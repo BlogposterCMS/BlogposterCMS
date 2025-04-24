@@ -46,6 +46,22 @@ BlogposterCMS
 
 ---
 
+## Documentation & Wiki 📚 
+
+All the juicy details—for module development, API endpoints, deployment, and more—live in our GitHub Wiki:
+
+👉 [BlogposterCMS Wiki](https://github.com/BlogposterCMS/BlogposterCMS/wiki)
+
+- **Getting Started**: full setup & configuration  
+- **Core Concepts**: mother-core, events, dependency loader  
+- **Module Development**: writing, packaging, and installing your own modules  
+- **API Reference**: all `/admin/api/...` endpoints with payload samples  
+- **Deployment**: Docker, Kubernetes, and server-less recipes  
+
+Make sure to keep the wiki in sync with your code changes, so contributors always know where to look!
+
+---
+
 ## Quick Start 🚦
 
 Clone, install, and run:

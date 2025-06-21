@@ -103,6 +103,8 @@ async function init() {
         '<button type="button" class="tb-btn fs-inc">+</button>' +
       '</div>'
     ].join('');
+    toolbar.addEventListener('mousedown', e => e.stopPropagation());
+    toolbar.addEventListener('click', e => e.stopPropagation());
     toolbar.addEventListener('click', ev => {
       const btn = ev.target.closest('button[data-cmd]');
       if (!btn) return;
@@ -225,6 +227,9 @@ async function init() {
         });
       }
       activeEl.focus();
+      if (activeEl.getAttribute('contenteditable') !== 'true') {
+        applyToolbarChange(activeEl, 'fontFamily', `'${font}'`);
+      }
     };
     const applySize = size => {
       const val = parseFloat(size);
@@ -267,6 +272,9 @@ async function init() {
         });
       }
       activeEl.focus();
+      if (activeEl.getAttribute('contenteditable') !== 'true') {
+        applyToolbarChange(activeEl, 'fontSize', val + 'px');
+      }
     };
 
     const sanitizeColor = c => {
@@ -316,6 +324,9 @@ async function init() {
         });
       }
       activeEl.focus();
+      if (activeEl.getAttribute('contenteditable') !== 'true') {
+        applyToolbarChange(activeEl, 'color', val);
+      }
     };
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {
       applySize((parseFloat(fsInput.value) || 16) + 1);
@@ -371,6 +382,16 @@ async function init() {
       if (!opt) return;
       applySize(opt.dataset.size);
       fsDropdown.classList.remove('open');
+    });
+
+    toolbar.addEventListener('input', e => {
+      const target = e.target;
+      if (!activeEl) return;
+      if (target.matches('.fs-input')) {
+        if (activeEl.getAttribute('contenteditable') !== 'true') {
+          applyToolbarChange(activeEl, 'fontSize', target.value + 'px');
+        }
+      }
     });
       console.log('[TBE] init() finished OK');
     } catch (err) {
@@ -481,6 +502,22 @@ export function enableAutoEdit() {
 export async function initTextEditor() {
   await init().catch(err => console.error('[globalTextEditor] init failed', err));
   enableAutoEdit();
+}
+
+export function setActiveElement(el) {
+  activeEl = el;
+  if (activeEl) {
+    console.log('[DEBUG] activeEl set to:', activeEl);
+  }
+}
+
+export function applyToolbarChange(el, styleProp, value) {
+  if (!el) return;
+  console.log('[DEBUG] Applying toolbar style:', styleProp, value, 'to element:', el);
+  el.style[styleProp] = value;
+  const clean = sanitizeHtml(el.innerHTML.trim());
+  el.innerHTML = clean;
+  el.__onSave?.(clean);
 }
 
 function showToolbar(el) {

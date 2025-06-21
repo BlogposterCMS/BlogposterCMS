@@ -4,7 +4,8 @@ import {
   editElement,
   initTextEditor,
   showToolbar,
-  hideToolbar
+  hideToolbar,
+  setActiveElement
 } from '../../js/globalTextEditor.js';
 
 function addHitLayer(widget) {
@@ -263,6 +264,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     activeWidgetEl = el;
     activeWidgetEl.classList.add('selected');
     grid.select(el);
+    const editable = findRegisteredEditable(el);
+    setActiveElement(editable);
+    console.log('[DEBUG] activeEl set to:', editable);
     showToolbar(el);
     const locked = el.getAttribute('gs-locked') === 'true';
     setLockIcon(locked);

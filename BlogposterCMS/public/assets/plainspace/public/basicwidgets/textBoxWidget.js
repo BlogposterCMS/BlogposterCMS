@@ -12,9 +12,7 @@ export function render(el) {
   p.appendChild(span);
   wrapper.appendChild(p);
 
-  /* NEW ­–––––––––––––––––––––––––––––––––––––––––  
-     Hit-Layer verhindert ungewolltes Editieren
-  ------------------------------------------------*/
+
   const shield = document.createElement('div');
   shield.className = 'hit-layer';
   Object.assign(shield.style, {
@@ -31,6 +29,5 @@ export function render(el) {
   el.innerHTML = '';
   el.appendChild(wrapper);
 
-  // registriere das <span>, nicht den ganzen <p>
   registerElement(span);
 }

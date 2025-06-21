@@ -165,6 +165,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
   document.addEventListener('widgetHtmlUpdate', handleHtmlUpdate);
+
+  function updateAllWidgetContents() {
+    if (!gridEl) return;
+    gridEl.querySelectorAll('.canvas-item').forEach(widget => {
+      const editable = getRegisteredEditable(widget);
+      if (!editable) return;
+      const instId = widget.dataset.instanceId;
+      if (!instId) return;
+      if (!codeMap[instId]) codeMap[instId] = {};
+      codeMap[instId].html = editable.innerHTML.trim();
+    });
+  }
+
   let activeWidgetEl = null;
   const actionBar = document.createElement('div');
   actionBar.className = 'widget-action-bar';
@@ -867,6 +880,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   async function saveCurrentLayout({ autosave = false } = {}) {
     if (!pageId) return;
+    updateAllWidgetContents();
     const layout = getCurrentLayout();
     const layoutStr = JSON.stringify(layout);
     if (autosave && layoutStr === lastSavedLayoutStr) { pendingSave = false; return; }
@@ -1335,6 +1349,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   saveBtn.addEventListener('click', async () => {
     const name = nameInput.value.trim();
     if (!name) { alert('Enter a name'); return; }
+    updateAllWidgetContents();
     const layout = getCurrentLayout();
     try {
       await meltdownEmit('saveLayoutTemplate', {

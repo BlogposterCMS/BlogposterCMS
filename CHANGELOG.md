@@ -11,6 +11,7 @@ El Psy Kongroo
 - Consolidated page editor widgets into a single `pageEditorWidget` and added save action to the content header.
 - Hit-layer rules consolidated in `_builder.scss` only
 - Builder opens page layouts on Layer 1 by default while keeping the global layer accessible.
+- Text widget no longer uses Shadow DOM and relies on scoped CSS classes.
 ### Added
 - Hit-layer overlay for text widgets to prevent accidental edits while dragging.
 - Canva-style two-step editing with click-to-edit and persistent bounding box.

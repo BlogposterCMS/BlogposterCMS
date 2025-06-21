@@ -10,6 +10,8 @@ let autoHandler = null;
 let currentColor = '#000000';
 let colorPicker = null;
 
+const editableMap = new WeakMap();
+
 
 export function sanitizeHtml(html) {
   const div = document.createElement('div');
@@ -41,6 +43,15 @@ function withinGridItem(el) {
     node = node.parentElement || (node.getRootNode && node.getRootNode().host);
   }
   return false;
+}
+
+function findWidget(node) {
+  let n = node;
+  while (n && n !== document.body) {
+    if (n.classList && n.classList.contains('canvas-item')) return n;
+    n = n.parentElement || (n.getRootNode && n.getRootNode().host);
+  }
+  return null;
 }
 
 function findEditable(target) {
@@ -407,6 +418,13 @@ export function editElement(el, onSave) {
   const widget = el.closest('.canvas-item');
   if (!widget) return;
 
+  const getHitLayer = w =>
+    w.querySelector('.hit-layer') ||
+    w.querySelector('.canvas-item-content')?.shadowRoot?.querySelector('.hit-layer') ||
+    null;
+
+  const hitLayer = getHitLayer(widget);
+
   const prevLayer = +widget.dataset.layer || 0;
   widget.dataset.layer = 9999;
   widget.style.zIndex = '9999';
@@ -417,7 +435,7 @@ export function editElement(el, onSave) {
   const grid = widget.closest('.canvas-grid')?.__grid;
   grid?.update(widget, { locked: false, noMove: true, noResize: false });
 
-  widget.querySelector('.hit-layer')?.remove();
+  if (hitLayer) hitLayer.style.pointerEvents = 'none';
 
   const block  = () => grid?.update(widget, { noMove: true });
   const allow  = () => grid?.update(widget, { noMove: false });
@@ -448,16 +466,7 @@ export function editElement(el, onSave) {
     el.removeEventListener('mouseenter', block);
     el.removeEventListener('mouseleave', allow);
 
-    if (!widget.querySelector('.hit-layer')) {
-      const h = document.createElement('div');
-      h.className = 'hit-layer';
-      Object.assign(h.style, {
-        position: 'absolute', inset: '0',
-        background: 'transparent', cursor: 'move',
-        pointerEvents: 'auto', zIndex: '5'
-      });
-      widget.appendChild(h);
-    }
+    if (hitLayer) hitLayer.style.pointerEvents = 'auto';
 
     widget.classList.remove('editing');
     hideToolbar();
@@ -479,8 +488,17 @@ export function editElement(el, onSave) {
   });
 }
 
-export function registerElement(el, onSave) {
-  el.__onSave = onSave;
+export function registerElement(editable, onSave) {
+  if (!editable) return;
+  editable.__onSave = onSave;
+  const widget = findWidget(editable);
+  if (widget) {
+    editableMap.set(widget, editable);
+  }
+}
+
+export function getRegisteredEditable(widget) {
+  return editableMap.get(widget) || null;
 }
 
 export function enableAutoEdit() {
@@ -490,11 +508,12 @@ export function enableAutoEdit() {
     if (toolbar && toolbar.contains(ev.target)) return;
     const el = findEditableFromEvent(ev);
     if (!el) return;
-    const widget = el.closest('.canvas-item');
+    const widget = findWidget(el);
     if (!widget || !widget.classList.contains('selected')) return;
+    const editable = getRegisteredEditable(widget) || el;
     ev.stopPropagation();
     ev.preventDefault();
-    editElement(el, el.__onSave);
+    editElement(editable, editable.__onSave);
   };
   document.addEventListener('click', autoHandler, true);
 }

@@ -5,7 +5,8 @@ import {
   initTextEditor,
   showToolbar,
   hideToolbar,
-  setActiveElement
+  setActiveElement,
+  getRegisteredEditable
 } from '../../js/globalTextEditor.js';
 
 function addHitLayer(widget) {
@@ -264,7 +265,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     activeWidgetEl = el;
     activeWidgetEl.classList.add('selected');
     grid.select(el);
-    const editable = findRegisteredEditable(el);
+    const editable = getRegisteredEditable(el);
     setActiveElement(editable);
     console.log('[DEBUG] activeEl set to:', editable);
     showToolbar(el);
@@ -292,7 +293,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     e.stopPropagation();
     if (!activeWidgetEl) return;
     const clone = activeWidgetEl.cloneNode(true);
-    clone.dataset.instanceId = genId();
+    const newId = genId();
+    clone.id = `widget-${newId}`;
+    clone.dataset.instanceId = newId;
     clone.dataset.global = activeWidgetEl.dataset.global || 'false';
     clone.dataset.layer = activeWidgetEl.dataset.layer || String(activeLayer);
     gridEl.appendChild(clone);
@@ -331,16 +334,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
 
   // Widget locking is now handled directly by the global text editor.
-
-  function findRegisteredEditable(wrapper) {
-    if (!wrapper) return null;
-    const walker = document.createTreeWalker(wrapper, NodeFilter.SHOW_ELEMENT);
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      if (node && node.__onSave !== undefined) return node;
-    }
-    return null;
-  }
 
   function extractCssProps(el) {
     if (!el) return '';
@@ -816,6 +809,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (item.code) codeMap[instId] = item.code;
       const wrapper = document.createElement('div');
       wrapper.classList.add('canvas-item');
+      wrapper.id = `widget-${instId}`;
       wrapper.dataset.widgetId = widgetDef.id;
       wrapper.dataset.instanceId = instId;
       wrapper.dataset.global = isGlobal ? 'true' : 'false';
@@ -1023,7 +1017,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     menu.querySelector('.menu-edit').onclick = () => { editBtn.click(); menu.style.display = 'none'; };
     menu.querySelector('.menu-copy').onclick = () => {
       const clone = el.cloneNode(true);
-      clone.dataset.instanceId = genId();
+      const cloneId = genId();
+      clone.id = `widget-${cloneId}`;
+      clone.dataset.instanceId = cloneId;
       clone.dataset.global = el.dataset.global || 'false';
       clone.dataset.layer = el.dataset.layer || String(activeLayer);
       gridEl.appendChild(clone);
@@ -1079,10 +1075,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       const isGlobal = el.dataset.global === 'true';
       if (isGlobal) {
         el.dataset.global = 'false';
-        el.dataset.instanceId = genId();
+        const newLocalId = genId();
+        el.dataset.instanceId = newLocalId;
+        el.id = `widget-${newLocalId}`;
       } else {
         el.dataset.global = 'true';
         el.dataset.instanceId = `global-${widgetDef.id}`;
+        el.id = `widget-${el.dataset.instanceId}`;
       }
       updateGlobalBtn();
       menu.style.display = 'none';
@@ -1114,7 +1113,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     el.addEventListener('click', e => {
       e.stopPropagation();
       if (activeWidgetEl === el) {
-        const editable = findRegisteredEditable(el);
+        const editable = getRegisteredEditable(el);
         if (editable) {
           editElement(editable, editable.__onSave);
           return;
@@ -1161,6 +1160,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
     const wrapper = document.createElement('div');
     wrapper.classList.add('canvas-item');
+    wrapper.id = `widget-${instId}`;
     wrapper.dataset.widgetId = widgetDef.id;
     wrapper.dataset.instanceId = instId;
     wrapper.dataset.global = 'false';

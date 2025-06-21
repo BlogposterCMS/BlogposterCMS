@@ -3,14 +3,34 @@
   height: 100%;
 }
 
-.textbox-widget {
+.widget-textbox {
   width: 100%;
   padding: 0.25rem;
   box-sizing: border-box;
   min-height: 1rem;
-  cursor: text;
 
-  p {
-    margin: 0;
+  .editable {
+    all: unset;
+    font-family: 'Manrope', sans-serif;
+    font-size: 16px;
+    color: #333;
+    background-color: #fff;
+    outline: none;
+    user-select: text;
+    cursor: text;
+  }
+
+  .editable b,
+  .editable strong {
+    font-weight: bold;
+  }
+
+  .editable i,
+  .editable em {
+    font-style: italic;
+  }
+
+  .editable u {
+    text-decoration: underline;
   }
 }

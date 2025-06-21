@@ -132,14 +132,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
 
-  function getCssUrls() {
-    const theme = window.ACTIVE_THEME || 'default';
-    return [
-      '/assets/css/site.css',
-      `/themes/${theme}/theme.css`
-    ];
-  }
-
   const codeMap = {};
   const undoStack = [];
   const redoStack = [];
@@ -213,31 +205,33 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     : '<img src="/assets/icons/trash.svg" alt="delete" />';
 
   function startUserMode(widget) {
-    const root = widget.querySelector('.canvas-item-content')?.shadowRoot;
+    const root = widget.querySelector('.canvas-item-content');
     const container = root?.querySelector('.widget-container');
     if (!container) return;
-    container.setAttribute('contenteditable', 'true');
-    container.style.userSelect = 'text';
+    const target = container.querySelector('.editable') || container;
+    target.setAttribute('contenteditable', 'true');
+    target.style.userSelect = 'text';
     let obs = userObservers.get(widget);
     if (obs) obs.disconnect();
     obs = new MutationObserver(() => {
       const htmlField = widget.__codeEditor?.querySelector('.editor-html');
       if (htmlField) htmlField.value = container.innerHTML;
     });
-    obs.observe(container, { childList: true, subtree: true, characterData: true });
-    container.addEventListener('input', () => {
+    obs.observe(target, { childList: true, subtree: true, characterData: true });
+    target.addEventListener('input', () => {
       const htmlField = widget.__codeEditor?.querySelector('.editor-html');
-      if (htmlField) htmlField.value = container.innerHTML;
+      if (htmlField) htmlField.value = target.innerHTML;
     });
     userObservers.set(widget, obs);
   }
 
   function stopUserMode(widget) {
-    const root = widget.querySelector('.canvas-item-content')?.shadowRoot;
+    const root = widget.querySelector('.canvas-item-content');
     const container = root?.querySelector('.widget-container');
-    if (container) {
-      container.removeAttribute('contenteditable');
-      container.style.userSelect = 'none';
+    const target = container?.querySelector('.editable') || container;
+    if (target) {
+      target.removeAttribute('contenteditable');
+      target.style.userSelect = 'none';
     }
     const obs = userObservers.get(widget);
     if (obs) obs.disconnect();
@@ -421,16 +415,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
     const content = wrapper.querySelector('.canvas-item-content');
     content.innerHTML = '';
-    const root = content.shadowRoot || content.attachShadow({ mode: 'open' });
+    const root = content;
     // Clean existing children to avoid duplicates on re-render
     while (root.firstChild) {
       root.removeChild(root.firstChild);
     }
-    const cssUrls = getCssUrls();
-    const style = document.createElement('style');
-    style.textContent = `@import url('${cssUrls[0]}');`;
-    root.appendChild(style);
-
     const container = document.createElement('div');
     container.className = 'widget-container';
     container.style.width = '100%';
@@ -467,9 +456,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         customStyle.textContent = data.css;
         root.appendChild(customStyle);
       }
-      const themeStyle = document.createElement('style');
-      themeStyle.textContent = `@import url('${cssUrls[1]}');`;
-      root.appendChild(themeStyle);
+      // theme styles applied globally
       if (data.html) {
         container.innerHTML = data.html;
       }
@@ -491,9 +478,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       .then(m => m.render?.(container, ctx))
       .catch(err => console.error('[Builder] widget import error', err));
 
-    const themeStyle = document.createElement('style');
-    themeStyle.textContent = `@import url('${cssUrls[1]}');`;
-    root.appendChild(themeStyle);
+    // theme styles applied globally
 
     if (widgetDef.id === 'textBox') {
       addHitLayer(wrapper);
@@ -620,7 +605,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (codeData.html) {
         htmlEl.value = codeData.html;
       } else {
-        const root = el.querySelector('.canvas-item-content')?.shadowRoot;
+        const root = el.querySelector('.canvas-item-content');
         const container = root?.querySelector('.widget-container');
         htmlEl.value = container ? container.innerHTML.trim() : '';
       }
@@ -630,7 +615,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       overlay.currentSelector = codeData.selector || '';
 
       function pickElement() {
-        const root = el.querySelector('.canvas-item-content')?.shadowRoot;
+        const root = el.querySelector('.canvas-item-content');
         if (!root) return;
         const handler = ev => {
           ev.preventDefault();

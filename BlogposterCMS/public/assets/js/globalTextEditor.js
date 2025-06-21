@@ -420,7 +420,7 @@ export function editElement(el, onSave) {
 
   const getHitLayer = w =>
     w.querySelector('.hit-layer') ||
-    w.querySelector('.canvas-item-content')?.shadowRoot?.querySelector('.hit-layer') ||
+    w.querySelector('.canvas-item-content .hit-layer') ||
     null;
 
   const hitLayer = getHitLayer(widget);

@@ -4,20 +4,22 @@ import { registerElement } from '../../../js/globalTextEditor.js';
 export function render(el, ctx = {}) {
   if (!el) return;
   const wrapper = document.createElement('div');
-  wrapper.className = 'textbox-widget';
+  wrapper.className = 'widget-textbox';
 
   if (ctx.id) {
     wrapper.id = `text-widget-${ctx.id}`;
   }
 
-  const p = document.createElement('p');
-  const span = document.createElement('span');
-  span.textContent = 'Lorem ipsum dolor sit amet';
+  const editable = document.createElement('div');
+  editable.className = 'editable';
+  editable.setAttribute('contenteditable', 'true');
+  editable.textContent = 'Lorem ipsum dolor sit amet';
+
   if (ctx.id) {
-    span.id = `text-widget-${ctx.id}-editable`;
+    editable.id = `text-widget-${ctx.id}-editable`;
   }
-  p.appendChild(span);
-  wrapper.appendChild(p);
+
+  wrapper.appendChild(editable);
 
 
   const shield = document.createElement('div');
@@ -36,5 +38,5 @@ export function render(el, ctx = {}) {
   el.innerHTML = '';
   el.appendChild(wrapper);
 
-  registerElement(span);
+  registerElement(editable);
 }

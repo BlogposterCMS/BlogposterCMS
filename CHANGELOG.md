@@ -11,6 +11,7 @@ El Psy Kongroo
 - builder renderer split into multiple modules under `public/assets/plainspace/builder`
   for easier maintenance; main entry renamed to `builderRenderer.js`
 ### Fixed
+- removed outdated webpack entry for `alpine.js` to restore build
 - removed leftover widget helper functions from `builderRenderer.js` and resolved build error
 - fixed header and sidebar partial paths in `pageRenderer.js` so assets load correctly
 - `admin` scripts moved under `public/assets/plainspace/dashboard` and the `partials` folder now lives directly in `plainspace`.

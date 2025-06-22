@@ -4,7 +4,6 @@ module.exports = {
   mode: 'production',
   entry: {
     adminSearch: './public/assets/js/adminSearch.js',
-    alpine: './public/assets/js/alpine.js',
     contentHeaderActions: './public/assets/plainspace/dashboard/contentHeaderActions.js',
     firstInstallCheck: './public/assets/js/firstInstallCheck.js',
     icons: './public/assets/js/icons.js',

@@ -1,0 +1,47 @@
+import { init as initCanvasGrid } from '../../main/canvasGrid.js';
+
+export function initGrid(gridEl, state, selectWidget) {
+  const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, pushOnOverlap: false }, gridEl);
+  gridEl.__grid = grid;
+
+  grid.on('change', el => {
+    if (el) selectWidget(el);
+  });
+  return grid;
+}
+
+export function getCurrentLayout(gridEl, codeMap) {
+  const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
+  return items.map(el => ({
+    id: el.dataset.instanceId,
+    widgetId: el.dataset.widgetId,
+    global: el.dataset.global === 'true',
+    layer: +el.dataset.layer || 0,
+    x: +el.dataset.x || 0,
+    y: +el.dataset.y || 0,
+    w: +el.getAttribute('gs-w'),
+    h: +el.getAttribute('gs-h'),
+    code: codeMap[el.dataset.instanceId] || null
+  }));
+}
+
+export function getCurrentLayoutForLayer(gridEl, idx, codeMap) {
+  const items = Array.from(gridEl.querySelectorAll(`.canvas-item[data-layer="${idx}"]`));
+  return items.map(el => ({
+    id: el.dataset.instanceId,
+    widgetId: el.dataset.widgetId,
+    global: el.dataset.global === 'true',
+    x: +el.dataset.x || 0,
+    y: +el.dataset.y || 0,
+    w: +el.getAttribute('gs-w'),
+    h: +el.getAttribute('gs-h'),
+    layer: +el.dataset.layer || 0,
+    code: codeMap[el.dataset.instanceId] || null
+  }));
+}
+
+export function pushState(stack, redoStack, layout) {
+  stack.push(JSON.stringify(layout));
+  if (stack.length > 50) stack.shift();
+  redoStack.length = 0;
+}

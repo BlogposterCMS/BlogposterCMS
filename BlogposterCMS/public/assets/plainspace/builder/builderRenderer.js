@@ -1,5 +1,4 @@
 // public/assets/plainspace/dashboard/builderRenderer.js
-import { init as initCanvasGrid } from '../main/canvasGrid.js';
 import {
   editElement,
   initTextEditor,
@@ -8,15 +7,16 @@ import {
   setActiveElement,
   getRegisteredEditable
 } from '../main/globalTextEditor.js';
+import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState } from './managers/gridManager.js';
+import { applyLayout, getItemData } from './managers/layoutManager.js';
+import { registerDeselect } from './managers/eventManager.js';
+import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 
 import { addHitLayer, applyBuilderTheme, wrapCss, executeJs } from './utils.js';
 import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon } from './renderer/renderUtils.js';
-import { attachEditButton, attachRemoveButton, attachLockOnClick } from './renderer/widgetActions.js';
-import { renderWidget } from './widgets/widgetRenderer.js';
-import { attachOptionsMenu } from './widgets/widgetMenu.js';
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0) {
   document.body.classList.add('builder-mode');
@@ -479,8 +479,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const saveLayoutCtx = { updateAllWidgetContents, getCurrentLayout, pushState, meltdownEmit, pageId, codeMap };
   await applyBuilderTheme();
   // Allow overlapping widgets for layered layouts
-  const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, pushOnOverlap: false }, gridEl);
-  gridEl.__grid = grid;        // ↲  macht das Grid von überall erreichbar
+  const grid = initGrid(gridEl, state, selectWidget);
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
   function scheduleAutosave() {
     scheduleAutosaveFn(state, opts => saveLayout(opts, { ...saveLayoutCtx, ...state }));
@@ -523,103 +522,20 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     state.activeWidgetEl.classList.remove('selected');
     state.activeWidgetEl = null;
     hideToolbar();
-    grid.clearSelection();
+  grid.clearSelection();
   });
 
-  function getCurrentLayout() {
-    const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
-    return items.map(el => ({
-      id: el.dataset.instanceId,
-      widgetId: el.dataset.widgetId,
-      global: el.dataset.global === 'true',
-      layer: +el.dataset.layer || 0,
-      x: +el.dataset.x || 0,
-      y: +el.dataset.y || 0,
-      w: +el.getAttribute('gs-w'),
-      h: +el.getAttribute('gs-h'),
-      code: codeMap[el.dataset.instanceId] || null
-    }));
-  }
+  const undoStack = [];
+  const redoStack = [];
+  const MAX_HISTORY = 50;
 
-  function getCurrentLayoutForLayer(idx) {
-    const items = Array.from(gridEl.querySelectorAll(`.canvas-item[data-layer="${idx}"]`));
-    return items.map(el => ({
-      id: el.dataset.instanceId,
-      widgetId: el.dataset.widgetId,
-      global: el.dataset.global === 'true',
-      x: +el.dataset.x || 0,
-      y: +el.dataset.y || 0,
-      w: +el.getAttribute('gs-w'),
-      h: +el.getAttribute('gs-h'),
-      layer: +el.dataset.layer || 0,
-      code: codeMap[el.dataset.instanceId] || null
-    }));
-  }
-
-  function getItemData(el) {
-    return {
-      widgetId: el.dataset.widgetId,
-      w: +el.getAttribute('gs-w'),
-      h: +el.getAttribute('gs-h'),
-      layer: +el.dataset.layer || 0,
-      code: codeMap[el.dataset.instanceId] || null
-    };
-  }
-
-  function pushState(layout = getCurrentLayout()) {
-    undoStack.push(JSON.stringify(layout));
-    if (undoStack.length > MAX_HISTORY) undoStack.shift();
-    redoStack.length = 0;
-  }
-
-  function applyLayout(layout, { append = false, layerIndex = activeLayer } = {}) {
-    if (!append) {
-      gridEl.innerHTML = '';
-      Object.keys(codeMap).forEach(k => delete codeMap[k]);
-    }
-    layout.forEach(item => {
-      const widgetDef = allWidgets.find(w => w.id === item.widgetId);
-      if (!widgetDef) return;
-      const instId = item.id || genId();
-      item.id = instId;
-      const isGlobal = item.global === true;
-      if (item.code) codeMap[instId] = item.code;
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('canvas-item');
-      wrapper.id = `widget-${instId}`;
-      wrapper.dataset.widgetId = widgetDef.id;
-      wrapper.dataset.instanceId = instId;
-      wrapper.dataset.global = isGlobal ? 'true' : 'false';
-      wrapper.dataset.layer = String(layerIndex);
-      wrapper.dataset.x = item.x ?? 0;
-      wrapper.dataset.y = item.y ?? 0;
-      wrapper.dataset.layer = item.layer ?? 0;
-      wrapper.style.zIndex = (item.layer ?? 0).toString();
-      wrapper.setAttribute('gs-w', item.w ?? 8);
-      wrapper.setAttribute('gs-h', item.h ?? DEFAULT_ROWS);
-      wrapper.setAttribute('gs-min-w', 4);
-      wrapper.setAttribute('gs-min-h', DEFAULT_ROWS);
-      const content = document.createElement('div');
-      content.className = 'canvas-item-content builder-themed';
-      content.innerHTML = `${getWidgetIcon(widgetDef)}<span>${widgetDef.metadata?.label || widgetDef.id}</span>`;
-      wrapper.appendChild(content);
-      attachRemoveButton(wrapper);
-      const editBtn = attachEditButton(wrapper, widgetDef);
-      attachOptionsMenu(wrapper, widgetDef, editBtn);
-      attachLockOnClick(wrapper);
-      gridEl.appendChild(wrapper);
-      grid.makeWidget(wrapper);
-      renderWidget(wrapper, widgetDef);
-    });
-    applyProMode();
-  }
 
   function undo() {
     if (undoStack.length < 2) return;
     const current = undoStack.pop();
     redoStack.push(current);
     const prev = JSON.parse(undoStack[undoStack.length - 1]);
-    applyLayout(prev);
+    applyLayout(prev, { gridEl, grid, codeMap, allWidgets, layerIndex: activeLayer });
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
@@ -628,7 +544,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const next = redoStack.pop();
     undoStack.push(next);
     const layout = JSON.parse(next);
-    applyLayout(layout);
+    applyLayout(layout, { gridEl, grid, codeMap, allWidgets, layerIndex: activeLayer });
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
@@ -689,20 +605,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     } catch (err) {
       console.warn('[Builder] failed to load global layout', err);
     }
-  }
-
-  function attachRemoveButton(el) {
-    const btn = document.createElement('button');
-    btn.className = 'widget-remove';
-    btn.innerHTML = window.featherIcon ? window.featherIcon('x') :
-      '<img src="/assets/icons/x.svg" alt="remove" />';
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      grid.removeWidget(el);
-      if (pageId) scheduleAutosave();
-    });
-    el.appendChild(btn);
-    return btn;
   }
 
   function attachOptionsMenu(el, widgetDef, editBtn) {
@@ -788,7 +690,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (!name) { menu.style.display = 'none'; return; }
       let templates = [];
       try { templates = JSON.parse(localStorage.getItem('widgetTemplates') || '[]'); } catch {}
-      const data = getItemData(el);
+      const data = getItemData(el, codeMap);
       const idx = templates.findIndex(t => t.name === name);
       if (idx !== -1) {
         if (!confirm('Template exists. Override?')) { menu.style.display = 'none'; return; }
@@ -878,7 +780,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   layoutLayers[0].layout = initialLayout;
   applyCompositeLayout(activeLayer);
-  pushState(initialLayout);
+  pushState(undoStack, redoStack, initialLayout);
 
   gridEl.addEventListener('dragover',  e => { e.preventDefault(); gridEl.classList.add('drag-over'); });
   gridEl.addEventListener('dragleave', () => gridEl.classList.remove('drag-over'));
@@ -1088,7 +990,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const name = nameInput.value.trim();
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
-    const layout = getCurrentLayout();
+    const layout = getCurrentLayout(gridEl, codeMap);
     try {
       await meltdownEmit('saveLayoutTemplate', {
         jwt: window.ADMIN_TOKEN,
@@ -1169,7 +1071,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function saveActiveLayer() {
-    layoutLayers[activeLayer].layout = getCurrentLayoutForLayer(activeLayer);
+    layoutLayers[activeLayer].layout = getCurrentLayoutForLayer(gridEl, activeLayer, codeMap);
   }
 
   function updateLayoutBar() {
@@ -1182,9 +1084,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function applyCompositeLayout(idx) {
     gridEl.innerHTML = '';
     Object.keys(codeMap).forEach(k => delete codeMap[k]);
-    applyLayout(layoutLayers[0].layout, { append: false, layerIndex: 0 });
+    applyLayout(layoutLayers[0].layout, { gridEl, grid, codeMap, allWidgets, append: false, layerIndex: 0 });
     if (idx !== 0) {
-      applyLayout(layoutLayers[idx].layout, { append: true, layerIndex: idx });
+      applyLayout(layoutLayers[idx].layout, { gridEl, grid, codeMap, allWidgets, append: true, layerIndex: idx });
     }
   }
 

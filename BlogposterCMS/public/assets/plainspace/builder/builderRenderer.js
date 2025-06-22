@@ -10,6 +10,13 @@ import {
 } from '../main/globalTextEditor.js';
 
 import { addHitLayer, applyBuilderTheme, wrapCss, executeJs } from './utils.js';
+import { createActionBar } from './renderer/actionBar.js';
+import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
+import { registerBuilderEvents } from './renderer/eventHandlers.js';
+import { getWidgetIcon } from './renderer/renderUtils.js';
+import { attachEditButton, attachRemoveButton, attachLockOnClick } from './renderer/widgetActions.js';
+import { renderWidget } from './widgets/widgetRenderer.js';
+import { attachOptionsMenu } from './widgets/widgetMenu.js';
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0) {
   document.body.classList.add('builder-mode');
@@ -90,11 +97,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.classList.remove('preview-mobile', 'preview-tablet', 'preview-desktop');
   }
 
-  let saveTimer = null;
-  let lastSavedLayoutStr = '';
-  let pendingSave = false;
   let proMode = true;
   let gridEl;
+  const state = {
+    pageId,
+    autosaveEnabled: true,
+    pendingSave: false,
+    saveTimer: null,
+    autosaveInterval: null,
+    lastSavedLayoutStr: '' ,
+    activeWidgetEl: null
+  };
   function handleHtmlUpdate(e) {
     const { instanceId, html } = e.detail || {};
     if (!instanceId || typeof html !== 'string') return;
@@ -121,42 +134,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   }
 
-  let activeWidgetEl = null;
-  const actionBar = document.createElement('div');
-  actionBar.className = 'widget-action-bar';
-  actionBar.innerHTML = `
-    <button class="action-lock"></button>
-    <button class="action-duplicate"></button>
-    <button class="action-delete"></button>
-    <button class="action-menu"></button>
- 
-  `;
-  actionBar.style.display = 'none';
-  document.body.appendChild(actionBar);
-
-  const lockBtn = actionBar.querySelector('.action-lock');
-  const dupBtn = actionBar.querySelector('.action-duplicate');
-  const menuBtn = actionBar.querySelector(".action-menu");
-  const delBtn = actionBar.querySelector('.action-delete');
-
-  const setLockIcon = locked => {
-    const icon = locked ? 'unlock' : 'lock';
-    lockBtn.innerHTML = window.featherIcon
-      ? window.featherIcon(icon)
-      : `<img src="/assets/icons/${icon}.svg" alt="${icon}" />`;
-  };
-  dupBtn.innerHTML = window.featherIcon
-    ? window.featherIcon('copy')
-    : '<img src="/assets/icons/copy.svg" alt="copy" />';
-  menuBtn.innerHTML = window.featherIcon
-    ? window.featherIcon('more-vertical')
-    : '<img src="/assets/icons/more-vertical.svg" alt="menu" />';
-  delBtn.innerHTML = window.featherIcon
-    ? window.featherIcon('trash')
-    : '<img src="/assets/icons/trash.svg" alt="delete" />';
-
-
-
   function applyProMode() {
     document.body.classList.toggle('pro-mode', proMode);
     document.querySelectorAll('.widget-edit').forEach(btn => {
@@ -168,88 +145,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       });
     }
   }
-
-  function scheduleAutosave() {
-    if (!autosaveEnabled || !pageId) return;
-    pendingSave = true;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      saveCurrentLayout({ autosave: true });
-    }, 1000);
-  }
-
-  function selectWidget(el) {
-    if (!el) return;
-    if (activeWidgetEl) activeWidgetEl.classList.remove('selected');
-    activeWidgetEl = el;
-    activeWidgetEl.classList.add('selected');
-    grid.select(el);
-    const editable = getRegisteredEditable(el);
-    setActiveElement(editable);
-    console.log('[DEBUG] activeEl set to:', editable);
-    showToolbar(el);
-    const locked = el.getAttribute('gs-locked') === 'true';
-    setLockIcon(locked);
-    actionBar.style.display = 'flex';
-    actionBar.style.visibility = 'hidden';
-    const rect = el.getBoundingClientRect();
-    actionBar.style.top = `${rect.top - 28 + window.scrollY}px`;
-    actionBar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
-    actionBar.style.visibility = '';
-  }
-
-  lockBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (!activeWidgetEl) return;
-    const locked = activeWidgetEl.getAttribute('gs-locked') === 'true';
-    activeWidgetEl.setAttribute('gs-locked', (!locked).toString());
-    grid.update(activeWidgetEl, { locked: !locked, noMove: !locked, noResize: !locked });
-    setLockIcon(!locked);
-    if (pageId) scheduleAutosave();
-  });
-
-  dupBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (!activeWidgetEl) return;
-    const clone = activeWidgetEl.cloneNode(true);
-    const newId = genId();
-    clone.id = `widget-${newId}`;
-    clone.dataset.instanceId = newId;
-    clone.dataset.global = activeWidgetEl.dataset.global || 'false';
-    clone.dataset.layer = activeWidgetEl.dataset.layer || String(activeLayer);
-    gridEl.appendChild(clone);
-    grid.makeWidget(clone);
-    const widgetDef = allWidgets.find(w => w.id === clone.dataset.widgetId);
-    attachRemoveButton(clone);
-    const cEditBtn = attachEditButton(clone, widgetDef);
-    attachOptionsMenu(clone, widgetDef, cEditBtn);
-    attachLockOnClick(clone);
-    renderWidget(clone, widgetDef);
-    if (pageId) scheduleAutosave();
-  });
-  menuBtn.addEventListener("click", e => {
-    e.stopPropagation();
-    if (!activeWidgetEl || !activeWidgetEl.__optionsMenu) return;
-    const menu = activeWidgetEl.__optionsMenu;
-    if (menu.style.display === "block" && menu.currentTrigger === menuBtn) {
-      menu.hide();
-      return;
-    }
-    menu.show(menuBtn);
-  });
-
-  delBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (!activeWidgetEl) return;
-    const target = activeWidgetEl;
-    target.classList.remove('selected');
-    grid.removeWidget(target);
-    actionBar.style.display = 'none';
-    hideToolbar();
-    activeWidgetEl = null;
-    grid.clearSelection();
-    if (pageId) scheduleAutosave();
-  });
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
 
   // Widget locking is now handled directly by the global text editor.
@@ -580,10 +475,23 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   contentEl.innerHTML = `<div id="builderGrid" class="canvas-grid builder-grid"></div>`;
   gridEl = document.getElementById('builderGrid');
+  const { updateAllWidgetContents } = registerBuilderEvents(gridEl, codeMap, { getRegisteredEditable });
+  const saveLayoutCtx = { updateAllWidgetContents, getCurrentLayout, pushState, meltdownEmit, pageId, codeMap };
   await applyBuilderTheme();
   // Allow overlapping widgets for layered layouts
   const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, pushOnOverlap: false }, gridEl);
   gridEl.__grid = grid;        // ↲  macht das Grid von überall erreichbar
+  const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
+  function scheduleAutosave() {
+    scheduleAutosaveFn(state, opts => saveLayout(opts, { ...saveLayoutCtx, ...state }));
+  }
+  function selectWidget(el) {
+    baseSelectWidget(el);
+    if (!el) return;
+    const editable = getRegisteredEditable(el);
+    setActiveElement(editable);
+    showToolbar(el);
+  }
   grid.on('change', el => {          // jedes Mal, wenn das Grid ein Widget anfasst …
     if (el) selectWidget(el);        // … Action-Bar zeigen
   });
@@ -594,17 +502,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     actionBar.style.display = "none";
   });
   grid.on("dragstop", () => {
-    if (activeWidgetEl) selectWidget(activeWidgetEl);
+    if (state.activeWidgetEl) selectWidget(state.activeWidgetEl);
   });
   grid.on("resizestop", () => {
-    if (activeWidgetEl) selectWidget(activeWidgetEl);
+    if (state.activeWidgetEl) selectWidget(state.activeWidgetEl);
   });
 
 
   document.addEventListener('click', e => {
-    if (!activeWidgetEl) return;
+    if (!state.activeWidgetEl) return;
     if (
-      e.target.closest('.canvas-item') === activeWidgetEl ||
+      e.target.closest('.canvas-item') === state.activeWidgetEl ||
       e.target.closest('.widget-action-bar') ||
       e.target.closest('.text-editor-toolbar') ||
       e.target.closest('.color-picker')
@@ -612,8 +520,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       return;
     }
     actionBar.style.display = 'none';
-    activeWidgetEl.classList.remove('selected');
-    activeWidgetEl = null;
+    state.activeWidgetEl.classList.remove('selected');
+    state.activeWidgetEl = null;
     hideToolbar();
     grid.clearSelection();
   });
@@ -725,36 +633,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function startAutosave() {
-    if (autosaveInterval) clearInterval(autosaveInterval);
-    if (autosaveEnabled && pageId) {
-      autosaveInterval = setInterval(() => {
-        if (pendingSave) saveCurrentLayout({ autosave: true });
-      }, 30000);
-    }
+    startAutosaveFn(state, opts => saveLayout(opts, saveLayoutCtx));
   }
 
-  async function saveCurrentLayout({ autosave = false } = {}) {
-    if (!pageId) return;
-    updateAllWidgetContents();
-    const layout = getCurrentLayout();
-    const layoutStr = JSON.stringify(layout);
-    if (autosave && layoutStr === lastSavedLayoutStr) { pendingSave = false; return; }
-    if (!autosave) pushState(layout);
-    try {
-      await meltdownEmit('saveLayoutForViewport', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        pageId,
-        lane: 'public',
-        viewport: 'desktop',
-        layout
-      });
-      lastSavedLayoutStr = layoutStr;
-      pendingSave = false;
-    } catch (err) {
-      console.error('[Builder] saveLayoutForViewport error', err);
-    }
+  async function saveCurrentLayout(opts = {}) {
+    await saveLayout(opts, { ...saveLayoutCtx, ...state });
   }
 
   let initialLayout = [];
@@ -981,7 +864,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function attachLockOnClick(el) {
     el.addEventListener('click', e => {
       e.stopPropagation();
-      if (activeWidgetEl === el) {
+      if (state.activeWidgetEl === el) {
         const editable = getRegisteredEditable(el);
         if (editable) {
           editElement(editable, editable.__onSave);
@@ -1178,10 +1061,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   headerMenu.querySelector('.menu-undo').addEventListener('click', () => { hideHeaderMenu(); undo(); });
   headerMenu.querySelector('.menu-redo').addEventListener('click', () => { hideHeaderMenu(); redo(); });
   const autosaveToggle = headerMenu.querySelector('.autosave-toggle');
-  autosaveToggle.checked = autosaveEnabled;
+  autosaveToggle.checked = state.autosaveEnabled;
   autosaveToggle.addEventListener('change', () => {
-    autosaveEnabled = autosaveToggle.checked;
-    startAutosave();
+    state.autosaveEnabled = autosaveToggle.checked;
+    startAutosaveFn(state, saveLayoutCtx);
   });
   const proToggle = headerMenu.querySelector('.pro-toggle');
   proToggle.checked = proMode;

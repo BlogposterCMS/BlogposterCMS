@@ -11,6 +11,7 @@ El Psy Kongroo
 - builder renderer split into multiple modules under `public/assets/plainspace/builder`
   for easier maintenance; main entry renamed to `builderRenderer.js`
 ### Fixed
+- removed outdated webpack entry for `alpine.js` to restore build
 - removed leftover widget helper functions from `builderRenderer.js` and resolved build error
 - fixed header and sidebar partial paths in `pageRenderer.js` so assets load correctly
 - `admin` scripts moved under `public/assets/plainspace/dashboard` and the `partials` folder now lives directly in `plainspace`.
@@ -18,6 +19,7 @@ El Psy Kongroo
 - All widgets now reside under `public/assets/plainspace/widgets` with separate
   `admin` and `public` folders. Admin action scripts moved to the same
   plainspace area and CanvasGrid lives beside the renderer.
+- fixed `codemap is not defined` error in layout builder by ensuring the `codeMap` object exists
 - Plainspace scripts consolidated under `public/assets/plainspace/main`.
 - Widgets no longer set `contenteditable`; `globalTextEditor` controls editing exclusively.
 - Hit-layer overlay no longer intercepts clicks in the builder.

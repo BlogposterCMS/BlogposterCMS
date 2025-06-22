@@ -1,5 +1,6 @@
 //public/assets/plainspace/builder/widgets/widgetRenderer.js
 import { addHitLayer, executeJs } from '../utils.js';
+import { registerElement } from '../main/globalTextEditor.js';
 
 export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const instanceId = wrapper.dataset.instanceId;
@@ -36,7 +37,13 @@ export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
       customStyle.textContent = data.css;
       root.appendChild(customStyle);
     }
-    if (data.html) container.innerHTML = data.html;
+    if (data.html) {
+      container.innerHTML = data.html;
+      container.querySelectorAll('.editable').forEach(el => {
+        registerElement(el);
+        console.log('[DEBUG] registered editable in loaded widget', el);
+      });
+    }
     if (data.js) {
       try { executeJs(data.js, wrapper, root); } catch (e) { console.error('[Builder] custom js error', e); }
     }

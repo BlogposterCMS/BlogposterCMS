@@ -1,4 +1,4 @@
-// public/assets/plainSpace/admin/adminDashboard.js
+// public/assets/plainSpace/dashboard/adminDashboard.js
 
 (async () => {
   try {

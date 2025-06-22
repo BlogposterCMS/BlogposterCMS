@@ -1,4 +1,4 @@
-// public/assets/js/canvasGrid.js
+// public/assets/plainspace/main/canvasGrid.js
 // Lightweight drag & resize grid for the builder
 import { bindGlobalListeners } from './globalEvents.js';
 

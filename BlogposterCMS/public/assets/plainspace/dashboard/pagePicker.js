@@ -1,4 +1,4 @@
-// /assets/plainSpace/admin/pagePicker.js
+// /assets/plainSpace/dashboard/pagePicker.js
 ;(async () => {
   // Use the global emitter function, not an import
   const meltdownEmit = window.meltdownEmit;

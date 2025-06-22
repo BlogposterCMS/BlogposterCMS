@@ -5,7 +5,7 @@ module.exports = {
   entry: {
     adminSearch: './public/assets/js/adminSearch.js',
     alpine: './public/assets/js/alpine.js',
-    contentHeaderActions: './public/assets/plainspace/admin/contentHeaderActions.js',
+    contentHeaderActions: './public/assets/plainspace/dashboard/contentHeaderActions.js',
     firstInstallCheck: './public/assets/js/firstInstallCheck.js',
     icons: './public/assets/js/icons.js',
     login: './public/assets/js/login.js',
@@ -16,9 +16,9 @@ module.exports = {
     install: './public/assets/js/install.js',
     sortable: './public/assets/js/sortable.min.js',
     tokenLoader: './public/assets/js/tokenLoader.js',
-    topHeaderActions: './public/assets/plainspace/admin/topHeaderActions.js',
+    topHeaderActions: './public/assets/plainspace/dashboard/topHeaderActions.js',
     openExplorer: './public/assets/js/openExplorer.js',
-    pageActions: './public/assets/plainspace/admin/pageActions.js',
+    pageActions: './public/assets/plainspace/dashboard/pageActions.js',
     fontsLoader: './public/assets/js/fontsLoader.js'
   },
   output: {

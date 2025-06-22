@@ -1,4 +1,4 @@
-// public/assets/plainspace/admin/builderRenderer.js
+// public/assets/plainspace/dashboard/builderRenderer.js
 import { init as initCanvasGrid } from '../main/canvasGrid.js';
 import {
   editElement,

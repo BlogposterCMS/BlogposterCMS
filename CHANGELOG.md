@@ -5,6 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Changed
+- `admin` scripts moved under `public/assets/plainspace/dashboard` and the `partials` folder now lives directly in `plainspace`.
+- `globalEvents.js` relocated to `public/assets/plainspace/main` for consistent imports.
 - All widgets now reside under `public/assets/plainspace/widgets` with separate
   `admin` and `public` folders. Admin action scripts moved to the same
   plainspace area and CanvasGrid lives beside the renderer.

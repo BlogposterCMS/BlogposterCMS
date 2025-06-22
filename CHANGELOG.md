@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Changed
+- moved `colorPicker.js` and `allowedTags.js` into the builder module and updated imports
+- builder renderer split into multiple modules under `public/assets/plainspace/builder`
+  for easier maintenance; main entry renamed to `builderRenderer.js`
 - `admin` scripts moved under `public/assets/plainspace/dashboard` and the `partials` folder now lives directly in `plainspace`.
 - `globalEvents.js` relocated to `public/assets/plainspace/main` for consistent imports.
 - All widgets now reside under `public/assets/plainspace/widgets` with separate
@@ -19,6 +22,7 @@ El Psy Kongroo
 - Hit-layer rules consolidated in `_builder.scss` only
 - Builder opens page layouts on Layer 1 by default while keeping the global layer accessible.
 - Text widget no longer uses Shadow DOM and relies on scoped CSS classes.
+- Builder renderer moved to `public/assets/plainspace/builder` and helper functions split into `utils.js`.
 ### Added
 - Hit-layer overlay for text widgets to prevent accidental edits while dragging.
 - Canva-style two-step editing with click-to-edit and persistent bounding box.
@@ -31,6 +35,8 @@ El Psy Kongroo
 - Global text editor now initializes correctly when the builder loads, fixing missing toolbar issues.
 - Toolbar buttons and color picker no longer close the widget while editing.
 - DOM mutation tracking now records the actual editable section so nested edits persist correctly.
+- fixed path to `fetchPartial.js` in `pageRenderer.js` after asset reorganization
+- removed stray closing brace from `builderRenderer.js` to resolve build errors
 
 ## [0.6.0] – 2025-06-21
 ### Core Rewrite

@@ -1,7 +1,7 @@
 // public/assets/plainspace/main/globalTextEditor.js
 // Lightweight global text editor for builder mode.
-import { createColorPicker } from '../../js/colorPicker.js';
-import { isValidTag } from '../../js/allowedTags.js';
+import { createColorPicker } from '../builder/colorPicker.js';
+import { isValidTag } from '../builder/allowedTags.js';
 
 let toolbar = null;
 let activeEl = null;

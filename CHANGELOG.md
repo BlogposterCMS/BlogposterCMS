@@ -35,6 +35,7 @@ El Psy Kongroo
 - Global text editor now initializes correctly when the builder loads, fixing missing toolbar issues.
 - Toolbar buttons and color picker no longer close the widget while editing.
 - DOM mutation tracking now records the actual editable section so nested edits persist correctly.
+- Fixed partial loading paths in dashboard utilities after file restructure.
 - fixed path to `fetchPartial.js` in `pageRenderer.js` after asset reorganization
 - removed stray closing brace from `builderRenderer.js` to resolve build errors
 

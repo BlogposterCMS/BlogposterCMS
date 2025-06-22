@@ -39,6 +39,8 @@ El Psy Kongroo
 - Canva-style two-step editing with click-to-edit and persistent bounding box.
 - DOM mutation tracking keeps widget code synchronized and triggers autosave.
 ### Fixed
+- inline styles like `font-size` and `color` are now preserved when saving text
+  widgets, while disallowed style properties are stripped during sanitization
 - Builder grid reference exposed for text editor to properly lock widgets.
 - Toolbar context restored when editing text widgets and content now sanitized on save.
 - Removed duplicate toolbar helper definitions and cleaned unused variables in the editor.

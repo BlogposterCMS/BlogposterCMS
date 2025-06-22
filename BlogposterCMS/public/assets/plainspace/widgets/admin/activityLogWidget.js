@@ -1,4 +1,4 @@
-// public/assets/plainspace/admin/activityLogWidget.js
+// public/assets/plainspace/widgets/admin/activityLogWidget.js
 export function render(el){
     const ul=document.createElement('ul');
     ['login','view','logout'].forEach(a=>{

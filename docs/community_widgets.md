@@ -10,7 +10,7 @@ Each widget has its own subfolder containing:
 - `widget.js` – the client-side widget code.
 - `widgetInfo.json` – metadata used for registration.
 
-System and Blogposter widgets remain in `public/assets/plainspace/admin` or `public/assets/plainspace/public`.
+System and Blogposter widgets remain in `public/assets/plainspace/widgets/admin` or `public/assets/plainspace/widgets/public`.
 Keeping community code separate avoids accidental mixing of trusted and unknown code.
 
 ## Registration process

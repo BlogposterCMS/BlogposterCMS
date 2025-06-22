@@ -3,7 +3,7 @@
   // Use the global emitter function, not an import
   const meltdownEmit = window.meltdownEmit;
   const jwt         = window.ADMIN_TOKEN;         // injected by your Express route
-  const { init: initCanvasGrid } = await import('../js/canvasGrid.js');
+  const { init: initCanvasGrid } = await import('../main/canvasGrid.js');
 
   // Lightweight grid for arranging pages
   const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5 }, '#pagePickerGrid');

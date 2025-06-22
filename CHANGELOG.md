@@ -48,6 +48,7 @@ El Psy Kongroo
 - Fixed partial loading paths in dashboard utilities after file restructure.
 - fixed path to `fetchPartial.js` in `pageRenderer.js` after asset reorganization
 - removed stray closing brace from `builderRenderer.js` to resolve build errors
+- fixed path to `globalTextEditor.js` in `textBoxWidget` so widget loads correctly
 
 ## [0.6.0] – 2025-06-21
 ### Core Rewrite

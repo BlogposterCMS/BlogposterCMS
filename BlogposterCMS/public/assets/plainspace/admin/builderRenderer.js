@@ -7,7 +7,7 @@ import {
   hideToolbar,
   setActiveElement,
   getRegisteredEditable
-} from '../../js/globalTextEditor.js';
+} from '../main/globalTextEditor.js';
 
 function addHitLayer(widget) {
   const shield = document.createElement('div');
@@ -142,7 +142,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let lastSavedLayoutStr = '';
   let pendingSave = false;
   let proMode = true;
-  const userObservers = new Map();
   let gridEl;
   function handleHtmlUpdate(e) {
     const { instanceId, html } = e.detail || {};
@@ -204,64 +203,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     ? window.featherIcon('trash')
     : '<img src="/assets/icons/trash.svg" alt="delete" />';
 
-  function startUserMode(widget) {
-    const root = widget.querySelector('.canvas-item-content');
-    const container = root?.querySelector('.widget-container');
-    if (!container) return;
-    const target = container.querySelector('.editable') || container;
-    target.setAttribute('contenteditable', 'true');
-    target.style.userSelect = 'text';
-    let obs = userObservers.get(widget);
-    if (obs) obs.disconnect();
-    const instId = widget.dataset.instanceId;
-    obs = new MutationObserver(() => {
-      const html = target.innerHTML;
-      const htmlField = widget.__codeEditor?.querySelector('.editor-html');
-      if (htmlField) htmlField.value = html;
-      if (instId) {
-        codeMap[instId] = codeMap[instId] || {};
-        codeMap[instId].html = html;
-        if (pageId) scheduleAutosave();
-      }
-    });
-    obs.observe(target, { childList: true, subtree: true, characterData: true });
-    target.addEventListener('input', () => {
-      const html = target.innerHTML;
-      const htmlField = widget.__codeEditor?.querySelector('.editor-html');
-      if (htmlField) htmlField.value = html;
-      if (instId) {
-        codeMap[instId] = codeMap[instId] || {};
-        codeMap[instId].html = html;
-        if (pageId) scheduleAutosave();
-      }
-    });
-    userObservers.set(widget, obs);
-  }
 
-  function stopUserMode(widget) {
-    const root = widget.querySelector('.canvas-item-content');
-    const container = root?.querySelector('.widget-container');
-    const target = container?.querySelector('.editable') || container;
-    if (target) {
-      target.removeAttribute('contenteditable');
-      target.style.userSelect = 'none';
-    }
-    const obs = userObservers.get(widget);
-    if (obs) obs.disconnect();
-    userObservers.delete(widget);
-  }
 
   function applyProMode() {
     document.body.classList.toggle('pro-mode', proMode);
     document.querySelectorAll('.widget-edit').forEach(btn => {
       btn.style.display = proMode ? '' : 'none';
-    });
-    document.querySelectorAll('.canvas-item').forEach(w => {
-      if (proMode) {
-        stopUserMode(w);
-      } else {
-        startUserMode(w);
-      }
     });
     if (!proMode) {
       document.querySelectorAll('.widget-code-editor').forEach(ed => {
@@ -506,7 +453,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     btn.style.display = proMode ? '' : 'none';
     btn.addEventListener('click', async e => {
       e.stopPropagation();
-      stopUserMode(el);
       let overlay = el.__codeEditor;
       let htmlEl, cssEl, jsEl;
       if (!overlay) {
@@ -672,7 +618,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         overlay.style.display = 'none';
         renderWidget(el, widgetDef);
         if (pageId) scheduleAutosave();
-        if (!proMode) startUserMode(el);
 
       };
       overlay.querySelector('.reset-btn').onclick = () => {
@@ -688,7 +633,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       };
       overlay.querySelector('.cancel-btn').onclick = () => {
         overlay.style.display = 'none';
-        if (!proMode) startUserMode(el);
       };
     });
     el.appendChild(btn);
@@ -844,7 +788,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       gridEl.appendChild(wrapper);
       grid.makeWidget(wrapper);
       renderWidget(wrapper, widgetDef);
-      if (!proMode) startUserMode(wrapper);
     });
     applyProMode();
   }

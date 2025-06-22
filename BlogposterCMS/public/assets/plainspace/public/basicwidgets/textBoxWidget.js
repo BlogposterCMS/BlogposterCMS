@@ -1,5 +1,5 @@
 //public/assets/plainspace/public/basicwidgets/textBoxWidget.js
-import { registerElement } from '../../../js/globalTextEditor.js';
+import { registerElement } from '../../main/globalTextEditor.js';
 
 export function render(el, ctx = {}) {
   if (!el) return;
@@ -12,7 +12,6 @@ export function render(el, ctx = {}) {
 
   const editable = document.createElement('div');
   editable.className = 'editable';
-  editable.setAttribute('contenteditable', 'true');
   editable.textContent = 'Lorem ipsum dolor sit amet';
 
   if (ctx.id) {

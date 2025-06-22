@@ -11,7 +11,7 @@ module.exports = {
     login: './public/assets/js/login.js',
     meltdownEmitter: './public/assets/js/meltdownEmitter.js',
     pageDataLoader: './public/assets/js/pageDataLoader.js',
-    pageRenderer: './public/assets/js/pageRenderer.js',
+    pageRenderer: './public/assets/plainspace/main/pageRenderer.js',
     
     install: './public/assets/js/install.js',
     sortable: './public/assets/js/sortable.min.js',

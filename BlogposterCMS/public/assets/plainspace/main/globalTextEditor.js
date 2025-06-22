@@ -1,7 +1,7 @@
-// public/assets/js/globalTextEditor.js
+// public/assets/plainspace/main/globalTextEditor.js
 // Lightweight global text editor for builder mode.
-import { createColorPicker } from './colorPicker.js';
-import { isValidTag } from './allowedTags.js';
+import { createColorPicker } from '../../js/colorPicker.js';
+import { isValidTag } from '../../js/allowedTags.js';
 
 let toolbar = null;
 let activeEl = null;
@@ -490,6 +490,11 @@ export function editElement(el, onSave) {
 
 export function registerElement(editable, onSave) {
   if (!editable) return;
+  if (!editable.id || (document.getElementById(editable.id) && document.getElementById(editable.id) !== editable)) {
+    editable.id = `editable-${Math.random().toString(36).slice(2,8)}`;
+  }
+  if (editable.__registered) return;
+  editable.__registered = true;
   editable.__onSave = onSave;
   const widget = findWidget(editable);
   if (widget) {

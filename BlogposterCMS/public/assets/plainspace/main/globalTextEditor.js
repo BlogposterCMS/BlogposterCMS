@@ -10,6 +10,20 @@ let autoHandler = null;
 let currentColor = '#000000';
 let colorPicker = null;
 
+function dispatchHtmlUpdate(el) {
+  if (!el) return;
+  const widget = findWidget(el);
+  const instanceId = widget?.dataset.instanceId;
+  if (!instanceId) return;
+  const clean = sanitizeHtml(el.innerHTML.trim());
+  console.log('[DEBUG] dispatchHtmlUpdate', instanceId, clean);
+  document.dispatchEvent(
+    new CustomEvent('widgetHtmlUpdate', {
+      detail: { instanceId, html: clean }
+    })
+  );
+}
+
 const editableMap = new WeakMap();
 
 
@@ -479,6 +493,10 @@ export function editElement(el, onSave) {
   el.focus();
   activeEl = el;
 
+  const inputHandler = () => dispatchHtmlUpdate(el);
+  el.addEventListener('input', inputHandler);
+  el.__inputHandler = inputHandler;
+
   showToolbar(el);
 
   function finish(save) {
@@ -486,6 +504,7 @@ export function editElement(el, onSave) {
       const clean = sanitizeHtml(el.innerHTML.trim());
       el.innerHTML = clean;
       onSave?.(clean);
+      dispatchHtmlUpdate(el);
     }
     activeEl = null;
 
@@ -498,6 +517,10 @@ export function editElement(el, onSave) {
 
     el.removeEventListener('mouseenter', block);
     el.removeEventListener('mouseleave', allow);
+    if (el.__inputHandler) {
+      el.removeEventListener('input', el.__inputHandler);
+      delete el.__inputHandler;
+    }
 
     if (hitLayer) hitLayer.style.pointerEvents = 'auto';
 
@@ -533,6 +556,7 @@ export function registerElement(editable, onSave) {
   if (widget) {
     editableMap.set(widget, editable);
   }
+  console.log('[DEBUG] registerElement:', editable, 'for widget:', widget);
 }
 
 export function getRegisteredEditable(widget) {
@@ -575,6 +599,7 @@ export function applyToolbarChange(el, styleProp, value) {
   const clean = sanitizeHtml(el.innerHTML.trim());
   el.innerHTML = clean;
   el.__onSave?.(clean);
+  dispatchHtmlUpdate(el);
 }
 
 function showToolbar(el) {

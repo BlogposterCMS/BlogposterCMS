@@ -1336,4 +1336,3 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.appendChild(layoutBar);
   }
 
-}

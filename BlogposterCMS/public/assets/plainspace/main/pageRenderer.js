@@ -1,6 +1,6 @@
 // public/assets/plainspace/main/pageRenderer.js
 
-import { fetchPartial } from '../admin/fetchPartial.js';
+import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { initBuilder } from '../builder/builderRenderer.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
 import { enableAutoEdit, sanitizeHtml } from './globalTextEditor.js';

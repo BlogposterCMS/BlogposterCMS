@@ -16,7 +16,7 @@ import { addHitLayer, applyBuilderTheme, wrapCss, executeJs } from './utils.js';
 import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
-import { getWidgetIcon } from './renderer/renderUtils.js';
+import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0) {
   document.body.classList.add('builder-mode');
@@ -108,31 +108,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     lastSavedLayoutStr: '' ,
     activeWidgetEl: null
   };
-  function handleHtmlUpdate(e) {
-    const { instanceId, html } = e.detail || {};
-    if (!instanceId || typeof html !== 'string') return;
-    codeMap[instanceId] = codeMap[instanceId] || {};
-    codeMap[instanceId].html = html;
-
-    const wrapper = gridEl?.querySelector(`.canvas-item[data-instance-id="${instanceId}"]`);
-    if (wrapper && wrapper.__codeEditor && wrapper.__codeEditor.style.display !== 'none') {
-      const htmlField = wrapper.__codeEditor.querySelector('.editor-html');
-      if (htmlField) htmlField.value = html;
-    }
-  }
-  document.addEventListener('widgetHtmlUpdate', handleHtmlUpdate);
-
-  function updateAllWidgetContents() {
-    if (!gridEl) return;
-    gridEl.querySelectorAll('.canvas-item').forEach(widget => {
-      const editable = getRegisteredEditable(widget);
-      if (!editable) return;
-      const instId = widget.dataset.instanceId;
-      if (!instId) return;
-      if (!codeMap[instId]) codeMap[instId] = {};
-      codeMap[instId].html = editable.innerHTML.trim();
-    });
-  }
 
   function applyProMode() {
     document.body.classList.toggle('pro-mode', proMode);
@@ -147,306 +122,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
 
-  // Widget locking is now handled directly by the global text editor.
 
-  function extractCssProps(el) {
-    if (!el) return '';
-    const style = getComputedStyle(el);
-    const props = [
-      'color', 'background', 'background-color', 'font-size', 'font-weight',
-      'padding', 'margin', 'border', 'border-radius', 'display'
-    ];
-    return props.map(p => `${p}: ${style.getPropertyValue(p)};`).join('\n');
-  }
 
-  function makeSelector(el) {
-    if (!el) return '';
-    if (el.id) return `#${el.id}`;
-    const cls = [...el.classList].join('.');
-    const tag = el.tagName.toLowerCase();
-    return cls ? `${tag}.${cls}` : tag;
-  }
-
-    script.remove();
-    delete window.__builderRoot;
-    delete window.__builderWrapper;
-  }
-
-  function getWidgetIcon(w) {
-    const iconName = w.metadata?.icon || ICON_MAP[w.id] || w.id;
-    return window.featherIcon ? window.featherIcon(iconName) :
-      `<img src="/assets/icons/${iconName}.svg" alt="${iconName}" />`;
-  }
-
-  function renderWidget(wrapper, widgetDef, customData = null) {
-    const instanceId = wrapper.dataset.instanceId;
-    const data = customData || codeMap[instanceId] || null;
-
-    const content = wrapper.querySelector('.canvas-item-content');
-    content.innerHTML = '';
-    const root = content;
-    // Clean existing children to avoid duplicates on re-render
-    while (root.firstChild) {
-      root.removeChild(root.firstChild);
-    }
-    const container = document.createElement('div');
-    container.className = 'widget-container';
-    container.style.width = '100%';
-    container.style.height = '100%';
-    // Prevent drag actions when interacting with form controls inside widgets.
-    // Attach the handler on both the container and the grid item content so
-    // events are intercepted before the grid logic runs.
-    const stop = ev => {
-      const t = ev.target.closest('input, textarea, select, label, button');
-      if (t) {
-        ev.stopPropagation();
-        ev.stopImmediatePropagation();
-      }
-    };
-    container.addEventListener('pointerdown', stop, true);
-    container.addEventListener('mousedown', stop, true);
-    container.addEventListener(
-      'touchstart',
-      stop,
-      { capture: true, passive: true }
-    );
-    content.addEventListener('pointerdown', stop, true);
-    content.addEventListener('mousedown', stop, true);
-    content.addEventListener(
-      'touchstart',
-      stop,
-      { capture: true, passive: true }
-    );
-    root.appendChild(container);
-
-    if (data) {
-      if (data.css) {
-        const customStyle = document.createElement('style');
-        customStyle.textContent = data.css;
-        root.appendChild(customStyle);
-      }
-      // theme styles applied globally
-      if (data.html) {
-        container.innerHTML = data.html;
-      }
-      if (data.js) {
-        try { executeJs(data.js, wrapper, root); } catch (e) { console.error('[Builder] custom js error', e); }
-      }
-      return;
-    }
-    const ctx = {
-      id: instanceId,
-      widgetId: widgetDef.id,
-      metadata: widgetDef.metadata
-    };
-    if (window.ADMIN_TOKEN) {
-      ctx.jwt = window.ADMIN_TOKEN;
-    }
-    const codeUrl = new URL(widgetDef.codeUrl, document.baseURI).href;
-    import(codeUrl)
-      .then(m => m.render?.(container, ctx))
-      .catch(err => console.error('[Builder] widget import error', err));
-
-    // theme styles applied globally
-
-    if (widgetDef.id === 'textBox') {
-      addHitLayer(wrapper);
-    }
-  }
-
-  function attachEditButton(el, widgetDef) {
-    const btn = document.createElement('button');
-    btn.className = 'widget-edit';
-    // Use a gear icon to enter pro mode
-    btn.innerHTML = window.featherIcon ? window.featherIcon('settings') : '<img src="/assets/icons/settings.svg" alt="pro" />';
-    btn.style.display = proMode ? '' : 'none';
-    btn.addEventListener('click', async e => {
-      e.stopPropagation();
-      let overlay = el.__codeEditor;
-      let htmlEl, cssEl, jsEl;
-      if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.className = 'widget-code-editor';
-        overlay.dataset.instanceId = el.dataset.instanceId;
-        overlay.innerHTML = `
-          <div class="editor-inner">
-            <label>HTML</label>
-            <textarea class="editor-html"></textarea>
-            <label>CSS</label>
-            <textarea class="editor-css"></textarea>
-            <label>JS</label>
-            <textarea class="editor-js"></textarea>
-            <div class="editor-actions">
-              <button class="media-btn">Insert Image</button>
-              <button class="save-btn">Save</button>
-              <button class="reset-btn">Reset to Default</button>
-              <button class="cancel-btn">Cancel</button>
-            </div>
-          </div>`;
-        document.body.appendChild(overlay);
-
-        htmlEl = overlay.querySelector('.editor-html');
-        cssEl = overlay.querySelector('.editor-css');
-        jsEl = overlay.querySelector('.editor-js');
-        const mediaBtn = overlay.querySelector('.media-btn');
-        const updateRender = () => {
-          const finalCss = wrapCss(cssEl.value, overlay.currentSelector);
-          renderWidget(el, widgetDef, {
-            html: htmlEl.value,
-            css: finalCss,
-            js: jsEl.value
-          });
-        };
-
-        htmlEl.addEventListener('input', updateRender);
-        cssEl.addEventListener('input', updateRender);
-        jsEl.addEventListener('input', updateRender);
-
-        mediaBtn.addEventListener('click', async () => {
-          try {
-            const { shareURL } = await window.meltdownEmit('openMediaExplorer', { jwt: window.ADMIN_TOKEN });
-            if (shareURL) {
-              const ta = htmlEl;
-              const start = ta.selectionStart || 0;
-              const end = ta.selectionEnd || 0;
-              const safeUrl = shareURL.replace(/"/g, '&quot;');
-              const imgTag = `<img src="${safeUrl}" alt="" />`;
-              ta.value = ta.value.slice(0, start) + imgTag + ta.value.slice(end);
-              ta.focus();
-              ta.setSelectionRange(start + imgTag.length, start + imgTag.length);
-              updateRender();
-            }
-          } catch (err) {
-            console.error('[Builder] openMediaExplorer error', err);
-          }
-        });
-
-        overlay.updateRender = updateRender;
-        el.__codeEditor = overlay;
-      } else {
-        overlay.dataset.instanceId = el.dataset.instanceId;
-        htmlEl = overlay.querySelector('.editor-html');
-        cssEl = overlay.querySelector('.editor-css');
-        jsEl = overlay.querySelector('.editor-js');
-        const mediaBtn = overlay.querySelector('.media-btn');
-        overlay.updateRender = () => {
-          const finalCss = wrapCss(cssEl.value, overlay.currentSelector);
-          renderWidget(el, widgetDef, {
-            html: htmlEl.value,
-            css: finalCss,
-            js: jsEl.value
-          });
-        };
-        mediaBtn.onclick = async () => {
-          try {
-            const { shareURL } = await window.meltdownEmit('openMediaExplorer', { jwt: window.ADMIN_TOKEN });
-            if (shareURL) {
-              const ta = htmlEl;
-              const start = ta.selectionStart || 0;
-              const end = ta.selectionEnd || 0;
-              const safeUrl = shareURL.replace(/"/g, '&quot;');
-              const imgTag = `<img src="${safeUrl}" alt="" />`;
-              ta.value = ta.value.slice(0, start) + imgTag + ta.value.slice(end);
-              ta.focus();
-              ta.setSelectionRange(start + imgTag.length, start + imgTag.length);
-              overlay.updateRender && overlay.updateRender();
-            }
-          } catch (err) {
-            console.error('[Builder] openMediaExplorer error', err);
-          }
-        };
-      }
-      const instId = el.dataset.instanceId;
-      const codeData = codeMap[instId] ? { ...codeMap[instId] } : {};
-
-      if (!codeData.sourceJs) {
-        try {
-          const resp = await window.fetchWithTimeout(
-            new URL(widgetDef.codeUrl, document.baseURI).href
-          );
-          codeData.sourceJs = await resp.text();
-        } catch (err) {
-          console.error('[Builder] fetch widget source error', err);
-          codeData.sourceJs = '';
-        }
-      }
-      if (codeData.html) {
-        htmlEl.value = codeData.html;
-      } else {
-        const root = el.querySelector('.canvas-item-content');
-        const container = root?.querySelector('.widget-container');
-        htmlEl.value = container ? container.innerHTML.trim() : '';
-      }
-      overlay.querySelector('.editor-css').value = codeData.css || '';
-      jsEl.value = codeData.js || '';
-      overlay.defaultJs = codeData.sourceJs || '';
-      overlay.currentSelector = codeData.selector || '';
-
-      function pickElement() {
-        const root = el.querySelector('.canvas-item-content');
-        if (!root) return;
-        const handler = ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          overlay.currentSelector = makeSelector(ev.target);
-          overlay.querySelector('.editor-css').value = extractCssProps(ev.target);
-          overlay.updateRender && overlay.updateRender();
-          root.removeEventListener('click', handler, true);
-        };
-        root.addEventListener('click', handler, true);
-      }
-
-      pickElement();
-
-      const rect = el.getBoundingClientRect();
-      const spaceRight = window.innerWidth - rect.right;
-      const spaceLeft = rect.left;
-      overlay.classList.remove('left', 'right');
-      overlay.style.display = 'block';
-      overlay.style.visibility = 'hidden';
-      overlay.style.top = `${rect.top}px`;
-      if (spaceRight >= 300 || spaceRight >= spaceLeft) {
-        overlay.classList.add('right');
-        overlay.style.left = `${rect.right + 8}px`;
-      } else {
-        overlay.classList.add('left');
-        const left = rect.left - overlay.offsetWidth - 8;
-        overlay.style.left = `${Math.max(0, left)}px`;
-      }
-      overlay.style.visibility = '';
-
-      overlay.updateRender && overlay.updateRender();
-      overlay.querySelector('.save-btn').onclick = () => {
-        const instId = el.dataset.instanceId;
-        codeMap[instId] = {
-          html: htmlEl.value,
-          css: wrapCss(cssEl.value, overlay.currentSelector),
-          js: jsEl.value,
-          selector: overlay.currentSelector
-        };
-        overlay.style.display = 'none';
-        renderWidget(el, widgetDef);
-        if (pageId) scheduleAutosave();
-
-      };
-      overlay.querySelector('.reset-btn').onclick = () => {
-        if (!confirm('Willst du wirklich alle Anpassungen zurücksetzen?')) return;
-        const instId = el.dataset.instanceId;
-        delete codeMap[instId];
-        htmlEl.value = '';
-        overlay.querySelector('.editor-css').value = '';
-        overlay.querySelector('.editor-js').value = overlay.defaultJs || '';
-        overlay.currentSelector = '';
-        overlay.updateRender && overlay.updateRender();
-        if (pageId) scheduleAutosave();
-      };
-      overlay.querySelector('.cancel-btn').onclick = () => {
-        overlay.style.display = 'none';
-      };
-    });
-    el.appendChild(btn);
-    return btn;
-  }
 
   let allWidgets = [];
   try {
@@ -462,7 +139,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   sidebarEl.querySelector('.drag-icons').innerHTML = allWidgets.map(w => `
     <div class="sidebar-item drag-widget-icon" draggable="true" data-widget-id="${w.id}">
-      ${getWidgetIcon(w)}
+      ${getWidgetIcon(w, ICON_MAP)}
       <span class="label">${w.metadata.label}</span>
     </div>
   `).join('');
@@ -607,175 +284,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
 
-  function attachOptionsMenu(el, widgetDef, editBtn) {
-    const menuBtn = document.createElement('button');
-    menuBtn.className = 'widget-menu';
-    menuBtn.innerHTML = window.featherIcon ? window.featherIcon('more-vertical') :
-      '<img src="/assets/icons/more-vertical.svg" alt="menu" />';
 
-    const menu = document.createElement('div');
-    menu.className = 'widget-options-menu';
-    menu.innerHTML = `
-      <button class="menu-edit"><img src="/assets/icons/edit.svg" class="icon" alt="edit" /> Edit Code</button>
-      <button class="menu-copy"><img src="/assets/icons/copy.svg" class="icon" alt="duplicate" /> Duplicate</button>
-      <button class="menu-template"><img src="/assets/icons/package.svg" class="icon" alt="template" /> Save as Template</button>
-      <button class="menu-lock"><img src="/assets/icons/lock.svg" class="icon" alt="lock" /> Lock Position</button>
-      <button class="menu-snap"><img src="/assets/icons/grid.svg" class="icon" alt="snap" /> Snap to Grid</button>
-      <button class="menu-global"><img src="/assets/icons/globe.svg" class="icon" alt="global" /> Set as Global Widget</button>
-      <button class="menu-layer-up"><img src="/assets/icons/arrow-up.svg" class="icon" alt="layer up" /> Layer Up</button>
-      <button class="menu-layer-down"><img src="/assets/icons/arrow-down.svg" class="icon" alt="layer down" /> Layer Down</button>
-    `;
-    menu.style.display = 'none';
-    document.body.appendChild(menu);
-
-    function hideMenu() {
-      menu.style.display = "none";
-      document.removeEventListener("click", outsideHandler);
-    }
-
-    function showMenu(triggerEl = menuBtn) {
-      updateGlobalBtn();
-      menu.style.display = "block";
-      menu.style.visibility = "hidden";
-      const rect = triggerEl.getBoundingClientRect();
-      menu.style.top = `${rect.top}px`;
-      const spaceRight = window.innerWidth - rect.right;
-      const spaceLeft = rect.left;
-      if (spaceRight >= menu.offsetWidth || spaceRight >= spaceLeft) {
-        menu.style.left = `${rect.right + 4}px`;
-      } else {
-        const left = rect.left - menu.offsetWidth - 4;
-        menu.style.left = `${Math.max(0, left)}px`;
-      }
-      menu.style.visibility = "";
-      menu.currentTrigger = triggerEl;
-      document.addEventListener("click", outsideHandler);
-    }
-
-    function outsideHandler(ev) {
-      if (!menu.contains(ev.target) && ev.target !== menu.currentTrigger) hideMenu();
-    }
-
-    menu.show = showMenu;
-    menu.hide = hideMenu;
-
-    menuBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      if (menu.style.display === "block" && menu.currentTrigger === menuBtn) {
-        hideMenu();
-        return;
-      }
-      showMenu(menuBtn);
-    });
-
-    menu.querySelector('.menu-edit').onclick = () => { editBtn.click(); menu.style.display = 'none'; };
-    menu.querySelector('.menu-copy').onclick = () => {
-      const clone = el.cloneNode(true);
-      const cloneId = genId();
-      clone.id = `widget-${cloneId}`;
-      clone.dataset.instanceId = cloneId;
-      clone.dataset.global = el.dataset.global || 'false';
-      clone.dataset.layer = el.dataset.layer || String(activeLayer);
-      gridEl.appendChild(clone);
-      grid.makeWidget(clone);
-      attachRemoveButton(clone);
-      const cEditBtn = attachEditButton(clone, widgetDef);
-      attachOptionsMenu(clone, widgetDef, cEditBtn);
-      renderWidget(clone, widgetDef);
-      menu.style.display = 'none';
-    };
-    menu.querySelector('.menu-template').onclick = () => {
-      const defaultName = widgetDef.metadata?.label || widgetDef.id;
-      const name = prompt('Template name:', defaultName);
-      if (!name) { menu.style.display = 'none'; return; }
-      let templates = [];
-      try { templates = JSON.parse(localStorage.getItem('widgetTemplates') || '[]'); } catch {}
-      const data = getItemData(el, codeMap);
-      const idx = templates.findIndex(t => t.name === name);
-      if (idx !== -1) {
-        if (!confirm('Template exists. Override?')) { menu.style.display = 'none'; return; }
-        templates[idx].data = data;
-        templates[idx].widgetId = widgetDef.id;
-        templates[idx].label = widgetDef.metadata?.label || widgetDef.id;
-      } else {
-        templates.push({ name, widgetId: widgetDef.id, label: widgetDef.metadata?.label || widgetDef.id, data });
-      }
-      localStorage.setItem('widgetTemplates', JSON.stringify(templates));
-      window.dispatchEvent(new Event('widgetTemplatesUpdated'));
-      menu.style.display = 'none';
-    };
-    menu.querySelector('.menu-lock').onclick = () => {
-      const locked = el.getAttribute('gs-locked') === 'true';
-      el.setAttribute('gs-locked', (!locked).toString());
-      grid.update(el, { locked: !locked, noMove: !locked, noResize: !locked });
-      menu.style.display = 'none';
-    };
-    menu.querySelector('.menu-snap').onclick = () => {
-      grid.update(el, {
-        x: Math.round(+el.dataset.x || 0),
-        y: Math.round(+el.dataset.y || 0),
-        w: Math.round(+el.getAttribute('gs-w')),
-        h: Math.round(+el.getAttribute('gs-h'))
-      });
-      if (pageId) scheduleAutosave();
-      menu.style.display = 'none';
-    };
-    const globalBtn = menu.querySelector('.menu-global');
-    function updateGlobalBtn() {
-      const isGlobal = el.dataset.global === 'true';
-      globalBtn.innerHTML = `<img src="/assets/icons/globe.svg" class="icon" alt="global" /> ${isGlobal ? 'Unset Global' : 'Set as Global Widget'}`;
-    }
-    globalBtn.onclick = () => {
-      const isGlobal = el.dataset.global === 'true';
-      if (isGlobal) {
-        el.dataset.global = 'false';
-        const newLocalId = genId();
-        el.dataset.instanceId = newLocalId;
-        el.id = `widget-${newLocalId}`;
-      } else {
-        el.dataset.global = 'true';
-        el.dataset.instanceId = `global-${widgetDef.id}`;
-        el.id = `widget-${el.dataset.instanceId}`;
-      }
-      updateGlobalBtn();
-      menu.style.display = 'none';
-      if (pageId) scheduleAutosave();
-    };
-
-    menu.querySelector('.menu-layer-up').onclick = () => {
-      const layer = (+el.dataset.layer || 0) + 1;
-      el.dataset.layer = layer;
-      el.style.zIndex = layer.toString();
-      menu.style.display = 'none';
-      if (pageId) scheduleAutosave();
-    };
-
-    menu.querySelector('.menu-layer-down').onclick = () => {
-      let layer = (+el.dataset.layer || 0) - 1;
-      if (layer < 0) layer = 0;
-      el.dataset.layer = layer;
-      el.style.zIndex = layer.toString();
-      menu.style.display = 'none';
-      if (pageId) scheduleAutosave();
-    };
-
-    el.appendChild(menuBtn);
-    el.__optionsMenu = menu;
-  }
-
-  function attachLockOnClick(el) {
-    el.addEventListener('click', e => {
-      e.stopPropagation();
-      if (state.activeWidgetEl === el) {
-        const editable = getRegisteredEditable(el);
-        if (editable) {
-          editElement(editable, editable.__onSave);
-          return;
-        }
-      }
-      selectWidget(el);
-    });
-  }
 
 
   layoutLayers[0].layout = initialLayout;
@@ -829,7 +338,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
     const content = document.createElement('div');
     content.className = 'canvas-item-content builder-themed';
-    content.innerHTML = `${getWidgetIcon(widgetDef)}<span>${widgetDef.metadata?.label || widgetDef.id}</span>`;
+    content.innerHTML = `${getWidgetIcon(widgetDef, ICON_MAP)}<span>${widgetDef.metadata?.label || widgetDef.id}</span>`;
     wrapper.appendChild(content);
     attachRemoveButton(wrapper);
     const editBtn2 = attachEditButton(wrapper, widgetDef);
@@ -838,7 +347,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
 
-    renderWidget(wrapper, widgetDef);
+    renderWidget(wrapper, widgetDef, codeMap);
     if (pageId) scheduleAutosave();
   });
 
@@ -1121,3 +630,4 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.appendChild(layoutBar);
   }
 
+}

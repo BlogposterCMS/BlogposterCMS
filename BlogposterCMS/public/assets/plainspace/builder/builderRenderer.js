@@ -9,20 +9,7 @@ import {
   getRegisteredEditable
 } from '../main/globalTextEditor.js';
 
-function addHitLayer(widget) {
-  const shield = document.createElement('div');
-  shield.className = 'hit-layer';
-  Object.assign(shield.style, {
-    position: 'absolute',
-    inset: '0',
-    background: 'transparent',
-    cursor: 'move',
-    pointerEvents: 'auto',
-    zIndex: '5'
-  });
-  widget.style.position = 'relative';
-  widget.appendChild(shield);
-}
+import { addHitLayer, applyBuilderTheme, wrapCss, executeJs } from './utils.js';
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0) {
   document.body.classList.add('builder-mode');
@@ -103,41 +90,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.classList.remove('preview-mobile', 'preview-tablet', 'preview-desktop');
   }
 
-  function scopeThemeCss(css, rootPrefix, contentPrefix) {
-    return css.replace(/(^|\})([^@{}]+)\{/g, (m, brace, selectors) => {
-      selectors = selectors.trim();
-      if (!selectors || selectors.startsWith('@')) return m;
-      const scoped = selectors.split(',').map(s => {
-        s = s.trim();
-        if ([':root', 'html', 'body'].includes(s)) return rootPrefix;
-        return `${contentPrefix} ${s}`;
-      }).join(', ');
-      return `${brace}${scoped}{`;
-    });
-  }
-
-  async function applyBuilderTheme() {
-    const theme = window.ACTIVE_THEME || 'default';
-    try {
-      const res = await window.fetchWithTimeout(`/themes/${theme}/theme.css`);
-      if (!res.ok) throw new Error('theme css fetch failed');
-      const css = await res.text();
-      const scoped = scopeThemeCss(css, '#builderGrid', '#builderGrid .builder-themed');
-      const style = document.createElement('style');
-      style.dataset.builderTheme = theme;
-      style.textContent = scoped;
-      document.head.appendChild(style);
-    } catch (err) {
-      console.error('[Builder] failed to apply theme', err);
-    }
-  }
-
-  const codeMap = {};
-  const undoStack = [];
-  const redoStack = [];
-  const MAX_HISTORY = 20;
-  let autosaveEnabled = true;
-  let autosaveInterval = null;
   let saveTimer = null;
   let lastSavedLayoutStr = '';
   let pendingSave = false;
@@ -320,44 +272,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     return cls ? `${tag}.${cls}` : tag;
   }
 
-  function wrapCss(css, selector) {
-    const trimmed = css.trim();
-    if (!trimmed) return '';
-    if (!selector || /\{[^}]*\}/.test(trimmed)) return trimmed;
-    return `${selector} {\n${trimmed}\n}`;
-  }
-
-  function executeJs(code, wrapper, root) {
-    if (!code) return;
-    const nonce = window.NONCE;
-    if (!nonce) {
-      console.error('[Builder] missing nonce');
-      return;
-    }
-    code = code.trim();
-    // If the code looks like an ES module, execute it via dynamic import
-    if (/^import\s|^export\s/m.test(code)) {
-      const blob = new Blob([code], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      import(url).then(m => {
-        if (typeof m.render === 'function') {
-          try { m.render.call(wrapper, root); } catch (err) {
-            console.error('[Builder] module render error', err);
-          }
-        }
-        URL.revokeObjectURL(url);
-      }).catch(err => {
-        console.error('[Builder] module import error', err);
-        URL.revokeObjectURL(url);
-      });
-      return;
-    }
-    window.__builderRoot = root;
-    window.__builderWrapper = wrapper;
-    const script = document.createElement('script');
-    script.setAttribute('nonce', nonce);
-    script.textContent = `(function(root){\n${code}\n}).call(window.__builderWrapper, window.__builderRoot);`;
-    document.body.appendChild(script);
     script.remove();
     delete window.__builderRoot;
     delete window.__builderWrapper;

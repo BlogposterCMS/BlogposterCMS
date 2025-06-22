@@ -15,6 +15,7 @@ El Psy Kongroo
 ### Added
 - Hit-layer overlay for text widgets to prevent accidental edits while dragging.
 - Canva-style two-step editing with click-to-edit and persistent bounding box.
+- DOM mutation tracking keeps widget code synchronized and triggers autosave.
 ### Fixed
 - Builder grid reference exposed for text editor to properly lock widgets.
 - Toolbar context restored when editing text widgets and content now sanitized on save.
@@ -22,6 +23,7 @@ El Psy Kongroo
 - Text widgets remain editable until clicking outside the widget or toolbar and no longer lock movement.
 - Global text editor now initializes correctly when the builder loads, fixing missing toolbar issues.
 - Toolbar buttons and color picker no longer close the widget while editing.
+- DOM mutation tracking now records the actual editable section so nested edits persist correctly.
 
 ## [0.6.0] – 2025-06-21
 ### Core Rewrite

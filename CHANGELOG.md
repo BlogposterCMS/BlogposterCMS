@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Changed
+- builder renderer now imports helper modules correctly and inline duplicates were removed
 - moved `colorPicker.js` and `allowedTags.js` into the builder module and updated imports
 - builder renderer split into multiple modules under `public/assets/plainspace/builder`
   for easier maintenance; main entry renamed to `builderRenderer.js`

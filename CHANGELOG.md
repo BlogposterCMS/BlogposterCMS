@@ -12,6 +12,7 @@ El Psy Kongroo
   for easier maintenance; main entry renamed to `builderRenderer.js`
 ### Fixed
 - removed leftover widget helper functions from `builderRenderer.js` and resolved build error
+- fixed header and sidebar partial paths in `pageRenderer.js` so assets load correctly
 - `admin` scripts moved under `public/assets/plainspace/dashboard` and the `partials` folder now lives directly in `plainspace`.
 - `globalEvents.js` relocated to `public/assets/plainspace/main` for consistent imports.
 - All widgets now reside under `public/assets/plainspace/widgets` with separate

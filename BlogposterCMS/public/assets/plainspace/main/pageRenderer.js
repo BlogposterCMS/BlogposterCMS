@@ -289,8 +289,7 @@ function ensureLayout(layout = {}, lane = 'public') {
       if (topHeaderEl) {
         topHeaderEl.innerHTML = sanitizeHtml(
           await fetchPartialSafe(
-            config.layout?.header || 'top-header',
-            'headers'
+            config.layout?.header || 'top-header'
           )
         );
         document.dispatchEvent(new CustomEvent('top-header-loaded'));
@@ -300,7 +299,7 @@ function ensureLayout(layout = {}, lane = 'public') {
             mainHeaderEl.innerHTML = '';
           } else {
             mainHeaderEl.innerHTML = sanitizeHtml(
-              await fetchPartialSafe(config.layout?.mainHeader || 'main-header', 'headers')
+              await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
             );
           }
           if (lane === 'admin' && page.title) {
@@ -312,8 +311,7 @@ function ensureLayout(layout = {}, lane = 'public') {
       if (contentHeaderEl) {
         contentHeaderEl.innerHTML = sanitizeHtml(
           await fetchPartialSafe(
-            config.layout?.contentHeader || 'content-header',
-            'headers'
+            config.layout?.contentHeader || 'content-header'
           )
         );
         document.dispatchEvent(new CustomEvent('content-header-loaded'));
@@ -325,7 +323,7 @@ function ensureLayout(layout = {}, lane = 'public') {
       const builderSidebar = config.layout?.sidebar || 'sidebar-builder';
       if (sidebarEl) {
         sidebarEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(builderSidebar, 'sidebars')
+          await fetchPartialSafe(builderSidebar)
         );
       }
 
@@ -351,7 +349,7 @@ function ensureLayout(layout = {}, lane = 'public') {
     if (sidebarEl) {
       if (sidebarPartial !== 'empty-sidebar') {
         sidebarEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(sidebarPartial, 'sidebars')
+          await fetchPartialSafe(sidebarPartial)
         );
         sidebarEl.style.display = '';
       } else {

@@ -213,14 +213,27 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     target.style.userSelect = 'text';
     let obs = userObservers.get(widget);
     if (obs) obs.disconnect();
+    const instId = widget.dataset.instanceId;
     obs = new MutationObserver(() => {
+      const html = target.innerHTML;
       const htmlField = widget.__codeEditor?.querySelector('.editor-html');
-      if (htmlField) htmlField.value = container.innerHTML;
+      if (htmlField) htmlField.value = html;
+      if (instId) {
+        codeMap[instId] = codeMap[instId] || {};
+        codeMap[instId].html = html;
+        if (pageId) scheduleAutosave();
+      }
     });
     obs.observe(target, { childList: true, subtree: true, characterData: true });
     target.addEventListener('input', () => {
+      const html = target.innerHTML;
       const htmlField = widget.__codeEditor?.querySelector('.editor-html');
-      if (htmlField) htmlField.value = target.innerHTML;
+      if (htmlField) htmlField.value = html;
+      if (instId) {
+        codeMap[instId] = codeMap[instId] || {};
+        codeMap[instId].html = html;
+        if (pageId) scheduleAutosave();
+      }
     });
     userObservers.set(widget, obs);
   }

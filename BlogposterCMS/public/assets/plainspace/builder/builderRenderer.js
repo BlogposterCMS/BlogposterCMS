@@ -99,6 +99,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   let proMode = true;
   let gridEl;
+  let codeMap = {};
+  function ensureCodeMap() {
+    if (!codeMap || typeof codeMap !== 'object') codeMap = {};
+    return codeMap;
+  }
   const state = {
     pageId,
     autosaveEnabled: true,
@@ -152,8 +157,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   contentEl.innerHTML = `<div id="builderGrid" class="canvas-grid builder-grid"></div>`;
   gridEl = document.getElementById('builderGrid');
-  const { updateAllWidgetContents } = registerBuilderEvents(gridEl, codeMap, { getRegisteredEditable });
-  const saveLayoutCtx = { updateAllWidgetContents, getCurrentLayout, pushState, meltdownEmit, pageId, codeMap };
+  const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
+  const saveLayoutCtx = { updateAllWidgetContents, getCurrentLayout, pushState, meltdownEmit, pageId, codeMap: ensureCodeMap() };
   await applyBuilderTheme();
   // Allow overlapping widgets for layered layouts
   const grid = initGrid(gridEl, state, selectWidget);
@@ -212,7 +217,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const current = undoStack.pop();
     redoStack.push(current);
     const prev = JSON.parse(undoStack[undoStack.length - 1]);
-    applyLayout(prev, { gridEl, grid, codeMap, allWidgets, layerIndex: activeLayer });
+    applyLayout(prev, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer });
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
@@ -221,7 +226,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const next = redoStack.pop();
     undoStack.push(next);
     const layout = JSON.parse(next);
-    applyLayout(layout, { gridEl, grid, codeMap, allWidgets, layerIndex: activeLayer });
+    applyLayout(layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer });
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
@@ -347,7 +352,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
 
-    renderWidget(wrapper, widgetDef, codeMap);
+    renderWidget(wrapper, widgetDef, ensureCodeMap());
     if (pageId) scheduleAutosave();
   });
 
@@ -499,7 +504,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const name = nameInput.value.trim();
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
-    const layout = getCurrentLayout(gridEl, codeMap);
+    const layout = getCurrentLayout(gridEl, ensureCodeMap());
     try {
       await meltdownEmit('saveLayoutTemplate', {
         jwt: window.ADMIN_TOKEN,
@@ -580,7 +585,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function saveActiveLayer() {
-    layoutLayers[activeLayer].layout = getCurrentLayoutForLayer(gridEl, activeLayer, codeMap);
+    layoutLayers[activeLayer].layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
   }
 
   function updateLayoutBar() {
@@ -592,10 +597,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   function applyCompositeLayout(idx) {
     gridEl.innerHTML = '';
-    Object.keys(codeMap).forEach(k => delete codeMap[k]);
-    applyLayout(layoutLayers[0].layout, { gridEl, grid, codeMap, allWidgets, append: false, layerIndex: 0 });
+    Object.keys(ensureCodeMap()).forEach(k => delete codeMap[k]);
+    applyLayout(layoutLayers[0].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: false, layerIndex: 0 });
     if (idx !== 0) {
-      applyLayout(layoutLayers[idx].layout, { gridEl, grid, codeMap, allWidgets, append: true, layerIndex: idx });
+      applyLayout(layoutLayers[idx].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: true, layerIndex: idx });
     }
   }
 

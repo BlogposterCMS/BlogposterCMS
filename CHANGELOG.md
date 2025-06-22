@@ -18,6 +18,7 @@ El Psy Kongroo
 - All widgets now reside under `public/assets/plainspace/widgets` with separate
   `admin` and `public` folders. Admin action scripts moved to the same
   plainspace area and CanvasGrid lives beside the renderer.
+- fixed `codemap is not defined` error in layout builder by ensuring the `codeMap` object exists
 - Plainspace scripts consolidated under `public/assets/plainspace/main`.
 - Widgets no longer set `contenteditable`; `globalTextEditor` controls editing exclusively.
 - Hit-layer overlay no longer intercepts clicks in the builder.

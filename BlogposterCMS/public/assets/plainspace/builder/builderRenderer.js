@@ -347,12 +347,20 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     wrapper.appendChild(content);
     attachRemoveButton(wrapper);
     const editBtn2 = attachEditButton(wrapper, widgetDef);
-    attachOptionsMenu(wrapper, widgetDef, editBtn2);
+    const localCodeMap = ensureCodeMap(); // reuse existing codeMap
+    attachOptionsMenu(wrapper, widgetDef, editBtn2, {
+      grid,
+      pageId,
+      scheduleAutosave,
+      activeLayer,
+      codeMap: localCodeMap,
+      genId,
+    });
     attachLockOnClick(wrapper);
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
 
-    renderWidget(wrapper, widgetDef, ensureCodeMap());
+    renderWidget(wrapper, widgetDef, localCodeMap);
     if (pageId) scheduleAutosave();
   });
 

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- fixed crash when adding widgets to the builder grid due to missing options passed to attachOptionsMenu
+- ensured existing `codeMap` is passed when creating widgets
+
 ### Changed
 - modularized builderRenderer into dedicated managers (grid, widget, layout, event)
 - builder renderer now imports helper modules correctly and inline duplicates were removed

@@ -15,7 +15,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 Initialize the grid in your admin scripts:
 
 ```js
-import { init as initCanvasGrid } from '../assets/js/canvasGrid.js';
+import { init as initCanvasGrid } from '../assets/plainspace/main/canvasGrid.js';
 
 const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5 }, '#builderGrid');
 ```

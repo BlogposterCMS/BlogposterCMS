@@ -8,7 +8,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'systemInfo',
     widgetType: ADMIN_LANE,
     label: 'System Info',
-    content: '/assets/plainspace/admin/systemInfoWidget.js',
+    content: '/assets/plainspace/widgets/admin/systemInfoWidget.js',
     category: 'core',
     options: { thirdWidth: true }
   },
@@ -16,7 +16,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'systemSettings',
     widgetType: ADMIN_LANE,
     label: 'System Settings',
-    content: '/assets/plainspace/admin/systemSettingsWidget.js',
+    content: '/assets/plainspace/widgets/admin/systemSettingsWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -24,7 +24,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'activityLog',
     widgetType: ADMIN_LANE,
     label: 'Activity Log',
-    content: '/assets/plainspace/admin/activityLogWidget.js',
+    content: '/assets/plainspace/widgets/admin/activityLogWidget.js',
     category: 'core',
     options: { height: 50, overflow: true, halfWidth: true }
   },
@@ -32,7 +32,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'contentSummary',
     widgetType: ADMIN_LANE,
     label: 'Content Summary',
-    content: '/assets/plainspace/admin/defaultwidgets/contentSummaryWidget.js',
+    content: '/assets/plainspace/widgets/admin/defaultwidgets/contentSummaryWidget.js',
     category: 'core',
     options: { thirdWidth: true }
   },
@@ -40,7 +40,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'pageEditor',
     widgetType: ADMIN_LANE,
     label: 'Page Editor',
-    content: '/assets/plainspace/admin/pageEditorWidgets/pageEditorWidget.js',
+    content: '/assets/plainspace/widgets/admin/pageEditorWidgets/pageEditorWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -48,7 +48,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'mediaExplorer',
     widgetType: ADMIN_LANE,
     label: 'Media Explorer',
-    content: '/assets/plainspace/admin/mediaExplorerWidget.js',
+    content: '/assets/plainspace/widgets/admin/mediaExplorerWidget.js',
     category: 'core',
     options: { halfWidth: true, height: 70, overflow: true }
   },
@@ -56,7 +56,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'modulesList',
     widgetType: ADMIN_LANE,
     label: 'Modules List',
-    content: '/assets/plainspace/admin/modulesListWidget.js',
+    content: '/assets/plainspace/widgets/admin/modulesListWidget.js',
     category: 'core',
     options: { halfWidth: true, height: 60, overflow: true }
   },
@@ -64,7 +64,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'usersList',
     widgetType: ADMIN_LANE,
     label: 'Users List',
-    content: '/assets/plainspace/admin/usersListWidget.js',
+    content: '/assets/plainspace/widgets/admin/usersListWidget.js',
     category: 'core',
     options: { halfWidth: true, height: 60, overflow: true }
   },
@@ -72,7 +72,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'userEdit',
     widgetType: ADMIN_LANE,
     label: 'User Editor',
-    content: '/assets/plainspace/admin/userEditWidget.js',
+    content: '/assets/plainspace/widgets/admin/userEditWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -80,7 +80,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'permissionsList',
     widgetType: ADMIN_LANE,
     label: 'Permissions List',
-    content: '/assets/plainspace/admin/permissionsWidget.js',
+    content: '/assets/plainspace/widgets/admin/permissionsWidget.js',
     category: 'core',
     options: { halfWidth: true, height: 60, overflow: true }
   },
@@ -88,7 +88,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'layoutTemplates',
     widgetType: ADMIN_LANE,
     label: 'Layouts',
-    content: '/assets/plainspace/admin/layoutTemplatesWidget.js',
+    content: '/assets/plainspace/widgets/admin/layoutTemplatesWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -96,7 +96,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'themesList',
     widgetType: ADMIN_LANE,
     label: 'Themes List',
-    content: '/assets/plainspace/admin/themesListWidget.js',
+    content: '/assets/plainspace/widgets/admin/themesListWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -104,7 +104,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'loginStrategies',
     widgetType: ADMIN_LANE,
     label: 'Login Strategies',
-    content: '/assets/plainspace/admin/loginStrategiesWidget.js',
+    content: '/assets/plainspace/widgets/admin/loginStrategiesWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -112,7 +112,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'fontsList',
     widgetType: ADMIN_LANE,
     label: 'Font Providers',
-    content: '/assets/plainspace/admin/fontsListWidget.js',
+    content: '/assets/plainspace/widgets/admin/fontsListWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -120,7 +120,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'loginStrategyEdit',
     widgetType: ADMIN_LANE,
     label: 'Login Strategy Edit',
-    content: '/assets/plainspace/admin/loginStrategyEditWidget.js',
+    content: '/assets/plainspace/widgets/admin/loginStrategyEditWidget.js',
     category: 'core',
     options: { halfWidth: true }
   },
@@ -128,7 +128,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'widgetList',
     widgetType: ADMIN_LANE,
     label: 'Widget List',
-    content: '/assets/plainspace/admin/widgetListWidget.js',
+    content: '/assets/plainspace/widgets/admin/widgetListWidget.js',
     category: 'core',
     options: { halfWidth: true, height: 60, overflow: true }
   },
@@ -136,14 +136,14 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: "htmlBlock",
     widgetType: PUBLIC_LANE,
     label: "HTML Block",
-    content: "/assets/plainspace/public/basicwidgets/htmlWidget.js",
+    content: "/assets/plainspace/widgets/public/basicwidgets/htmlWidget.js",
     category: "basic"
   },
   {
     widgetId: "textBox",
     widgetType: PUBLIC_LANE,
     label: "Text Box",
-    content: "/assets/plainspace/public/basicwidgets/textBoxWidget.js",
+    content: "/assets/plainspace/widgets/public/basicwidgets/textBoxWidget.js",
     category: "basic"
   }
 ];

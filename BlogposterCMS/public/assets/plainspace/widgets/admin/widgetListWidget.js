@@ -1,4 +1,4 @@
-// public/assets/plainspace/admin/widgetListWidget.js
+// public/assets/plainspace/widgets/admin/widgetListWidget.js
 export async function render(el) {
   const meltdownEmit = window.meltdownEmit;
   const jwt = window.ADMIN_TOKEN;

@@ -1,5 +1,5 @@
 // public/assets/plainspace/admin/builderRenderer.js
-import { init as initCanvasGrid } from '../../js/canvasGrid.js';
+import { init as initCanvasGrid } from '../main/canvasGrid.js';
 import {
   editElement,
   initTextEditor,

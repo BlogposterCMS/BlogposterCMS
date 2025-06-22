@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 - fixed crash when adding widgets to the builder grid due to missing options passed to attachOptionsMenu
 - ensured existing `codeMap` is passed when creating widgets
+- prevented autosave crash when layout grid was not ready by validating the grid element
 
 ### Changed
 - modularized builderRenderer into dedicated managers (grid, widget, layout, event)

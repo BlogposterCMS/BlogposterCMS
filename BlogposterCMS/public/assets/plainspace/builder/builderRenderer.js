@@ -158,7 +158,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   contentEl.innerHTML = `<div id="builderGrid" class="canvas-grid builder-grid"></div>`;
   gridEl = document.getElementById('builderGrid');
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
-  const saveLayoutCtx = { updateAllWidgetContents, getCurrentLayout, pushState, meltdownEmit, pageId, codeMap: ensureCodeMap() };
+  const saveLayoutCtx = {
+    updateAllWidgetContents,
+    getCurrentLayout: () => getCurrentLayout(gridEl, ensureCodeMap()),
+    pushState,
+    meltdownEmit,
+    pageId,
+    codeMap: ensureCodeMap()
+  };
   await applyBuilderTheme();
   // Allow overlapping widgets for layered layouts
   const grid = initGrid(gridEl, state, selectWidget);

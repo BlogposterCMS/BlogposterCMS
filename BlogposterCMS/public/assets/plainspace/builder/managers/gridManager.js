@@ -11,6 +11,7 @@ export function initGrid(gridEl, state, selectWidget) {
 }
 
 export function getCurrentLayout(gridEl, codeMap) {
+  if (!gridEl) return [];
   const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
   return items.map(el => ({
     id: el.dataset.instanceId,
@@ -26,6 +27,7 @@ export function getCurrentLayout(gridEl, codeMap) {
 }
 
 export function getCurrentLayoutForLayer(gridEl, idx, codeMap) {
+  if (!gridEl) return [];
   const items = Array.from(gridEl.querySelectorAll(`.canvas-item[data-layer="${idx}"]`));
   return items.map(el => ({
     id: el.dataset.instanceId,

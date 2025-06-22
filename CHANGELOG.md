@@ -5,10 +5,13 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Changed
+- modularized builderRenderer into dedicated managers (grid, widget, layout, event)
 - builder renderer now imports helper modules correctly and inline duplicates were removed
 - moved `colorPicker.js` and `allowedTags.js` into the builder module and updated imports
 - builder renderer split into multiple modules under `public/assets/plainspace/builder`
   for easier maintenance; main entry renamed to `builderRenderer.js`
+### Fixed
+- removed leftover widget helper functions from `builderRenderer.js` and resolved build error
 - `admin` scripts moved under `public/assets/plainspace/dashboard` and the `partials` folder now lives directly in `plainspace`.
 - `globalEvents.js` relocated to `public/assets/plainspace/main` for consistent imports.
 - All widgets now reside under `public/assets/plainspace/widgets` with separate

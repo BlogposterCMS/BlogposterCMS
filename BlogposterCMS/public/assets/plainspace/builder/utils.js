@@ -1,3 +1,5 @@
+//public/assets/plainspace/builder/utils.js
+
 export function addHitLayer(widget) {
   const shield = document.createElement('div');
   shield.className = 'hit-layer';

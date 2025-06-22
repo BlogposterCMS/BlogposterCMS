@@ -1,3 +1,4 @@
+//public/assets/plainspace/builder/widgets/widgetRenderer.js
 import { addHitLayer, executeJs } from '../utils.js';
 
 export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {

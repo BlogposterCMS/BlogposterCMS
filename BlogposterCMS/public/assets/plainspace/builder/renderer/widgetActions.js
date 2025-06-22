@@ -1,3 +1,4 @@
+//public/assets/plainspace/builder/renderer/widgetActions.js
 import { renderWidget } from '../widgets/widgetRenderer.js';
 import { wrapCss } from '../utils.js';
 import { extractCssProps, makeSelector } from './renderUtils.js';

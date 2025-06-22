@@ -1,3 +1,4 @@
+//public/assets/plainspace/builder/renderer/autosave.js
 export function scheduleAutosave(state, saveFn) {
   if (!state.autosaveEnabled || !state.pageId) return;
   state.pendingSave = true;

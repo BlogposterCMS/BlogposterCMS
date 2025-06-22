@@ -1,3 +1,4 @@
+//public/assets/plainspace/builder/widgets/widgetMenu.js
 import { makeSelector, extractCssProps } from '../renderer/renderUtils.js';
 import { wrapCss } from '../utils.js';
 import { renderWidget } from './widgetRenderer.js';

@@ -1,3 +1,5 @@
+
+//public/assets/plainspace/builder/allowedTags.js
 export const allowedTags = [
   'div', 'section', 'article', 'aside', 'main', 'nav',
   'p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'strong', 'em', 'blockquote', 'code', 'pre',

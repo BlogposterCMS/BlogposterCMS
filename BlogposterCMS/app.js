@@ -548,7 +548,7 @@ app.get('/admin/home', pageLimiter, csrfProtection, async (req, res) => {
         let html = fs.readFileSync(path.join(publicPath, 'admin.html'), 'utf8');
         if (renderMode === 'server') {
           html = html.replace(
-            /<script type="module" src="\/assets\/js\/pageRenderer.js"><\/script>\s*/i,
+            /<script type="module" src="\/assets\/plainspace\/main\/pageRenderer.js"><\/script>\s*/i,
             ''
           );
         }
@@ -658,7 +658,7 @@ app.get('/admin/*', pageLimiter, csrfProtection, async (req, res, next) => {
     );
     if (renderMode === 'server') {
       html = html.replace(
-        /<script type="module" src="\/assets\/js\/pageRenderer.js"><\/script>\s*/i,
+        /<script type="module" src="\/assets\/plainspace\/main\/pageRenderer.js"><\/script>\s*/i,
         ''
       );
     }
@@ -965,7 +965,7 @@ app.get('/:slug?', pageLimiter, async (req, res, next) => {
     let html = fs.readFileSync(pageHtmlPath, 'utf8');
     if (renderMode === 'server') {
       html = html.replace(
-        /<script type="module" src="\/assets\/js\/pageRenderer.js"><\/script>\s*/i,
+        /<script type="module" src="\/assets\/plainspace\/main\/pageRenderer.js"><\/script>\s*/i,
         ''
       );
     }

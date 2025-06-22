@@ -1,8 +1,8 @@
-// public/assets/js/pageRenderer.js
+// public/assets/plainspace/main/pageRenderer.js
 
-import { fetchPartial } from '../plainspace/admin/fetchPartial.js';
-import { initBuilder } from '../plainspace/admin/builderRenderer.js';
-import { init as initCanvasGrid } from './canvasGrid.js';
+import { fetchPartial } from '../admin/fetchPartial.js';
+import { initBuilder } from '../admin/builderRenderer.js';
+import { init as initCanvasGrid } from '../../js/canvasGrid.js';
 import { enableAutoEdit, sanitizeHtml } from './globalTextEditor.js';
 
 // Default rows for admin widgets (~50px with 5px grid cells)

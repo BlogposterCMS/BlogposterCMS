@@ -5,6 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Changed
+- Plainspace scripts consolidated under `public/assets/plainspace/main`.
+- Widgets no longer set `contenteditable`; `globalTextEditor` controls editing exclusively.
 - Hit-layer overlay no longer intercepts clicks in the builder.
 - Click on a widget now selects it and displays the action bar.
 - Action bar now reappears when widgets move or resize.

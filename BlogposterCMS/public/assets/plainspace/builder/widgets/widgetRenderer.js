@@ -1,6 +1,6 @@
 //public/assets/plainspace/builder/widgets/widgetRenderer.js
 import { addHitLayer, executeJs } from '../utils.js';
-import { registerElement } from '../main/globalTextEditor.js';
+import { registerElement } from '../../main/globalTextEditor.js';
 
 export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const instanceId = wrapper.dataset.instanceId;

@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- fixed color picker closing immediately after selecting a color; picker now only
+  hides on outside clicks or via the close button
 - text block editor toolbar now spans the builder grid width and stays fixed below the header
 - toolbar no longer floats near widgets; removed `floating-ui` helper
 - builder grid now starts below the fixed toolbar to avoid overlap

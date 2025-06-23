@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- widgets dropped onto the canvas are automatically selected and editing shows a text cursor
 - hit-layer now disables pointer events while a widget is being edited or when the action bar is visible
 - fixed color picker closing immediately after selecting a color; picker now only
   hides on outside clicks or via the close button

@@ -372,6 +372,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
 
+    /* --------  Neu: automatisch auswählen  --------------------------- */
+    selectWidget(wrapper);          // ruft Action-Bar & widgetSelected
+
     renderWidget(wrapper, widgetDef, localCodeMap);
     if (pageId) scheduleAutosave();
   });

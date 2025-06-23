@@ -685,10 +685,12 @@ export function enableAutoEdit() {
     const widget = findWidget(ev.target);
     if (!widget || !widget.classList.contains('selected')) return;
     let el = findEditableFromEvent(ev);
+    if (!el) el = getRegisteredEditable(widget);
+    /*  Neu:  Ist noch nichts registriert?  ->  kurz warten und neu triggern  */
     if (!el) {
-      el = getRegisteredEditable(widget);
+      setTimeout(() => widget.dispatchEvent(new Event('dblclick')), 30);
+      return;
     }
-    if (!el) return;
     ev.stopPropagation();
     ev.preventDefault();
     editElement(el, el.__onSave, ev);

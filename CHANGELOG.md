@@ -5,6 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 - allowed `font-style` inline style in `sanitizeHtml` so italic text survives cleaning
+- registerElement no longer forces the `contenteditable` attribute; `editElement` now fully controls it for safer widget editing
+- fixed grid blocking keyboard input by restoring `contenteditable` removal after finishing edits
 - ensured toolbar click callback restores the selected editable element when the previous active element is gone
 - sanitized HTML is now applied only once when finishing text edits to prevent cursor jumps
 - toolbar buttons now reliably apply styles to the current editable element and

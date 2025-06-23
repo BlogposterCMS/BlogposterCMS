@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- registerElement no longer forces the `contenteditable` attribute; `editElement` now fully controls it for safer widget editing
 - toolbar buttons now reliably apply styles to the current editable element and
   the toolbar is reused if it already exists
 - dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized

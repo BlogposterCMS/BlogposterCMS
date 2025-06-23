@@ -587,9 +587,6 @@ export function registerElement(editable, onSave) {
   }
   if (editable.__registered) return;
   editable.__registered = true;
-  if (!editable.hasAttribute('contenteditable')) {
-    editable.setAttribute('contenteditable', 'true');
-  }
   editable.__onSave = onSave;
   const widget = findWidget(editable);
   if (widget) {

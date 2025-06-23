@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 - fixed color picker closing immediately after selecting a color; picker now only
   hides on outside clicks or via the close button
+- toolbar actions now work on the selected widget even before entering edit mode
+- fixed bold, italic and underline toggles correctly remove styling instead of nesting spans
 - text block editor toolbar now spans the builder grid width and stays fixed below the header
 - toolbar no longer floats near widgets; removed `floating-ui` helper
 - builder grid now starts below the fixed toolbar to avoid overlap

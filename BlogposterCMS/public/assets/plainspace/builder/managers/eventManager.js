@@ -11,6 +11,7 @@ export function registerDeselect(gridEl, state, actionBar, hideToolbar) {
     }
     actionBar.style.display = 'none';
     state.activeWidgetEl.classList.remove('selected');
+    state.activeWidgetEl.dispatchEvent(new Event('deselected'));
     state.activeWidgetEl = null;
     hideToolbar();
     gridEl.__grid.clearSelection();

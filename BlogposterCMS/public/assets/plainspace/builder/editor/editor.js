@@ -581,7 +581,10 @@ export function editElement(el, onSave, clickEvent = null) {
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
 
+  //lock the widget to prevent moving/resizing while editing
+  widget.setAttribute('gs-locked', 'true');
   const grid = widget.closest('.canvas-grid')?.__grid;
+  grid?.update(widget, { locked: true, noMove: true, noResize: true });
 
   if (hitLayer) hitLayer.style.pointerEvents = 'none';
 
@@ -609,6 +612,8 @@ export function editElement(el, onSave, clickEvent = null) {
 
     widget.dataset.layer = prevLayer;
     widget.style.zIndex = String(prevLayer);
+    widget.setAttribute('gs-locked', 'false');
+    grid?.update(widget, { locked: false, noMove: false, noResize: false });
     if (el.__inputHandler) {
       el.removeEventListener('input', el.__inputHandler);
       delete el.__inputHandler;

@@ -584,6 +584,14 @@ p {
   border: 1px dashed #ccc;
   color: #555;
 }
+.color-picker .color-input {
+  width: 60px;
+  padding: 2px 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+}
 .color-picker .color-section-label {
   margin-right: 4px;
   font-size: 12px;
@@ -1780,11 +1788,13 @@ body.builder-mode #content {
   margin-left: 96px;
   height: calc(100vh - 79px);
   overflow-y: auto;
+  padding-top: 60px;
+  box-sizing: border-box;
 }
 
 body.builder-mode #builderGrid {
-  height: 100%;
-  min-height: 100%;
+  height: calc(100% - 60px);
+  min-height: calc(100% - 60px);
 }
 
 body.builder-mode .canvas-item-content.builder-themed {
@@ -2173,9 +2183,10 @@ body.preview-desktop #content {
 .text-block-editor-toolbar {
   position: fixed;
   top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 32px);
+  left: 96px;
+  right: 0;
+  width: auto;
+  transform: none;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2188,6 +2199,10 @@ body.preview-desktop #content {
 }
 .text-block-editor-toolbar.floating {
   position: absolute;
+  top: auto;
+  left: 0;
+  transform: none;
+  width: auto;
 }
 .text-block-editor-toolbar .tb-btn {
   background: transparent;
@@ -2272,15 +2287,34 @@ body.preview-desktop #content {
   height: 100%;
 }
 
-.textbox-widget {
+.widget-textbox {
   width: 100%;
   padding: 0.25rem;
   box-sizing: border-box;
   min-height: 1rem;
+}
+.widget-textbox .editable {
+  all: unset;
+  font-family: "Manrope", sans-serif;
+  font-size: 16px;
+  color: #333;
+  background-color: #fff;
+  outline: none;
+  -webkit-user-select: text;
+     -moz-user-select: text;
+          user-select: text;
   cursor: text;
 }
-.textbox-widget p {
-  margin: 0;
+.widget-textbox .editable b,
+.widget-textbox .editable strong {
+  font-weight: bold;
+}
+.widget-textbox .editable i,
+.widget-textbox .editable em {
+  font-style: italic;
+}
+.widget-textbox .editable u {
+  text-decoration: underline;
 }
 
 .half-width {

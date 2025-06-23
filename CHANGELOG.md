@@ -8,6 +8,7 @@ El Psy Kongroo
 - ensured existing `codeMap` is passed when creating widgets
 - prevented autosave crash when layout grid was not ready by validating the grid element
 - improved text widget editing to require a second click before entering edit mode and position the caret at the click location
+- text widgets remain `contenteditable` at all times and toolbar actions update inline styles directly
 - editing now begins when clicking anywhere on a selected widget, not just text elements
 
 ### Changed

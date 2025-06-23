@@ -140,35 +140,41 @@ async function init() {
   }
   initPromise = (async () => {
     try {
-      toolbar = document.createElement('div');
-      toolbar.className = 'text-block-editor-toolbar floating';
-      toolbar.style.display = 'none';
-      toolbar.innerHTML = [
-      '<div class="font-family-control">' +
-        '<div class="ff-dropdown">' +
-          '<button type="button" class="ff-btn"><span class="ff-label">Font</span></button>' +
-          '<div class="ff-options"></div>' +
-        '</div>' +
-      '</div>',
-      '<button type="button" class="tb-btn" data-cmd="bold">' + window.featherIcon('bold') + '</button>',
-      '<button type="button" class="tb-btn" data-cmd="italic">' + window.featherIcon('italic') + '</button>',
-      '<button type="button" class="tb-btn" data-cmd="underline">' + window.featherIcon('underline') + '</button>',
-      '<select class="heading-select" style="display:none">' +
-        ['h1','h2','h3','h4','h5','h6'].map(h => `<option value="${h}">${h.toUpperCase()}</option>`).join('') +
-      '</select>',
-      '<div class="font-size-control">' +
-        '<button type="button" class="tb-btn fs-dec">-</button>' +
-        '<div class="fs-dropdown">' +
-          '<button type="button" class="fs-btn"><span>' +
-            '<input type="number" class="fs-input" value="16" min="1" max="800" step="0.1" pattern="\\d*" tabindex="-1" placeholder="--" />' +
-          '</span></button>' +
-          '<div class="fs-options">' +
-            [12,14,16,18,24,36].map(s => `<span data-size="${s}">${s}</span>`).join('') +
+      // Reuse existing toolbar if present to avoid duplicate listeners
+      toolbar = document.body.querySelector('.text-block-editor-toolbar');
+      if (!toolbar) {
+        toolbar = document.createElement('div');
+        toolbar.className = 'text-block-editor-toolbar floating';
+        toolbar.style.display = 'none';
+        toolbar.innerHTML = [
+        '<div class="font-family-control">' +
+          '<div class="ff-dropdown">' +
+            '<button type="button" class="ff-btn"><span class="ff-label">Font</span></button>' +
+            '<div class="ff-options"></div>' +
           '</div>' +
-        '</div>' +
-        '<button type="button" class="tb-btn fs-inc">+</button>' +
-      '</div>'
-    ].join('');
+        '</div>',
+        '<button type="button" class="tb-btn" data-cmd="bold">' + window.featherIcon('bold') + '</button>',
+        '<button type="button" class="tb-btn" data-cmd="italic">' + window.featherIcon('italic') + '</button>',
+        '<button type="button" class="tb-btn" data-cmd="underline">' + window.featherIcon('underline') + '</button>',
+        '<select class="heading-select" style="display:none">' +
+          ['h1','h2','h3','h4','h5','h6'].map(h => `<option value="${h}">${h.toUpperCase()}</option>`).join('') +
+        '</select>',
+        '<div class="font-size-control">' +
+          '<button type="button" class="tb-btn fs-dec">-</button>' +
+          '<div class="fs-dropdown">' +
+            '<button type="button" class="fs-btn"><span>' +
+              '<input type="number" class="fs-input" value="16" min="1" max="800" step="0.1" pattern="\\d*" tabindex="-1" placeholder="--" />' +
+            '</span></button>' +
+            '<div class="fs-options">' +
+              [12,14,16,18,24,36].map(s => `<span data-size="${s}">${s}</span>`).join('') +
+            '</div>' +
+          '</div>' +
+          '<button type="button" class="tb-btn fs-inc">+</button>' +
+        '</div>'
+      ].join('');
+        document.body.appendChild(toolbar);
+      }
+      toolbar.style.display = 'none';
     toolbar.addEventListener('mousedown', e => e.stopPropagation());
     toolbar.addEventListener('click', e => e.stopPropagation());
 
@@ -206,12 +212,16 @@ async function init() {
       const btn = ev.target.closest('button[data-cmd]');
       if (!btn) return;
       ev.preventDefault();
+      if (!activeEl || !document.body.contains(activeEl)) {
+        const selected = document.querySelector('.canvas-item.selected [contenteditable="true"]');
+        if (selected) activeEl = selected;
+      }
+      if (!activeEl) return;
       const cmd = btn.dataset.cmd;
       if (cmd === 'bold') toggleStyle('fontWeight', 'bold');
       if (cmd === 'italic') toggleStyle('fontStyle', 'italic');
       if (cmd === 'underline') toggleStyle('textDecoration', 'underline');
     });
-    document.body.appendChild(toolbar);
 
     const colorWrapper = document.createElement('div');
     colorWrapper.className = 'text-color-picker';

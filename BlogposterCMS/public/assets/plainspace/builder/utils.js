@@ -25,9 +25,6 @@ export function addHitLayer(widget) {
   widget.addEventListener('editEnd', toggle);
   widget.addEventListener('selected', toggle);
   widget.addEventListener('deselected', toggle);
-
-  // Set initial state
-  toggle();
 }
 
 export function scopeThemeCss(css, rootPrefix, contentPrefix) {

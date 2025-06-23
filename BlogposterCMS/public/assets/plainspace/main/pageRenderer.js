@@ -3,7 +3,7 @@
 import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { initBuilder } from '../builder/builderRenderer.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
-import { enableAutoEdit, sanitizeHtml } from './globalTextEditor.js';
+import { enableAutoEdit, sanitizeHtml } from '../editor/editor.js';
 
 // Default rows for admin widgets (~50px with 5px grid cells)
 // Temporary patch: double the default height for larger widgets

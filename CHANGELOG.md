@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- block-level style toggles now drop empty style attributes after removing a property
+- cleaned up empty wrapper spans and detected italic styles reported as oblique
+- fixed style toggles leaving stray spans in Safari and added italic detection
+- style toggles compare computed styles (root node included) to avoid nested
+  wrappers and keep formatting consistent
+- underline detection now accounts for browser-specific textDecoration values
+- undo history entries are no longer duplicated when toggling styles
+- custom widget events now bubble up to the document
+- hit-layer initializes its state immediately
 - autoEdit now retries entering edit mode if a widget hasn't registered its editable element yet
 - widgets dropped onto the canvas are automatically selected and editing shows a text cursor
 - hit-layer now disables pointer events while a widget is being edited or when the action bar is visible

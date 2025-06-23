@@ -3,6 +3,49 @@
 import { isValidTag } from '../allowedTags.js';
 import { createColorPicker } from './colorPicker.js';
 
+/* Helper functions for style detection and span merging */
+export function hasStyle(node, prop, value) {
+  const cs = getComputedStyle(node);
+  if (prop === 'fontWeight' && value === 'bold')
+    return cs.fontWeight === 'bold' || parseInt(cs.fontWeight, 10) >= 600;
+  if (prop === 'textDecoration')
+    return cs.textDecoration.includes(value);
+  if (prop === 'fontStyle')
+    return /italic|oblique/.test(cs.fontStyle);
+  return cs[prop] === String(value);
+}
+
+export function unwrapEmpty(node) {
+  if (node.nodeType !== 1) return;
+  if (node.tagName !== 'SPAN') return;
+  if (node.getAttribute('style')) return;
+  node.replaceWith(...node.childNodes);
+}
+
+export function mergeSiblings(span) {
+  let prev = span.previousSibling;
+  let next = span.nextSibling;
+  if (
+    prev &&
+    prev.nodeType === 1 &&
+    prev.tagName === 'SPAN' &&
+    prev.getAttribute('style') === span.getAttribute('style')
+  ) {
+    prev.append(...span.childNodes);
+    span.remove();
+    span = prev;
+  }
+  if (
+    next &&
+    next.nodeType === 1 &&
+    next.tagName === 'SPAN' &&
+    next.getAttribute('style') === span.getAttribute('style')
+  ) {
+    span.append(...next.childNodes);
+    next.remove();
+  }
+}
+
 let toolbar = null;
 let activeEl = null;
 let initPromise = null;

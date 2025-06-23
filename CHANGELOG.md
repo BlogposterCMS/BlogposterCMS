@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- added helper functions `hasStyle`, `unwrapEmpty` and `mergeSiblings` to
+  `editor.js` for consistent span handling
 - block-level style toggles now drop empty style attributes after removing a property
 - cleaned up empty wrapper spans and detected italic styles reported as oblique
 - fixed style toggles leaving stray spans in Safari and added italic detection

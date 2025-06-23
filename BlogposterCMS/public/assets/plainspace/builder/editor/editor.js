@@ -538,8 +538,7 @@ export function editElement(el, onSave, clickEvent = null) {
     }
     activeEl = null;
 
-    // Keep text widgets editable at all times
-    // el.removeAttribute('contenteditable');
+    el.removeAttribute('contenteditable');
 
     widget.dataset.layer = prevLayer;
     widget.style.zIndex = String(prevLayer);

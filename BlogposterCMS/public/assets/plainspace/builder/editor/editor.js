@@ -610,7 +610,7 @@ export function editElement(el, onSave, clickEvent = null) {
   widget.dataset.layer = 9999;
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
-  widget.dispatchEvent(new Event('editStart', { bubbles: true }));
+  widget.dispatchEvent(new Event('editStart'));
 
   //lock the widget to prevent moving/resizing while editing
   widget.setAttribute('gs-locked', 'true');
@@ -653,7 +653,7 @@ export function editElement(el, onSave, clickEvent = null) {
     if (hitLayer) hitLayer.style.pointerEvents = 'auto';
 
     widget.classList.remove('editing');
-    widget.dispatchEvent(new Event('editEnd', { bubbles: true }));
+    widget.dispatchEvent(new Event('editEnd'));
     if (widget.classList.contains('selected')) {
       showToolbar();
     } else {
@@ -707,8 +707,7 @@ export function enableAutoEdit() {
     if (!el) el = getRegisteredEditable(widget);
     /*  Neu:  Ist noch nichts registriert?  ->  kurz warten und neu triggern  */
     if (!el) {
-      setTimeout(() =>
-        widget.dispatchEvent(new Event('dblclick', { bubbles: true })), 30);
+      setTimeout(() => widget.dispatchEvent(new Event('dblclick')), 30);
       return;
     }
     ev.stopPropagation();
@@ -752,8 +751,7 @@ function hideToolbar() {
   }
 }
 
-document.addEventListener('selected',   () => hideToolbar());
-document.addEventListener('deselected', () => hideToolbar());
+document.addEventListener('selected', () => hideToolbar());
 
 export { showToolbar, hideToolbar };
 

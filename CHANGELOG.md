@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 - widgets remain movable while editing text; bounding box stays interactive
+- `sanitizeHtml` now runs only on save; live edits no longer sanitize input
 - grid widgets now lock completely during text edits to avoid race conditions
 - ensured toolbar element is reused if it already exists to prevent duplicate listeners
 - color changes no longer trigger autosave; `applyColor` no longer calls `updateAndDispatch`

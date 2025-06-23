@@ -15,19 +15,19 @@ function dispatchHtmlUpdate(el) {
   const widget = findWidget(el);
   const instanceId = widget?.dataset.instanceId;
   if (!instanceId) return;
-  const clean = sanitizeHtml(el.innerHTML.trim());
-  console.log('[DEBUG] dispatchHtmlUpdate', instanceId, clean);
+  const html = el.innerHTML.trim();
+  console.log('[DEBUG] dispatchHtmlUpdate', instanceId, html);
   document.dispatchEvent(
     new CustomEvent('widgetHtmlUpdate', {
-      detail: { instanceId, html: clean }
+      detail: { instanceId, html }
     })
   );
 }
 
 function updateAndDispatch(el) {
   if (!el) return;
-  const clean = sanitizeHtml(el.innerHTML.trim());
-  el.__onSave?.(clean);
+  const html = el.innerHTML.trim();
+  el.__onSave?.(html);
   dispatchHtmlUpdate(el);
 }
 

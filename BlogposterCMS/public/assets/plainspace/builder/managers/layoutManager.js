@@ -9,7 +9,8 @@ export function applyLayout(layout, {
   codeMap,
   allWidgets,
   layerIndex = 0,
-  append = false
+  append = false,
+  iconMap = {}
 } = {}) {
   const DEFAULT_ROWS = 20;
   if (!append) {
@@ -40,7 +41,7 @@ export function applyLayout(layout, {
     wrapper.setAttribute('gs-min-h', DEFAULT_ROWS);
     const content = document.createElement('div');
     content.className = 'canvas-item-content builder-themed';
-    content.innerHTML = `${getWidgetIcon(widgetDef)}<span>${widgetDef.metadata?.label || widgetDef.id}</span>`;
+    content.innerHTML = `${getWidgetIcon(widgetDef, iconMap)}<span>${widgetDef.metadata?.label || widgetDef.id}</span>`;
     wrapper.appendChild(content);
     attachRemoveButton(wrapper, grid, null, () => {});
     const editBtn = attachEditButton(wrapper, widgetDef, codeMap, null, () => {});

@@ -301,61 +301,77 @@ async function init() {
     toggleStyleInternal = (prop, value) => {
       if (!activeEl) return;
       const sel = window.getSelection();
+      if (!sel) return;
 
-      // 1. Range‑Selektion => Inline‑Spans setzen/entfernen
-      if (sel && !sel.isCollapsed &&
-          activeEl.contains(sel.anchorNode) && activeEl.contains(sel.focusNode)) {
-        const range = sel.getRangeAt(0).cloneRange();
-        const span = document.createElement('span');
-        span.style[prop] = value;
-        span.appendChild(range.extractContents());
-        range.deleteContents();
-
-        /* Wenn der markierte Text bereits homogen formatiert ist,
-           entfernen wir den Stil statt ihn zu stapeln. */
-        const tmp = span.cloneNode(true);
-        const checkNodes = [tmp, ...tmp.querySelectorAll('*')];
-        const everyHasStyle = checkNodes.every(n => {
-          const val = getComputedStyle(n)[prop];
-          if (prop === 'textDecoration') return val.includes('underline');
-          if (prop === 'fontWeight' && String(value) === 'bold') {
-            return val === 'bold' || parseInt(val, 10) >= 600;
-          }
-          if (prop === 'fontStyle') return /(italic|oblique)/.test(val);
-          return val === String(value);
-        });
-        if (everyHasStyle) {
-          range.insertNode(tmp);
-          tmp.querySelectorAll('*').forEach(n => {
-            n.style[prop] = '';
-            if (!n.getAttribute('style')) n.replaceWith(...n.childNodes);
-          });
-          tmp.style[prop] = '';
-          if (!tmp.getAttribute('style')) tmp.replaceWith(...tmp.childNodes);
-        } else {
-          range.insertNode(span);
+      // Helper to apply/remove on one element
+      const toggleNode = (node, toActive) => {
+        if (node.nodeType !== 1 || node.tagName !== 'SPAN') {
+          // Wrap plain text
+          const span = document.createElement('span');
+          span.textContent = node.textContent;
+          node.replaceWith(span);
+          node = span;
         }
+        if (toActive) {
+          node.style[prop] = value;
+        } else {
+          node.style.removeProperty(prop);
+        }
+        unwrapEmpty(node);
+        mergeSiblings(node);
+      };
+
+      /* -------- RANGE-SELECTION ---------- */
+      if (!sel.isCollapsed) {
+        const range = sel.getRangeAt(0).cloneRange();
+        const contents = range.cloneContents();
+        const walker = document.createTreeWalker(contents, NodeFilter.SHOW_TEXT, null);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+
+        const allActive = nodes.every(n => hasStyle(n.parentElement, prop, value));
+
+        // iterate over real DOM nodes, not clone
+        nodes.forEach(textNode => {
+          const real = range.commonAncestorContainer.ownerDocument
+            .evaluate('.', textNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+          toggleNode(real.parentElement ?? real, !allActive);
+        });
+
         sel.removeAllRanges();
         sel.addRange(range);
       }
-      // 2. Keine Range oder Box‑Level‑Modus => Toggle am Block selbst
+
+      /* -------- CARET / BLOCK-LEVEL ---------- */
       else {
-        const current = getComputedStyle(activeEl)[prop];
-        let isActive = current === String(value);
-        if (prop === 'textDecoration') isActive = current.includes('underline');
-        if (prop === 'fontWeight' && String(value) === 'bold') {
-          isActive = current === 'bold' || parseInt(current, 10) >= 600;
-        }
-        if (prop === 'fontStyle') isActive = /(italic|oblique)/.test(current);
-        if (isActive) {
-          activeEl.style.removeProperty(prop);
-          if (!activeEl.getAttribute('style')) activeEl.removeAttribute('style');
+        let target = sel.anchorNode && sel.anchorNode.parentElement;
+        if (!target || target === activeEl) {
+          // caret in blank area – create span if turning on
+          if (!hasStyle(activeEl, prop, value)) {
+            const span = document.createElement('span');
+            span.textContent = '\u200B'; // zero width so caret stays
+            span.style[prop] = value;
+            const range = sel.getRangeAt(0);
+            range.insertNode(span);
+            range.setStart(span, 0);
+            range.setEnd(span, 0);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            target = span;
+          } else {
+            // turning off whole block style
+            activeEl.style.removeProperty(prop);
+            unwrapEmpty(activeEl);
+          }
         } else {
-          activeEl.style[prop] = value;
+          const isActive = hasStyle(target, prop, value);
+          toggleNode(target, !isActive);
         }
       }
 
-      // history update handled by toggleStyle wrapper
+      // cleanup entire container once
+      activeEl.normalize();
+      recordChange(activeEl, activeEl.outerHTML);
       updateAndDispatch(activeEl);
       activeEl.focus();
     };

@@ -2,7 +2,6 @@
 // Lightweight global text editor for builder mode.
 import { isValidTag } from '../allowedTags.js';
 import { createColorPicker } from './colorPicker.js';
-import { positionFloatingEl } from './floating-ui.js';
 
 let toolbar = null;
 let activeEl = null;
@@ -220,7 +219,7 @@ async function init() {
         toolbar || document.body.querySelector('.text-block-editor-toolbar');
       if (!toolbar) {
         toolbar = document.createElement('div');
-        toolbar.className = 'text-block-editor-toolbar floating';
+        toolbar.className = 'text-block-editor-toolbar';
         toolbar.style.display = 'none';
         toolbar.innerHTML = [
         '<div class="font-family-control">' +
@@ -597,7 +596,7 @@ export function editElement(el, onSave, clickEvent = null) {
   el.addEventListener('input', inputHandler);
   el.__inputHandler = inputHandler;
 
-  showToolbar(el);
+  showToolbar();
 
   function finish(save) {
     if (save) {
@@ -619,7 +618,7 @@ export function editElement(el, onSave, clickEvent = null) {
 
     widget.classList.remove('editing');
     if (widget.classList.contains('selected')) {
-      showToolbar(widget);
+      showToolbar();
     } else {
       hideToolbar();
     }
@@ -698,10 +697,9 @@ export function applyToolbarChange(el, styleProp, value) {
   updateAndDispatch(el);
 }
 
-function showToolbar(el) {
+function showToolbar() {
   if (!toolbar) return;
   toolbar.style.display = 'flex';
-  if (el) positionFloatingEl(toolbar, el);
 }
 
 function hideToolbar() {

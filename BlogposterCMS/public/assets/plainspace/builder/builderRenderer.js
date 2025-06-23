@@ -180,7 +180,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (!el) return;
     const editable = getRegisteredEditable(el);
     setActiveElement(editable);
-    showToolbar(el);
+    showToolbar();
   }
   grid.on('change', el => {          // jedes Mal, wenn das Grid ein Widget anfasst …
     if (el) selectWidget(el);        // … Action-Bar zeigen

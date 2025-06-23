@@ -13,6 +13,7 @@ export function render(el, ctx = {}) {
   const editable = document.createElement('div');
   editable.className = 'editable';
   editable.textContent = 'Lorem ipsum dolor sit amet';
+  editable.setAttribute('contenteditable', 'true');
 
   if (ctx.id) {
     editable.id = `text-widget-${ctx.id}-editable`;

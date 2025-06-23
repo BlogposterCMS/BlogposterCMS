@@ -163,13 +163,48 @@ async function init() {
     ].join('');
     toolbar.addEventListener('mousedown', e => e.stopPropagation());
     toolbar.addEventListener('click', e => e.stopPropagation());
+
+    const toggleStyle = (prop, value) => {
+      if (!activeEl) return;
+      const sel = window.getSelection();
+      if (
+        sel &&
+        !sel.isCollapsed &&
+        activeEl.contains(sel.anchorNode) &&
+        activeEl.contains(sel.focusNode)
+      ) {
+        try {
+          const range = sel.getRangeAt(0).cloneRange();
+          const span = document.createElement('span');
+          span.style[prop] = value;
+          span.appendChild(range.extractContents());
+          range.insertNode(span);
+          sel.removeAllRanges();
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          sel.addRange(newRange);
+        } catch (err) {
+          activeEl.style[prop] = value;
+        }
+      } else {
+        const current = activeEl.style[prop];
+        activeEl.style[prop] = current === value ? '' : value;
+      }
+      const clean = sanitizeHtml(activeEl.innerHTML.trim());
+      activeEl.innerHTML = clean;
+      activeEl.__onSave?.(clean);
+      dispatchHtmlUpdate(activeEl);
+      activeEl.focus();
+    };
+
     toolbar.addEventListener('click', ev => {
       const btn = ev.target.closest('button[data-cmd]');
       if (!btn) return;
       ev.preventDefault();
       const cmd = btn.dataset.cmd;
-      document.execCommand(cmd, false, null);
-      activeEl?.focus();
+      if (cmd === 'bold') toggleStyle('fontWeight', 'bold');
+      if (cmd === 'italic') toggleStyle('fontStyle', 'italic');
+      if (cmd === 'underline') toggleStyle('textDecoration', 'underline');
     });
     document.body.appendChild(toolbar);
 
@@ -247,9 +282,8 @@ async function init() {
     document.addEventListener('fontsUpdated', populateFonts);
 
     const applyFont = font => {
-      if (!font) return;
+      if (!font || !activeEl) return;
       ffLabel.textContent = font;
-      if (!activeEl) return;
       const sel = window.getSelection();
       if (
         sel &&
@@ -261,8 +295,7 @@ async function init() {
           const range = sel.getRangeAt(0).cloneRange();
           const span = document.createElement('span');
           span.style.fontFamily = `'${font}'`;
-          const frag = range.extractContents();
-          span.appendChild(frag);
+          span.appendChild(range.extractContents());
           range.insertNode(span);
           sel.removeAllRanges();
           const newRange = document.createRange();
@@ -272,28 +305,18 @@ async function init() {
           activeEl.style.fontFamily = `'${font}'`;
         }
       } else {
-        activeEl.querySelectorAll('*').forEach(el => {
-          el.style.fontFamily = `'${font}'`;
-        });
-        activeEl.childNodes.forEach(node => {
-          if (node.nodeType === 3 && node.textContent.trim()) {
-            const span = document.createElement('span');
-            span.style.fontFamily = `'${font}'`;
-            span.textContent = node.textContent;
-            node.parentNode.replaceChild(span, node);
-          }
-        });
+        activeEl.style.fontFamily = `'${font}'`;
       }
+      const clean = sanitizeHtml(activeEl.innerHTML.trim());
+      activeEl.innerHTML = clean;
+      activeEl.__onSave?.(clean);
+      dispatchHtmlUpdate(activeEl);
       activeEl.focus();
-      if (activeEl.getAttribute('contenteditable') !== 'true') {
-        applyToolbarChange(activeEl, 'fontFamily', `'${font}'`);
-      }
     };
     const applySize = size => {
       const val = parseFloat(size);
-      if (!val) return;
+      if (!val || !activeEl) return;
       fsInput.value = val;
-      if (!activeEl) return;
 
       const sel = window.getSelection();
       if (
@@ -306,8 +329,7 @@ async function init() {
           const range = sel.getRangeAt(0).cloneRange();
           const span = document.createElement('span');
           span.style.fontSize = val + 'px';
-          const frag = range.extractContents();
-          span.appendChild(frag);
+          span.appendChild(range.extractContents());
           range.insertNode(span);
           sel.removeAllRanges();
           const newRange = document.createRange();
@@ -317,22 +339,13 @@ async function init() {
           activeEl.style.fontSize = val + 'px';
         }
       } else {
-        activeEl.querySelectorAll('*').forEach(el => {
-          el.style.fontSize = val + 'px';
-        });
-        activeEl.childNodes.forEach(node => {
-          if (node.nodeType === 3 && node.textContent.trim()) {
-            const span = document.createElement('span');
-            span.style.fontSize = val + 'px';
-            span.textContent = node.textContent;
-            node.parentNode.replaceChild(span, node);
-          }
-        });
+        activeEl.style.fontSize = val + 'px';
       }
+      const clean = sanitizeHtml(activeEl.innerHTML.trim());
+      activeEl.innerHTML = clean;
+      activeEl.__onSave?.(clean);
+      dispatchHtmlUpdate(activeEl);
       activeEl.focus();
-      if (activeEl.getAttribute('contenteditable') !== 'true') {
-        applyToolbarChange(activeEl, 'fontSize', val + 'px');
-      }
     };
 
     const sanitizeColor = c => {
@@ -358,8 +371,7 @@ async function init() {
           const range = sel.getRangeAt(0).cloneRange();
           const span = document.createElement('span');
           span.style.color = val;
-          const frag = range.extractContents();
-          span.appendChild(frag);
+          span.appendChild(range.extractContents());
           range.insertNode(span);
           sel.removeAllRanges();
           const newRange = document.createRange();
@@ -369,22 +381,13 @@ async function init() {
           activeEl.style.color = val;
         }
       } else {
-        activeEl.querySelectorAll('*').forEach(el => {
-          el.style.color = val;
-        });
-        activeEl.childNodes.forEach(node => {
-          if (node.nodeType === 3 && node.textContent.trim()) {
-            const span = document.createElement('span');
-            span.style.color = val;
-            span.textContent = node.textContent;
-            node.parentNode.replaceChild(span, node);
-          }
-        });
+        activeEl.style.color = val;
       }
+      const clean = sanitizeHtml(activeEl.innerHTML.trim());
+      activeEl.innerHTML = clean;
+      activeEl.__onSave?.(clean);
+      dispatchHtmlUpdate(activeEl);
       activeEl.focus();
-      if (activeEl.getAttribute('contenteditable') !== 'true') {
-        applyToolbarChange(activeEl, 'color', val);
-      }
     };
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {
       applySize((parseFloat(fsInput.value) || 16) + 1);
@@ -533,7 +536,8 @@ export function editElement(el, onSave, clickEvent = null) {
     }
     activeEl = null;
 
-    el.removeAttribute('contenteditable');
+    // Keep text widgets editable at all times
+    // el.removeAttribute('contenteditable');
 
     widget.dataset.layer = prevLayer;
     widget.style.zIndex = String(prevLayer);

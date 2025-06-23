@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- toolbar floating styles defined in SCSS; compiled CSS unchanged
+- toolbar positioning logic moved to new `floating-ui` module
 - widgets remain movable while editing text; bounding box stays interactive
 - `sanitizeHtml` now runs only on save; live edits no longer sanitize input
 - grid widgets now lock completely during text edits to avoid race conditions

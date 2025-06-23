@@ -21,6 +21,10 @@
 
   &.floating {
     position: absolute;
+    top: auto;
+    left: 0;
+    transform: none;
+    width: auto;
   }
 
   .tb-btn {

@@ -16,19 +16,19 @@ function dispatchHtmlUpdate(el) {
   const widget = findWidget(el);
   const instanceId = widget?.dataset.instanceId;
   if (!instanceId) return;
-  const clean = sanitizeHtml(el.innerHTML.trim());
-  console.log('[DEBUG] dispatchHtmlUpdate', instanceId, clean);
+  const html = el.innerHTML.trim();
+  console.log('[DEBUG] dispatchHtmlUpdate', instanceId, html);
   document.dispatchEvent(
     new CustomEvent('widgetHtmlUpdate', {
-      detail: { instanceId, html: clean }
+      detail: { instanceId, html }
     })
   );
 }
 
 function updateAndDispatch(el) {
   if (!el) return;
-  const clean = sanitizeHtml(el.innerHTML.trim());
-  el.__onSave?.(clean);
+  const html = el.innerHTML.trim();
+  el.__onSave?.(html);
   dispatchHtmlUpdate(el);
 }
 
@@ -508,10 +508,7 @@ export function editElement(el, onSave, clickEvent = null) {
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
 
-  // Lock widget completely while editing to avoid race conditions
-  widget.setAttribute('gs-locked', 'true');
   const grid = widget.closest('.canvas-grid')?.__grid;
-  grid?.update(widget, { locked: true, noMove: true, noResize: true });
 
   if (hitLayer) hitLayer.style.pointerEvents = 'none';
 
@@ -539,8 +536,6 @@ export function editElement(el, onSave, clickEvent = null) {
 
     widget.dataset.layer = prevLayer;
     widget.style.zIndex = String(prevLayer);
-    widget.setAttribute('gs-locked', 'false');
-    grid?.update(widget, { locked: false, noMove: false, noResize: false });
     if (el.__inputHandler) {
       el.removeEventListener('input', el.__inputHandler);
       delete el.__inputHandler;

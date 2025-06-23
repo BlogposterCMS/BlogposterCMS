@@ -294,6 +294,7 @@ async function init() {
       }
       updateAndDispatch(activeEl);
       activeEl.focus();
+      updateAndDispatch(activeEl);
     };
 
     toolbar.addEventListener('click', ev => {
@@ -336,7 +337,6 @@ async function init() {
       onSelect: c => {
         applyColor(c);
         colorIcon.style.textDecorationColor = c;
-        colorPicker.hide();
       },
       onClose: () => colorBtn.focus()
     });
@@ -354,9 +354,13 @@ async function init() {
       }
     });
     toolbar.addEventListener('click', ev => {
+      if (!colorPicker.el.contains(ev.target)) return;
+    });
+
+    document.addEventListener('click', ev => {
       if (
-        !colorWrapper.contains(ev.target) &&
-        !colorPicker.el.contains(ev.target)
+        !colorPicker.el.contains(ev.target) &&
+        !toolbar.contains(ev.target)
       ) {
         colorPicker.hide();
       }
@@ -481,6 +485,7 @@ async function init() {
         activeEl.style.color = val;
       }
       activeEl.focus();
+      updateAndDispatch(activeEl);
     };
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {
       applySize((parseFloat(fsInput.value) || 16) + 1);

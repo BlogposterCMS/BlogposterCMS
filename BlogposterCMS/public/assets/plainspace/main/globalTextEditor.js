@@ -593,14 +593,16 @@ export function enableAutoEdit() {
   autoHandler = ev => {
     if (!document.body.classList.contains('builder-mode')) return;
     if (toolbar && toolbar.contains(ev.target)) return;
-    const el = findEditableFromEvent(ev);
-    if (!el) return;
-    const widget = findWidget(el);
+    const widget = findWidget(ev.target);
     if (!widget || !widget.classList.contains('selected')) return;
-    const editable = getRegisteredEditable(widget) || el;
+    let el = findEditableFromEvent(ev);
+    if (!el) {
+      el = getRegisteredEditable(widget);
+    }
+    if (!el) return;
     ev.stopPropagation();
     ev.preventDefault();
-    editElement(editable, editable.__onSave, ev);
+    editElement(el, el.__onSave, ev);
   };
   document.addEventListener('click', autoHandler, true);
 }

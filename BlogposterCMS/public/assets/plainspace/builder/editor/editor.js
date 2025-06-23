@@ -49,6 +49,7 @@ export function sanitizeHtml(html) {
           'font-family',
           'text-decoration',
           'font-weight',
+          'font-style',
           'color',
           'background-color'
         ];
@@ -391,7 +392,6 @@ async function init() {
       } else {
         activeEl.style.color = val;
       }
-      updateAndDispatch(activeEl);
       activeEl.focus();
     };
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {
@@ -539,8 +539,7 @@ export function editElement(el, onSave, clickEvent = null) {
     }
     activeEl = null;
 
-    // Keep text widgets editable at all times
-    // el.removeAttribute('contenteditable');
+    el.removeAttribute('contenteditable');
 
     widget.dataset.layer = prevLayer;
     widget.style.zIndex = String(prevLayer);
@@ -587,9 +586,6 @@ export function registerElement(editable, onSave) {
   }
   if (editable.__registered) return;
   editable.__registered = true;
-  if (!editable.hasAttribute('contenteditable')) {
-    editable.setAttribute('contenteditable', 'true');
-  }
   editable.__onSave = onSave;
   const widget = findWidget(editable);
   if (widget) {

@@ -29,13 +29,16 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
 
   function select(el) {
     if (!el) return;
-    if (state.activeWidgetEl) state.activeWidgetEl.classList.remove('selected');
+    if (state.activeWidgetEl) {
+      state.activeWidgetEl.classList.remove('selected');
+      state.activeWidgetEl.dispatchEvent(new Event('deselected'));
+    }
     state.activeWidgetEl = el;
     const editable = window.getRegisteredEditable
       ? window.getRegisteredEditable(el)
       : null;
     if (editable) window.setActiveElement(editable);
-    document.dispatchEvent(new Event('widgetSelected'));
+    el.dispatchEvent(new Event('selected'));
     state.activeWidgetEl.classList.add('selected');
     grid.select(el);
     const locked = el.getAttribute('gs-locked') === 'true';
@@ -63,6 +66,7 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     if (!state.activeWidgetEl) return;
     const target = state.activeWidgetEl;
     target.classList.remove('selected');
+    target.dispatchEvent(new Event('deselected'));
     grid.removeWidget(target);
     actionBar.style.display = 'none';
     state.activeWidgetEl = null;

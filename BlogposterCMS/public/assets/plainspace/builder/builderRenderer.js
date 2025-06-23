@@ -211,6 +211,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     actionBar.style.display = 'none';
     state.activeWidgetEl.classList.remove('selected');
+    state.activeWidgetEl.dispatchEvent(new Event('deselected'));
     state.activeWidgetEl = null;
     hideToolbar();
   grid.clearSelection();

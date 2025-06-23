@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- global text editor activates on first click and keeps widgets draggable; a second click sets the caret at the exact position using `caretRangeFromPoint`
 - fixed crash when adding widgets to the builder grid due to missing options passed to attachOptionsMenu
 - ensured existing `codeMap` is passed when creating widgets
 - prevented autosave crash when layout grid was not ready by validating the grid element

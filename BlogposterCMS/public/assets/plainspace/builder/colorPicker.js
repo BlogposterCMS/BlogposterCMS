@@ -1,9 +1,4 @@
-// Load Pickr library which exposes a global `Pickr` when imported as a module
-// or via a script tag. The distributed `pickr.min.js` does not export a
-// default module, so we import it for its side effects and read the global.
-import '../../js/vendor/pickr.min.js';
-const Pickr = window.Pickr || globalThis.Pickr;
-
+// public/assets/plainspace/builder/colorPicker.js
 export function createColorPicker(options = {}) {
   const {
     presetColors = [
@@ -72,36 +67,23 @@ export function createColorPicker(options = {}) {
     const addCustom = document.createElement('button');
     addCustom.type = 'button';
     addCustom.className = 'color-circle add-custom';
-    // Append element before initializing Pickr so the library
-    // can safely replace it during its build process
-    section.appendChild(addCustom);
-
-    const pickr = Pickr.create({
-      el: addCustom,
-      // ensure the generated picker elements live inside the section
-      container: section,
-      theme: 'nano',
-      default: selectedColor,
-      components: {
-        preview: true,
-        opacity: true,
-        hue: true,
-        interaction: {
-          input: true,
-          save: true
-        }
-      }
-    });
-
-    pickr.on('change', color => {
-      selectedColor = color.toHEXA().toString();
+    addCustom.textContent = '+';
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.className = 'color-input';
+    input.value = selectedColor;
+    input.addEventListener('input', ev => {
+      selectedColor = ev.target.value;
       container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
       addCustom.style.backgroundColor = selectedColor;
       addCustom.classList.add('active');
       onSelect(selectedColor);
     });
-
-    pickr.on('save', () => pickr.hide());
+    addCustom.addEventListener('click', () => {
+      input.click();
+    });
+    section.appendChild(addCustom);
+    section.appendChild(input);
     wrapper.appendChild(section);
     container.appendChild(wrapper);
   }

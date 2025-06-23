@@ -117,6 +117,7 @@
 .color-circle.active {
   border-color: var(--user-color);
 }
+
 .color-circle.add-custom {
   display: flex;
   align-items: center;
@@ -137,4 +138,3 @@
 .color-picker.hidden {
   display: none;
 }
-

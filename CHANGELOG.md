@@ -18,6 +18,7 @@ El Psy Kongroo
 - sanitized HTML is now applied only once when finishing text edits to prevent cursor jumps
 - toolbar buttons now reliably apply styles to the current editable element and
   the toolbar is reused if it already exists
+- text editor commands now follow a Command pattern with undo/redo history
 - dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized
 - widgetSelected event now fires when selecting a widget so the editor can hide the toolbar on first click
 - toolbar stays visible after editing if the widget remains selected and loaded

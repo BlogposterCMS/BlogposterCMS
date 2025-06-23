@@ -11,6 +11,80 @@ let autoHandler = null;
 let currentColor = '#000000';
 let colorPicker = null;
 
+// Command history for text edits
+const textHistory = [];
+const redoHistory = [];
+const MAX_HISTORY = 50;
+
+let toggleStyleInternal;
+let applyFontInternal;
+let applySizeInternal;
+let applyColorInternal;
+
+function pushCommand(command) {
+  textHistory.push(command);
+  if (textHistory.length > MAX_HISTORY) textHistory.shift();
+  redoHistory.length = 0;
+}
+
+export function undoTextCommand() {
+  const cmd = textHistory.pop();
+  if (!cmd) return false;
+  redoHistory.push(cmd);
+  cmd.undo();
+  return true;
+}
+
+export function redoTextCommand() {
+  const cmd = redoHistory.pop();
+  if (!cmd) return false;
+  textHistory.push(cmd);
+  cmd.execute();
+  return true;
+}
+
+function recordChange(el, prevHtml) {
+  const newHtml = el.innerHTML;
+  pushCommand({
+    execute() {
+      el.innerHTML = newHtml;
+      updateAndDispatch(el);
+    },
+    undo() {
+      el.innerHTML = prevHtml;
+      updateAndDispatch(el);
+    }
+  });
+}
+
+export function toggleStyle(prop, value) {
+  if (!activeEl) return;
+  const prev = activeEl.innerHTML;
+  toggleStyleInternal(prop, value);
+  recordChange(activeEl, prev);
+}
+
+export function applyFont(font) {
+  if (!activeEl) return;
+  const prev = activeEl.innerHTML;
+  applyFontInternal(font);
+  recordChange(activeEl, prev);
+}
+
+export function applySize(size) {
+  if (!activeEl) return;
+  const prev = activeEl.innerHTML;
+  applySizeInternal(size);
+  recordChange(activeEl, prev);
+}
+
+export function applyColor(color) {
+  if (!activeEl) return;
+  const prev = activeEl.innerHTML;
+  applyColorInternal(color);
+  recordChange(activeEl, prev);
+}
+
 function dispatchHtmlUpdate(el) {
   if (!el) return;
   const widget = findWidget(el);
@@ -180,7 +254,7 @@ async function init() {
     toolbar.addEventListener('mousedown', e => e.stopPropagation());
     toolbar.addEventListener('click', e => e.stopPropagation());
 
-    const toggleStyle = (prop, value) => {
+    toggleStyleInternal = (prop, value) => {
       if (!activeEl) return;
       const sel = window.getSelection();
       if (
@@ -297,7 +371,7 @@ async function init() {
     populateFonts();
     document.addEventListener('fontsUpdated', populateFonts);
 
-    const applyFont = font => {
+    applyFontInternal = font => {
       if (!font || !activeEl) return;
       ffLabel.textContent = font;
       const sel = window.getSelection();
@@ -326,7 +400,7 @@ async function init() {
       updateAndDispatch(activeEl);
       activeEl.focus();
     };
-    const applySize = size => {
+    applySizeInternal = size => {
       const val = parseFloat(size);
       if (!val || !activeEl) return;
       fsInput.value = val;
@@ -366,7 +440,7 @@ async function init() {
       return tmp.style.color ? c : '#000000';
     };
 
-    const applyColor = color => {
+    applyColorInternal = color => {
       const val = sanitizeColor(color);
       currentColor = val;
       if (!activeEl) return;

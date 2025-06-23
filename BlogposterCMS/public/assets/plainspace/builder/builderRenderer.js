@@ -5,7 +5,9 @@ import {
   showToolbar,
   hideToolbar,
   setActiveElement,
-  getRegisteredEditable
+  getRegisteredEditable,
+  undoTextCommand,
+  redoTextCommand
 } from './editor/editor.js';
 import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState } from './managers/gridManager.js';
 import { applyLayout, getItemData } from './managers/layoutManager.js';
@@ -220,6 +222,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
 
   function undo() {
+    if (undoTextCommand()) return;
     if (undoStack.length < 2) return;
     const current = undoStack.pop();
     redoStack.push(current);
@@ -229,6 +232,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function redo() {
+    if (redoTextCommand()) return;
     if (!redoStack.length) return;
     const next = redoStack.pop();
     undoStack.push(next);

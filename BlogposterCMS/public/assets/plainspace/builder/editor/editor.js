@@ -27,7 +27,6 @@ function dispatchHtmlUpdate(el) {
 function updateAndDispatch(el) {
   if (!el) return;
   const clean = sanitizeHtml(el.innerHTML.trim());
-  el.innerHTML = clean;
   el.__onSave?.(clean);
   dispatchHtmlUpdate(el);
 }
@@ -534,6 +533,7 @@ export function editElement(el, onSave, clickEvent = null) {
 
   function finish(save) {
     if (save) {
+      el.innerHTML = sanitizeHtml(el.innerHTML.trim());
       updateAndDispatch(el);
     }
     activeEl = null;
@@ -653,6 +653,8 @@ function hideToolbar() {
     headingSelect.onchange = null;
   }
 }
+
+document.addEventListener('widgetSelected', () => hideToolbar());
 
 export { showToolbar, hideToolbar };
 

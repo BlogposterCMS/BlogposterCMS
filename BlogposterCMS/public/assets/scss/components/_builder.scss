@@ -518,11 +518,13 @@ body.preview-desktop #content {
   cursor: move;
 }
 
-.canvas-item.editing { 
-  z-index: 9999; 
+.canvas-item.editing {
+  z-index: 9999;
+  cursor: text;
 }
 
 .canvas-item.selected .hit-layer,
 .canvas-item.editing .hit-layer {
   pointer-events: none;
+  cursor: text;
 }

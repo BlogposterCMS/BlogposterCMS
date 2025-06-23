@@ -211,6 +211,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     actionBar.style.display = 'none';
     state.activeWidgetEl.classList.remove('selected');
+    state.activeWidgetEl.dispatchEvent(new Event('deselected'));
     state.activeWidgetEl = null;
     hideToolbar();
   grid.clearSelection();
@@ -370,6 +371,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     attachLockOnClick(wrapper);
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
+
+    /* --------  Neu: automatisch auswählen  --------------------------- */
+    selectWidget(wrapper);          // ruft Action-Bar & widgetSelected
 
     renderWidget(wrapper, widgetDef, localCodeMap);
     if (pageId) scheduleAutosave();

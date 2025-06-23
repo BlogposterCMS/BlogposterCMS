@@ -356,7 +356,7 @@ async function init() {
       }
     });
     /* Picker nur schließen, wenn X gedrückt oder Widget gewechselt */
-    document.addEventListener('widgetSelected', () => colorPicker.hide());
+    document.addEventListener('selected', () => colorPicker.hide());
     colorWrapper.appendChild(colorBtn);
     toolbar.appendChild(colorWrapper);
 
@@ -591,6 +591,7 @@ export function editElement(el, onSave, clickEvent = null) {
   widget.dataset.layer = 9999;
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
+  widget.dispatchEvent(new Event('editStart'));
 
   //lock the widget to prevent moving/resizing while editing
   widget.setAttribute('gs-locked', 'true');
@@ -633,6 +634,7 @@ export function editElement(el, onSave, clickEvent = null) {
     if (hitLayer) hitLayer.style.pointerEvents = 'auto';
 
     widget.classList.remove('editing');
+    widget.dispatchEvent(new Event('editEnd'));
     if (widget.classList.contains('selected')) {
       showToolbar();
     } else {
@@ -730,7 +732,7 @@ function hideToolbar() {
   }
 }
 
-document.addEventListener('widgetSelected', () => hideToolbar());
+document.addEventListener('selected', () => hideToolbar());
 
 export { showToolbar, hideToolbar };
 

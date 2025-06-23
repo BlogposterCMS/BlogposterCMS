@@ -614,7 +614,7 @@ export function enableAutoEdit() {
     ev.preventDefault();
     editElement(el, el.__onSave, ev);
   };
-  document.addEventListener('click', autoHandler, true);
+  document.addEventListener('dblclick', autoHandler, true);
 }
 
 export async function initTextEditor() {

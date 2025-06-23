@@ -322,11 +322,13 @@ body.builder-mode #content {
   margin-left: 96px;
   height: calc(100vh - 79px);
   overflow-y: auto;
+  padding-top: 60px; // keep toolbar from covering the grid
+  box-sizing: border-box;
 }
 
 body.builder-mode #builderGrid {
-  height: 100%;
-  min-height: 100%;
+  height: calc(100% - 60px);
+  min-height: calc(100% - 60px);
 }
 
 // Ensure themed widget content matches its wrapper dimensions

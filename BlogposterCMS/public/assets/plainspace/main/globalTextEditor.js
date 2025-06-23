@@ -461,7 +461,29 @@ async function init() {
 }
 
 
-export function editElement(el, onSave) {
+function setCaretFromEvent(el, ev) {
+  if (!el || !ev) return;
+  let range = null;
+  if (document.caretRangeFromPoint) {
+    range = document.caretRangeFromPoint(ev.clientX, ev.clientY);
+  } else if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(ev.clientX, ev.clientY);
+    if (pos) {
+      range = document.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+    }
+  }
+  if (range) {
+    range.collapse(true);
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+}
+
+export function editElement(el, onSave, clickEvent = null) {
   const widget = el.closest('.canvas-item');
   if (!widget) return;
 
@@ -491,6 +513,9 @@ export function editElement(el, onSave) {
 
   el.setAttribute('contenteditable', 'true');
   el.focus();
+  if (clickEvent) {
+    setCaretFromEvent(el, clickEvent);
+  }
   activeEl = el;
 
   const inputHandler = () => dispatchHtmlUpdate(el);
@@ -575,7 +600,7 @@ export function enableAutoEdit() {
     const editable = getRegisteredEditable(widget) || el;
     ev.stopPropagation();
     ev.preventDefault();
-    editElement(editable, editable.__onSave);
+    editElement(editable, editable.__onSave, ev);
   };
   document.addEventListener('click', autoHandler, true);
 }

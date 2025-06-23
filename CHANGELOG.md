@@ -4,7 +4,6 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
-- text block editor toolbar now spans the builder grid width and stays fixed on top
 - toolbar floating styles defined in SCSS; compiled CSS unchanged
 - toolbar positioning logic moved to new `floating-ui` module
 - builder grid now starts below the fixed toolbar to avoid overlap

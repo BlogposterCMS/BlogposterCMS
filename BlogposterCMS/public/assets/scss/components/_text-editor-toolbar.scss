@@ -6,10 +6,9 @@
 .text-block-editor-toolbar {
   position: fixed;
   top: 60px; // floats just below the header
-  left: 96px; // align with builder grid offset
-  right: 0;
-  width: auto; // stretch across the grid
-  transform: none;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px); // almost full width with small margins
   display: flex;
   align-items: center;
   gap: 4px;

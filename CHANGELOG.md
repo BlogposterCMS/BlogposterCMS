@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- fixed 404 errors when loading the Text Box widget by correcting import paths and icon mapping
 - moved `globalTextEditor` and `colorPicker` modules into a new `editor` folder and updated imports
 - restored self-made color picker using native color input and removed pickr library
 - removed custom color picker that intercepted clicks; built-in color inputs are now used for text and user color selection

@@ -224,7 +224,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const current = undoStack.pop();
     redoStack.push(current);
     const prev = JSON.parse(undoStack[undoStack.length - 1]);
-    applyLayout(prev, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer });
+    applyLayout(prev, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
@@ -233,7 +233,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const next = redoStack.pop();
     undoStack.push(next);
     const layout = JSON.parse(next);
-    applyLayout(layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer });
+    applyLayout(layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
@@ -613,9 +613,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function applyCompositeLayout(idx) {
     gridEl.innerHTML = '';
     Object.keys(ensureCodeMap()).forEach(k => delete codeMap[k]);
-    applyLayout(layoutLayers[0].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: false, layerIndex: 0 });
+    applyLayout(layoutLayers[0].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: false, layerIndex: 0, iconMap: ICON_MAP });
     if (idx !== 0) {
-      applyLayout(layoutLayers[idx].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: true, layerIndex: idx });
+      applyLayout(layoutLayers[idx].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: true, layerIndex: idx, iconMap: ICON_MAP });
     }
   }
 

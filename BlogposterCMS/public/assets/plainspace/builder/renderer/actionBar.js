@@ -31,6 +31,7 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     if (!el) return;
     if (state.activeWidgetEl) state.activeWidgetEl.classList.remove('selected');
     state.activeWidgetEl = el;
+    document.dispatchEvent(new Event('widgetSelected'));
     state.activeWidgetEl.classList.add('selected');
     grid.select(el);
     const locked = el.getAttribute('gs-locked') === 'true';

@@ -84,7 +84,8 @@ export async function render(el) {
         colorBtn.style.backgroundColor = selectedColor;
 
         const themeColor = getComputedStyle(document.documentElement)
-          .getPropertyValue('--accent-color').trim();
+          .getPropertyValue('--accent-color')
+          .trim();
         const picker = createColorPicker({
           presetColors: colorChoices,
           userColors: user.ui_color ? [user.ui_color] : [],

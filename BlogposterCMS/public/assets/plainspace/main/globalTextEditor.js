@@ -1,7 +1,7 @@
 // public/assets/plainspace/main/globalTextEditor.js
 // Lightweight global text editor for builder mode.
-import { createColorPicker } from '../builder/colorPicker.js';
 import { isValidTag } from '../builder/allowedTags.js';
+import { createColorPicker } from '../builder/colorPicker.js';
 
 let toolbar = null;
 let activeEl = null;
@@ -641,7 +641,6 @@ function showToolbar(el) {
 function hideToolbar() {
   if (!toolbar) return;
   toolbar.style.display = 'none';
-  colorPicker?.hide?.();
   const headingSelect = toolbar.querySelector('.heading-select');
   if (headingSelect) {
     headingSelect.style.display = 'none';

@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- restored self-made color picker using native color input and removed pickr library
+- removed custom color picker that intercepted clicks; built-in color inputs are now used for text and user color selection
 - fixed crash when adding widgets to the builder grid due to missing options passed to attachOptionsMenu
 - ensured existing `codeMap` is passed when creating widgets
 - prevented autosave crash when layout grid was not ready by validating the grid element

@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- grid widgets now lock completely during text edits to avoid race conditions
 - ensured toolbar element is reused if it already exists to prevent duplicate listeners
 - color changes no longer trigger autosave; `applyColor` no longer calls `updateAndDispatch`
 - allowed `font-style` inline style in `sanitizeHtml` so italic text survives cleaning

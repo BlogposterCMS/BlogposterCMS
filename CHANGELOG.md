@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 - grid widgets now lock completely during text edits to avoid race conditions
+- ensured toolbar element is reused if it already exists to prevent duplicate listeners
+- color changes no longer trigger autosave; `applyColor` no longer calls `updateAndDispatch`
+- allowed `font-style` inline style in `sanitizeHtml` so italic text survives cleaning
 - registerElement no longer forces the `contenteditable` attribute; `editElement` now fully controls it for safer widget editing
 - fixed grid blocking keyboard input by restoring `contenteditable` removal after finishing edits
 - ensured toolbar click callback restores the selected editable element when the previous active element is gone

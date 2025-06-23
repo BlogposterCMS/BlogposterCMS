@@ -49,6 +49,7 @@ export function sanitizeHtml(html) {
           'font-family',
           'text-decoration',
           'font-weight',
+          'font-style',
           'color',
           'background-color'
         ];
@@ -139,8 +140,9 @@ async function init() {
   }
   initPromise = (async () => {
     try {
-      // Reuse existing toolbar if present to avoid duplicate listeners
-      toolbar = document.body.querySelector('.text-block-editor-toolbar');
+      // Ensure toolbar is a singleton to avoid duplicate event listeners
+      toolbar =
+        toolbar || document.body.querySelector('.text-block-editor-toolbar');
       if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.className = 'text-block-editor-toolbar floating';
@@ -390,7 +392,6 @@ async function init() {
       } else {
         activeEl.style.color = val;
       }
-      updateAndDispatch(activeEl);
       activeEl.focus();
     };
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {
@@ -605,7 +606,7 @@ export function enableAutoEdit() {
     ev.preventDefault();
     editElement(el, el.__onSave, ev);
   };
-  document.addEventListener('click', autoHandler, true);
+  document.addEventListener('dblclick', autoHandler, true);
 }
 
 export async function initTextEditor() {

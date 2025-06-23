@@ -262,19 +262,32 @@ async function init() {
         activeEl.contains(sel.anchorNode) &&
         activeEl.contains(sel.focusNode)
       ) {
-        try {
-          const range = sel.getRangeAt(0).cloneRange();
+        const range = sel.getRangeAt(0).cloneRange();
+        const wrapper = document.createElement('span');
+        wrapper.appendChild(range.cloneContents());
+
+        const alreadyStyled = [...wrapper.querySelectorAll('*')].every(
+          n => n.style[prop] === value
+        );
+
+        if (alreadyStyled) {
+          const frag = range.extractContents();
+          const div = document.createElement('div');
+          div.appendChild(frag);
+          div.querySelectorAll(`[style*="${prop}"]`).forEach(n => {
+            n.style[prop] = '';
+            if (!n.getAttribute('style')) n.replaceWith(...n.childNodes);
+          });
+          range.insertNode(div);
+          div.replaceWith(...div.childNodes);
+        } else {
           const span = document.createElement('span');
           span.style[prop] = value;
           span.appendChild(range.extractContents());
           range.insertNode(span);
-          sel.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(span);
-          sel.addRange(newRange);
-        } catch (err) {
-          activeEl.style[prop] = value;
         }
+        sel.removeAllRanges();
+        sel.addRange(range);
       } else {
         const current = activeEl.style[prop];
         activeEl.style[prop] = current === value ? '' : value;

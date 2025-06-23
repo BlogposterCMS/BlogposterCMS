@@ -213,8 +213,7 @@ async function init() {
       if (!btn) return;
       ev.preventDefault();
       if (!activeEl || !document.body.contains(activeEl)) {
-        const selected = document.querySelector('.canvas-item.selected [contenteditable="true"]');
-        if (selected) activeEl = selected;
+        activeEl = document.querySelector('.canvas-item.selected [contenteditable="true"]');
       }
       if (!activeEl) return;
       const cmd = btn.dataset.cmd;

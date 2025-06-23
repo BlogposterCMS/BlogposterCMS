@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- autoEdit now retries entering edit mode if a widget hasn't registered its editable element yet
 - fixed color picker closing immediately after selecting a color; picker now only
   hides on outside clicks or via the close button
 - toolbar actions now work on the selected widget even before entering edit mode

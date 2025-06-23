@@ -6,7 +6,7 @@ import {
   hideToolbar,
   setActiveElement,
   getRegisteredEditable
-} from '../editor/editor.js';
+} from './editor/editor.js';
 import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState } from './managers/gridManager.js';
 import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';

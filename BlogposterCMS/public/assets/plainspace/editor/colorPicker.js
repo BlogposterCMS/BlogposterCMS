@@ -1,4 +1,4 @@
-// public/assets/plainspace/builder/colorPicker.js
+// public/assets/plainspace/editor/colorPicker.js
 export function createColorPicker(options = {}) {
   const {
     presetColors = [
@@ -68,19 +68,21 @@ export function createColorPicker(options = {}) {
     addCustom.type = 'button';
     addCustom.className = 'color-circle add-custom';
     addCustom.textContent = '+';
-    const input = document.createElement('input');
-    input.type = 'color';
+    const input = document.createElement('div');
     input.className = 'color-input';
-    input.value = selectedColor;
-    input.addEventListener('input', ev => {
-      selectedColor = ev.target.value;
+    input.contentEditable = 'true';
+    input.textContent = selectedColor;
+    const sanitize = val => (/^#[0-9a-fA-F]{3,8}$/.test(val) ? val : selectedColor);
+    input.addEventListener('input', () => {
+      const val = sanitize(input.textContent.trim());
+      selectedColor = val;
       container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
       addCustom.style.backgroundColor = selectedColor;
       addCustom.classList.add('active');
       onSelect(selectedColor);
     });
     addCustom.addEventListener('click', () => {
-      input.click();
+      input.focus();
     });
     section.appendChild(addCustom);
     section.appendChild(input);

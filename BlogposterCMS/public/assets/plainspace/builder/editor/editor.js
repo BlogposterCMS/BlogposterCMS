@@ -554,7 +554,11 @@ export function editElement(el, onSave, clickEvent = null) {
     if (hitLayer) hitLayer.style.pointerEvents = 'auto';
 
     widget.classList.remove('editing');
-    hideToolbar();
+    if (widget.classList.contains('selected')) {
+      showToolbar(widget);
+    } else {
+      hideToolbar();
+    }
     document.removeEventListener('mousedown', outsideClick, true);
   }
 
@@ -580,6 +584,9 @@ export function registerElement(editable, onSave) {
   }
   if (editable.__registered) return;
   editable.__registered = true;
+  if (!editable.hasAttribute('contenteditable')) {
+    editable.setAttribute('contenteditable', 'true');
+  }
   editable.__onSave = onSave;
   const widget = findWidget(editable);
   if (widget) {

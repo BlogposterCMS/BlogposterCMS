@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- widgets dropped onto the canvas are automatically selected and editing shows a text cursor
 - fixed color picker closing immediately after selecting a color; picker now only
   hides on outside clicks or via the close button
 - toolbar actions now work on the selected widget even before entering edit mode

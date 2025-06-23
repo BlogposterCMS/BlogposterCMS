@@ -506,17 +506,12 @@ export function editElement(el, onSave, clickEvent = null) {
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
 
-  // Only disable dragging while editing but keep widget unlocked
-  widget.setAttribute('gs-locked', 'false');
+  // Lock widget completely while editing to avoid race conditions
+  widget.setAttribute('gs-locked', 'true');
   const grid = widget.closest('.canvas-grid')?.__grid;
-  grid?.update(widget, { locked: false, noMove: true, noResize: false });
+  grid?.update(widget, { locked: true, noMove: true, noResize: true });
 
   if (hitLayer) hitLayer.style.pointerEvents = 'none';
-
-  const block  = () => grid?.update(widget, { noMove: true });
-  const allow  = () => grid?.update(widget, { noMove: false });
-  el.addEventListener('mouseenter', block);
-  el.addEventListener('mouseleave', allow);
 
   el.setAttribute('contenteditable', 'true');
   el.focus();
@@ -544,9 +539,6 @@ export function editElement(el, onSave, clickEvent = null) {
     widget.style.zIndex = String(prevLayer);
     widget.setAttribute('gs-locked', 'false');
     grid?.update(widget, { locked: false, noMove: false, noResize: false });
-
-    el.removeEventListener('mouseenter', block);
-    el.removeEventListener('mouseleave', allow);
     if (el.__inputHandler) {
       el.removeEventListener('input', el.__inputHandler);
       delete el.__inputHandler;

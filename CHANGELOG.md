@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- toolbar buttons now reliably apply styles to the current editable element and
+  the toolbar is reused if it already exists
 - dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized
 - toolbar stays visible after editing if the widget remains selected and loaded
   text widgets now receive the `contenteditable` attribute automatically

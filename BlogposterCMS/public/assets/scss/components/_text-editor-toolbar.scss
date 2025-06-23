@@ -1,14 +1,15 @@
 /* =============================================================================
    components/_text-editor-toolbar.scss
-   Styles for the floating text block editor toolbar
+   Styles for the fixed text block editor toolbar
    ============================================================================= */
 
 .text-block-editor-toolbar {
   position: fixed;
-  top: 60px; // floats just below the header
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 32px); // almost full width with small margins
+  top: 60px; // fixed just below the header
+  left: 96px; // align with builder grid offset
+  right: 0;
+  width: auto; // stretch across the grid
+  transform: none;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -19,13 +20,6 @@
   box-shadow: var(--shadow-default);
   z-index: 1000;
 
-  &.floating {
-    position: absolute;
-    top: auto;
-    left: 0;
-    transform: none;
-    width: auto;
-  }
 
   .tb-btn {
     background: transparent;

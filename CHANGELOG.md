@@ -4,8 +4,8 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
-- toolbar floating styles defined in SCSS; compiled CSS unchanged
-- toolbar positioning logic moved to new `floating-ui` module
+- text block editor toolbar now spans the builder grid width and stays fixed below the header
+- toolbar no longer floats near widgets; removed `floating-ui` helper
 - builder grid now starts below the fixed toolbar to avoid overlap
 - widgets remain movable while editing text; bounding box stays interactive
 - `sanitizeHtml` now runs only on save; live edits no longer sanitize input

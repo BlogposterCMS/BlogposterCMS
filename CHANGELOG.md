@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- allowed `font-style` inline style in `sanitizeHtml` so italic text survives cleaning
 - ensured toolbar click callback restores the selected editable element when the previous active element is gone
 - sanitized HTML is now applied only once when finishing text edits to prevent cursor jumps
 - toolbar buttons now reliably apply styles to the current editable element and

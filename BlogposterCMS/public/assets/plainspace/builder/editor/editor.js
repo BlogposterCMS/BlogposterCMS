@@ -49,6 +49,7 @@ export function sanitizeHtml(html) {
           'font-family',
           'text-decoration',
           'font-weight',
+          'font-style',
           'color',
           'background-color'
         ];

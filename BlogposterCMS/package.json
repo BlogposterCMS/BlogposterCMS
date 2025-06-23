@@ -1,6 +1,6 @@
 {
     "name": "blogposter_cms",
-    "version": "0.6.1",
+    "version": "0.6.0",
     "main": "app.js",
     "scripts": {
         "start": "node app.js",

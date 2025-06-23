@@ -2,6 +2,7 @@
 // Lightweight global text editor for builder mode.
 import { isValidTag } from '../allowedTags.js';
 import { createColorPicker } from './colorPicker.js';
+import { positionFloatingEl } from './floating-ui.js';
 
 let toolbar = null;
 let activeEl = null;
@@ -631,6 +632,7 @@ export function applyToolbarChange(el, styleProp, value) {
 function showToolbar(el) {
   if (!toolbar) return;
   toolbar.style.display = 'flex';
+  if (el) positionFloatingEl(toolbar, el);
 }
 
 function hideToolbar() {

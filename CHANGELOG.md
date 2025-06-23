@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- toolbar floating styles defined in SCSS; compiled CSS unchanged
+- toolbar positioning logic moved to new `floating-ui` module
 - grid widgets now lock completely during text edits to avoid race conditions
 - ensured toolbar element is reused if it already exists to prevent duplicate listeners
 - color changes no longer trigger autosave; `applyColor` no longer calls `updateAndDispatch`

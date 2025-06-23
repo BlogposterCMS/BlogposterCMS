@@ -271,12 +271,24 @@ async function init() {
         /* Wenn der markierte Text bereits homogen formatiert ist,
            entfernen wir den Stil statt ihn zu stapeln. */
         const tmp = span.cloneNode(true);
-        const everyHasStyle = [...tmp.querySelectorAll('*')].every(
-          n => (n.style[prop] || '') === String(value)
-        );
+        const checkNodes = [tmp, ...tmp.querySelectorAll('*')];
+        const everyHasStyle = checkNodes.every(n => {
+          const val = getComputedStyle(n)[prop];
+          if (prop === 'textDecoration') return val.includes('underline');
+          if (prop === 'fontWeight' && String(value) === 'bold') {
+            return val === 'bold' || parseInt(val, 10) >= 600;
+          }
+          if (prop === 'fontStyle') return /(italic|oblique)/.test(val);
+          return val === String(value);
+        });
         if (everyHasStyle) {
-          tmp.querySelectorAll('*').forEach(n => n.style[prop] = '');
           range.insertNode(tmp);
+          tmp.querySelectorAll('*').forEach(n => {
+            n.style[prop] = '';
+            if (!n.getAttribute('style')) n.replaceWith(...n.childNodes);
+          });
+          tmp.style[prop] = '';
+          if (!tmp.getAttribute('style')) tmp.replaceWith(...tmp.childNodes);
         } else {
           range.insertNode(span);
         }
@@ -285,15 +297,22 @@ async function init() {
       }
       // 2. Keine Range oder Box‑Level‑Modus => Toggle am Block selbst
       else {
-        if (activeEl.style[prop] === value) {
+        const current = getComputedStyle(activeEl)[prop];
+        let isActive = current === String(value);
+        if (prop === 'textDecoration') isActive = current.includes('underline');
+        if (prop === 'fontWeight' && String(value) === 'bold') {
+          isActive = current === 'bold' || parseInt(current, 10) >= 600;
+        }
+        if (prop === 'fontStyle') isActive = /(italic|oblique)/.test(current);
+        if (isActive) {
           activeEl.style.removeProperty(prop);
+          if (!activeEl.getAttribute('style')) activeEl.removeAttribute('style');
         } else {
           activeEl.style[prop] = value;
         }
       }
 
-      /* Undo/Redo‑Stack */
-      recordChange(activeEl, activeEl.outerHTML);
+      // history update handled by toggleStyle wrapper
       updateAndDispatch(activeEl);
       activeEl.focus();
     };

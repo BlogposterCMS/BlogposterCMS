@@ -499,10 +499,10 @@ export function editElement(el, onSave, clickEvent = null) {
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
 
-  // Keep widget draggable while editing and unlock it
+  // Only disable dragging while editing but keep widget unlocked
   widget.setAttribute('gs-locked', 'false');
   const grid = widget.closest('.canvas-grid')?.__grid;
-  grid?.update(widget, { locked: false, noMove: false, noResize: false });
+  grid?.update(widget, { locked: false, noMove: true, noResize: false });
 
   if (hitLayer) hitLayer.style.pointerEvents = 'none';
 
@@ -600,13 +600,7 @@ export function enableAutoEdit() {
     const editable = getRegisteredEditable(widget) || el;
     ev.stopPropagation();
     ev.preventDefault();
-
-    if (editable.getAttribute('contenteditable') === 'true') {
-      setCaretFromEvent(editable, ev);
-      editable.focus();
-    } else {
-      editElement(editable, editable.__onSave);
-    }
+    editElement(editable, editable.__onSave, ev);
   };
   document.addEventListener('click', autoHandler, true);
 }

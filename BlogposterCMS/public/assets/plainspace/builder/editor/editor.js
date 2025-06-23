@@ -140,8 +140,9 @@ async function init() {
   }
   initPromise = (async () => {
     try {
-      // Reuse existing toolbar if present to avoid duplicate listeners
-      toolbar = document.body.querySelector('.text-block-editor-toolbar');
+      // Ensure toolbar is a singleton to avoid duplicate event listeners
+      toolbar =
+        toolbar || document.body.querySelector('.text-block-editor-toolbar');
       if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.className = 'text-block-editor-toolbar floating';

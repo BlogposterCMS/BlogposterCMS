@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- sanitized HTML is now applied only once when finishing text edits to prevent cursor jumps
 - dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized
 - toolbar stays visible after editing if the widget remains selected and loaded
   text widgets now receive the `contenteditable` attribute automatically

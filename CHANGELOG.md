@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- sanitized HTML is now applied only once when finishing text edits to prevent cursor jumps
 - toolbar buttons now reliably apply styles to the current editable element and
   the toolbar is reused if it already exists
 - dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized

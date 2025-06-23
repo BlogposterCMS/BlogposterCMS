@@ -391,7 +391,6 @@ async function init() {
       } else {
         activeEl.style.color = val;
       }
-      updateAndDispatch(activeEl);
       activeEl.focus();
     };
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {

@@ -256,45 +256,41 @@ async function init() {
     toggleStyleInternal = (prop, value) => {
       if (!activeEl) return;
       const sel = window.getSelection();
-      if (
-        sel &&
-        !sel.isCollapsed &&
-        activeEl.contains(sel.anchorNode) &&
-        activeEl.contains(sel.focusNode)
-      ) {
+
+      // 1. Range‑Selektion => Inline‑Spans setzen/entfernen
+      if (sel && !sel.isCollapsed &&
+          activeEl.contains(sel.anchorNode) && activeEl.contains(sel.focusNode)) {
         const range = sel.getRangeAt(0).cloneRange();
-        const wrapper = document.createElement('span');
-        wrapper.appendChild(range.cloneContents());
+        const span = document.createElement('span');
+        span.style[prop] = value;
+        span.appendChild(range.extractContents());
+        range.deleteContents();
 
-        const alreadyStyled = [...wrapper.querySelectorAll('*')].every(
-          n => n.style[prop] === value
+        /* Wenn der markierte Text bereits homogen formatiert ist,
+           entfernen wir den Stil statt ihn zu stapeln. */
+        const tmp = span.cloneNode(true);
+        const everyHasStyle = [...tmp.querySelectorAll('*')].every(
+          n => (n.style[prop] || '') === String(value)
         );
-
-        if (alreadyStyled) {
-          const frag = range.extractContents();
-          const div = document.createElement('div');
-          div.appendChild(frag);
-          div.querySelectorAll(`[style*="${prop}"]`).forEach(n => {
-            n.style[prop] = '';
-            if (!n.getAttribute('style')) n.replaceWith(...n.childNodes);
-          });
-          range.insertNode(div);
-          div.replaceWith(...div.childNodes);
+        if (everyHasStyle) {
+          tmp.querySelectorAll('*').forEach(n => n.style[prop] = '');
+          range.insertNode(tmp);
         } else {
-          const span = document.createElement('span');
-          span.style[prop] = value;
-          span.appendChild(range.extractContents());
           range.insertNode(span);
         }
         sel.removeAllRanges();
         sel.addRange(range);
-      } else {
-        const current = activeEl.style[prop];
-        activeEl.style[prop] = current === value ? '' : value;
       }
+      // 2. Keine Range oder Box‑Level‑Modus => Toggle am Block selbst
+      else {
+        const cur = activeEl.style[prop];
+        activeEl.style[prop] = cur === value ? '' : value;
+      }
+
+      /* Undo/Redo‑Stack */
+      recordChange(activeEl, activeEl.innerHTML);
       updateAndDispatch(activeEl);
       activeEl.focus();
-      updateAndDispatch(activeEl);
     };
 
     toolbar.addEventListener('click', ev => {
@@ -337,6 +333,7 @@ async function init() {
       onSelect: c => {
         applyColor(c);
         colorIcon.style.textDecorationColor = c;
+        /* Picker offen lassen – schließen erst über X/Widgetwechsel */
       },
       onClose: () => colorBtn.focus()
     });
@@ -353,18 +350,8 @@ async function init() {
         colorPicker.hide();
       }
     });
-    toolbar.addEventListener('click', ev => {
-      if (!colorPicker.el.contains(ev.target)) return;
-    });
-
-    document.addEventListener('click', ev => {
-      if (
-        !colorPicker.el.contains(ev.target) &&
-        !toolbar.contains(ev.target)
-      ) {
-        colorPicker.hide();
-      }
-    });
+    /* Picker nur schließen, wenn X gedrückt oder Widget gewechselt */
+    document.addEventListener('widgetSelected', () => colorPicker.hide());
     colorWrapper.appendChild(colorBtn);
     toolbar.appendChild(colorWrapper);
 

@@ -27,7 +27,6 @@ function dispatchHtmlUpdate(el) {
 function updateAndDispatch(el) {
   if (!el) return;
   const clean = sanitizeHtml(el.innerHTML.trim());
-  el.innerHTML = clean;
   el.__onSave?.(clean);
   dispatchHtmlUpdate(el);
 }
@@ -213,8 +212,7 @@ async function init() {
       if (!btn) return;
       ev.preventDefault();
       if (!activeEl || !document.body.contains(activeEl)) {
-        const selected = document.querySelector('.canvas-item.selected [contenteditable="true"]');
-        if (selected) activeEl = selected;
+        activeEl = document.querySelector('.canvas-item.selected [contenteditable="true"]');
       }
       if (!activeEl) return;
       const cmd = btn.dataset.cmd;
@@ -535,12 +533,12 @@ export function editElement(el, onSave, clickEvent = null) {
 
   function finish(save) {
     if (save) {
+      el.innerHTML = sanitizeHtml(el.innerHTML.trim());
       updateAndDispatch(el);
     }
     activeEl = null;
 
-    // Keep text widgets editable at all times
-    // el.removeAttribute('contenteditable');
+    el.removeAttribute('contenteditable');
 
     widget.dataset.layer = prevLayer;
     widget.style.zIndex = String(prevLayer);
@@ -651,6 +649,8 @@ function hideToolbar() {
     headingSelect.onchange = null;
   }
 }
+
+document.addEventListener('widgetSelected', () => hideToolbar());
 
 export { showToolbar, hideToolbar };
 

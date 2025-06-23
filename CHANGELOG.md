@@ -5,9 +5,13 @@ El Psy Kongroo
 
 ## [Unreleased]
 - registerElement no longer forces the `contenteditable` attribute; `editElement` now fully controls it for safer widget editing
+- fixed grid blocking keyboard input by restoring `contenteditable` removal after finishing edits
+- ensured toolbar click callback restores the selected editable element when the previous active element is gone
+- sanitized HTML is now applied only once when finishing text edits to prevent cursor jumps
 - toolbar buttons now reliably apply styles to the current editable element and
   the toolbar is reused if it already exists
 - dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized
+- widgetSelected event now fires when selecting a widget so the editor can hide the toolbar on first click
 - toolbar stays visible after editing if the widget remains selected and loaded
   text widgets now receive the `contenteditable` attribute automatically
 - fixed 404 errors when loading the Text Box widget by correcting import paths and icon mapping

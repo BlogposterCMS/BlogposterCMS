@@ -202,7 +202,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (
       e.target.closest('.canvas-item') === state.activeWidgetEl ||
       e.target.closest('.widget-action-bar') ||
-      e.target.closest('.text-editor-toolbar') ||
+      e.target.closest('.text-block-editor-toolbar') ||
       e.target.closest('.color-picker')
     ) {
       return;

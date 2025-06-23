@@ -301,7 +301,8 @@ async function init() {
       if (!btn) return;
       ev.preventDefault();
       if (!activeEl || !document.body.contains(activeEl)) {
-        activeEl = document.querySelector('.canvas-item.selected [contenteditable="true"]');
+        const w = document.querySelector('.canvas-item.selected');
+        activeEl = w ? getRegisteredEditable(w) : null;
       }
       if (!activeEl) return;
       const cmd = btn.dataset.cmd;

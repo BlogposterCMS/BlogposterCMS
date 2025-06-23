@@ -31,6 +31,10 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     if (!el) return;
     if (state.activeWidgetEl) state.activeWidgetEl.classList.remove('selected');
     state.activeWidgetEl = el;
+    const editable = window.getRegisteredEditable
+      ? window.getRegisteredEditable(el)
+      : null;
+    if (editable) window.setActiveElement(editable);
     document.dispatchEvent(new Event('widgetSelected'));
     state.activeWidgetEl.classList.add('selected');
     grid.select(el);

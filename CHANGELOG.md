@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized
 - toolbar stays visible after editing if the widget remains selected and loaded
   text widgets now receive the `contenteditable` attribute automatically
 - fixed 404 errors when loading the Text Box widget by correcting import paths and icon mapping

@@ -24,6 +24,14 @@ function dispatchHtmlUpdate(el) {
   );
 }
 
+function updateAndDispatch(el) {
+  if (!el) return;
+  const clean = sanitizeHtml(el.innerHTML.trim());
+  el.innerHTML = clean;
+  el.__onSave?.(clean);
+  dispatchHtmlUpdate(el);
+}
+
 const editableMap = new WeakMap();
 
 
@@ -190,10 +198,7 @@ async function init() {
         const current = activeEl.style[prop];
         activeEl.style[prop] = current === value ? '' : value;
       }
-      const clean = sanitizeHtml(activeEl.innerHTML.trim());
-      activeEl.innerHTML = clean;
-      activeEl.__onSave?.(clean);
-      dispatchHtmlUpdate(activeEl);
+      updateAndDispatch(activeEl);
       activeEl.focus();
     };
 
@@ -307,10 +312,7 @@ async function init() {
       } else {
         activeEl.style.fontFamily = `'${font}'`;
       }
-      const clean = sanitizeHtml(activeEl.innerHTML.trim());
-      activeEl.innerHTML = clean;
-      activeEl.__onSave?.(clean);
-      dispatchHtmlUpdate(activeEl);
+      updateAndDispatch(activeEl);
       activeEl.focus();
     };
     const applySize = size => {
@@ -341,10 +343,7 @@ async function init() {
       } else {
         activeEl.style.fontSize = val + 'px';
       }
-      const clean = sanitizeHtml(activeEl.innerHTML.trim());
-      activeEl.innerHTML = clean;
-      activeEl.__onSave?.(clean);
-      dispatchHtmlUpdate(activeEl);
+      updateAndDispatch(activeEl);
       activeEl.focus();
     };
 
@@ -383,10 +382,7 @@ async function init() {
       } else {
         activeEl.style.color = val;
       }
-      const clean = sanitizeHtml(activeEl.innerHTML.trim());
-      activeEl.innerHTML = clean;
-      activeEl.__onSave?.(clean);
-      dispatchHtmlUpdate(activeEl);
+      updateAndDispatch(activeEl);
       activeEl.focus();
     };
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {
@@ -529,10 +525,7 @@ export function editElement(el, onSave, clickEvent = null) {
 
   function finish(save) {
     if (save) {
-      const clean = sanitizeHtml(el.innerHTML.trim());
-      el.innerHTML = clean;
-      onSave?.(clean);
-      dispatchHtmlUpdate(el);
+      updateAndDispatch(el);
     }
     activeEl = null;
 
@@ -634,10 +627,7 @@ export function applyToolbarChange(el, styleProp, value) {
   if (!el) return;
   console.log('[DEBUG] Applying toolbar style:', styleProp, value, 'to element:', el);
   el.style[styleProp] = value;
-  const clean = sanitizeHtml(el.innerHTML.trim());
-  el.innerHTML = clean;
-  el.__onSave?.(clean);
-  dispatchHtmlUpdate(el);
+  updateAndDispatch(el);
 }
 
 function showToolbar(el) {

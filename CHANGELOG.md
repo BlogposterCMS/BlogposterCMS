@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+- toolbar actions now work on the selected widget even before entering edit mode
 - text block editor toolbar now spans the builder grid width and stays fixed below the header
 - toolbar no longer floats near widgets; removed `floating-ui` helper
 - builder grid now starts below the fixed toolbar to avoid overlap

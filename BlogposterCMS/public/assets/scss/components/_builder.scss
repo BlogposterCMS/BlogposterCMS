@@ -507,7 +507,15 @@ body.preview-desktop #content {
 }
 
 .hit-layer {
-  pointer-events: auto;  
+  pointer-events: auto;
+}
+
+.canvas-item .editable {
+  cursor: text;
+}
+
+.canvas-item:not(.editing) .hit-layer {
+  cursor: move;
 }
 
 .canvas-item.editing { 

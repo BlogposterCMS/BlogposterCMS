@@ -2012,6 +2012,14 @@ body.preview-desktop #content {
   pointer-events: auto;
 }
 
+.canvas-item .editable {
+  cursor: text;
+}
+
+.canvas-item:not(.editing) .hit-layer {
+  cursor: move;
+}
+
 .canvas-item.editing {
   z-index: 9999;
 }
@@ -2178,7 +2186,7 @@ body.preview-desktop #content {
 
 /* =============================================================================
    components/_text-editor-toolbar.scss
-   Styles for the floating text block editor toolbar
+   Styles for the fixed text block editor toolbar
    ============================================================================= */
 .text-block-editor-toolbar {
   position: fixed;
@@ -2196,13 +2204,6 @@ body.preview-desktop #content {
   border-radius: 21px;
   box-shadow: var(--shadow-default);
   z-index: 1000;
-}
-.text-block-editor-toolbar.floating {
-  position: absolute;
-  top: auto;
-  left: 0;
-  transform: none;
-  width: auto;
 }
 .text-block-editor-toolbar .tb-btn {
   background: transparent;

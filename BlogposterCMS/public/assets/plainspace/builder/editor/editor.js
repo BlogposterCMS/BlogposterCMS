@@ -43,14 +43,16 @@ export function redoTextCommand() {
 }
 
 function recordChange(el, prevHtml) {
-  const newHtml = el.innerHTML;
+  const newHtml = el.outerHTML;
   pushCommand({
     execute() {
-      el.innerHTML = newHtml;
+      el.outerHTML = newHtml;
+      el = document.getElementById(el.id) || el;
       updateAndDispatch(el);
     },
     undo() {
-      el.innerHTML = prevHtml;
+      el.outerHTML = prevHtml;
+      el = document.getElementById(el.id) || el;
       updateAndDispatch(el);
     }
   });
@@ -58,28 +60,28 @@ function recordChange(el, prevHtml) {
 
 export function toggleStyle(prop, value) {
   if (!activeEl) return;
-  const prev = activeEl.innerHTML;
+  const prev = activeEl.outerHTML;
   toggleStyleInternal(prop, value);
   recordChange(activeEl, prev);
 }
 
 export function applyFont(font) {
   if (!activeEl) return;
-  const prev = activeEl.innerHTML;
+  const prev = activeEl.outerHTML;
   applyFontInternal(font);
   recordChange(activeEl, prev);
 }
 
 export function applySize(size) {
   if (!activeEl) return;
-  const prev = activeEl.innerHTML;
+  const prev = activeEl.outerHTML;
   applySizeInternal(size);
   recordChange(activeEl, prev);
 }
 
 export function applyColor(color) {
   if (!activeEl) return;
-  const prev = activeEl.innerHTML;
+  const prev = activeEl.outerHTML;
   applyColorInternal(color);
   recordChange(activeEl, prev);
 }
@@ -89,7 +91,7 @@ function dispatchHtmlUpdate(el) {
   const widget = findWidget(el);
   const instanceId = widget?.dataset.instanceId;
   if (!instanceId) return;
-  const html = el.innerHTML.trim();
+  const html = el.outerHTML.trim();
   console.log('[DEBUG] dispatchHtmlUpdate', instanceId, html);
   document.dispatchEvent(
     new CustomEvent('widgetHtmlUpdate', {
@@ -283,12 +285,15 @@ async function init() {
       }
       // 2. Keine Range oder Box‑Level‑Modus => Toggle am Block selbst
       else {
-        const cur = activeEl.style[prop];
-        activeEl.style[prop] = cur === value ? '' : value;
+        if (activeEl.style[prop] === value) {
+          activeEl.style.removeProperty(prop);
+        } else {
+          activeEl.style[prop] = value;
+        }
       }
 
       /* Undo/Redo‑Stack */
-      recordChange(activeEl, activeEl.innerHTML);
+      recordChange(activeEl, activeEl.outerHTML);
       updateAndDispatch(activeEl);
       activeEl.focus();
     };

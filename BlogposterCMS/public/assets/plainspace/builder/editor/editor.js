@@ -645,6 +645,8 @@ function hideToolbar() {
   }
 }
 
+document.addEventListener('widgetSelected', () => hideToolbar());
+
 export { showToolbar, hideToolbar };
 
 if (document.body.classList.contains('builder-mode')) {

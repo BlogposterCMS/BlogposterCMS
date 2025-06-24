@@ -4,20 +4,6 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
-- fixed duplicated text when toggling styles due to miswrapped nodes
-- corrected mergeSiblings left loop to merge all previous spans
-- restored undo history for bold/italic/underline toolbar actions
-- fixed double history entries by recording changes only once per style toggle
-- ignored whitespace text nodes when toggling styles to avoid empty spans
-- improved style toggling stability by walking the real DOM instead of cloned
-  nodes to avoid Safari/Firefox crashes
-- `mergeSiblings` now collapses all adjacent spans with identical styles
-- zero-width caret placeholder is removed on first input to prevent stray
-  characters
-- added helper functions `hasStyle`, `unwrapEmpty` and `mergeSiblings` to
-  `editor.js` for consistent span handling
-- rewrote `toggleStyleInternal` to always merge spans and handle range
-  selections uniformly
 - block-level style toggles now drop empty style attributes after removing a property
 - cleaned up empty wrapper spans and detected italic styles reported as oblique
 - fixed style toggles leaving stray spans in Safari and added italic detection

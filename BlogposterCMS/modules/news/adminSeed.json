@@ -1,0 +1,27 @@
+{
+  "adminWidgets": [
+    {
+      "widgetId": "newsWidgetAdmin",
+      "widgetType": "admin",
+      "label": "News",
+      "content": "/assets/plainspace/community/news/adminWidget.js",
+      "category": "community",
+      "options": { "halfWidth": true }
+    }
+  ],
+  "adminPages": [
+    {
+      "title": "News",
+      "slug": "news",
+      "lane": "admin",
+      "config": {
+        "layout": {
+          "header": "top-header",
+          "sidebar": "default-sidebar",
+          "inheritsLayout": true
+        },
+        "widgets": ["newsWidgetAdmin"]
+      }
+    }
+  ]
+}

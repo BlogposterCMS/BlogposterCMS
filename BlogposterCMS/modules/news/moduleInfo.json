@@ -1,0 +1,7 @@
+{
+  "moduleName": "news",
+  "version": "0.1.0",
+  "description": "Fetches trading news from OpenAI",
+  "developer": "Community",
+  "adminSeed": "adminSeed.json"
+}

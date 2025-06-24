@@ -20,6 +20,36 @@ const { DEFAULT_WIDGETS }   = require('./config/defaultWidgets');
 const { getSetting, setSetting } = require('./settingHelpers');
 const { onceCallback }      = require('../../emitters/motherEmitter');
 
+async function seedFromModules(motherEmitter, jwt) {
+  const modulesDir = path.resolve(__dirname, '../../../modules');
+  if (!fs.existsSync(modulesDir)) return;
+
+  const dirs = fs.readdirSync(modulesDir, { withFileTypes: true });
+  for (const dir of dirs) {
+    if (!dir.isDirectory()) continue;
+    const infoPath = path.join(modulesDir, dir.name, 'moduleInfo.json');
+    if (!fs.existsSync(infoPath)) continue;
+    try {
+      const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+      const seedFile = info.adminSeed || 'adminSeed.json';
+      const seedPath = path.join(modulesDir, dir.name, seedFile);
+      if (!fs.existsSync(seedPath)) continue;
+      const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+      if (Array.isArray(seed.adminPages) && seed.adminPages.length) {
+        await seedAdminPages(motherEmitter, jwt, seed.adminPages);
+      }
+      if (Array.isArray(seed.adminWidgets) && seed.adminWidgets.length) {
+        for (const widget of seed.adminWidgets) {
+          const { options = {}, ...data } = widget;
+          await seedAdminWidget(motherEmitter, jwt, data, options);
+        }
+      }
+    } catch (err) {
+      console.error(`[plainSpace] Failed module seed for ${dir.name}:`, err.message);
+    }
+  }
+}
+
 module.exports = {
   async initialize({ motherEmitter, isCore, jwt }) {
     if (!isCore) {
@@ -103,6 +133,9 @@ module.exports = {
         await setSetting(motherEmitter, jwt, 'PLAINSPACE_SEEDED', 'true');
         console.log('[plainSpace] Set "PLAINSPACE_SEEDED"=true => no more seeds next time.');
       }
+
+          // 3a) Seed admin assets from community modules
+      await seedFromModules(motherEmitter, jwt);
 
       // 3) Issue a public token for front-end usage (why not?)
       motherEmitter.emit(

@@ -4,6 +4,8 @@
 const { registerCreateDatabaseEvent } = require('./meltdownBridging/createDatabaseEvent');
 const { registerPerformDbOperationEvent } = require('./meltdownBridging/performDbOperationEvent');
 const { registerHighLevelCrudEvents } = require('./meltdownBridging/highLevelCrudEvents');
+const { registerApplySchemaFileEvent } = require("./meltdownBridging/applySchemaFileEvent");
+const { registerApplySchemaDefinitionEvent } = require("./meltdownBridging/applySchemaDefinitionEvent");
 const { initializeDatabaseManagerDatabase } = require('./dbSetup');
 const { getDbType } = require('./helpers/dbTypeHelpers');
 
@@ -30,6 +32,8 @@ module.exports = {
     registerCreateDatabaseEvent(motherEmitter);
     registerPerformDbOperationEvent(motherEmitter);
     registerHighLevelCrudEvents(motherEmitter);
+    registerApplySchemaFileEvent(motherEmitter);
+    registerApplySchemaDefinitionEvent(motherEmitter);
 
     // Possibly check/create "databaseManager" shared schema
     await initializeDatabaseManagerDatabase(motherEmitter, jwt);

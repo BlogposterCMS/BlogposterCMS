@@ -9,6 +9,22 @@ import { enableAutoEdit, sanitizeHtml } from '../builder/editor/editor.js';
 // Temporary patch: double the default height for larger widgets
 const DEFAULT_ADMIN_ROWS = 20;
 
+function applyWidgetOptions(wrapper, opts = {}) {
+  if (!opts) return;
+  if (opts.max) wrapper.classList.add('max');
+  if (opts.maxWidth) wrapper.classList.add('max-width');
+  if (opts.maxHeight) wrapper.classList.add('max-height');
+  if (opts.halfWidth) wrapper.classList.add('half-width');
+  if (opts.thirdWidth) wrapper.classList.add('third-width');
+  if (typeof opts.width === 'number') {
+    wrapper.style.width = `${opts.width}%`;
+  }
+  if (typeof opts.height === 'number') {
+    wrapper.style.height = `${opts.height}%`;
+  }
+  if (opts.overflow) wrapper.classList.add('overflow');
+}
+
 function getGlobalCssUrl(lane) {
   if (lane === 'admin') return '/assets/css/site.css';
   const theme = window.ACTIVE_THEME || 'default';
@@ -400,9 +416,9 @@ function ensureLayout(layout = {}, lane = 'public') {
       // Static mode: public pages should not be directly editable
       const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth: 5 }, gridEl);
 
-      items.forEach(item => {
+      for (const item of items) {
         const def = allWidgets.find(w => w.id === item.widgetId);
-        if (!def) return;
+        if (!def) continue;
         if (DEBUG) console.debug('[Renderer] render widget', def.id, item.id);
 
         // Expanded default size for public widgets
@@ -420,6 +436,16 @@ function ensureLayout(layout = {}, lane = 'public') {
         wrapper.dataset.instanceId = item.id;
         if (item.global) wrapper.dataset.global = 'true';
 
+        try {
+          const res = await meltdownEmit('getWidgetInstance', {
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            instanceId: `default.${def.id}`
+          });
+          const opts = res?.content ? JSON.parse(res.content) : null;
+          applyWidgetOptions(wrapper, opts);
+        } catch {}
+
         const content = document.createElement('div');
         content.className = 'canvas-item-content';
         wrapper.appendChild(content);
@@ -429,7 +455,7 @@ function ensureLayout(layout = {}, lane = 'public') {
 
         renderWidget(content, def, item.code || null, lane);
 
-      });
+      }
       return;
     }
 
@@ -460,7 +486,7 @@ function ensureLayout(layout = {}, lane = 'public') {
 
     const matchedWidgets = allWidgets.filter(w => (config.widgets || []).includes(w.id));
 
-    matchedWidgets.forEach(def => {
+    for (const def of matchedWidgets) {
       if (DEBUG) console.debug('[Renderer] admin render widget', def.id);
       const meta = layout.find(l => l.widgetId === def.id) || {};
       // Larger defaults for admin widgets
@@ -478,6 +504,17 @@ function ensureLayout(layout = {}, lane = 'public') {
       wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2,8)}`;
       if (meta.global) wrapper.dataset.global = 'true';
 
+      try {
+        const res = await meltdownEmit('getWidgetInstance', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'plainspace',
+          moduleType: 'core',
+          instanceId: `default.${def.id}`
+        });
+        const opts = res?.content ? JSON.parse(res.content) : null;
+        applyWidgetOptions(wrapper, opts);
+      } catch {}
+
       const content = document.createElement('div');
       content.className = 'canvas-item-content';
       wrapper.appendChild(content);
@@ -487,7 +524,7 @@ function ensureLayout(layout = {}, lane = 'public') {
 
       renderWidget(content, def, meta.code || null, lane);
 
-    });
+    }
 
     grid.on('change', () => {
       const items = Array.from(gridEl.querySelectorAll('.canvas-item'));

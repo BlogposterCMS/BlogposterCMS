@@ -304,5 +304,6 @@ motherEmitter.on('deactivateModule', (payload) => {
 
 module.exports = {
   motherEmitter,
-  onceCallback
+  onceCallback,
+  meltdownForModule
 };

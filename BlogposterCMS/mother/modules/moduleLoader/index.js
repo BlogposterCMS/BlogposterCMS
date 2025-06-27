@@ -161,7 +161,7 @@ async function loadAllModules({ emitter, app, jwt }) {
         app,
         jwt,
         ALLOW_INDIVIDUAL_SANDBOX,
-        true // Ja, das ist jetzt der Auto-Retry
+        true 
       );
     }
   }
@@ -184,7 +184,7 @@ async function loadAllModules({ emitter, app, jwt }) {
 
 // Lädt ein Modul in einer einfachen vm-Sandbox
 function loadModuleSandboxed(indexJsPath) {
-  const allowedBuiltins = new Set(['path', 'fs']);
+  const allowedBuiltins = new Set(['path', 'fs', 'crypto']);
 
   function sandboxRequire(reqPath) {
     if (allowedBuiltins.has(reqPath)) {
@@ -204,11 +204,23 @@ function loadModuleSandboxed(indexJsPath) {
     module: { exports: {} },
     exports: {},
     require: sandboxRequire,
+    __filename: indexJsPath,
+    __dirname: path.dirname(indexJsPath),
     console,
     setTimeout,
     setInterval,
     clearTimeout,
     clearInterval,
+    // expose only the OPENAI API key to sandboxed modules for security
+    process: {
+      env: {
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        GROK_API_KEY: process.env.GROK_API_KEY,
+        XAI_API_KEY: process.env.XAI_API_KEY,
+        BRAVE_API_KEY: process.env.BRAVE_API_KEY,
+        NEWS_MODEL: process.env.NEWS_MODEL
+      }
+    }
   };
   vm.createContext(context);
   const code = fs.readFileSync(indexJsPath, 'utf8');
@@ -350,6 +362,11 @@ async function performHealthCheck(modEntry, moduleName, app, jwt) {
     },
     on() {
       /* Noop: Während des Health Checks lauschen wir auf nix. */
+    },
+    listenerCount() {
+      // Modules may call listenerCount to avoid duplicate handlers. During
+      // the health check we don't register listeners, so always return 0.
+      return 0;
     },
     registerModuleType() {
       // Für den Testlauf nicht relevant, wir tun so als wäre es schon geschehen.

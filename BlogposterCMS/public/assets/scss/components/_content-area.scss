@@ -22,7 +22,7 @@
 }
 .canvas-item {
   position: absolute;
-  overflow: hidden;
+  overflow: visible;
   background: var(--color-white);
   border-radius: 9px;
   /*box-shadow: var(--shadow-card);*/

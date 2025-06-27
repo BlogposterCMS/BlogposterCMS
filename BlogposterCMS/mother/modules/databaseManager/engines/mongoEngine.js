@@ -107,6 +107,12 @@ async function performMongoOperation(moduleName, operation, params = []) {
       } else if (operation === 'deleteOne') {
         const { collectionName, query } = params;
         return await db.collection(collectionName).deleteOne(query);
+      } else if (operation === 'createCollection') {
+        const { collectionName } = params;
+        return await db.createCollection(collectionName).catch(() => {});
+      } else if (operation === 'createIndex') {
+        const { collectionName, index, options } = params;
+        return await db.collection(collectionName).createIndex(index, options || {});
       }
       throw new Error(`[MongoEngine] Unsupported operation="${operation}".`);
     }

@@ -1,12 +1,20 @@
 {
   "adminWidgets": [
     {
-      "widgetId": "newsWidgetAdmin",
+      "widgetId": "newsListWidget",
       "widgetType": "admin",
       "label": "News",
-      "content": "/assets/plainspace/community/news/adminWidget.js",
+      "content": "/assets/plainspace/community/news/newsList.js",
       "category": "community",
       "options": { "halfWidth": true }
+    },
+    {
+      "widgetId": "newsDetailWidget",
+      "widgetType": "admin",
+      "label": "News",
+      "content": "/assets/plainspace/community/news/newsDetail.js",
+      "category": "community",
+      "options": { "maxWidth": true }
     }
   ],
   "adminPages": [
@@ -20,7 +28,21 @@
           "sidebar": "default-sidebar",
           "inheritsLayout": true
         },
-        "widgets": ["newsWidgetAdmin"]
+        "widgets": ["newsListWidget"]
+      }
+    },
+    {
+      "title": "News Details",
+      "slug": "news-details",
+      "parentSlug": "news",
+      "lane": "admin",
+      "config": {
+        "layout": {
+          "header": "top-header",
+          "sidebar": "default-sidebar",
+          "inheritsLayout": true
+        },
+        "widgets": ["newsDetailWidget"]
       }
     }
   ]

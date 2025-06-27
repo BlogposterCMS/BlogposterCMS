@@ -34,7 +34,31 @@ const renderMode = features?.renderMode || 'client';
 
 
 
-const { motherEmitter } = require('./mother/emitters/motherEmitter');
+const { motherEmitter, meltdownForModule } = require('./mother/emitters/motherEmitter');
+const moduleNameFromStack = require('./mother/utils/moduleNameFromStack');
+
+function handleGlobalError(err) {
+  console.error('[GLOBAL] Unhandled error =>', err);
+
+  const moduleName = moduleNameFromStack(err.stack || '');
+  if (moduleName) {
+    meltdownForModule(err.message, moduleName, motherEmitter);
+  }
+}
+
+process.on('uncaughtException', handleGlobalError);
+process.on('unhandledRejection', (reason) => {
+  let err;
+  if (reason instanceof Error) {
+    err = reason;
+  } else if (reason && typeof reason === 'object' && reason.stack) {
+    err = new Error(String(reason.message || reason.toString()));
+    err.stack = reason.stack;
+  } else {
+    err = new Error(String(reason));
+  }
+  handleGlobalError(err);
+});
 
 //───────────────────────────────────────────────────────────────────────────
 // ENV sanity checks
@@ -283,7 +307,8 @@ function getModuleTokenForDbManager() {
     { name:'widgetManager',       path:'mother/modules/widgetManager',       extra:{} },
     { name:'userManagement',      path:'mother/modules/userManagement',      extra:{ app } },
     { name:'pagesManager',        path:'mother/modules/pagesManager',        extra:{} },
-    { name:'dependencyLoader',    path:'mother/modules/dependencyLoader',    extra:{} },
+    { name:'dependencyLoader',    path:'mother/modules/dependencyLoader',    extra:{ jwtToken: dbManagerToken } },
+    { name:'requestManager',      path:'mother/modules/requestManager',      extra:{} },
     { name:'unifiedSettings',     path:'mother/modules/unifiedSettings',     extra:{ app } },
     { name:'serverManager',       path:'mother/modules/serverManager',       extra:{ app } },
     { name:'mediaManager',        path:'mother/modules/mediaManager',        extra:{ app } },

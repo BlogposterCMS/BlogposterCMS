@@ -1,0 +1,13 @@
+.news-detail-card {
+  @extend .page-list-card;
+}
+
+.news-detail-title {
+  @extend .page-title;
+  margin-bottom: 1rem;
+}
+
+.news-json {
+  font-family: var(--font-body);
+  line-height: 1.4;
+}

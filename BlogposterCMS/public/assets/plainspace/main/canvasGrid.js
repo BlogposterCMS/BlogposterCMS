@@ -24,6 +24,11 @@ export class CanvasGrid {
     this.el.classList.add('canvas-grid');
     this.widgets = [];
     this.activeEl = null;
+    this._resizeObserver = new ResizeObserver(entries => {
+      if (this.activeEl && entries.some(e => e.target === this.activeEl)) {
+        this._updateBBox();
+      }
+    });
     this._emitter = new EventTarget();
     this._createBBox();
     bindGlobalListeners(this.el, (evt, e) => this._emit(evt, e));
@@ -316,14 +321,23 @@ export class CanvasGrid {
   }
 
   select(el) {
-    if (this.activeEl) this.activeEl.classList.remove('selected');
+    if (this.activeEl) {
+      this._resizeObserver.unobserve(this.activeEl);
+      this.activeEl.classList.remove('selected');
+    }
     this.activeEl = el;
-    if (el) el.classList.add('selected');
+    if (el) {
+      el.classList.add('selected');
+      this._resizeObserver.observe(el);
+    }
     this._updateBBox();
   }
 
   clearSelection() {
-    if (this.activeEl) this.activeEl.classList.remove('selected');
+    if (this.activeEl) {
+      this._resizeObserver.unobserve(this.activeEl);
+      this.activeEl.classList.remove('selected');
+    }
     this.activeEl = null;
     this.bbox.style.display = 'none';
   }

@@ -1,6 +1,6 @@
 {
   "moduleName": "dependencyLoader",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Whitelist manager for community module dependencies.",
   "developer": "Blogposter Team"
 }

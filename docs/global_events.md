@@ -3,7 +3,7 @@
 The frontend exposes a small helper, `bindGlobalListeners`, that attaches a unified set of event listeners to any element. It forwards both element and window events through a callback so modules can react without wiring up dozens of handlers.
 
 ```js
-import { bindGlobalListeners } from '../assets/plainspace/main/globalEvents.js';
+import { bindGlobalListeners } from '../plainspace/main/globalEvents.js';
 
 bindGlobalListeners(rootElement, (eventName, event) => {
   // handle event
@@ -41,7 +41,7 @@ Calling `bindGlobalListeners` automatically registers all of the above. Events t
 
 ### Are they implemented?
 
-Yes. The source lives in [`public/assets/plainspace/main/globalEvents.js`](../BlogposterCMS/public/assets/plainspace/main/globalEvents.js). The tests exercise public event handling in `tests/publicEvents.test.js`, ensuring the bindings work.
+Yes. The source lives in [`public//plainspace/main/globalEvents.js`](../BlogposterCMS/public//plainspace/main/globalEvents.js). The tests exercise public event handling in `tests/publicEvents.test.js`, ensuring the bindings work.
 
 ### Example Usage
 

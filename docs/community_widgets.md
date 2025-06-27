@@ -4,13 +4,13 @@ This document outlines a safe approach for loading widgets created by third‑pa
 
 ## Folder structure
 
-Community widgets should live under `public/assets/plainspace/community/{folderName}`.
+Community widgets should live under `public/plainspace/community/{folderName}`.
 Each widget has its own subfolder containing:
 
 - `widget.js` – the client-side widget code.
 - `widgetInfo.json` – metadata used for registration.
 
-System and Blogposter widgets remain in `public/assets/plainspace/widgets/admin` or `public/assets/plainspace/widgets/public`.
+System and Blogposter widgets remain in `public//plainspace/widgets/admin` or `public//plainspace/widgets/public`.
 Keeping community code separate avoids accidental mixing of trusted and unknown code.
 
 ## Registration process

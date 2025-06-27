@@ -2,6 +2,25 @@
 ![ALPHA status](https://img.shields.io/badge/status-alpha-red)
 
 # 🚀 BlogposterCMS
+**Composable Modular Sandbox**
+
+**BlogposterCMS is an open-source, self-hosted modular platform built with Node.js for security, speed, and ultimate flexibility.**
+
+- **Composable:** Build exactly what you need.
+- **Modular:** Every component isolated and interchangeable.
+- **Sandbox:** Secure and controlled from the first module.
+
+>Forget CMS. Think Composable.
+
+## ⚠️ Important Update – v0.6.1 Released!
+
+With the **v0.6.1** release, we've introduced essential improvements and fixes to the visual builder.
+
+> ⚠️ **BREAKING CHANGE:**  
+> Due to internal changes, existing installations will need a **full reinitialization**.  
+> See the [Changelog](https://github.com/m41130/BlogposterDEV/blob/main/CHANGELOG.md) for full details.
+
+
 
 ## ⚠️ Important Update – v0.6.0 Released!
 
@@ -10,13 +29,7 @@ GridStack has been removed and replaced with a fully custom-built **CanvasGrid**
 
 Check the detailed [Changelog](https://github.com/m41130/BlogposterDEV/blob/main/CHANGELOG.md) for more information.
 
-**Composable Modular Sandbox**
 
-- **Composable:** Build exactly what you need.
-- **Modular:** Every component isolated and interchangeable.
-- **Sandbox:** Secure and controlled from the first module.
-
-Forget CMS. Think Composable.
 
 
 
@@ -41,9 +54,13 @@ This manual setup is the safest way to get started until an official CLI is rele
 > "The last CMS you'll ever fork."
 > BlogposterCMS is what happens when a dev snaps after one too many WordPress updates.
 
-**BlogposterCMS** is an **open-source, self-hosted Node.js content management system** built for security and speed.
-It lets you run modern blogs and websites without sacrificing control. Every feature is a module. Every module is sandboxed. Every action is validated.
-You get the power of plugins — without the plugin drama.
+
+BlogposterCMS is an open-source, self-hosted composable modular platform built for security, speed, and flexibility.
+It gives you the power and modularity of a CMS—without the typical CMS constraints.
+
+Use it to build modern websites, blogs, dashboards, or even advanced applications.
+Every feature is a module. Every module is sandboxed. Every action is validated.
+You get the flexibility of plugins—without the plugin drama.
 
 - 🧩 100% modular (every feature is optional)
 - 🔐 JWT-secured event system (no rogue code allowed)

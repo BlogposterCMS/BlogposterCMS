@@ -12,6 +12,7 @@
 
 >Forget CMS. Think Composable.
 
+
 ## ⚠️ Important Update – v0.6.1 Released!
 
 With the **v0.6.1** release, we've introduced essential improvements and fixes to the visual builder.
@@ -45,16 +46,22 @@ npm start
 This manual setup is the safest way to get started until an official CLI is released.
 ```
 
+## ☕ Support the Development
+
+If you enjoy using **BlogposterCMS** or find it valuable, consider supporting its development!
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%23FF813F.svg?style=flat&logo=buy-me-a-coffee&logoColor=white)](https://coff.ee/BlogposterCMS)
+
+Your support keeps the motivation high and the coffee flowing.
+>
+
 ⚠️ This project is experimental alpha software. Expect breaking changes.
 
 ![BlogposterCMS logo](./BlogposterCMS/public/assets/logo/logo_blogposter_min_transparent.png)
 
 📚 Full documentation lives in [`docs/index.md`](./docs/index.md) – your entry point for installation, architecture, security and developer guides.
-
-> "The last CMS you'll ever fork."
-> BlogposterCMS is what happens when a dev snaps after one too many WordPress updates.
-
-
+>
+>
 BlogposterCMS is an open-source, self-hosted composable modular platform built for security, speed, and flexibility.
 It gives you the power and modularity of a CMS—without the typical CMS constraints.
 

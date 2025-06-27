@@ -25,7 +25,6 @@ const {
   ensurePageSchemaAndTable,
   getPageBySlugLocal
 } = require('./pagesService');
-const { DEFAULT_WIDGETS } = require('./config/defaultWidgets');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 
@@ -71,24 +70,6 @@ module.exports = {
       if (seededVal !== 'true') {
         console.log('[PAGE MANAGER] First-time seeding of widgets and pages...');
 
-        // Seed default widgets
-        for (const widget of DEFAULT_WIDGETS) {
-          await new Promise(resolve => {
-            motherEmitter.emit('createWidget', {
-              jwt,
-              moduleName: 'widgetManager',
-              moduleType: 'core',
-              ...widget
-            }, (err) => {
-              if (err) {
-                console.error(`[PAGE MANAGER] Widget creation error: ${err.message}`);
-              } else {
-                console.log(`[PAGE MANAGER] Widget "${widget.widgetId}" created (or already existed).`);
-              }
-              resolve();
-            });
-          });
-        }
 
         // Check if any pages exist. If none => seed "Coming Soon"
         const pages = await new Promise((resolve, reject) => {

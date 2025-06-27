@@ -245,7 +245,7 @@ function getModuleTokenForDbManager() {
   const publicPath = path.join(__dirname, 'public');
   const assetsPath = path.join(publicPath, 'assets');
   app.use('/admin/assets', express.static(path.join(publicPath, 'assets')));
-  app.use('/plainspace', express.static(path.join(assetsPath, 'plainspace')));
+  app.use('/plainspace', express.static(path.join(publicPath, 'plainspace')));
   app.use('/assets', express.static(assetsPath));
   app.use('/themes', express.static(path.join(publicPath, 'themes')));
   app.use('/favicon.ico', express.static(path.join(publicPath,'favicon.ico')));

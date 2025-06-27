@@ -10,7 +10,7 @@ function loadSetupFunction() {
   function customRequire(name) {
     if (name === 'dotenv') return { config: () => {} };
     if (name.startsWith('./') || name.startsWith('../')) {
-      if (name === './pagesService' || name === './config/defaultWidgets') {
+      if (name === './pagesService') {
         return {};
       }
       if (name === '../../emitters/motherEmitter') {

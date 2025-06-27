@@ -3,100 +3,35 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
-## [Unreleased]
-- block-level style toggles now drop empty style attributes after removing a property
-- cleaned up empty wrapper spans and detected italic styles reported as oblique
-- fixed style toggles leaving stray spans in Safari and added italic detection
-- style toggles compare computed styles (root node included) to avoid nested
-  wrappers and keep formatting consistent
-- underline detection now accounts for browser-specific textDecoration values
-- undo history entries are no longer duplicated when toggling styles
-- custom widget events now bubble up to the document
-- hit-layer initializes its state immediately
-- autoEdit now retries entering edit mode if a widget hasn't registered its editable element yet
-- widgets dropped onto the canvas are automatically selected and editing shows a text cursor
-- hit-layer now disables pointer events while a widget is being edited or when the action bar is visible
-- fixed color picker closing immediately after selecting a color; picker now only
-  hides on outside clicks or via the close button
-- toolbar actions now work on the selected widget even before entering edit mode
-- fixed bold, italic and underline toggles correctly remove styling instead of nesting spans
-- text block editor toolbar now spans the builder grid width and stays fixed below the header
-- toolbar no longer floats near widgets; removed `floating-ui` helper
-- builder grid now starts below the fixed toolbar to avoid overlap
-- widgets remain movable while editing text; bounding box stays interactive
-- `sanitizeHtml` now runs only on save; live edits no longer sanitize input
-- grid widgets now lock completely during text edits to avoid race conditions
-- ensured toolbar element is reused if it already exists to prevent duplicate listeners
-- color changes no longer trigger autosave; `applyColor` no longer calls `updateAndDispatch`
-- allowed `font-style` inline style in `sanitizeHtml` so italic text survives cleaning
-- registerElement no longer forces the `contenteditable` attribute; `editElement` now fully controls it for safer widget editing
-- fixed grid blocking keyboard input by restoring `contenteditable` removal after finishing edits
-- ensured toolbar click callback restores the selected editable element when the previous active element is gone
-- sanitized HTML is now applied only once when finishing text edits to prevent cursor jumps
-- toolbar buttons now reliably apply styles to the current editable element and
-  the toolbar is reused if it already exists
-- text editor commands now follow a Command pattern with undo/redo history
-- dispatchHtmlUpdate now triggered for every toolbar action to keep widget HTML synchronized
-- widgetSelected event now fires when selecting a widget so the editor can hide the toolbar on first click
-- toolbar stays visible after editing if the widget remains selected and loaded
-  text widgets now receive the `contenteditable` attribute automatically
-- fixed 404 errors when loading the Text Box widget by correcting import paths and icon mapping
-- moved `globalTextEditor` and `colorPicker` modules into a new `editor` folder and updated imports
-- restored self-made color picker using native color input and removed pickr library
-- removed custom color picker that intercepted clicks; built-in color inputs are now used for text and user color selection
-- fixed crash when adding widgets to the builder grid due to missing options passed to attachOptionsMenu
-- ensured existing `codeMap` is passed when creating widgets
-- prevented autosave crash when layout grid was not ready by validating the grid element
-- improved text widget editing to require a second click before entering edit mode and position the caret at the click location
-- text widgets remain `contenteditable` at all times and toolbar actions update inline styles directly
-- editing now begins when clicking anywhere on a selected widget, not just text elements
+## [0.6.1] 2025-06-27
+
+### Added
+- **requestManager** core module – single, auditable gateway for all outbound HTTP requests with a strict whitelist.
+- **DatabaseManager** now understands JSON schema inputs: new events `applySchemaFile` and `applySchemaDefinition` wire straight into the engines and can create MongoDB collections / indexes on the fly.
+- **MongoEngine** helper operations `createCollection` and `createIndex` are available when the backing store is MongoDB.
+- **moduleNameFromStack** helper pin‑points an offending module by walking the stack trace.
+- **Global crash funnel** – `handleGlobalError` traps `uncaughtException` and `unhandledRejection` and forwards them to `meltdownForModule` for uniform recovery handling.
+- **Sandbox** now whitelists the built‑in `crypto` module and surfaces only a minimal set of env vars (`OPENAI_API_KEY`, `GROK_API_KEY`, `BRAVE_API_KEY`, `NEWS_MODEL`).
+- New environment variables: `GROK_API_KEY`, `NEWS_MODEL`.
+
+### Improved
+- **Builder / CanvasGrid** migrated to a `ResizeObserver` workflow; bounding boxes track live size changes, text widgets follow a two‑step *click‑to‑edit* flow and the floating toolbar is now rock solid.
+- **pageRenderer** gained `applyWidgetOptions` – advanced sizing flags (`maxWidth`, `halfWidth`, `thirdWidth`) plus fixed‑percent sizes and overflow control.
+- **moduleLoader** allows the built‑in `crypto` module inside sandboxes and keeps its automatic retry logic.
+- **site.css**: new utility classes for the news‑card layout, wider card family and improved hover states.
 
 ### Changed
-- modularized builderRenderer into dedicated managers (grid, widget, layout, event)
-- builder renderer now imports helper modules correctly and inline duplicates were removed
-- moved `colorPicker.js` and `allowedTags.js` into the builder module and updated imports
-- builder renderer split into multiple modules under `public/assets/plainspace/builder`
-  for easier maintenance; main entry renamed to `builderRenderer.js`
-### Fixed
-- text widgets loaded from saved layouts now sync inline style changes to `codeMap` and log updates for easier debugging
-- fixed missing ../../ path for `globalTextEditor` import in `widgetRenderer.js` to restore production build
-- removed outdated webpack entry for `alpine.js` to restore build
-- removed leftover widget helper functions from `builderRenderer.js` and resolved build error
-- fixed header and sidebar partial paths in `pageRenderer.js` so assets load correctly
-- `admin` scripts moved under `public/assets/plainspace/dashboard` and the `partials` folder now lives directly in `plainspace`.
-- `globalEvents.js` relocated to `public/assets/plainspace/main` for consistent imports.
-- All widgets now reside under `public/assets/plainspace/widgets` with separate
-  `admin` and `public` folders. Admin action scripts moved to the same
-  plainspace area and CanvasGrid lives beside the renderer.
-- fixed `codemap is not defined` error in layout builder by ensuring the `codeMap` object exists
-- Plainspace scripts consolidated under `public/assets/plainspace/main`.
-- Widgets no longer set `contenteditable`; `globalTextEditor` controls editing exclusively.
-- Hit-layer overlay no longer intercepts clicks in the builder.
-- Click on a widget now selects it and displays the action bar.
-- Action bar now reappears when widgets move or resize.
-- Consolidated page editor widgets into a single `pageEditorWidget` and added save action to the content header.
-- Hit-layer rules consolidated in `_builder.scss` only
-- Builder opens page layouts on Layer 1 by default while keeping the global layer accessible.
-- Text widget no longer uses Shadow DOM and relies on scoped CSS classes.
-- Builder renderer moved to `public/assets/plainspace/builder` and helper functions split into `utils.js`.
-### Added
-- Hit-layer overlay for text widgets to prevent accidental edits while dragging.
-- Canva-style two-step editing with click-to-edit and persistent bounding box.
-- DOM mutation tracking keeps widget code synchronized and triggers autosave.
-### Fixed
-- inline styles like `font-size` and `color` are now preserved when saving text
-  widgets, while disallowed style properties are stripped during sanitization
-- Builder grid reference exposed for text editor to properly lock widgets.
-- Toolbar context restored when editing text widgets and content now sanitized on save.
-- Removed duplicate toolbar helper definitions and cleaned unused variables in the editor.
-- Text widgets remain editable until clicking outside the widget or toolbar and no longer lock movement.
-- Global text editor now initializes correctly when the builder loads, fixing missing toolbar issues.
-- Toolbar buttons and color picker no longer close the widget while editing.
-- DOM mutation tracking now records the actual editable section so nested edits persist correctly.
-- Fixed partial loading paths in dashboard utilities after file restructure.
-- fixed path to `fetchPartial.js` in `pageRenderer.js` after asset reorganization
-- removed stray closing brace from `builderRenderer.js` to resolve build errors
-- fixed path to `globalTextEditor.js` in `textBoxWidget` so widget loads correctly
+- Root project bumped to **0.6.2** and **moduleLoader 0.6.1** to reflect the new core plumbing.
+- Dependency bump: explicit `crypto@1.0.1` entry for environments that still rely on the deprecated package name.
+
+### Removed
+- Entire experimental **News** module and its widgets – never shipped publicly, so all references, related dependencies (`openai`, `brave`) and environment variables were stripped out of the codebase and `package*.json`.
+
+### Note
+- The Builder requires more time than planned due to ongoing issues with text editing—accompanied by massive hair loss. Pull Requests to resolve this issue are warmly welcomed.
+- **Breaking Change:** Due to major internal updates, reinitializing your setup is necessary after this release.
+
+> \"I don't want to set the world on fiiiiiiiire.\"
 
 ## [0.6.0] – 2025-06-21
 ### Core Rewrite

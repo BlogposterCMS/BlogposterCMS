@@ -45,6 +45,7 @@ important security notes.
 - [importer](modules/importer.md)
 - [mediaManager](modules/mediaManager.md)
 - [moduleLoader](modules/moduleLoader.md)
+- [requestManager](modules/requestManager.md)
 - [notificationManager](modules/notificationManager.md)
 - [pagesManager](modules/pagesManager.md)
 - [plainSpace](modules/plainSpace.md)

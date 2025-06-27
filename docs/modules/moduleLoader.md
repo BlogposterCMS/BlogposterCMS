@@ -1,6 +1,8 @@
 # Module Loader
 
-Loads optional community modules from the top-level `modules/` directory. Each module is sandboxed during a health check to prevent crashes or unsafe behaviour. The sandbox uses Node's `vm` module and only exposes `path` and `fs` as allowed dependencies.
+Loads optional community modules from the top-level `modules/` directory. Each module is sandboxed during a health check to prevent crashes or unsafe behaviour. The sandbox uses Node's `vm` module and exposes only a few built-ins (`path`, `fs`, `crypto`) plus `__dirname` and `__filename`.
+
+During sandbox execution the module receives a very limited `process.env` containing only `OPENAI_API_KEY`, `GROK_API_KEY`, `XAI_API_KEY`, `BRAVE_API_KEY` and `NEWS_MODEL` if they are defined on the host.
 
 ## Startup
 - Core module executed after the initial core modules are ready.

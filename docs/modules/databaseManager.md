@@ -15,12 +15,16 @@ The Database Manager acts as the gateway between modules and the persistence lay
 ## Listened Events
 - `createDatabase`
 - `performDbOperation`
+- `applySchemaFile`
+- `applySchemaDefinition`
 - `dbInsert`
 - `dbSelect`
 - `dbUpdate`
 - `dbDelete`
 
 The manager also emits `deactivateModule` if a module triggers a fatal error. Every call is validated against the provided JWT before any database operation is executed.
+
+`applySchemaFile` and `applySchemaDefinition` allow modules to create tables or MongoDB collections from a JSON schema at runtime.
 
 ## Database Engines
 The manager works with **PostgreSQL**, **MongoDB** or **SQLite** as selected by the `CONTENT_DB_TYPE` variable. PostgreSQL is fully tested and recommended for production use. MongoDB support is experimental. SQLite is intended for lightweight deployments. See [Choosing a Database Engine](../choosing_database_engine.md) for configuration details.

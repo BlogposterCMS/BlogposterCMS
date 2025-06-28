@@ -11,6 +11,7 @@ El Psy Kongroo
 
 ### Fixed
 - CodeQL workflow now grants `actions: read` permission to resolve upload errors.
+- Fixed widget preview crash when toggling admin edit mode.
 
 ## [0.6.3] - 2025-06-28
 

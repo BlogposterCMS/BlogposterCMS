@@ -7,6 +7,10 @@ El Psy Kongroo
 
 ### Added
 - Admin layout edit toggle now opens a widget selection popup.
+- Collapsible right-side pages menu on admin home with filter dropdown and animated toggle icon.
+
+### Fixed
+- CodeQL workflow now grants `actions: read` permission to resolve upload errors.
 
 ## [0.6.3] - 2025-06-28
 

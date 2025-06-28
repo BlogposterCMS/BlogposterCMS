@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Admin layout edit toggle now opens a widget selection popup.
 - Collapsible right-side pages menu on admin home with filter dropdown and animated toggle icon.
 
 ### Fixed

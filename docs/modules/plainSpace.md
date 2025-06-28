@@ -8,6 +8,8 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
 
 ## Purpose
 - Seeds the admin dashboard pages on first run.
+- Admin pages defined by community modules are automatically placed
+  under `/admin/pages/{slug}` when seeded.
 - Provides `widget.registry.request.v1` for the page builder.
 - `seedAdminWidget` can attach width and height options when creating admin widgets.
 - Default admin widgets are seeded with options describing their suggested layout.

@@ -56,7 +56,8 @@ export function showWidgetPopup() {
     preview.appendChild(wrapper);
     item.appendChild(preview);
 
-    renderWidget(content, def, null, 'admin');
+    // Use the canvas wrapper so renderWidget can locate the content element
+    renderWidget(wrapper, def, null, 'admin');
 
     const title = document.createElement('div');
     title.className = 'widget-title';
@@ -101,6 +102,7 @@ async function addWidget(def) {
     const opts = res?.content ? JSON.parse(res.content) : null;
     applyWidgetOptions(wrapper, opts);
   } catch {}
-  renderWidget(content, def, null, 'admin');
+  // Pass the grid item wrapper for correct rendering of newly added widgets
+  renderWidget(wrapper, def, null, 'admin');
   hideWidgetPopup();
 }

@@ -18,7 +18,8 @@ module.exports = {
     topHeaderActions: './public/plainspace/dashboard/topHeaderActions.js',
     openExplorer: './public/assets/js/openExplorer.js',
     pageActions: './public/plainspace/dashboard/pageActions.js',
-    fontsLoader: './public/assets/js/fontsLoader.js'
+    fontsLoader: './public/assets/js/fontsLoader.js',
+    pagesMenu: './public/plainspace/dashboard/pagesMenu.js'
   },
   output: {
     filename: '[name].js',

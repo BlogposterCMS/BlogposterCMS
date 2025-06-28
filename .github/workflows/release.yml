@@ -10,6 +10,7 @@ permissions:
   contents: write
   security-events: write
   packages: write
+  actions: read
 
 jobs:
   validate:

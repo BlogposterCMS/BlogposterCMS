@@ -8,6 +8,9 @@ El Psy Kongroo
 ### Added
 - Collapsible right-side pages menu on admin home with filter dropdown and animated toggle icon.
 
+### Fixed
+- CodeQL workflow now grants `actions: read` permission to resolve upload errors.
+
 ## [0.6.3] - 2025-06-28
 
 ### Added

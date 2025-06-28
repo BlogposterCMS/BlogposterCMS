@@ -229,6 +229,12 @@ function ensureLayout(layout = {}, lane = 'public') {
     mainContent.appendChild(content);
   }
 
+  if (!document.getElementById('pages-menu')) {
+    const menu = document.createElement('aside');
+    menu.id = 'pages-menu';
+    mainContent.appendChild(menu);
+  }
+
   // Ensure global content header inside the content section
   const contentEl = document.getElementById('content');
   if (contentEl && !document.getElementById('content-header')) {
@@ -363,6 +369,17 @@ function ensureLayout(layout = {}, lane = 'public') {
       } else {
         sidebarEl.innerHTML = '';
         sidebarEl.style.display = 'none';
+      }
+    }
+
+    const pagesMenuEl = document.getElementById('pages-menu');
+    if (pagesMenuEl) {
+      try {
+        pagesMenuEl.innerHTML = sanitizeHtml(
+          await fetchPartialSafe('pages-menu')
+        );
+      } catch (err) {
+        console.warn('[Renderer] failed to load pages-menu', err);
       }
     }
 

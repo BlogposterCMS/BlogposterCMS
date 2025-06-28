@@ -36,7 +36,7 @@ async function seedFromModules(motherEmitter, jwt) {
       if (!fs.existsSync(seedPath)) continue;
       const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
       if (Array.isArray(seed.adminPages) && seed.adminPages.length) {
-        await seedAdminPages(motherEmitter, jwt, seed.adminPages);
+        await seedAdminPages(motherEmitter, jwt, seed.adminPages, true);
       }
       if (Array.isArray(seed.adminWidgets) && seed.adminWidgets.length) {
         for (const widget of seed.adminWidgets) {

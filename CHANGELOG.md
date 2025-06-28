@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
+## [0.6.3] - 2025-06-28
+
+### Added
+- Community module pages are now automatically seeded under
+  `/admin/pages/{slug}` when their lane is `admin`.
+
 ## [0.6.1] 2025-06-27
 
 ### Added

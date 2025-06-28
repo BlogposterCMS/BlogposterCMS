@@ -30,7 +30,7 @@ const ADMIN_LANE  = 'admin';
  * If it doesn’t, meltdown => createPage. Because the world needs more admin pages.
  */
 // plainSpaceService.js
-async function seedAdminPages(motherEmitter, jwt, adminPages = []) {
+async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommunity = false) {
   const makeSlug = (str) =>
     String(str)
       .toLowerCase()
@@ -43,12 +43,18 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = []) {
   for (const page of adminPages) {
     try {
     let parentId = null;
-    let finalSlugForCheck = page.slug.replace(/\//g, '-');
-    let finalSlugForCreate = page.slug;
 
-    if (page.parentSlug) {
-      const parentSlugSanitized = page.parentSlug.replace(/\//g, '-');
-      finalSlugForCheck = `${parentSlugSanitized}-${page.slug.replace(/\//g, '-')}`;
+    const prefixSegs = (prefixCommunity && page.lane === ADMIN_LANE) ? ['pages'] : [];
+    const parentSegs = page.parentSlug ? page.parentSlug.split('/').filter(Boolean) : [];
+    const pageSegs   = page.slug.split('/').filter(Boolean);
+
+    const parentSlugRaw = parentSegs.length ? [...prefixSegs, ...parentSegs].join('/') : null;
+    const finalSlugRaw  = [...prefixSegs, ...parentSegs, ...pageSegs].join('/');
+
+    let finalSlugForCheck = finalSlugRaw.replace(/\//g, '-');
+
+    if (parentSlugRaw) {
+      const parentSlugSanitized = parentSlugRaw.replace(/\//g, '-');
 
       let parent = await meltdownEmit(motherEmitter, 'getPageBySlug', {
         jwt,
@@ -59,13 +65,14 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = []) {
       }).catch(() => null);
 
       if (!parent) {
-        const parentTitle = page.parentSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const baseTitle = parentSegs[parentSegs.length - 1] || 'Page';
+        const parentTitle = baseTitle.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         const res = await meltdownEmit(motherEmitter, 'createPage', {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
           title: parentTitle,
-          slug: page.parentSlug,
+          slug: parentSlugRaw,
           lane: page.lane,
           status: 'published',
           meta: {},
@@ -78,13 +85,11 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = []) {
             seoTitle: parentTitle,
             seoKeywords: ''
           }]
-        }).catch(err => { console.error(`[plainSpace] Error creating parent "${page.parentSlug}":`, err.message); return null; });
+        }).catch(err => { console.error(`[plainSpace] Error creating parent "${parentSlugRaw}":`, err.message); return null; });
         parentId = res?.pageId || null;
       } else {
         parentId = parent.id;
       }
-
-      finalSlugForCreate = `${page.parentSlug}/${page.slug}`;
     }
 
     const existingPage = await meltdownEmit(motherEmitter, 'getPageBySlug', {
@@ -109,7 +114,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = []) {
       moduleName: 'pagesManager',
       moduleType: 'core',
       title: page.title,
-      slug: finalSlugForCreate,
+      slug: finalSlugRaw,
       lane: page.lane,
       status: 'published',
       parent_id: parentId,

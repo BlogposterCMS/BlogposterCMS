@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
+## [Unreleased]
+
+### Added
+- Admin layout edit toggle now opens a widget selection popup.
+
 ## [0.6.3] - 2025-06-28
 
 ### Added

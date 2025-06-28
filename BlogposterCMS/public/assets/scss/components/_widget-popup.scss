@@ -1,0 +1,71 @@
+.widget-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  overflow-y: auto;
+  display: none;
+}
+
+body.widget-popup-open #top-header,
+body.widget-popup-open #main-header,
+body.widget-popup-open #sidebar {
+  filter: brightness(0.3);
+}
+
+.widget-popup-container {
+  max-width: 1000px;
+  margin: 80px auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.widget-popup-item {
+  position: relative;
+  background: var(--color-white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.widget-preview {
+  flex: 1;
+  padding: 8px;
+}
+
+.widget-title {
+  padding: 6px 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  border-top: 1px solid #eee;
+}
+
+.widget-add-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: var(--color-primary);
+  border: none;
+  padding: 4px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.widget-add-btn .icon {
+  width: 20px;
+  height: 20px;
+}

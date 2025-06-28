@@ -1,3 +1,5 @@
+import { showWidgetPopup, hideWidgetPopup } from './widgetPopup.js';
+
 export function initContentHeader() {
   const editToggle = document.getElementById('edit-toggle');
   const actionBtn  = document.getElementById('dynamic-action-btn');
@@ -28,6 +30,7 @@ export function initContentHeader() {
       editing = !isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
       editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/edit.svg';
+      if (editing) showWidgetPopup(); else hideWidgetPopup();
     });
   }
   editToggle.addEventListener('click', async () => {
@@ -39,6 +42,11 @@ export function initContentHeader() {
     editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/edit.svg';
     editToggle.classList.add('spin');
     setTimeout(() => editToggle.classList.remove('spin'), 300);
+    if (editing) {
+      showWidgetPopup();
+    } else {
+      hideWidgetPopup();
+    }
     if (!editing && typeof window.saveAdminLayout === 'function') {
       try { await window.saveAdminLayout(); } catch(e) { console.error(e); }
     }

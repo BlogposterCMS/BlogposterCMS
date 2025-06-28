@@ -382,6 +382,7 @@ function ensureLayout(layout = {}, lane = 'public') {
     if (DEBUG) console.debug('[Renderer] widgetRes', widgetRes);
 
     const allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
+    window.availableWidgets = allWidgets;
 
     // 8. PUBLIC PAGE: render widgets using stored layout in static grid
     if (lane !== 'admin') {

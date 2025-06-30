@@ -37,6 +37,15 @@
     &:hover {
       background: var(--color-secondary-light);
     }
+
+    &.active {
+      background: color-mix(in srgb, var(--user-color), black 20%);
+      color: var(--color-white);
+      @supports not (background: color-mix(in srgb, #000, black 20%)) {
+        background: var(--user-color);
+        opacity: .8;
+      }
+    }
   }
 
   .font-size-control {

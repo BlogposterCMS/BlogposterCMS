@@ -8,6 +8,7 @@ El Psy Kongroo
 ### Added
 - Admin layout edit toggle now opens a widget selection popup.
 - Collapsible right-side pages menu on admin home with filter dropdown and animated toggle icon.
+- Toolbar buttons now reflect active text styles; bold, italic and underline states update live with high-contrast highlighting and fewer spans.
 
 ### Fixed
 - CodeQL workflow now grants `actions: read` permission to resolve upload errors.

@@ -2223,6 +2223,16 @@ body.preview-desktop #content {
 .text-block-editor-toolbar .tb-btn:hover {
   background: var(--color-secondary-light);
 }
+.text-block-editor-toolbar .tb-btn.active {
+  background: color-mix(in srgb, var(--user-color), black 20%);
+  color: var(--color-white);
+}
+@supports not (background: color-mix(in srgb, #000, black 20%)) {
+  .text-block-editor-toolbar .tb-btn.active {
+    background: var(--user-color);
+    opacity: .8;
+  }
+}
 .text-block-editor-toolbar .font-size-control {
   background: var(--color-white-dark);
   border-radius: 4px;

@@ -19,6 +19,88 @@ let toggleStyleInternal;
 let applyFontInternal;
 let applySizeInternal;
 let applyColorInternal;
+let updateButtonStates = () => {};
+let pendingSelectionUpdate = null;
+
+function parseColor(val) {
+  val = String(val || '').trim();
+  if (val.startsWith('#')) {
+    if (val.length === 4) {
+      val = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
+    }
+    const int = parseInt(val.slice(1), 16);
+    return {
+      r: (int >> 16) & 255,
+      g: (int >> 8) & 255,
+      b: int & 255
+    };
+  }
+  const m = val.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (m) {
+    return { r: +m[1], g: +m[2], b: +m[3] };
+  }
+  return null;
+}
+
+function setActiveButtonAppearance(btn, active) {
+  if (!btn) return;
+  btn.classList.toggle('active', active);
+  if (!active) {
+    btn.style.color = '';
+    return;
+  }
+  const userColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--user-color')
+    .trim();
+  const rgb = parseColor(userColor);
+  let luminance = 0;
+  if (rgb) {
+    luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  }
+  btn.style.color = luminance > 0.6 ? 'var(--color-text)' : 'var(--color-white)';
+}
+
+function styleMatches(val, prop, target) {
+  if (prop === 'textDecoration') return String(val).includes('underline');
+  if (prop === 'fontWeight' && String(target) === 'bold') {
+    return val === 'bold' || parseInt(val, 10) >= 600;
+  }
+  if (prop === 'fontStyle') return /(italic|oblique)/.test(val);
+  return String(val) === String(target);
+}
+
+function isSelectionStyled(prop, value) {
+  if (!activeEl) return false;
+  const sel = window.getSelection();
+  if (
+    !sel ||
+    sel.isCollapsed ||
+    !activeEl.contains(sel.anchorNode) ||
+    !activeEl.contains(sel.focusNode)
+  ) {
+    const current = getComputedStyle(activeEl)[prop];
+    return styleMatches(current, prop, value);
+  }
+  const range = sel.getRangeAt(0);
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        return range.intersectsNode(node)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+  const carriers = new Set();
+  while (walker.nextNode()) {
+    carriers.add(walker.currentNode.parentElement);
+  }
+  return [...carriers].every(el =>
+    styleMatches(getComputedStyle(el)[prop], prop, value)
+  );
+}
 
 function pushCommand(command) {
   textHistory.push(command);
@@ -255,55 +337,80 @@ async function init() {
     toolbar.addEventListener('mousedown', e => e.stopPropagation());
     toolbar.addEventListener('click', e => e.stopPropagation());
 
+    updateButtonStates = function () {
+      if (!toolbar || !activeEl) return;
+      const map = {
+        bold: ['fontWeight', 'bold'],
+        italic: ['fontStyle', 'italic'],
+        underline: ['textDecoration', 'underline']
+      };
+      for (const [cmd, [prop, val]] of Object.entries(map)) {
+        const btn = toolbar.querySelector(`[data-cmd="${cmd}"]`);
+        if (!btn) continue;
+        const active = isSelectionStyled(prop, val);
+        setActiveButtonAppearance(btn, active);
+      }
+    };
+
+    document.addEventListener('selectionchange', () => {
+      if (pendingSelectionUpdate) return;
+      pendingSelectionUpdate = requestAnimationFrame(() => {
+        updateButtonStates();
+        pendingSelectionUpdate = null;
+      });
+    });
+
     toggleStyleInternal = (prop, value) => {
       if (!activeEl) return;
       const sel = window.getSelection();
 
-      // 1. Range‑Selektion => Inline‑Spans setzen/entfernen
-      if (sel && !sel.isCollapsed &&
-          activeEl.contains(sel.anchorNode) && activeEl.contains(sel.focusNode)) {
-        const range = sel.getRangeAt(0).cloneRange();
-        const span = document.createElement('span');
-        span.style[prop] = value;
-        span.appendChild(range.extractContents());
-        range.deleteContents();
-
-        /* Wenn der markierte Text bereits homogen formatiert ist,
-           entfernen wir den Stil statt ihn zu stapeln. */
-        const tmp = span.cloneNode(true);
-        const checkNodes = [tmp, ...tmp.querySelectorAll('*')];
-        const everyHasStyle = checkNodes.every(n => {
-          const val = getComputedStyle(n)[prop];
-          if (prop === 'textDecoration') return val.includes('underline');
-          if (prop === 'fontWeight' && String(value) === 'bold') {
-            return val === 'bold' || parseInt(val, 10) >= 600;
+      if (
+        sel &&
+        !sel.isCollapsed &&
+        activeEl.contains(sel.anchorNode) &&
+        activeEl.contains(sel.focusNode)
+      ) {
+        const range = sel.getRangeAt(0);
+        const walker = document.createTreeWalker(
+          range.commonAncestorContainer,
+          NodeFilter.SHOW_TEXT,
+          {
+            acceptNode(node) {
+              return range.intersectsNode(node)
+                ? NodeFilter.FILTER_ACCEPT
+                : NodeFilter.FILTER_REJECT;
+            }
           }
-          if (prop === 'fontStyle') return /(italic|oblique)/.test(val);
-          return val === String(value);
-        });
-        if (everyHasStyle) {
-          range.insertNode(tmp);
-          tmp.querySelectorAll('*').forEach(n => {
-            n.style[prop] = '';
-            if (!n.getAttribute('style')) n.replaceWith(...n.childNodes);
+        );
+        const nodes = [];
+        while (walker.nextNode()) {
+          nodes.push(walker.currentNode);
+        }
+        const parents = nodes.map(n => n.parentElement);
+        const uniqueParents = [...new Set(parents)];
+        const allHave = uniqueParents.every(el =>
+          styleMatches(getComputedStyle(el)[prop], prop, value)
+        );
+        if (allHave) {
+          uniqueParents.forEach(el => {
+            el.style.removeProperty(prop);
+            if (!el.getAttribute('style')) el.replaceWith(...el.childNodes);
           });
-          tmp.style[prop] = '';
-          if (!tmp.getAttribute('style')) tmp.replaceWith(...tmp.childNodes);
         } else {
-          range.insertNode(span);
+          nodes.forEach(text => {
+            let carrier = text.parentElement;
+            if (carrier.tagName !== 'SPAN') {
+              const span = document.createElement('span');
+              carrier.insertBefore(span, text);
+              span.appendChild(text);
+              carrier = span;
+            }
+            carrier.style[prop] = value;
+          });
         }
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-      // 2. Keine Range oder Box‑Level‑Modus => Toggle am Block selbst
-      else {
+      } else {
         const current = getComputedStyle(activeEl)[prop];
-        let isActive = current === String(value);
-        if (prop === 'textDecoration') isActive = current.includes('underline');
-        if (prop === 'fontWeight' && String(value) === 'bold') {
-          isActive = current === 'bold' || parseInt(current, 10) >= 600;
-        }
-        if (prop === 'fontStyle') isActive = /(italic|oblique)/.test(current);
+        let isActive = styleMatches(current, prop, value);
         if (isActive) {
           activeEl.style.removeProperty(prop);
           if (!activeEl.getAttribute('style')) activeEl.removeAttribute('style');
@@ -314,6 +421,7 @@ async function init() {
 
       // history update handled by toggleStyle wrapper
       updateAndDispatch(activeEl);
+      updateButtonStates();
       activeEl.focus();
     };
 
@@ -739,6 +847,7 @@ export function applyToolbarChange(el, styleProp, value) {
 function showToolbar() {
   if (!toolbar) return;
   toolbar.style.display = 'flex';
+  updateButtonStates();
 }
 
 function hideToolbar() {

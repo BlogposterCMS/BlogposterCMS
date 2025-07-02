@@ -3,15 +3,15 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
-## [Unreleased]
+## [0.6.2] 2025-07-02
 
 ### Added
 - Admin layout edit toggle now opens a widget selection popup.
 - Collapsible right‑side pages menu on admin home with filter dropdown and animated toggle icon.
 - Toolbar buttons now reflect active text styles; bold, italic and underline states update live with high‑contrast highlighting and fewer spans.
 - Community module pages are now automatically seeded under /admin/pages/{slug} when their lane is admin.
-- NEW: User‑select capabilities for selected and editing canvas items in builder mode.
-- NEW: debounce utility helper for performant, low‑overhead event handling.
+- User‑select capabilities for selected and editing canvas items in builder mode.
+- debounce utility helper for performant, low‑overhead event handling.
 
 ### Improved / Changed
 - Changelog formatting updated for consistent bullet lists and headings.
@@ -34,6 +34,7 @@ El Psy Kongroo
 - Dashboard edit mode no longer adds dashed borders around widgets; bounding box sizing uses border-box for accurate transforms
 -Admin widgets now render on pages even when not listed in the page config, enabling placement anywhere.
 
+>\"Wake the fuck up, Samurai, we have a city to burn.\"
 
 ## [0.6.1] 2025-06-27
 

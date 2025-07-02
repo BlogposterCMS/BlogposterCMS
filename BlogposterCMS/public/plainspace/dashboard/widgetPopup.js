@@ -52,8 +52,26 @@ export async function showWidgetPopup() {
   const container = overlay.querySelector('.widget-popup-container');
   container.innerHTML = '';
 
+  /* fetch default instances in one batched request */
+  const previewEvents = widgets.map(def => ({
+    eventName: 'getWidgetInstance',
+    payload: {
+      jwt: window.ADMIN_TOKEN,
+      moduleName: 'plainspace',
+      moduleType: 'core',
+      instanceId: `default.${def.id}`
+    }
+  }));
+
+  let previewResults = [];
+  try {
+    previewResults = await window.meltdownEmitBatch(previewEvents);
+  } catch {
+    previewResults = [];
+  }
+
   /* build each card */
-  for (const def of widgets) {
+  widgets.forEach((def, idx) => {
     const item     = document.createElement('div');
     item.className = 'widget-popup-item';
 
@@ -71,17 +89,11 @@ export async function showWidgetPopup() {
     preview.appendChild(wrapper);
     item.appendChild(preview);
 
-    /* fetch default instance once for preview */
     let instance = null;
-    try {
-      const res = await window.meltdownEmit('getWidgetInstance', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        instanceId: `default.${def.id}`
-      });
-      instance = res?.content ? JSON.parse(res.content) : null;
-    } catch { /* ignore */ }
+    const res = previewResults[idx];
+    if (res && !res.error && res.data?.content) {
+      try { instance = JSON.parse(res.data.content); } catch { /* ignore */ }
+    }
 
     renderWidget(wrapper, def, null, instance);
 

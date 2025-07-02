@@ -58,34 +58,18 @@
 }
 
 /* ============================================================
-   Gallery card – unchanged except width tweak
+   Widget list entry
 ============================================================ */
 .widget-popup-item {
-  max-height: fit-content;
   position: relative;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
   background: var(--color-white);
   border-radius: 8px;
   box-shadow: var(--shadow-card);
-  overflow: hidden;
   width: 100%;                      /* respect grid-auto-columns */
-}
-
-.widget-preview {
-  max-height: fit-content;
-  flex: 1;
-  padding: 8px;
-  background: #fafafa;
-  border-bottom: 1px solid #eee;
-
-  .canvas-item {
-    position: static   !important;
-    transform: none    !important;
-    width: 100%        !important;
-    height: 100%       !important;
-    box-shadow: none   !important;
-  }
 }
 
 .widget-title {

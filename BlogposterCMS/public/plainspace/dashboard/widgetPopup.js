@@ -57,34 +57,6 @@ export async function showWidgetPopup() {
     const item     = document.createElement('div');
     item.className = 'widget-popup-item';
 
-    const preview  = document.createElement('div');
-    preview.className = 'widget-preview';
-
-    const wrapper  = document.createElement('div');
-    wrapper.className          = 'canvas-item';
-    wrapper.dataset.instanceId = `prev-${def.id}`;
-    wrapper.dataset.widgetId   = def.id;
-
-    const content  = document.createElement('div');
-    content.className = 'canvas-item-content';
-    wrapper.appendChild(content);
-    preview.appendChild(wrapper);
-    item.appendChild(preview);
-
-    /* fetch default instance once for preview */
-    let instance = null;
-    try {
-      const res = await window.meltdownEmit('getWidgetInstance', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        instanceId: `default.${def.id}`
-      });
-      instance = res?.content ? JSON.parse(res.content) : null;
-    } catch { /* ignore */ }
-
-    renderWidget(wrapper, def, null, instance);
-
     const title = document.createElement('div');
     title.className = 'widget-title';
     title.textContent = def.metadata?.label || def.id;

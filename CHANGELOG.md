@@ -43,9 +43,6 @@ CodeQL workflow now grants actions: read permission to resolve upload errors.
 
 Fixed widget preview crash when toggling admin edit mode.
 
-- Batched widget preview loading in the admin popup to prevent rate-limit lockouts.
-- All meltdownEmit calls now flow through a shared debouncer to avoid rate limiter issues.
-
 
 ## [0.6.1] 2025-06-27
 

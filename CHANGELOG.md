@@ -43,11 +43,6 @@ CodeQL workflow now grants actions: read permission to resolve upload errors.
 
 Fixed widget preview crash when toggling admin edit mode.
 
-Fixed meltdown API rate limiter lockouts by debouncing `meltdownEmit` calls and
-batching them when multiple events fire in quick succession.
-Refactored `meltdownEmitter.js` to use the shared debounce helper and switched
-index.html and pages.html to load it as an ES module.
-
 
 ## [0.6.1] 2025-06-27
 

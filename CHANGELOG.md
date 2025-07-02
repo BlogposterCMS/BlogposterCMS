@@ -37,6 +37,8 @@ Refactored widget rendering to guarantee correct instance handling and stronger 
 
 pages‑menu initialisation rewritten with cleaner event hooks and multiple sorting options.
 
+- Widget rendering now loads in stages with debounced API calls for smoother first paint.
+
 Fixed
 
 CodeQL workflow now grants actions: read permission to resolve upload errors.

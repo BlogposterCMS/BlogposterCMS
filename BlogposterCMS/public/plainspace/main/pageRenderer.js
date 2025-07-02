@@ -54,6 +54,33 @@ async function fetchPartialSafe(name, type) {
   }
 }
 
+function createDebouncedEmitter(delay = 150) {
+  let queue = [];
+  let timer = null;
+  return function(eventName, payload = {}) {
+    return new Promise((resolve, reject) => {
+      queue.push({ eventName, payload, resolve, reject });
+      if (!timer) {
+        timer = setTimeout(async () => {
+          const batch = queue.slice();
+          queue = [];
+          timer = null;
+          try {
+            const results = await window.meltdownEmitBatch(
+              batch.map(it => ({ eventName: it.eventName, payload: it.payload }))
+            );
+            batch.forEach((item, idx) => item.resolve(results[idx]));
+          } catch (err) {
+            batch.forEach(item => item.reject(err));
+          }
+        }, delay);
+      }
+    });
+  };
+}
+
+const emitDebounced = createDebouncedEmitter(100);
+
 function executeJs(code, wrapper, root) {
   if (!code) return;
   const nonce = window.NONCE;
@@ -435,16 +462,16 @@ function ensureLayout(layout = {}, lane = 'public') {
       // Static mode: public pages should not be directly editable
       const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth: 5 }, gridEl);
 
+      const pending = [];
       for (const item of items) {
         const def = allWidgets.find(w => w.id === item.widgetId);
         if (!def) continue;
-        if (DEBUG) console.debug('[Renderer] render widget', def.id, item.id);
+        if (DEBUG) console.debug('[Renderer] render widget placeholder', def.id, item.id);
 
-        // Expanded default size for public widgets
         const [x, y, w, h] = [item.x ?? 0, item.y ?? 0, item.w ?? 8, item.h ?? 4];
 
         const wrapper = document.createElement('div');
-        wrapper.classList.add('canvas-item');
+        wrapper.classList.add('canvas-item', 'loading');
         wrapper.dataset.x = x;
         wrapper.dataset.y = y;
         wrapper.setAttribute('gs-w', w);
@@ -455,8 +482,24 @@ function ensureLayout(layout = {}, lane = 'public') {
         wrapper.dataset.instanceId = item.id;
         if (item.global) wrapper.dataset.global = 'true';
 
+        const ph = document.createElement('div');
+        ph.className = 'widget-placeholder';
+        ph.textContent = def.metadata?.label || def.id;
+        wrapper.appendChild(ph);
+
+        gridEl.appendChild(wrapper);
+        grid.makeWidget(wrapper);
+        pending.push({ wrapper, item, def });
+      }
+
+      for (const { wrapper, item, def } of pending) {
+        const content = document.createElement('div');
+        content.className = 'canvas-item-content';
+        wrapper.innerHTML = '';
+        wrapper.appendChild(content);
+
         try {
-          const res = await meltdownEmit('getWidgetInstance', {
+          const res = await emitDebounced('getWidgetInstance', {
             moduleName: 'plainspace',
             moduleType: 'core',
             instanceId: `default.${def.id}`
@@ -465,15 +508,8 @@ function ensureLayout(layout = {}, lane = 'public') {
           applyWidgetOptions(wrapper, opts);
         } catch {}
 
-        const content = document.createElement('div');
-        content.className = 'canvas-item-content';
-        wrapper.appendChild(content);
-
-        gridEl.appendChild(wrapper);
-        grid.makeWidget(wrapper);
-
         renderWidget(content, def, item.code || null, lane);
-
+        wrapper.classList.remove('loading');
       }
       return;
     }
@@ -504,14 +540,14 @@ function ensureLayout(layout = {}, lane = 'public') {
 
     const matchedWidgets = allWidgets.filter(w => (config.widgets || []).includes(w.id));
 
+    const pendingAdmin = [];
     for (const def of matchedWidgets) {
-      if (DEBUG) console.debug('[Renderer] admin render widget', def.id);
+      if (DEBUG) console.debug('[Renderer] admin render widget placeholder', def.id);
       const meta = layout.find(l => l.widgetId === def.id) || {};
-      // Larger defaults for admin widgets
       const [x, y, w, h] = [meta.x ?? 0, meta.y ?? 0, meta.w ?? 8, meta.h ?? DEFAULT_ADMIN_ROWS];
 
       const wrapper = document.createElement('div');
-      wrapper.classList.add('canvas-item');
+      wrapper.classList.add('canvas-item', 'loading');
       wrapper.dataset.x = x;
       wrapper.dataset.y = y;
       wrapper.setAttribute('gs-w', w);
@@ -522,8 +558,24 @@ function ensureLayout(layout = {}, lane = 'public') {
       wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2,8)}`;
       if (meta.global) wrapper.dataset.global = 'true';
 
+      const ph = document.createElement('div');
+      ph.className = 'widget-placeholder';
+      ph.textContent = def.metadata?.label || def.id;
+      wrapper.appendChild(ph);
+
+      gridEl.appendChild(wrapper);
+      grid.makeWidget(wrapper);
+      pendingAdmin.push({ wrapper, def, meta });
+    }
+
+    for (const { wrapper, def, meta } of pendingAdmin) {
+      const content = document.createElement('div');
+      content.className = 'canvas-item-content';
+      wrapper.innerHTML = '';
+      wrapper.appendChild(content);
+
       try {
-        const res = await meltdownEmit('getWidgetInstance', {
+        const res = await emitDebounced('getWidgetInstance', {
           jwt: window.ADMIN_TOKEN,
           moduleName: 'plainspace',
           moduleType: 'core',
@@ -533,15 +585,8 @@ function ensureLayout(layout = {}, lane = 'public') {
         applyWidgetOptions(wrapper, opts);
       } catch {}
 
-      const content = document.createElement('div');
-      content.className = 'canvas-item-content';
-      wrapper.appendChild(content);
-
-      gridEl.appendChild(wrapper);
-      grid.makeWidget(wrapper);
-
       renderWidget(content, def, meta.code || null, lane);
-
+      wrapper.classList.remove('loading');
     }
 
     grid.on('change', () => {

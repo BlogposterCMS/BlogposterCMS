@@ -1,43 +1,67 @@
 /* =============================================================================
-   Forms
+   Forms (angepasst für modernes Login-Design)
    ============================================================================= */
 
-   .app-scope {
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-  
-    label {
-      font-family: var(--font-body);
-      font-weight: 500;
-      color: var(--color-text);
-      // Allow pointer events on labels so nested form controls remain clickable
-      // Individual pages like the login screen apply their own pointer-events
-      // rules when implementing floating labels.
-      pointer-events: auto;
-    }
-  
-    input,
-    textarea {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-bottom: 2px solid #D1D5DB;
-      border-radius: 0;
-      font-size: 14px;
-      background-color: transparent;
-      transition: border 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
-  
-      &:focus {
-        outline: none;
-        border-bottom: 2px solid transparent;
-        border-radius: 9px;
-        border-image: var(--gradient-primary) 1;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        // Gradient-Text-Effekt beim Fokus
-      }
-    }
-  }
-  
+.app-scope form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-scope label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: #888;
+  pointer-events: none; /* notwendig für floating labels */
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.app-scope input,
+.app-scope textarea {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 8px;
+  border: none;
+  background-color: #f1f3f6;
+  font-size: 15px;
+  color: #333;
+  transition: box-shadow 0.2s ease;
+  box-shadow: inset 0 0 0 2px transparent;
+}
+
+.app-scope input:focus,
+.app-scope textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #008080;
+  background-color: #ffffff;
+}
+
+/* Floating Labels */
+.app-scope input:not(:placeholder-shown) + label,
+.app-scope input:focus + label,
+.app-scope textarea:not(:placeholder-shown) + label,
+.app-scope textarea:focus + label {
+  top: -7px;
+  left: 14px;
+  font-size: 12px;
+  color: #008080;
+  background: #ffffff;
+  padding: 0 4px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.app-scope form .button {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.app-scope form::after {
+  content: '';
+  display: block;
+  height: 14px; /* exakter Abstand zum Button, stabil und unveränderlich */
+}

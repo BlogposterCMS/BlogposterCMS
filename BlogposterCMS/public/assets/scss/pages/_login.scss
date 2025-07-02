@@ -1,164 +1,159 @@
 /* =============================================================================
-   Login Page Specific Styles
+   Login Page Styles
    ============================================================================= */
 
 .app-scope.login-page {
   position: relative;
-  background-color: var(--color-bg);
-
-  // Fixierte SVG-Bar im goldenen Schnitt, nur im rechten unteren Drittel sichtbar
-  &::before {
-    content: '';
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    width: 400px;
-    height: 300px;
-    background: url('/assets/images/bg-bars-fixed-corner.svg') no-repeat bottom right;
-    background-size: contain;
-    opacity: 1; // SVG regelt die Balken-Opacity selbst
-    z-index: -2;
-    pointer-events: none;
-  }
-
-  // Dezentes White-Overlay für eleganten "Paper-Effekt"
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: rgba(255, 255, 255, 0.8);
-    z-index: 0;
-    pointer-events: none;
-  }
+  background-color: #f5f7fa;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-
-/* Branding positioned at top-left */
-.branding-top-left {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--color-text);
-  letter-spacing: 0.5px;
-  opacity: 0.9;
-  z-index: 1;
-}
-
-/* =============================================================================
-   Login Form Styles
-   ============================================================================= */
 
 .login-form {
   position: relative;
-  z-index: 1;
   width: 100%;
   max-width: 400px;
-  padding: 32px;
-  border-radius: 14px;
-  background-color: #fff; // Papierweiß
-  box-shadow: 0 12px 28px rgba(0,0,0,0.07);
+  padding: 2.5rem;
+  background-color: #fff;
+  border-radius: 24px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.07);
   display: flex;
   flex-direction: column;
   align-items: center;
+  z-index: 1;
 }
 
 .login-form .cms-title {
   font-family: var(--font-heading);
-  font-size: 22px;
-  color: #222;
-  font-weight: 500;
-  margin-bottom: 24px;
+  font-size: 24px;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
   text-align: center;
-  letter-spacing: 0.5px;
-  opacity: 0.92;
+  opacity: 0.9;
 }
 
 .login-form .logo {
-  width: 160px;
-  height: auto;
-  margin: 24px auto 14px;
+  width: 100px;
+  margin-bottom: 1rem;
 }
 
 .login-form form {
   width: 100%;
 }
 
-.strategy-buttons {
-  width: 100%;
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+/* =============================================================================
+   Input Fields Styling
+   ============================================================================= */
 
-.strategy-buttons .oauth-button {
-  background: #f6f6f6;
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-family: var(--font-body);
-}
-
-.login-form .field {
+.field {
   width: 100%;
   margin-bottom: 1rem;
   position: relative;
-
-  input {
-    width: 100%;
-    padding: 1.5rem 0.75rem 0.5rem;
-    border: none;
-    border-bottom: 2px solid #e4e4e4;
-    background: transparent;
-    font-size: 1rem;
-    color: var(--color-text);
-    font-family: var(--font-body);
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-bottom: 2px solid #008080; // Markenfarbe für Fokus
-    }
-  }
-
-  label {
-    position: absolute;
-    left: 0.75rem;
-    top: 1rem;
-    font-size: 1rem;
-    color: #888;
-    font-family: var(--font-body);
-    pointer-events: none;
-    transition: all 0.2s ease;
-    background: transparent;
-  }
-
-  input:focus + label,
-  input:not(:placeholder-shown) + label {
-    top: 0.25rem;
-    font-size: 0.75rem;
-    color: #008080;
-    background: none;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    opacity: 0.94;
-  }
 }
 
+.field input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #f1f3f6;
+  font-size: 14px;
+  color: #444;
+  transition: box-shadow 0.2s ease;
+  box-shadow: inset 0 0 0 2px transparent;
+}
 
+.field input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #008080;
+}
+
+.field label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  font-size: 14px;
+  color: #aaa;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.field input:not(:placeholder-shown) + label,
+.field input:focus + label {
+  top: -8px;
+  left: 12px;
+  font-size: 12px;
+  color: #008080;
+  background: white;
+  padding: 0 4px;
+  font-weight: 500;
+}
 
 /* =============================================================================
-   Login Page Layout
+   Gradient Button Styling (wie auf deinem Bild!)
    ============================================================================= */
 
-.login-page {
-  display: flex;
-  justify-content: center;
+.app-scope .button {
+  display: inline-flex;
   align-items: center;
-  min-height: 100vh; // Immer mindestens volle Höhe
-  background-color: var(--color-bg);
+  justify-content: center;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #3acfd5, #3a4ed5, #c93ad5, #ff3a79, #ffbc3a);
+  background-size: 200% 200%;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
 }
 
+.app-scope .button:hover {
+  background-position: right center;
+}
+
+/* =============================================================================
+   Optional: SVG-Overlay und Branding (aus deinem ursprünglichen Code)
+   ============================================================================= */
+
+.app-scope.login-page::before {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 400px;
+  height: 300px;
+  background: url('/assets/images/bg-bars-fixed-corner.svg') no-repeat bottom right;
+  background-size: contain;
+  opacity: 1;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.app-scope.login-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Branding oben links (optional) */
+.branding-top-left {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  opacity: 0.9;
+  z-index: 1;
+}

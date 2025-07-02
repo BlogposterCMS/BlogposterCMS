@@ -1,48 +1,53 @@
 /* =============================================================================
-   Buttons
+   Buttons (angepasst an modernes Login-Design)
    ============================================================================= */
 
-   .app-scope {
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 14px 32px;
-      border: none;
-      border-radius: 12px;
-      background: var(--gradient-primary);
-      color: var(--color-white);
-      font-family: var(--font-body);
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.533);
-      position: relative;
-      overflow: hidden;
-      opacity: 0.8;
-  
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        height: 100%;
-        width: 100%;
-        background: rgba(255, 255, 255, 0.2);
-        transform: skewX(-45deg);
-        transition: left 0.5s ease;
-      }
-  
-      &:hover {
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
-  
-        &::before {
-          left: 200%;
-        }
-      }
-    }
-  }
-  
+.app-scope .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #3acfd5,
+    #3a4ed5,
+    #c93ad5,
+    #ff3a79,
+    #ffbc3a
+  );
+  background-size: 200%;
+  background-position: left center;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  opacity: 1;
+}
+
+.app-scope .button:hover {
+  background-position: right center;
+}
+
+/* Optional: Dezenter Glanzeffekt beim Hover */
+.app-scope .button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  height: 100%;
+  width: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: skewX(-45deg);
+  transition: left 0.5s ease;
+}
+
+.app-scope .button:hover::before {
+  left: 150%;
+}

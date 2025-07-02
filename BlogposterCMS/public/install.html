@@ -8,35 +8,43 @@
 </head>
 <body>
   <h1 class="branding-top-left">BlogposterCMS</h1>
-  <div class="app-scope install-page">
+
+  <div class="app-scope login-page">
     <div class="login-form form-container">
       <img id="logo" class="logo" src="/assets/logo/logo_blogposter_min_transparent.png" alt="BlogposterCMS Logo"/>
       <div class="cms-title">Initial Setup</div>
+
       <form id="installForm">
         <div class="field">
-          <input name="name" required placeholder=" ">
-          <label>Name</label>
+          <input id="name" name="name" required placeholder=" ">
+          <label for="name">Name</label>
         </div>
+
         <div class="field">
-          <input name="username" required placeholder=" " autocomplete="username">
-          <label>Username</label>
+          <input id="username" name="username" required placeholder=" " autocomplete="username">
+          <label for="username">Username</label>
         </div>
+
         <div class="field">
-          <input name="email" type="email" required placeholder=" " autocomplete="email">
-          <label>Email</label>
+          <input id="email" name="email" type="email" required placeholder=" " autocomplete="email">
+          <label for="email">Email</label>
         </div>
+
         <div class="field">
-          <input name="password" type="password" required placeholder=" " autocomplete="new-password">
-          <label>Password</label>
+          <input id="password" name="password" type="password" required placeholder=" " autocomplete="new-password">
+          <label for="password">Password</label>
         </div>
+
         <div class="field">
-          <input name="favoriteColor" type="color" value="#008080">
-          <label>Favorite Color</label>
+          <input id="favoriteColor" name="favoriteColor" type="color" value="#008080">
+          <label for="favoriteColor">Favorite Color</label>
         </div>
+
         <button type="submit" class="button">Install</button>
       </form>
     </div>
   </div>
+
   <script type="module" src="/assets/js/meltdownEmitter.js"></script>
   <script type="module" src="/assets/js/fontsLoader.js"></script>
   <script src="/assets/js/install.js"></script>

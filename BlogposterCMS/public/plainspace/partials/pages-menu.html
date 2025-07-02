@@ -1,12 +1,32 @@
-<aside class="pages-menu" id="pages-menu">
+<aside id="pages-menu" class="pages-menu">
   <div class="menu-header">
-    <span class="menu-title">Pages</span>
-    <img src="/assets/icons/filter.svg" id="pages-menu-filter" class="icon" alt="Filter" />
+
+      <!-- close arrow (click = collapse) -->
+     <img src="/assets/icons/arrow-right.svg"
+         id="pages-menu-close"
+         class="icon close-arrow"
+         alt="Close menu">
+
+    <span class="menu-title">Admin Pages</span>
+
+    <!-- existing filter icon -->
+    <img src="/assets/icons/filter.svg"
+         id="pages-menu-filter"
+         class="icon"
+         alt="Filter">
+
     <div id="pages-menu-filter-dropdown" class="filter-dropdown">
       <button data-sort="alpha">Alphabetical</button>
       <button data-sort="recent">Most Recent</button>
       <button data-sort="freq">Frequently Used</button>
     </div>
   </div>
+
   <ul class="menu-list"></ul>
+
+  <!-- empty-state hint -->
+  <p id="pages-menu-empty" class="empty-hint">
+    Here you’ll eventually see pages provided by modules.<br>
+    You can also create your own pages.
+  </p>
 </aside>

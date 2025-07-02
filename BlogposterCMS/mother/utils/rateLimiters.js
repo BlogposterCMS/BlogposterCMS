@@ -1,6 +1,15 @@
 const rateLimit = require('express-rate-limit');
 const { rate } = require('../../config/security');
 
+const logBlockedRequest = (type) => (req, res, next, options) => {
+  console.warn(`[RateLimiter BLOCKED] (${type}) IP: ${req.ip}, URL: ${req.originalUrl}`);
+  next();
+};
+
+const logLimitReached = (type) => (req, res, options) => {
+  console.log(`[RateLimiter LIMIT REACHED] (${type}) IP: ${req.ip}, URL: ${req.originalUrl}`);
+};
+
 const apiLimiter = rateLimit({
   windowMs: rate.api.windowMs,
   max: rate.api.max,

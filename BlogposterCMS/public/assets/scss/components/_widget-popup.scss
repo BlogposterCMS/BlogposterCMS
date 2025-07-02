@@ -1,71 +1,125 @@
+/* ============================================================
+   Overlay – still darkens the page
+============================================================ */
 .widget-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  pointer-events: none; 
+
+  &.open { display: block; }
+
+  /* dark rectangle ONLY over the left sidebar */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;                 /* stick to left edge */
+    width: 75px;            /* sidebar width */
+    height: 100%;
+    background: #ffffffb0;
+    pointer-events: none;    /* sidebar already disabled via .dimmed */
+  }
+}
+
+
+/* ============================================================
+   Dock bar (replaces centred modal)
+============================================================ */
+.widget-popup-container {
+  /* stick to top, full width */
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 1000;
-  overflow-y: auto;
-  display: none;
-}
+  max-height: 150px;
 
-body.widget-popup-open #top-header,
-body.widget-popup-open #main-header,
-body.widget-popup-open #sidebar {
-  filter: brightness(0.3);
-}
+                     /* adjust to taste */
+  padding: 12px 24px 16px;
+  background: var(--color-white);
+  border-radius: 0 0 10px 10px;     /* rounded bottom only */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 
-.widget-popup-container {
-  max-width: 1000px;
-  margin: 80px auto;
-  padding: 20px;
+  /* horizontal gallery */
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  grid-auto-flow: column;           /* items flow left→right */
+  grid-auto-columns: 200px;         /* card width */
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  z-index: 1001;                    /* above the backdrop */
 }
 
+.widget-popup-container,
+.widget-popup-backdrop {       /* keep this if you still use a sidebar backdrop */
+  pointer-events: auto;        /* ← these CAN receive clicks */
+}
+
+/* ============================================================
+   Gallery card – unchanged except width tweak
+============================================================ */
 .widget-popup-item {
+  max-height: fit-content;
   position: relative;
+  display: flex;
+  flex-direction: column;
   background: var(--color-white);
   border-radius: 8px;
   box-shadow: var(--shadow-card);
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  width: 100%;                      /* respect grid-auto-columns */
 }
 
 .widget-preview {
+  max-height: fit-content;
   flex: 1;
   padding: 8px;
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+
+  .canvas-item {
+    position: static   !important;
+    transform: none    !important;
+    width: 100%        !important;
+    height: 100%       !important;
+    box-shadow: none   !important;
+  }
 }
 
 .widget-title {
   padding: 6px 8px;
   text-align: center;
-  font-size: 14px;
-  font-weight: 500;
-  border-top: 1px solid #eee;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .widget-add-btn {
   position: absolute;
-  top: 50%;
-  right: 8px;
-  transform: translateY(-50%);
-  background: var(--color-primary);
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
   border: none;
-  padding: 4px;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  background: var(--user-color);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover { opacity: 0.75; }
+
+  img, svg { width: 16px; height: 16px; }
 }
 
-.widget-add-btn .icon {
-  width: 20px;
-  height: 20px;
+/* ============================================================
+   Dimmed areas (headers / sidebar) – unchanged
+============================================================ */
+.dimmed {
+  pointer-events: none;
+  filter: brightness(0.3);
 }

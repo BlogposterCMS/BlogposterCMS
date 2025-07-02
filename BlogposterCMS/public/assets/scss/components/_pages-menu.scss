@@ -1,12 +1,15 @@
+// --------------------------------------------------------------
+// Admin-Pages sidebar
+// --------------------------------------------------------------
 .pages-menu {
   position: fixed;
-  top: 104px;
+  top: 163px;
   right: 0;
   bottom: 0;
   width: 220px;
   background: var(--color-white);
   border-left: 1px solid #eee;
-  box-shadow: -2px 0 6px rgba(0,0,0,0.05);
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.05);
   transform: translateX(100%);
   transition: transform 0.25s ease;
   overflow-y: auto;
@@ -16,6 +19,7 @@
     transform: translateX(0);
   }
 
+  /* ---------- header ---------- */
   .menu-header {
     display: flex;
     align-items: center;
@@ -24,6 +28,19 @@
     border-bottom: 1px solid #eee;
     position: relative;
 
+    /* arrow that closes the menu */
+    .close-arrow {
+      cursor: pointer;
+      margin-left: 6px;
+      transition: opacity 0.2s ease;
+
+    }
+    /* show arrow only when panel is open */
+    .pages-menu.open & .close-arrow {
+      opacity: 1;
+    }
+
+    /* filter dropdown */
     .filter-dropdown {
       position: absolute;
       top: 100%;
@@ -48,6 +65,7 @@
         text-align: left;
         font-family: var(--font-body);
         cursor: pointer;
+
         &:hover {
           background: var(--color-light-gray, #f6f6f6);
         }
@@ -55,6 +73,7 @@
     }
   }
 
+  /* ---------- list ---------- */
   .menu-list {
     list-style: none;
     margin: 0;
@@ -68,13 +87,33 @@
       text-decoration: none;
       font-family: var(--font-body);
       transition: color 0.2s;
+
       &:hover {
         color: var(--user-color);
       }
     }
   }
+
+  /* ---------- empty-state hint ---------- */
+  .empty-hint {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  &.empty .empty-hint {
+    display: block;
+  }
 }
 
+/* ---------- responsive tweak ---------- */
 @media (max-width: 900px) {
   .pages-menu {
     top: 56px;

@@ -22,6 +22,40 @@ let applyColorInternal;
 let updateButtonStates = () => {};
 let pendingSelectionUpdate = null;
 
+// --------------------------------------------------
+//  Remember selection range
+//  This is used to restore the selection after applying styles
+// --------------------------------------------------
+let preservedRange = null;
+
+function saveSelection () {
+  const ae = document.activeElement;
+  if (ae && (
+        ae.closest('.text-block-editor-toolbar') ||
+        ae.closest('.text-color-picker')))
+    return;
+
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && !sel.isCollapsed) {
+    preservedRange = sel.getRangeAt(0).cloneRange();
+  }
+}
+
+function restoreSelection() {
+  if (preservedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(preservedRange);
+  }
+}
+
+// Bei jeder Nutzer-Interaktion merken
+document.addEventListener('mouseup',          saveSelection, true);
+document.addEventListener('keyup',            saveSelection, true);
+document.addEventListener('touchend',         saveSelection, true);
+document.addEventListener('selectionchange',  saveSelection, true);
+
+
 function parseColor(val) {
   val = String(val || '').trim();
   if (val.startsWith('#')) {
@@ -60,14 +94,27 @@ function setActiveButtonAppearance(btn, active) {
   btn.style.color = luminance > 0.6 ? 'var(--color-text)' : 'var(--color-white)';
 }
 
-function styleMatches(val, prop, target) {
-  if (prop === 'textDecoration') return String(val).includes('underline');
-  if (prop === 'fontWeight' && String(target) === 'bold') {
-    return val === 'bold' || parseInt(val, 10) >= 600;
-  }
-  if (prop === 'fontStyle') return /(italic|oblique)/.test(val);
-  return String(val) === String(target);
-}
+function styleMatches(val, prop, target, styleObj = null) {
+   switch (prop) {
+
+     case 'textDecoration': {
+       const hasUnderline = String(val).includes('underline');
+       const wavy = styleObj && styleObj.textDecorationStyle === 'wavy';
+       return hasUnderline && !wavy;
+     }
+
+     case 'fontWeight': {       // „bold“
+       const num = parseInt(val, 10);
+       return val === 'bold' || (!isNaN(num) && num >= 600);
+     }
+
+     case 'fontStyle':          // „italic“
+       return /(italic|oblique)/.test(val);
+
+     default:
+       return String(val) === String(target);
+   }
+ }
 
 function isSelectionStyled(prop, value) {
   if (!activeEl) return false;
@@ -82,18 +129,26 @@ function isSelectionStyled(prop, value) {
     return styleMatches(current, prop, value);
   }
   const range = sel.getRangeAt(0);
+  // 1) Cursor evtl. in Text-Knoten? → Root anheben
+  let walkerRoot = range.commonAncestorContainer;
+  if (walkerRoot.nodeType === 3) {
+    walkerRoot = walkerRoot.parentNode;
+  }
+
+  // 2) Walker über walkerRoot aufbauen
   const walker = document.createTreeWalker(
-    range.commonAncestorContainer,
+    walkerRoot,
     NodeFilter.SHOW_TEXT,
     {
-      acceptNode(node) {
-        return range.intersectsNode(node)
+      acceptNode(n) {
+        return range.intersectsNode(n)
           ? NodeFilter.FILTER_ACCEPT
           : NodeFilter.FILTER_REJECT;
       }
     }
   );
   const carriers = new Set();
+  carriers.add(activeEl);
   while (walker.nextNode()) {
     carriers.add(walker.currentNode.parentElement);
   }
@@ -184,10 +239,11 @@ function dispatchHtmlUpdate(el) {
 
 function updateAndDispatch(el) {
   if (!el) return;
-  const html = el.innerHTML.trim();
+  const html = el.outerHTML.trim();
   el.__onSave?.(html);
   dispatchHtmlUpdate(el);
 }
+
 
 const editableMap = new WeakMap();
 
@@ -334,8 +390,172 @@ async function init() {
         document.body.appendChild(toolbar);
       }
       toolbar.style.display = 'none';
-    toolbar.addEventListener('mousedown', e => e.stopPropagation());
-    toolbar.addEventListener('click', e => e.stopPropagation());
+
+    // ---- Globaler Focus‑Stopper --------------------------
+    toolbar.addEventListener('pointerdown', ev => {
+      saveSelection();           // Range sichern
+      ev.preventDefault();       // Fokuswechsel unterbinden
+      ev.stopPropagation();      // kein weiteres Bubbling
+    }, true);
+
+
+    toolbar.addEventListener('click', ev => {           
+      const btn = ev.target.closest('button[data-cmd]');
+      });
+
+    function splitRangeBoundaries(range) {
+      // Start
+      if (range.startContainer.nodeType === 3) {
+        const txt = range.startContainer;
+        if (range.startOffset > 0 && range.startOffset < txt.length) {
+          txt.splitText(range.startOffset);
+          range.setStart(txt.nextSibling, 0);
+        }
+      }
+      // End
+      if (range.endContainer.nodeType === 3) {
+        const txt = range.endContainer;
+        if (range.endOffset > 0 && range.endOffset < txt.length) {
+          txt.splitText(range.endOffset);
+        }
+      }
+    }
+
+    //
+    /* ============================================================
+   applyStyleInternal – applies a style to the active element or the selected range
+   ============================================================ */
+function applyStyleInternal(prop, value) {
+
+  /* DBG-0: Funktionsaufruf + Parameter */
+  console.log('%c[DBG-0] applyStyleInternal →', 'color:#f06',
+              { prop, value });
+
+  restoreSelection();
+  if (!activeEl) {
+    console.warn('[DBG-0] activeEl ist null → Abbruch');
+    return;
+  }
+
+  /* ----------------------------------------------------------------
+     1) check selction and range
+     ---------------------------------------------------------------- */
+  const sel = window.getSelection();
+  console.log('%c[DBG-1] sel =', 'color:#0af', sel && sel.toString());
+
+  let range = null;
+
+  if (sel && sel.rangeCount &&
+      !sel.isCollapsed &&
+      activeEl.contains(sel.anchorNode) &&
+      activeEl.contains(sel.focusNode)) {
+
+    range = sel.getRangeAt(0);
+    console.log('%c[DBG-2] Range aus sel genommen', 'color:#0af', range);
+
+  } else if (preservedRange && !preservedRange.collapsed) {
+
+    range = preservedRange.cloneRange();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    console.log('%c[DBG-2] Range aus preservedRange wiederhergestellt',
+                'color:#0af', range);
+
+  } else {
+    console.warn('[DBG-2] KEINE gültige Range --> ganze Box wird formatiert');
+  }
+
+  const hasRange = !!range;
+  const normalizeSize = v => parseFloat(v).toFixed(2);
+
+  /* ----------------------------------------------------------------
+     2) Helper „touch“ – applied in every node
+     ---------------------------------------------------------------- */
+  const touch = el => {
+    const computedVal = getComputedStyle(el)[prop];
+    const inlineVal   = el.style[prop];
+    let isAlreadySet;
+
+    if (prop === 'fontSize') {
+      isAlreadySet = normalizeSize(computedVal) === normalizeSize(value);
+    } else {
+      isAlreadySet = inlineVal === value || computedVal === value;
+    }
+
+    console.log('%c[DBG-3] touch', 'color:#e69500',
+                { el, computedVal, inlineVal, isAlreadySet });
+
+    if (isAlreadySet) {
+      el.style[prop] = '';
+    } else {
+      el.style[prop] = value;
+    }
+
+    /* leere <span> entsorgen */
+    if (el.tagName === 'SPAN' && !el.getAttribute('style')) {
+      el.replaceWith(...el.childNodes);
+      console.log('%c[DBG-3] leerer <span> entfernt', 'color:#e69500');
+    }
+  };
+
+  /* ----------------------------------------------------------------
+     3) pick nodes in range and format them
+     ---------------------------------------------------------------- */
+  if (hasRange) {
+    splitRangeBoundaries(range);
+
+    let walkerRoot = range.commonAncestorContainer;
+    if (walkerRoot.nodeType === 3) {
+      walkerRoot = walkerRoot.parentNode;
+    }
+
+   const walker = document.createTreeWalker(
+      walkerRoot,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: n => range.intersectsNode(n)
+                       ? NodeFilter.FILTER_ACCEPT
+                       : NodeFilter.FILTER_REJECT
+      }
+    );
+
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    console.log('%c[DBG-4] Textknoten gefunden:', 'color:#07a', nodes.length, nodes);
+
+    nodes.forEach(text => {
+      let carrier = text.parentElement;
+      if (carrier.tagName !== 'SPAN') {
+        const span = document.createElement('span');
+        carrier.insertBefore(span, text);
+        span.appendChild(text);
+        carrier = span;
+        console.log('%c[DBG-4] Neuer <span> angelegt', 'color:#07a', carrier);
+      }
+      touch(carrier);
+    });
+
+  /* ----------------------------------------------------------------
+     4)  no range - formate the box itself
+     ---------------------------------------------------------------- */
+  } else {
+    touch(activeEl);
+  }
+
+  updateAndDispatch(activeEl);
+  updateButtonStates();
+  if (!hasRange) {         
+   preservedRange = null; 
+    } else {
+      preservedRange = range.cloneRange();
+      saveSelection(); 
+    }
+ 
+  console.log('%c[DBG-5] applyStyleInternal ENDE', 'color:#f06');
+}
+
+
+
 
     updateButtonStates = function () {
       if (!toolbar || !activeEl) return;
@@ -350,7 +570,17 @@ async function init() {
         const active = isSelectionStyled(prop, val);
         setActiveButtonAppearance(btn, active);
       }
+
+      updateFontSizeInput();
     };
+
+    function updateFontSizeInput() {
+      if (!activeEl || !fsInput) return;
+
+      const computedSize = window.getComputedStyle(activeEl).fontSize;
+      fsInput.value = parseFloat(computedSize);
+    }
+
 
     document.addEventListener('selectionchange', () => {
       if (pendingSelectionUpdate) return;
@@ -360,70 +590,12 @@ async function init() {
       });
     });
 
-    toggleStyleInternal = (prop, value) => {
-      if (!activeEl) return;
-      const sel = window.getSelection();
+    // Unified mapping – these functions are used to apply styles
+    toggleStyleInternal = applyStyleInternal;
+    applyFontInternal   = font  => applyStyleInternal('fontFamily', font);
+    applySizeInternal   = size  => applyStyleInternal('fontSize', parseFloat(size) + 'px');
+    applyColorInternal  = color => applyStyleInternal('color', color);
 
-      if (
-        sel &&
-        !sel.isCollapsed &&
-        activeEl.contains(sel.anchorNode) &&
-        activeEl.contains(sel.focusNode)
-      ) {
-        const range = sel.getRangeAt(0);
-        const walker = document.createTreeWalker(
-          range.commonAncestorContainer,
-          NodeFilter.SHOW_TEXT,
-          {
-            acceptNode(node) {
-              return range.intersectsNode(node)
-                ? NodeFilter.FILTER_ACCEPT
-                : NodeFilter.FILTER_REJECT;
-            }
-          }
-        );
-        const nodes = [];
-        while (walker.nextNode()) {
-          nodes.push(walker.currentNode);
-        }
-        const parents = nodes.map(n => n.parentElement);
-        const uniqueParents = [...new Set(parents)];
-        const allHave = uniqueParents.every(el =>
-          styleMatches(getComputedStyle(el)[prop], prop, value)
-        );
-        if (allHave) {
-          uniqueParents.forEach(el => {
-            el.style.removeProperty(prop);
-            if (!el.getAttribute('style')) el.replaceWith(...el.childNodes);
-          });
-        } else {
-          nodes.forEach(text => {
-            let carrier = text.parentElement;
-            if (carrier.tagName !== 'SPAN') {
-              const span = document.createElement('span');
-              carrier.insertBefore(span, text);
-              span.appendChild(text);
-              carrier = span;
-            }
-            carrier.style[prop] = value;
-          });
-        }
-      } else {
-        const current = getComputedStyle(activeEl)[prop];
-        let isActive = styleMatches(current, prop, value);
-        if (isActive) {
-          activeEl.style.removeProperty(prop);
-          if (!activeEl.getAttribute('style')) activeEl.removeAttribute('style');
-        } else {
-          activeEl.style[prop] = value;
-        }
-      }
-
-      // history update handled by toggleStyle wrapper
-      updateAndDispatch(activeEl);
-      updateButtonStates();
-      activeEl.focus();
-    };
 
     toolbar.addEventListener('click', ev => {
       const btn = ev.target.closest('button[data-cmd]');
@@ -471,7 +643,15 @@ async function init() {
     });
     colorPicker.el.classList.add('floating', 'hidden');
     document.body.appendChild(colorPicker.el);
+    colorPicker.el.addEventListener('pointerdown', ev => {
+    if (ev.target.classList.contains('swatch')) {
+        saveSelection();
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    }, true);
     colorBtn.addEventListener('click', () => {
+      saveSelection();
       if (colorPicker.el.classList.contains('hidden')) {
         const rect = colorBtn.getBoundingClientRect();
         colorPicker.showAt(
@@ -482,7 +662,7 @@ async function init() {
         colorPicker.hide();
       }
     });
-    /* Picker nur schließen, wenn X gedrückt oder Widget gewechselt */
+
     document.addEventListener('selected', () => colorPicker.hide());
     colorWrapper.appendChild(colorBtn);
     toolbar.appendChild(colorWrapper);
@@ -507,115 +687,32 @@ async function init() {
     populateFonts();
     document.addEventListener('fontsUpdated', populateFonts);
 
-    applyFontInternal = font => {
-      if (!font || !activeEl) return;
-      ffLabel.textContent = font;
-      const sel = window.getSelection();
-      if (
-        sel &&
-        !sel.isCollapsed &&
-        activeEl.contains(sel.anchorNode) &&
-        activeEl.contains(sel.focusNode)
-      ) {
-        try {
-          const range = sel.getRangeAt(0).cloneRange();
-          const span = document.createElement('span');
-          span.style.fontFamily = `'${font}'`;
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-          sel.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(span);
-          sel.addRange(newRange);
-        } catch (err) {
-          activeEl.style.fontFamily = `'${font}'`;
-        }
-      } else {
-        activeEl.style.fontFamily = `'${font}'`;
-      }
-      updateAndDispatch(activeEl);
-      activeEl.focus();
-    };
-    applySizeInternal = size => {
-      const val = parseFloat(size);
-      if (!val || !activeEl) return;
-      fsInput.value = val;
-
-      const sel = window.getSelection();
-      if (
-        sel &&
-        !sel.isCollapsed &&
-        activeEl.contains(sel.anchorNode) &&
-        activeEl.contains(sel.focusNode)
-      ) {
-        try {
-          const range = sel.getRangeAt(0).cloneRange();
-          const span = document.createElement('span');
-          span.style.fontSize = val + 'px';
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-          sel.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(span);
-          sel.addRange(newRange);
-        } catch (err) {
-          activeEl.style.fontSize = val + 'px';
-        }
-      } else {
-        activeEl.style.fontSize = val + 'px';
-      }
-      updateAndDispatch(activeEl);
-      activeEl.focus();
-    };
-
-    const sanitizeColor = c => {
-      c = String(c || '').trim();
-      if (/^#[0-9a-fA-F]{3,8}$/.test(c)) return c;
-      const tmp = document.createElement('div');
-      tmp.style.color = c;
-      return tmp.style.color ? c : '#000000';
-    };
-
-    applyColorInternal = color => {
-      const val = sanitizeColor(color);
-      currentColor = val;
-      if (!activeEl) return;
-      const sel = window.getSelection();
-      if (
-        sel &&
-        !sel.isCollapsed &&
-        activeEl.contains(sel.anchorNode) &&
-        activeEl.contains(sel.focusNode)
-      ) {
-        try {
-          const range = sel.getRangeAt(0).cloneRange();
-          const span = document.createElement('span');
-          span.style.color = val;
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-          sel.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(span);
-          sel.addRange(newRange);
-        } catch (err) {
-          activeEl.style.color = val;
-        }
-      } else {
-        activeEl.style.color = val;
-      }
-      activeEl.focus();
-      updateAndDispatch(activeEl);
-    };
+    
     toolbar.querySelector('.fs-inc').addEventListener('click', () => {
-      applySize((parseFloat(fsInput.value) || 16) + 1);
+      saveSelection();
+      const newSize = (parseFloat(fsInput.value) || 16) + 1;
+      fsInput.value = newSize;
+      applySize(newSize);
+
+      if (activeEl) updateAndDispatch(activeEl); // <- HTML-Update triggern
     });
+
     toolbar.querySelector('.fs-dec').addEventListener('click', () => {
-      applySize((parseFloat(fsInput.value) || 16) - 1);
+      saveSelection();
+      const newSize = Math.max((parseFloat(fsInput.value) || 16) - 1, 1);
+      fsInput.value = newSize;
+      applySize(newSize);
+
+      if (activeEl) updateAndDispatch(activeEl); // <- HTML-Update triggern
     });
+
+
     const filterOptions = val => {
-      fsOptions.querySelectorAll('span[data-size]').forEach(span => {
-        span.style.display = !val || span.textContent.startsWith(val) ? 'block' : 'none';
-      });
+      fsOptions.querySelectorAll('span[data-size]')
+                .forEach(span => {
+                span.style.display = !val || span.textContent.startsWith(val)
+                                      ? 'block' : 'none';
+              });
     };
 
     fsBtn.addEventListener('click', () => {

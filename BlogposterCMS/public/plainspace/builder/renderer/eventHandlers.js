@@ -22,7 +22,7 @@ export function registerBuilderEvents(gridEl, codeMap, { getRegisteredEditable }
       const instId = widget.dataset.instanceId;
       if (!instId) return;
       if (!codeMap[instId]) codeMap[instId] = {};
-      codeMap[instId].html = editable.innerHTML.trim();
+      codeMap[instId].html = editable.outerHTML.trim();
     });
   }
 

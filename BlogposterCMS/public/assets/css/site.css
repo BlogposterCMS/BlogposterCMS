@@ -2031,6 +2031,13 @@ body.preview-desktop #content {
   cursor: text;
 }
 
+.builder-mode .canvas-item.selected,
+.builder-mode .canvas-item.editing {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+
 .heading-widget {
   display: flex;
   align-items: center;
@@ -2230,7 +2237,7 @@ body.preview-desktop #content {
 @supports not (background: color-mix(in srgb, #000, black 20%)) {
   .text-block-editor-toolbar .tb-btn.active {
     background: var(--user-color);
-    opacity: .8;
+    opacity: 0.8;
   }
 }
 .text-block-editor-toolbar .font-size-control {
@@ -2444,4 +2451,237 @@ body.preview-desktop #content {
 .news-json {
   font-family: var(--font-body);
   line-height: 1.4;
+}
+
+/* ============================================================
+   Overlay – still darkens the page
+============================================================ */
+.widget-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  pointer-events: none;
+  /* dark rectangle ONLY over the left sidebar */
+}
+.widget-popup-overlay.open {
+  display: block;
+}
+.widget-popup-overlay::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0; /* stick to left edge */
+  width: 75px; /* sidebar width */
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6901960784);
+  pointer-events: none; /* sidebar already disabled via .dimmed */
+}
+
+/* ============================================================
+   Dock bar (replaces centred modal)
+============================================================ */
+.widget-popup-container {
+  /* stick to top, full width */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-height: 150px;
+  /* adjust to taste */
+  padding: 12px 24px 16px;
+  background: var(--color-white);
+  border-radius: 0 0 10px 10px; /* rounded bottom only */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  /* horizontal gallery */
+  display: grid;
+  grid-auto-flow: column; /* items flow left→right */
+  grid-auto-columns: 200px; /* card width */
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  z-index: 1001; /* above the backdrop */
+}
+
+.widget-popup-container,
+.widget-popup-backdrop { /* keep this if you still use a sidebar backdrop */
+  pointer-events: auto; /* ← these CAN receive clicks */
+}
+
+/* ============================================================
+   Gallery card – unchanged except width tweak
+============================================================ */
+.widget-popup-item {
+  max-height: -moz-fit-content;
+  max-height: fit-content;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  width: 100%; /* respect grid-auto-columns */
+}
+
+.widget-preview {
+  max-height: -moz-fit-content;
+  max-height: fit-content;
+  flex: 1;
+  padding: 8px;
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+}
+.widget-preview .canvas-item {
+  position: static !important;
+  transform: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-shadow: none !important;
+}
+
+.widget-title {
+  padding: 6px 8px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.widget-add-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--user-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.widget-add-btn:hover {
+  opacity: 0.75;
+}
+.widget-add-btn img, .widget-add-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================================
+   Dimmed areas (headers / sidebar) – unchanged
+============================================================ */
+.dimmed {
+  pointer-events: none;
+  filter: brightness(0.3);
+}
+
+.pages-menu {
+  position: fixed;
+  top: 163px;
+  right: 0;
+  bottom: 0;
+  width: 220px;
+  background: var(--color-white);
+  border-left: 1px solid #eee;
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.05);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+  z-index: 30;
+  /* ---------- header ---------- */
+  /* ---------- list ---------- */
+  /* ---------- empty-state hint ---------- */
+}
+.pages-menu.open {
+  transform: translateX(0);
+}
+.pages-menu .menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  position: relative;
+  /* arrow that closes the menu */
+  /* show arrow only when panel is open */
+  /* filter dropdown */
+}
+.pages-menu .menu-header .close-arrow {
+  cursor: pointer;
+  margin-left: 6px;
+  transition: opacity 0.2s ease;
+}
+.pages-menu.open .pages-menu .menu-header .close-arrow {
+  opacity: 1;
+}
+.pages-menu .menu-header .filter-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 6px;
+  background: var(--color-white);
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: var(--shadow-card);
+  display: none;
+  flex-direction: column;
+  margin-top: 4px;
+  z-index: 20;
+}
+.pages-menu .menu-header .filter-dropdown.open {
+  display: flex;
+}
+.pages-menu .menu-header .filter-dropdown button {
+  background: none;
+  border: none;
+  padding: 6px 12px;
+  text-align: left;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.pages-menu .menu-header .filter-dropdown button:hover {
+  background: var(--color-light-gray, #f6f6f6);
+}
+.pages-menu .menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pages-menu .menu-list li a {
+  color: var(--color-text);
+  text-decoration: none;
+  font-family: var(--font-body);
+  transition: color 0.2s;
+}
+.pages-menu .menu-list li a:hover {
+  color: var(--user-color);
+}
+.pages-menu .empty-hint {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.pages-menu.empty .empty-hint {
+  display: block;
+}
+
+/* ---------- responsive tweak ---------- */
+@media (max-width: 900px) {
+  .pages-menu {
+    top: 56px;
+    width: 70%;
+  }
 }/*# sourceMappingURL=site.css.map */

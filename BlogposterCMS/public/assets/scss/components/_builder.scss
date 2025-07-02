@@ -528,3 +528,10 @@ body.preview-desktop #content {
   pointer-events: none;
   cursor: text;
 }
+
+.builder-mode .canvas-item.selected,
+.builder-mode .canvas-item.editing {
+  -webkit-user-select: text;
+     -moz-user-select: text;
+          user-select: text;
+}

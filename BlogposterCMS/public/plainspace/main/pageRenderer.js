@@ -378,6 +378,7 @@ function ensureLayout(layout = {}, lane = 'public') {
         pagesMenuEl.innerHTML = sanitizeHtml(
           await fetchPartialSafe('pages-menu')
         );
+        document.dispatchEvent(new CustomEvent('pages-menu-loaded'));
       } catch (err) {
         console.warn('[Renderer] failed to load pages-menu', err);
       }
@@ -477,7 +478,6 @@ function ensureLayout(layout = {}, lane = 'public') {
       return;
     }
 
-    // 9. ADMIN PAGE: INIT GRIDSTACK
     const layoutRes = await meltdownEmit('getLayoutForViewport', {
       jwt: window.ADMIN_TOKEN,
       moduleName: 'plainspace',

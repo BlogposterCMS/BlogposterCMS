@@ -4,9 +4,12 @@ import { registerElement } from '../editor/editor.js';
 
 export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const instanceId = wrapper.dataset.instanceId;
-  const data = customData || codeMap[instanceId] || null;
-
+  const data = customData || (codeMap && codeMap[instanceId]) || null;
   const content = wrapper.querySelector('.canvas-item-content');
+  if (!content) {
+  console.error('[renderWidget] .canvas-item-content not found for', widgetDef.id);
+  return;
+}
   content.innerHTML = '';
   const root = content;
   while (root.firstChild) root.removeChild(root.firstChild);

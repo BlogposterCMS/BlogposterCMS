@@ -29,6 +29,8 @@ moduleLoader now allows the built‑in crypto module inside sandboxes and keeps 
 
 site.css: new utility classes for the news‑card layout, wider card family and improved hover states.
 
+- Admin canvas grid now scales widgets responsively with percentage-based sizing.
+
 Updated pages‑menu styles and added an empty‑state hint for better UX.
 
 Widget popup now shows a backdrop overlay and can be closed with the Escape key.

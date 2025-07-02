@@ -13,7 +13,6 @@
   
 .canvas-grid {
   width: 100%;
-  min-width: 600px;
   min-height: 300px;
   position: relative;
   background: var(--color-bg);
@@ -27,8 +26,6 @@
   border-radius: 9px;
   /*box-shadow: var(--shadow-card);*/
   transition: all 0.2s ease;
-  min-width: 120px;
-  min-height: 80px;
   will-change: transform;
   z-index: 0; // baseline layer for widgets
 }

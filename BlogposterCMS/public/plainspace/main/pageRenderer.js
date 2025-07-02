@@ -531,7 +531,7 @@ function ensureLayout(layout = {}, lane = 'public') {
     gridEl.id = 'adminGrid';
     gridEl.className = 'canvas-grid';
     contentEl.appendChild(gridEl);
-    const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5 }, gridEl);
+    const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, percentageMode: true }, gridEl);
     grid.setStatic(true);
     grid.on('change', () => {});
     window.adminGrid = grid;

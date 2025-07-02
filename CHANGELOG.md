@@ -49,6 +49,8 @@ CodeQL workflow now grants actions: read permission to resolve upload errors.
 
 Fixed widget preview crash when toggling admin edit mode.
 
+- CanvasGrid percentage sizing now clamps at 100% and remains stable on window resize.
+
 
 ## [0.6.1] 2025-06-27
 

@@ -35,7 +35,7 @@ export class CanvasGrid {
     this._updateGridHeight();
     if (this.options.percentageMode) {
       window.addEventListener('resize', () => {
-        this.widgets.forEach(w => this._applyPosition(w));
+        this.widgets.forEach(w => this._applyPosition(w, false));
       });
     }
   }
@@ -60,7 +60,7 @@ export class CanvasGrid {
     this.el.style.height = `${height}px`;
   }
 
-  _applyPosition(el) {
+  _applyPosition(el, recalc = true) {
     const { columnWidth, cellHeight, columns, rows } = this.options;
     let x = +el.dataset.x || 0;
     let y = +el.dataset.y || 0;
@@ -99,8 +99,16 @@ export class CanvasGrid {
     if (this.options.percentageMode) {
       const gridW = this.el.clientWidth || 1;
       const gridH = this.el.clientHeight || 1;
-      el.style.width = `${(w * columnWidth / gridW) * 100}%`;
-      el.style.height = `${(h * cellHeight / gridH) * 100}%`;
+      if (recalc) {
+        const wPercent = Math.min((w * columnWidth / gridW) * 100, 100);
+        const hPercent = Math.min((h * cellHeight / gridH) * 100, 100);
+        el.dataset.wPercent = wPercent;
+        el.dataset.hPercent = hPercent;
+      }
+      const wPercent = el.dataset.wPercent || 0;
+      const hPercent = el.dataset.hPercent || 0;
+      el.style.width = `${wPercent}%`;
+      el.style.height = `${hPercent}%`;
     } else {
       el.style.width = `${w * columnWidth}px`;
       el.style.height = `${h * cellHeight}px`;
@@ -146,7 +154,8 @@ export class CanvasGrid {
     if (opts.locked != null) el.setAttribute('gs-locked', opts.locked);
     if (opts.noMove != null) el.setAttribute('gs-no-move', opts.noMove);
     if (opts.noResize != null) el.setAttribute('gs-no-resize', opts.noResize);
-    this._applyPosition(el);
+    const recalc = opts.w != null || opts.h != null;
+    this._applyPosition(el, recalc);
     if (this.pushOnOverlap) this._resolveCollisions(el);
     if (el === this.activeEl) this._updateBBox();
     this._updateGridHeight();
@@ -291,7 +300,7 @@ export class CanvasGrid {
         const newY = rect.y + rect.h;
         if (oRect.y < newY) {
           other.dataset.y = newY;
-          this._applyPosition(other);
+          this._applyPosition(other, false);
           this._pushWidget(other, moved);
         }
       }

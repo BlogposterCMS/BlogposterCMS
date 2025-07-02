@@ -32,6 +32,6 @@
 
 // Highlight widgets while the admin layout is editable
 body.dashboard-edit-mode .canvas-item {
-  border: 2px dashed var(--user-color);
+  border: none;
 }
 

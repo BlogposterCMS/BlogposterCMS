@@ -33,13 +33,12 @@
   top: 0;
   left: 0;
   right: 0;
-  max-height: 150px;
+  height: 160px;
 
                      /* adjust to taste */
   padding: 12px 24px 16px;
   background: var(--color-white);
   border-radius: 0 0 10px 10px;     /* rounded bottom only */
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 
   /* horizontal gallery */
   display: grid;

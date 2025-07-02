@@ -483,6 +483,7 @@ body.preview-desktop #content {
   position: absolute;
   border: 1px dashed var(--user-color, #333);
   pointer-events: none;
+  box-sizing: border-box;
   z-index: 1000;
   .bbox-handle {
     position: absolute;

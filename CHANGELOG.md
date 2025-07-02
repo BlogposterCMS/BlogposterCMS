@@ -5,20 +5,44 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-### Added
-- Admin layout edit toggle now opens a widget selection popup.
-- Collapsible right-side pages menu on admin home with filter dropdown and animated toggle icon.
-- Toolbar buttons now reflect active text styles; bold, italic and underline states update live with high-contrast highlighting and fewer spans.
+Added
 
-### Fixed
-- CodeQL workflow now grants `actions: read` permission to resolve upload errors.
-- Fixed widget preview crash when toggling admin edit mode.
+Admin layout edit toggle now opens a widget selection popup.
 
-## [0.6.3] - 2025-06-28
+Collapsible right‑side pages menu on admin home with filter dropdown and animated toggle icon.
 
-### Added
-- Community module pages are now automatically seeded under
-  `/admin/pages/{slug}` when their lane is `admin`.
+Toolbar buttons now reflect active text styles; bold, italic and underline states update live with high‑contrast highlighting and fewer spans.
+
+Community module pages are now automatically seeded under /admin/pages/{slug} when their lane is admin.
+
+NEW: User‑select capabilities for selected and editing canvas items in builder mode.
+
+NEW: debounce utility helper for performant, low‑overhead event handling.
+
+Improved / Changed
+
+Builder / CanvasGrid migrated to a ResizeObserver workflow; bounding boxes track live size changes, text widgets follow a two‑step click‑to‑edit flow and the floating toolbar is now rock solid.
+
+pageRenderer gained applyWidgetOptions – advanced sizing flags (maxWidth, halfWidth, thirdWidth) plus fixed‑percent sizes and overflow control.
+
+moduleLoader now allows the built‑in crypto module inside sandboxes and keeps its automatic retry logic.
+
+site.css: new utility classes for the news‑card layout, wider card family and improved hover states.
+
+Updated pages‑menu styles and added an empty‑state hint for better UX.
+
+Widget popup now shows a backdrop overlay and can be closed with the Escape key.
+
+Refactored widget rendering to guarantee correct instance handling and stronger error management.
+
+pages‑menu initialisation rewritten with cleaner event hooks and multiple sorting options.
+
+Fixed
+
+CodeQL workflow now grants actions: read permission to resolve upload errors.
+
+Fixed widget preview crash when toggling admin edit mode.
+
 
 ## [0.6.1] 2025-06-27
 

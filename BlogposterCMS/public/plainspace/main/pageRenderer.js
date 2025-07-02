@@ -531,14 +531,15 @@ function ensureLayout(layout = {}, lane = 'public') {
     gridEl.id = 'adminGrid';
     gridEl.className = 'canvas-grid';
     contentEl.appendChild(gridEl);
-    const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, percentageMode: true }, gridEl);
-    grid.setStatic(true);
+const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, percentageMode: true, pushOnOverlap: true }, gridEl);    grid.setStatic(true);
     grid.on('change', () => {});
     window.adminGrid = grid;
     window.adminPageContext = { pageId: page.id, lane };
     window.adminCurrentLayout = layout;
 
-    const matchedWidgets = allWidgets.filter(w => (config.widgets || []).includes(w.id));
+    const widgetIdSet = new Set(layout.map(l => l.widgetId));
+    for (const id of (config.widgets || [])) widgetIdSet.add(id);
+    const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
 
     const pendingAdmin = [];
     for (const def of matchedWidgets) {

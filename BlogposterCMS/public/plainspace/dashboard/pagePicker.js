@@ -6,8 +6,7 @@
   const { init: initCanvasGrid } = await import('../main/canvasGrid.js');
 
   // Lightweight grid for arranging pages
-  const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5 }, '#pagePickerGrid');
-
+const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, pushOnOverlap: true }, '#pagePickerGrid');
   // 1) load & render all public pages
   async function loadPages() {
     const { pages = [] } = await meltdownEmit('getPagesByLane', {

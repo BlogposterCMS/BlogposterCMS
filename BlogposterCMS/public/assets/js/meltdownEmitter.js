@@ -1,15 +1,16 @@
 // public/assets/js/meltdownEmitter.js
-;(function(window) {
-  function fetchWithTimeout(resource, options = {}, timeout = 10000) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    const opts = { ...options, signal: controller.signal };
-    return fetch(resource, opts).finally(() => clearTimeout(id));
-  }
+import { debounce } from './utils/debounce.js';
 
-  window.fetchWithTimeout = fetchWithTimeout;
+export function fetchWithTimeout(resource, options = {}, timeout = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const opts = { ...options, signal: controller.signal };
+  return fetch(resource, opts).finally(() => clearTimeout(id));
+}
 
-  window.meltdownEmit = async function(eventName, payload = {}, timeout = 10000) {
+window.fetchWithTimeout = fetchWithTimeout;
+
+  async function meltdownEmitRaw(eventName, payload = {}, timeout = 10000) {
     if (
       (eventName === 'openExplorer' || eventName === 'openMediaExplorer') &&
       window._openMediaExplorer
@@ -74,7 +75,39 @@
     }
 
     return json.data;
-  };
+  }
+
+const _queue = [];
+
+function flushQueue() {
+    const batch = _queue.splice(0, _queue.length);
+    if (batch.length === 0) return;
+
+    if (batch.length === 1) {
+      const { eventName, payload, timeout, resolve, reject } = batch[0];
+      meltdownEmitRaw(eventName, payload, timeout).then(resolve).catch(reject);
+      return;
+    }
+
+    const events = batch.map(item => ({ eventName: item.eventName, payload: item.payload }));
+    const timeout = batch[0].timeout;
+    window.meltdownEmitBatch(events, null, timeout)
+      .then(results => {
+        results.forEach((res, idx) => batch[idx].resolve(res));
+      })
+      .catch(err => {
+        batch.forEach(item => item.reject(err));
+      });
+}
+
+const scheduleFlush = debounce(flushQueue, 50);
+
+window.meltdownEmit = function(eventName, payload = {}, timeout = 10000) {
+  return new Promise((resolve, reject) => {
+    _queue.push({ eventName, payload, timeout, resolve, reject });
+    scheduleFlush();
+  });
+};
 
   // Batch multiple meltdown events in one request
   window.meltdownEmitBatch = async function(events = [], jwt = null, timeout = 10000) {
@@ -128,6 +161,6 @@
       throw new Error(json.error || resp.statusText);
     }
 
-    return json.results;
-  };
-})(window);
+  return json.results;
+};
+

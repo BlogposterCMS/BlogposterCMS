@@ -41,6 +41,8 @@ pages‑menu initialisation rewritten with cleaner event hooks and multiple sort
 
 - Widget rendering now loads in stages with debounced API calls for smoother first paint.
 
+- User color is now cached for the session to avoid repeated meltdown requests.
+
 Fixed
 
 CodeQL workflow now grants actions: read permission to resolve upload errors.

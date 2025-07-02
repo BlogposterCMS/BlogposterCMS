@@ -175,6 +175,8 @@ export async function render(el) {
       }
       try {
         await meltdownEmit('updateUserProfile', payload);
+        window.USER_COLOR = selectedColor;
+        document.documentElement.style.setProperty('--user-color', selectedColor);
         alert('Saved');
       } catch (err) {
         alert('Error: ' + err.message);

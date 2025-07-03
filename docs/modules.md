@@ -52,7 +52,6 @@ important security notes.
 - [serverManager](modules/serverManager.md)
 - [settingsManager](modules/settingsManager.md)
 - [shareManager](modules/shareManager.md)
-- [themeManager](modules/themeManager.md)
 - [translationManager](modules/translationManager.md)
 - [unifiedSettings](modules/unifiedSettings.md)
 - [userManagement](modules/userManagement.md)

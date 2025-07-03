@@ -315,7 +315,6 @@ function getModuleTokenForDbManager() {
     { name:'shareManager',        path:'mother/modules/shareManager',        extra:{ app } },
     { name:'translationManager',  path:'mother/modules/translationManager',  extra:{} },
     { name:'plainSpace',          path:'mother/modules/plainSpace',          extra:{ app } },
-    { name:'themeManager',        path:'mother/modules/themeManager',        extra:{} },
     { name:'importer',            path:'mother/modules/importer',            extra:{} },
     { name:'fontsManager',        path:'mother/modules/fontsManager',        extra:{} }
   ];

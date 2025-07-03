@@ -31,25 +31,6 @@ function loadModule(relPath) {
   return sandbox.module.exports;
 }
 
-async function testThemeManager() {
-  const tm = loadModule('mother/modules/themeManager');
-  const em = new EventEmitter();
-  await tm.initialize({ motherEmitter: em, isCore: true, jwt: 't' });
-
-  await new Promise((resolve, reject) => {
-    em.emit('listThemes', { jwt: 't', moduleName: 'themeManager', moduleType: 'core' }, (err, res) => {
-      if (err) return reject(err);
-      assert(Array.isArray(res));
-      resolve();
-    });
-  });
-
-  await new Promise(resolve => {
-    em.emit('listThemes', { moduleName: 'themeManager', moduleType: 'core' }, err => {
-      assert(err); resolve();
-    });
-  });
-}
 
 async function testImporter() {
   const imp = loadModule('mother/modules/importer');
@@ -69,8 +50,7 @@ async function testImporter() {
   });
 }
 
-test('themeManager and importer modules work', async () => {
-  await testThemeManager();
+test('importer module works', async () => {
   await testImporter();
 });
 

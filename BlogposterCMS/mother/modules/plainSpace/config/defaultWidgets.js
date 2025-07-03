@@ -93,14 +93,6 @@ module.exports.DEFAULT_WIDGETS = [
     options: { halfWidth: true }
   },
   {
-    widgetId: 'themesList',
-    widgetType: ADMIN_LANE,
-    label: 'Themes List',
-    content: '/plainspace/widgets/admin/themesListWidget.js',
-    category: 'core',
-    options: { halfWidth: true }
-  },
-  {
     widgetId: 'loginStrategies',
     widgetType: ADMIN_LANE,
     label: 'Login Strategies',

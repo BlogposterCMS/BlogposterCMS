@@ -1,5 +1,11 @@
 .main-content {
   display: flex;
-  flex-direction: row;  // jetzt nebeneinander statt untereinander   
-  gap: 16px;            // optionaler Abstand zwischen den Spalten
+  flex-direction: row;   
+  gap: 16px;           
+  background: var(--color-light-gray, #f6f6f7);
+
+}
+
+#adminGrid {
+  min-height: 100vh;
 }

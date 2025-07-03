@@ -335,6 +335,11 @@
   display: flex;
   flex-direction: row;
   gap: 16px;
+  background: var(--color-light-gray, #f6f6f7);
+}
+
+#adminGrid {
+  min-height: 100vh;
 }
 
 #content {
@@ -619,6 +624,42 @@ p {
 
 .app-scope form .button {
   margin-top: 14px;
+}
+
+.custom-select {
+  position: relative;
+  display: inline-block;
+}
+.custom-select .display {
+  background: var(--color-secondary-light);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.custom-select .options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-white);
+  border: 1px solid #eee;
+  box-shadow: var(--shadow-default);
+  border-radius: 4px;
+  z-index: 1000;
+  display: none;
+}
+.custom-select.open .options {
+  display: block;
+}
+.custom-select .option {
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.custom-select .option:hover {
+  background: var(--color-secondary-light);
 }
 
 .color-picker {
@@ -1975,7 +2016,7 @@ p {
 }
 
 body.builder-mode #content {
-  margin-left: 96px;
+  margin-left: 57px;
   height: calc(100vh - 79px);
   overflow-y: auto;
   padding-top: 60px;
@@ -2352,6 +2393,33 @@ body.preview-desktop #content {
 .page-content-widget .add-content-btn:hover {
   opacity: 1;
   transform: scale(1.1);
+}
+
+.content-add-menu {
+  position: fixed;
+  background: var(--color-white);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-body);
+  display: none;
+  z-index: 1000;
+}
+
+.content-add-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-body);
+}
+
+.content-add-menu button:hover {
+  background: var(--color-light-gray, #f0f0f0);
 }
 
 .page-content-widget .content-list {

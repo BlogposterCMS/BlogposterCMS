@@ -9,7 +9,7 @@
 
   window.fetchWithTimeout = fetchWithTimeout;
 
-  const THROTTLE_DELAY = 1000; // min time between requests in ms
+  const THROTTLE_DELAY = 100; // min time between requests in ms
   const requestQueue = [];
   let busy = false;
 

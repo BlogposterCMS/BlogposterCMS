@@ -25,7 +25,7 @@ export async function render(el) {
 
   const title = document.createElement('div');
   title.className = 'layout-gallery-title';
-  title.textContent = 'Layouts';
+  title.textContent = 'Your Content';
 
   titleBar.appendChild(title);
   card.appendChild(titleBar);

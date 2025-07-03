@@ -34,7 +34,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Content Summary',
     content: '/plainspace/widgets/admin/defaultwidgets/contentSummaryWidget.js',
     category: 'core',
-    options: { thirdWidth: true }
+    options: { maxWidth: true }
   },
   {
     widgetId: 'pageEditor',

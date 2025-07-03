@@ -550,29 +550,20 @@ p {
   left: 150%;
 }
 
-/* =============================================================================
-   Forms (angepasst für modernes Login-Design)
-   ============================================================================= */
 .app-scope form {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px; /* optimaler Abstand zwischen Feldern */
+  position: relative;
 }
 
-.app-scope label {
-  font-family: var(--font-body);
-  font-weight: 500;
-  color: #888;
-  pointer-events: none; /* notwendig für floating labels */
-  position: absolute;
-  top: 14px;
-  left: 18px;
-  font-size: 14px;
-  transition: all 0.2s ease;
+.app-scope .field {
+  position: relative;
+  width: 100%;
 }
 
-.app-scope input,
-.app-scope textarea {
+.app-scope .field input,
+.app-scope .field textarea {
   width: 100%;
   padding: 14px 18px;
   border-radius: 8px;
@@ -584,28 +575,26 @@ p {
   box-shadow: inset 0 0 0 2px transparent;
 }
 
-.app-scope input:focus,
-.app-scope textarea:focus {
+.app-scope .field input:focus,
+.app-scope .field textarea:focus {
   outline: none;
   box-shadow: inset 0 0 0 2px #008080;
   background-color: #ffffff;
 }
 
-/* Floating Labels */
-.app-scope input:not(:-moz-placeholder-shown) + label, .app-scope textarea:not(:-moz-placeholder-shown) + label {
-  top: -7px;
-  left: 14px;
-  font-size: 12px;
-  color: #008080;
-  background: #ffffff;
-  padding: 0 4px;
+.app-scope .field label {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-family: var(--font-body);
   font-weight: 500;
+  color: #888;
   pointer-events: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
-.app-scope input:not(:placeholder-shown) + label,
-.app-scope input:focus + label,
-.app-scope textarea:not(:placeholder-shown) + label,
-.app-scope textarea:focus + label {
+
+.app-scope .field input:not(:-moz-placeholder-shown) + label, .app-scope .field textarea:not(:-moz-placeholder-shown) + label {
   top: -7px;
   left: 14px;
   font-size: 12px;
@@ -613,18 +602,23 @@ p {
   background: #ffffff;
   padding: 0 4px;
   font-weight: 500;
-  pointer-events: none;
+}
+
+.app-scope .field input:not(:placeholder-shown) + label,
+.app-scope .field input:focus + label,
+.app-scope .field textarea:not(:placeholder-shown) + label,
+.app-scope .field textarea:focus + label {
+  top: -7px;
+  left: 14px;
+  font-size: 12px;
+  color: #008080;
+  background: #ffffff;
+  padding: 0 4px;
+  font-weight: 500;
 }
 
 .app-scope form .button {
   margin-top: 14px;
-  margin-bottom: 0;
-}
-
-.app-scope form::after {
-  content: "";
-  display: block;
-  height: 14px; /* exakter Abstand zum Button, stabil und unveränderlich */
 }
 
 .color-picker {
@@ -1073,7 +1067,7 @@ p {
     transform: scale(1);
   }
 }
-.page-list-card, .news-detail-card, .news-list-card, .widget-list-card, .permissions-card, .user-list-card, .layout-list-card, .modules-list-card, .fonts-list-card, .login-strategies-card, .system-settings-card {
+.page-list-card, .news-detail-card, .news-list-card, .widget-list-card, .permissions-card, .user-list-card, .layout-gallery-card, .layout-list-card, .modules-list-card, .fonts-list-card, .login-strategies-card, .system-settings-card {
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
@@ -1087,13 +1081,13 @@ p {
   gap: 16px;
 }
 
-.page-title-bar, .news-title-bar, .widget-title-bar, .permissions-title-bar, .user-title-bar, .layout-title-bar, .modules-title-bar, .fonts-title-bar, .login-strategy-title-bar, .system-settings-title-bar {
+.page-title-bar, .news-title-bar, .widget-title-bar, .permissions-title-bar, .user-title-bar, .layout-gallery-title-bar, .layout-title-bar, .modules-title-bar, .fonts-title-bar, .login-strategy-title-bar, .system-settings-title-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.page-title, .news-detail-title, .news-title, .widget-title, .permissions-title, .user-title, .layout-title, .modules-title, .fonts-title, .login-strategy-title, .system-settings-title {
+.page-title, .news-detail-title, .news-title, .widget-title, .permissions-title, .user-title, .layout-gallery-title, .layout-title, .modules-title, .fonts-title, .login-strategy-title, .system-settings-title {
   font-family: var(--font-heading);
   font-size: 22px;
   font-weight: 600;
@@ -1552,6 +1546,35 @@ p {
 .layout-usage {
   font-size: 0.85rem;
   color: #555;
+}
+
+.layout-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+}
+
+.layout-gallery-item {
+  text-align: center;
+}
+
+.layout-gallery-preview {
+  width: 100%;
+  height: 80px;
+  -o-object-fit: cover;
+     object-fit: cover;
+  background: #f6f6f6;
+  border-radius: 6px;
+}
+
+.layout-gallery-name {
+  font-size: 0.9rem;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .builder-header {
@@ -2146,80 +2169,6 @@ body.preview-desktop #content {
 .page-editor-widget label,
 .user-edit-widget label {
   font-weight: 500;
-}
-
-.page-editor-widget .field,
-.user-edit-widget .field {
-  position: relative;
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-.page-editor-widget .field input,
-.page-editor-widget .field textarea,
-.user-edit-widget .field input,
-.user-edit-widget .field textarea,
-.user-edit-widget select {
-  width: 100%;
-  padding: 1.5rem 0.75rem 0.5rem;
-  border: none;
-  border-bottom: 2px solid #e4e4e4;
-  background: transparent;
-  font-size: 1rem;
-  color: var(--color-text);
-  font-family: var(--font-body);
-  transition: border-color 0.2s;
-}
-
-.page-editor-widget .field input:focus,
-.page-editor-widget .field textarea:focus,
-.user-edit-widget .field input:focus,
-.user-edit-widget .field textarea:focus,
-.user-edit-widget select:focus {
-  outline: none;
-  border-bottom: 2px solid var(--user-color);
-}
-
-.page-editor-widget .field label,
-.user-edit-widget .field label {
-  position: absolute;
-  left: 0.75rem;
-  top: 1rem;
-  font-size: 1rem;
-  color: #888;
-  font-family: var(--font-body);
-  pointer-events: none;
-  transition: all 0.2s ease;
-  background: transparent;
-}
-
-.page-editor-widget .field input:not(:-moz-placeholder-shown) + label, .page-editor-widget .field textarea:not(:-moz-placeholder-shown) + label, .user-edit-widget .field input:not(:-moz-placeholder-shown) + label, .user-edit-widget .field textarea:not(:-moz-placeholder-shown) + label {
-  top: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--user-color);
-  background: none;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  opacity: 0.94;
-}
-
-.page-editor-widget .field input:focus + label,
-.page-editor-widget .field input:not(:placeholder-shown) + label,
-.page-editor-widget .field textarea:focus + label,
-.page-editor-widget .field textarea:not(:placeholder-shown) + label,
-.user-edit-widget .field input:focus + label,
-.user-edit-widget .field input:not(:placeholder-shown) + label,
-.user-edit-widget .field textarea:focus + label,
-.user-edit-widget .field textarea:not(:placeholder-shown) + label,
-.user-edit-widget select:focus + label,
-.user-edit-widget select:not([data-empty=true]) + label {
-  top: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--user-color);
-  background: none;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  opacity: 0.94;
 }
 
 .user-field-row {

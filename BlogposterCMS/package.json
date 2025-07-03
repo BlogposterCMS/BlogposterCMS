@@ -22,6 +22,7 @@
     "express-rate-limit": "^7.5.0",
     "express-validator": "^7.2.0",
     "helmet": "^8.0.0",
+    "html-to-image": "^1.11.13",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.10.0",
     "openai": "^5.7.0",

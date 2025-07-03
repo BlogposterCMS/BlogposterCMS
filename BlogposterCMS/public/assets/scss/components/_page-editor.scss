@@ -29,69 +29,7 @@
   font-weight: 500;
 }
 
-.page-editor-widget .field,
-.user-edit-widget .field {
-  position: relative;
-  width: 100%;
-  margin-bottom: 1rem;
-}
 
-.page-editor-widget .field input,
-.page-editor-widget .field textarea,
-.user-edit-widget .field input,
-.user-edit-widget .field textarea,
-.user-edit-widget select {
-  width: 100%;
-  padding: 1.5rem 0.75rem 0.5rem;
-  border: none;
-  border-bottom: 2px solid #e4e4e4;
-  background: transparent;
-  font-size: 1rem;
-  color: var(--color-text);
-  font-family: var(--font-body);
-  transition: border-color 0.2s;
-}
-
-.page-editor-widget .field input:focus,
-.page-editor-widget .field textarea:focus,
-.user-edit-widget .field input:focus,
-.user-edit-widget .field textarea:focus,
-.user-edit-widget select:focus {
-  outline: none;
-  border-bottom: 2px solid var(--user-color);
-}
-
-.page-editor-widget .field label,
-.user-edit-widget .field label {
-  position: absolute;
-  left: 0.75rem;
-  top: 1rem;
-  font-size: 1rem;
-  color: #888;
-  font-family: var(--font-body);
-  pointer-events: none;
-  transition: all 0.2s ease;
-  background: transparent;
-}
-
-.page-editor-widget .field input:focus + label,
-.page-editor-widget .field input:not(:placeholder-shown) + label,
-.page-editor-widget .field textarea:focus + label,
-.page-editor-widget .field textarea:not(:placeholder-shown) + label,
-.user-edit-widget .field input:focus + label,
-.user-edit-widget .field input:not(:placeholder-shown) + label,
-.user-edit-widget .field textarea:focus + label,
-.user-edit-widget .field textarea:not(:placeholder-shown) + label,
-.user-edit-widget select:focus + label,
-.user-edit-widget select:not([data-empty="true"]) + label {
-  top: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--user-color);
-  background: none;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  opacity: 0.94;
-}
 
 .user-field-row {
   display: flex;

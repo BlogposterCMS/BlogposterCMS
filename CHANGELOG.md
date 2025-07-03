@@ -34,6 +34,7 @@ El Psy Kongroo
 - Rate limiter no longer applies globally to page routes; only login and meltdown API endpoints remain protected.
 
 ### Fixed
+- Bounding box dimensions now read the widget's DOM size before display so first-seeded widgets render correctly.
 - Bounding box now generates inside each widget so it always matches the widget size in the builder and dashboard.
 
 

@@ -496,13 +496,15 @@ function ensureLayout(layout = {}, lane = 'public') {
 
         gridEl.appendChild(wrapper);
         grid.makeWidget(wrapper);
-        pending.push({ wrapper, item, def });
+        pending.push({ wrapper, item, def, placeholder: ph });
       }
 
-      for (const { wrapper, item, def } of pending) {
+      for (const { wrapper, item, def, placeholder } of pending) {
         const content = document.createElement('div');
         content.className = 'canvas-item-content';
-        wrapper.innerHTML = '';
+        if (placeholder && placeholder.parentNode === wrapper) {
+          placeholder.remove();
+        }
         wrapper.appendChild(content);
 
         try {
@@ -573,13 +575,15 @@ const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, percentageMode: tru
 
       gridEl.appendChild(wrapper);
       grid.makeWidget(wrapper);
-      pendingAdmin.push({ wrapper, def, meta });
+      pendingAdmin.push({ wrapper, def, meta, placeholder: ph });
     }
 
-    for (const { wrapper, def, meta } of pendingAdmin) {
+    for (const { wrapper, def, meta, placeholder } of pendingAdmin) {
       const content = document.createElement('div');
       content.className = 'canvas-item-content';
-      wrapper.innerHTML = '';
+      if (placeholder && placeholder.parentNode === wrapper) {
+        placeholder.remove();
+      }
       wrapper.appendChild(content);
 
       try {

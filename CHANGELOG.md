@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
+## [0.6.3] 2025-07-20
+
+### Improved
+- `meltdownEmit` now throttles requests to one per second to prevent 429 errors when multiple modules fire off events simultaneously.
+
 ## [0.6.2] 2025-07-02
 
 ### Added

@@ -27,6 +27,9 @@ El Psy Kongroo
 - Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.
 - The **Layouts** page in the admin sidebar was removed. The layout editor now opens via the top "Content" link.
 
+### Fixed
+- Bounding box now generates inside each widget so it always matches the widget size in the builder and dashboard.
+
 
 ## [0.6.2] 2025-07-02
 

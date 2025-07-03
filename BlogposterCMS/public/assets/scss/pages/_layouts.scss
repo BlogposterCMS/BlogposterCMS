@@ -112,3 +112,44 @@
   font-size: 0.85rem;
   color: #555;
 }
+
+// Layout Gallery Widget styles
+.layout-gallery-card {
+  @extend .page-list-card;
+}
+
+.layout-gallery-title-bar {
+  @extend .page-title-bar;
+}
+
+.layout-gallery-title {
+  @extend .page-title;
+}
+
+.layout-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+}
+
+.layout-gallery-item {
+  text-align: center;
+}
+
+.layout-gallery-preview {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  background: #f6f6f6;
+  border-radius: 6px;
+}
+
+.layout-gallery-name {
+  font-size: 0.9rem;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

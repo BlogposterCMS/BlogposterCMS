@@ -7,6 +7,7 @@ El Psy Kongroo
 
 ### Added
 - Page editor now includes a "Page Content" widget to manage attached HTML documents.
+- Content Summary widget now displays available layouts in a responsive grid.
 
 
 ### Improved

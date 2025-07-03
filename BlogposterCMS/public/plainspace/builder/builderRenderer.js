@@ -19,6 +19,7 @@ import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
+import { toPng } from 'html-to-image';
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
   document.body.classList.add('builder-mode');
@@ -548,11 +549,22 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   applyProMode();
   buildLayoutBar();
 
+  async function capturePreview() {
+    if (!gridEl) return '';
+    try {
+      return await toPng(gridEl, { cacheBust: true });
+    } catch (err) {
+      console.error('[Builder] preview capture error', err);
+      return '';
+    }
+  }
+
   saveBtn.addEventListener('click', async () => {
     const name = nameInput.value.trim();
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
     const layout = getCurrentLayout(gridEl, ensureCodeMap());
+    const previewPath = await capturePreview();
     try {
       await meltdownEmit('saveLayoutTemplate', {
         jwt: window.ADMIN_TOKEN,
@@ -561,7 +573,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         lane: 'public',
         viewport: 'desktop',
         layout,
-        isGlobal: globalToggle.checked
+        isGlobal: globalToggle.checked,
+        previewPath
       });
 
       const targetIds = pageId

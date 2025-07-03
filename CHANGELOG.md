@@ -14,6 +14,8 @@ El Psy Kongroo
 - Layout gallery items link directly to the builder for quick edits.
 - Content Summary cards now use interactive div-based layouts with a hover menu
   for opening, copying and deleting layouts.
+- Saving a layout now generates a preview image using `html-to-image` so the
+  Content Summary gallery always shows the latest design.
 
 
 ### Improved

@@ -1558,6 +1558,7 @@ p {
 
 .layout-gallery-item {
   text-align: center;
+  cursor: pointer;
 }
 
 .layout-gallery-preview {

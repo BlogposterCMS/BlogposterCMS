@@ -20,6 +20,7 @@ El Psy Kongroo
 
 ### Removed
 - Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.
+- The **Layouts** page in the admin sidebar was removed. The layout editor now opens via the top "Content" link.
 
 
 ## [0.6.2] 2025-07-02

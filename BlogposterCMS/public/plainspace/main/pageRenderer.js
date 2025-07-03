@@ -428,7 +428,8 @@ function ensureLayout(layout = {}, lane = 'public') {
     const widgetRes = await meltdownEmit('widget.registry.request.v1', {
       lane: widgetLane,
       moduleName: 'plainspace',
-      moduleType: 'core'
+      moduleType: 'core',
+      ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {})
     });
     if (DEBUG) console.debug('[Renderer] widgetRes', widgetRes);
 

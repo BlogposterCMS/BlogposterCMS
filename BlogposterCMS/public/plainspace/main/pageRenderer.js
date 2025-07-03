@@ -374,8 +374,9 @@ function ensureLayout(layout = {}, lane = 'public') {
       const pageIdParam = urlParams.get('pageId') || null;
       const startLayerParam = parseInt(urlParams.get('layer'), 10);
       const startLayer = Number.isFinite(startLayerParam) ? startLayerParam : 0;
+      const layoutNameParam = urlParams.get('layout') || null;
 
-      await initBuilder(sidebarEl, contentEl, pageIdParam, startLayer);
+      await initBuilder(sidebarEl, contentEl, pageIdParam, startLayer, layoutNameParam);
 
       enableAutoEdit();
 

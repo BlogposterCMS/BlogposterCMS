@@ -20,7 +20,7 @@ import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveF
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 
-export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0) {
+export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
   document.body.classList.add('builder-mode');
   initTextEditor();
   // Builder widgets load the active theme inside their shadow roots.
@@ -288,6 +288,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
   else {
+    if (layoutNameParam) {
+      try {
+        const tplRes = await meltdownEmit('getLayoutTemplate', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'plainspace',
+          moduleType: 'core',
+          name: layoutNameParam
+        });
+        initialLayout = Array.isArray(tplRes?.layout) ? tplRes.layout : [];
+      } catch (err) {
+        console.warn('[Builder] failed to load layout template', err);
+      }
+    }
     try {
       const globalRes = await meltdownEmit('getGlobalLayoutTemplate', {
         jwt: window.ADMIN_TOKEN,
@@ -391,7 +404,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   topBar.appendChild(backBtn);
 
   let pageSelect = null;
-  const layoutName = pageData?.meta?.layoutTemplate || 'default';
+  const layoutName = layoutNameParam || pageData?.meta?.layoutTemplate || 'default';
 
   const infoWrap = document.createElement('div');
   infoWrap.className = 'layout-info';

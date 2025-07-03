@@ -166,6 +166,9 @@ export class CanvasGrid {
     const bbox = document.createElement('div');
     bbox.className = 'bounding-box';
     bbox.style.display = 'none';
+    // Ensure the bounding box matches the widget size on first render
+    bbox.style.width = `${el.offsetWidth}px`;
+    bbox.style.height = `${el.offsetHeight}px`;
     const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
     const handles = {};
     positions.forEach(p => {
@@ -316,6 +319,9 @@ export class CanvasGrid {
     if (!this.activeEl || this.staticGrid) return;
     const bbox = this.activeEl.__bbox;
     if (!bbox) return;
+    // Sync bounding box size with the active widget
+    bbox.style.width = `${this.activeEl.offsetWidth}px`;
+    bbox.style.height = `${this.activeEl.offsetHeight}px`;
     const noResize = this.activeEl.getAttribute('gs-no-resize') === 'true';
     const noMove = this.activeEl.getAttribute('gs-no-move') === 'true';
     const disabled = noResize && noMove;

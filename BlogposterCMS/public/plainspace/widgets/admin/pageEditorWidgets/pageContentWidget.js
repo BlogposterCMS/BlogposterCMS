@@ -40,92 +40,151 @@ export async function render(el) {
   listEl.className = 'content-list';
   wrapper.appendChild(listEl);
 
-  async function loadContent() {
-    try {
-      const res = await meltdownEmit('getChildPages', {
-        jwt,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        parentId: page.id
-      });
-      const items = Array.isArray(res) ? res : (res?.data ?? []);
-      return items.filter(i => i.is_content);
-    } catch (err) {
-      console.error('Load content failed', err);
-      return [];
-    }
-  }
-
-  function renderList(items) {
+  function renderList() {
     listEl.innerHTML = '';
-    if (!items.length) {
+    const hasLayout = !!page.meta?.layoutTemplate;
+    const hasHtml = !!page.html;
+
+    if (!hasLayout && !hasHtml) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       empty.textContent = 'No content attached.';
       listEl.appendChild(empty);
       return;
     }
-    items.forEach(item => {
+
+    function addItem(label, removeHandler) {
       const li = document.createElement('li');
       li.className = 'content-item';
       const title = document.createElement('span');
       title.className = 'content-title';
-      title.textContent = item.title || item.slug;
-      title.addEventListener('click', () => {
-        window.open(`/admin/${item.slug}`, '_blank');
-      });
-
+      title.textContent = label;
       const remove = document.createElement('img');
       remove.src = '/assets/icons/trash.svg';
       remove.className = 'icon delete-content-btn';
       remove.alt = 'Remove';
       remove.title = 'Detach content';
-      remove.addEventListener('click', async e => {
-        e.stopPropagation();
-        if (!confirm('Detach this content?')) return;
-        try {
-          await meltdownEmit('setAsDeleted', {
-            jwt,
-            moduleName: 'pagesManager',
-            moduleType: 'core',
-            pageId: item.id
-          });
-          renderList(await loadContent());
-        } catch (err) {
-          alert('Failed to detach content: ' + err.message);
-        }
-      });
-
+      remove.addEventListener('click', removeHandler);
       li.appendChild(title);
       li.appendChild(remove);
       listEl.appendChild(li);
-    });
+    }
+
+    if (hasLayout) {
+      addItem(`Design: ${page.meta.layoutTemplate}`, async e => {
+        e.stopPropagation();
+        if (!confirm('Remove attached design?')) return;
+        const newMeta = { ...(page.meta || {}) };
+        delete newMeta.layoutTemplate;
+        try {
+          await meltdownEmit('updatePage', {
+            jwt,
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            pageId: page.id,
+            slug: page.slug,
+            status: page.status,
+            seo_image: page.seo_image || '',
+            parent_id: page.parent_id,
+            is_content: page.is_content,
+            lane: page.lane,
+            language: page.language,
+            title: page.title,
+            translations: [{
+              language: page.language,
+              title: page.title,
+              html: page.html || '',
+              css: page.css || ''
+            }],
+            meta: newMeta
+          });
+          page.meta = newMeta;
+          if (window.pageDataLoader) {
+            window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+          }
+          renderList();
+        } catch (err) {
+          alert('Failed to detach design: ' + err.message);
+        }
+      });
+    }
+
+    if (hasHtml) {
+      addItem('HTML Attachment', async e => {
+        e.stopPropagation();
+        if (!confirm('Remove uploaded HTML?')) return;
+        try {
+          await meltdownEmit('updatePage', {
+            jwt,
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            pageId: page.id,
+            slug: page.slug,
+            status: page.status,
+            seo_image: page.seo_image || '',
+            parent_id: page.parent_id,
+            is_content: page.is_content,
+            lane: page.lane,
+            language: page.language,
+            title: page.title,
+            translations: [{
+              language: page.language,
+              title: page.title,
+              html: '',
+              css: page.css || ''
+            }],
+            meta: { ...(page.meta || {}) }
+          });
+          page.html = '';
+          if (window.pageDataLoader) {
+            window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+          }
+          renderList();
+        } catch (err) {
+          alert('Failed to detach HTML: ' + err.message);
+        }
+      });
+    }
   }
 
   async function handleFile(file) {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const html = sanitizeHtml(ev.target.result);
-      const base = file.name.replace(/\.[^.]+$/, '');
+      if (page.html || page.meta?.layoutTemplate) {
+        const ok = confirm('Replace existing attached content?');
+        if (!ok) return;
+      }
+      const newMeta = { ...(page.meta || {}) };
+      delete newMeta.layoutTemplate;
       try {
-        await meltdownEmit('createPage', {
+        await meltdownEmit('updatePage', {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
-          title: base,
-          slug: base,
+          pageId: page.id,
+          slug: page.slug,
+          status: page.status,
+          seo_image: page.seo_image || '',
+          parent_id: page.parent_id,
+          is_content: page.is_content,
           lane: page.lane,
-          parent_id: page.id,
-          is_content: true,
           language: page.language,
+          title: page.title,
           translations: [{
             language: page.language,
-            title: base,
+            title: page.title,
             html,
-            css: ''
-          }]
+            css: page.css || ''
+          }],
+          meta: newMeta
         });
-        renderList(await loadContent());
+        if (window.pageDataLoader) {
+          window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+        }
+        page.html = html;
+        page.meta = newMeta;
+        renderList();
       } catch (err) {
         alert('Failed to add content: ' + err.message);
       }
@@ -148,21 +207,39 @@ export async function render(el) {
     }
     const name = prompt('Select or enter layout name:\n' + templates.join('\n'), templates[0] || '');
     if (!name) return;
+    if (page.html || page.meta?.layoutTemplate) {
+      const ok = confirm('Replace existing attached content?');
+      if (!ok) return;
+    }
+    const newMeta = { ...(page.meta || {}), layoutTemplate: name };
     try {
-      await meltdownEmit('createPage', {
+      await meltdownEmit('updatePage', {
         jwt,
         moduleName: 'pagesManager',
         moduleType: 'core',
-        title: name,
-        slug: name.replace(/\s+/g, '-').toLowerCase(),
+        pageId: page.id,
+        slug: page.slug,
+        status: page.status,
+        seo_image: page.seo_image || '',
+        parent_id: page.parent_id,
+        is_content: page.is_content,
         lane: page.lane,
-        parent_id: page.id,
-        is_content: true,
         language: page.language,
-        meta: { layoutTemplate: name },
-        translations: [{ language: page.language, title: name, html: '', css: '' }]
+        title: page.title,
+        translations: [{
+          language: page.language,
+          title: page.title,
+          html: '',
+          css: page.css || ''
+        }],
+        meta: newMeta
       });
-      renderList(await loadContent());
+      if (window.pageDataLoader) {
+        window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+      }
+      page.meta = newMeta;
+      page.html = '';
+      renderList();
     } catch (err) {
       alert('Failed to attach design: ' + err.message);
     }
@@ -208,5 +285,5 @@ export async function render(el) {
 
   el.innerHTML = '';
   el.appendChild(wrapper);
-  renderList(await loadContent());
+  renderList();
 }

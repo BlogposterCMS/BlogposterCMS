@@ -366,6 +366,11 @@ function ensureLayout(layout = {}, lane = 'public') {
         sidebarEl.innerHTML = sanitizeHtml(
           await fetchPartialSafe(builderSidebar)
         );
+        const textContainer = sidebarEl.querySelector('#textSidebar');
+        if (textContainer) {
+          const textHtml = await fetchPartialSafe('text-sidebar', 'builder');
+          textContainer.innerHTML = sanitizeHtml(textHtml);
+        }
       }
 
       const urlParams = new URLSearchParams(window.location.search);

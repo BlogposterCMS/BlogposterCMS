@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Added
+- Builder sidebar now features a collapsible text panel loaded from
+  `builder/text-sidebar.html` with quick access to heading, subheading and body
+  styles. The canvas scales down when the panel opens.
 - Page editor now includes a "Page Content" widget to manage attached HTML documents.
 - Content Summary widget now displays available layouts in a responsive grid.
 - Layout gallery items link directly to the builder for quick edits.

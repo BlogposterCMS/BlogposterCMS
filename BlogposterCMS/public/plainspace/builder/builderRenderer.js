@@ -157,6 +157,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   });
 
+  const textIcon = sidebarEl.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
+  const textSidebar = sidebarEl.querySelector('#textSidebar');
+  const collapseBtn = textSidebar?.querySelector('.collapse-btn');
+  if (textIcon && textSidebar && collapseBtn) {
+    textIcon.addEventListener('click', () => {
+      document.body.classList.toggle('text-panel-open');
+    });
+    collapseBtn.addEventListener('click', () => {
+      document.body.classList.remove('text-panel-open');
+    });
+  }
+
   contentEl.innerHTML = `<div id="builderGrid" class="canvas-grid builder-grid"></div>`;
   gridEl = document.getElementById('builderGrid');
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });

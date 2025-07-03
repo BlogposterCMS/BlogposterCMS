@@ -118,7 +118,6 @@ module.exports.ADMIN_PAGES = [
   },
   {
     title: 'Page Editor',
-    // Slug sanitized by pagesManager => slashes become hyphens
     slug: 'edit',
     parentSlug: 'pages',
     lane: 'admin',
@@ -128,7 +127,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
-      widgets: ['pageEditorWidget']
+      widgets: ['pageEditorWidget', 'pageContent']
 
     }
   },

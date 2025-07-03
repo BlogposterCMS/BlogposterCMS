@@ -1,0 +1,44 @@
+.page-content-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page-content-widget .content-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-content-widget .add-content-btn {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.page-content-widget .add-content-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.page-content-widget .content-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.page-content-widget .content-item {
+  cursor: pointer;
+  color: var(--user-color);
+}
+
+.page-content-widget .empty-state {
+  color: #bbb;
+  padding: 10px 0;
+  text-align: center;
+}

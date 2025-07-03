@@ -45,6 +45,14 @@ module.exports.DEFAULT_WIDGETS = [
     options: { halfWidth: true }
   },
   {
+    widgetId: 'pageContent',
+    widgetType: ADMIN_LANE,
+    label: 'Page Content',
+    content: '/plainspace/widgets/admin/pageEditorWidgets/pageContentWidget.js',
+    category: 'core',
+    options: { halfWidth: true }
+  },
+  {
     widgetId: 'mediaExplorer',
     widgetType: ADMIN_LANE,
     label: 'Media Explorer',

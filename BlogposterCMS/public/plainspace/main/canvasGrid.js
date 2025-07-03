@@ -30,7 +30,6 @@ export class CanvasGrid {
       }
     });
     this._emitter = new EventTarget();
-    this._createBBox();
     bindGlobalListeners(this.el, (evt, e) => this._emit(evt, e));
     this._updateGridHeight();
     if (this.options.percentageMode) {
@@ -117,6 +116,7 @@ export class CanvasGrid {
 
   makeWidget(el) {
     this._applyPosition(el);
+    this._createBBox(el);
     this._enableDrag(el);
     this.widgets.push(el);
     if (this.pushOnOverlap) this._resolveCollisions(el);
@@ -162,24 +162,25 @@ export class CanvasGrid {
     this._emit('change', el);
   }
 
-  _createBBox() {
-    this.bbox = document.createElement('div');
-    this.bbox.className = 'bounding-box';
-    this.bbox.style.display = 'none';
-    const positions = ['nw','n','ne','e','se','s','sw','w'];
-    this.handles = {};
+  _createBBox(el) {
+    const bbox = document.createElement('div');
+    bbox.className = 'bounding-box';
+    bbox.style.display = 'none';
+    const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+    const handles = {};
     positions.forEach(p => {
       const h = document.createElement('div');
       h.className = `bbox-handle ${p}`;
       h.dataset.pos = p;
-      this.bbox.appendChild(h);
-      this.handles[p] = h;
+      bbox.appendChild(h);
+      handles[p] = h;
     });
-    document.body.appendChild(this.bbox);
-    this._bindResize();
+    el.appendChild(bbox);
+    this._bindResize(el, handles);
+    el.__bbox = bbox;
   }
 
-  _bindResize() {
+  _bindResize(el, handles) {
     let startX, startY, startW, startH, startGX, startGY, pos;
     const move = e => {
       if (!this.activeEl || pos == null) return;
@@ -204,21 +205,21 @@ export class CanvasGrid {
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
     };
-    Object.values(this.handles).forEach(h => {
+    Object.values(handles).forEach(h => {
       h.addEventListener('mousedown', e => {
-        if (!this.activeEl || this.staticGrid) return;
-        if (this.activeEl.getAttribute('gs-locked') === 'true' ||
-            this.activeEl.getAttribute('gs-no-resize') === 'true') {
+        if (this.activeEl !== el || this.staticGrid) return;
+        if (el.getAttribute('gs-locked') === 'true' ||
+            el.getAttribute('gs-no-resize') === 'true') {
           return;
         }
         e.stopPropagation();
         pos = h.dataset.pos;
-        const rect = this.activeEl.getBoundingClientRect();
+        const rect = el.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
         startW = rect.width; startH = rect.height;
-        startGX = +this.activeEl.dataset.x || 0;
-        startGY = +this.activeEl.dataset.y || 0;
-        this._emit('resizestart', this.activeEl);
+        startGX = +el.dataset.x || 0;
+        startGY = +el.dataset.y || 0;
+        this._emit('resizestart', el);
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', up);
       });
@@ -313,31 +314,26 @@ export class CanvasGrid {
 
   _updateBBox() {
     if (!this.activeEl || this.staticGrid) return;
+    const bbox = this.activeEl.__bbox;
+    if (!bbox) return;
     const noResize = this.activeEl.getAttribute('gs-no-resize') === 'true';
     const noMove = this.activeEl.getAttribute('gs-no-move') === 'true';
     const disabled = noResize && noMove;
-    this.bbox.classList.toggle('disabled', disabled);
-    if (disabled) return;
-    const rect = this.activeEl.getBoundingClientRect();
-    const gridRect = this.el.getBoundingClientRect();
-    const transform = this.activeEl.style.transform;
-    this.bbox.style.top = `${gridRect.top + window.scrollY}px`;
-    this.bbox.style.left = `${gridRect.left + window.scrollX}px`;
-    this.bbox.style.transform = transform;
-    this.bbox.style.width = `${rect.width}px`;
-    this.bbox.style.height = `${rect.height}px`;
-    this.bbox.style.display = 'block';
+    bbox.classList.toggle('disabled', disabled);
+    bbox.style.display = disabled ? 'none' : 'block';
   }
 
   select(el) {
     if (this.activeEl) {
       this._resizeObserver.unobserve(this.activeEl);
       this.activeEl.classList.remove('selected');
+      if (this.activeEl.__bbox) this.activeEl.__bbox.style.display = 'none';
     }
     this.activeEl = el;
     if (el) {
       el.classList.add('selected');
       this._resizeObserver.observe(el);
+      if (el.__bbox) el.__bbox.style.display = 'block';
     }
     this._updateBBox();
   }
@@ -346,9 +342,9 @@ export class CanvasGrid {
     if (this.activeEl) {
       this._resizeObserver.unobserve(this.activeEl);
       this.activeEl.classList.remove('selected');
+      if (this.activeEl.__bbox) this.activeEl.__bbox.style.display = 'none';
     }
     this.activeEl = null;
-    this.bbox.style.display = 'none';
   }
 
 

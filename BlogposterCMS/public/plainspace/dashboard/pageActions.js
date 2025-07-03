@@ -3,7 +3,7 @@ export async function createNewPage() {
   if (!title) return;
   const slug = prompt('Slug (optional):') || '';
   try {
-    await window.meltdownEmit('createPage', {
+     const { pageId } = await window.meltdownEmit('createPage', {
       jwt: window.ADMIN_TOKEN,
       moduleName: 'pagesManager',
       moduleType: 'core',
@@ -11,9 +11,15 @@ export async function createNewPage() {
       slug,
       lane: 'public',
       status: 'published'
-    });
-    window.location.reload();
+    }) || {};
+
+    if (pageId) {
+      window.location.href = `/admin/builder?pageId=${pageId}&layer=1`;
+    } else {
+      window.location.reload();
+    }
   } catch (err) {
     alert('Error: ' + err.message);
   }
+  window.createNewPage = createNewPage;
 }

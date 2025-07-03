@@ -26,6 +26,7 @@ El Psy Kongroo
 ### Removed
 - Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.
 - The **Layouts** page in the admin sidebar was removed. The layout editor now opens via the top "Content" link.
+- Rate limiter no longer applies globally to page routes; only login and meltdown API endpoints remain protected.
 
 ### Fixed
 - Bounding box now generates inside each widget so it always matches the widget size in the builder and dashboard.

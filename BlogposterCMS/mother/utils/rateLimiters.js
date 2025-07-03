@@ -26,12 +26,4 @@ const loginLimiter = rateLimit({
   legacyHeaders: rate.login.legacyHeaders
 });
 
-const pageLimiter = rateLimit({
-  windowMs: rate.pages.windowMs,
-  max: rate.pages.max,
-  message: rate.pages.message,
-  standardHeaders: rate.pages.standardHeaders,
-  legacyHeaders: rate.pages.legacyHeaders
-});
-
-module.exports = { apiLimiter, loginLimiter, pageLimiter };
+module.exports = { apiLimiter, loginLimiter };

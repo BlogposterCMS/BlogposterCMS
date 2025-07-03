@@ -23,7 +23,7 @@ const helmet       = require('helmet');
 const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
 const csurf        = require('csurf');
-const { apiLimiter, loginLimiter, pageLimiter } = require('./mother/utils/rateLimiters');
+const { apiLimiter, loginLimiter } = require('./mother/utils/rateLimiters');
 const crypto = require('crypto');
 const { sanitizeCookieName, sanitizeCookiePath, sanitizeCookieDomain } = require('./mother/utils/cookieUtils');
 const { isProduction, features } = require('./config/runtime');
@@ -545,7 +545,7 @@ app.get('/admin/logout', (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────
 
 // Redirect plain /admin to login or install depending on setup
-app.get('/admin', pageLimiter, csrfProtection, async (_req, res) => {
+app.get('/admin', csrfProtection, async (_req, res) => {
   try {
     if (await needsInitialSetup()) {
       return res.redirect('/install');
@@ -559,7 +559,7 @@ app.get('/admin', pageLimiter, csrfProtection, async (_req, res) => {
 });
 
 // Admin Home Route
-app.get('/admin/home', pageLimiter, csrfProtection, async (req, res) => {
+app.get('/admin/home', csrfProtection, async (req, res) => {
   try {
     if (await needsInitialSetup()) {
       return res.redirect('/install');
@@ -615,7 +615,7 @@ app.get('/admin/home', pageLimiter, csrfProtection, async (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────
 
 // Capture any admin page slug via wildcard and parse req.params[0]
-app.get('/admin/*', pageLimiter, csrfProtection, async (req, res, next) => {
+app.get('/admin/*', csrfProtection, async (req, res, next) => {
 
   const adminJwt = req.cookies?.admin_jwt;
 
@@ -716,7 +716,7 @@ app.get('/admin/*', pageLimiter, csrfProtection, async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────
 // 8) Explicit /login route
 // ─────────────────────────────────────────────────────────────────
-app.get('/login', pageLimiter, csrfProtection, async (req, res) => {
+app.get('/login', csrfProtection, async (req, res) => {
   try {
     if (await needsInitialSetup()) {
       return res.redirect('/install');
@@ -751,7 +751,7 @@ app.get('/login', pageLimiter, csrfProtection, async (req, res) => {
 
 // Convenience redirect for first-time registration
 
-app.post('/install', pageLimiter, csrfProtection, async (req, res) => {
+app.post('/install', csrfProtection, async (req, res) => {
   const { name, username, email, password, favoriteColor } = req.body || {};
   if (!name || !username || !email || !password) {
     return res.status(400).send('Missing fields');
@@ -826,7 +826,7 @@ app.post('/install', pageLimiter, csrfProtection, async (req, res) => {
   }
 });
 
-app.get('/install', pageLimiter, csrfProtection, async (req, res) => {
+app.get('/install', csrfProtection, async (req, res) => {
   try {
     const pubTok = await new Promise((r, j) => motherEmitter.emit('issuePublicToken', { purpose: 'firstInstallCheck', moduleName: 'auth' }, (e, d) => e ? j(e) : r(d)));
     const val = await new Promise((r, j) => motherEmitter.emit('getPublicSetting', { jwt: pubTok, moduleName: 'settingsManager', moduleType: 'core', key: 'FIRST_INSTALL_DONE' }, (e, d) => e ? j(e) : r(d)));
@@ -842,7 +842,7 @@ app.get('/install', pageLimiter, csrfProtection, async (req, res) => {
     res.status(500).send('Server misconfiguration');
   }
 });
-app.get('/register', pageLimiter, (_req, res) => {
+app.get('/register', (_req, res) => {
   res.redirect('/install');
 });
 
@@ -931,7 +931,7 @@ app.use(async (req, res, next) => {
 const pageHtmlPath = path.join(__dirname, 'public', 'index.html');
 
 // Handle public pages ("/" or "/:slug")
-app.get('/:slug?', pageLimiter, async (req, res, next) => {
+app.get('/:slug?', async (req, res, next) => {
   try {
     const requestedSlug = req.params.slug;
 

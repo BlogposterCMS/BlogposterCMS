@@ -106,6 +106,55 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
     if (exists) {
       console.log(`[plainSpace] Admin page "${finalSlugForCheck}" already exists.`);
+
+      if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
+        const currentMeta = existingPage.meta || {};
+        const existingWidgets = Array.isArray(currentMeta.widgets) ? currentMeta.widgets.slice() : [];
+        const missing = page.config.widgets.filter(w => !existingWidgets.includes(w));
+
+        if (missing.length) {
+          const newMeta = { ...currentMeta, widgets: [...existingWidgets, ...missing] };
+          try {
+            await meltdownEmit(motherEmitter, 'updatePage', {
+              jwt,
+              moduleName: 'pagesManager',
+              moduleType: 'core',
+              pageId: existingPage.id,
+              meta: newMeta
+            });
+
+            const layoutRes = await meltdownEmit(motherEmitter, 'getLayoutForViewport', {
+              jwt,
+              moduleName: MODULE,
+              moduleType: 'core',
+              pageId: existingPage.id,
+              lane: page.lane,
+              viewport: 'desktop'
+            });
+            let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
+            const existingIds = layout.map(l => l.widgetId);
+            let y = layout.reduce((m, l) => Math.max(m, (l.y ?? 0) + (l.h ?? 4)), 0);
+            for (const w of missing) {
+              if (existingIds.includes(w)) continue;
+              layout.push({ id: `w${layout.length}`, widgetId: w, x: 0, y, w: 8, h: 4, code: null });
+              y += 4;
+            }
+            await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
+              jwt,
+              moduleName: MODULE,
+              moduleType: 'core',
+              pageId: existingPage.id,
+              lane: page.lane,
+              viewport: 'desktop',
+              layout
+            });
+            console.log(`[plainSpace] Updated widgets for existing admin page "${finalSlugForCheck}".`);
+          } catch (err) {
+            console.error(`[plainSpace] Failed to update admin page "${finalSlugForCheck}":`, err.message);
+          }
+        }
+      }
+
       continue;
     }
 

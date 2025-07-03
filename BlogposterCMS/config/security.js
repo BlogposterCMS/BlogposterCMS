@@ -33,14 +33,6 @@ const rate = {
     message         : { error: 'Too many requests – try again later.' },
     standardHeaders : true,
     legacyHeaders   : false
-  },
-  /* Page rendering limiter */
-  pages : {
-    windowMs        : 15 * 60 * 1000,      // 15 min
-    max             : 500,                 // higher default to avoid search lockouts
-    message         : { error: 'Too many page requests – try again later.' },
-    standardHeaders : true,
-    legacyHeaders   : false
   }
 };
 
@@ -51,10 +43,6 @@ rate.api.windowMs   = Number(env.API_RATE_LIMIT_WINDOW
   ? Number(env.API_RATE_LIMIT_WINDOW) * 60 * 1000
   : rate.api.windowMs);
 rate.api.max        = Number(env.API_RATE_LIMIT_MAX ?? rate.api.max);
-rate.pages.windowMs = Number(env.PAGE_RATE_LIMIT_WINDOW
-  ? Number(env.PAGE_RATE_LIMIT_WINDOW) * 60 * 1000
-  : rate.pages.windowMs);
-rate.pages.max      = Number(env.PAGE_RATE_LIMIT_MAX ?? rate.pages.max);
 
 /*─────────────────────────────────────────────────────────────────────*
  *  #2  CSRF CONFIG

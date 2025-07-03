@@ -1,6 +1,7 @@
 // public//plainspace/main/canvasGrid.js
 // Lightweight drag & resize grid for the builder
 import { bindGlobalListeners } from './globalEvents.js';
+import { BoundingBoxManager } from './BoundingBoxManager.js';
 
 export class CanvasGrid {
   constructor(options = {}, el) {
@@ -138,6 +139,10 @@ export class CanvasGrid {
 
   removeWidget(el) {
     if (el.parentNode === this.el) {
+      if (el.__bboxManager) {
+        el.__bboxManager.disconnect?.();
+        el.__bboxManager.box?.remove();
+      }
       el.remove();
       this._updateGridHeight();
       this._emit('change', el);
@@ -163,12 +168,12 @@ export class CanvasGrid {
   }
 
   _createBBox(el) {
-    const bbox = document.createElement('div');
-    bbox.className = 'bounding-box';
+    if (el.__bboxManager) return;
+    const manager = new BoundingBoxManager(el, this.el);
+    const bbox = manager.box;
+    bbox.classList.add('bounding-box');
     bbox.style.display = 'none';
-    // Ensure the bounding box matches the widget size on first render
-    bbox.style.width = `${el.offsetWidth}px`;
-    bbox.style.height = `${el.offsetHeight}px`;
+
     const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
     const handles = {};
     positions.forEach(p => {
@@ -178,9 +183,10 @@ export class CanvasGrid {
       bbox.appendChild(h);
       handles[p] = h;
     });
-    el.appendChild(bbox);
+
     this._bindResize(el, handles);
     el.__bbox = bbox;
+    el.__bboxManager = manager;
   }
 
   _bindResize(el, handles) {
@@ -201,6 +207,7 @@ export class CanvasGrid {
       if (pos.includes('w')) opts.x = gx;
       if (pos.includes('n')) opts.y = gy;
       this.update(this.activeEl, opts);
+      el.dispatchEvent(new Event('resizemove', { bubbles: true }));
     };
     const up = () => {
       if (pos != null) this._emit('resizestop', this.activeEl);
@@ -241,6 +248,7 @@ export class CanvasGrid {
       el.style.transform =
         `translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`;
       this._updateBBox();
+      el.dispatchEvent(new Event('dragmove', { bubbles: true }));
     };
     const up = () => {
       dragging = false;
@@ -317,11 +325,10 @@ export class CanvasGrid {
 
   _updateBBox() {
     if (!this.activeEl || this.staticGrid) return;
+    const manager = this.activeEl.__bboxManager;
     const bbox = this.activeEl.__bbox;
-    if (!bbox) return;
-    // Sync bounding box size with the active widget
-    bbox.style.width = `${this.activeEl.offsetWidth}px`;
-    bbox.style.height = `${this.activeEl.offsetHeight}px`;
+    if (!manager || !bbox) return;
+    manager.update();
     const noResize = this.activeEl.getAttribute('gs-no-resize') === 'true';
     const noMove = this.activeEl.getAttribute('gs-no-move') === 'true';
     const disabled = noResize && noMove;

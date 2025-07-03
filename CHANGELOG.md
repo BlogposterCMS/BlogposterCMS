@@ -3,10 +3,19 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
-## [0.6.3] 2025-07-20
+## [unreleased]
+
+### Added
+- Page editor now includes a "Page Content" widget to manage attached HTML documents.
+
 
 ### Improved
 - `meltdownEmit` now throttles requests to one per second to prevent 429 errors when multiple modules fire off events simultaneously.
+
+
+### Removed
+- Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.
+
 
 ## [0.6.2] 2025-07-02
 
@@ -64,7 +73,7 @@ El Psy Kongroo
 
 ### Removed
 - Entire experimental **News** module and its widgets – never shipped publicly, so all references, related dependencies (`openai`, `brave`) and environment variables were stripped out of the codebase and `package*.json`.
-- Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.
+
 
 ### Note
 - The Builder requires more time than planned due to ongoing issues with text editing—accompanied by massive hair loss. Pull Requests to resolve this issue are warmly welcomed.

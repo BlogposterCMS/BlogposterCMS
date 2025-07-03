@@ -545,19 +545,75 @@ body.preview-desktop #content {
     background: var(--user-color, #333);
     border-radius: 50%;
     pointer-events: all;
+    transform: scale(var(--inv-scale));
   }
-  .nw { top: -4px; left: -4px; cursor: nwse-resize; }
-  .n { top: -4px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-  .ne { top: -4px; right: -4px; cursor: nesw-resize; }
-  .e { top: 50%; right: -4px; transform: translateY(-50%); cursor: ew-resize; }
-  .se { bottom: -4px; right: -4px; cursor: nwse-resize; }
-  .s { bottom: -4px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-  .sw { bottom: -4px; left: -4px; cursor: nesw-resize; }
-  .w { top: 50%; left: -4px; transform: translateY(-50%); cursor: ew-resize; }
+  .nw {
+    top: -4px;
+    left: -4px;
+    transform: translate(-50%, -50%) scale(var(--inv-scale));
+    cursor: nwse-resize;
+  }
+  .n {
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%) scale(var(--inv-scale));
+    cursor: ns-resize;
+  }
+  .ne {
+    top: -4px;
+    right: -4px;
+    transform: translate(50%, -50%) scale(var(--inv-scale));
+    cursor: nesw-resize;
+  }
+  .e {
+    top: 50%;
+    right: -4px;
+    transform: translateY(-50%) scale(var(--inv-scale));
+    cursor: ew-resize;
+  }
+  .se {
+    bottom: -4px;
+    right: -4px;
+    transform: translate(50%, 50%) scale(var(--inv-scale));
+    cursor: nwse-resize;
+  }
+  .s {
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%) scale(var(--inv-scale));
+    cursor: ns-resize;
+  }
+  .sw {
+    bottom: -4px;
+    left: -4px;
+    transform: translate(-50%, 50%) scale(var(--inv-scale));
+    cursor: nesw-resize;
+  }
+  .w {
+    top: 50%;
+    left: -4px;
+    transform: translateY(-50%) scale(var(--inv-scale));
+    cursor: ew-resize;
+  }
 }
 
 .bounding-box.disabled {
   display: none;
+}
+
+.selection-box {
+  position: absolute;
+  border: 1px dashed var(--user-color, #0aa);
+  transform-origin: 0 0;
+}
+
+.selection-box::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid currentColor;
+  transform: scale(var(--inv-scale));
+  pointer-events: none;
 }
 
 .hit-layer {

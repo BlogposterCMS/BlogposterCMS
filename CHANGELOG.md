@@ -19,6 +19,9 @@ El Psy Kongroo
 ### Improved
 - `meltdownEmit` now throttles requests to one per second to prevent 429 errors when multiple modules fire off events simultaneously.
 
+### Fixed
+- Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.
+
 
 ### Removed
 - Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.

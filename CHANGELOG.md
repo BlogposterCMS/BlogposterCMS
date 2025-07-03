@@ -16,6 +16,7 @@ El Psy Kongroo
   for opening, copying and deleting layouts.
 - Saving a layout now generates a preview image using `html-to-image` so the
   Content Summary gallery always shows the latest design.
+- Page Content widget plus button now opens a menu to attach a layout or upload HTML.
 - New `customSelect` script automatically converts `<select data-enhance="dropdown">` elements
   into styled div-based dropdowns for consistent theming.
 

@@ -20,8 +20,17 @@ export async function render(el) {
   const addBtn = document.createElement('img');
   addBtn.src = '/assets/icons/plus.svg';
   addBtn.alt = 'Add content';
-  addBtn.title = 'Attach HTML content';
+  addBtn.title = 'Attach content';
   addBtn.className = 'icon add-content-btn';
+
+  const addMenu = document.createElement('div');
+  addMenu.className = 'content-add-menu';
+  addMenu.innerHTML = `
+    <button class="menu-layout"><img src="/assets/icons/layout.svg" class="icon" alt="layout" /> Attach Design</button>
+    <button class="menu-upload"><img src="/assets/icons/upload.svg" class="icon" alt="upload" /> Upload HTML</button>
+  `;
+  addMenu.style.display = 'none';
+  document.body.appendChild(addMenu);
 
   titleBar.appendChild(titleEl);
   titleBar.appendChild(addBtn);
@@ -98,7 +107,64 @@ export async function render(el) {
     reader.readAsText(file);
   }
 
-  addBtn.addEventListener('click', () => {
+  async function attachDesign() {
+    let templates = [];
+    try {
+      const res = await meltdownEmit('getLayoutTemplateNames', {
+        jwt,
+        moduleName: 'plainspace',
+        moduleType: 'core',
+        lane: page.lane
+      });
+      templates = Array.isArray(res?.templates) ? res.templates.map(t => t.name) : [];
+    } catch (err) {
+      console.warn('Failed to fetch layouts', err);
+    }
+    const name = prompt('Select or enter layout name:\n' + templates.join('\n'), templates[0] || '');
+    if (!name) return;
+    try {
+      await meltdownEmit('createPage', {
+        jwt,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        title: name,
+        slug: name.replace(/\s+/g, '-').toLowerCase(),
+        lane: page.lane,
+        parent_id: page.id,
+        is_content: true,
+        language: page.language,
+        meta: { layoutTemplate: name },
+        translations: [{ language: page.language, title: name, html: '', css: '' }]
+      });
+      renderList(await loadContent());
+    } catch (err) {
+      alert('Failed to attach design: ' + err.message);
+    }
+  }
+
+  function hideMenu() {
+    addMenu.style.display = 'none';
+    document.removeEventListener('click', outsideHandler);
+  }
+
+  function outsideHandler(e) {
+    if (!addMenu.contains(e.target) && e.target !== addBtn) hideMenu();
+  }
+
+  addBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (addMenu.style.display === 'block') { hideMenu(); return; }
+    addMenu.style.display = 'block';
+    addMenu.style.visibility = 'hidden';
+    const rect = addBtn.getBoundingClientRect();
+    addMenu.style.top = `${rect.bottom + 4}px`;
+    addMenu.style.left = `${rect.left}px`;
+    addMenu.style.visibility = '';
+    document.addEventListener('click', outsideHandler);
+  });
+
+  addMenu.querySelector('.menu-upload').addEventListener('click', () => {
+    hideMenu();
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.html,.htm,text/html';
@@ -107,6 +173,11 @@ export async function render(el) {
       if (file) handleFile(file);
     });
     input.click();
+  });
+
+  addMenu.querySelector('.menu-layout').addEventListener('click', async () => {
+    hideMenu();
+    await attachDesign();
   });
 
   el.innerHTML = '';

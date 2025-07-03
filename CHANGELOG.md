@@ -57,7 +57,8 @@ El Psy Kongroo
 - Fixed widget preview crash when toggling admin edit mode.
 - CanvasGrid percentage sizing now clamps at 100% and remains stable on window resize.
 - Dashboard edit mode no longer adds dashed borders around widgets; bounding box sizing uses border-box for accurate transforms
--Admin widgets now render on pages even when not listed in the page config, enabling placement anywhere.
+- Admin widgets now render on pages even when not listed in the page config, enabling placement anywhere.
+- Existing admin pages now receive missing widgets and layout updates on startup.
 
 >\"Wake the fuck up, Samurai, we have a city to burn.\"
 

@@ -37,6 +37,9 @@ export async function render(el) {
     templates.forEach(t => {
       const li = document.createElement('li');
       li.className = 'layout-gallery-item';
+      li.addEventListener('click', () => {
+        window.location.href = `/admin/builder?layout=${encodeURIComponent(t.name)}`;
+      });
 
       const img = document.createElement('img');
       img.className = 'layout-gallery-preview';

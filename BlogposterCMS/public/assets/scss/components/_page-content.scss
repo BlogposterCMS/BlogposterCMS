@@ -60,8 +60,23 @@
 }
 
 .page-content-widget .content-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
   color: var(--user-color);
+}
+
+.delete-content-btn {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.delete-content-btn:hover {
+  opacity: 1;
 }
 
 .page-content-widget .empty-state {
@@ -69,3 +84,6 @@
   padding: 10px 0;
   text-align: center;
 }
+
+.attached-content { margin-top: 20px; }
+

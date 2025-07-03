@@ -15,6 +15,19 @@ export async function render(el) {
     console.warn('[ContentSummaryWidget] failed to load templates', err);
   }
 
+  let uploads = [];
+  try {
+    const res = await meltdownEmit('getAllPages', {
+      jwt,
+      moduleName: 'pagesManager',
+      moduleType: 'core'
+    });
+    const pages = Array.isArray(res) ? res : (res?.data ?? []);
+    uploads = pages.filter(p => p.is_content && !p.meta?.layoutTemplate && p.lane === 'public');
+  } catch (err) {
+    console.warn('[ContentSummaryWidget] failed to load uploads', err);
+  }
+
   el.innerHTML = '';
 
   const card = document.createElement('div');
@@ -27,11 +40,27 @@ export async function render(el) {
   title.className = 'layout-gallery-title';
   title.textContent = 'Your Content';
 
+  const tabs = document.createElement('div');
+  tabs.className = 'widget-tabs';
+  const tabDesigns = document.createElement('button');
+  tabDesigns.className = 'widget-tab active';
+  tabDesigns.textContent = 'Designs';
+  const tabUploads = document.createElement('button');
+  tabUploads.className = 'widget-tab';
+  tabUploads.textContent = 'Uploaded';
+  tabs.appendChild(tabDesigns);
+  tabs.appendChild(tabUploads);
+
   titleBar.appendChild(title);
+  titleBar.appendChild(tabs);
   card.appendChild(titleBar);
 
-  const list = document.createElement('div');
-  list.className = 'layout-gallery';
+  const designList = document.createElement('div');
+  designList.className = 'layout-gallery';
+
+  const uploadList = document.createElement('div');
+  uploadList.className = 'layout-gallery uploaded-gallery';
+  uploadList.style.display = 'none';
 
   if (templates.length) {
     templates.forEach(t => {
@@ -127,16 +156,58 @@ export async function render(el) {
       item.appendChild(menu);
       item.appendChild(img);
       item.appendChild(span);
-      list.appendChild(item);
+      designList.appendChild(item);
     });
   } else {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
     empty.textContent = 'No layouts found.';
-    list.appendChild(empty);
+    designList.appendChild(empty);
   }
 
-  card.appendChild(list);
+  function renderUploads() {
+    uploadList.innerHTML = '';
+    if (uploads.length) {
+      uploads.forEach(u => {
+        const item = document.createElement('div');
+        item.className = 'layout-gallery-item';
+        item.addEventListener('click', () => {
+          window.open(`/admin/${u.slug}`, '_blank');
+        });
+
+        const span = document.createElement('span');
+        span.className = 'layout-gallery-name';
+        span.textContent = u.title || u.slug;
+
+        item.appendChild(span);
+        uploadList.appendChild(item);
+      });
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No uploads found.';
+      uploadList.appendChild(empty);
+    }
+  }
+
+  renderUploads();
+
+  card.appendChild(designList);
+  card.appendChild(uploadList);
   el.appendChild(card);
+
+  tabDesigns.addEventListener('click', () => {
+    tabDesigns.classList.add('active');
+    tabUploads.classList.remove('active');
+    designList.style.display = '';
+    uploadList.style.display = 'none';
+  });
+
+  tabUploads.addEventListener('click', () => {
+    tabUploads.classList.add('active');
+    tabDesigns.classList.remove('active');
+    uploadList.style.display = '';
+    designList.style.display = 'none';
+  });
 }
 

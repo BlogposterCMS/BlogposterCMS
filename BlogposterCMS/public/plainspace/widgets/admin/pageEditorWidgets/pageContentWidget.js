@@ -68,10 +68,36 @@ export async function render(el) {
     items.forEach(item => {
       const li = document.createElement('li');
       li.className = 'content-item';
-      li.textContent = item.title || item.slug;
-      li.addEventListener('click', () => {
+      const title = document.createElement('span');
+      title.className = 'content-title';
+      title.textContent = item.title || item.slug;
+      title.addEventListener('click', () => {
         window.open(`/admin/${item.slug}`, '_blank');
       });
+
+      const remove = document.createElement('img');
+      remove.src = '/assets/icons/trash.svg';
+      remove.className = 'icon delete-content-btn';
+      remove.alt = 'Remove';
+      remove.title = 'Detach content';
+      remove.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm('Detach this content?')) return;
+        try {
+          await meltdownEmit('setAsDeleted', {
+            jwt,
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            pageId: item.id
+          });
+          renderList(await loadContent());
+        } catch (err) {
+          alert('Failed to detach content: ' + err.message);
+        }
+      });
+
+      li.appendChild(title);
+      li.appendChild(remove);
       listEl.appendChild(li);
     });
   }

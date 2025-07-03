@@ -71,11 +71,25 @@ export async function render(el) {
       menu.querySelector('.copy-layout').onclick = async ev => {
         ev.stopPropagation();
         try {
-          const res = await meltdownEmit('getLayoutTemplate', { jwt, name: t.name });
+          const res = await meltdownEmit('getLayoutTemplate', {
+            jwt,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            name: t.name
+          });
           const layoutArr = res?.layout || [];
           const newName = prompt('Copy name:', t.name + ' copy');
           if (!newName) { menu.classList.remove('open'); return; }
-          await meltdownEmit('saveLayoutTemplate', { jwt, name: newName, lane: 'public', viewport: 'desktop', layout: layoutArr, previewPath: t.previewPath || '' });
+          await meltdownEmit('saveLayoutTemplate', {
+            jwt,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            name: newName,
+            lane: 'public',
+            viewport: 'desktop',
+            layout: layoutArr,
+            previewPath: t.previewPath || ''
+          });
           alert('Layout copied');
         } catch (err) {
           alert('Failed to copy layout: ' + err.message);
@@ -87,7 +101,12 @@ export async function render(el) {
         ev.stopPropagation();
         if (!confirm('Delete this layout?')) { menu.classList.remove('open'); return; }
         try {
-          await meltdownEmit('deleteLayoutTemplate', { jwt, name: t.name });
+          await meltdownEmit('deleteLayoutTemplate', {
+            jwt,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            name: t.name
+          });
           item.remove();
         } catch (err) {
           alert('Failed to delete layout: ' + err.message);

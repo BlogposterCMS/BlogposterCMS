@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Added
+* Attached page content now loads automatically, displaying uploaded HTML and attached layouts.
+* Page Content widget now lets admins detach uploaded files to switch layouts.
+* Content Summary widget includes "Designs" and "Uploaded" tabs listing uploaded HTML pages separately.
 - Builder sidebar now features a collapsible text panel loaded from
   `builder/text-sidebar.html` with quick access to heading, subheading and body
   styles. The canvas scales down when the panel opens.
@@ -45,7 +48,7 @@ El Psy Kongroo
 ## [0.6.2] 2025-07-02
 
 ### Added
-- Admin layout edit toggle now opens a widget selection popup.
+ - Admin layout edit toggle now opens a widget selection popup.
 - Collapsible right‑side pages menu on admin home with filter dropdown and animated toggle icon.
 - Toolbar buttons now reflect active text styles; bold, italic and underline states update live with high‑contrast highlighting and fewer spans.
 - Community module pages are now automatically seeded under /admin/pages/{slug} when their lane is admin.
@@ -79,7 +82,7 @@ El Psy Kongroo
 ## [0.6.1] 2025-06-27
 
 ### Added
-- **requestManager** core module – single, auditable gateway for all outbound HTTP requests with a strict whitelist.
+ - **requestManager** core module – single, auditable gateway for all outbound HTTP requests with a strict whitelist.
 - **DatabaseManager** now understands JSON schema inputs: new events `applySchemaFile` and `applySchemaDefinition` wire straight into the engines and can create MongoDB collections / indexes on the fly.
 - **MongoEngine** helper operations `createCollection` and `createIndex` are available when the backing store is MongoDB.
 - **moduleNameFromStack** helper pin‑points an offending module by walking the stack trace.

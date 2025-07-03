@@ -207,3 +207,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.uploaded-gallery {
+  @extend .layout-gallery;
+}

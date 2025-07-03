@@ -271,6 +271,104 @@ function ensureLayout(layout = {}, lane = 'public') {
   }
 }
 
+async function renderStaticGrid(target, layout, allWidgets, lane) {
+  if (!target) return;
+  const gridEl = document.createElement('div');
+  gridEl.className = 'canvas-grid';
+  target.appendChild(gridEl);
+  const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth: 5 }, gridEl);
+  const pending = [];
+  for (const item of layout) {
+    const def = allWidgets.find(w => w.id === item.widgetId);
+    if (!def) continue;
+    const [x, y, w, h] = [item.x ?? 0, item.y ?? 0, item.w ?? 8, item.h ?? 4];
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('canvas-item', 'loading');
+    wrapper.dataset.x = x;
+    wrapper.dataset.y = y;
+    wrapper.setAttribute('gs-w', w);
+    wrapper.setAttribute('gs-h', h);
+    wrapper.setAttribute('gs-min-w', 4);
+    wrapper.setAttribute('gs-min-h', 4);
+    wrapper.dataset.widgetId = def.id;
+    wrapper.dataset.instanceId = item.id;
+    if (item.global) wrapper.dataset.global = 'true';
+    const ph = document.createElement('div');
+    ph.className = 'widget-placeholder';
+    ph.textContent = def.metadata?.label || def.id;
+    wrapper.appendChild(ph);
+    gridEl.appendChild(wrapper);
+    grid.makeWidget(wrapper);
+    pending.push({ wrapper, item, def, placeholder: ph });
+  }
+  for (const { wrapper, item, def, placeholder } of pending) {
+    const content = document.createElement('div');
+    content.className = 'canvas-item-content';
+    if (placeholder && placeholder.parentNode === wrapper) placeholder.remove();
+    wrapper.appendChild(content);
+    try {
+      const res = await emitDebounced('getWidgetInstance', {
+        instanceId: `default.${def.id}`,
+        ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {}) ,
+        moduleName: 'plainspace',
+        moduleType: 'core'
+      });
+      const opts = res?.content ? JSON.parse(res.content) : null;
+      applyWidgetOptions(wrapper, opts);
+    } catch {}
+    renderWidget(content, def, item.code || null, lane);
+    wrapper.classList.remove('loading');
+  }
+}
+
+async function renderAttachedContent(page, lane, allWidgets, container) {
+  if (!container) return;
+  try {
+    const childRes = await meltdownEmit('getChildPages', {
+      parentId: page.id,
+      moduleName: 'pagesManager',
+      moduleType: 'core',
+      ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
+    });
+    const items = Array.isArray(childRes) ? childRes : (childRes?.data ?? []);
+    for (const child of items.filter(c => c.is_content)) {
+      const childPageRes = await meltdownEmit('getPageById', {
+        pageId: child.id,
+        lane,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
+      });
+      const childPage = childPageRes?.data ?? childPageRes;
+      if (!childPage) continue;
+      const section = document.createElement('section');
+      section.className = 'attached-content';
+      if (childPage.meta?.layoutTemplate) {
+        let layoutArr = [];
+        try {
+          const res = await meltdownEmit('getLayoutTemplate', {
+            name: childPage.meta.layoutTemplate,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
+          });
+          layoutArr = Array.isArray(res?.layout) ? res.layout : [];
+        } catch (err) {
+          console.warn('[Renderer] failed to load layout template', err);
+        }
+        await renderStaticGrid(section, layoutArr, allWidgets, lane);
+      } else if (childPage.html) {
+        const div = document.createElement('div');
+        div.innerHTML = sanitizeHtml(childPage.html);
+        section.appendChild(div);
+      }
+      container.appendChild(section);
+    }
+  } catch (err) {
+    console.warn('[Renderer] failed to load attached content', err);
+  }
+}
+
 (async () => {
   try {
     // 1. ROUTE BASICS
@@ -520,6 +618,7 @@ function ensureLayout(layout = {}, lane = 'public') {
         renderWidget(content, def, item.code || null, lane);
         wrapper.classList.remove('loading');
       }
+      await renderAttachedContent(page, lane, allWidgets, contentEl);
       return;
     }
 
@@ -600,6 +699,8 @@ const grid = initCanvasGrid({ cellHeight: 5, columnWidth: 5, percentageMode: tru
       renderWidget(content, def, meta.code || null, lane);
       wrapper.classList.remove('loading');
     }
+
+    await renderAttachedContent(page, lane, allWidgets, contentEl);
 
     grid.on('change', () => {
       const items = Array.from(gridEl.querySelectorAll('.canvas-item'));

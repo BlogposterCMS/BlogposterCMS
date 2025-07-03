@@ -23,6 +23,7 @@ El Psy Kongroo
 
 ### Fixed
 - Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.
+- Builder now loads `html-to-image` on demand, preventing module errors outside the editor.
 
 
 ### Removed

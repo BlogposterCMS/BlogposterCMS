@@ -19,7 +19,24 @@ import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
-import { toPng } from 'html-to-image';
+
+let _toPng;
+async function loadToPng() {
+  if (_toPng) return _toPng;
+  try {
+    const mod = await import('html-to-image');
+    _toPng = mod.toPng;
+  } catch (err) {
+    try {
+      const mod = await import('https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/+esm');
+      _toPng = mod.toPng;
+    } catch (err2) {
+      console.warn('[Builder] html-to-image unavailable', err2);
+      _toPng = async () => '';
+    }
+  }
+  return _toPng;
+}
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
   document.body.classList.add('builder-mode');
@@ -552,6 +569,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   async function capturePreview() {
     if (!gridEl) return '';
     try {
+      const toPng = await loadToPng();
       return await toPng(gridEl, { cacheBust: true });
     } catch (err) {
       console.error('[Builder] preview capture error', err);

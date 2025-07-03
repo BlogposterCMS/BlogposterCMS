@@ -1,14 +1,7 @@
-# Theme Manager
+# Theme Manager (Temporarily Disabled)
 
-Lists installed themes located under `public/themes` and provides metadata about each theme.
+The Theme Manager module has been removed from the server for now.
+Previous versions listed installed themes under `public/themes` and exposed
+metadata via the `listThemes` event.
 
-## Startup
-- Core module with JWT requirement.
-
-## Purpose
-- Reads `theme.json` from each theme directory and returns the list via an event.
-
-## Listened Events
-- `listThemes`
-
-The file system is read-only for untrusted callers; modifications require server access.
+This documentation will be reinstated once the module returns.

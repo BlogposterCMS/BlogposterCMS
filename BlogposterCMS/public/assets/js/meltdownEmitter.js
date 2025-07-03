@@ -9,7 +9,11 @@
 
   window.fetchWithTimeout = fetchWithTimeout;
 
-  window.meltdownEmit = async function(eventName, payload = {}, timeout = 10000) {
+  const THROTTLE_DELAY = 1000; // min time between requests in ms
+  const requestQueue = [];
+  let busy = false;
+
+  async function _meltdownEmit(eventName, payload = {}, timeout = 10000) {
     if (
       (eventName === 'openExplorer' || eventName === 'openMediaExplorer') &&
       window._openMediaExplorer
@@ -74,6 +78,28 @@
     }
 
     return json.data;
+  }
+
+  function processQueue() {
+    if (busy || requestQueue.length === 0) return;
+    busy = true;
+    const { eventName, payload, timeout, resolve, reject } = requestQueue.shift();
+    _meltdownEmit(eventName, payload, timeout)
+      .then(resolve)
+      .catch(reject)
+      .finally(() => {
+        setTimeout(() => {
+          busy = false;
+          processQueue();
+        }, THROTTLE_DELAY);
+      });
+  }
+
+  window.meltdownEmit = function(eventName, payload = {}, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+      requestQueue.push({ eventName, payload, timeout, resolve, reject });
+      processQueue();
+    });
   };
 
   // Batch multiple meltdown events in one request

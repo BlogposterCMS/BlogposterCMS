@@ -71,6 +71,40 @@
   overflow-x: auto;
   overflow-y: hidden;
 
+  .text-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 96px;
+    width: 240px;
+    height: calc(100% - 56px);
+    background: var(--color-white);
+    box-shadow: var(--shadow-card);
+    padding: 16px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+
+    .collapse-btn {
+      align-self: flex-end;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    .text-choice {
+      width: 100%;
+      padding: 8px;
+      background: var(--color-light-gray, #f0f0f0);
+      border: none;
+      cursor: pointer;
+      text-align: left;
+
+      .preview.heading { font-size: 1.5rem; font-weight: 700; }
+      .preview.subheading { font-size: 1.25rem; font-weight: 600; }
+      .preview.body { font-size: 1rem; }
+    }
+  }
+
     .builder-sidebar-nav {
        width: 100%;
       display: flex;
@@ -324,6 +358,21 @@ body.builder-mode #content {
   overflow-y: auto;
   padding-top: 60px; // keep toolbar from covering the grid
   box-sizing: border-box;
+}
+
+body.builder-mode.text-panel-open #content {
+  margin-left: 336px;
+  transform: scale(0.9);
+  transform-origin: top left;
+}
+
+body.builder-mode.text-panel-open .text-sidebar {
+  display: flex;
+}
+
+body.builder-mode.text-panel-open #builderGrid {
+  transform: scale(0.9);
+  transform-origin: top left;
 }
 
 body.builder-mode #builderGrid {

@@ -12,6 +12,8 @@ El Psy Kongroo
 - Page editor now includes a "Page Content" widget to manage attached HTML documents.
 - Content Summary widget now displays available layouts in a responsive grid.
 - Layout gallery items link directly to the builder for quick edits.
+- Content Summary cards now use interactive div-based layouts with a hover menu
+  for opening, copying and deleting layouts.
 
 
 ### Improved

@@ -30,16 +30,70 @@ export async function render(el) {
   titleBar.appendChild(title);
   card.appendChild(titleBar);
 
-  const list = document.createElement('ul');
+  const list = document.createElement('div');
   list.className = 'layout-gallery';
 
   if (templates.length) {
     templates.forEach(t => {
-      const li = document.createElement('li');
-      li.className = 'layout-gallery-item';
-      li.addEventListener('click', () => {
+      const item = document.createElement('div');
+      item.className = 'layout-gallery-item';
+      item.addEventListener('click', () => {
         window.location.href = `/admin/builder?layout=${encodeURIComponent(t.name)}`;
       });
+
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'layout-menu-btn';
+      menuBtn.innerHTML = window.featherIcon
+        ? window.featherIcon('more-horizontal')
+        : '<img src="/assets/icons/more-horizontal.svg" class="icon" alt="menu" />';
+
+      const menu = document.createElement('div');
+      menu.className = 'layout-card-menu';
+      menu.innerHTML = `
+        <div class="menu-item open-layout">${window.featherIcon ? window.featherIcon('external-link') : '<img class="icon" src="/assets/icons/external-link.svg" alt="open" />'} Open in new tab</div>
+        <div class="menu-item copy-layout">${window.featherIcon ? window.featherIcon('copy') : '<img class="icon" src="/assets/icons/copy.svg" alt="copy" />'} Copy layout</div>
+        <div class="menu-item delete-layout">${window.featherIcon ? window.featherIcon('trash') : '<img class="icon" src="/assets/icons/trash.svg" alt="delete" />'} Delete</div>
+      `;
+      menuBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        menu.classList.toggle('open');
+      });
+      document.addEventListener('click', e => {
+        if (!menu.contains(e.target) && e.target !== menuBtn) menu.classList.remove('open');
+      });
+
+      menu.querySelector('.open-layout').onclick = ev => {
+        ev.stopPropagation();
+        window.open(`/admin/builder?layout=${encodeURIComponent(t.name)}`, '_blank');
+        menu.classList.remove('open');
+      };
+
+      menu.querySelector('.copy-layout').onclick = async ev => {
+        ev.stopPropagation();
+        try {
+          const res = await meltdownEmit('getLayoutTemplate', { jwt, name: t.name });
+          const layoutArr = res?.layout || [];
+          const newName = prompt('Copy name:', t.name + ' copy');
+          if (!newName) { menu.classList.remove('open'); return; }
+          await meltdownEmit('saveLayoutTemplate', { jwt, name: newName, lane: 'public', viewport: 'desktop', layout: layoutArr, previewPath: t.previewPath || '' });
+          alert('Layout copied');
+        } catch (err) {
+          alert('Failed to copy layout: ' + err.message);
+        }
+        menu.classList.remove('open');
+      };
+
+      menu.querySelector('.delete-layout').onclick = async ev => {
+        ev.stopPropagation();
+        if (!confirm('Delete this layout?')) { menu.classList.remove('open'); return; }
+        try {
+          await meltdownEmit('deleteLayoutTemplate', { jwt, name: t.name });
+          item.remove();
+        } catch (err) {
+          alert('Failed to delete layout: ' + err.message);
+        }
+        menu.classList.remove('open');
+      };
 
       const img = document.createElement('img');
       img.className = 'layout-gallery-preview';
@@ -50,9 +104,11 @@ export async function render(el) {
       span.className = 'layout-gallery-name';
       span.textContent = t.name;
 
-      li.appendChild(img);
-      li.appendChild(span);
-      list.appendChild(li);
+      item.appendChild(menuBtn);
+      item.appendChild(menu);
+      item.appendChild(img);
+      item.appendChild(span);
+      list.appendChild(item);
     });
   } else {
     const empty = document.createElement('div');

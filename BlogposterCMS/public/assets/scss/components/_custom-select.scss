@@ -1,0 +1,40 @@
+.custom-select {
+  position: relative;
+  display: inline-block;
+
+  .display {
+    background: var(--color-secondary-light);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+
+  .options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-white);
+    border: 1px solid #eee;
+    box-shadow: var(--shadow-default);
+    border-radius: 4px;
+    z-index: 1000;
+    display: none;
+  }
+
+  &.open .options {
+    display: block;
+  }
+
+  .option {
+    padding: 4px 8px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-secondary-light);
+    }
+  }
+}

@@ -32,7 +32,10 @@ El Psy Kongroo
 ### Fixed
 - Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.
 - Builder now loads `html-to-image` on demand, preventing module errors outside the editor.
-- Selection boxes refresh during drag and resize and disconnect cleanly when widgets are removed.
+ - Selection boxes refresh during drag and resize and disconnect cleanly when widgets are removed.
+- Uploading HTML via Page Content now updates the current page instead of creating a child page.
+- Public pages no longer render the widget grid when a layout template or HTML is attached.
+- Page Content widget now limits each page to a single attached design or HTML file and replaces existing content when uploading new attachments.
 
 
 ### Removed

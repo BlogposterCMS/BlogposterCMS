@@ -536,6 +536,34 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
     // 8. PUBLIC PAGE: render widgets using stored layout in static grid
     if (lane !== 'admin') {
+      if (config.layoutTemplate) {
+        let layoutArr = [];
+        try {
+          const res = await meltdownEmit('getLayoutTemplate', {
+            name: config.layoutTemplate,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            jwt: window.PUBLIC_TOKEN,
+            lane
+          });
+          layoutArr = Array.isArray(res?.layout) ? res.layout : [];
+        } catch (err) {
+          console.warn('[Renderer] failed to load layout template', err);
+        }
+        clearContentKeepHeader(contentEl);
+        await renderStaticGrid(contentEl, layoutArr, allWidgets, lane);
+        await renderAttachedContent(page, lane, allWidgets, contentEl);
+        return;
+      }
+      if (page.html) {
+        clearContentKeepHeader(contentEl);
+        const div = document.createElement('div');
+        div.innerHTML = sanitizeHtml(page.html);
+        contentEl.appendChild(div);
+        await renderAttachedContent(page, lane, allWidgets, contentEl);
+        return;
+      }
+
       const layoutRes = await meltdownEmit('getLayoutForViewport', {
         moduleName: 'plainspace',
         moduleType: 'core',

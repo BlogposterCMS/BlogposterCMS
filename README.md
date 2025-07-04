@@ -1,5 +1,6 @@
 [![Tests](https://github.com/m41130/BlogposterCMS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/m41130/BlogposterCMS/actions/workflows/ci.yml)
 ![ALPHA status](https://img.shields.io/badge/status-alpha-red)
+⚠️ This project is experimental alpha software. Expect breaking changes.
 
 # 🚀 BlogposterCMS
 **Composable Modular Sandbox**
@@ -55,7 +56,7 @@ If you enjoy using **BlogposterCMS** or find it valuable, consider supporting it
 Your support keeps the motivation high and the coffee flowing.
 >
 
-⚠️ This project is experimental alpha software. Expect breaking changes.
+
 
 ![BlogposterCMS logo](./BlogposterCMS/public/assets/logo/logo_blogposter_min_transparent.png)
 

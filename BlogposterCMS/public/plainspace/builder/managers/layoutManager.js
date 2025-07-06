@@ -11,7 +11,8 @@ export function applyLayout(layout, {
   allWidgets,
   layerIndex = 0,
   append = false,
-  iconMap = {}
+  iconMap = {},
+  selectWidget = null
 } = {}) {
   const DEFAULT_ROWS = 20;
   if (!append) {
@@ -47,7 +48,7 @@ export function applyLayout(layout, {
     attachRemoveButton(wrapper, grid, null, () => {});
     const editBtn = attachEditButton(wrapper, widgetDef, codeMap, null, () => {});
     attachOptionsMenu(wrapper, widgetDef, editBtn, { grid, pageId: null, scheduleAutosave: () => {}, activeLayer: layerIndex, codeMap, genId: () => instId });
-    attachLockOnClick(wrapper);
+    attachLockOnClick(wrapper, selectWidget);
     gridEl.appendChild(wrapper);
   grid.makeWidget(wrapper);
   renderWidget(wrapper, widgetDef, codeMap);

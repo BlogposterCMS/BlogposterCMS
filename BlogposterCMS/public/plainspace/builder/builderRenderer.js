@@ -15,7 +15,7 @@ import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 
-import { addHitLayer, applyBuilderTheme, wrapCss, executeJs } from './utils.js';
+import { applyBuilderTheme, wrapCss, executeJs } from './utils.js';
 import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';

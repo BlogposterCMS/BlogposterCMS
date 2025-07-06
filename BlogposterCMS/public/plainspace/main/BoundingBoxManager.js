@@ -31,34 +31,6 @@ export class BoundingBoxManager extends EventTarget {
     this.canvas.addEventListener('zoom', this._updateHandler, true);
   }
 
-  addHitLayer(widget) {
-    if (!widget || widget.querySelector('.hit-layer')) return null;
-    const shield = document.createElement('div');
-    shield.className = 'hit-layer';
-    Object.assign(shield.style, {
-      position: 'absolute',
-      inset: '0',
-      background: 'transparent',
-      cursor: 'move',
-      pointerEvents: 'auto',
-      zIndex: '5'
-    });
-    widget.style.position = 'relative';
-    widget.appendChild(shield);
-
-    const toggle = () => {
-      const editing = widget.classList.contains('editing');
-      const selected = widget.classList.contains('selected');
-      shield.style.pointerEvents = editing || selected ? 'none' : 'auto';
-      shield.style.cursor = editing ? 'text' : 'move';
-    };
-    widget.addEventListener('editStart', toggle);
-    widget.addEventListener('editEnd', toggle);
-    widget.addEventListener('selected', toggle);
-    widget.addEventListener('deselected', toggle);
-    return shield;
-  }
-
   setWidget(widget) {
     if (this.widget === widget) return;
     if (this.widget) {

@@ -30,6 +30,7 @@ El Psy Kongroo
 - Bounding boxes now update via a shared manager so selection outlines stay aligned during zoom and scroll.
 - Resize handles combine translation and scaling so they maintain consistent size at different zoom levels.
 - Text editor code split into modular files for easier maintenance.
+- Builder editor files reorganized under `core/` and `toolbar/` directories for clearer structure.
 - Editor entry point now exports specific functions explicitly for a clearer and safer API.
 - Editor and selection modules now register through `globalEvents` instead of attaching duplicate DOM listeners.
 

@@ -8,8 +8,8 @@ import {
   toggleStyle,
   getRegisteredEditable,
   applyToolbarChange
-} from './editor-core.js';
-import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from './selection.js';
+} from '../core/editor.js';
+import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from '../core/selection.js';
 
 let updateButtonStates = () => {};
 

@@ -1,4 +1,4 @@
-import { initGlobalEvents, onGlobalEvent } from '../../main/globalEvents.js';
+import { initGlobalEvents, onGlobalEvent } from '../../../main/globalEvents.js';
 
 let preservedRange = null;
 let activeEl = null; // placeholder, will be set by editor-core

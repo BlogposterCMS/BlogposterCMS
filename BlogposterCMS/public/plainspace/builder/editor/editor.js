@@ -6,14 +6,14 @@ export {
   setActiveElement,
   applyToolbarChange,
   getRegisteredEditable
-} from './editor-core.js';
+} from './core/editor.js';
 
-export { showToolbar, hideToolbar, initToolbar } from './toolbar.js';
-export { undoTextCommand, redoTextCommand, recordChange } from './history.js';
-export { sanitizeHtml } from './sanitizer.js';
+export { showToolbar, hideToolbar, initToolbar } from './toolbar/toolbar.js';
+export { undoTextCommand, redoTextCommand, recordChange } from './core/history.js';
+export { sanitizeHtml } from './core/sanitizer.js';
 export {
   saveSelection,
   restoreSelection,
   isSelectionStyled,
   initSelectionTracking
-} from './selection.js';
+} from './core/selection.js';

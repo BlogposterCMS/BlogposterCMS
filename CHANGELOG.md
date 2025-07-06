@@ -28,6 +28,7 @@ El Psy Kongroo
 - `meltdownEmit` now throttles requests to one per second to prevent 429 errors when multiple modules fire off events simultaneously.
 - Bounding boxes now update via a shared manager so selection outlines stay aligned during zoom and scroll.
 - Resize handles combine translation and scaling so they maintain consistent size at different zoom levels.
+- Text editor code split into modular files for easier maintenance.
 
 ### Fixed
 - Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.

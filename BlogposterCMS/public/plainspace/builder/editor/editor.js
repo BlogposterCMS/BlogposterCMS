@@ -1,5 +1,19 @@
-export * from './editor-core.js';
-export * from './toolbar.js';
-export * from './history.js';
-export * from './sanitizer.js';
-export * from './selection.js';
+export {
+  initTextEditor,
+  editElement,
+  registerElement,
+  enableAutoEdit,
+  setActiveElement,
+  applyToolbarChange,
+  getRegisteredEditable
+} from './editor-core.js';
+
+export { showToolbar, hideToolbar, initToolbar } from './toolbar.js';
+export { undoTextCommand, redoTextCommand, recordChange } from './history.js';
+export { sanitizeHtml } from './sanitizer.js';
+export {
+  saveSelection,
+  restoreSelection,
+  isSelectionStyled,
+  initSelectionTracking
+} from './selection.js';

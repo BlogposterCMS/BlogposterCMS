@@ -1,5 +1,5 @@
 //public//plainspace/builder/widgets/widgetRenderer.js
-import { addHitLayer, executeJs } from '../utils.js';
+import { executeJs } from '../utils.js';
 import { registerElement } from '../editor/editor.js';
 
 export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
@@ -59,5 +59,5 @@ export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
     .then(m => m.render?.(container, ctx))
     .catch(err => console.error('[Builder] widget import error', err));
 
-  if (widgetDef.id === 'textBox') addHitLayer(wrapper);
+
 }

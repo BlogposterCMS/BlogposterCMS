@@ -1,31 +1,5 @@
 //public//plainspace/builder/utils.js
 
-export function addHitLayer(widget) {
-  const shield = document.createElement('div');
-  shield.className = 'hit-layer';
-  Object.assign(shield.style, {
-    position: 'absolute',
-    inset: '0',
-    background: 'transparent',
-    cursor: 'move',
-    pointerEvents: 'auto', // default
-    zIndex: '5'
-  });
-  widget.style.position = 'relative';
-  widget.appendChild(shield);
-
-  // Toggle hit-layer interactivity based on widget state
-  const toggle = () => {
-    const editing  = widget.classList.contains('editing');
-    const selected = widget.classList.contains('selected');
-    shield.style.pointerEvents = editing || selected ? 'none' : 'auto';
-    shield.style.cursor = editing ? 'text' : 'move';
-  };
-  widget.addEventListener('editStart', toggle);
-  widget.addEventListener('editEnd', toggle);
-  widget.addEventListener('selected', toggle);
-  widget.addEventListener('deselected', toggle);
-}
 
 export function scopeThemeCss(css, rootPrefix, contentPrefix) {
   return css.replace(/(^|\})([^@{}]+)\{/g, (m, brace, selectors) => {

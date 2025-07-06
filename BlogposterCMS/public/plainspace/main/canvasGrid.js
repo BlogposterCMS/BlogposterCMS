@@ -120,6 +120,7 @@ export class CanvasGrid {
 
   makeWidget(el) {
     this._applyPosition(el);
+    this.bboxManager.addHitLayer(el);
     this._enableDrag(el);
     this.widgets.push(el);
     if (this.pushOnOverlap) this._resolveCollisions(el);

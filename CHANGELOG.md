@@ -25,6 +25,7 @@ El Psy Kongroo
 
 
 ### Improved
+- Hit layer creation now lives in `BoundingBoxManager` for unified grid interaction logic.
 - Bounding box overlay is now managed by a single instance emitting `widgetchange` events for cleaner communication.
 - `meltdownEmit` now throttles requests to one per second to prevent 429 errors when multiple modules fire off events simultaneously.
 - Bounding boxes now update via a shared manager so selection outlines stay aligned during zoom and scroll.

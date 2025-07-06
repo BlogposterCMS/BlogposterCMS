@@ -1,3 +1,5 @@
+import { initGlobalEvents, onGlobalEvent } from '../../main/globalEvents.js';
+
 let preservedRange = null;
 let activeEl = null; // placeholder, will be set by editor-core
 export function bindActiveElementGetter(getter) {
@@ -26,10 +28,11 @@ export function restoreSelection() {
 }
 
 export function initSelectionTracking() {
-  document.addEventListener('mouseup', saveSelection, true);
-  document.addEventListener('keyup', saveSelection, true);
-  document.addEventListener('touchend', saveSelection, true);
-  document.addEventListener('selectionchange', saveSelection, true);
+  initGlobalEvents(document);
+  onGlobalEvent('mouseup', saveSelection);
+  onGlobalEvent('keyup', saveSelection);
+  onGlobalEvent('touchend', saveSelection);
+  onGlobalEvent('selectionchange', saveSelection);
 }
 
 function styleMatches(val, prop, target, styleObj = null) {

@@ -3,6 +3,7 @@ import { isSelectionStyled, restoreSelection, saveSelection, bindActiveElementGe
 import { recordChange } from './history.js';
 import { initToolbar, showToolbar, hideToolbar } from './toolbar.js';
 import { isValidTag } from '../allowedTags.js';
+import { initGlobalEvents, onGlobalEvent } from '../../main/globalEvents.js';
 
 export const state = {
   toolbar: null,
@@ -215,7 +216,7 @@ export function editElement(el, onSave, clickEvent = null) {
     } else {
       hideToolbar();
     }
-    document.removeEventListener('mousedown', outsideClick, true);
+    removeOutside();
   }
 
   const outsideClick = ev => {
@@ -226,7 +227,7 @@ export function editElement(el, onSave, clickEvent = null) {
     ) return;
     finish(true);
   };
-  document.addEventListener('mousedown', outsideClick, true);
+  const removeOutside = onGlobalEvent('mousedown', outsideClick);
   el.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); finish(false); }
   });
@@ -254,6 +255,7 @@ export function getRegisteredEditable(widget) {
 
 export function enableAutoEdit() {
   if (state.autoHandler) return;
+  initGlobalEvents(document);
   state.autoHandler = ev => {
     if (!document.body.classList.contains('builder-mode')) return;
     if (state.toolbar && state.toolbar.contains(ev.target)) return;
@@ -269,7 +271,7 @@ export function enableAutoEdit() {
     ev.preventDefault();
     editElement(el, el.__onSave, ev);
   };
-  document.addEventListener('dblclick', state.autoHandler, true);
+  onGlobalEvent('dblclick', state.autoHandler);
 }
 
 export async function initTextEditor() {

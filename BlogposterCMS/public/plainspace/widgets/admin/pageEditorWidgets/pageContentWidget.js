@@ -192,6 +192,11 @@ export async function render(el) {
     reader.readAsText(file);
   }
 
+  const layoutMenu = document.createElement('div');
+  layoutMenu.className = 'layout-select-menu';
+  layoutMenu.style.display = 'none';
+  document.body.appendChild(layoutMenu);
+
   async function attachDesign() {
     let templates = [];
     try {
@@ -205,44 +210,86 @@ export async function render(el) {
     } catch (err) {
       console.warn('Failed to fetch layouts', err);
     }
-    const name = prompt('Select or enter layout name:\n' + templates.join('\n'), templates[0] || '');
-    if (!name) return;
-    if (page.html || page.meta?.layoutTemplate) {
-      const ok = confirm('Replace existing attached content?');
-      if (!ok) return;
+    if (!templates.length) {
+      alert('No layouts available');
+      return;
     }
-    const newMeta = { ...(page.meta || {}), layoutTemplate: name };
-    try {
-      await meltdownEmit('updatePage', {
-        jwt,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        pageId: page.id,
-        slug: page.slug,
-        status: page.status,
-        seo_image: page.seo_image || '',
-        parent_id: page.parent_id,
-        is_content: page.is_content,
-        lane: page.lane,
-        language: page.language,
-        title: page.title,
-        translations: [{
+
+    layoutMenu.innerHTML = '';
+    const select = document.createElement('select');
+    select.dataset.enhance = 'dropdown';
+    templates.forEach(name => {
+      const o = document.createElement('option');
+      o.value = name;
+      o.textContent = name;
+      select.appendChild(o);
+    });
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'confirm-layout-btn';
+    confirmBtn.textContent = 'Attach';
+    layoutMenu.appendChild(select);
+    layoutMenu.appendChild(confirmBtn);
+
+    const { default: enhanceSelects } = await import('/assets/js/customSelect.js');
+    enhanceSelects();
+
+    function closeMenu() {
+      layoutMenu.style.display = 'none';
+      document.removeEventListener('click', outside);
+    }
+    function outside(e) {
+      if (!layoutMenu.contains(e.target)) closeMenu();
+    }
+
+    layoutMenu.style.visibility = 'hidden';
+    const rect = addBtn.getBoundingClientRect();
+    layoutMenu.style.top = `${rect.bottom + 4}px`;
+    layoutMenu.style.left = `${rect.left}px`;
+    layoutMenu.style.display = 'block';
+    layoutMenu.style.visibility = '';
+    document.addEventListener('click', outside);
+
+    confirmBtn.addEventListener('click', async () => {
+      const name = select.value;
+      closeMenu();
+      if (!name) return;
+      if (page.html || page.meta?.layoutTemplate) {
+        const ok = confirm('Replace existing attached content?');
+        if (!ok) return;
+      }
+      const newMeta = { ...(page.meta || {}), layoutTemplate: name };
+      try {
+        await meltdownEmit('updatePage', {
+          jwt,
+          moduleName: 'pagesManager',
+          moduleType: 'core',
+          pageId: page.id,
+          slug: page.slug,
+          status: page.status,
+          seo_image: page.seo_image || '',
+          parent_id: page.parent_id,
+          is_content: page.is_content,
+          lane: page.lane,
           language: page.language,
           title: page.title,
-          html: '',
-          css: page.css || ''
-        }],
-        meta: newMeta
-      });
-      if (window.pageDataLoader) {
-        window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+          translations: [{
+            language: page.language,
+            title: page.title,
+            html: '',
+            css: page.css || ''
+          }],
+          meta: newMeta
+        });
+        if (window.pageDataLoader) {
+          window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+        }
+        page.meta = newMeta;
+        page.html = '';
+        renderList();
+      } catch (err) {
+        alert('Failed to attach design: ' + err.message);
       }
-      page.meta = newMeta;
-      page.html = '';
-      renderList();
-    } catch (err) {
-      alert('Failed to attach design: ' + err.message);
-    }
+    }, { once: true });
   }
 
   function hideMenu() {

@@ -43,6 +43,7 @@ El Psy Kongroo
 ### Fixed
 - Bounding box visibility now toggles exclusively via `BoundingBoxManager` to
   prevent duplicate DOM updates.
+- Bounding box now stays mounted when switching layers in the builder.
 - Builder grid now imports `BoundingBoxManager` directly so selection outlines
   display correctly.
 - Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.

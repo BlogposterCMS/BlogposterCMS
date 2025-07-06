@@ -1,3 +1,4 @@
+//public/plainspace/builder/managers/gridManager.js
 import { init as initCanvasGrid } from '../../main/canvasGrid.js';
 
 export function initGrid(gridEl, state, selectWidget) {

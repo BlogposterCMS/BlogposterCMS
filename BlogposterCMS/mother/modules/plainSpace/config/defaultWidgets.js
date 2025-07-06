@@ -28,6 +28,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     options: { height: 50, overflow: true, halfWidth: true }
   },
+
   {
     widgetId: 'contentSummary',
     widgetType: ADMIN_LANE,
@@ -42,7 +43,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Page Editor',
     content: '/plainspace/widgets/admin/pageEditorWidgets/pageEditorWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { thirdWidth: true }
   },
   {
     widgetId: 'pageContent',

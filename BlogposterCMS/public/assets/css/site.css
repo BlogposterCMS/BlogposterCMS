@@ -1589,7 +1589,7 @@ p {
   color: #555;
 }
 
-.layout-gallery {
+.layout-gallery, .uploaded-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
@@ -2209,54 +2209,74 @@ body.preview-desktop #content {
   background: var(--user-color, #333);
   border-radius: 50%;
   pointer-events: all;
+  transform: scale(var(--inv-scale));
 }
 .bounding-box .nw {
   top: -4px;
   left: -4px;
+  transform: translate(-50%, -50%) scale(var(--inv-scale));
   cursor: nwse-resize;
 }
 .bounding-box .n {
   top: -4px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--inv-scale));
   cursor: ns-resize;
 }
 .bounding-box .ne {
   top: -4px;
   right: -4px;
+  transform: translate(50%, -50%) scale(var(--inv-scale));
   cursor: nesw-resize;
 }
 .bounding-box .e {
   top: 50%;
   right: -4px;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--inv-scale));
   cursor: ew-resize;
 }
 .bounding-box .se {
   bottom: -4px;
   right: -4px;
+  transform: translate(50%, 50%) scale(var(--inv-scale));
   cursor: nwse-resize;
 }
 .bounding-box .s {
   bottom: -4px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--inv-scale));
   cursor: ns-resize;
 }
 .bounding-box .sw {
   bottom: -4px;
   left: -4px;
+  transform: translate(-50%, 50%) scale(var(--inv-scale));
   cursor: nesw-resize;
 }
 .bounding-box .w {
   top: 50%;
   left: -4px;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--inv-scale));
   cursor: ew-resize;
 }
 
 .bounding-box.disabled {
   display: none;
+}
+
+.selection-box {
+  position: absolute;
+  border: 1px dashed var(--user-color, #0aa);
+  transform-origin: 0 0;
+}
+
+.selection-box::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px solid currentColor;
+  transform: scale(var(--inv-scale));
+  pointer-events: none;
 }
 
 .hit-layer {
@@ -2432,14 +2452,33 @@ body.preview-desktop #content {
 }
 
 .page-content-widget .content-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
   color: var(--user-color);
+}
+
+.delete-content-btn {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.delete-content-btn:hover {
+  opacity: 1;
 }
 
 .page-content-widget .empty-state {
   color: #bbb;
   padding: 10px 0;
   text-align: center;
+}
+
+.attached-content {
+  margin-top: 20px;
 }
 
 /* =============================================================================

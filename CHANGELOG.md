@@ -31,6 +31,7 @@ El Psy Kongroo
 - Resize handles combine translation and scaling so they maintain consistent size at different zoom levels.
 - Text editor code split into modular files for easier maintenance.
 - Editor entry point now exports specific functions explicitly for a clearer and safer API.
+- Editor and selection modules now register through `globalEvents` instead of attaching duplicate DOM listeners.
 
 ### Fixed
 - Bounding box visibility now toggles exclusively via `BoundingBoxManager` to

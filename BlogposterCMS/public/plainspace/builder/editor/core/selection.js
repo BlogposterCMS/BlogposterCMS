@@ -1,6 +1,7 @@
 import { initGlobalEvents, onGlobalEvent } from '../../../main/globalEvents.js';
+import { styleMatches, elementHasStyle } from '../utils/styleUtils.js';
 
-let preservedRange = null;
+const preservedRanges = new WeakMap();
 let activeEl = null; // placeholder, will be set by editor-core
 export function bindActiveElementGetter(getter) {
   activeEl = getter;
@@ -14,16 +15,19 @@ export function saveSelection() {
     return;
 
   const sel = window.getSelection();
-  if (sel && sel.rangeCount && !sel.isCollapsed) {
-    preservedRange = sel.getRangeAt(0).cloneRange();
+  const el = activeEl && activeEl();
+  if (sel && el && sel.rangeCount && !sel.isCollapsed && el.contains(sel.anchorNode) && el.contains(sel.focusNode)) {
+    preservedRanges.set(el, sel.getRangeAt(0).cloneRange());
   }
 }
 
 export function restoreSelection() {
-  if (preservedRange) {
+  const el = activeEl && activeEl();
+  const range = el && preservedRanges.get(el);
+  if (range) {
     const sel = window.getSelection();
     sel.removeAllRanges();
-    sel.addRange(preservedRange);
+    sel.addRange(range);
   }
 }
 
@@ -35,24 +39,6 @@ export function initSelectionTracking() {
   onGlobalEvent('selectionchange', saveSelection);
 }
 
-function styleMatches(val, prop, target, styleObj = null) {
-   switch (prop) {
-     case 'textDecoration': {
-       const hasUnderline = String(val).includes('underline');
-       const wavy = styleObj && styleObj.textDecorationStyle === 'wavy';
-       return hasUnderline && !wavy;
-     }
-     case 'fontWeight': {
-       const num = parseInt(val, 10);
-       return val === 'bold' || (!isNaN(num) && num >= 600);
-     }
-     case 'fontStyle':
-       return /(italic|oblique)/.test(val);
-     default:
-       return String(val) === String(target);
-   }
- }
-
 export function isSelectionStyled(prop, value) {
   if (!activeEl()) return false;
   const el = activeEl();
@@ -63,10 +49,13 @@ export function isSelectionStyled(prop, value) {
     !el.contains(sel.anchorNode) ||
     !el.contains(sel.focusNode)
   ) {
-    const current = getComputedStyle(el)[prop];
-    return styleMatches(current, prop, value);
+    return elementHasStyle(el, prop, value);
   }
   const range = sel.getRangeAt(0);
+  if (sel.anchorNode === sel.focusNode) {
+    const node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+    return elementHasStyle(node, prop, value);
+  }
   let walkerRoot = range.commonAncestorContainer;
   if (walkerRoot.nodeType === 3) {
     walkerRoot = walkerRoot.parentNode;
@@ -87,8 +76,6 @@ export function isSelectionStyled(prop, value) {
   while (walker.nextNode()) {
     carriers.add(walker.currentNode.parentElement);
   }
-  return [...carriers].every(elm =>
-    styleMatches(getComputedStyle(elm)[prop], prop, value)
-  );
+  return [...carriers].every(elm => elementHasStyle(elm, prop, value));
 }
 

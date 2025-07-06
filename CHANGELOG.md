@@ -5,6 +5,11 @@ El Psy Kongroo
 
 ## [unreleased]
 
+### Changed
+- Editor selection is now stored per editor instance for improved reliability with multiple open editors.
+- `isSelectionStyled` skips TreeWalker creation for single-node selections, improving performance.
+- Style detection logic moved to `styleUtils.js` for clearer separation of concerns.
+
 ### Added
 * Attached page content now loads automatically, displaying uploaded HTML and attached layouts.
 * Page Content widget now lets admins detach uploaded files to switch layouts.

@@ -115,11 +115,6 @@ async function addWidget(def) {
 
   // Ensure newly added widgets show their bounding box while editing
   if (document.body.classList.contains('dashboard-edit-mode')) {
-    const box = wrapper.__bbox;
-    if (box) {
-      const locked = wrapper.getAttribute('gs-no-resize') === 'true' &&
-                     wrapper.getAttribute('gs-no-move') === 'true';
-      box.style.display = locked ? 'none' : 'block';
-    }
+    grid.select(wrapper);
   }
 }

@@ -1,37 +1,58 @@
 // public/plainspace/main/BoundingBoxManager.js
 import { localRect } from './grid-utils.js';
 
-export class BoundingBoxManager {
-  constructor(widget, canvas) {
-    this.widget = widget;
+export class BoundingBoxManager extends EventTarget {
+  constructor(canvas) {
+    super();
     this.canvas = canvas;
+    this.widget = null;
     this.MIN_W = 32;
     this.MIN_H = 32;
 
     this.box = document.createElement('div');
-    this.box.className = 'selection-box';
+    this.box.className = 'selection-box bounding-box';
     this.box.style.pointerEvents = 'none';
+    this.box.style.display = 'none';
     this.canvas.appendChild(this.box);
 
-    this._observeWidget();
-    this.update();
+    this.handles = {};
+    const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+    positions.forEach(p => {
+      const h = document.createElement('div');
+      h.className = `bbox-handle ${p}`;
+      h.dataset.pos = p;
+      this.box.appendChild(h);
+      this.handles[p] = h;
+    });
+
+    this._updateHandler = () => this.update();
+    this._ro = new ResizeObserver(this._updateHandler);
+    this.canvas.addEventListener('scroll', this._updateHandler, true);
+    this.canvas.addEventListener('zoom', this._updateHandler, true);
   }
 
-  _observeWidget() {
-    this._ro = new ResizeObserver(() => this.update());
-    this._ro.observe(this.widget);
-
-    this.widget.addEventListener('dragmove', () => this.update(), true);
-    this.widget.addEventListener('resizemove', () => this.update(), true);
-    this.canvas.addEventListener('scroll', () => this.update(), true);
-    this.canvas.addEventListener('zoom', () => this.update(), true);
-  }
-
-  disconnect() {
-    this._ro?.disconnect();
+  setWidget(widget) {
+    if (this.widget === widget) return;
+    if (this.widget) {
+      this.widget.removeEventListener('dragmove', this._updateHandler, true);
+      this.widget.removeEventListener('resizemove', this._updateHandler, true);
+      this._ro.unobserve(this.widget);
+    }
+    this.widget = widget;
+    if (widget) {
+      this._ro.observe(widget);
+      widget.addEventListener('dragmove', this._updateHandler, true);
+      widget.addEventListener('resizemove', this._updateHandler, true);
+      this.update();
+      this.show();
+    } else {
+      this.hide();
+    }
+    this.dispatchEvent(new CustomEvent('widgetchange', { detail: widget }));
   }
 
   update() {
+    if (!this.widget) return;
     const scale = parseFloat(
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
@@ -42,5 +63,18 @@ export class BoundingBoxManager {
     this.box.style.width = `${width}px`;
     this.box.style.height = `${height}px`;
     this.box.style.setProperty('--inv-scale', String(1 / scale));
+  }
+
+  show() {
+    this.box.style.display = 'block';
+  }
+
+  hide() {
+    this.box.style.display = 'none';
+  }
+
+  setDisabled(flag) {
+    this.box.classList.toggle('disabled', flag);
+    if (flag) this.hide();
   }
 }

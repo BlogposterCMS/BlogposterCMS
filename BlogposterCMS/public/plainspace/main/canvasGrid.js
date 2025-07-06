@@ -25,6 +25,9 @@ export class CanvasGrid {
     this.el.classList.add('canvas-grid');
     this.widgets = [];
     this.activeEl = null;
+    this.bboxManager = new BoundingBoxManager(this.el);
+    this.bbox = this.bboxManager.box;
+    this._bindResize();
     this._resizeObserver = new ResizeObserver(entries => {
       if (this.activeEl && entries.some(e => e.target === this.activeEl)) {
         this._updateBBox();
@@ -117,7 +120,6 @@ export class CanvasGrid {
 
   makeWidget(el) {
     this._applyPosition(el);
-    this._createBBox(el);
     this._enableDrag(el);
     this.widgets.push(el);
     if (this.pushOnOverlap) this._resolveCollisions(el);
@@ -139,10 +141,7 @@ export class CanvasGrid {
 
   removeWidget(el) {
     if (el.parentNode === this.el) {
-      if (el.__bboxManager) {
-        el.__bboxManager.disconnect?.();
-        el.__bboxManager.box?.remove();
-      }
+      if (this.activeEl === el) this.clearSelection();
       el.remove();
       this._updateGridHeight();
       this._emit('change', el);
@@ -167,32 +166,11 @@ export class CanvasGrid {
     this._emit('change', el);
   }
 
-  _createBBox(el) {
-    if (el.__bboxManager) return;
-    const manager = new BoundingBoxManager(el, this.el);
-    const bbox = manager.box;
-    bbox.classList.add('bounding-box');
-    bbox.style.display = 'none';
-
-    const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-    const handles = {};
-    positions.forEach(p => {
-      const h = document.createElement('div');
-      h.className = `bbox-handle ${p}`;
-      h.dataset.pos = p;
-      bbox.appendChild(h);
-      handles[p] = h;
-    });
-
-    this._bindResize(el, handles);
-    el.__bbox = bbox;
-    el.__bboxManager = manager;
-  }
-
-  _bindResize(el, handles) {
+  _bindResize() {
     let startX, startY, startW, startH, startGX, startGY, pos;
     const move = e => {
-      if (!this.activeEl || pos == null) return;
+      const el = this.activeEl;
+      if (!el || pos == null) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       let w = startW, h = startH;
@@ -206,7 +184,7 @@ export class CanvasGrid {
       const opts = { w: Math.round(w / this.options.columnWidth), h: Math.round(h / this.options.cellHeight) };
       if (pos.includes('w')) opts.x = gx;
       if (pos.includes('n')) opts.y = gy;
-      this.update(this.activeEl, opts);
+      this.update(el, opts);
       el.dispatchEvent(new Event('resizemove', { bubbles: true }));
     };
     const up = () => {
@@ -215,9 +193,10 @@ export class CanvasGrid {
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
     };
-    Object.values(handles).forEach(h => {
+    Object.values(this.bboxManager.handles).forEach(h => {
       h.addEventListener('mousedown', e => {
-        if (this.activeEl !== el || this.staticGrid) return;
+        const el = this.activeEl;
+        if (!el || this.staticGrid) return;
         if (el.getAttribute('gs-locked') === 'true' ||
             el.getAttribute('gs-no-resize') === 'true') {
           return;
@@ -325,29 +304,25 @@ export class CanvasGrid {
 
   _updateBBox() {
     if (!this.activeEl || this.staticGrid) return;
-    const manager = this.activeEl.__bboxManager;
-    const bbox = this.activeEl.__bbox;
-    if (!manager || !bbox) return;
+    const manager = this.bboxManager;
     manager.update();
     const noResize = this.activeEl.getAttribute('gs-no-resize') === 'true';
     const noMove = this.activeEl.getAttribute('gs-no-move') === 'true';
     const disabled = noResize && noMove;
-    bbox.classList.toggle('disabled', disabled);
-    bbox.style.display = disabled ? 'none' : 'block';
+    manager.setDisabled(disabled);
   }
 
   select(el) {
     if (this.activeEl) {
       this._resizeObserver.unobserve(this.activeEl);
       this.activeEl.classList.remove('selected');
-      if (this.activeEl.__bbox) this.activeEl.__bbox.style.display = 'none';
     }
     this.activeEl = el;
     if (el) {
       el.classList.add('selected');
       this._resizeObserver.observe(el);
-      if (el.__bbox) el.__bbox.style.display = 'block';
     }
+    this.bboxManager.setWidget(el);
     this._updateBBox();
   }
 
@@ -355,9 +330,9 @@ export class CanvasGrid {
     if (this.activeEl) {
       this._resizeObserver.unobserve(this.activeEl);
       this.activeEl.classList.remove('selected');
-      if (this.activeEl.__bbox) this.activeEl.__bbox.style.display = 'none';
     }
     this.activeEl = null;
+    this.bboxManager.setWidget(null);
   }
 
 

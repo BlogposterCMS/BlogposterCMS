@@ -25,12 +25,15 @@ El Psy Kongroo
 
 
 ### Improved
+- Bounding box overlay is now managed by a single instance emitting `widgetchange` events for cleaner communication.
 - `meltdownEmit` now throttles requests to one per second to prevent 429 errors when multiple modules fire off events simultaneously.
 - Bounding boxes now update via a shared manager so selection outlines stay aligned during zoom and scroll.
 - Resize handles combine translation and scaling so they maintain consistent size at different zoom levels.
 - Text editor code split into modular files for easier maintenance.
 
 ### Fixed
+- Bounding box visibility now toggles exclusively via `BoundingBoxManager` to
+  prevent duplicate DOM updates.
 - Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.
 - Builder now loads `html-to-image` on demand, preventing module errors outside the editor.
  - Selection boxes refresh during drag and resize and disconnect cleanly when widgets are removed.

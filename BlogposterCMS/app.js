@@ -23,7 +23,7 @@ const helmet       = require('helmet');
 const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
 const csurf        = require('csurf');
-const { apiLimiter, loginLimiter } = require('./mother/utils/rateLimiters');
+const { loginLimiter } = require('./mother/utils/rateLimiters');
 const crypto = require('crypto');
 const { sanitizeCookieName, sanitizeCookiePath, sanitizeCookieDomain } = require('./mother/utils/cookieUtils');
 const { isProduction, features } = require('./config/runtime');
@@ -273,8 +273,6 @@ function getModuleTokenForDbManager() {
   app.use(bodyParser.urlencoded({ extended: true, limit: bodyLimit }));
   app.use(cookieParser());
 
-  // Rate limiting provided by utils/rateLimiters.js
-
   // CSRF protection
   const csrfProtection = csurf({
     cookie: { httpOnly: true, sameSite: 'strict' }
@@ -352,7 +350,7 @@ function getModuleTokenForDbManager() {
 // 5) Meltdown API – proxy front-end requests into motherEmitter events
 // ──────────────────────────────────────────────────────────────────────────
 
-app.post('/api/meltdown', apiLimiter, async (req, res) => {
+app.post('/api/meltdown', async (req, res) => {
   // 1) Read event name first so we know if it is public
   const { eventName, payload = {} } = req.body || {};
   const PUBLIC_EVENTS = [
@@ -403,7 +401,7 @@ app.post('/api/meltdown', apiLimiter, async (req, res) => {
 });
 
 // Batch variant to reduce number of requests from the admin UI
-app.post('/api/meltdown/batch', apiLimiter, async (req, res) => {
+app.post('/api/meltdown/batch', async (req, res) => {
   const { events } = req.body || {};
   if (!Array.isArray(events)) {
     return res.status(400).json({ error: 'Invalid events array' });

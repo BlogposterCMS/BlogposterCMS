@@ -15,7 +15,11 @@ export function applyLayout(layout, {
 } = {}) {
   const DEFAULT_ROWS = 20;
   if (!append) {
-    gridEl.innerHTML = '';
+    if (grid && typeof grid.removeAll === 'function') {
+      grid.removeAll();
+    } else {
+      gridEl.innerHTML = '';
+    }
     Object.keys(codeMap).forEach(k => delete codeMap[k]);
   }
   layout.forEach(item => {

@@ -677,7 +677,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function applyCompositeLayout(idx) {
-    gridEl.innerHTML = '';
+    if (grid && typeof grid.removeAll === 'function') {
+      grid.removeAll();
+    } else {
+      gridEl.innerHTML = '';
+    }
     Object.keys(ensureCodeMap()).forEach(k => delete codeMap[k]);
     applyLayout(layoutLayers[0].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: false, layerIndex: 0, iconMap: ICON_MAP });
     if (idx !== 0) {

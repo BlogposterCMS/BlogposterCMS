@@ -37,7 +37,6 @@ El Psy Kongroo
 ### Fixed
 - Bounding box visibility now toggles exclusively via `BoundingBoxManager` to
   prevent duplicate DOM updates.
-- Clicking a widget in the builder now correctly selects it and displays the bounding box.
 - Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.
 - Builder now loads `html-to-image` on demand, preventing module errors outside the editor.
  - Selection boxes refresh during drag and resize and disconnect cleanly when widgets are removed.

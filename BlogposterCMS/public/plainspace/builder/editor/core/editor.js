@@ -1,9 +1,9 @@
 import { sanitizeHtml } from './sanitizer.js';
 import { isSelectionStyled, restoreSelection, saveSelection, bindActiveElementGetter } from './selection.js';
 import { recordChange } from './history.js';
-import { initToolbar, showToolbar, hideToolbar } from './toolbar.js';
-import { isValidTag } from '../allowedTags.js';
-import { initGlobalEvents, onGlobalEvent } from '../../main/globalEvents.js';
+import { initToolbar, showToolbar, hideToolbar } from '../toolbar/toolbar.js';
+import { isValidTag } from './allowedTags.js';
+import { initGlobalEvents, onGlobalEvent } from '../../../main/globalEvents.js';
 
 export const state = {
   toolbar: null,

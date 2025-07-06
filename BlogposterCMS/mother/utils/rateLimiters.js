@@ -10,14 +10,6 @@ const logLimitReached = (type) => (req, res, options) => {
   console.log(`[RateLimiter LIMIT REACHED] (${type}) IP: ${req.ip}, URL: ${req.originalUrl}`);
 };
 
-const apiLimiter = rateLimit({
-  windowMs: rate.api.windowMs,
-  max: rate.api.max,
-  message: rate.api.message,
-  standardHeaders: rate.api.standardHeaders,
-  legacyHeaders: rate.api.legacyHeaders
-});
-
 const loginLimiter = rateLimit({
   windowMs: rate.login.windowMs,
   max: rate.login.max,
@@ -26,4 +18,4 @@ const loginLimiter = rateLimit({
   legacyHeaders: rate.login.legacyHeaders
 });
 
-module.exports = { apiLimiter, loginLimiter };
+module.exports = { loginLimiter };

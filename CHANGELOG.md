@@ -14,6 +14,7 @@ El Psy Kongroo
 * Attached page content now loads automatically, displaying uploaded HTML and attached layouts.
 * Page Content widget now lets admins detach uploaded files to switch layouts.
 * Content Summary widget includes "Designs" and "Uploaded" tabs listing uploaded HTML pages separately.
+- Page Content widget offers a dropdown of available designs when attaching layouts.
 - Builder sidebar now features a collapsible text panel loaded from
   `builder/text-sidebar.html` with quick access to heading, subheading and body
   styles. The canvas scales down when the panel opens.

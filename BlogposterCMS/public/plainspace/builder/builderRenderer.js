@@ -683,12 +683,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   function markInactiveWidgets() {
     gridEl.querySelectorAll('.canvas-item').forEach(el => {
-      if (String(el.dataset.layer) !== String(activeLayer)) {
-        el.classList.add('inactive-layer');
+      const inactive = String(el.dataset.layer) !== String(activeLayer);
+      el.classList.toggle('inactive-layer', inactive);
+      if (inactive) {
         el.title = 'Change layer to edit this widget';
+        el.setAttribute('gs-no-move', 'true');
+        el.setAttribute('gs-no-resize', 'true');
       } else {
-        el.classList.remove('inactive-layer');
         el.removeAttribute('title');
+        el.removeAttribute('gs-no-move');
+        el.removeAttribute('gs-no-resize');
       }
     });
   }

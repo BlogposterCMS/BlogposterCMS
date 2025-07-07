@@ -490,6 +490,31 @@ body.builder-mode[data-active-layer="1"] .canvas-item[data-global="true"] {
   pointer-events: none;
 }
 
+body.builder-mode .canvas-item.inactive-layer {
+  opacity: 0.6;
+  position: relative;
+}
+
+body.builder-mode .canvas-item.inactive-layer::after {
+  content: 'change layer to edit this widget';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--color-text);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+body.builder-mode .canvas-item.inactive-layer:hover::after {
+  opacity: 1;
+}
+
 .builder-version {
   position: fixed;
   left: 0;

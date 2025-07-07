@@ -236,14 +236,17 @@ function ensureLayout(layout = {}, lane = 'public') {
   }
 }
 
-async function renderStaticGrid(target, layout, allWidgets, lane) {
-  if (!target) return;
-  const gridEl = document.createElement('div');
-  gridEl.className = 'canvas-grid';
-  target.appendChild(gridEl);
-  const columnWidth = 5;
-  const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
-  const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth, columns }, gridEl);
+async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
+  if (!target) return { gridEl: null, grid: null };
+  let { gridEl, grid, append = false } = opts;
+  if (!append || !gridEl || !grid) {
+    gridEl = document.createElement('div');
+    gridEl.className = 'canvas-grid';
+    target.appendChild(gridEl);
+    const columnWidth = 5;
+    const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
+    grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth, columns }, gridEl);
+  }
   const pending = [];
   for (const item of layout) {
     const def = allWidgets.find(w => w.id === item.widgetId);
@@ -286,6 +289,7 @@ async function renderStaticGrid(target, layout, allWidgets, lane) {
     renderWidget(content, def, item.code || null, lane);
     wrapper.classList.remove('loading');
   }
+  return { gridEl, grid };
 }
 
 async function renderAttachedContent(page, lane, allWidgets, container) {
@@ -501,6 +505,21 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     const allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
     window.availableWidgets = allWidgets;
 
+    let globalLayout = [];
+    try {
+      const glRes = await meltdownEmit('getGlobalLayoutTemplate', {
+        moduleName: 'plainspace',
+        moduleType: 'core',
+        ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN }),
+        lane
+      });
+      globalLayout = Array.isArray(glRes?.layout)
+        ? glRes.layout.map(l => Object.assign({}, l, { global: true }))
+        : [];
+    } catch (err) {
+      console.warn('[Renderer] failed to load global layout', err);
+    }
+
     // 8. PUBLIC PAGE: render widgets using stored layout in static grid
     if (lane !== 'admin') {
       if (config.layoutTemplate) {
@@ -517,8 +536,9 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         } catch (err) {
           console.warn('[Renderer] failed to load layout template', err);
         }
+        const combined = [...globalLayout, ...layoutArr];
         clearContentKeepHeader(contentEl);
-        await renderStaticGrid(contentEl, layoutArr, allWidgets, lane);
+        await renderStaticGrid(contentEl, combined, allWidgets, lane);
         await renderAttachedContent(page, lane, allWidgets, contentEl);
         return;
       }
@@ -544,8 +564,9 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
       // Temporary patch: start widgets larger by default
       const items = layout.length ? layout : (config.widgets || []).map((id, idx) => ({ id: `w${idx}`, widgetId: id, x:0,y:idx*2,w:8,h:4, code:null }));
+      const combined = [...globalLayout, ...items];
 
-      if (!items.length) {
+      if (!combined.length) {
         clearContentKeepHeader(contentEl);
         const msg = document.createElement('p');
         msg.className = 'empty-state';
@@ -563,7 +584,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth: 5 }, gridEl);
 
       const pending = [];
-      for (const item of items) {
+      for (const item of combined) {
         const def = allWidgets.find(w => w.id === item.widgetId);
         if (!def) continue;
         if (DEBUG) console.debug('[Renderer] render widget placeholder', def.id, item.id);
@@ -628,6 +649,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     if (DEBUG) console.debug('[Renderer] admin layoutRes', layoutRes);
 
     let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
+    const combinedAdmin = [...globalLayout, ...layout];
 
     clearContentKeepHeader(contentEl);
     const gridEl = document.createElement('div');
@@ -642,14 +664,14 @@ const grid = initCanvasGrid({ cellHeight: 5, columnWidth, columns, percentageMod
     window.adminPageContext = { pageId: page.id, lane };
     window.adminCurrentLayout = layout;
 
-    const widgetIdSet = new Set(layout.map(l => l.widgetId));
+    const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));
     for (const id of (config.widgets || [])) widgetIdSet.add(id);
     const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
 
     const pendingAdmin = [];
     for (const def of matchedWidgets) {
       if (DEBUG) console.debug('[Renderer] admin render widget placeholder', def.id);
-      const meta = layout.find(l => l.widgetId === def.id) || {};
+      const meta = combinedAdmin.find(l => l.widgetId === def.id) || {};
       const [x, y, w, h] = [meta.x ?? 0, meta.y ?? 0, meta.w ?? 8, meta.h ?? DEFAULT_ADMIN_ROWS];
 
       const wrapper = document.createElement('div');
@@ -700,7 +722,7 @@ const grid = initCanvasGrid({ cellHeight: 5, columnWidth, columns, percentageMod
     await renderAttachedContent(page, lane, allWidgets, contentEl);
 
     grid.on('change', () => {
-      const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
+      const items = Array.from(gridEl.querySelectorAll('.canvas-item')).filter(el => el.dataset.global !== 'true');
       const newLayout = items.map(el => ({
         id: el.dataset.instanceId,
         widgetId: el.dataset.widgetId,

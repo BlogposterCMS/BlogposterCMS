@@ -485,6 +485,11 @@ body.preview-desktop #content {
   z-index: 100;
 }
 
+body.builder-mode[data-active-layer="1"] .canvas-item[data-global="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .builder-version {
   position: fixed;
   left: 0;

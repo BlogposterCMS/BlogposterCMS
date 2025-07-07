@@ -80,10 +80,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let viewportSelect;
   const layoutLayers = [
     { name: 'Global', layout: [] },
-    { name: 'Layer 1', layout: [] },
-    { name: 'Layer 2', layout: [] }
+    { name: 'Layer 1', layout: [] }
   ];
-  let activeLayer = Math.max(0, Math.min(layoutLayers.length - 1, Number(startLayer) || 0));
+  const startLayerNum = Number(startLayer);
+  let activeLayer = Number.isFinite(startLayerNum)
+    ? Math.max(0, Math.min(layoutLayers.length - 1, startLayerNum))
+    : 1;
+  document.body.dataset.activeLayer = String(activeLayer);
   let globalLayoutName = null;
   let layoutBar;
   let globalToggle;
@@ -349,7 +352,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
 
 
-  layoutLayers[0].layout = initialLayout;
+  layoutLayers[1].layout = initialLayout;
   applyCompositeLayout(activeLayer);
   pushState(undoStack, redoStack, initialLayout);
 
@@ -693,6 +696,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (idx === activeLayer) return;
     saveActiveLayer();
     activeLayer = idx;
+    document.body.dataset.activeLayer = String(activeLayer);
     applyCompositeLayout(idx);
     updateLayoutBar();
   }

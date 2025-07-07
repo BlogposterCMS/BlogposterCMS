@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Changed
+- Builder now defaults to "Layer 1" when opening designs and loads the global layout behind it. The unused "Layer 2" option has been removed.
+- Global widgets now appear semi-transparent when editing the main layer so the global layout stays visible in the background.
+- Public pages now always combine the global layout with attached designs so shared widgets display everywhere.
 - Text block editor toolbar now renders inside the editable area and remains fixed when active.
 - ExecuteJs helper centralized in `script-utils.js` so builder and renderer share the same implementation.
 - Editor selection is now stored per editor instance for improved reliability with multiple open editors.

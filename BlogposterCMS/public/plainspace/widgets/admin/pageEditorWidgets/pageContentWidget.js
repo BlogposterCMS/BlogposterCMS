@@ -206,7 +206,9 @@ export async function render(el) {
         moduleType: 'core',
         lane: page.lane
       });
-      templates = Array.isArray(res?.templates) ? res.templates.map(t => t.name) : [];
+      templates = Array.isArray(res?.templates)
+        ? res.templates.filter(t => !t.isGlobal).map(t => t.name)
+        : [];
     } catch (err) {
       console.warn('Failed to fetch layouts', err);
     }

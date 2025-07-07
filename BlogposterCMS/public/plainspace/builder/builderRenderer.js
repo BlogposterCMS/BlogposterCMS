@@ -178,14 +178,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   });
 
   const textIcon = sidebarEl.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
-  const textSidebar = sidebarEl.querySelector('#textSidebar');
-  const collapseBtn = textSidebar?.querySelector('.collapse-btn');
-  if (textIcon && textSidebar && collapseBtn) {
+  const builderPanel = sidebarEl.querySelector('#builderPanel');
+  const collapseBtn = builderPanel?.querySelector('.collapse-btn');
+  if (textIcon && builderPanel && collapseBtn) {
     textIcon.addEventListener('click', () => {
-      document.body.classList.toggle('text-panel-open');
+      document.body.classList.toggle('panel-open');
     });
     collapseBtn.addEventListener('click', () => {
-      document.body.classList.remove('text-panel-open');
+      document.body.classList.remove('panel-open');
     });
   }
 

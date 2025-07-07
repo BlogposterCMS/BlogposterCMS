@@ -492,9 +492,14 @@ body.preview-desktop #content {
   z-index: 100;
 }
 
-body.builder-mode[data-active-layer="1"] .canvas-item[data-global="true"] {
+body.builder-mode .canvas-item[data-global="true"] {
   opacity: 0.6;
   pointer-events: none;
+}
+
+body.builder-mode[data-active-layer="0"] .canvas-item[data-global="true"] {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 body.builder-mode .canvas-item.inactive-layer {

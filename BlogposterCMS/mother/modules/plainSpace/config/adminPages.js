@@ -12,7 +12,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'empty-sidebar',
         inheritsLayout: true
       },
-      widgets: ['systemInfo', 'activityLog']
+      widgets: ['contentSummary', 'modulesList', 'pageStats']
     }
   },
   {

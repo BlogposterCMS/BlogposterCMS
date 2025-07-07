@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Changed
+- Admin Home page now shows `contentSummary`, `modulesList` and `pageStats` widgets instead of System Info and Activity Log.
 - Widgets from other layers are now locked against selection and movement while showing a hover message.
 - Widgets from other layers now display a translucent overlay and show a tooltip prompting to change layers when hovered.
 - Text editor toolbar now mounts at the top of the `#content` area instead of inside widgets.

@@ -3,11 +3,12 @@ export async function render(el) {
   const meltdownEmit = window.meltdownEmit;
 
   try {
-    const [title, desc, isMaint, pageId, pagesRes] = await Promise.all([
+    const [title, desc, isMaint, pageId, faviconUrl, pagesRes] = await Promise.all([
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'SITE_TITLE' }),
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'SITE_DESC' }),
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'MAINTENANCE_MODE' }),
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'MAINTENANCE_PAGE_ID' }),
+      meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'FAVICON_URL' }),
       meltdownEmit('getAllPages', { jwt, moduleName: 'pagesManager', moduleType: 'core' })
     ]);
 
@@ -110,10 +111,38 @@ export async function render(el) {
     pageDiv.appendChild(pageLabel);
     pageDiv.appendChild(pageSelect);
 
+    const favLabel = document.createElement('label');
+    favLabel.textContent = 'Favicon';
+    const favWrapper = document.createElement('div');
+    favWrapper.className = 'favicon-picker';
+    const favImg = document.createElement('img');
+    favImg.className = 'favicon-preview';
+    if (faviconUrl) favImg.src = faviconUrl;
+    const favBtn = document.createElement('button');
+    favBtn.type = 'button';
+    favBtn.textContent = 'Choose...';
+    favBtn.addEventListener('click', async () => {
+      try {
+        const { shareURL, cancelled } = await meltdownEmit('openMediaExplorer', { jwt });
+        if (!cancelled && shareURL) {
+          favImg.src = shareURL;
+          await meltdownEmit('setSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'FAVICON_URL', value: shareURL });
+        }
+      } catch (err) {
+        alert('Error selecting favicon: ' + err.message);
+      }
+    });
+    favWrapper.appendChild(favImg);
+    favWrapper.appendChild(favBtn);
+    const favDiv = document.createElement('div');
+    favDiv.appendChild(favLabel);
+    favDiv.appendChild(favWrapper);
+
     section.appendChild(titleDiv);
     section.appendChild(descDiv);
     section.appendChild(maintDiv);
     section.appendChild(pageDiv);
+    section.appendChild(favDiv);
 
     card.appendChild(section);
 

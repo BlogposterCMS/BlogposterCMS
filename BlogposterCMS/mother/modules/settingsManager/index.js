@@ -103,7 +103,11 @@ function setupSettingsListeners(motherEmitter) {
     }
   });
 
-  const PUBLIC_SETTING_KEYS = ['FIRST_INSTALL_DONE', 'ALLOW_REGISTRATION'];
+  const PUBLIC_SETTING_KEYS = [
+    'FIRST_INSTALL_DONE',
+    'ALLOW_REGISTRATION',
+    'FAVICON_URL'
+  ];
 
   // A2) getPublicSetting
   motherEmitter.on('getPublicSetting', (payload, originalCb) => {

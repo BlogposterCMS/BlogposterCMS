@@ -87,9 +87,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     ? Math.max(0, Math.min(layoutLayers.length - 1, startLayerNum))
     : 1;
   document.body.dataset.activeLayer = String(activeLayer);
-  let globalLayoutName = null;
   let layoutBar;
-  let globalToggle;
 
   function showPreviewHeader() {
     if (previewHeader) return;
@@ -314,7 +312,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           moduleType: 'core'
         });
         layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
-        globalLayoutName = globalRes?.name || null;
       } catch (err) {
         console.warn('[Builder] failed to load global layout', err);
       }
@@ -343,7 +340,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         moduleType: 'core'
       });
       layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
-      globalLayoutName = globalRes?.name || null;
     } catch (err) {
       console.warn('[Builder] failed to load global layout', err);
     }
@@ -598,7 +594,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         lane: 'public',
         viewport: 'desktop',
         layout,
-        isGlobal: globalToggle.checked,
         previewPath
       });
 
@@ -622,15 +617,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       }));
 
       await meltdownEmitBatch(events);
-
-      if (globalToggle.checked) {
-        await meltdownEmit('setGlobalLayoutTemplate', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core',
-          name
-        });
-      }
 
       alert('Layout template saved');
     } catch (err) {
@@ -730,16 +716,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       btn.addEventListener('click', () => switchLayer(idx));
       layoutBar.appendChild(btn);
     });
-    const toggleWrap = document.createElement('label');
-    toggleWrap.className = 'layout-global-toggle';
-    globalToggle = document.createElement('input');
-    globalToggle.type = 'checkbox';
-    globalToggle.id = 'layoutIsGlobal';
-    globalToggle.className = 'global-layout-toggle';
-    if (layoutName === globalLayoutName) globalToggle.checked = true;
-    toggleWrap.appendChild(globalToggle);
-    toggleWrap.append(' Global');
-    layoutBar.appendChild(toggleWrap);
     document.body.appendChild(layoutBar);
   }
 

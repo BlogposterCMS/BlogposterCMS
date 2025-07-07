@@ -2253,12 +2253,6 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
 .layout-bar .active {
   font-weight: 600;
 }
-.layout-bar .layout-global-toggle {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 
 .bounding-box {
   position: absolute;

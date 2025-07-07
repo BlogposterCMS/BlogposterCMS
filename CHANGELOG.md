@@ -70,6 +70,8 @@ El Psy Kongroo
 - Page Content widget now limits each page to a single attached design or HTML file and replaces existing content when uploading new attachments.
 - Page editor now loads attached HTML and layout metadata correctly after a page reload.
 
+- Builder grid now retains a fixed gap below the builder header so the toolbar doesn't shift the layout when activated.
+
 
 ### Removed
 - Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.

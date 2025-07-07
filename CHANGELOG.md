@@ -70,6 +70,7 @@ El Psy Kongroo
 - Public pages no longer render the widget grid when a layout template or HTML is attached.
 - Page Content widget now limits each page to a single attached design or HTML file and replaces existing content when uploading new attachments.
 - Page editor now loads attached HTML and layout metadata correctly after a page reload.
+- Page editor layout dropdown now lists lane-specific designs and hides the global layout.
 
 - Builder grid now retains a fixed gap below the builder header so the toolbar doesn't shift the layout when activated.
 

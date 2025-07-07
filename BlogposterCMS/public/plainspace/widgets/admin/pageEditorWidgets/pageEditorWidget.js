@@ -94,14 +94,17 @@ export async function render(el) {
       jwt,
       moduleName: 'plainspace',
       moduleType: 'core',
-      lane: 'public'
+      lane: page.lane
     });
-    templates = Array.isArray(res?.templates) ? res.templates : [];
+    templates = Array.isArray(res?.templates)
+      ? res.templates.filter(t => !t.isGlobal)
+      : [];
   } catch (err) {
     console.warn('Could not fetch layout templates', err);
   }
-  if (!templates.length) templates = ['default'];
-  templates.forEach(name => {
+  if (!templates.length) templates = [{ name: 'default' }];
+  templates.forEach(t => {
+    const name = t.name || t;
     const o = document.createElement('option');
     o.value = name;
     o.textContent = name;

@@ -4,11 +4,12 @@
    ============================================================================= */
 
 .text-block-editor-toolbar {
-  position: fixed;
-  top: 60px; // fixed just below the header
-  left: 96px; // align with builder grid offset
-  right: 0;
-  width: auto; // stretch across the grid
+  position: sticky;
+  top: 0; // stick to the top inside the editable area
+  left: 0;
+  width: max-content;
+  float: left; // ensure content flows next to the bar
+  margin-bottom: 4px;
   transform: none;
   display: flex;
   align-items: center;

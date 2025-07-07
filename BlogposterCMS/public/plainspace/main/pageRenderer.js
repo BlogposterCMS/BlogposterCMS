@@ -5,26 +5,12 @@ import { initBuilder } from '../builder/builderRenderer.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
 import { enableAutoEdit, sanitizeHtml } from '../builder/editor/editor.js';
 import { executeJs } from './script-utils.js';
+import { applyWidgetOptions } from './widgetOptions.js';
 
 // Default rows for admin widgets (~50px with 5px grid cells)
 // Temporary patch: double the default height for larger widgets
 const DEFAULT_ADMIN_ROWS = 20;
 
-function applyWidgetOptions(wrapper, opts = {}) {
-  if (!opts) return;
-  if (opts.max) wrapper.classList.add('max');
-  if (opts.maxWidth) wrapper.classList.add('max-width');
-  if (opts.maxHeight) wrapper.classList.add('max-height');
-  if (opts.halfWidth) wrapper.classList.add('half-width');
-  if (opts.thirdWidth) wrapper.classList.add('third-width');
-  if (typeof opts.width === 'number') {
-    wrapper.style.width = `${opts.width}%`;
-  }
-  if (typeof opts.height === 'number') {
-    wrapper.style.height = `${opts.height}%`;
-  }
-  if (opts.overflow) wrapper.classList.add('overflow');
-}
 
 function getGlobalCssUrl(lane) {
   if (lane === 'admin') return '/assets/css/site.css';
@@ -284,7 +270,7 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
         moduleType: 'core'
       });
       const opts = res?.content ? JSON.parse(res.content) : null;
-      applyWidgetOptions(wrapper, opts);
+      applyWidgetOptions(wrapper, opts, grid);
     } catch {}
     renderWidget(content, def, item.code || null, lane);
     wrapper.classList.remove('loading');
@@ -630,7 +616,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
             instanceId: `default.${def.id}`
           });
           const opts = res?.content ? JSON.parse(res.content) : null;
-          applyWidgetOptions(wrapper, opts);
+          applyWidgetOptions(wrapper, opts, grid);
         } catch {}
 
         renderWidget(content, def, item.code || null, lane);
@@ -714,7 +700,7 @@ const grid = initCanvasGrid({ cellHeight: 5, columnWidth, columns, percentageMod
           instanceId: `default.${def.id}`
         });
         const opts = res?.content ? JSON.parse(res.content) : null;
-        applyWidgetOptions(wrapper, opts);
+        applyWidgetOptions(wrapper, opts, grid);
       } catch {}
 
       renderWidget(content, def, meta.code || null, lane);

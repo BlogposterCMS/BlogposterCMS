@@ -1,20 +1,10 @@
 import { renderWidget } from '../builder/widgets/widgetRenderer.js';
+import { applyWidgetOptions } from '../main/widgetOptions.js';
 
 const DEFAULT_ADMIN_ROWS = 20;
 let overlay;
 let escBound = false;
 
-function applyWidgetOptions(wrapper, opts = {}) {
-  if (!opts) return;
-  if (opts.max)        wrapper.classList.add('max');
-  if (opts.maxWidth)   wrapper.classList.add('max-width');
-  if (opts.maxHeight)  wrapper.classList.add('max-height');
-  if (opts.halfWidth)  wrapper.classList.add('half-width');
-  if (opts.thirdWidth) wrapper.classList.add('third-width');
-  if (typeof opts.width  === 'number') wrapper.style.width  = `${opts.width}%`;
-  if (typeof opts.height === 'number') wrapper.style.height = `${opts.height}%`;
-  if (opts.overflow) wrapper.classList.add('overflow');
-}
 
 /* ─────────── Popup ⇢ open ─────────── */
 export async function showWidgetPopup() {
@@ -108,7 +98,7 @@ async function addWidget(def) {
       instanceId: `default.${def.id}`
     });
     instance = res?.content ? JSON.parse(res.content) : null;
-    applyWidgetOptions(wrapper, instance);        // apply max / width etc.
+    applyWidgetOptions(wrapper, instance, grid);        // apply max / width etc.
   } catch { /* ignore */ }
 
   renderWidget(wrapper, def, null, instance);

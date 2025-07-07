@@ -1269,6 +1269,12 @@ switch (operation) {
       await client.query(`UPDATE plainspace.layout_templates SET is_global = (name = $1)` , [d.name]);
       return { success: true };
     }
+
+    case 'DELETE_LAYOUT_TEMPLATE': {
+      const d = params[0] || {};
+      await client.query(`DELETE FROM plainspace.layout_templates WHERE name = $1`, [d.name]);
+      return { success: true };
+    }
     
     case 'GET_PLAINSPACE_LAYOUT': {
       // "params" => { pageId, lane, viewport }

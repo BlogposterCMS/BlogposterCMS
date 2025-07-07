@@ -88,6 +88,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     : 1;
   document.body.dataset.activeLayer = String(activeLayer);
   let layoutBar;
+  let globalLayoutName = null;
 
   function showPreviewHeader() {
     if (previewHeader) return;
@@ -195,7 +196,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
     updateAllWidgetContents,
-    getCurrentLayout: () => getCurrentLayout(gridEl, ensureCodeMap()),
+    getCurrentLayout: () => getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap()),
     pushState,
     meltdownEmit,
     pageId,
@@ -312,6 +313,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           moduleType: 'core'
         });
         layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
+        globalLayoutName = globalRes?.name || null;
       } catch (err) {
         console.warn('[Builder] failed to load global layout', err);
       }
@@ -340,6 +342,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         moduleType: 'core'
       });
       layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
+      globalLayoutName = globalRes?.name || null;
     } catch (err) {
       console.warn('[Builder] failed to load global layout', err);
     }
@@ -584,7 +587,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const name = nameInput.value.trim();
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
-    const layout = getCurrentLayout(gridEl, ensureCodeMap());
+    const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
     const previewPath = await capturePreview();
     try {
       await meltdownEmit('saveLayoutTemplate', {
@@ -670,13 +673,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function markInactiveWidgets() {
     gridEl.querySelectorAll('.canvas-item').forEach(el => {
       const inactive = String(el.dataset.layer) !== String(activeLayer);
-      el.classList.toggle('inactive-layer', inactive);
-      if (inactive) {
+      const isGlobal = el.dataset.global === 'true';
+      if (inactive && !isGlobal) {
+        el.classList.add('inactive-layer');
         el.title = 'Change layer to edit this widget';
+      } else {
+        el.classList.remove('inactive-layer');
+        el.removeAttribute('title');
+      }
+      if (inactive) {
         el.setAttribute('gs-no-move', 'true');
         el.setAttribute('gs-no-resize', 'true');
       } else {
-        el.removeAttribute('title');
         el.removeAttribute('gs-no-move');
         el.removeAttribute('gs-no-resize');
       }
@@ -707,6 +715,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function buildLayoutBar() {
+    if (layoutName === globalLayoutName) return;
     layoutBar = document.createElement('div');
     layoutBar.className = 'layout-bar';
     layoutLayers.forEach((layer, idx) => {

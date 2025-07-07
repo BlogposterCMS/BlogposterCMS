@@ -373,11 +373,15 @@ body.builder-mode.panel-open .builder-panel {
 body.builder-mode.panel-open #builderGrid {
   transform: scale(0.9);
   transform-origin: top left;
+  margin-top: 56px;
+  height: calc(100% - 56px);
+  min-height: calc(100% - 56px);
 }
 
 body.builder-mode #builderGrid {
-  height: 100%;
-  min-height: 100%;
+  margin-top: 56px;
+  height: calc(100% - 56px);
+  min-height: calc(100% - 56px);
 }
 
 // Ensure themed widget content matches its wrapper dimensions
@@ -408,6 +412,9 @@ body.preview-mode .builder-header .layout-info {
 
 body.preview-mode #builderGrid {
   pointer-events: none;
+  margin-top: 56px;
+  height: calc(100% - 56px);
+  min-height: calc(100% - 56px);
 }
 
 body.preview-mode #content {

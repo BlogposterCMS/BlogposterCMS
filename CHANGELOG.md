@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Changed
+- Text block editor toolbar now renders inside the editable area and remains fixed when active.
 - ExecuteJs helper centralized in `script-utils.js` so builder and renderer share the same implementation.
 - Editor selection is now stored per editor instance for improved reliability with multiple open editors.
 - `isSelectionStyled` skips TreeWalker creation for single-node selections, improving performance.

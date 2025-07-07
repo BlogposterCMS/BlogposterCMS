@@ -390,6 +390,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
 export function showToolbar() {
   if (!state.toolbar) return;
+  if (state.activeEl && state.activeEl.parentElement) {
+    const host = state.activeEl.parentElement;
+    if (state.toolbar.parentElement !== host) {
+      host.insertBefore(state.toolbar, host.firstChild);
+    }
+  }
   state.toolbar.style.display = 'flex';
   updateButtonStates();
 }
@@ -397,6 +403,10 @@ export function showToolbar() {
 export function hideToolbar() {
   if (!state.toolbar) return;
   state.toolbar.style.display = 'none';
+  if (state.toolbar.parentElement && state.toolbar.parentElement !== document.body) {
+    state.toolbar.remove();
+    document.body.appendChild(state.toolbar);
+  }
   const headingSelect = state.toolbar.querySelector('.heading-select');
   if (headingSelect) {
     headingSelect.style.display = 'none';

@@ -211,3 +211,14 @@
 .uploaded-gallery {
   @extend .layout-gallery;
 }
+
+.layout-section-title {
+  grid-column: 1 / -1;
+  font-weight: 600;
+  margin: 8px 0 4px;
+  font-size: 0.95rem;
+}
+
+.global-layout {
+  box-shadow: 0 0 0 2px var(--user-color);
+}

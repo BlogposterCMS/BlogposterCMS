@@ -498,7 +498,12 @@ function registerPlainSpaceEvents(motherEmitter) {
         },
         (err, rows = []) => {
           if (err) return cb(err);
-          const templates = rows.map(r => ({ name: r.name, previewPath: r.preview_path || '', isGlobal: !!r.is_global }));
+          const templates = rows.map(r => ({
+            name: r.name,
+            previewPath: r.preview_path || '',
+            isGlobal: !!r.is_global,
+            updatedAt: r.updated_at || null
+          }));
           cb(null, { templates });
         }
       );

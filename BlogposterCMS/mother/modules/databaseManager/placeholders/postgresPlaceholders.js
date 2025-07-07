@@ -1246,10 +1246,10 @@ switch (operation) {
     case 'GET_PLAINSPACE_LAYOUT_TEMPLATE_NAMES': {
       const d = params[0] || {};
       const result = await client.query(`
-        SELECT name, preview_path, is_global
+        SELECT name, preview_path, is_global, updated_at
           FROM plainspace.layout_templates
          WHERE lane = $1
-         ORDER BY name ASC
+         ORDER BY updated_at DESC
       `, [d.lane]);
       return result.rows;
     }

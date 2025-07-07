@@ -1119,9 +1119,9 @@ case 'GET_PLAINSPACE_LAYOUT_TEMPLATE': {
 case 'GET_PLAINSPACE_LAYOUT_TEMPLATE_NAMES': {
   const { lane } = params?.[0] ?? {};
   const rows = await db.all(`
-    SELECT name, preview_path, is_global FROM plainspace_layout_templates
+    SELECT name, preview_path, is_global, updated_at FROM plainspace_layout_templates
      WHERE lane = ?
-     ORDER BY name ASC;
+     ORDER BY updated_at DESC;
   `, [lane]);
   return rows;
 }

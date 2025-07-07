@@ -446,9 +446,11 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       // Pass page IDs as strings so MongoDB ObjectIds remain intact. Postgres
       // will cast numeric strings automatically.
       const pageIdParam = urlParams.get('pageId') || null;
-      const startLayerParam = parseInt(urlParams.get('layer'), 10);
-      const startLayer = Number.isFinite(startLayerParam) ? startLayerParam : 0;
       const layoutNameParam = urlParams.get('layout') || null;
+      const startLayerParam = parseInt(urlParams.get('layer'), 10);
+      const startLayer = Number.isFinite(startLayerParam)
+        ? startLayerParam
+        : (layoutNameParam ? 1 : 0);
 
       await initBuilder(sidebarEl, contentEl, pageIdParam, startLayer, layoutNameParam);
 

@@ -21,27 +21,5 @@ export async function createNewPage() {
   } catch (err) {
     alert('Error: ' + err.message);
   }
+  window.createNewPage = createNewPage;
 }
-
-export async function createNewLayout() {
-  const layoutName = prompt('New layout name:');
-  if (!layoutName) return;
-  try {
-    await window.meltdownEmit('saveLayoutTemplate', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      name: layoutName.trim(),
-      lane: 'public',
-      viewport: 'desktop',
-      layout: [],
-      previewPath: ''
-    });
-    window.location.href = `/admin/builder?layout=${encodeURIComponent(layoutName.trim())}`;
-  } catch (err) {
-    alert('Error: ' + err.message);
-  }
-}
-
-window.createNewPage = createNewPage;
-window.createNewLayout = createNewLayout;

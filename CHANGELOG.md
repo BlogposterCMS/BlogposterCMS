@@ -66,6 +66,7 @@ El Psy Kongroo
 ### Fixed
 - Bounding box dimensions now read the widget's DOM size before display so first-seeded widgets render correctly.
 - Bounding box now generates inside each widget so it always matches the widget size in the builder and dashboard.
+- Canvas grid columns now clamp to the container width so widgets can't be dragged outside the grid.
 
 
 ## [0.6.2] 2025-07-02

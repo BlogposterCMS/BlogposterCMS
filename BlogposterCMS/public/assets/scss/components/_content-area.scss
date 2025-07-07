@@ -16,7 +16,8 @@
   min-height: 300px;
   position: relative;
   background: var(--color-bg);
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: visible;
   height: auto;
 }
 .canvas-item {

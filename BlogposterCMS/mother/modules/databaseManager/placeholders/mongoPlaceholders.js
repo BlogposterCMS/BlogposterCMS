@@ -1257,8 +1257,8 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     const d = params[0] || {};
     const docs = await db.collection('plainspace_layout_templates')
         .find({ lane: d.lane })
-        .project({ name: 1, preview_path: 1, is_global: 1, _id: 0 })
-        .sort({ name: 1 })
+        .project({ name: 1, preview_path: 1, is_global: 1, updated_at: 1, _id: 0 })
+        .sort({ updated_at: -1 })
         .toArray();
     return docs;
     }

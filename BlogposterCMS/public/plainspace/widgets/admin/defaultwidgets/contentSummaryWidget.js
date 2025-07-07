@@ -62,27 +62,27 @@ export async function render(el) {
   uploadList.className = 'layout-gallery uploaded-gallery';
   uploadList.style.display = 'none';
 
-  if (templates.length) {
-    templates.forEach(t => {
-      const item = document.createElement('div');
-      item.className = 'layout-gallery-item';
-      item.addEventListener('click', () => {
-        window.location.href = `/admin/builder?layout=${encodeURIComponent(t.name)}`;
-      });
+  function createItem(t) {
+    const item = document.createElement('div');
+    item.className = 'layout-gallery-item' + (t.isGlobal ? ' global-layout' : '');
+    item.addEventListener('click', () => {
+      window.location.href = `/admin/builder?layout=${encodeURIComponent(t.name)}`;
+    });
 
-      const menuBtn = document.createElement('button');
-      menuBtn.className = 'layout-menu-btn';
-      menuBtn.innerHTML = window.featherIcon
-        ? window.featherIcon('more-horizontal')
-        : '<img src="/assets/icons/more-horizontal.svg" class="icon" alt="menu" />';
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'layout-menu-btn';
+    menuBtn.innerHTML = window.featherIcon
+      ? window.featherIcon('more-horizontal')
+      : '<img src="/assets/icons/more-horizontal.svg" class="icon" alt="menu" />';
 
-      const menu = document.createElement('div');
-      menu.className = 'layout-card-menu';
-      menu.innerHTML = `
-        <div class="menu-item open-layout">${window.featherIcon ? window.featherIcon('external-link') : '<img class="icon" src="/assets/icons/external-link.svg" alt="open" />'} Open in new tab</div>
-        <div class="menu-item copy-layout">${window.featherIcon ? window.featherIcon('copy') : '<img class="icon" src="/assets/icons/copy.svg" alt="copy" />'} Copy layout</div>
-        <div class="menu-item delete-layout">${window.featherIcon ? window.featherIcon('trash') : '<img class="icon" src="/assets/icons/trash.svg" alt="delete" />'} Delete</div>
-      `;
+    const menu = document.createElement('div');
+    menu.className = 'layout-card-menu';
+    menu.innerHTML = `
+      <div class="menu-item open-layout">${window.featherIcon ? window.featherIcon('external-link') : '<img class="icon" src="/assets/icons/external-link.svg" alt="open" />'} Open in new tab</div>
+      <div class="menu-item copy-layout">${window.featherIcon ? window.featherIcon('copy') : '<img class="icon" src="/assets/icons/copy.svg" alt="copy" />'} Copy layout</div>
+      <div class="menu-item set-global">${window.featherIcon ? window.featherIcon('star') : '<img class="icon" src="/assets/icons/star.svg" alt="global" />'} Set as global</div>
+      <div class="menu-item delete-layout">${window.featherIcon ? window.featherIcon('trash') : '<img class="icon" src="/assets/icons/trash.svg" alt="delete" />'} Delete</div>
+    `;
       menuBtn.addEventListener('click', e => {
         e.stopPropagation();
         menu.classList.toggle('open');
@@ -126,8 +126,29 @@ export async function render(el) {
         menu.classList.remove('open');
       };
 
+      menu.querySelector('.set-global').onclick = async ev => {
+        ev.stopPropagation();
+        try {
+          await meltdownEmit('setGlobalLayoutTemplate', {
+            jwt,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            name: t.name
+          });
+          alert('Global layout updated');
+        } catch (err) {
+          alert('Failed to set global: ' + err.message);
+        }
+        menu.classList.remove('open');
+      };
+
       menu.querySelector('.delete-layout').onclick = async ev => {
         ev.stopPropagation();
+        if (t.isGlobal) {
+          alert('Global layout cannot be deleted. Set another design as global first.');
+          menu.classList.remove('open');
+          return;
+        }
         if (!confirm('Delete this layout?')) { menu.classList.remove('open'); return; }
         try {
           await meltdownEmit('deleteLayoutTemplate', {
@@ -143,21 +164,42 @@ export async function render(el) {
         menu.classList.remove('open');
       };
 
-      const img = document.createElement('img');
-      img.className = 'layout-gallery-preview';
-      img.alt = `${t.name} preview`;
-      img.src = t.previewPath || '/assets/icons/file.svg';
+    const img = document.createElement('img');
+    img.className = 'layout-gallery-preview';
+    img.alt = `${t.name} preview`;
+    img.src = t.previewPath || '/assets/icons/file.svg';
 
-      const span = document.createElement('span');
-      span.className = 'layout-gallery-name';
-      span.textContent = t.name;
+    const span = document.createElement('span');
+    span.className = 'layout-gallery-name';
+    span.textContent = t.name;
 
-      item.appendChild(menuBtn);
-      item.appendChild(menu);
-      item.appendChild(img);
-      item.appendChild(span);
-      designList.appendChild(item);
-    });
+    item.appendChild(menuBtn);
+    item.appendChild(menu);
+    item.appendChild(img);
+    item.appendChild(span);
+    return item;
+  }
+
+  if (templates.length) {
+    const globalTemplate = templates.find(t => t.isGlobal);
+    const others = templates.filter(t => !t.isGlobal);
+    others.sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+
+    if (globalTemplate) {
+      const section = document.createElement('div');
+      section.className = 'layout-section-title';
+      section.textContent = 'Global Layout';
+      designList.appendChild(section);
+      designList.appendChild(createItem(globalTemplate));
+    }
+
+    if (others.length) {
+      const section = document.createElement('div');
+      section.className = 'layout-section-title';
+      section.textContent = 'Recent Designs';
+      designList.appendChild(section);
+      others.forEach(t => designList.appendChild(createItem(t)));
+    }
   } else {
     const empty = document.createElement('div');
     empty.className = 'empty-state';

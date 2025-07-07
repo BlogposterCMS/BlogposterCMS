@@ -91,6 +91,38 @@ module.exports = {
         console.error('[plainSpace] Could not create "plainspace.layout_templates" table:', err.message);
       });
 
+      // Ensure a global layout exists
+      try {
+        const globalRes = await meltdownEmit(motherEmitter, 'getGlobalLayoutTemplate', {
+          jwt,
+          moduleName: MODULE,
+          moduleType: 'core'
+        });
+        if (!globalRes?.name) {
+          const name = 'global-layout';
+          await meltdownEmit(motherEmitter, 'saveLayoutTemplate', {
+            jwt,
+            moduleName: MODULE,
+            moduleType: 'core',
+            name,
+            lane: PUBLIC_LANE,
+            viewport: 'desktop',
+            layout: [],
+            previewPath: '',
+            isGlobal: true
+          });
+          await meltdownEmit(motherEmitter, 'setGlobalLayoutTemplate', {
+            jwt,
+            moduleName: MODULE,
+            moduleType: 'core',
+            name
+          });
+          console.log('[plainSpace] Default global layout created.');
+        }
+      } catch (err) {
+        console.error('[plainSpace] Failed to ensure global layout:', err.message);
+      }
+
       await meltdownEmit(motherEmitter, 'dbUpdate', {
         jwt,
         moduleName: MODULE,

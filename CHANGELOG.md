@@ -17,6 +17,7 @@ El Psy Kongroo
   (`builder/text-panel.html`) loads by default when clicking the text widget.
 
 ### Added
+* Layout gallery now shows the global design in its own section and lists recent designs below. A default global layout is created if none exists.
 * Attached page content now loads automatically, displaying uploaded HTML and attached layouts.
 * Page Content widget now lets admins detach uploaded files to switch layouts.
 * Content Summary widget includes "Designs" and "Uploaded" tabs listing uploaded HTML pages separately.

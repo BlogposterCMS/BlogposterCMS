@@ -1,4 +1,5 @@
 //public//plainspace/builder/utils.js
+import { executeJs as exec } from '../main/script-utils.js';
 
 export function addHitLayer(widget) {
   const shield = document.createElement('div');
@@ -64,36 +65,5 @@ export function wrapCss(css, selector) {
 }
 
 export function executeJs(code, wrapper, root) {
-  if (!code) return;
-  const nonce = window.NONCE;
-  if (!nonce) {
-    console.error('[Builder] missing nonce');
-    return;
-  }
-  code = code.trim();
-  if (/^import\s|^export\s/m.test(code)) {
-    const blob = new Blob([code], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    import(url).then(m => {
-      if (typeof m.render === 'function') {
-        try { m.render.call(wrapper, root); } catch (err) {
-          console.error('[Builder] module render error', err);
-        }
-      }
-      URL.revokeObjectURL(url);
-    }).catch(err => {
-      console.error('[Builder] module import error', err);
-      URL.revokeObjectURL(url);
-    });
-    return;
-  }
-  window.__builderRoot = root;
-  window.__builderWrapper = wrapper;
-  const script = document.createElement('script');
-  script.setAttribute('nonce', nonce);
-  script.textContent = `(function(root){\n${code}\n}).call(window.__builderWrapper, window.__builderRoot);`;
-  document.body.appendChild(script);
-  script.remove();
-  delete window.__builderRoot;
-  delete window.__builderWrapper;
+  exec(code, wrapper, root, 'Builder');
 }

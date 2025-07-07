@@ -6,9 +6,12 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Changed
+- ExecuteJs helper centralized in `script-utils.js` so builder and renderer share the same implementation.
 - Editor selection is now stored per editor instance for improved reliability with multiple open editors.
 - `isSelectionStyled` skips TreeWalker creation for single-node selections, improving performance.
 - Style detection logic moved to `styleUtils.js` for clearer separation of concerns.
+- Canvas grid now uses shared utilities for snapping and collision checks, removing redundant code.
+- Canvas grid documentation covers shared grid utility helpers.
 
 ### Added
 * Attached page content now loads automatically, displaying uploaded HTML and attached layouts.

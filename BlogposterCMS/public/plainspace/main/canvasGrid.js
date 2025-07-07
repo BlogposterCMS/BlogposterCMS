@@ -2,6 +2,7 @@
 // Lightweight drag & resize grid for the builder
 import { bindGlobalListeners } from './globalEvents.js';
 import { BoundingBoxManager } from './BoundingBoxManager.js';
+import { snapToGrid, elementRect, rectsCollide } from './grid-utils.js';
 
 export class CanvasGrid {
   constructor(options = {}, el) {
@@ -222,8 +223,7 @@ export class CanvasGrid {
       if (!dragging) return;
       targetX = startGX * this.options.columnWidth + (e.clientX - startX);
       targetY = startGY * this.options.cellHeight + (e.clientY - startY);
-      const snap = this._snap(targetX, targetY);
-      console.log(`Dragging auf X: ${snap.x}, Y: ${snap.y}`);
+      const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
       el.style.transform =
         `translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`;
       this._updateBBox();
@@ -233,8 +233,7 @@ export class CanvasGrid {
       dragging = false;
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
-      const snap = this._snap(targetX, targetY);
-      console.log(`Finale Position gespeichert: translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`);
+      const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
       this.update(el, { x: snap.x, y: snap.y });
       this._emit('dragstop', el);
     };
@@ -256,38 +255,16 @@ export class CanvasGrid {
     });
   }
 
-  _snap(x, y) {
-    const gx = Math.round(x / this.options.columnWidth);
-    const gy = Math.round(y / this.options.cellHeight);
-    return { x: gx, y: gy };
-  }
-
-  _getRect(el) {
-    return {
-      x: +el.dataset.x || 0,
-      y: +el.dataset.y || 0,
-      w: +el.getAttribute('gs-w') || 1,
-      h: +el.getAttribute('gs-h') || 1
-    };
-  }
-
-  _collides(a, b) {
-    return !(
-      b.x >= a.x + a.w ||
-      b.x + b.w <= a.x ||
-      b.y >= a.y + a.h ||
-      b.y + b.h <= a.y
-    );
-  }
+  // snapToGrid, elementRect and rectsCollide are imported from grid-utils.js
 
   _pushWidget(widget, moved = new Set()) {
     if (moved.has(widget)) return;
     moved.add(widget);
-    const rect = this._getRect(widget);
+    const rect = elementRect(widget);
     this.widgets.forEach(other => {
       if (other === widget) return;
-      const oRect = this._getRect(other);
-      if (this._collides(rect, oRect)) {
+      const oRect = elementRect(other);
+      if (rectsCollide(rect, oRect)) {
         const newY = rect.y + rect.h;
         if (oRect.y < newY) {
           other.dataset.y = newY;

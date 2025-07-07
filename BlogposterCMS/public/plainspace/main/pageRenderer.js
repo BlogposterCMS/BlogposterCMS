@@ -4,6 +4,7 @@ import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { initBuilder } from '../builder/builderRenderer.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
 import { enableAutoEdit, sanitizeHtml } from '../builder/editor/editor.js';
+import { executeJs } from './script-utils.js';
 
 // Default rows for admin widgets (~50px with 5px grid cells)
 // Temporary patch: double the default height for larger widgets
@@ -81,42 +82,6 @@ function createDebouncedEmitter(delay = 150) {
 
 const emitDebounced = createDebouncedEmitter(100);
 
-function executeJs(code, wrapper, root) {
-  if (!code) return;
-  const nonce = window.NONCE;
-  if (!nonce) {
-    console.error('[Renderer] missing nonce');
-    return;
-  }
-  code = code.trim();
-  // If the code contains ES module syntax, run it via dynamic import
-  if (/^import\s|^export\s/m.test(code)) {
-    const blob = new Blob([code], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    import(url).then(m => {
-      if (typeof m.render === 'function') {
-        try { m.render.call(wrapper, root); } catch (err) {
-          console.error('[Renderer] module render error', err);
-        }
-      }
-      URL.revokeObjectURL(url);
-    }).catch(err => {
-      console.error('[Renderer] module import error', err);
-      URL.revokeObjectURL(url);
-    });
-    return;
-  }
-  window.__rendererRoot = root;
-  window.__rendererWrapper = wrapper;
-  const script = document.createElement('script');
-  script.setAttribute('nonce', nonce);
-  script.textContent = `(function(root){\n${code}\n}).call(window.__rendererWrapper, window.__rendererRoot);`;
-  document.body.appendChild(script);
-  script.remove();
-  delete window.__rendererRoot;
-  delete window.__rendererWrapper;
-}
-
 function renderWidget(wrapper, def, code = null, lane = 'public') {
   const root = wrapper.attachShadow({ mode: 'open' });
   const globalCss = getGlobalCssUrl(lane);
@@ -165,7 +130,7 @@ function renderWidget(wrapper, def, code = null, lane = 'public') {
       container.innerHTML = sanitizeHtml(code.html);
     }
     if (code.js) {
-      try { executeJs(code.js, wrapper, root); } catch (e) { console.error('[Renderer] custom js error', e); }
+      try { executeJs(code.js, wrapper, root, 'Renderer'); } catch (e) { console.error('[Renderer] custom js error', e); }
 
     }
     return;

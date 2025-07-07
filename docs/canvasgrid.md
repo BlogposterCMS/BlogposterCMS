@@ -29,3 +29,7 @@ grid.update(el, { x: 1, y: 1 });
 ```
 
 Listen for the `change` event to persist layout updates when users move or resize widgets.
+
+Grid calculations are shared through `grid-utils.js`. Import helpers like
+`snapToGrid`, `elementRect` and `rectsCollide` to keep widget logic
+consistent across modules.

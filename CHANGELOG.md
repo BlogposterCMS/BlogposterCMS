@@ -59,8 +59,15 @@ El Psy Kongroo
 - Editor and selection modules now register through `globalEvents` instead of attaching duplicate DOM listeners.
 
 ### Fixed
+- Widget sizing helper is now shared in `widgetOptions.js` so both the dashboard popup
+  and page renderer seed widgets at their correct percentage size.
+- Half/third width widget options now apply percentage widths so seeded widgets
+  render at the correct size and the bounding box matches.
+- Sizing calculations now occur in `pageRenderer.js` so seeded widgets inherit
+  correct bounding box dimensions.
 - Bounding box visibility now toggles exclusively via `BoundingBoxManager` to
   prevent duplicate DOM updates.
+- Bounding box sizing now aligns with percentage-based widget sizes.
 - Bounding box now stays mounted when switching layers in the builder.
 - Builder grid now imports `BoundingBoxManager` directly so selection outlines
   display correctly.

@@ -51,20 +51,8 @@ export async function render(el) {
   tabs.appendChild(tabDesigns);
   tabs.appendChild(tabUploads);
 
-  const addBtn = document.createElement('img');
-  addBtn.src = '/assets/icons/plus.svg';
-  addBtn.alt = 'Add layout';
-  addBtn.title = 'Create new design';
-  addBtn.className = 'icon add-layout-btn';
-  addBtn.addEventListener('click', handleAddLayout);
-
-  const rightWrap = document.createElement('div');
-  rightWrap.className = 'layout-title-actions';
-  rightWrap.appendChild(tabs);
-  rightWrap.appendChild(addBtn);
-
   titleBar.appendChild(title);
-  titleBar.appendChild(rightWrap);
+  titleBar.appendChild(tabs);
   card.appendChild(titleBar);
 
   const designList = document.createElement('div');
@@ -241,26 +229,6 @@ export async function render(el) {
       empty.className = 'empty-state';
       empty.textContent = 'No uploads found.';
       uploadList.appendChild(empty);
-    }
-  }
-
-  async function handleAddLayout() {
-    const layoutName = prompt('New layout name:');
-    if (!layoutName) return;
-    try {
-      await meltdownEmit('saveLayoutTemplate', {
-        jwt,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        name: layoutName.trim(),
-        lane: 'public',
-        viewport: 'desktop',
-        layout: [],
-        previewPath: ''
-      });
-      window.location.href = `/admin/builder?layout=${encodeURIComponent(layoutName.trim())}`;
-    } catch (err) {
-      alert('Error: ' + err.message);
     }
   }
 

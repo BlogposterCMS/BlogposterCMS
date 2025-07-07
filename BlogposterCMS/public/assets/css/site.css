@@ -2481,6 +2481,22 @@ body.preview-desktop #content {
   margin-top: 20px;
 }
 
+.layout-select-menu {
+  position: fixed;
+  background: var(--color-white);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-body);
+  padding: 8px;
+  display: none;
+  z-index: 1000;
+}
+
+.layout-select-menu button {
+  margin-top: 8px;
+  width: 100%;
+}
+
 /* =============================================================================
    components/_text-editor-toolbar.scss
    Styles for the fixed text block editor toolbar

@@ -354,6 +354,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   layoutLayers[1].layout = initialLayout;
   applyCompositeLayout(activeLayer);
+  markInactiveWidgets();
   pushState(undoStack, redoStack, initialLayout);
 
   gridEl.addEventListener('dragover',  e => { e.preventDefault(); gridEl.classList.add('drag-over'); });
@@ -424,6 +425,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     selectWidget(wrapper);          // ruft Action-Bar & widgetSelected
 
     renderWidget(wrapper, widgetDef, localCodeMap);
+    markInactiveWidgets();
     if (pageId) scheduleAutosave();
   });
 
@@ -679,6 +681,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   }
 
+  function markInactiveWidgets() {
+    gridEl.querySelectorAll('.canvas-item').forEach(el => {
+      if (String(el.dataset.layer) !== String(activeLayer)) {
+        el.classList.add('inactive-layer');
+        el.title = 'Change layer to edit this widget';
+      } else {
+        el.classList.remove('inactive-layer');
+        el.removeAttribute('title');
+      }
+    });
+  }
+
   function applyCompositeLayout(idx) {
     if (grid && typeof grid.removeAll === 'function') {
       grid.removeAll();
@@ -690,6 +704,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (idx !== 0) {
       applyLayout(layoutLayers[idx].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: true, layerIndex: idx, iconMap: ICON_MAP });
     }
+    markInactiveWidgets();
   }
 
   function switchLayer(idx) {

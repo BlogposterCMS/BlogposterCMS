@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Changed
+- Widgets from other layers now display a translucent overlay and show a tooltip prompting to change layers when hovered.
 - Builder now defaults to "Layer 1" when opening designs and loads the global layout behind it. The unused "Layer 2" option has been removed.
 - Global widgets now appear semi-transparent when editing the main layer so the global layout stays visible in the background.
 - Public pages now always combine the global layout with attached designs so shared widgets display everywhere.

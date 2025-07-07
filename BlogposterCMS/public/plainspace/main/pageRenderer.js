@@ -431,10 +431,10 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         sidebarEl.innerHTML = sanitizeHtml(
           await fetchPartialSafe(builderSidebar)
         );
-        const textContainer = sidebarEl.querySelector('#textSidebar');
-        if (textContainer) {
-          const textHtml = await fetchPartialSafe('text-sidebar', 'builder');
-          textContainer.innerHTML = sanitizeHtml(textHtml);
+        const panelContainer = sidebarEl.querySelector('#builderPanel');
+        if (panelContainer) {
+          const textHtml = await fetchPartialSafe('text-panel', 'builder');
+          panelContainer.innerHTML = sanitizeHtml(textHtml);
         }
       }
 

@@ -71,7 +71,7 @@
   overflow-x: auto;
   overflow-y: hidden;
 
-  .text-sidebar {
+  .builder-panel {
     position: fixed;
     top: 56px;
     left: 96px;
@@ -360,17 +360,17 @@ body.builder-mode #content {
   box-sizing: border-box;
 }
 
-body.builder-mode.text-panel-open #content {
+body.builder-mode.panel-open #content {
   margin-left: 336px;
   transform: scale(0.9);
   transform-origin: top left;
 }
 
-body.builder-mode.text-panel-open .text-sidebar {
+body.builder-mode.panel-open .builder-panel {
   display: flex;
 }
 
-body.builder-mode.text-panel-open #builderGrid {
+body.builder-mode.panel-open #builderGrid {
   transform: scale(0.9);
   transform-origin: top left;
 }

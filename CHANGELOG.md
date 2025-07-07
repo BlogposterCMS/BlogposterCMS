@@ -12,6 +12,9 @@ El Psy Kongroo
 - Style detection logic moved to `styleUtils.js` for clearer separation of concerns.
 - Canvas grid now uses shared utilities for snapping and collision checks, removing redundant code.
 - Canvas grid documentation covers shared grid utility helpers.
+- Builder sidebar now loads panels into a new `builder-panel` container so
+  different widgets can display custom panels. The existing text panel
+  (`builder/text-panel.html`) loads by default when clicking the text widget.
 
 ### Added
 * Attached page content now loads automatically, displaying uploaded HTML and attached layouts.
@@ -19,7 +22,7 @@ El Psy Kongroo
 * Content Summary widget includes "Designs" and "Uploaded" tabs listing uploaded HTML pages separately.
 - Page Content widget offers a dropdown of available designs when attaching layouts.
 - Builder sidebar now features a collapsible text panel loaded from
-  `builder/text-sidebar.html` with quick access to heading, subheading and body
+  `builder/text-panel.html` with quick access to heading, subheading and body
   styles. The canvas scales down when the panel opens.
 - Page editor now includes a "Page Content" widget to manage attached HTML documents.
 - Content Summary widget now displays available layouts in a responsive grid.

@@ -59,6 +59,8 @@ El Psy Kongroo
 - Editor and selection modules now register through `globalEvents` instead of attaching duplicate DOM listeners.
 
 ### Fixed
+- Bounding box seeding now respects width and height percentages so new widgets
+  display at their correct size immediately.
 - Widget sizing helper is now shared in `widgetOptions.js` so both the dashboard popup
   and page renderer seed widgets at their correct percentage size.
 - Half/third width widget options now apply percentage widths so seeded widgets

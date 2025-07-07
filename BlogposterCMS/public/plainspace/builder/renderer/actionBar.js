@@ -61,6 +61,17 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     if (state.pageId) scheduleAutosave();
   });
 
+    menuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!state.activeWidgetEl || !state.activeWidgetEl.__optionsMenu) return;
+    const menu = state.activeWidgetEl.__optionsMenu;
+    if (menu.style.display === 'block' && menu.currentTrigger === menuBtn) {
+      menu.hide();
+      return;
+    }
+    menu.show(menuBtn);
+  });
+
   delBtn.addEventListener('click', e => {
     e.stopPropagation();
     if (!state.activeWidgetEl) return;

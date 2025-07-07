@@ -122,6 +122,12 @@
   @extend .page-title-bar;
 }
 
+.layout-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .layout-gallery-title {
   @extend .page-title;
 }

@@ -309,6 +309,9 @@ async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) 
  *   - saveLayoutTemplate
  *   - getLayoutTemplate
  *   - getLayoutTemplateNames
+ *   - getGlobalLayoutTemplate
+ *   - setGlobalLayoutTemplate
+ *   - deleteLayoutTemplate
  */
 function registerPlainSpaceEvents(motherEmitter) {
   // 1) saveLayoutForViewport
@@ -558,7 +561,31 @@ function registerPlainSpaceEvents(motherEmitter) {
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
-          data: { rawSQL: 'SET_GLOBAL_LAYOUT_TEMPLATE', params: [{ name }] }
+      data: { rawSQL: 'SET_GLOBAL_LAYOUT_TEMPLATE', params: [{ name }] }
+      },
+      cb
+    );
+  } catch (err) { cb(err); }
+  });
+
+  // 9) deleteLayoutTemplate
+  motherEmitter.on('deleteLayoutTemplate', (payload, cb) => {
+    try {
+      const { jwt, name, decodedJWT } = payload || {};
+      if (!jwt || !name) {
+        return cb(new Error('[plainSpace] Invalid payload in deleteLayoutTemplate.'));
+      }
+      if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.saveLayoutTemplate')) {
+        return cb(new Error('Forbidden – missing permission: plainspace.saveLayoutTemplate'));
+      }
+      motherEmitter.emit(
+        'dbDelete',
+        {
+          jwt,
+          moduleName: MODULE,
+          moduleType: 'core',
+          table: '__rawSQL__',
+          where: { rawSQL: 'DELETE_LAYOUT_TEMPLATE', name }
         },
         cb
       );

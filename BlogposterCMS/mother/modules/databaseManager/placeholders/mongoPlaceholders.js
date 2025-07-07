@@ -1275,6 +1275,12 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     return { success: true };
     }
 
+    case 'DELETE_LAYOUT_TEMPLATE': {
+    const d = params[0] || {};
+    await db.collection('plainspace_layout_templates').deleteOne({ name: d.name });
+    return { success: true };
+    }
+
     case 'GET_PLAINSPACE_LAYOUT': {
     const d = params[0] || {};
     const doc = await db.collection('plainspace_layouts').findOne({

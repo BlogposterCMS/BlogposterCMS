@@ -65,6 +65,7 @@ El Psy Kongroo
 - Builder grid now imports `BoundingBoxManager` directly so selection outlines
   display correctly.
 - Copy layout action in Content Summary widget now includes `moduleName` so meltdown requests succeed.
+- Deleting a design from Content Summary works again with the new `deleteLayoutTemplate` event.
 - Builder now loads `html-to-image` on demand, preventing module errors outside the editor.
  - Selection boxes refresh during drag and resize and disconnect cleanly when widgets are removed.
 - Uploading HTML via Page Content now updates the current page instead of creating a child page.

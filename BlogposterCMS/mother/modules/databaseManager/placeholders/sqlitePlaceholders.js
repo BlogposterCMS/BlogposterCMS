@@ -1141,6 +1141,12 @@ case 'SET_GLOBAL_LAYOUT_TEMPLATE': {
   return { success: true };
 }
 
+case 'DELETE_LAYOUT_TEMPLATE': {
+  const { name } = params?.[0] ?? {};
+  await db.run(`DELETE FROM plainspace_layout_templates WHERE name = ?;`, [name]);
+  return { success: true };
+}
+
 case 'GET_PLAINSPACE_LAYOUT': {
   const d = params?.[0] ?? {};
   const rows = await db.all(`

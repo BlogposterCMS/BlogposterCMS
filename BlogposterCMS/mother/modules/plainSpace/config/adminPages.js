@@ -25,7 +25,11 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
-      widgets: ['contentSummary']
+      widgets: ['contentSummary'],
+      actionButton: {
+        icon: '/assets/icons/plus.svg',
+        action: 'createNewLayout'
+      }
     }
   },
   {

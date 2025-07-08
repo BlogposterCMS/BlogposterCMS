@@ -82,22 +82,6 @@ export class BoundingBoxManager extends EventTarget {
     this.box.style.display = 'none';
   }
 
-  checkSize() {
-    if (!this.widget) return false;
-    const prevW = parseFloat(this.box.style.width) || 0;
-    const prevH = parseFloat(this.box.style.height) || 0;
-    const scale = parseFloat(
-      getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
-    );
-    const { w, h } = localRect(this.widget, this.canvas, scale);
-    const width = Math.max(w, this.MIN_W);
-    const height = Math.max(h, this.MIN_H);
-    if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
-      this.update();
-      return true;
-    }
-    return false;
-  }
 
   setDisabled(flag) {
     this.box.classList.toggle('disabled', flag);

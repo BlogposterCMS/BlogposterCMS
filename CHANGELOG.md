@@ -29,7 +29,6 @@ El Psy Kongroo
   (`builder/text-panel.html`) loads by default when clicking the text widget.
 
 ### Added
-* Grid mode introduced for the admin dashboard and builder. Widgets snap to unique cells and a resize arrow replaces the bounding box.
 * Plus button on Content page lets admins create new designs directly.
 * Layout gallery now shows the global design in its own section and lists recent designs below. A default global layout is created if none exists.
 * Attached page content now loads automatically, displaying uploaded HTML and attached layouts.
@@ -53,9 +52,6 @@ El Psy Kongroo
 
 
 ### Improved
-- Grid mode resize handle now uses a unified `.grid-mode` rule with a smaller 10×10 pixel arrow.
-- Builder and admin dashboard grids enable `pushOnOverlap` so widgets automatically move aside in grid mode.
-- Grid mode can now push overlapping widgets aside when `pushOnOverlap` is true.
 - Bounding box overlay is now managed by a single instance emitting `widgetchange` events for cleaner communication.
 - `meltdownEmit` now throttles requests to one per second to prevent 429 errors when multiple modules fire off events simultaneously.
 - Bounding boxes now update via a shared manager so selection outlines stay aligned during zoom and scroll.
@@ -64,6 +60,7 @@ El Psy Kongroo
 - Builder editor files reorganized under `core/` and `toolbar/` directories for clearer structure.
 - Editor entry point now exports specific functions explicitly for a clearer and safer API.
 - Editor and selection modules now register through `globalEvents` instead of attaching duplicate DOM listeners.
+- BoundingBoxManager now polls widget dimensions via `checkSize()` after selection so seeded widgets stay aligned.
 
 ### Fixed
 - Bounding box updates immediately after layout shifts via `transitionend` and
@@ -99,7 +96,6 @@ El Psy Kongroo
 
 ### Removed
 - Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.
-- Unused `checkSize` method from `BoundingBoxManager` removed.
 - The **Layouts** page in the admin sidebar was removed. The layout editor now opens via the top "Content" link.
 - Rate limiter now only applies to the login endpoint; meltdown API relies on JWT authentication.
 

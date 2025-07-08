@@ -4,10 +4,11 @@
    ============================================================================= */
 
 .text-block-editor-toolbar {
-  position: absolute; // overlay grid without affecting layout
-  top: 0;
+  position: sticky;
+  top: 0; // stick to the top inside the editable area
   left: 0;
   width: max-content;
+  float: left; // ensure content flows next to the bar
   margin-bottom: 4px;
   transform: none;
   display: flex;

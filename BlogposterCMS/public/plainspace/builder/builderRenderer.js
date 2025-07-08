@@ -41,7 +41,7 @@ async function loadToPng() {
 }
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
-  document.body.classList.add('builder-mode', 'grid-mode');
+  document.body.classList.add('builder-mode');
   initTextEditor();
   // Builder widgets load the active theme inside their shadow roots.
   // Inject the theme scoped to the builder grid so the preview matches

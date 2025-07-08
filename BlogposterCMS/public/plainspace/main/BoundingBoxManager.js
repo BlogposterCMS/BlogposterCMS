@@ -8,6 +8,7 @@ export class BoundingBoxManager extends EventTarget {
     this.widget = null;
     this.MIN_W = 32;
     this.MIN_H = 32;
+    this._checkTimer = null;
 
     this.box = document.createElement('div');
     this.box.className = 'selection-box bounding-box';
@@ -38,6 +39,8 @@ export class BoundingBoxManager extends EventTarget {
       this.widget.removeEventListener('resizemove', this._updateHandler, true);
       this._ro.unobserve(this.widget);
     }
+    clearInterval(this._checkTimer);
+    this._checkTimer = null;
     this.widget = widget;
     if (widget) {
       this._ro.observe(widget);
@@ -45,6 +48,7 @@ export class BoundingBoxManager extends EventTarget {
       widget.addEventListener('resizemove', this._updateHandler, true);
       this.update();
       this.show();
+      this._checkTimer = setInterval(() => this.checkSize(), 500);
     } else {
       this.hide();
     }
@@ -71,6 +75,23 @@ export class BoundingBoxManager extends EventTarget {
 
   hide() {
     this.box.style.display = 'none';
+  }
+
+  checkSize() {
+    if (!this.widget) return false;
+    const prevW = parseFloat(this.box.style.width) || 0;
+    const prevH = parseFloat(this.box.style.height) || 0;
+    const scale = parseFloat(
+      getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
+    );
+    const { w, h } = localRect(this.widget, this.canvas, scale);
+    const width = Math.max(w, this.MIN_W);
+    const height = Math.max(h, this.MIN_H);
+    if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
+      this.update();
+      return true;
+    }
+    return false;
   }
 
   setDisabled(flag) {

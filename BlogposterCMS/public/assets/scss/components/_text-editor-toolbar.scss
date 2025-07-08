@@ -4,12 +4,10 @@
    ============================================================================= */
 
 .text-block-editor-toolbar {
-  position: sticky;
-  top: 0; // stick to the top inside the editable area
+  position: fixed;
+  top: 0;
   left: 0;
   width: max-content;
-  float: left; // ensure content flows next to the bar
-  margin-bottom: 4px;
   transform: none;
   display: flex;
   align-items: center;

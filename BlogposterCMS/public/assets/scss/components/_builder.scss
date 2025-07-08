@@ -637,6 +637,21 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
   display: none;
 }
 
+body.grid-mode .bounding-box {
+  border: none;
+}
+body.grid-mode .bbox-handle {
+  display: none;
+}
+body.grid-mode .bbox-handle.se {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: url('/assets/icons/arrow-down-right.svg') center/contain no-repeat;
+  border-radius: 0;
+  pointer-events: all;
+}
+
 .selection-box {
   position: absolute;
   border: 1px dashed var(--user-color, #0aa);

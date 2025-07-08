@@ -13,11 +13,13 @@ export class CanvasGrid {
         columns: Infinity,
         rows: Infinity,
         pushOnOverlap: false,
-        percentageMode: false
+        percentageMode: false,
+        gridMode: false
       },
       options
     );
     this.staticGrid = Boolean(this.options.staticGrid);
+    this.gridMode = Boolean(this.options.gridMode);
     this.pushOnOverlap = Boolean(this.options.pushOnOverlap);
     if (Number.isFinite(this.options.column)) {
       this.options.columns = this.options.column;
@@ -169,6 +171,7 @@ export class CanvasGrid {
 
   _bindResize() {
     let startX, startY, startW, startH, startGX, startGY, pos;
+    let prevRect;
     const move = e => {
       const el = this.activeEl;
       if (!el || pos == null) return;
@@ -188,12 +191,21 @@ export class CanvasGrid {
       this.update(el, opts);
       el.dispatchEvent(new Event('resizemove', { bubbles: true }));
     };
-    const up = () => {
-      if (pos != null) this._emit('resizestop', this.activeEl);
-      pos = null;
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-    };
+      const up = () => {
+        if (pos != null) {
+          if (this.gridMode && this.pushOnOverlap) {
+            this._resolveCollisions(this.activeEl);
+          }
+          const rect = elementRect(this.activeEl);
+          if (this.gridMode && this._hasCollision(rect, this.activeEl)) {
+            this.update(this.activeEl, prevRect);
+          }
+          this._emit('resizestop', this.activeEl);
+        }
+        pos = null;
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+      };
     Object.values(this.bboxManager.handles).forEach(h => {
       h.addEventListener('mousedown', e => {
         const el = this.activeEl;
@@ -205,6 +217,7 @@ export class CanvasGrid {
         e.stopPropagation();
         pos = h.dataset.pos;
         const rect = el.getBoundingClientRect();
+        prevRect = elementRect(el);
         startX = e.clientX; startY = e.clientY;
         startW = rect.width; startH = rect.height;
         startGX = +el.dataset.x || 0;
@@ -218,6 +231,7 @@ export class CanvasGrid {
 
   _enableDrag(el) {
     let startX, startY, startGX, startGY, dragging = false;
+    let prevRect;
     let targetX = 0, targetY = 0;
     const move = e => {
       if (!dragging) return;
@@ -234,7 +248,18 @@ export class CanvasGrid {
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
       const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
-      this.update(el, { x: snap.x, y: snap.y });
+      const newRect = { x: snap.x, y: snap.y, w: +el.getAttribute('gs-w'), h: +el.getAttribute('gs-h') };
+      if (this.gridMode && this.pushOnOverlap) {
+        this.update(el, newRect);
+        const rect = elementRect(el);
+        if (this._hasCollision(rect, el)) {
+          this.update(el, prevRect);
+        }
+      } else if (this.gridMode && this._hasCollision(newRect, el)) {
+        this.update(el, prevRect);
+      } else {
+        this.update(el, { x: snap.x, y: snap.y });
+      }
       this._emit('dragstop', el);
     };
     el.addEventListener('mousedown', e => {
@@ -246,6 +271,7 @@ export class CanvasGrid {
       startX = e.clientX; startY = e.clientY;
       startGX = +el.dataset.x || 0;
       startGY = +el.dataset.y || 0;
+      prevRect = { x: startGX, y: startGY, w: +el.getAttribute('gs-w'), h: +el.getAttribute('gs-h') };
       targetX = startGX * this.options.columnWidth;
       targetY = startGY * this.options.cellHeight;
       dragging = true;
@@ -277,6 +303,10 @@ export class CanvasGrid {
 
   _resolveCollisions(el) {
     this._pushWidget(el);
+  }
+
+  _hasCollision(rect, el) {
+    return this.widgets.some(w => w !== el && rectsCollide(rect, elementRect(w)));
   }
 
   _updateBBox() {

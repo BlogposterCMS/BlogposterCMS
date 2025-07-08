@@ -644,9 +644,18 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     gridEl.id = 'adminGrid';
     gridEl.className = 'canvas-grid';
     contentEl.appendChild(gridEl);
+    document.body.classList.add('grid-mode');
     const columnWidth = 5;
     const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
-const grid = initCanvasGrid({ cellHeight: 5, columnWidth, columns, percentageMode: true, pushOnOverlap: true }, gridEl);    grid.setStatic(true);
+const grid = initCanvasGrid({
+      cellHeight: 5,
+      columnWidth,
+      columns,
+      percentageMode: true,
+      pushOnOverlap: true,
+      gridMode: true
+    }, gridEl);
+    grid.setStatic(true);
     grid.on('change', () => {});
     window.adminGrid = grid;
     window.adminPageContext = { pageId: page.id, lane };

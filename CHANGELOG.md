@@ -29,6 +29,7 @@ El Psy Kongroo
   (`builder/text-panel.html`) loads by default when clicking the text widget.
 
 ### Added
+* Admin dashboard now features a **grid mode** with an Excel-like layout and a bottom-right resize handle.
 * Plus button on Content page lets admins create new designs directly.
 * Layout gallery now shows the global design in its own section and lists recent designs below. A default global layout is created if none exists.
 * Attached page content now loads automatically, displaying uploaded HTML and attached layouts.

@@ -1,0 +1,31 @@
+body.grid-mode {
+  .canvas-item {
+    border: none;
+  }
+
+  .bounding-box {
+    border: none;
+  }
+
+  .bounding-box .bbox-handle {
+    display: none;
+  }
+
+  .bounding-box .se {
+    display: block;
+    width: 10px;
+    height: 10px;
+    bottom: -4px;
+    right: -4px;
+    transform: translate(50%, 50%) scale(var(--inv-scale));
+    border-right: 2px solid var(--user-color, #333);
+    border-bottom: 2px solid var(--user-color, #333);
+    background: transparent;
+    cursor: nwse-resize;
+    border-radius: 0;
+  }
+
+  &:not(.dashboard-edit-mode) .bounding-box {
+    display: none;
+  }
+}

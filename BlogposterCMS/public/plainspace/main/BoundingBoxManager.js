@@ -43,11 +43,16 @@ export class BoundingBoxManager extends EventTarget {
     this._checkTimer = null;
     this.widget = widget;
     if (widget) {
+      if (!widget.isConnected) {
+        requestAnimationFrame(() => this.setWidget(widget));
+        return;
+      }
       this._ro.observe(widget);
       widget.addEventListener('dragmove', this._updateHandler, true);
       widget.addEventListener('resizemove', this._updateHandler, true);
       this.update();
       this.show();
+      requestAnimationFrame(() => this.checkSize());
       this._checkTimer = setInterval(() => this.checkSize(), 500);
     } else {
       this.hide();

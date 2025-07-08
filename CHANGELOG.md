@@ -62,6 +62,8 @@ El Psy Kongroo
 - BoundingBoxManager now polls widget dimensions via `checkSize()` after selection so seeded widgets stay aligned.
 
 ### Fixed
+- Bounding boxes now wait for widgets to be connected to the DOM before
+  initializing so the outline no longer appears in the corner.
 - Bounding box seeding now respects width and height percentages so new widgets
   display at their correct size immediately.
 - Widget sizing helper is now shared in `widgetOptions.js` so both the dashboard popup

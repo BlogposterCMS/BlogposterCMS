@@ -13,6 +13,16 @@ import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracki
 
 let updateButtonStates = () => {};
 
+let toolbarPositionListenersAttached = false;
+
+export function updateToolbarPosition() {
+  if (!state.toolbar) return;
+  const header = document.querySelector('.builder-header');
+  if (!header) return;
+  const rect = header.getBoundingClientRect();
+  state.toolbar.style.top = rect.bottom + 'px';
+}
+
 function parseColor(val) {
   val = String(val || '').trim();
   if (val.startsWith('#')) {
@@ -394,6 +404,12 @@ export function showToolbar() {
   if (content && state.toolbar.parentElement !== content) {
     content.prepend(state.toolbar);
   }
+  updateToolbarPosition();
+  if (!toolbarPositionListenersAttached) {
+    window.addEventListener('scroll', updateToolbarPosition);
+    window.addEventListener('resize', updateToolbarPosition);
+    toolbarPositionListenersAttached = true;
+  }
   state.toolbar.style.display = 'flex';
   updateButtonStates();
 }
@@ -405,6 +421,11 @@ export function hideToolbar() {
   if (headingSelect) {
     headingSelect.style.display = 'none';
     headingSelect.onchange = null;
+  }
+  if (toolbarPositionListenersAttached) {
+    window.removeEventListener('scroll', updateToolbarPosition);
+    window.removeEventListener('resize', updateToolbarPosition);
+    toolbarPositionListenersAttached = false;
   }
 }
 

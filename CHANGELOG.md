@@ -63,6 +63,7 @@ El Psy Kongroo
 - BoundingBoxManager now polls widget dimensions via `checkSize()` after selection so seeded widgets stay aligned.
 
 ### Fixed
+- Text editor toolbar now stays positioned below the builder header while scrolling.
 - Bounding box updates immediately after layout shifts via `transitionend` and
   `animationend` events, and selection recalculates using `requestAnimationFrame`.
 - Bounding boxes now wait for widgets to be connected to the DOM before

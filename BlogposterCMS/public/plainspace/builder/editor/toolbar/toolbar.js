@@ -21,6 +21,13 @@ export function updateToolbarPosition() {
   if (!header) return;
   const rect = header.getBoundingClientRect();
   state.toolbar.style.top = rect.bottom + 'px';
+  const content = document.getElementById('content');
+  if (content) {
+    const cRect = content.getBoundingClientRect();
+    state.toolbar.style.left = cRect.left + 'px';
+  } else {
+    state.toolbar.style.left = '0';
+  }
 }
 
 function parseColor(val) {
@@ -177,7 +184,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
         '<button type="button" class="tb-btn fs-inc">+</button>' +
       '</div>'
     ].join('');
-    document.body.appendChild(state.toolbar);
+    const contentEl = document.getElementById('content');
+    if (contentEl) {
+      contentEl.prepend(state.toolbar);
+    } else {
+      document.body.appendChild(state.toolbar);
+    }
   }
   state.toolbar.style.display = 'none';
 

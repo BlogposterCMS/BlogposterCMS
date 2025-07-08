@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Changed
+- Text editor toolbar now aligns with the left edge of `#content` so it doesn't extend beyond the section.
+- Text editor toolbar now initializes inside `#content` if available to prevent it from appearing above the section.
 - Global widgets are now static when editing other layouts and are excluded from page saves.
 - Admin Home page now shows `contentSummary`, `modulesList` and `pageStats` widgets instead of System Info and Activity Log.
 - Widgets from other layers are now locked against selection and movement while showing a hover message.

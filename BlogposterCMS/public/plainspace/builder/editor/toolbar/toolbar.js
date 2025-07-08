@@ -13,29 +13,6 @@ import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracki
 
 let updateButtonStates = () => {};
 
-let scrollHandler = null;
-
-function updateToolbarSticky() {
-  if (!state.toolbar) return;
-  const content = document.getElementById('content');
-  if (!content) return;
-  const rect = content.getBoundingClientRect();
-  const barHeight = state.toolbar.offsetHeight;
-  if (rect.top <= 0 && rect.bottom >= barHeight) {
-    state.toolbar.style.position = 'fixed';
-    state.toolbar.style.top = '0';
-    state.toolbar.style.left = rect.left + 'px';
-  } else if (rect.bottom < barHeight) {
-    state.toolbar.style.position = 'absolute';
-    state.toolbar.style.top = (rect.height - barHeight) + 'px';
-    state.toolbar.style.left = '0';
-  } else {
-    state.toolbar.style.position = 'absolute';
-    state.toolbar.style.top = '0';
-    state.toolbar.style.left = '0';
-  }
-}
-
 function parseColor(val) {
   val = String(val || '').trim();
   if (val.startsWith('#')) {
@@ -190,12 +167,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
         '<button type="button" class="tb-btn fs-inc">+</button>' +
       '</div>'
     ].join('');
-    const content = document.getElementById('content');
-    if (content) {
-      content.prepend(state.toolbar);
-    } else {
-      document.body.appendChild(state.toolbar);
-    }
+    document.body.appendChild(state.toolbar);
   }
   state.toolbar.style.display = 'none';
 
@@ -418,25 +390,17 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
 export function showToolbar() {
   if (!state.toolbar) return;
+  const content = document.getElementById('content');
+  if (content && state.toolbar.parentElement !== content) {
+    content.prepend(state.toolbar);
+  }
   state.toolbar.style.display = 'flex';
   updateButtonStates();
-  if (!scrollHandler) {
-    scrollHandler = () => updateToolbarSticky();
-    document.addEventListener('scroll', scrollHandler, true);
-  }
-  updateToolbarSticky();
 }
 
 export function hideToolbar() {
   if (!state.toolbar) return;
   state.toolbar.style.display = 'none';
-  if (scrollHandler) {
-    document.removeEventListener('scroll', scrollHandler, true);
-    scrollHandler = null;
-  }
-  state.toolbar.style.position = 'absolute';
-  state.toolbar.style.top = '0';
-  state.toolbar.style.left = '0';
   const headingSelect = state.toolbar.querySelector('.heading-select');
   if (headingSelect) {
     headingSelect.style.display = 'none';

@@ -7,6 +7,9 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 - GPU‑accelerated transforms keep dragging and resizing smooth at 60fps.
 - Widgets remain inside the grid and can be layered using `data-layer` for z-index control.
 - Optional push mode prevents overlaps by moving surrounding widgets out of the way.
+- Grid mode enforces unique cell occupancy with a resize arrow handle instead of a bounding box.
+- When `pushOnOverlap` is true, grid mode automatically moves other widgets out of the way.
+- Grid mode is exclusive to the admin dashboard. The builder keeps its regular bounding boxes and allows overlapping.
 - Percentage based sizing lets layouts adapt responsively.
 - All mouse, touch and keyboard events are forwarded through `bindGlobalListeners` for centralized handling.
 

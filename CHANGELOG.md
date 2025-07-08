@@ -11,6 +11,7 @@ El Psy Kongroo
 - Widgets from other layers are now locked against selection and movement while showing a hover message.
 - Widgets from other layers now display a translucent overlay and show a tooltip prompting to change layers when hovered.
 - Text editor toolbar now mounts at the top of the `#content` area instead of inside widgets.
+- Text editor toolbar is fixed in place so activating it no longer shifts the layout.
 - Builder now defaults to "Layer 1" when opening designs and loads the global layout behind it. The unused "Layer 2" option has been removed.
 - Global layout toggle removed from the builder footer and designs open directly on their own layer.
 - Global layer button restored and labeled "Global" when editing pages; the layout bar is hidden when editing the global design itself.
@@ -62,6 +63,8 @@ El Psy Kongroo
 - BoundingBoxManager now polls widget dimensions via `checkSize()` after selection so seeded widgets stay aligned.
 
 ### Fixed
+- Bounding box updates immediately after layout shifts via `transitionend` and
+  `animationend` events, and selection recalculates using `requestAnimationFrame`.
 - Bounding boxes now wait for widgets to be connected to the DOM before
   initializing so the outline no longer appears in the corner.
 - Bounding box seeding now respects width and height percentages so new widgets

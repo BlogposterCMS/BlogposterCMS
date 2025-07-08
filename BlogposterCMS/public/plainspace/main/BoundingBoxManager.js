@@ -8,7 +8,6 @@ export class BoundingBoxManager extends EventTarget {
     this.widget = null;
     this.MIN_W = 32;
     this.MIN_H = 32;
-    this._checkTimer = null;
 
     this.box = document.createElement('div');
     this.box.className = 'selection-box bounding-box';
@@ -37,10 +36,10 @@ export class BoundingBoxManager extends EventTarget {
     if (this.widget) {
       this.widget.removeEventListener('dragmove', this._updateHandler, true);
       this.widget.removeEventListener('resizemove', this._updateHandler, true);
+      this.widget.removeEventListener('transitionend', this._updateHandler, true);
+      this.widget.removeEventListener('animationend', this._updateHandler, true);
       this._ro.unobserve(this.widget);
     }
-    clearInterval(this._checkTimer);
-    this._checkTimer = null;
     this.widget = widget;
     if (widget) {
       if (!widget.isConnected) {
@@ -50,10 +49,11 @@ export class BoundingBoxManager extends EventTarget {
       this._ro.observe(widget);
       widget.addEventListener('dragmove', this._updateHandler, true);
       widget.addEventListener('resizemove', this._updateHandler, true);
+      widget.addEventListener('transitionend', this._updateHandler, true);
+      widget.addEventListener('animationend', this._updateHandler, true);
       this.update();
       this.show();
-      requestAnimationFrame(() => this.checkSize());
-      this._checkTimer = setInterval(() => this.checkSize(), 500);
+      requestAnimationFrame(() => this.update());
     } else {
       this.hide();
     }

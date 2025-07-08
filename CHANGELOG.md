@@ -59,6 +59,7 @@ El Psy Kongroo
 - Builder editor files reorganized under `core/` and `toolbar/` directories for clearer structure.
 - Editor entry point now exports specific functions explicitly for a clearer and safer API.
 - Editor and selection modules now register through `globalEvents` instead of attaching duplicate DOM listeners.
+- BoundingBoxManager now polls widget dimensions via `checkSize()` after selection so seeded widgets stay aligned.
 
 ### Fixed
 - Bounding box seeding now respects width and height percentages so new widgets

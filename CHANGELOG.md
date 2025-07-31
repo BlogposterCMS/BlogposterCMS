@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [unreleased]
 
 ### Changed
+- Admin widgets now include a built-in resize handle and no longer rely on the
+  BoundingBoxManager.
 - Text editor toolbar now aligns with the left edge of `#content` so it doesn't extend beyond the section.
 - Text editor toolbar now initializes inside `#content` if available to prevent it from appearing above the section.
 - Global widgets are now static when editing other layouts and are excluded from page saves.

@@ -660,6 +660,44 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     window.adminPageContext = { pageId: page.id, lane };
     window.adminCurrentLayout = layout;
 
+    const CELL_W = grid.options.columnWidth;
+    const CELL_H = grid.options.cellHeight;
+    gridEl.addEventListener('pointerdown', e => {
+      if (!e.target.classList.contains('resize-handle')) return;
+      const widget = e.target.closest('.canvas-item');
+      const startX = e.clientX, startY = e.clientY;
+      const origW = +widget.getAttribute('gs-w');
+      const origH = +widget.getAttribute('gs-h');
+
+      function onMove(ev) {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        let newW = Math.max(
+          Math.round((origW * CELL_W + dx) / CELL_W),
+          +widget.getAttribute('gs-min-w')
+        );
+        let newH = Math.max(
+          Math.round((origH * CELL_H + dy) / CELL_H),
+          +widget.getAttribute('gs-min-h')
+        );
+
+        if (!isCollision(widget, widget.dataset.x, widget.dataset.y, newW, newH)) {
+          widget.setAttribute('gs-w', newW);
+          widget.setAttribute('gs-h', newH);
+          widget.style.width = `${newW * CELL_W}px`;
+          widget.style.height = `${newH * CELL_H}px`;
+        }
+      }
+
+      function onUp() {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+      }
+
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+
     const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));
     for (const id of (config.widgets || [])) widgetIdSet.add(id);
     const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
@@ -689,6 +727,9 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
       gridEl.appendChild(wrapper);
       grid.makeWidget(wrapper);
+      const handle = document.createElement('div');
+      handle.className = 'resize-handle br';
+      wrapper.appendChild(handle);
       pendingAdmin.push({ wrapper, def, meta, placeholder: ph });
     }
 
@@ -755,3 +796,17 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     alert('Renderer error: ' + err.message);
   }
 })();
+
+function isCollision(self, x, y, w, h) {
+  const all = Array.from(document.getElementById('adminGrid')?.querySelectorAll('.canvas-item') || [])
+    .filter(el => el !== self);
+  const r1 = { x, y, w, h };
+  return all.some(el => {
+    const ex = +el.dataset.x, ey = +el.dataset.y;
+    const ew = +el.getAttribute('gs-w'), eh = +el.getAttribute('gs-h');
+    return !(ex + ew <= r1.x ||
+             r1.x + r1.w <= ex ||
+             ey + eh <= r1.y ||
+             r1.y + r1.h <= ey);
+  });
+}

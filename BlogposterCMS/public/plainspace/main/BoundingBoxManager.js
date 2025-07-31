@@ -27,12 +27,17 @@ export class BoundingBoxManager extends EventTarget {
 
     this._updateHandler = () => this.update();
     this._ro = new ResizeObserver(this._updateHandler);
+    this._onLoad = null;
     this.canvas.addEventListener('scroll', this._updateHandler, true);
     this.canvas.addEventListener('zoom', this._updateHandler, true);
   }
 
   setWidget(widget) {
     if (this.widget === widget) return;
+    if (this._onLoad) {
+      window.removeEventListener('load', this._onLoad);
+      this._onLoad = null;
+    }
     if (this.widget) {
       this.widget.removeEventListener('dragmove', this._updateHandler, true);
       this.widget.removeEventListener('resizemove', this._updateHandler, true);
@@ -46,14 +51,25 @@ export class BoundingBoxManager extends EventTarget {
         requestAnimationFrame(() => this.setWidget(widget));
         return;
       }
-      this._ro.observe(widget);
-      widget.addEventListener('dragmove', this._updateHandler, true);
-      widget.addEventListener('resizemove', this._updateHandler, true);
-      widget.addEventListener('transitionend', this._updateHandler, true);
-      widget.addEventListener('animationend', this._updateHandler, true);
-      this.update();
-      this.show();
-      requestAnimationFrame(() => this.update());
+      const observe = () => {
+        this._ro.observe(widget);
+        widget.addEventListener('dragmove', this._updateHandler, true);
+        widget.addEventListener('resizemove', this._updateHandler, true);
+        widget.addEventListener('transitionend', this._updateHandler, true);
+        widget.addEventListener('animationend', this._updateHandler, true);
+        this.update();
+        this.show();
+        requestAnimationFrame(() => this.update());
+      };
+      if (document.readyState === 'complete') {
+        observe();
+      } else {
+        this._onLoad = () => {
+          observe();
+          this._onLoad = null;
+        };
+        window.addEventListener('load', this._onLoad, { once: true });
+      }
     } else {
       this.hide();
     }

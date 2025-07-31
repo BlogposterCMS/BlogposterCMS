@@ -63,9 +63,11 @@ El Psy Kongroo
 - Builder editor files reorganized under `core/` and `toolbar/` directories for clearer structure.
 - Editor entry point now exports specific functions explicitly for a clearer and safer API.
 - Editor and selection modules now register through `globalEvents` instead of attaching duplicate DOM listeners.
-- BoundingBoxManager now polls widget dimensions via `checkSize()` after selection so seeded widgets stay aligned.
+- BoundingBoxManager now relies on `ResizeObserver` so seeded widgets report their final size without polling.
+- ResizeObserver for bounding boxes starts after the window `load` event so seeded widgets size correctly.
 
 ### Fixed
+- Bounding box uses `ResizeObserver` to update once widgets render, ensuring shadow-root widgets display the correct outline.
 - Text editor toolbar now stays positioned below the builder header while scrolling.
 - Bounding box updates immediately after layout shifts via `transitionend` and
   `animationend` events, and selection recalculates using `requestAnimationFrame`.

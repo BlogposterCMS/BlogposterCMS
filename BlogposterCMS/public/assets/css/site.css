@@ -80,7 +80,7 @@
   transition: all 0.2s ease;
 }
 
-.field input:not(:-moz-placeholder-shown) + label {
+.field input:not(:-moz-placeholder) + label {
   top: -8px;
   left: 12px;
   font-size: 12px;
@@ -246,7 +246,7 @@
   transition: all 0.2s ease;
 }
 
-.field input:not(:-moz-placeholder-shown) + label {
+.field input:not(:-moz-placeholder) + label {
   top: -8px;
   left: 12px;
   font-size: 12px;
@@ -340,6 +340,16 @@
 
 #adminGrid {
   min-height: 100vh;
+}
+
+.resize-handle.br {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  background: url("/assets/icons/resize.svg") no-repeat center;
 }
 
 #content {
@@ -600,7 +610,7 @@ p {
   transition: all 0.2s ease;
 }
 
-.app-scope .field input:not(:-moz-placeholder-shown) + label, .app-scope .field textarea:not(:-moz-placeholder-shown) + label {
+.app-scope .field input:not(:-moz-placeholder) + label, .app-scope .field textarea:not(:-moz-placeholder) + label {
   top: -7px;
   left: 14px;
   font-size: 12px;
@@ -3038,4 +3048,29 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
     top: 56px;
     width: 70%;
   }
+}
+body.grid-mode .canvas-item {
+  border: none;
+}
+body.grid-mode .bounding-box {
+  border: none;
+}
+body.grid-mode .bounding-box .bbox-handle {
+  display: none;
+}
+body.grid-mode .bounding-box .se {
+  display: block;
+  width: 10px;
+  height: 10px;
+  bottom: -4px;
+  right: -4px;
+  transform: translate(50%, 50%) scale(var(--inv-scale));
+  border-right: 2px solid var(--user-color, #333);
+  border-bottom: 2px solid var(--user-color, #333);
+  background: transparent;
+  cursor: nwse-resize;
+  border-radius: 0;
+}
+body.grid-mode:not(.dashboard-edit-mode) .bounding-box {
+  display: none;
 }/*# sourceMappingURL=site.css.map */

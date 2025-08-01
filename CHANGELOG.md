@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
-## [unreleased]
+## [0.6.3] – 2025-08-01
 
 ### Changed
 - Admin widgets now include a built-in resize handle and no longer rely on the
@@ -100,18 +100,16 @@ El Psy Kongroo
 - Page editor layout dropdown now lists lane-specific designs and hides the global layout.
 
 - Builder grid now retains a fixed gap below the builder header so the toolbar doesn't shift the layout when activated.
-
+- Bounding box dimensions now read the widget's DOM size before display so first-seeded widgets render correctly.
+- Bounding box now generates inside each widget so it always matches the widget size in the builder and dashboard.
+- Canvas grid columns now clamp to the container width so widgets can't be dragged outside the grid.
 
 ### Removed
 - Temporarily removed **themeManager** and the Themes settings page; related widget and menu entries are gone.
 - The **Layouts** page in the admin sidebar was removed. The layout editor now opens via the top "Content" link.
 - Rate limiter now only applies to the login endpoint; meltdown API relies on JWT authentication.
 
-### Fixed
-- Bounding box dimensions now read the widget's DOM size before display so first-seeded widgets render correctly.
-- Bounding box now generates inside each widget so it always matches the widget size in the builder and dashboard.
-- Canvas grid columns now clamp to the container width so widgets can't be dragged outside the grid.
-
+>\"I think we can put our differences behind us. For science. You monster.\"
 
 ## [0.6.2] 2025-07-02
 

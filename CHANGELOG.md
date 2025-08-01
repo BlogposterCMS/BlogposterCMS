@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 El Psy Kongroo
 
+## [Unreleased]
+
+### Fixed
+- Text editor color picker and size dropdown now apply styles only to the selected text.
+
 ## [0.6.3] – 2025-08-01
 
 ### Changed

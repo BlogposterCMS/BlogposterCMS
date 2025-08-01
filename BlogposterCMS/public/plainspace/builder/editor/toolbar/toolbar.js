@@ -284,7 +284,10 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   state.colorPicker.el.classList.add('floating', 'hidden');
   document.body.appendChild(state.colorPicker.el);
   state.colorPicker.el.addEventListener('pointerdown', ev => {
-    if (ev.target.classList.contains('swatch')) {
+    if (
+      ev.target.classList.contains('swatch') ||
+      ev.target.classList.contains('color-circle')
+    ) {
       saveSelection();
       ev.preventDefault();
       ev.stopPropagation();
@@ -393,6 +396,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   fsOptions.addEventListener('click', ev => {
     const opt = ev.target.closest('span[data-size]');
     if (!opt) return;
+    saveSelection();
     applySize(opt.dataset.size);
     fsDropdown.classList.remove('open');
   });

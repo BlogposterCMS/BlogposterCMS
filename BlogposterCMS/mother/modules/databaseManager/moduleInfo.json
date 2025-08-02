@@ -1,6 +1,6 @@
 {
   "moduleName": "databaseManager",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Gateway between modules and the database.",
   "developer": "Blogposter Team"
 }

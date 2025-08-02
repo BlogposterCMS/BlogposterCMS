@@ -668,18 +668,21 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       const startX = e.clientX, startY = e.clientY;
       const origW = +widget.getAttribute('gs-w');
       const origH = +widget.getAttribute('gs-h');
+      const minW  = +widget.getAttribute('gs-min-w') || 1;
+      const minH  = +widget.getAttribute('gs-min-h') || 1;
 
       function onMove(ev) {
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        let newW = Math.max(
-          Math.round((origW * CELL_W + dx) / CELL_W),
-          +widget.getAttribute('gs-min-w')
-        );
-        let newH = Math.max(
-          Math.round((origH * CELL_H + dy) / CELL_H),
-          +widget.getAttribute('gs-min-h')
-        );
+        let dx = ev.clientX - startX;
+        let dy = ev.clientY - startY;
+
+        dx = Math.max(dx, (minW - origW) * CELL_W);
+        dy = Math.max(dy, (minH - origH) * CELL_H);
+
+        let newW = origW + Math.round(dx / CELL_W);
+        let newH = origH + Math.round(dy / CELL_H);
+
+        newW = Math.max(newW, minW);
+        newH = Math.max(newH, minH);
 
         if (!isCollision(widget, widget.dataset.x, widget.dataset.y, newW, newH)) {
           widget.setAttribute('gs-w', newW);
@@ -714,8 +717,12 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       wrapper.dataset.y = y;
       wrapper.setAttribute('gs-w', w);
       wrapper.setAttribute('gs-h', h);
-      wrapper.setAttribute('gs-min-w', 4);
-      wrapper.setAttribute('gs-min-h', DEFAULT_ADMIN_ROWS);
+      const minW = 4;
+      const minH = DEFAULT_ADMIN_ROWS;
+      wrapper.setAttribute('gs-min-w', minW);
+      wrapper.setAttribute('gs-min-h', minH);
+      wrapper.style.minWidth = `${minW * CELL_W}px`;
+      wrapper.style.minHeight = `${minH * CELL_H}px`;
       wrapper.dataset.widgetId = def.id;
       wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2,8)}`;
       if (meta.global) wrapper.dataset.global = 'true';

@@ -684,9 +684,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (inactive) {
         el.setAttribute('gs-no-move', 'true');
         el.setAttribute('gs-no-resize', 'true');
+        if (el.getAttribute('contenteditable') === 'true') {
+          el.dataset.prevContentEditable = 'true';
+        }
+        el.setAttribute('contenteditable', 'false');
       } else {
         el.removeAttribute('gs-no-move');
         el.removeAttribute('gs-no-resize');
+        if (el.dataset.prevContentEditable === 'true') {
+          el.setAttribute('contenteditable', 'true');
+          delete el.dataset.prevContentEditable;
+        } else {
+          el.removeAttribute('contenteditable');
+        }
       }
     });
   }

@@ -25,7 +25,7 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
       <button class="menu-template"><img src="/assets/icons/package.svg" class="icon" alt="template" /> Save as Template</button>
       <button class="menu-lock"><img src="/assets/icons/lock.svg" class="icon" alt="lock" /> Lock Position</button>
       <button class="menu-snap"><img src="/assets/icons/grid.svg" class="icon" alt="snap" /> Snap to Grid</button>
-      <button class="menu-global"><img src="/assets/icons/globe.svg" class="icon" alt="global" /> Set as Global Widget</button>
+      <button class="menu-shared"><img src="/assets/icons/globe.svg" class="icon" alt="shared" /> Set as Shared Widget</button>
       <button class="menu-layer-up"><img src="/assets/icons/arrow-up.svg" class="icon" alt="layer up" /> Layer Up</button>
       <button class="menu-layer-down"><img src="/assets/icons/arrow-down.svg" class="icon" alt="layer down" /> Layer Down</button>
   `;
@@ -38,7 +38,7 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   }
 
   function showMenu(triggerEl = menuBtn) {
-    updateGlobalBtn();
+    updateSharedBtn();
     menu.style.display = 'block';
     menu.style.visibility = 'hidden';
     const rect = triggerEl.getBoundingClientRect();
@@ -99,7 +99,6 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
       widgetId: widgetDef.id,
       w: +el.getAttribute('gs-w'),
       h: +el.getAttribute('gs-h'),
-      layer: +el.dataset.layer || 0,
       code: codeMap[el.dataset.instanceId] || null
     };
     const idx = templates.findIndex(t => t.name === name);
@@ -115,14 +114,14 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
     window.dispatchEvent(new Event('widgetTemplatesUpdated'));
     menu.style.display = 'none';
   };
-  const globalBtn = menu.querySelector('.menu-global');
-  function updateGlobalBtn() {
-    const isGlobal = el.dataset.global === 'true';
-    globalBtn.innerHTML = `<img src="/assets/icons/globe.svg" class="icon" alt="global" /> ${isGlobal ? 'Unset Global' : 'Set as Global Widget'}`;
+  const sharedBtn = menu.querySelector('.menu-shared');
+  function updateSharedBtn() {
+    const isShared = el.dataset.global === 'true';
+    sharedBtn.innerHTML = `<img src="/assets/icons/globe.svg" class="icon" alt="shared" /> ${isShared ? 'Unset Shared Widget' : 'Set as Shared Widget'}`;
   }
-  globalBtn.onclick = () => {
-    const isGlobal = el.dataset.global === 'true';
-    if (isGlobal) {
+  sharedBtn.onclick = () => {
+    const isShared = el.dataset.global === 'true';
+    if (isShared) {
       el.dataset.global = 'false';
       const newLocalId = genId();
       el.dataset.instanceId = newLocalId;
@@ -132,7 +131,7 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
       el.dataset.instanceId = `global-${widgetDef.id}`;
       el.id = `widget-${el.dataset.instanceId}`;
     }
-    updateGlobalBtn();
+    updateSharedBtn();
     menu.style.display = 'none';
     if (pageId) scheduleAutosave();
   };

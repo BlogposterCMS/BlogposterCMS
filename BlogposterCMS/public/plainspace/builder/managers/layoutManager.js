@@ -38,8 +38,7 @@ export function applyLayout(layout, {
     wrapper.dataset.layer = String(layerIndex);
     wrapper.dataset.x = item.x ?? 0;
     wrapper.dataset.y = item.y ?? 0;
-    wrapper.dataset.layer = item.layer ?? 0;
-    wrapper.style.zIndex = (item.layer ?? 0).toString();
+    wrapper.style.zIndex = layerIndex.toString();
     wrapper.setAttribute('gs-w', item.w ?? 8);
     wrapper.setAttribute('gs-h', item.h ?? DEFAULT_ROWS);
     wrapper.setAttribute('gs-min-w', 4);
@@ -61,9 +60,9 @@ export function applyLayout(layout, {
 export function getItemData(el, codeMap) {
   return {
     widgetId: el.dataset.widgetId,
+    global: el.dataset.global === 'true',
     w: +el.getAttribute('gs-w'),
     h: +el.getAttribute('gs-h'),
-    layer: +el.dataset.layer || 0,
     code: codeMap[el.dataset.instanceId] || null
   };
 }

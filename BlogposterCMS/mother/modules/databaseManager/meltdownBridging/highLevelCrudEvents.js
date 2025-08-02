@@ -597,42 +597,48 @@ function localDbDelete(motherEmitter, payload, callback) {
 
 /**
  * Helper function to handle rawSQL param arrays in meltdown payload
+ *
+ * Falls back to the `where` object when `data` is omitted so calls like
+ * `dbDelete` with parameters in `where` don't crash on undefined values.
  */
-function extractParamsIfNeeded(dataObj, whereObj) {
-  if (dataObj.params !== undefined) {
-    return Array.isArray(dataObj.params)
-      ? dataObj.params
-      : [ dataObj.params ];
+function extractParamsIfNeeded(dataObj = {}, whereObj = {}) {
+  // Prefer explicitly provided data; otherwise look at the WHERE clause.
+  const source = Object.keys(dataObj).length ? dataObj : whereObj;
+
+  if (source.params !== undefined) {
+    return Array.isArray(source.params)
+      ? source.params
+      : [ source.params ];
   }
-  const numericKeys = Object.keys(dataObj)
+  const numericKeys = Object.keys(source)
     .filter(k => /^\d+$/.test(k))
     .sort((a,b) => a - b);
   if (numericKeys.length) {
-    return numericKeys.map(k => dataObj[k]);
+    return numericKeys.map(k => source[k]);
   }
 
   // If rawSQL with named parameters, map common placeholders to positional
   // arrays for cross-engine compatibility. Fallback to returning the object
   // as-is for custom handlers.
-  if (dataObj.rawSQL) {
-    if (dataObj.rawSQL === 'GET_SETTING' && dataObj.key !== undefined) {
-      return [ dataObj.key ];
+  if (source.rawSQL) {
+    if (source.rawSQL === 'GET_SETTING' && source.key !== undefined) {
+      return [ source.key ];
     }
     if (
-      dataObj.rawSQL === 'UPSERT_SETTING' &&
-      dataObj.key !== undefined &&
-      dataObj.value !== undefined
+      source.rawSQL === 'UPSERT_SETTING' &&
+      source.key !== undefined &&
+      source.value !== undefined
     ) {
-      return [ dataObj.key, dataObj.value ];
+      return [ source.key, source.value ];
     }
-    if (Object.keys(dataObj).some(k => !/^(rawSQL|params|\d+)$/.test(k))) {
+    if (Object.keys(source).some(k => !/^(rawSQL|params|\d+)$/.test(k))) {
       // Preserve named parameters but wrap them in an array so placeholders
       // expecting params[0] receive the object consistently across engines.
-      return [ dataObj ];
+      return [ source ];
     }
   }
 
-  return [ dataObj ];
+  return [ source ];
 }
 
 module.exports = {

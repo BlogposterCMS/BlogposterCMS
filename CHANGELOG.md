@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Raw SQL deletes now extract parameters from the `where` clause when `data` is omitted, preventing layout deletion errors.
 - Text editor color picker and size dropdown now apply styles only to the selected text.
 - Widgets from inactive layers ignore pointer events and editing, preventing accidental changes.
 - Admin grid resize handles no longer slide underneath widgets when reaching the minimum size.

@@ -7,6 +7,7 @@ El Psy Kongroo
 
 ### Fixed
 - Text editor color picker and size dropdown now apply styles only to the selected text.
+- Widgets from inactive layers ignore pointer events and editing, preventing accidental changes.
 - Admin grid resize handles no longer slide underneath widgets when reaching the minimum size.
 
 ## [0.6.3] – 2025-08-01

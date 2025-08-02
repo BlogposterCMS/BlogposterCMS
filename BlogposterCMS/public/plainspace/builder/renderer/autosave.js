@@ -18,7 +18,7 @@ export function startAutosave(state, saveFn) {
 }
 
 export async function saveCurrentLayout({ autosave = false } = {}, ctx) {
-  const { updateAllWidgetContents, getCurrentLayout, pushState, meltdownEmit, pageId, codeMap } = ctx;
+  const { updateAllWidgetContents, getCurrentLayout, pushState, meltdownEmit, pageId, codeMap, getLayer } = ctx;
   if (!pageId) return;
   updateAllWidgetContents();
   const layout = getCurrentLayout();
@@ -33,7 +33,8 @@ export async function saveCurrentLayout({ autosave = false } = {}, ctx) {
       pageId,
       lane: 'public',
       viewport: 'desktop',
-      layout
+      layout,
+      layer: typeof getLayer === 'function' ? getLayer() : 0
     });
     ctx.lastSavedLayoutStr = layoutStr;
     ctx.pendingSave = false;

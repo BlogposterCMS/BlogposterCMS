@@ -5,6 +5,10 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Changed
+- Layouts now store a `layer` value and widgets inherit the active layer.
+- Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
+
 ### Fixed
 - Text editor color picker and size dropdown now apply styles only to the selected text.
 - Widgets from inactive layers ignore pointer events and editing, preventing accidental changes.

@@ -200,7 +200,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     pushState,
     meltdownEmit,
     pageId,
-    codeMap: ensureCodeMap()
+    codeMap: ensureCodeMap(),
+    getLayer: () => activeLayer
   };
   await applyBuilderTheme();
   // Allow overlapping widgets for layered layouts
@@ -391,11 +392,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     wrapper.id = `widget-${instId}`;
     wrapper.dataset.widgetId = widgetDef.id;
     wrapper.dataset.instanceId = instId;
-    wrapper.dataset.global = 'false';
     wrapper.dataset.layer = String(activeLayer);
     wrapper.dataset.x = x;
     wrapper.dataset.y = y;
-    wrapper.style.zIndex = '0';
+    wrapper.style.zIndex = String(activeLayer);
     wrapper.setAttribute('gs-w', w);
     wrapper.setAttribute('gs-h', h);
     wrapper.setAttribute('gs-min-w', 4);
@@ -673,8 +673,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function markInactiveWidgets() {
     gridEl.querySelectorAll('.canvas-item').forEach(el => {
       const inactive = String(el.dataset.layer) !== String(activeLayer);
-      const isGlobal = el.dataset.global === 'true';
-      if (inactive && !isGlobal) {
+      if (inactive) {
         el.classList.add('inactive-layer');
         el.title = 'Change layer to edit this widget';
       } else {
@@ -708,9 +707,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       gridEl.innerHTML = '';
     }
     Object.keys(ensureCodeMap()).forEach(k => delete codeMap[k]);
-    applyLayout(layoutLayers[0].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: false, layerIndex: 0, iconMap: ICON_MAP });
-    if (idx !== 0) {
-      applyLayout(layoutLayers[idx].layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, append: true, layerIndex: idx, iconMap: ICON_MAP });
+    for (let i = 0; i <= idx; i++) {
+      applyLayout(layoutLayers[i].layout, {
+        gridEl,
+        grid,
+        codeMap: ensureCodeMap(),
+        allWidgets,
+        append: i !== 0,
+        layerIndex: i,
+        iconMap: ICON_MAP
+      });
     }
     markInactiveWidgets();
   }

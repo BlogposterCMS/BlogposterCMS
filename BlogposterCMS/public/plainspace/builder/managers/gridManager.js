@@ -20,7 +20,6 @@ export function getCurrentLayout(gridEl, codeMap) {
     id: el.dataset.instanceId,
     widgetId: el.dataset.widgetId,
     global: el.dataset.global === 'true',
-    layer: +el.dataset.layer || 0,
     x: +el.dataset.x || 0,
     y: +el.dataset.y || 0,
     w: +el.getAttribute('gs-w'),
@@ -40,7 +39,6 @@ export function getCurrentLayoutForLayer(gridEl, idx, codeMap) {
     y: +el.dataset.y || 0,
     w: +el.getAttribute('gs-w'),
     h: +el.getAttribute('gs-h'),
-    layer: +el.dataset.layer || 0,
     code: codeMap[el.dataset.instanceId] || null
   }));
 }

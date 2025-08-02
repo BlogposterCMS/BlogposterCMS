@@ -248,7 +248,6 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     wrapper.setAttribute('gs-min-h', 4);
     wrapper.dataset.widgetId = def.id;
     wrapper.dataset.instanceId = item.id;
-    if (item.global) wrapper.dataset.global = 'true';
     const ph = document.createElement('div');
     ph.className = 'widget-placeholder';
     ph.textContent = def.metadata?.label || def.id;
@@ -436,7 +435,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       const startLayerParam = parseInt(urlParams.get('layer'), 10);
       const startLayer = Number.isFinite(startLayerParam)
         ? startLayerParam
-        : (layoutNameParam ? 1 : 0);
+        : (Number(config.layout?.layer) || (layoutNameParam ? 1 : 0));
 
       await initBuilder(sidebarEl, contentEl, pageIdParam, startLayer, layoutNameParam);
 
@@ -502,7 +501,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         lane
       });
       globalLayout = Array.isArray(glRes?.layout)
-        ? glRes.layout.map(l => Object.assign({}, l, { global: true }))
+        ? glRes.layout
         : [];
     } catch (err) {
       console.warn('[Renderer] failed to load global layout', err);
@@ -589,7 +588,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         wrapper.setAttribute('gs-min-h', 4);
         wrapper.dataset.widgetId = def.id;
         wrapper.dataset.instanceId = item.id;
-        if (item.global) wrapper.dataset.global = 'true';
 
         const ph = document.createElement('div');
         ph.className = 'widget-placeholder';
@@ -725,7 +723,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       wrapper.style.minHeight = `${minH * CELL_H}px`;
       wrapper.dataset.widgetId = def.id;
       wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2,8)}`;
-      if (meta.global) wrapper.dataset.global = 'true';
 
       const ph = document.createElement('div');
       ph.className = 'widget-placeholder';
@@ -766,11 +763,10 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     await renderAttachedContent(page, lane, allWidgets, contentEl);
 
     grid.on('change', () => {
-      const items = Array.from(gridEl.querySelectorAll('.canvas-item')).filter(el => el.dataset.global !== 'true');
+      const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
       const newLayout = items.map(el => ({
         id: el.dataset.instanceId,
         widgetId: el.dataset.widgetId,
-        global: el.dataset.global === 'true',
         x: +el.dataset.x || 0,
         y: +el.dataset.y || 0,
         w: +el.getAttribute('gs-w'),

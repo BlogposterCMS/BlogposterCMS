@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- Shared widgets now highlight in gold on hover, falling back to black when the user color is similar.
 - Layouts now store a `layer` value and widgets inherit the active layer.
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 

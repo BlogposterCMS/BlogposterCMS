@@ -12,6 +12,7 @@
   --user-color: #008080; // User-selected accent color
   --color-primary: var(--user-color);
   --gradient-primary: linear-gradient(90deg, var(--user-color), #FF00FF, #FFA500);
+  --shared-widget-color: #d4af37; // Gold highlight for shared widgets
   --shadow-card: 0 1px 28px rgba(0,0,0,0.07);
   --shadow-default: 0px 0px 0px 1px rgba(64, 87, 109, .04), 0px 6px 20px -4px rgba(64, 87, 109, .3);
 

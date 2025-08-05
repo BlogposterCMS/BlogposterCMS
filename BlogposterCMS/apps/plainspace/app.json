@@ -2,7 +2,7 @@
   "name": "plainspace",
   "title": "Page Builder",
   "icon": "layout",
-  "entry": "./index.js",
+  "entry": "plainspace",
   "permissions": ["builder.use"],
   "launchable": true
 }

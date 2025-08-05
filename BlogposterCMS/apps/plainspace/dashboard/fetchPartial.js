@@ -1,3 +1,7 @@
+/**
+ * Builder dashboard fetchPartial.js
+ * Provides a function to load partial HTML from the server.
+ */
 export async function fetchPartial(partialName, partialType = '') {
   const typePath = partialType ? `${partialType}/` : '';
   const base = '/apps/' + 'plainspace' + '/partials/';

@@ -1,4 +1,3 @@
-//public//plainspace/builder/renderer/eventHandlers.js
 export function registerBuilderEvents(gridEl, codeMap, { getRegisteredEditable }) {
   function handleHtmlUpdate(e) {
     const { instanceId, html } = e.detail || {};

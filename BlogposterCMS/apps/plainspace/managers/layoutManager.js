@@ -1,4 +1,3 @@
-// public/plainspace/builder/managers/layoutManager.js
 import { getWidgetIcon } from '../renderer/renderUtils.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick } from '../renderer/widgetActions.js';
 import { attachOptionsMenu } from '../widgets/widgetMenu.js';

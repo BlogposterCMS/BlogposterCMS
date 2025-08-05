@@ -1,4 +1,3 @@
-import { renderWidget } from '/plainspace/widgets/widgetRenderer.js';
 import { applyWidgetOptions } from '../main/widgetOptions.js';
 
 const DEFAULT_ADMIN_ROWS = 20;
@@ -101,6 +100,9 @@ async function addWidget(def) {
     applyWidgetOptions(wrapper, instance, grid);        // apply max / width etc.
   } catch { /* ignore */ }
 
+  const { renderWidget } = await import(
+    /* webpackChunkName: "builder" */ '../../../apps/plainspace/widgets/widgetRenderer.js'
+  );
   renderWidget(wrapper, def, null, instance);
 
   // Ensure newly added widgets show their bounding box while editing

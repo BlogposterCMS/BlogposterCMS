@@ -20,7 +20,8 @@ module.exports = {
     pageActions: './public/plainspace/dashboard/pageActions.js',
     fontsLoader: './public/assets/js/fontsLoader.js',
     pagesMenu: './public/plainspace/dashboard/pagesMenu.js',
-    customSelect: './public/assets/js/customSelect.js'
+    customSelect: './public/assets/js/customSelect.js',
+    plainspace: './apps/plainspace/index.js'
   },
   output: {
     filename: '[name].js',
@@ -28,9 +29,7 @@ module.exports = {
     clean: true
   },
   resolve: {
-    alias: {
-      '/plainspace': path.resolve(__dirname, 'apps/plainspace')
-    }
+    // Alias removed: Builder uses relative paths
   },
   devtool: 'source-map'
 };

@@ -3,7 +3,7 @@ import { isSelectionStyled, restoreSelection, saveSelection, bindActiveElementGe
 import { recordChange } from './history.js';
 import { initToolbar, showToolbar, hideToolbar } from '../toolbar/toolbar.js';
 import { isValidTag } from './allowedTags.js';
-import { initGlobalEvents, onGlobalEvent } from '/plainspace/main/globalEvents.js';
+import { initGlobalEvents, onGlobalEvent } from '../../main/globalEvents.js';
 
 export const state = {
   toolbar: null,

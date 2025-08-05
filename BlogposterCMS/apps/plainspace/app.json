@@ -2,8 +2,7 @@
   "name": "plainspace",
   "title": "Page Builder",
   "icon": "layout",
-  "entry": "apps/plainspace/index.js",
-  "routes": ["/admin/app/plainspace", "/admin/app/plainspace/:pageId"],
+  "entry": "./index.js",
   "permissions": ["builder.use"],
   "launchable": true
 }

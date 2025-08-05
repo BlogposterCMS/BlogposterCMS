@@ -1,4 +1,3 @@
-// public/plainspace/main/BoundingBoxManager.js
 import { localRect } from './grid-utils.js';
 
 export class BoundingBoxManager extends EventTarget {

@@ -1,7 +1,4 @@
-// public//plainspace/widgets/public/basicwidgets/textBoxWidget.js
-import { registerElement } from '/plainspace/editor/core/editor.js';
-
-export function render(el, ctx = {}) {
+export async function render(el, ctx = {}) {
   if (!el) return;
   const wrapper = document.createElement('div');
   wrapper.className = 'widget-textbox';
@@ -38,5 +35,10 @@ export function render(el, ctx = {}) {
   el.innerHTML = '';
   el.appendChild(wrapper);
 
-  registerElement(editable);
+  if (document.body.classList.contains('builder-mode')) {
+    const { registerElement } = await import(
+      /* webpackChunkName: "builder" */ '../../../../../apps/plainspace/editor/core/editor.js'
+    );
+    registerElement(editable);
+  }
 }

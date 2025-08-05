@@ -1,4 +1,3 @@
-//public//plainspace/builder/renderer/renderUtils.js
 export function extractCssProps(el) {
   if (!el) return '';
   const style = getComputedStyle(el);

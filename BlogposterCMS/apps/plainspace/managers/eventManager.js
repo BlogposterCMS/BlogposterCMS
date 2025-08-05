@@ -1,4 +1,3 @@
-//public/plainspace/builder/managers/eventManager.js
 export function registerDeselect(gridEl, state, actionBar, hideToolbar) {
   document.addEventListener('click', e => {
     if (!state.activeWidgetEl) return;

@@ -1,4 +1,3 @@
-//public//plainspace/builder/widgets/widgetRenderer.js
 import { addHitLayer, executeJs } from '../utils.js';
 import { registerElement } from '../editor/editor.js';
 

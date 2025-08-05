@@ -1,4 +1,3 @@
-// public/plainspace/main/script-utils.js
 // Utilities for executing user-provided JavaScript with CSP nonce support
 export function executeJs(code, wrapper, root, context = 'App') {
   if (!code) return;

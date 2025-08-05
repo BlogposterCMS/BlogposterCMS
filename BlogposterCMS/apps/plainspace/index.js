@@ -1,4 +1,4 @@
-import { fetchPartial } from '/plainspace/dashboard/fetchPartial.js';
+import { fetchPartial } from './dashboard/fetchPartial.js';
 import { initBuilder } from './builderRenderer.js';
 import { enableAutoEdit, sanitizeHtml } from './editor/editor.js';
 

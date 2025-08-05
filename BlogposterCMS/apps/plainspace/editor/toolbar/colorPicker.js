@@ -1,4 +1,3 @@
-// public//plainspace/editor/colorPicker.js
 export function createColorPicker(options = {}) {
   const {
     presetColors = [

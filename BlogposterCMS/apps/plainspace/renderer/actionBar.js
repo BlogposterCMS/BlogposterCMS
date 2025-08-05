@@ -1,4 +1,3 @@
-//public//plainspace/builder/renderer/actionBar.js
 export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
   const actionBar = document.createElement('div');
   actionBar.className = 'widget-action-bar';

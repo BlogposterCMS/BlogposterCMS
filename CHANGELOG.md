@@ -18,6 +18,7 @@ El Psy Kongroo
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Builder app now loads required core scripts, restoring `fetchWithTimeout`, `meltdownEmit`, and icon rendering.
 - Builder dashboard partials now load from `/plainspace/partials/` with sanitized file names.
 - Served `public/plainspace` alongside app assets so dashboard scripts load without 404 errors.
 - Restored `/plainspace` static route and corrected builder imports, resolving blank dashboards and MIME type errors.

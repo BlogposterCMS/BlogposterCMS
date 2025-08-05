@@ -1,5 +1,5 @@
 //public/plainspace/builder/managers/gridManager.js
-import { init as initCanvasGrid } from '../../main/canvasGrid.js';
+import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
 export function initGrid(gridEl, state, selectWidget) {
   const columnWidth = 5;

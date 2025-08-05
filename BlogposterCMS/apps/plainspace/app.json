@@ -1,0 +1,9 @@
+{
+  "name": "plainspace",
+  "title": "Page Builder",
+  "icon": "layout",
+  "entry": "apps/plainspace/index.js",
+  "routes": ["/admin/app/plainspace", "/admin/app/plainspace/:pageId"],
+  "permissions": ["builder.use"],
+  "launchable": true
+}

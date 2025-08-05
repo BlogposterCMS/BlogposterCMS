@@ -5,12 +5,16 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Added
+- Introduced `/admin/app/:appName` namespace with a standalone Page Builder app.
+
 ### Changed
 - Shared widgets now highlight in gold on hover, falling back to black when the user color is similar.
 - Layouts now store a `layer` value and widgets inherit the active layer.
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Reserved `admin`, `app`, and `api` slugs to protect critical namespaces.
 - Raw SQL deletes now extract parameters from the `where` clause when `data` is omitted, preventing layout deletion errors.
 - Text editor color picker and size dropdown now apply styles only to the selected text.
 - Widgets from inactive layers ignore pointer events and editing, preventing accidental changes.

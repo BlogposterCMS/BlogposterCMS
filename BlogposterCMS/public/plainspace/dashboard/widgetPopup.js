@@ -1,4 +1,4 @@
-import { renderWidget } from '../builder/widgets/widgetRenderer.js';
+import { renderWidget } from '/plainspace/widgets/widgetRenderer.js';
 import { applyWidgetOptions } from '../main/widgetOptions.js';
 
 const DEFAULT_ADMIN_ROWS = 20;

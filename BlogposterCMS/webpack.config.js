@@ -27,5 +27,10 @@ module.exports = {
     path: path.resolve(__dirname, 'public', 'build'),
     clean: true
   },
+  resolve: {
+    alias: {
+      '/plainspace': path.resolve(__dirname, 'apps/plainspace')
+    }
+  },
   devtool: 'source-map'
 };

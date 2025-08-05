@@ -277,6 +277,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
       await addCol('title', 'title TEXT');
       await addCol('meta', 'meta TEXT');
       await db.run(`CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_lane_unique ON pagesManager_pages (slug, lane);`);
+      await db.run(`CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_unique ON pagesManager_pages (slug);`);
       return { done: true };
     }
 

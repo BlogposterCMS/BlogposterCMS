@@ -7,6 +7,8 @@ El Psy Kongroo
 
 ### Added
 - Introduced `/admin/app/:appName` namespace with a standalone Page Builder app.
+- Webpack now aliases `/plainspace/*` to `apps/plainspace/*` so builder imports resolve correctly.
+- Seeded `builder.use` permission for controlling Page Builder access.
 
 ### Changed
 - Shared widgets now highlight in gold on hover, falling back to black when the user color is similar.
@@ -15,6 +17,7 @@ El Psy Kongroo
 
 ### Fixed
 - Reserved `admin`, `app`, and `api` slugs to protect critical namespaces.
+- Enforced a unique index on page slugs in database placeholders to prevent duplicate or reserved slugs slipping through.
 - Raw SQL deletes now extract parameters from the `where` clause when `data` is omitted, preventing layout deletion errors.
 - Text editor color picker and size dropdown now apply styles only to the selected text.
 - Widgets from inactive layers ignore pointer events and editing, preventing accidental changes.

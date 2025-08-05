@@ -7,7 +7,7 @@ export async function render(el) {
     return;
   }
 
-  const { sanitizeHtml } = await import('../../../builder/editor/editor.js');
+  const { sanitizeHtml } = await import('/plainspace/editor/core/sanitizer.js');
 
   const wrapper = document.createElement('div');
   wrapper.className = 'page-content-widget';

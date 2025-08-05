@@ -228,6 +228,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
      */
     case 'INIT_PAGES_TABLE': {
       await createIndexWithRetry(db.collection('pages'), { slug: 1, lane: 1 }, { unique: true }).catch(() => {});
+      await createIndexWithRetry(db.collection('pages'), { slug: 1 }, { unique: true }).catch(() => {});
       // For "page_translations", we want (page_id, language) unique
       await createIndexWithRetry(
         db.collection('page_translations'),

@@ -261,6 +261,10 @@ function getModuleTokenForDbManager() {
     '/plainspace',
     express.static(path.join(__dirname, 'apps', 'plainspace'))
   );
+  app.use(
+    '/plainspace',
+    express.static(path.join(publicPath, 'plainspace'))
+  );
   app.use('/assets', express.static(assetsPath));
   app.use('/themes', express.static(path.join(publicPath, 'themes')));
   app.use('/favicon.ico', express.static(path.join(publicPath,'favicon.ico')));

@@ -913,14 +913,19 @@ app.get('/register', (_req, res) => {
 // 9) Maintenance mode middleware
 // ─────────────────────────────────────────────────────────────────
 app.use(async (req, res, next) => {
-  // skip admin + assets
-  if (
-    req.path.startsWith('/admin') ||
-    req.path.startsWith('/assets') ||
-    req.path.startsWith('/api') ||
-    req.path === '/login' ||
-    req.path === '/favicon.ico'
-    ) return next();
+  // allow essential routes and static assets during maintenance
+  const allowedPrefixes = [
+    '/admin',
+    '/assets',
+    '/api',
+    '/login',
+    '/favicon.ico',
+    '/plainspace',
+    '/themes',
+    '/apps',
+    '/fonts'
+  ];
+  if (allowedPrefixes.some(p => req.path.startsWith(p))) return next();
   
 
   // check the flag

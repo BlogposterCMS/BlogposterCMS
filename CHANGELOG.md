@@ -18,6 +18,7 @@ El Psy Kongroo
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Maintenance mode now allows theme and plainspace assets, preventing MIME type errors on `/coming-soon`.
 - Reserved `admin`, `app`, and `api` slugs to protect critical namespaces.
 - Enforced a unique index on page slugs in database placeholders to prevent duplicate or reserved slugs slipping through.
 - Raw SQL deletes now extract parameters from the `where` clause when `data` is omitted, preventing layout deletion errors.

@@ -14,7 +14,7 @@ export async function createNewPage() {
     }) || {};
 
     if (pageId) {
-      window.location.href = `/admin/builder?pageId=${pageId}&layer=1`;
+      window.location.href = `/admin/app/plainspace/${pageId}?layer=1`;
     } else {
       window.location.reload();
     }
@@ -37,7 +37,7 @@ export async function createNewLayout() {
       layout: [],
       previewPath: ''
     });
-    window.location.href = `/admin/builder?layout=${encodeURIComponent(layoutName.trim())}`;
+    window.location.href = `/admin/app/plainspace?layout=${encodeURIComponent(layoutName.trim())}`;
   } catch (err) {
     alert('Error: ' + err.message);
   }

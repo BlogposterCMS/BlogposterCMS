@@ -1,5 +1,5 @@
 // public//plainspace/widgets/public/basicwidgets/textBoxWidget.js
-import { registerElement } from '../../../builder/editor/editor.js';
+import { registerElement } from '/plainspace/editor/core/editor.js';
 
 export function render(el, ctx = {}) {
   if (!el) return;

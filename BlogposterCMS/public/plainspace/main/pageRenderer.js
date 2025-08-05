@@ -1,9 +1,10 @@
 // public//plainspace/main/pageRenderer.js
 
 import { fetchPartial } from '../dashboard/fetchPartial.js';
-import { initBuilder } from '../builder/builderRenderer.js';
+import { initBuilder } from '/plainspace/builderRenderer.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
-import { enableAutoEdit, sanitizeHtml } from '../builder/editor/editor.js';
+import { enableAutoEdit } from '/plainspace/editor/core/editor.js';
+import { sanitizeHtml } from '/plainspace/editor/core/sanitizer.js';
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
 

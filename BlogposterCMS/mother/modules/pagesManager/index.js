@@ -238,8 +238,12 @@ function setupPagesManagerEvents(motherEmitter) {
     if (!baseSlug) {
       return callback(new Error('Could not generate a valid slug.'));
     }
-  
+
     let finalSlug = baseSlug;
+    const RESERVED = ['admin', 'app', 'api'];
+    if (RESERVED.some(r => finalSlug === r || finalSlug.startsWith(`${r}/`))) {
+      return callback(new Error('Slug is reserved.'));
+    }
     let tries = 0;
   
     // Check if slug already exists:

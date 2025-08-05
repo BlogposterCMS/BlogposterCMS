@@ -134,6 +134,20 @@ async function ensureDefaultPermissions(motherEmitter, jwt) {
     }));
   }
 
+  if (!existing.includes('builder.use')) {
+    tasks.push(emitAsync(motherEmitter, 'dbInsert', {
+      jwt,
+      moduleName: 'userManagement',
+      table: 'permissions',
+      data: {
+        permission_key: 'builder.use',
+        description: 'Use the Page Builder',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    }));
+  }
+
   await Promise.all(tasks);
   console.log('[USER SERVICE] Default permissions ensured.');
 }

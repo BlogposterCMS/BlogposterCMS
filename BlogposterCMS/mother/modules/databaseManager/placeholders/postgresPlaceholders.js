@@ -281,6 +281,11 @@ switch (operation) {
           ON pagesManager.pages (slug, lane);
       `);
 
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_unique
+          ON pagesManager.pages (slug);
+      `);
+
       /* 4. One start page per language – this index was already fine */
       await client.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS pages_start_unique

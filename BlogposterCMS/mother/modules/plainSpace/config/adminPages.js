@@ -51,20 +51,6 @@ module.exports.ADMIN_PAGES = [
     }
   },
   {
-    title: 'Page Builder',
-    slug: 'builder',
-    lane: 'admin',
-    config: {
-      layout: {
-        header: 'top-header',
-        sidebar: 'sidebar-builder', // Special sidebar with draggable widget icons
-        inheritsLayout: false
-      },
-      widgetLane: 'public',  // <-- Show ALL public widgets in the builder, not preselected
-      widgets: []            // <-- No preselection, empty array: builder picks dynamically
-    }
-  },
-  {
     title: 'Media',
     slug: 'media',
     parentSlug: 'content',

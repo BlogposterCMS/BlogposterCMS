@@ -1,4 +1,4 @@
-import { initGlobalEvents, onGlobalEvent } from '../../../main/globalEvents.js';
+import { initGlobalEvents, onGlobalEvent } from '/plainspace/main/globalEvents.js';
 import { styleMatches, elementHasStyle } from '../utils/styleUtils.js';
 
 const preservedRanges = new WeakMap();

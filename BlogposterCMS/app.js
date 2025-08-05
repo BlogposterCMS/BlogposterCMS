@@ -28,6 +28,7 @@ const crypto = require('crypto');
 const { sanitizeCookieName, sanitizeCookiePath, sanitizeCookieDomain } = require('./mother/utils/cookieUtils');
 const { isProduction, features } = require('./config/runtime');
 const renderMode = features?.renderMode || 'client';
+const { hasPermission } = require('./mother/modules/userManagement/permissionUtils');
 
 
 
@@ -183,6 +184,16 @@ function getModuleTokenForDbManager() {
       .substring(0, 96);
   }
 
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
+  }
+
   // Helper to verify an admin JWT against the current user database
   function validateAdminToken(token) {
     return new Promise((resolve, reject) => {
@@ -246,6 +257,7 @@ function getModuleTokenForDbManager() {
   const assetsPath = path.join(publicPath, 'assets');
   app.use('/admin/assets', express.static(path.join(publicPath, 'assets')));
   app.use('/plainspace', express.static(path.join(publicPath, 'plainspace')));
+  app.use('/apps', express.static(path.join(__dirname, 'apps')));
   app.use('/assets', express.static(assetsPath));
   app.use('/themes', express.static(path.join(publicPath, 'themes')));
   app.use('/favicon.ico', express.static(path.join(publicPath,'favicon.ico')));
@@ -609,7 +621,58 @@ app.get('/admin/home', csrfProtection, async (req, res) => {
 
 
 // ──────────────────────────────────────────────────────────────────────────
-// 7b) Admin SPA shell for any /admin/<slug> path
+// 7b) App launcher at /admin/app/:appName
+// ──────────────────────────────────────────────────────────────────────────
+app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
+  const adminJwt = req.cookies?.admin_jwt;
+  if (!adminJwt) {
+    const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+    return res.redirect(jump);
+  }
+
+  let decoded;
+  try {
+    decoded = await validateAdminToken(adminJwt);
+  } catch (err) {
+    console.warn('[GET /admin/app] Invalid admin token =>', err.message);
+    res.clearCookie('admin_jwt', {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: isProduction
+    });
+    const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+    return res.redirect(jump);
+  }
+
+  const appName = sanitizeSlug(req.params.appName);
+  const appDir = path.join(__dirname, 'apps', appName);
+  const manifestPath = path.join(appDir, 'app.json');
+  if (!fs.existsSync(manifestPath)) {
+    return res.status(404).send('App not found');
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch (err) {
+    return res.status(500).send('Invalid app manifest');
+  }
+
+  if (Array.isArray(manifest.permissions) &&
+      !manifest.permissions.every(p => hasPermission(decoded, p))) {
+    return res.status(403).send('Forbidden');
+  }
+
+  const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
+  const entry = String(manifest.entry || '').replace(/[^a-zA-Z0-9_\-/\.]/g, '');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
+  return res.send(html);
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// 7c) Admin SPA shell for any /admin/<slug> path
 // ──────────────────────────────────────────────────────────────────────────
 
 // Capture any admin page slug via wildcard and parse req.params[0]

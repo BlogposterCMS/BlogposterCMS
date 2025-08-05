@@ -78,7 +78,7 @@ export async function render(el) {
     const item = document.createElement('div');
     item.className = 'layout-gallery-item' + (t.isGlobal ? ' global-layout' : '');
     item.addEventListener('click', () => {
-      window.location.href = `/admin/builder?layout=${encodeURIComponent(t.name)}`;
+      window.location.href = `/admin/app/plainspace?layout=${encodeURIComponent(t.name)}`;
     });
 
     const menuBtn = document.createElement('button');
@@ -105,7 +105,7 @@ export async function render(el) {
 
       menu.querySelector('.open-layout').onclick = ev => {
         ev.stopPropagation();
-        window.open(`/admin/builder?layout=${encodeURIComponent(t.name)}`, '_blank');
+        window.open(`/admin/app/plainspace?layout=${encodeURIComponent(t.name)}`, '_blank');
         menu.classList.remove('open');
       };
 
@@ -258,7 +258,7 @@ export async function render(el) {
         layout: [],
         previewPath: ''
       });
-      window.location.href = `/admin/builder?layout=${encodeURIComponent(layoutName.trim())}`;
+      window.location.href = `/admin/app/plainspace?layout=${encodeURIComponent(layoutName.trim())}`;
     } catch (err) {
       alert('Error: ' + err.message);
     }

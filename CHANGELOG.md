@@ -17,6 +17,7 @@ El Psy Kongroo
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Served `public/plainspace` alongside app assets so dashboard scripts load without 404 errors.
 - Restored `/plainspace` static route and corrected builder imports, resolving blank dashboards and MIME type errors.
 - Maintenance mode now allows theme and plainspace assets, preventing MIME type errors on `/coming-soon`.
 - Reserved `admin`, `app`, and `api` slugs to protect critical namespaces.

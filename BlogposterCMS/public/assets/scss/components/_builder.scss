@@ -341,6 +341,11 @@
   border-color: var(--user-color);
 }
 
+.builder-mode .canvas-item[data-global="true"]:hover,
+.builder-mode .canvas-item[data-global="true"].selected {
+  border-color: var(--shared-widget-color, #d4af37);
+}
+
 // Hide native resize handles when using the bounding box
 .builder-mode .canvas-item > .ui-resizable-handle {
   display: none;

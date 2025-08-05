@@ -1,6 +1,8 @@
 import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
-import { sanitizeHtml } from '../../../apps/plainspace/editor/core/sanitizer.js';
+const { sanitizeHtml } = await import(
+  /* webpackIgnore: true */ '/apps/plainspace/editor/core/sanitizer.js'
+);
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
 
@@ -435,8 +437,8 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         : (Number(config.layout?.layer) || (layoutNameParam ? 1 : 0));
 
       const [{ initBuilder }, { enableAutoEdit }] = await Promise.all([
-        import(/* webpackChunkName: "builder" */ '../../../apps/plainspace/builderRenderer.js'),
-        import(/* webpackChunkName: "builder" */ '../../../apps/plainspace/editor/core/editor.js')
+        import(/* webpackIgnore: true */ '/apps/plainspace/builderRenderer.js'),
+        import(/* webpackIgnore: true */ '/apps/plainspace/editor/core/editor.js')
       ]);
 
       await initBuilder(sidebarEl, contentEl, pageIdParam, startLayer, layoutNameParam);

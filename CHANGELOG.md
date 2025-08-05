@@ -11,13 +11,13 @@ El Psy Kongroo
 
 ### Changed
 - Public renderer now lazy-loads builder modules to avoid bundling the entire builder into public pages.
-- Builder modules now use relative imports and no longer rely on the `/plainspace` alias.
-- Express no longer serves `public/plainspace`; builder assets are bundled and loaded via relative paths.
+- Builder assets are now served from `/apps/plainspace`, and the `/plainspace` alias maps to this location for backward compatibility.
 - Shared widgets now highlight in gold on hover, falling back to black when the user color is similar.
 - Layouts now store a `layer` value and widgets inherit the active layer.
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Restored `/plainspace` static route and corrected builder imports, resolving blank dashboards and MIME type errors.
 - Maintenance mode now allows theme and plainspace assets, preventing MIME type errors on `/coming-soon`.
 - Reserved `admin`, `app`, and `api` slugs to protect critical namespaces.
 - Enforced a unique index on page slugs in database placeholders to prevent duplicate or reserved slugs slipping through.

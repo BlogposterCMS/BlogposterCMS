@@ -101,7 +101,7 @@ async function addWidget(def) {
   } catch { /* ignore */ }
 
   const { renderWidget } = await import(
-    /* webpackChunkName: "builder" */ '../../../apps/plainspace/widgets/widgetRenderer.js'
+    /* webpackIgnore: true */ '/apps/plainspace/widgets/widgetRenderer.js'
   );
   renderWidget(wrapper, def, null, instance);
 

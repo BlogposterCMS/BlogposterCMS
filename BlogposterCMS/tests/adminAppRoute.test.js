@@ -33,7 +33,10 @@ test('GET /admin/app/plainspace/123 returns 200 with csrf token', async () => {
     if (!fs.existsSync(manifestPath)) return res.status(404).send('App not found');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
-    const entry = String(manifest.entry || '').replace(/[^a-zA-Z0-9_\-/\.]/g, '');
+    const rawEntry = String(manifest.entry || '').replace(/[^a-zA-Z0-9_\-/\.]/g, '');
+    const entry = rawEntry.includes('/') || rawEntry.endsWith('.js')
+      ? rawEntry
+      : `build/${rawEntry}.js`;
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
     res.send(html);
   });

@@ -255,7 +255,9 @@ function getModuleTokenForDbManager() {
   // Set up paths
   const publicPath = path.join(__dirname, 'public');
   const assetsPath = path.join(publicPath, 'assets');
+  const buildPath = path.join(publicPath, 'build');
   app.use('/admin/assets', express.static(path.join(publicPath, 'assets')));
+  app.use('/build', express.static(buildPath));
   app.use('/apps', express.static(path.join(__dirname, 'apps')));
   app.use(
     '/plainspace',
@@ -672,7 +674,10 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
   }
 
   const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
-  const entry = String(manifest.entry || '').replace(/[^a-zA-Z0-9_\-/\.]/g, '');
+  const rawEntry = String(manifest.entry || '').replace(/[^a-zA-Z0-9_\-/\.]/g, '');
+  const entry = rawEntry.includes('/') || rawEntry.endsWith('.js')
+    ? rawEntry
+    : `build/${rawEntry}.js`;
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
   return res.send(html);

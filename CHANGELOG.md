@@ -10,6 +10,7 @@ El Psy Kongroo
 - Seeded `builder.use` permission for controlling Page Builder access.
 
 ### Changed
+- Admin app launcher now resolves manifest entries to bundled scripts and exposes `/build` assets.
 - Public renderer now lazy-loads builder modules to avoid bundling the entire builder into public pages.
 - Builder assets are now served from `/apps/plainspace`, and the `/plainspace` alias maps to this location for backward compatibility.
 - Shared widgets now highlight in gold on hover, falling back to black when the user color is similar.
@@ -17,6 +18,7 @@ El Psy Kongroo
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Builder dashboard partials now load from `/plainspace/partials/` with sanitized file names.
 - Served `public/plainspace` alongside app assets so dashboard scripts load without 404 errors.
 - Restored `/plainspace` static route and corrected builder imports, resolving blank dashboards and MIME type errors.
 - Maintenance mode now allows theme and plainspace assets, preventing MIME type errors on `/coming-soon`.

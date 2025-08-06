@@ -1193,6 +1193,20 @@ switch (operation) {
       `);
       return { done: true };
     }
+
+    case 'INIT_PLAINSPACE_PUBLISHED_DESIGNS': {
+      await client.query('CREATE SCHEMA IF NOT EXISTS plainspace;');
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS plainspace.published_designs (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          path TEXT NOT NULL,
+          files JSONB NOT NULL,
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+      `);
+      return { done: true };
+    }
     
     case 'UPSERT_PLAINSPACE_LAYOUT': {
       // "params" => { pageId, lane, viewport, layoutArr }
@@ -1238,12 +1252,37 @@ switch (operation) {
       return { success:true };
     }
 
+    case 'UPSERT_PLAINSPACE_PUBLISHED_DESIGN': {
+      const d = params[0] || {};
+      await client.query(`
+        INSERT INTO plainspace.published_designs (name, path, files, updated_at)
+        VALUES ($1,$2,$3,NOW())
+        ON CONFLICT (name)
+        DO UPDATE SET path = EXCLUDED.path,
+                      files = EXCLUDED.files,
+                      updated_at = NOW()
+      `, [
+        d.name,
+        d.path,
+        JSON.stringify(d.files || [])
+      ]);
+      return { success: true };
+    }
+
     case 'GET_PLAINSPACE_LAYOUT_TEMPLATE': {
       const d = params[0] || {};
       const result = await client.query(`
         SELECT layout_json, is_global
           FROM plainspace.layout_templates
          WHERE name = $1
+      `, [d.name]);
+      return result.rows;
+    }
+
+    case 'GET_PLAINSPACE_PUBLISHED_DESIGN': {
+      const d = params[0] || {};
+      const result = await client.query(`
+        SELECT path, files FROM plainspace.published_designs WHERE name = $1
       `, [d.name]);
       return result.rows;
     }

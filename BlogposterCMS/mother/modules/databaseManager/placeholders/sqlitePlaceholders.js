@@ -1091,6 +1091,18 @@ case 'UPSERT_PLAINSPACE_LAYOUT': {
   return { success: true };
 }
 
+case 'INIT_PLAINSPACE_PUBLISHED_DESIGNS': {
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS plainspace_published_designs (
+      name TEXT PRIMARY KEY,
+      path TEXT NOT NULL,
+      files TEXT NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  return { done: true };
+}
+
 case 'UPSERT_PLAINSPACE_LAYOUT_TEMPLATE': {
   const d = params?.[0] ?? {};
   await db.run(`
@@ -1108,6 +1120,19 @@ case 'UPSERT_PLAINSPACE_LAYOUT_TEMPLATE': {
   return { success: true };
 }
 
+case 'UPSERT_PLAINSPACE_PUBLISHED_DESIGN': {
+  const d = params?.[0] ?? {};
+  await db.run(`
+    INSERT INTO plainspace_published_designs (name, path, files, updated_at)
+      VALUES (?,?,?,CURRENT_TIMESTAMP)
+    ON CONFLICT(name) DO UPDATE SET
+      path = excluded.path,
+      files = excluded.files,
+      updated_at = CURRENT_TIMESTAMP;
+  `, [d.name, d.path, JSON.stringify(d.files ?? [])]);
+  return { success: true };
+}
+
 case 'GET_PLAINSPACE_LAYOUT_TEMPLATE': {
   const { name } = params?.[0] ?? {};
   const rows = await db.all(`
@@ -1115,6 +1140,13 @@ case 'GET_PLAINSPACE_LAYOUT_TEMPLATE': {
      WHERE name = ?;
   `, [name]);
   return rows;
+}
+
+case 'GET_PLAINSPACE_PUBLISHED_DESIGN': {
+  const { name } = params?.[0] ?? {};
+  return await db.all(`
+    SELECT path, files FROM plainspace_published_designs WHERE name = ?;
+  `, [name]);
 }
 
 case 'GET_PLAINSPACE_LAYOUT_TEMPLATE_NAMES': {

@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Builder publish now saves designs under `/builder/{designName}/` and records file metadata for safe overwrites.
+- Publishing a design triggers a database save of the layout template.
 - Builder can publish static HTML files to the media library via a new "Publish" button.
 - Media manager now accepts HTML, CSS, and JavaScript uploads for static delivery.
 - Introduced `/admin/app/:appName` namespace with a standalone Page Builder app.

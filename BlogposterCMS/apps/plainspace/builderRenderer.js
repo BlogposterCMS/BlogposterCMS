@@ -613,10 +613,56 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const previewPath = await capturePreview();
     const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
     const subPath = `builder/${safeName}`;
-    const htmlContent = gridEl ? gridEl.innerHTML : '';
-    const jsContent = Array.from(gridEl.querySelectorAll('script')).map(s => s.textContent).join('\n');
-    const cssContent = Array.from(gridEl.querySelectorAll('style')).map(s => s.textContent).join('\n');
-    const files = [{ fileName: 'index.html', data: htmlContent }];
+
+    const gridClone = gridEl ? gridEl.cloneNode(true) : null;
+    const externalStyles = [];
+    const externalScripts = [];
+    let jsContent = '';
+    let cssContent = '';
+    let bodyHtml = '';
+    if (gridClone) {
+      gridClone.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
+        if (l.href) externalStyles.push(l.href);
+        l.remove();
+      });
+      gridClone.querySelectorAll('script').forEach(s => {
+        if (s.src) {
+          externalScripts.push(s.src);
+        } else {
+          jsContent += s.textContent + '\n';
+        }
+        s.remove();
+      });
+      gridClone.querySelectorAll('style').forEach(st => {
+        cssContent += st.textContent + '\n';
+        st.remove();
+      });
+      bodyHtml = gridClone.innerHTML;
+    }
+
+    const theme = window.ACTIVE_THEME || 'default';
+    const headLinks = [
+      `<link rel="stylesheet" href="/themes/${theme}/theme.css">`,
+      ...externalStyles.map(href => `<link rel="stylesheet" href="${href}">`)
+    ];
+    if (cssContent.trim()) headLinks.push('<link rel="stylesheet" href="style.css">');
+
+    const tailScripts = [
+      `<script src="/themes/${theme}/theme.js"></script>`,
+      '<script src="/build/meltdownEmitter.js"></script>',
+      '<script type="module" src="/assets/js/faviconLoader.js"></script>',
+      '<script type="module" src="/assets/js/fontsLoader.js"></script>',
+      '<script type="module" src="/assets/js/customSelect.js"></script>',
+      '<script src="/assets/js/openExplorer.js"></script>',
+      ...externalScripts.map(src => `<script src="${src}"></script>`),
+      '<script type="module" src="/plainspace/main/pageRenderer.js"></script>'
+    ];
+    if (jsContent.trim()) tailScripts.splice(-1, 0, '<script src="script.js"></script>');
+
+    const safeTitle = name.replace(/[<>"]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const indexHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${safeTitle}</title>${headLinks.join('')}</head><body><div class="app-scope"><div id="content">${bodyHtml}</div></div>${tailScripts.join('')}</body></html>`;
+
+    const files = [{ fileName: 'index.html', data: indexHtml }];
     if (jsContent.trim()) files.push({ fileName: 'script.js', data: jsContent });
     if (cssContent.trim()) files.push({ fileName: 'style.css', data: cssContent });
     let existingMeta = null;

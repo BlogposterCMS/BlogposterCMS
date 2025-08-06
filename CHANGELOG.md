@@ -18,6 +18,8 @@ El Psy Kongroo
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Standalone builder app now links `site.css` and skips missing theme CSS gracefully.
+- Added default theme assets to restore builder styling.
 - Missing global helpers caused runtime errors in the admin panel; scripts now load from `/build` and the `resize` icon asset is restored.
 - Builder app now loads required core scripts, restoring `fetchWithTimeout`, `meltdownEmit`, and icon rendering.
 - Builder dashboard partials now load from `/plainspace/partials/` with sanitized file names.
@@ -97,6 +99,7 @@ El Psy Kongroo
 - ResizeObserver for bounding boxes starts after the window `load` event so seeded widgets size correctly.
 
 ### Fixed
+- Added default theme assets to restore builder styling.
 - Bounding box uses `ResizeObserver` to update once widgets render, ensuring shadow-root widgets display the correct outline.
 - Text editor toolbar now stays positioned below the builder header while scrolling.
 - Bounding box updates immediately after layout shifts via `transitionend` and
@@ -164,6 +167,7 @@ El Psy Kongroo
 - User color is now cached for the session to avoid repeated meltdown requests.
 
 ### Fixed
+- Added default theme assets to restore builder styling.
 - CodeQL workflow now grants actions: read permission to resolve upload errors.
 - Fixed widget preview crash when toggling admin edit mode.
 - CanvasGrid percentage sizing now clamps at 100% and remains stable on window resize.
@@ -578,6 +582,7 @@ This release marks a foundational shift to a fully independent and modular build
   compatibility with older SQLite versions.
 
 ### Fixed
+- Added default theme assets to restore builder styling.
 - Resolved SyntaxError in SQLite placeholder handler causing server startup failure.
 
 ## [0.4.0] – 2025-06-04

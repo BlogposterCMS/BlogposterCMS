@@ -41,10 +41,14 @@ export function scopeThemeCss(css, rootPrefix, contentPrefix) {
 }
 
 export async function applyBuilderTheme() {
-  const theme = window.ACTIVE_THEME || 'default';
+  const theme = window.ACTIVE_THEME;
+  if (!theme) return; // no active theme
   try {
     const res = await window.fetchWithTimeout(`/themes/${theme}/theme.css`);
-    if (!res.ok) throw new Error('theme css fetch failed');
+    if (!res.ok) {
+      console.warn(`[Builder] missing theme "${theme}" css (${res.status})`);
+      return;
+    }
     const css = await res.text();
     const scoped = scopeThemeCss(css, '#builderGrid', '#builderGrid .builder-themed');
     const style = document.createElement('style');
@@ -52,7 +56,7 @@ export async function applyBuilderTheme() {
     style.textContent = scoped;
     document.head.appendChild(style);
   } catch (err) {
-    console.error('[Builder] failed to apply theme', err);
+    console.warn('[Builder] failed to apply theme', err);
   }
 }
 

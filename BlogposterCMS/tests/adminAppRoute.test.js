@@ -37,7 +37,7 @@ test('GET /admin/app/plainspace/123 returns 200 with csrf token', async () => {
     const entry = rawEntry.includes('/') || rawEntry.endsWith('.js')
       ? rawEntry
       : `build/${rawEntry}.js`;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title><link rel="stylesheet" href="/assets/css/site.css"></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
     res.send(html);
   });
 

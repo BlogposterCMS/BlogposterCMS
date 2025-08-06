@@ -4,6 +4,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 
 ## Features
 
+- 1px baseline grid for pixel-perfect placement
 - GPU‑accelerated transforms keep dragging and resizing smooth at 60fps.
 - Widgets remain inside the grid and can be layered using `data-layer` for z-index control.
 - Optional push mode prevents overlaps by moving surrounding widgets out of the way.
@@ -17,7 +18,7 @@ Initialize the grid in your admin scripts:
 ```js
 import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
-const grid = initCanvasGrid({ cellHeight: 6, columnWidth: 6 }, '#builderGrid');
+const grid = initCanvasGrid({ cellHeight: 1, columnWidth: 1 }, '#builderGrid');
 ```
 
 Widgets can be added or updated programmatically:

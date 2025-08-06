@@ -8,9 +8,9 @@ export class CanvasGrid {
   constructor(options = {}, el) {
     this.options = Object.assign(
       {
-        // 6px baseline grid for consistent widget alignment
-        cellHeight: 6,
-        columnWidth: 6,
+        // 1px baseline grid for pixel-perfect alignment
+        cellHeight: 1,
+        columnWidth: 1,
         columns: Infinity,
         rows: Infinity,
         pushOnOverlap: false,

@@ -6,9 +6,9 @@ const { sanitizeHtml } = await import(
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
 
-// Default rows for admin widgets (~50px with 5px grid cells)
+// Default rows for admin widgets (~100px with pixel grid)
 // Temporary patch: double the default height for larger widgets
-const DEFAULT_ADMIN_ROWS = 20;
+const DEFAULT_ADMIN_ROWS = 100;
 
 
 function getGlobalCssUrl(lane) {
@@ -228,9 +228,9 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     gridEl = document.createElement('div');
     gridEl.className = 'canvas-grid';
     target.appendChild(gridEl);
-    const columnWidth = 6;
+    const columnWidth = 1;
     const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
-    grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 6, columnWidth, columns }, gridEl);
+    grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth, columns }, gridEl);
   }
   const pending = [];
   for (const item of layout) {
@@ -572,7 +572,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       gridEl.className = 'canvas-grid';
       contentEl.appendChild(gridEl);
       // Static mode: public pages should not be directly editable
-      const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 6, columnWidth: 6 }, gridEl);
+      const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth: 1 }, gridEl);
 
       const pending = [];
       for (const item of combined) {
@@ -646,10 +646,10 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     gridEl.id = 'adminGrid';
     gridEl.className = 'canvas-grid';
     contentEl.appendChild(gridEl);
-    const columnWidth = 6;
+    const columnWidth = 1;
     const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
     const grid = initCanvasGrid({
-      cellHeight: 6,
+      cellHeight: 1,
       columnWidth,
       columns,
       percentageMode: true,

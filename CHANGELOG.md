@@ -8,6 +8,8 @@ El Psy Kongroo
 ### Added
 - Introduced `/admin/app/:appName` namespace with a standalone Page Builder app.
 - Seeded `builder.use` permission for controlling Page Builder access.
+- App registry now builds at startup via a dedicated `appLoader` core module scanning `apps/` manifests.
+- Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
 - Admin app launcher now resolves manifest entries to bundled scripts and exposes `/build` assets.

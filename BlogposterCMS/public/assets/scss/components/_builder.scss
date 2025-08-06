@@ -16,6 +16,7 @@
 .builder-header .builder-back-btn,
 .builder-header .builder-save-btn,
 .builder-header .builder-preview-btn,
+.builder-header .builder-publish-btn,
 .builder-header .builder-menu-btn {
   background: transparent;
   border: none;
@@ -47,13 +48,6 @@
 }
 
 
-.builder-header .page-link {
-  color: var(--color-primary);
-}
-
-.builder-header .page-select {
-  padding: 4px 8px;
-}
 
 .builder-sidebar {
   position: fixed;

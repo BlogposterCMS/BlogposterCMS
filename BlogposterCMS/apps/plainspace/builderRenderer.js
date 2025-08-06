@@ -438,7 +438,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   backBtn.addEventListener('click', () => history.back());
   topBar.appendChild(backBtn);
 
-  let pageSelect = null;
   const layoutName = layoutNameParam || pageData?.meta?.layoutTemplate || 'default';
 
   const infoWrap = document.createElement('div');
@@ -450,45 +449,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   nameInput.placeholder = 'Layout name…';
   nameInput.value = layoutName;
   infoWrap.appendChild(nameInput);
-
-  // Global layout toggle moved to the layout bar
-
-  const editFor = document.createElement('span');
-  editFor.textContent = 'editing for';
-  infoWrap.appendChild(editFor);
-
-  if (pageData?.title) {
-    const pageLink = document.createElement('a');
-    pageLink.className = 'page-link';
-    pageLink.href = `/admin/pages/edit/${pageId}`;
-    pageLink.textContent = pageData.title;
-    infoWrap.appendChild(pageLink);
-  } else {
-    const none = document.createElement('span');
-    none.textContent = 'not attached to a page';
-    infoWrap.appendChild(none);
-
-    pageSelect = document.createElement('select');
-    pageSelect.className = 'page-select';
-    pageSelect.multiple = true;
-    try {
-      const { pages = [] } = await meltdownEmit('getPagesByLane', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        lane: 'public'
-      });
-      (Array.isArray(pages) ? pages : []).forEach(p => {
-        const o = document.createElement('option');
-        o.value = p.id;
-        o.textContent = p.title;
-        pageSelect.appendChild(o);
-      });
-    } catch (err) {
-      console.warn('[Builder] failed to load pages', err);
-    }
-    infoWrap.appendChild(pageSelect);
-  }
 
   topBar.appendChild(infoWrap);
 
@@ -505,6 +465,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   previewBtn.innerHTML = window.featherIcon ? window.featherIcon('eye') :
     '<img src="/assets/icons/eye.svg" alt="Preview" />';
   topBar.appendChild(previewBtn);
+
+  const publishBtn = document.createElement('button');
+  publishBtn.id = 'publishLayoutBtn';
+  publishBtn.className = 'builder-publish-btn';
+  publishBtn.innerHTML = window.featherIcon ? window.featherIcon('upload') :
+    '<img src="/assets/icons/upload.svg" alt="Publish" />';
+  topBar.appendChild(publishBtn);
 
   const headerMenuBtn = document.createElement('button');
   headerMenuBtn.className = 'builder-menu-btn';
@@ -599,11 +566,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         previewPath
       });
 
-      const targetIds = pageId
-        ? [pageId]
-        // Keep IDs as strings so MongoDB ObjectIds are preserved. Postgres
-        // automatically casts numeric strings to integers.
-        : Array.from(pageSelect?.selectedOptions || []).map(o => o.value);
+      const targetIds = pageId ? [pageId] : [];
 
       const events = targetIds.map(id => ({
         eventName: 'saveLayoutForViewport',
@@ -639,6 +602,28 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       showPreviewHeader();
     } else {
       hidePreviewHeader();
+    }
+  });
+
+  publishBtn.addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    if (!name) { alert('Enter a name'); return; }
+    updateAllWidgetContents();
+    const htmlContent = gridEl ? gridEl.innerHTML : '';
+    const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
+    try {
+      await meltdownEmit('uploadFileToFolder', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'mediaManager',
+        moduleType: 'core',
+        subPath: 'builder',
+        fileName: `${safeName}.html`,
+        fileData: btoa(unescape(encodeURIComponent(htmlContent)))
+      });
+      alert('Layout published');
+    } catch (err) {
+      console.error('[Builder] publish error', err);
+      alert('Publish failed: ' + err.message);
     }
   });
 

@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Builder can publish static HTML files to the media library via a new "Publish" button.
 - Media manager now accepts HTML, CSS, and JavaScript uploads for static delivery.
 - Introduced `/admin/app/:appName` namespace with a standalone Page Builder app.
 - Seeded `builder.use` permission for controlling Page Builder access.
@@ -13,6 +14,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Removed "editing for page" label and page selection dropdown from the builder header.
 - Admin app launcher now resolves manifest entries to bundled scripts and exposes `/build` assets.
 - Public renderer now lazy-loads builder modules to avoid bundling the entire builder into public pages.
 - Builder assets are now served from `/apps/plainspace`, and the `/plainspace` alias maps to this location for backward compatibility.

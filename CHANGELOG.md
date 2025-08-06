@@ -21,6 +21,7 @@ El Psy Kongroo
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- appLoader now exports `initialize()` like other core modules, preventing server startup crashes.
 - Dynamic widget imports in the builder now bypass Webpack bundling, preventing missing module errors.
 - Standalone builder app now links `site.css` and skips missing theme CSS gracefully.
 - Added default theme assets to restore builder styling.

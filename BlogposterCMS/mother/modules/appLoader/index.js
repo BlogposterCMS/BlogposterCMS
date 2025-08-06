@@ -7,8 +7,7 @@ const {
   registerOrUpdateApp
 } = require('./appRegistryService');
 
-async function loadAllApps({ emitter, jwt, baseDir }) {
-  const motherEmitter = emitter;
+async function loadAllApps({ motherEmitter, jwt, baseDir }) {
   const appsPath = baseDir || path.resolve(__dirname, '../../../apps');
 
   try {
@@ -64,4 +63,13 @@ async function loadAllApps({ emitter, jwt, baseDir }) {
   }
 }
 
-module.exports = loadAllApps;
+module.exports = {
+  async initialize({ motherEmitter, isCore, jwt, baseDir }) {
+    if (!isCore) {
+      console.error('[APP LOADER] Must be loaded as a core module.');
+      return;
+    }
+
+    await loadAllApps({ motherEmitter, jwt, baseDir });
+  }
+};

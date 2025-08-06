@@ -17,6 +17,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Page Content widget now displays available designs as preview cards and shows attached content separately.
 - Builder now imports CanvasGrid and related utilities from public plainspace modules, removing duplicate builder copies.
 - CanvasGrid now uses a 6px base unit for consistent dashboard alignment.
 - Widget containers now share `page-list-card` styling for consistent appearance.

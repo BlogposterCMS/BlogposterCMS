@@ -4,5 +4,6 @@
   "icon": "layout",
   "entry": "plainspace",
   "permissions": ["builder.use"],
-  "launchable": true
+  "launchable": true,
+  "tags": ["builder"]
 }

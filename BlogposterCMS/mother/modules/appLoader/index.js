@@ -6,6 +6,7 @@ const {
   ensureAppRegistrySchema,
   registerOrUpdateApp
 } = require('./appRegistryService');
+const { hasPermission } = require('../userManagement/permissionUtils');
 
 async function loadAllApps({ motherEmitter, jwt, baseDir }) {
   const appsPath = baseDir || path.resolve(__dirname, '../../../apps');
@@ -71,5 +72,41 @@ module.exports = {
     }
 
     await loadAllApps({ motherEmitter, jwt, baseDir });
+
+    motherEmitter.on('listBuilderApps', async (payload, callback) => {
+      try {
+        if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'builder.use')) {
+          return callback(new Error('Forbidden'));
+        }
+        const appsPath = baseDir || path.resolve(__dirname, '../../../apps');
+        const dirs = fs.existsSync(appsPath)
+          ? fs.readdirSync(appsPath, { withFileTypes: true })
+          : [];
+        const result = [];
+        for (const dirent of dirs) {
+          if (!dirent.isDirectory()) continue;
+          const manifestPath = path.join(appsPath, dirent.name, 'app.json');
+          if (!fs.existsSync(manifestPath)) continue;
+          try {
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            if (
+              manifest &&
+              Array.isArray(manifest.tags) &&
+              manifest.tags.includes('builder')
+            ) {
+              result.push({
+                name: dirent.name,
+                title: manifest.title || manifest.name || dirent.name
+              });
+            }
+          } catch {
+            // ignore malformed manifest
+          }
+        }
+        callback(null, { apps: result });
+      } catch (err) {
+        callback(err);
+      }
+    });
   }
 };

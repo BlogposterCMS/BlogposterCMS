@@ -437,6 +437,7 @@ body.dashboard-edit-mode .canvas-item {
   --user-color: #008080;
   --color-primary: var(--user-color);
   --gradient-primary: linear-gradient(90deg, var(--user-color), #FF00FF, #FFA500);
+  --shared-widget-color: #d4af37;
   --shadow-card: 0 1px 28px rgba(0,0,0,0.07);
   --shadow-default: 0px 0px 0px 1px rgba(64, 87, 109, .04), 0px 6px 20px -4px rgba(64, 87, 109, .3);
   --font-body: "Manrope", sans-serif;
@@ -464,6 +465,10 @@ body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  padding: 28px 22px 14px 22px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
 }
 
 .widget-container.loading {
@@ -1120,10 +1125,6 @@ p {
   }
 }
 .page-list-card, .news-detail-card, .news-list-card, .widget-list-card, .permissions-card, .user-list-card, .layout-gallery-card, .layout-list-card, .modules-list-card, .fonts-list-card, .login-strategies-card, .system-settings-card {
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
-  padding: 28px 22px 14px 22px;
   margin: 0 auto;
   min-width: 280px;
   width: 100%;
@@ -1312,9 +1313,6 @@ p {
 
 .page-stats-widget {
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
-  padding: 20px;
   margin: 0 auto;
   width: 100%;
   font-family: var(--font-body);
@@ -1732,6 +1730,7 @@ p {
 .builder-header .builder-back-btn,
 .builder-header .builder-save-btn,
 .builder-header .builder-preview-btn,
+.builder-header .builder-publish-btn,
 .builder-header .builder-menu-btn {
   background: transparent;
   border: none;
@@ -1760,14 +1759,6 @@ p {
   font-size: 1.25rem;
   padding: 4px 8px;
   flex: 1;
-}
-
-.builder-header .page-link {
-  color: var(--color-primary);
-}
-
-.builder-header .page-select {
-  padding: 4px 8px;
 }
 
 .builder-sidebar {
@@ -2049,6 +2040,11 @@ p {
   border-color: var(--user-color);
 }
 
+.builder-mode .canvas-item[data-global=true]:hover,
+.builder-mode .canvas-item[data-global=true].selected {
+  border-color: var(--shared-widget-color, #d4af37);
+}
+
 .builder-mode .canvas-item > .ui-resizable-handle {
   display: none;
 }
@@ -2200,19 +2196,10 @@ body.preview-desktop #content {
   z-index: 100;
 }
 
-body.builder-mode .canvas-item[data-global=true] {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-body.builder-mode[data-active-layer="0"] .canvas-item[data-global=true] {
-  opacity: 1;
-  pointer-events: auto;
-}
-
 body.builder-mode .canvas-item.inactive-layer {
   opacity: 0.6;
   position: relative;
+  pointer-events: none;
 }
 
 body.builder-mode .canvas-item.inactive-layer::after {
@@ -2227,7 +2214,7 @@ body.builder-mode .canvas-item.inactive-layer::after {
   justify-content: center;
   text-align: center;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transition: opacity 0.2s ease;
 }
 

@@ -679,7 +679,7 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     ? rawEntry
     : `build/${rawEntry}.js`;
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title><script src="/build/meltdownEmitter.js"></script><script src="/build/icons.js"></script></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title><link rel="stylesheet" href="/assets/css/site.css"><script src="/build/meltdownEmitter.js"></script><script src="/build/icons.js"></script></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
   return res.send(html);
 });
 

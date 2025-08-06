@@ -8,6 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
 }
 
 .page-content-widget .add-content-btn {
@@ -21,6 +22,29 @@
 .page-content-widget .add-content-btn:hover {
   opacity: 1;
   transform: scale(1.1);
+}
+
+.page-content-widget .content-upload-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-white);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  list-style: none;
+  padding: 4px 0;
+  margin: 4px 0 0 0;
+  z-index: 10;
+}
+
+.page-content-widget .content-upload-menu li {
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.page-content-widget .content-upload-menu li:hover {
+  background: var(--color-light-gray, #f0f0f0);
 }
 
 .section-title {

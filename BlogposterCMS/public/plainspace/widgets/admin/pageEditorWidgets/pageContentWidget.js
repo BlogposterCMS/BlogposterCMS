@@ -26,6 +26,23 @@ export async function render(el) {
     title: page.title
   };
 
+  let builderApps = null;
+  async function getBuilderApps() {
+    if (builderApps !== null) return builderApps;
+    try {
+      const res = await meltdownEmit('listBuilderApps', {
+        jwt,
+        moduleName: 'appLoader',
+        moduleType: 'core'
+      });
+      builderApps = Array.isArray(res?.apps) ? res.apps : [];
+    } catch (err) {
+      console.warn('Failed to fetch builder apps', err);
+      builderApps = [];
+    }
+    return builderApps;
+  }
+
   const wrapper = document.createElement('div');
   wrapper.className = 'page-content-widget';
 
@@ -287,15 +304,45 @@ export async function render(el) {
     reader.readAsText(file);
   }
 
-  addBtn.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.html,.htm,text/html';
-    input.addEventListener('change', () => {
-      const file = input.files[0];
-      if (file) handleFile(file);
+  addBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    const existing = titleBar.querySelector('.content-upload-menu');
+    if (existing) existing.remove();
+
+    const menu = document.createElement('ul');
+    menu.className = 'content-upload-menu';
+
+    const uploadLi = document.createElement('li');
+    uploadLi.textContent = 'Upload HTML';
+    uploadLi.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.html,.htm,text/html';
+      input.addEventListener('change', () => {
+        const file = input.files[0];
+        if (file) handleFile(file);
+      });
+      input.click();
     });
-    input.click();
+    menu.appendChild(uploadLi);
+
+    const builders = await getBuilderApps();
+    builders.forEach(app => {
+      const li = document.createElement('li');
+      li.textContent = app.title || app.name;
+      li.addEventListener('click', () => {
+        window.location.href = `/admin/app/${encodeURIComponent(app.name)}/${page.id}`;
+      });
+      menu.appendChild(li);
+    });
+
+    titleBar.appendChild(menu);
+
+    const close = () => {
+      menu.remove();
+      document.removeEventListener('click', close);
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
   });
 
   el.innerHTML = '';

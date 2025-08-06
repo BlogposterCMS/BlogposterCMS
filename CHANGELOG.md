@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
+- Apps can expose a builder by adding a `builder` tag in their manifest.
 - Builder publish now saves designs under `/builder/{designName}/` and records file metadata for safe overwrites.
 - Publishing a design triggers a database save of the layout template.
 - Published designs now include a full HTML skeleton and link their theme and widget assets.

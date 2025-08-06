@@ -18,6 +18,7 @@ El Psy Kongroo
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
 
 ### Fixed
+- Dynamic widget imports in the builder now bypass Webpack bundling, preventing missing module errors.
 - Standalone builder app now links `site.css` and skips missing theme CSS gracefully.
 - Added default theme assets to restore builder styling.
 - Missing global helpers caused runtime errors in the admin panel; scripts now load from `/build` and the `resize` icon asset is restored.

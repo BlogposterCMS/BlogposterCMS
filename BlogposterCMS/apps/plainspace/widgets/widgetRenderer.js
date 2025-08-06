@@ -54,7 +54,7 @@ export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const ctx = { id: instanceId, widgetId: widgetDef.id, metadata: widgetDef.metadata };
   if (window.ADMIN_TOKEN) ctx.jwt = window.ADMIN_TOKEN;
   const codeUrl = new URL(widgetDef.codeUrl, document.baseURI).href;
-  import(codeUrl)
+  import(/* webpackIgnore: true */ codeUrl)
     .then(m => m.render?.(container, ctx))
     .catch(err => console.error('[Builder] widget import error', err));
 

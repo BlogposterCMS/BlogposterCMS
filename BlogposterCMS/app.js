@@ -324,6 +324,7 @@ function getModuleTokenForDbManager() {
     { name:'notificationManager', path:'mother/modules/notificationManager', extra:{ app } },
     { name:'settingsManager',     path:'mother/modules/settingsManager',     extra:{} },
     { name:'widgetManager',       path:'mother/modules/widgetManager',       extra:{} },
+    { name:'appLoader',           path:'mother/modules/appLoader',           extra:{} },
     { name:'userManagement',      path:'mother/modules/userManagement',      extra:{ app } },
     { name:'pagesManager',        path:'mother/modules/pagesManager',        extra:{} },
     { name:'dependencyLoader',    path:'mother/modules/dependencyLoader',    extra:{ jwtToken: dbManagerToken } },

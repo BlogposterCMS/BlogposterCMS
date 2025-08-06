@@ -19,6 +19,31 @@ const { onceCallback } = require('../../emitters/motherEmitter');
 
 const { hasPermission } = require('../userManagement/permissionUtils');
 
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'text/html',
+  'text/css',
+  'application/javascript'
+];
+
+const EXTENSION_MIME_MAP = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.html': 'text/html',
+  '.htm': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript'
+};
+
 let libraryRoot;
 
 module.exports = {
@@ -214,12 +239,17 @@ function setupMediaManagerEvents(motherEmitter) {
       }
       fs.mkdirSync(targetDir, { recursive: true });
 
-      let finalName = fileName;
+      let finalName = path.basename(fileName);
+      const ext = path.extname(finalName).toLowerCase();
+      const resolvedMime = EXTENSION_MIME_MAP[ext];
+      if (!resolvedMime) {
+        return callback(new Error('[MEDIA MANAGER] uploadFileToFolder => disallowed file type.'));
+      }
+
       const fullPath = path.join(targetDir, finalName);
       if (fs.existsSync(fullPath)) {
         const timestamp = Date.now();
-        const ext = path.extname(fileName);
-        const base = path.basename(fileName, ext);
+        const base = path.basename(finalName, ext);
         finalName = `${base}-${timestamp}${ext}`;
       }
 
@@ -227,7 +257,7 @@ function setupMediaManagerEvents(motherEmitter) {
         ? fileData
         : Buffer.from(fileData, 'base64');
       fs.writeFileSync(path.join(targetDir, finalName), buffer);
-      callback(null, { success: true, fileName: finalName, mimeType });
+      callback(null, { success: true, fileName: finalName, mimeType: resolvedMime });
     } catch (err) {
       callback(err);
     }
@@ -278,7 +308,7 @@ function setupUploadRoute(app) {
       return target;
     },
     maxFileSize: parseInt(process.env.MAX_UPLOAD_BYTES || '20000000', 10),
-    allowedMimeTypes: ['image/jpeg','image/png','image/gif','image/webp','image/svg+xml']
+    allowedMimeTypes: ALLOWED_MIME_TYPES
   }), (req, res) => {
     res.json({ success: true, fileName: req.uploadFile.finalName, mimeType: req.uploadFile.mimeType });
   });

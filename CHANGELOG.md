@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Media manager now accepts HTML, CSS, and JavaScript uploads for static delivery.
 - Introduced `/admin/app/:appName` namespace with a standalone Page Builder app.
 - Seeded `builder.use` permission for controlling Page Builder access.
 - App registry now builds at startup via a dedicated `appLoader` core module scanning `apps/` manifests.

@@ -1248,6 +1248,11 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     return { success: true };
     }
 
+    case 'INIT_PLAINSPACE_PUBLISHED_DESIGNS': {
+      await db.createCollection('plainspace_published_designs').catch(() => {});
+      return { done: true };
+    }
+
     case 'GET_PLAINSPACE_LAYOUT_TEMPLATE': {
     const d = params[0] || {};
     const doc = await db.collection('plainspace_layout_templates').findOne({ name: d.name });
@@ -1262,6 +1267,28 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         .sort({ updated_at: -1 })
         .toArray();
     return docs;
+    }
+
+    case 'UPSERT_PLAINSPACE_PUBLISHED_DESIGN': {
+      const d = params[0] || {};
+      await db.collection('plainspace_published_designs').updateOne(
+        { name: d.name },
+        {
+          $set: {
+            path: d.path,
+            files: d.files || [],
+            updated_at: new Date().toISOString()
+          }
+        },
+        { upsert: true }
+      );
+      return { success: true };
+    }
+
+    case 'GET_PLAINSPACE_PUBLISHED_DESIGN': {
+      const d = params[0] || {};
+      const doc = await db.collection('plainspace_published_designs').findOne({ name: d.name });
+      return doc ? [doc] : [];
     }
 
     case 'GET_GLOBAL_LAYOUT_TEMPLATE': {

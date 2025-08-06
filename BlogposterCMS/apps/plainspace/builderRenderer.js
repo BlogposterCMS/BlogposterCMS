@@ -609,16 +609,65 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const name = nameInput.value.trim();
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
-    const htmlContent = gridEl ? gridEl.innerHTML : '';
+    const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
+    const previewPath = await capturePreview();
     const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
+    const subPath = `builder/${safeName}`;
+    const htmlContent = gridEl ? gridEl.innerHTML : '';
+    const jsContent = Array.from(gridEl.querySelectorAll('script')).map(s => s.textContent).join('\n');
+    const cssContent = Array.from(gridEl.querySelectorAll('style')).map(s => s.textContent).join('\n');
+    const files = [{ fileName: 'index.html', data: htmlContent }];
+    if (jsContent.trim()) files.push({ fileName: 'script.js', data: jsContent });
+    if (cssContent.trim()) files.push({ fileName: 'style.css', data: cssContent });
+    let existingMeta = null;
     try {
-      await meltdownEmit('uploadFileToFolder', {
+      existingMeta = await meltdownEmit('getPublishedDesignMeta', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'plainspace',
+        moduleType: 'core',
+        name
+      });
+    } catch (err) {
+      console.warn('[Builder] getPublishedDesignMeta', err);
+    }
+    try {
+      await meltdownEmit('deleteLocalItem', {
         jwt: window.ADMIN_TOKEN,
         moduleName: 'mediaManager',
         moduleType: 'core',
-        subPath: 'builder',
-        fileName: `${safeName}.html`,
-        fileData: btoa(unescape(encodeURIComponent(htmlContent)))
+        currentPath: existingMeta?.path ? existingMeta.path.split('/').slice(0, -1).join('/') : 'builder',
+        itemName: existingMeta?.path ? existingMeta.path.split('/').pop() : safeName
+      });
+    } catch (err) {
+      console.warn('[Builder] deleteLocalItem', err);
+    }
+    try {
+      await meltdownEmit('saveLayoutTemplate', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'plainspace',
+        name,
+        lane: 'public',
+        viewport: 'desktop',
+        layout,
+        previewPath
+      });
+      for (const f of files) {
+        await meltdownEmit('uploadFileToFolder', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'mediaManager',
+          moduleType: 'core',
+          subPath,
+          fileName: f.fileName,
+          fileData: btoa(unescape(encodeURIComponent(f.data)))
+        });
+      }
+      await meltdownEmit('savePublishedDesignMeta', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'plainspace',
+        moduleType: 'core',
+        name,
+        path: subPath,
+        files: files.map(f => f.fileName)
       });
       alert('Layout published');
     } catch (err) {

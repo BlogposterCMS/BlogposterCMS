@@ -647,6 +647,63 @@ function registerPlainSpaceEvents(motherEmitter) {
       cb(err);
     }
   });
+
+  // 10) savePublishedDesignMeta
+  motherEmitter.on('savePublishedDesignMeta', (payload, cb) => {
+    try {
+      const { jwt, name, path, files, decodedJWT } = payload || {};
+      if (!jwt || !name || !path || !Array.isArray(files)) {
+        return cb(new Error('[plainSpace] Invalid payload in savePublishedDesignMeta.'));
+      }
+      if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.saveLayoutTemplate')) {
+        return cb(new Error('Forbidden – missing permission: plainspace.saveLayoutTemplate'));
+      }
+      motherEmitter.emit(
+        'dbUpdate',
+        {
+          jwt,
+          moduleName: MODULE,
+          moduleType: 'core',
+          table: '__rawSQL__',
+          data: { rawSQL: 'UPSERT_PLAINSPACE_PUBLISHED_DESIGN', params: [{ name, path, files }] }
+        },
+        cb
+      );
+    } catch (err) {
+      cb(err);
+    }
+  });
+
+  // 11) getPublishedDesignMeta
+  motherEmitter.on('getPublishedDesignMeta', (payload, cb) => {
+    try {
+      const { jwt, name } = payload || {};
+      if (!jwt || !name) {
+        return cb(new Error('[plainSpace] Invalid payload in getPublishedDesignMeta.'));
+      }
+      motherEmitter.emit(
+        'dbSelect',
+        {
+          jwt,
+          moduleName: MODULE,
+          moduleType: 'core',
+          table: '__rawSQL__',
+          data: { rawSQL: 'GET_PLAINSPACE_PUBLISHED_DESIGN', params: [{ name }] }
+        },
+        (err, rows = []) => {
+          if (err) return cb(err);
+          if (!rows.length) return cb(null, { path: '', files: [] });
+          let files = rows[0].files || [];
+          if (typeof files === 'string') {
+            try { files = JSON.parse(files); } catch { files = []; }
+          }
+          cb(null, { path: rows[0].path || '', files });
+        }
+      );
+    } catch (err) {
+      cb(err);
+    }
+  });
 }
 
 module.exports = {

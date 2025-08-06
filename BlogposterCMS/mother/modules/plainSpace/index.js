@@ -91,6 +91,18 @@ module.exports = {
         console.error('[plainSpace] Could not create "plainspace.layout_templates" table:', err.message);
       });
 
+      await meltdownEmit(motherEmitter, 'dbUpdate', {
+        jwt,
+        moduleName: MODULE,
+        moduleType: 'core',
+        table: '__rawSQL__',
+        data: { rawSQL: 'INIT_PLAINSPACE_PUBLISHED_DESIGNS' }
+      }).then(() => {
+        console.log('[plainSpace] "plainspace.published_designs" table creation ensured.');
+      }).catch(err => {
+        console.error('[plainSpace] Could not create "plainspace.published_designs" table:', err.message);
+      });
+
       // Ensure a global layout exists
       try {
         const globalRes = await meltdownEmit(motherEmitter, 'getGlobalLayoutTemplate', {

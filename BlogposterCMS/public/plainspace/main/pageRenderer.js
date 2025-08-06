@@ -228,9 +228,9 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     gridEl = document.createElement('div');
     gridEl.className = 'canvas-grid';
     target.appendChild(gridEl);
-    const columnWidth = 5;
+    const columnWidth = 6;
     const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
-    grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth, columns }, gridEl);
+    grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 6, columnWidth, columns }, gridEl);
   }
   const pending = [];
   for (const item of layout) {
@@ -572,7 +572,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       gridEl.className = 'canvas-grid';
       contentEl.appendChild(gridEl);
       // Static mode: public pages should not be directly editable
-      const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 5, columnWidth: 5 }, gridEl);
+      const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 6, columnWidth: 6 }, gridEl);
 
       const pending = [];
       for (const item of combined) {
@@ -646,10 +646,10 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     gridEl.id = 'adminGrid';
     gridEl.className = 'canvas-grid';
     contentEl.appendChild(gridEl);
-    const columnWidth = 5;
+    const columnWidth = 6;
     const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
     const grid = initCanvasGrid({
-      cellHeight: 5,
+      cellHeight: 6,
       columnWidth,
       columns,
       percentageMode: true,

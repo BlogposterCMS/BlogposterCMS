@@ -1,9 +1,9 @@
-import { init as initCanvasGrid } from '../main/canvasGrid.js';
+import { init as initCanvasGrid } from '../../../public/plainspace/main/canvasGrid.js';
 
 export function initGrid(gridEl, state, selectWidget) {
-  const columnWidth = 5;
+  const columnWidth = 6;
   const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
-  const grid = initCanvasGrid({ cellHeight: 5, columnWidth, columns, pushOnOverlap: false }, gridEl);
+  const grid = initCanvasGrid({ cellHeight: 6, columnWidth, columns, pushOnOverlap: false }, gridEl);
   gridEl.__grid = grid;
 
   grid.on('change', el => {

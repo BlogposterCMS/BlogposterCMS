@@ -61,7 +61,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   if (!displayPorts.length) displayPorts.push(...DEFAULT_PORTS);
 
   // Temporary patch: larger default widget height
-  const DEFAULT_ROWS = 20; // around 100px with 5px grid cells
+  const DEFAULT_ROWS = 100; // around 100px with pixel grid
   const ICON_MAP = {
     systemInfo: 'info',
     activityLog: 'list',

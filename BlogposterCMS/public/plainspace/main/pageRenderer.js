@@ -653,7 +653,8 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       columnWidth,
       columns,
       percentageMode: true,
-      pushOnOverlap: true
+      pushOnOverlap: true,
+      useBoundingBox: false
     }, gridEl);
     grid.setStatic(true);
     document.body.classList.add('grid-mode');

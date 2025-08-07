@@ -24,6 +24,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Dashboard editing no longer displays bounding boxes; resizing uses a bottom-right handle.
 - Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.
 - Builder publication moves entire folders in one operation and requires the `builder.publish` permission.
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.

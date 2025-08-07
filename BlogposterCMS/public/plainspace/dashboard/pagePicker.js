@@ -9,7 +9,7 @@
   const gridEl = document.querySelector('#pagePickerGrid');
   const columnWidth = 1;
   const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
-const grid = initCanvasGrid({ cellHeight: 1, columnWidth, columns, pushOnOverlap: true }, gridEl);
+const grid = initCanvasGrid({ cellHeight: 1, columnWidth, columns, pushOnOverlap: true, useBoundingBox: false }, gridEl);
   // 1) load & render all public pages
   async function loadPages() {
     const { pages = [] } = await meltdownEmit('getPagesByLane', {

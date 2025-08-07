@@ -27,24 +27,10 @@ export function initContentHeader() {
   let editing = false;
   if (window.adminGrid && typeof window.adminGrid.on === 'function') {
     const grid = window.adminGrid;
-
-    const toggleBoundingBox = show => {
-      if (!grid.bboxManager) return;
-      if (!show) {
-        grid.bboxManager.hide();
-      } else if (grid.activeEl) {
-        const noResize = grid.activeEl.getAttribute('gs-no-resize') === 'true';
-        const noMove = grid.activeEl.getAttribute('gs-no-move') === 'true';
-        grid.bboxManager.setDisabled(noResize && noMove);
-        grid.bboxManager.show();
-      }
-    };
-
     grid.on('staticchange', isStatic => {
       editing = !isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
       editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/edit.svg';
-      toggleBoundingBox(editing);
       if (editing) showWidgetPopup(); else hideWidgetPopup();
     });
   }

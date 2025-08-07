@@ -105,7 +105,7 @@ async function addWidget(def) {
   );
   renderWidget(wrapper, def, null, instance);
 
-  // Ensure newly added widgets show their bounding box while editing
+  // Activate the widget immediately when added in edit mode
   if (document.body.classList.contains('dashboard-edit-mode')) {
     grid.select(wrapper);
   }

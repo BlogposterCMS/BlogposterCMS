@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
+- HTML uploads now go through the media manager to stay in the library and avoid overwriting existing files.
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 - Apps can expose a builder by adding a `builder` tag in their manifest.

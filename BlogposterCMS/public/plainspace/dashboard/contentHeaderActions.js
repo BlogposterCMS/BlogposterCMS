@@ -27,8 +27,10 @@ export function initContentHeader() {
   let editing = false;
   if (window.adminGrid && typeof window.adminGrid.on === 'function') {
     const grid = window.adminGrid;
+    grid.pushOnOverlap = grid.staticGrid;
     grid.on('staticchange', isStatic => {
       editing = !isStatic;
+      grid.pushOnOverlap = isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
       editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/edit.svg';
       if (editing) showWidgetPopup(); else hideWidgetPopup();

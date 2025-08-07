@@ -46,6 +46,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Dashboard grid now keeps push-on-overlap enabled in static mode to avoid widget collisions.
 - appLoader now exports `initialize()` like other core modules, preventing server startup crashes.
 - Dynamic widget imports in the builder now bypass Webpack bundling, preventing missing module errors.
 - Standalone builder app now links `site.css` and skips missing theme CSS gracefully.

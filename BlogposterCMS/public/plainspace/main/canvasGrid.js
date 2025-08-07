@@ -128,6 +128,12 @@ export class CanvasGrid {
 
   makeWidget(el) {
     this._applyPosition(el);
+    if (!this.useBoundingBox) {
+      const handle = document.createElement('div');
+      handle.className = 'resize-handle';
+      el.appendChild(handle);
+      this._bindResize(el);
+    }
     this._enableDrag(el);
     this.widgets.push(el);
     if (this.pushOnOverlap) this._resolveCollisions(el);
@@ -174,54 +180,95 @@ export class CanvasGrid {
     this._emit('change', el);
   }
 
-  _bindResize() {
-    if (!this.useBoundingBox || !this.bboxManager) return;
-    let startX, startY, startW, startH, startGX, startGY, pos;
-    const move = e => {
-      const el = this.activeEl;
-      if (!el || pos == null) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      let w = startW, h = startH;
-      let gx = startGX, gy = startGY;
-      if (pos.includes('e')) w += dx;
-      if (pos.includes('s')) h += dy;
-      if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
-      if (pos.includes('n')) { h -= dy; gy += Math.round(dy / this.options.cellHeight); }
-      w = Math.max(20, w);
-      h = Math.max(20, h);
-      const opts = { w: Math.round(w / this.options.columnWidth), h: Math.round(h / this.options.cellHeight) };
-      if (pos.includes('w')) opts.x = gx;
-      if (pos.includes('n')) opts.y = gy;
-      this.update(el, opts);
-      el.dispatchEvent(new Event('resizemove', { bubbles: true }));
-    };
-    const up = () => {
-      if (pos != null) this._emit('resizestop', this.activeEl);
-      pos = null;
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-    };
-    Object.values(this.bboxManager.handles).forEach(h => {
-      h.addEventListener('mousedown', e => {
-        const el = this.activeEl;
-        if (!el || this.staticGrid) return;
+  _bindResize(el) {
+    if (this.useBoundingBox && !el) {
+      if (!this.bboxManager) return;
+      let startX, startY, startW, startH, startGX, startGY, pos;
+      const move = e => {
+        const widget = this.activeEl;
+        if (!widget || pos == null) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let w = startW, h = startH;
+        let gx = startGX, gy = startGY;
+        if (pos.includes('e')) w += dx;
+        if (pos.includes('s')) h += dy;
+        if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
+        if (pos.includes('n')) { h -= dy; gy += Math.round(dy / this.options.cellHeight); }
+        w = Math.max(20, w);
+        h = Math.max(20, h);
+        const opts = { w: Math.round(w / this.options.columnWidth), h: Math.round(h / this.options.cellHeight) };
+        if (pos.includes('w')) opts.x = gx;
+        if (pos.includes('n')) opts.y = gy;
+        this.update(widget, opts);
+        widget.dispatchEvent(new Event('resizemove', { bubbles: true }));
+      };
+      const up = () => {
+        if (pos != null) this._emit('resizestop', this.activeEl);
+        pos = null;
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+      };
+      Object.values(this.bboxManager.handles).forEach(h => {
+        h.addEventListener('mousedown', e => {
+          const widget = this.activeEl;
+          if (!widget || this.staticGrid) return;
+          if (widget.getAttribute('gs-locked') === 'true' ||
+              widget.getAttribute('gs-no-resize') === 'true') {
+            return;
+          }
+          e.stopPropagation();
+          pos = h.dataset.pos;
+          const rect = widget.getBoundingClientRect();
+          startX = e.clientX; startY = e.clientY;
+          startW = rect.width; startH = rect.height;
+          startGX = +widget.dataset.x || 0;
+          startGY = +widget.dataset.y || 0;
+          this._emit('resizestart', widget);
+          document.addEventListener('mousemove', move);
+          document.addEventListener('mouseup', up);
+        });
+      });
+    } else if (!this.useBoundingBox && el) {
+      const handle = el.querySelector('.resize-handle');
+      if (!handle) return;
+      let startX, startY, startW, startH;
+      const move = e => {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let w = startW + dx;
+        let h = startH + dy;
+        const minW = (+el.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
+        const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
+        w = Math.max(minW, w);
+        h = Math.max(minH, h);
+        this.update(el, {
+          w: Math.round(w / this.options.columnWidth),
+          h: Math.round(h / this.options.cellHeight)
+        });
+        el.dispatchEvent(new Event('resizemove', { bubbles: true }));
+      };
+      const up = () => {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        this._emit('resizestop', el);
+      };
+      handle.addEventListener('mousedown', e => {
+        if (this.staticGrid) return;
         if (el.getAttribute('gs-locked') === 'true' ||
             el.getAttribute('gs-no-resize') === 'true') {
           return;
         }
         e.stopPropagation();
-        pos = h.dataset.pos;
+        this.select(el);
         const rect = el.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
         startW = rect.width; startH = rect.height;
-        startGX = +el.dataset.x || 0;
-        startGY = +el.dataset.y || 0;
         this._emit('resizestart', el);
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', up);
       });
-    });
+    }
   }
 
   _enableDrag(el) {

@@ -1021,9 +1021,46 @@ const pageHtmlPath = path.join(__dirname, 'public', 'index.html');
 const libraryRoot = path.join(process.cwd(), 'library');
 const builderPublicRoot = path.join(libraryRoot, 'public', 'builder');
 
-app.get('/p/:slug', (req, res, next) => {
+app.get('/p/:slug', async (req, res, next) => {
   try {
     const slug = sanitizeSlug(req.params.slug || '');
+
+    try {
+      // Obtain/refresh public token for page lookup
+      global.pagesPublicToken = await new Promise((resolve, reject) => {
+        motherEmitter.emit(
+          'ensurePublicToken',
+          {
+            currentToken: global.pagesPublicToken,
+            purpose: 'public',
+            moduleName: 'publicRoute',
+            moduleType: 'core'
+          },
+          (err, data) => (err ? reject(err) : resolve(data))
+        );
+      });
+
+      const page = await new Promise((resolve, reject) => {
+        motherEmitter.emit(
+          'getPageBySlug',
+          {
+            jwt: global.pagesPublicToken,
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            slug
+          },
+          (err, result) => (err ? reject(err) : resolve(result))
+        );
+      });
+
+      // If a dynamic page exists, let the normal dynamic handler serve it
+      if (page?.id) {
+        return next();
+      }
+    } catch (lookupErr) {
+      console.warn('[SERVER] /p/:slug lookup failed →', lookupErr.message);
+    }
+
     const filePath = path.join(builderPublicRoot, slug, 'index.html');
     if (!filePath.startsWith(builderPublicRoot) || !fs.existsSync(filePath)) {
       return next();

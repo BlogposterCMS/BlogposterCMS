@@ -642,6 +642,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
     const theme = window.ACTIVE_THEME || 'default';
     const headLinks = [
+      `<link rel="canonical" href="/p/${safeName}">`,
       `<link rel="stylesheet" href="/themes/${theme}/theme.css">`,
       ...externalStyles.map(href => `<link rel="stylesheet" href="${href}">`)
     ];
@@ -706,13 +707,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           fileName: f.fileName,
           fileData: btoa(unescape(encodeURIComponent(f.data)))
         });
-        await meltdownEmit('makeFilePublic', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'mediaManager',
-          moduleType: 'core',
-          filePath: `${subPath}/${f.fileName}`
-        });
       }
+      await meltdownEmit('makeFilePublic', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'mediaManager',
+        moduleType: 'core',
+        filePath: subPath
+      });
       await meltdownEmit('savePublishedDesignMeta', {
         jwt: window.ADMIN_TOKEN,
         moduleName: 'plainspace',

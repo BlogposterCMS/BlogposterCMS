@@ -287,14 +287,20 @@ function setupMediaManagerEvents(motherEmitter) {
       return callback(new Error('Missing userId or filePath in makeFilePublic.'));
     }
 
-    // 2) Permission check (admins or users with media.makePublic)
-    const canProceed = isAdmin || (decodedJWT && hasPermission(decodedJWT, 'media.makePublic'));
+    // 2) Permission check (admins or users with builder.publish)
+    const canProceed = isAdmin || (decodedJWT && hasPermission(decodedJWT, 'builder.publish'));
     if (!canProceed) {
-      return callback(new Error('[MEDIA MANAGER] Permission denied => media.makePublic'));
+      return callback(new Error('[MEDIA MANAGER] Permission denied => builder.publish'));
+    }
+
+    // 3) Restrict non-admins to builder paths
+    const normalized = path.normalize(filePath).replace(/^([\.\/]+)+/, '');
+    if (!isAdmin && !normalized.startsWith('builder/')) {
+      return callback(new Error('[MEDIA MANAGER] makeFilePublic => path must reside under "builder/"'));
     }
 
     // proceed
-    actuallyMoveFileToPublic(motherEmitter, { jwt, userId: resolvedUserId, filePath }, callback);
+    actuallyMoveFileToPublic(motherEmitter, { jwt, userId: resolvedUserId, filePath: normalized }, callback);
   });
 }
 
@@ -336,6 +342,9 @@ function actuallyMoveFileToPublic(motherEmitter, { jwt, userId, filePath }, call
     }
 
     fs.mkdirSync(path.dirname(publicAbs), { recursive: true });
+    if (fs.existsSync(publicAbs)) {
+      fs.rmSync(publicAbs, { recursive: true, force: true });
+    }
     fs.renameSync(sourceAbs, publicAbs);
     console.log(`[MEDIA MANAGER] Moved file from "${sourceAbs}" to "${publicAbs}"`);
 

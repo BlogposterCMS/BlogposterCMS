@@ -1018,6 +1018,21 @@ app.use(async (req, res, next) => {
 // 11) Public pages
 // ─────────────────────────────────────────────────────────────────
 const pageHtmlPath = path.join(__dirname, 'public', 'index.html');
+const libraryRoot = path.join(process.cwd(), 'library');
+const builderPublicRoot = path.join(libraryRoot, 'public', 'builder');
+
+app.get('/p/:slug', (req, res, next) => {
+  try {
+    const slug = sanitizeSlug(req.params.slug || '');
+    const filePath = path.join(builderPublicRoot, slug, 'index.html');
+    if (!filePath.startsWith(builderPublicRoot) || !fs.existsSync(filePath)) {
+      return next();
+    }
+    res.sendFile(filePath);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Handle public pages ("/" or "/:slug")
 app.get('/:slug?', async (req, res, next) => {

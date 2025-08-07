@@ -706,6 +706,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           fileName: f.fileName,
           fileData: btoa(unescape(encodeURIComponent(f.data)))
         });
+        await meltdownEmit('makeFilePublic', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'mediaManager',
+          moduleType: 'core',
+          filePath: `${subPath}/${f.fileName}`
+        });
       }
       await meltdownEmit('savePublishedDesignMeta', {
         jwt: window.ADMIN_TOKEN,

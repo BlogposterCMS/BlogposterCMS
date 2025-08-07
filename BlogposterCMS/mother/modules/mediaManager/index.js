@@ -279,11 +279,13 @@ function setupMediaManagerEvents(motherEmitter) {
     if (!jwt || moduleName !== 'mediaManager' || moduleType !== 'core') {
       return callback(new Error('[MEDIA MANAGER] makeFilePublic => invalid meltdown payload.'));
     }
-    if (!userId || !filePath) {
-      return callback(new Error('Missing userId or filePath in makeFilePublic.'));
-    }
 
     const { decodedJWT } = payload;
+    const resolvedUserId = userId || decodedJWT?.user?.id;
+
+    if (!resolvedUserId || !filePath) {
+      return callback(new Error('Missing userId or filePath in makeFilePublic.'));
+    }
 
     // 2) Permission check (admins or users with media.makePublic)
     const canProceed = isAdmin || (decodedJWT && hasPermission(decodedJWT, 'media.makePublic'));
@@ -292,7 +294,7 @@ function setupMediaManagerEvents(motherEmitter) {
     }
 
     // proceed
-    actuallyMoveFileToPublic(motherEmitter, { jwt, userId, filePath }, callback);
+    actuallyMoveFileToPublic(motherEmitter, { jwt, userId: resolvedUserId, filePath }, callback);
   });
 }
 
@@ -321,22 +323,23 @@ function setupUploadRoute(app) {
  */
 function actuallyMoveFileToPublic(motherEmitter, { jwt, userId, filePath }, callback) {
   try {
-    // 1) source path
-    const sourceAbs = path.join(libraryRoot, filePath);
-    if (!fs.existsSync(sourceAbs)) {
-      return callback(new Error(`Source file not found => ${filePath}`));
+    const normalized = path.normalize(filePath).replace(/^([\.\/]+)+/, '');
+    const sourceAbs = path.join(libraryRoot, normalized);
+    const publicRoot = path.join(libraryRoot, 'public');
+    if (!sourceAbs.startsWith(libraryRoot) || !fs.existsSync(sourceAbs)) {
+      return callback(new Error(`Source file not found or outside library => ${filePath}`));
     }
 
-    // let's place it in library/public/<basename>
-    const baseName  = path.basename(filePath);
-    const publicAbs = path.join(libraryRoot, 'public', baseName);
+    const publicAbs = path.join(publicRoot, normalized);
+    if (!publicAbs.startsWith(publicRoot)) {
+      return callback(new Error('Invalid destination path.'));
+    }
 
-    // physically move
+    fs.mkdirSync(path.dirname(publicAbs), { recursive: true });
     fs.renameSync(sourceAbs, publicAbs);
     console.log(`[MEDIA MANAGER] Moved file from "${sourceAbs}" to "${publicAbs}"`);
 
-    // meltdown => createShareLink
-    const relativePublicPath = path.relative(libraryRoot, publicAbs); // e.g. "public/foo.jpg"
+    const relativePublicPath = path.relative(libraryRoot, publicAbs);
     motherEmitter.emit('createShareLink', {
       jwt,
       moduleName: 'shareManager',
@@ -347,12 +350,7 @@ function actuallyMoveFileToPublic(motherEmitter, { jwt, userId, filePath }, call
     }, (err, shareData) => {
       if (err) {
         console.warn('[MEDIA MANAGER] Could not create share link =>', err.message);
-        // We won't fail the entire operation, the file is still public
-        return callback(null, {
-          success: true,
-          publicPath: publicAbs,
-          shareLink: null
-        });
+        return callback(null, { success: true, publicPath: publicAbs, shareLink: null });
       }
       return callback(null, {
         success: true,

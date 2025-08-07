@@ -40,6 +40,7 @@ important security notes.
 ### Available Modules
 
 - [auth](modules/auth.md)
+- [appLoader](modules/appLoader.md)
 - [databaseManager](modules/databaseManager.md)
 - [dependencyLoader](modules/dependencyLoader.md)
 - [importer](modules/importer.md)

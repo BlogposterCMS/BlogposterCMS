@@ -9,7 +9,7 @@ Handles file and folder operations under the media library. It verifies permissi
 ## Purpose
 - List and create folders.
 - Upload files through stream-based middleware.
-- Move files into the public directory via `makeFilePublic`.
+- Move files or entire folders into the public directory via `makeFilePublic` (requires `builder.publish` permission).
 
 ## Listened Events
 - `listLocalFolder`

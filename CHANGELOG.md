@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- `/p/{slug}` route rewrites to builder HTML files without exposing library paths.
+- `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
 - HTML uploads now go through the media manager to stay in the library and avoid overwriting existing files.
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
@@ -22,6 +24,9 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.
+- Builder publication moves entire folders in one operation and requires the `builder.publish` permission.
+- Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 - Builder and renderer now operate on a pixel-based grid for precise widget placement.
 - Page Content widget now displays available designs as preview cards and shows attached content separately.
 - Builder now imports CanvasGrid and related utilities from public plainspace modules, removing duplicate builder copies.
@@ -34,6 +39,10 @@ El Psy Kongroo
 - Shared widgets now highlight in gold on hover, falling back to black when the user color is similar.
 - Layouts now store a `layer` value and widgets inherit the active layer.
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
+
+- Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.
+- Builder publication moves entire folders in one operation and requires the `builder.publish` permission.
+- Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
 - appLoader now exports `initialize()` like other core modules, preventing server startup crashes.

@@ -27,9 +27,15 @@ export class CanvasGrid {
     this.el.classList.add('canvas-grid');
     this.widgets = [];
     this.activeEl = null;
-    this.bboxManager = new BoundingBoxManager(this.el);
-    this.bbox = this.bboxManager.box;
-    this._bindResize();
+    this.useBoundingBox = this.options.useBoundingBox !== false;
+    if (this.useBoundingBox) {
+      this.bboxManager = new BoundingBoxManager(this.el);
+      this.bbox = this.bboxManager.box;
+      this._bindResize();
+    } else {
+      this.bboxManager = null;
+      this.bbox = null;
+    }
     this._resizeObserver = new ResizeObserver(entries => {
       if (this.activeEl && entries.some(e => e.target === this.activeEl)) {
         this._updateBBox();
@@ -169,6 +175,7 @@ export class CanvasGrid {
   }
 
   _bindResize() {
+    if (!this.useBoundingBox || !this.bboxManager) return;
     let startX, startY, startW, startH, startGX, startGY, pos;
     const move = e => {
       const el = this.activeEl;
@@ -281,7 +288,7 @@ export class CanvasGrid {
   }
 
   _updateBBox() {
-    if (!this.activeEl || this.staticGrid) return;
+    if (!this.useBoundingBox || !this.bboxManager || !this.activeEl || this.staticGrid) return;
     const manager = this.bboxManager;
     manager.update();
     const noResize = this.activeEl.getAttribute('gs-no-resize') === 'true';
@@ -300,7 +307,9 @@ export class CanvasGrid {
       el.classList.add('selected');
       this._resizeObserver.observe(el);
     }
-    this.bboxManager.setWidget(el);
+    if (this.useBoundingBox && this.bboxManager) {
+      this.bboxManager.setWidget(el);
+    }
     this._updateBBox();
   }
 
@@ -310,7 +319,9 @@ export class CanvasGrid {
       this.activeEl.classList.remove('selected');
     }
     this.activeEl = null;
-    this.bboxManager.setWidget(null);
+    if (this.useBoundingBox && this.bboxManager) {
+      this.bboxManager.setWidget(null);
+    }
   }
 
 

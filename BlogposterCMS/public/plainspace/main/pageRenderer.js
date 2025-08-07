@@ -229,7 +229,7 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     gridEl.className = 'canvas-grid';
     target.appendChild(gridEl);
     const columnWidth = 1;
-    const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
+    const columns = 12;
     grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth, columns }, gridEl);
   }
   const pending = [];
@@ -646,8 +646,8 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     gridEl.id = 'adminGrid';
     gridEl.className = 'canvas-grid';
     contentEl.appendChild(gridEl);
-    const columnWidth = 1;
-    const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
+    const columnWidth = 80;
+    const columns = 12;
     const grid = initCanvasGrid({
       cellHeight: 1,
       columnWidth,
@@ -665,45 +665,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
     const CELL_W = grid.options.columnWidth;
     const CELL_H = grid.options.cellHeight;
-    gridEl.addEventListener('pointerdown', e => {
-      if (!e.target.classList.contains('resize-handle')) return;
-      const widget = e.target.closest('.canvas-item');
-      const startX = e.clientX, startY = e.clientY;
-      const origW = +widget.getAttribute('gs-w');
-      const origH = +widget.getAttribute('gs-h');
-      const minW  = +widget.getAttribute('gs-min-w') || 1;
-      const minH  = +widget.getAttribute('gs-min-h') || 1;
-
-      function onMove(ev) {
-        let dx = ev.clientX - startX;
-        let dy = ev.clientY - startY;
-
-        dx = Math.max(dx, (minW - origW) * CELL_W);
-        dy = Math.max(dy, (minH - origH) * CELL_H);
-
-        let newW = origW + Math.round(dx / CELL_W);
-        let newH = origH + Math.round(dy / CELL_H);
-
-        newW = Math.max(newW, minW);
-        newH = Math.max(newH, minH);
-
-        if (!isCollision(widget, widget.dataset.x, widget.dataset.y, newW, newH)) {
-          widget.setAttribute('gs-w', newW);
-          widget.setAttribute('gs-h', newH);
-          widget.style.width = `${newW * CELL_W}px`;
-          widget.style.height = `${newH * CELL_H}px`;
-        }
-      }
-
-      function onUp() {
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onUp);
-      }
-
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
-    });
-
     const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));
     for (const id of (config.widgets || [])) widgetIdSet.add(id);
     const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
@@ -736,9 +697,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
       gridEl.appendChild(wrapper);
       grid.makeWidget(wrapper);
-      const handle = document.createElement('div');
-      handle.className = 'resize-handle br';
-      wrapper.appendChild(handle);
       pendingAdmin.push({ wrapper, def, meta, placeholder: ph });
     }
 
@@ -805,16 +763,3 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
   }
 })();
 
-function isCollision(self, x, y, w, h) {
-  const all = Array.from(document.getElementById('adminGrid')?.querySelectorAll('.canvas-item') || [])
-    .filter(el => el !== self);
-  const r1 = { x, y, w, h };
-  return all.some(el => {
-    const ex = +el.dataset.x, ey = +el.dataset.y;
-    const ew = +el.getAttribute('gs-w'), eh = +el.getAttribute('gs-h');
-    return !(ex + ew <= r1.x ||
-             r1.x + r1.w <= ex ||
-             ey + eh <= r1.y ||
-             r1.y + r1.h <= ey);
-  });
-}

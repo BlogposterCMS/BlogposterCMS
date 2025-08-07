@@ -456,6 +456,16 @@ body.preview-desktop #content {
 .canvas-item {
   pointer-events: auto;
   user-select: none;
+
+  .resize-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    right: 0;
+    bottom: 0;
+    cursor: se-resize;
+    background: var(--user-color, #333);
+  }
 }
 
 .canvas-item.locked {

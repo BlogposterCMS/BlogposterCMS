@@ -11,6 +11,10 @@ export async function render(el) {
     /* webpackIgnore: true */ '/apps/plainspace/editor/core/sanitizer.js'
   );
 
+  const HTML_FOLDER = 'page-content';
+  const HTML_SUBPATH = `public/${HTML_FOLDER}`;
+  const HTML_WEB_BASE = `/media/${HTML_FOLDER}`;
+
   const common = {
     jwt,
     moduleName: 'pagesManager',
@@ -210,6 +214,38 @@ export async function render(el) {
         }
       });
       li.appendChild(remove);
+    } else {
+      li.addEventListener('click', async () => {
+        if (page.html || page.meta?.layoutTemplate) {
+          const ok = confirm('Replace existing attached content?');
+          if (!ok) return;
+        }
+        try {
+          const res = await fetch(`${HTML_WEB_BASE}/${encodeURIComponent(name)}`);
+          const fileHtml = sanitizeHtml(await res.text());
+          const newMeta = { ...(page.meta || {}), htmlFileName: name };
+          delete newMeta.layoutTemplate;
+          await meltdownEmit('updatePage', {
+            ...common,
+            translations: [{
+              language: page.language,
+              title: page.title,
+              html: fileHtml,
+              css: page.css || ''
+            }],
+            meta: newMeta
+          });
+          if (window.pageDataLoader) {
+            window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+          }
+          page.html = fileHtml;
+          page.meta = newMeta;
+          renderSelected();
+          renderGallery();
+        } catch (err) {
+          alert('Failed to attach HTML: ' + err.message);
+        }
+      });
     }
 
     return li;
@@ -254,12 +290,43 @@ export async function render(el) {
     }
   }
 
+  async function loadHtmlFiles() {
+    try {
+      await meltdownEmit('createLocalFolder', {
+        jwt,
+        moduleName: 'mediaManager',
+        moduleType: 'core',
+        currentPath: 'public',
+        newFolderName: HTML_FOLDER
+      });
+    } catch (_) {
+      // folder likely exists
+    }
+    try {
+      const res = await meltdownEmit('listLocalFolder', {
+        jwt,
+        moduleName: 'mediaManager',
+        moduleType: 'core',
+        subPath: HTML_SUBPATH
+      });
+      return Array.isArray(res?.files)
+        ? res.files.filter(f => f.toLowerCase().endsWith('.html'))
+        : [];
+    } catch (err) {
+      console.warn('Failed to list HTML files', err);
+      return [];
+    }
+  }
+
   async function renderGallery() {
     gallery.innerHTML = '';
     const templates = (await loadDesigns()).filter(
       t => t.name !== page.meta?.layoutTemplate
     );
-    if (!templates.length) {
+    const htmlFiles = (await loadHtmlFiles()).filter(
+      f => f !== page.meta?.htmlFileName
+    );
+    if (!templates.length && !htmlFiles.length) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       empty.textContent = 'No designs available.';
@@ -267,9 +334,22 @@ export async function render(el) {
       return;
     }
     templates.forEach(t => gallery.appendChild(createDesignCard(t)));
+    for (const name of htmlFiles) {
+      try {
+        const res = await fetch(`${HTML_WEB_BASE}/${encodeURIComponent(name)}`);
+        const html = await res.text();
+        gallery.appendChild(createHtmlCard(name, html));
+      } catch (err) {
+        console.warn('Failed to load HTML file', name, err);
+      }
+    }
   }
 
   async function handleFile(file) {
+    if (!/\.html?$/i.test(file.name)) {
+      alert('Only HTML files are allowed.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async ev => {
       const html = sanitizeHtml(ev.target.result);
@@ -277,7 +357,32 @@ export async function render(el) {
         const ok = confirm('Replace existing attached content?');
         if (!ok) return;
       }
-      const newMeta = { ...(page.meta || {}), htmlFileName: file.name };
+      try {
+        await meltdownEmit('createLocalFolder', {
+          jwt,
+          moduleName: 'mediaManager',
+          moduleType: 'core',
+          currentPath: 'public',
+          newFolderName: HTML_FOLDER
+        });
+      } catch (_) {}
+      let savedName = file.name;
+      try {
+        const res = await meltdownEmit('uploadFileToFolder', {
+          jwt,
+          moduleName: 'mediaManager',
+          moduleType: 'core',
+          subPath: HTML_SUBPATH,
+          fileName: file.name,
+          fileData: btoa(unescape(encodeURIComponent(html))),
+          mimeType: 'text/html'
+        });
+        if (res?.fileName) savedName = res.fileName;
+      } catch (err) {
+        alert('Failed to save file: ' + err.message);
+        return;
+      }
+      const newMeta = { ...(page.meta || {}), htmlFileName: savedName };
       delete newMeta.layoutTemplate;
       try {
         await meltdownEmit('updatePage', {
@@ -291,7 +396,11 @@ export async function render(el) {
           meta: newMeta
         });
         if (window.pageDataLoader) {
-          window.pageDataLoader.clear('getPageById', { moduleName: 'pagesManager', moduleType: 'core', pageId: page.id });
+          window.pageDataLoader.clear('getPageById', {
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            pageId: page.id
+          });
         }
         page.html = html;
         page.meta = newMeta;

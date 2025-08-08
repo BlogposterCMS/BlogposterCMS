@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Documentation now covers declaring `apiEvents` in widget metadata for secure
+  endpoint pre-registration.
 - Default widgets declare their API event usage in metadata, enabling secure pre-registration of endpoints.
 - Widgets now register required API events from metadata so the client can declare needed endpoints before widget code loads.
 - `/p/{slug}` route rewrites to builder HTML files without exposing library paths.

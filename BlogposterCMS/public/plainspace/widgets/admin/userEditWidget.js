@@ -49,7 +49,7 @@ export async function render(el) {
     let selectedColor = user.ui_color || colorChoices[0];
 
     const headerDelete = document.createElement('img');
-    headerDelete.src = '/assets/icons/trash-2.svg';
+  headerDelete.src = '/assets/icons/delete.svg';
     headerDelete.className = 'icon delete-user-btn';
     headerDelete.title = 'Delete user';
     headerDelete.style.alignSelf = 'flex-end';

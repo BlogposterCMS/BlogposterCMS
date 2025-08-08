@@ -14,12 +14,12 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   menuBtn.className = 'widget-menu';
   menuBtn.innerHTML = window.featherIcon
     ? window.featherIcon('more-vertical')
-    : '<img src="/assets/icons/more-vertical.svg" alt="menu" />';
+    : '<img src="/assets/icons/ellipsis-vertical.svg" alt="menu" />';
 
   const menu = document.createElement('div');
   menu.className = 'widget-options-menu';
   menu.innerHTML = `
-      <button class="menu-edit"><img src="/assets/icons/edit.svg" class="icon" alt="edit" /> Edit Code</button>
+        <button class="menu-edit"><img src="/assets/icons/pencil-line.svg" class="icon" alt="edit" /> Edit Code</button>
       <button class="menu-copy"><img src="/assets/icons/copy.svg" class="icon" alt="duplicate" /> Duplicate</button>
       <button class="menu-template"><img src="/assets/icons/package.svg" class="icon" alt="template" /> Save as Template</button>
       <button class="menu-lock"><img src="/assets/icons/lock.svg" class="icon" alt="lock" /> Lock Position</button>

@@ -85,7 +85,7 @@ export async function render(el) {
     menuBtn.className = 'layout-menu-btn';
     menuBtn.innerHTML = window.featherIcon
       ? window.featherIcon('more-horizontal')
-      : '<img src="/assets/icons/more-horizontal.svg" class="icon" alt="menu" />';
+      : '<img src="/assets/icons/ellipsis.svg" class="icon" alt="menu" />';
 
     const menu = document.createElement('div');
     menu.className = 'layout-card-menu';

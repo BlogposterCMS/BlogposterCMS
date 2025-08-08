@@ -477,7 +477,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   headerMenuBtn.className = 'builder-menu-btn';
   headerMenuBtn.innerHTML = window.featherIcon
     ? window.featherIcon('more-vertical')
-    : '<img src="/assets/icons/more-vertical.svg" alt="menu" />';
+    : '<img src="/assets/icons/ellipsis-vertical.svg" alt="menu" />';
   topBar.appendChild(headerMenuBtn);
 
   const headerMenu = document.createElement('div');

@@ -32,7 +32,7 @@ export function initContentHeader() {
       editing = !isStatic;
       grid.pushOnOverlap = isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
-      editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/edit.svg';
+        editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/pencil-line.svg';
       if (editing) showWidgetPopup(); else hideWidgetPopup();
     });
   }
@@ -42,7 +42,7 @@ export function initContentHeader() {
     editing = !editing;
     grid.setStatic(!editing);
     document.body.classList.toggle('dashboard-edit-mode', editing);
-    editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/edit.svg';
+      editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/pencil-line.svg';
     editToggle.classList.add('spin');
     setTimeout(() => editToggle.classList.remove('spin'), 300);
     if (editing) {

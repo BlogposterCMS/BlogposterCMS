@@ -23,7 +23,7 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
       <button class="menu-copy"><img src="/assets/icons/copy.svg" class="icon" alt="duplicate" /> Duplicate</button>
       <button class="menu-template"><img src="/assets/icons/package.svg" class="icon" alt="template" /> Save as Template</button>
       <button class="menu-lock"><img src="/assets/icons/lock.svg" class="icon" alt="lock" /> Lock Position</button>
-      <button class="menu-snap"><img src="/assets/icons/grid.svg" class="icon" alt="snap" /> Snap to Grid</button>
+      <button class="menu-snap"><img src="/assets/icons/layout-grid.svg" class="icon" alt="snap" /> Snap to Grid</button>
       <button class="menu-shared"><img src="/assets/icons/globe.svg" class="icon" alt="shared" /> Set as Shared Widget</button>
       <button class="menu-layer-up"><img src="/assets/icons/arrow-up.svg" class="icon" alt="layer up" /> Layer Up</button>
       <button class="menu-layer-down"><img src="/assets/icons/arrow-down.svg" class="icon" alt="layer down" /> Layer Down</button>

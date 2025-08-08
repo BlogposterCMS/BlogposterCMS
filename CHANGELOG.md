@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Default widgets declare their API event usage in metadata, enabling secure pre-registration of endpoints.
+- Widgets now register required API events from metadata so the client can declare needed endpoints before widget code loads.
 - `/p/{slug}` route rewrites to builder HTML files without exposing library paths.
 - `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.

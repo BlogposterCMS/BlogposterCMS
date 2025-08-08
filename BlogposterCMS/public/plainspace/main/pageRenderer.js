@@ -67,6 +67,19 @@ function createDebouncedEmitter(delay = 150) {
 
 const emitDebounced = createDebouncedEmitter(100);
 
+function registerWidgetEvents(def, lane) {
+  const raw = def?.metadata?.apiEvents;
+  if (!raw || typeof window.meltdownEmit !== 'function') return;
+  const list = Array.isArray(raw) ? raw : [raw];
+  const events = list.filter(ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev));
+  if (!events.length) return;
+  const jwt = lane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
+  if (!jwt) return;
+  window.meltdownEmit('registerWidgetUsage', { jwt, events }).catch(err => {
+    console.warn(`[Renderer] registerWidgetUsage failed for ${def.id}`, err);
+  });
+}
+
 function renderWidget(wrapper, def, code = null, lane = 'public') {
   const root = wrapper.attachShadow({ mode: 'open' });
   const globalCss = getGlobalCssUrl(lane);
@@ -107,6 +120,8 @@ function renderWidget(wrapper, def, code = null, lane = 'public') {
   const handleSlot = document.createElement('slot');
   handleSlot.name = 'resize-handle';
   root.appendChild(handleSlot);
+
+  registerWidgetEvents(def, lane);
 
   const handleSheet = new CSSStyleSheet();
   handleSheet.replaceSync(`::slotted(.resize-handle){position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--user-color, #333);}`);

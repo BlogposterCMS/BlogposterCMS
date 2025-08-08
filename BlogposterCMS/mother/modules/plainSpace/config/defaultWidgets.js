@@ -10,7 +10,8 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'System Info',
     content: '/plainspace/widgets/admin/systemInfoWidget.js',
     category: 'core',
-    options: { thirdWidth: true }
+    options: { thirdWidth: true },
+    metadata: { apiEvents: [] }
   },
   {
     widgetId: 'systemSettings',
@@ -18,7 +19,15 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'System Settings',
     content: '/plainspace/widgets/admin/systemSettingsWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { halfWidth: true },
+    metadata: {
+      apiEvents: [
+        'getSetting',
+        'getAllPages',
+        'setSetting',
+        'openMediaExplorer'
+      ]
+    }
   },
   {
     widgetId: 'activityLog',
@@ -26,7 +35,8 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Activity Log',
     content: '/plainspace/widgets/admin/activityLogWidget.js',
     category: 'core',
-    options: { height: 50, overflow: true, halfWidth: true }
+    options: { height: 50, overflow: true, halfWidth: true },
+    metadata: { apiEvents: [] }
   },
 
   {
@@ -35,7 +45,17 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Content Summary',
     content: '/plainspace/widgets/admin/defaultwidgets/contentSummaryWidget.js',
     category: 'core',
-    options: { maxWidth: true }
+    options: { maxWidth: true },
+    metadata: {
+      apiEvents: [
+        'getLayoutTemplateNames',
+        'getAllPages',
+        'getLayoutTemplate',
+        'saveLayoutTemplate',
+        'setGlobalLayoutTemplate',
+        'deleteLayoutTemplate'
+      ]
+    }
   },
   {
     widgetId: 'pageEditor',
@@ -43,7 +63,10 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Page Editor',
     content: '/plainspace/widgets/admin/pageEditorWidgets/pageEditorWidget.js',
     category: 'core',
-    options: { thirdWidth: true }
+    options: { thirdWidth: true },
+    metadata: {
+      apiEvents: ['getLayoutTemplateNames', 'updatePage']
+    }
   },
   {
     widgetId: 'pageContent',
@@ -51,7 +74,17 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Page Content',
     content: '/plainspace/widgets/admin/pageEditorWidgets/pageContentWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { halfWidth: true },
+    metadata: {
+      apiEvents: [
+        'listBuilderApps',
+        'updatePage',
+        'getLayoutTemplateNames',
+        'createLocalFolder',
+        'listLocalFolder',
+        'uploadFileToFolder'
+      ]
+    }
   },
   {
     widgetId: 'mediaExplorer',
@@ -59,7 +92,14 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Media Explorer',
     content: '/plainspace/widgets/admin/mediaExplorerWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 70, overflow: true }
+    options: { halfWidth: true, height: 70, overflow: true },
+    metadata: {
+      apiEvents: [
+        'createLocalFolder',
+        'createShareLink',
+        'listLocalFolder'
+      ]
+    }
   },
   {
     widgetId: 'modulesList',
@@ -67,7 +107,16 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Modules List',
     content: '/plainspace/widgets/admin/modulesListWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true }
+    options: { halfWidth: true, height: 60, overflow: true },
+    metadata: {
+      apiEvents: [
+        'getModuleRegistry',
+        'listSystemModules',
+        'installModuleFromZip',
+        'activateModuleInRegistry',
+        'deactivateModuleInRegistry'
+      ]
+    }
   },
   {
     widgetId: 'usersList',
@@ -75,7 +124,17 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Users List',
     content: '/plainspace/widgets/admin/usersListWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true }
+    options: { halfWidth: true, height: 60, overflow: true },
+    metadata: {
+      apiEvents: [
+        'getAllUsers',
+        'getAllRoles',
+        'createUser',
+        'createRole',
+        'updateRole',
+        'deleteRole'
+      ]
+    }
   },
   {
     widgetId: 'userEdit',
@@ -83,7 +142,14 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'User Editor',
     content: '/plainspace/widgets/admin/userEditWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { halfWidth: true },
+    metadata: {
+      apiEvents: [
+        'getUserDetailsById',
+        'deleteUser',
+        'updateUserProfile'
+      ]
+    }
   },
   {
     widgetId: 'permissionsList',
@@ -91,7 +157,17 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Permissions List',
     content: '/plainspace/widgets/admin/permissionsWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true }
+    options: { halfWidth: true, height: 60, overflow: true },
+    metadata: {
+      apiEvents: [
+        'getAllPermissions',
+        'getAllRoles',
+        'createPermission',
+        'createRole',
+        'updateRole',
+        'deleteRole'
+      ]
+    }
   },
   {
     widgetId: 'layoutTemplates',
@@ -99,7 +175,14 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Layouts',
     content: '/plainspace/widgets/admin/layoutTemplatesWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { halfWidth: true },
+    metadata: {
+      apiEvents: [
+        'getLayoutTemplateNames',
+        'getPagesByLane',
+        'saveLayoutTemplate'
+      ]
+    }
   },
   {
     widgetId: 'loginStrategies',
@@ -107,7 +190,10 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Login Strategies',
     content: '/plainspace/widgets/admin/loginStrategiesWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { halfWidth: true },
+    metadata: {
+      apiEvents: ['listLoginStrategies', 'setLoginStrategyEnabled']
+    }
   },
   {
     widgetId: 'fontsList',
@@ -115,7 +201,10 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Font Providers',
     content: '/plainspace/widgets/admin/fontsListWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { halfWidth: true },
+    metadata: {
+      apiEvents: ['listFontProviders', 'setFontProviderEnabled']
+    }
   },
   {
     widgetId: 'loginStrategyEdit',
@@ -123,7 +212,10 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Login Strategy Edit',
     content: '/plainspace/widgets/admin/loginStrategyEditWidget.js',
     category: 'core',
-    options: { halfWidth: true }
+    options: { halfWidth: true },
+    metadata: {
+      apiEvents: ['getSetting', 'setSetting']
+    }
   },
   {
     widgetId: 'widgetList',
@@ -131,41 +223,61 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Widget List',
     content: '/plainspace/widgets/admin/widgetListWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true }
+    options: { halfWidth: true, height: 60, overflow: true },
+    metadata: {
+      apiEvents: [
+        'widget.registry.request.v1',
+        'getPagesByLane',
+        'getLayoutForViewport'
+      ]
+    }
   },
-   {
+  {
     widgetId: 'pageList',
     widgetType: ADMIN_LANE,
     label: 'Page List',
     content: '/plainspace/widgets/admin/defaultwidgets/pageList.js',
-    category: 'core'
+    category: 'core',
+    metadata: {
+      apiEvents: [
+        'getPagesByLane',
+        'createPage',
+        'updatePage',
+        'setAsStart',
+        'deletePage'
+      ]
+    }
   },
   {
     widgetId: 'pageStats',
     widgetType: ADMIN_LANE,
     label: 'Page Stats',
     content: '/plainspace/widgets/admin/defaultwidgets/pageStats.js',
-    category: 'core'
+    category: 'core',
+    metadata: { apiEvents: ['getPagesByLane'] }
   },
   {
     widgetId: 'pageEditorWidget',
     widgetType: ADMIN_LANE,
     label: 'Page Editor',
     content: '/plainspace/widgets/admin/pageEditorWidgets/pageEditorWidget.js',
-    category: 'core'
+    category: 'core',
+    metadata: { apiEvents: ['getLayoutTemplateNames', 'updatePage'] }
   },
   {
     widgetId: "htmlBlock",
     widgetType: PUBLIC_LANE,
     label: "HTML Block",
     content: "/plainspace/widgets/public/basicwidgets/htmlWidget.js",
-    category: "basic"
+    category: "basic",
+    metadata: { apiEvents: [] }
   },
   {
     widgetId: "textBox",
     widgetType: PUBLIC_LANE,
     label: "Text Box",
     content: "/plainspace/widgets/public/basicwidgets/textBoxWidget.js",
-    category: "basic"
+    category: "basic",
+    metadata: { apiEvents: [] }
   }
 ];

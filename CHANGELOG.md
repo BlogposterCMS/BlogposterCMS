@@ -25,6 +25,7 @@ El Psy Kongroo
 
 ### Changed
 - Admin resize handle now uses the `move-diagonal-2.svg` icon.
+- Replaced legacy Feather icon references with new icon set paths.
 - CanvasGrid supports internal resize handles when bounding boxes are disabled, and the admin grid uses a 12×80px layout for stable percentage sizing.
 - Dashboard editing no longer displays bounding boxes; resizing uses a bottom-right handle.
 - Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.
@@ -42,7 +43,6 @@ El Psy Kongroo
 - Shared widgets now highlight in gold on hover, falling back to black when the user color is similar.
 - Layouts now store a `layer` value and widgets inherit the active layer.
 - Widgets retain a `data-global` flag for shared widgets while per-widget layer values were dropped, and inactive layers share a unified appearance.
-
 - Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.
 - Builder publication moves entire folders in one operation and requires the `builder.publish` permission.
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
@@ -65,8 +65,6 @@ El Psy Kongroo
 - Text editor color picker and size dropdown now apply styles only to the selected text.
 - Widgets from inactive layers ignore pointer events and editing, preventing accidental changes.
 - Admin grid resize handles no longer slide underneath widgets when reaching the minimum size.
-
-### Fixed
 - CanvasGrid resize handle now styles correctly within widget shadow roots via adoptedStyleSheets, ensuring consistent positioning.
 
 ## [0.6.3] – 2025-08-01

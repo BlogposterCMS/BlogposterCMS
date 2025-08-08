@@ -1,6 +1,19 @@
 import { addHitLayer, executeJs } from '../utils.js';
 import { registerElement } from '../editor/editor.js';
 
+function registerWidgetEvents(widgetDef) {
+  const raw = widgetDef?.metadata?.apiEvents;
+  if (!raw || typeof window.meltdownEmit !== 'function') return;
+  const list = Array.isArray(raw) ? raw : [raw];
+  const events = list.filter(ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev));
+  if (!events.length) return;
+  const jwt = window.ADMIN_TOKEN || window.PUBLIC_TOKEN;
+  if (!jwt) return;
+  window.meltdownEmit('registerWidgetUsage', { jwt, events }).catch(err => {
+    console.warn('[Builder] registerWidgetUsage failed for', widgetDef.id, err);
+  });
+}
+
 export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const instanceId = wrapper.dataset.instanceId;
   const data = customData || (codeMap && codeMap[instanceId]) || null;
@@ -32,6 +45,8 @@ export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   content.addEventListener('mousedown', stop, true);
   content.addEventListener('touchstart', stop, { capture: true, passive: true });
   root.appendChild(container);
+
+  registerWidgetEvents(widgetDef);
 
   if (data) {
     if (data.css) {

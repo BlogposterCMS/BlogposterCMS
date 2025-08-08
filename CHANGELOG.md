@@ -24,6 +24,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Replaced legacy Feather icon references with new icon set paths.
 - CanvasGrid supports internal resize handles when bounding boxes are disabled, and the admin grid uses a 12×80px layout for stable percentage sizing.
 - Dashboard editing no longer displays bounding boxes; resizing uses a bottom-right handle.
 - Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.

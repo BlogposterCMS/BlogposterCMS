@@ -23,7 +23,7 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
   };
 
   dupBtn.innerHTML = window.featherIcon ? window.featherIcon('copy') : '<img src="/assets/icons/copy.svg" alt="copy" />';
-  menuBtn.innerHTML = window.featherIcon ? window.featherIcon('more-vertical') : '<img src="/assets/icons/more-vertical.svg" alt="menu" />';
+  menuBtn.innerHTML = window.featherIcon ? window.featherIcon('more-vertical') : '<img src="/assets/icons/ellipsis-vertical.svg" alt="menu" />';
   delBtn.innerHTML = window.featherIcon ? window.featherIcon('trash') : '<img src="/assets/icons/trash.svg" alt="delete" />';
 
   function select(el) {

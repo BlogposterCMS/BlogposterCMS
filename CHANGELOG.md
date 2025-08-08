@@ -65,6 +65,9 @@ El Psy Kongroo
 - Widgets from inactive layers ignore pointer events and editing, preventing accidental changes.
 - Admin grid resize handles no longer slide underneath widgets when reaching the minimum size.
 
+### Fixed
+- CanvasGrid resize handle now styles correctly within widget shadow roots via adoptedStyleSheets, ensuring consistent positioning.
+
 ## [0.6.3] – 2025-08-01
 
 ### Changed

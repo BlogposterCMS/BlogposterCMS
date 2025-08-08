@@ -104,6 +104,13 @@ function renderWidget(wrapper, def, code = null, lane = 'public') {
     { capture: true, passive: true }
   );
   root.appendChild(container);
+  const handleSlot = document.createElement('slot');
+  handleSlot.name = 'resize-handle';
+  root.appendChild(handleSlot);
+
+  const handleSheet = new CSSStyleSheet();
+  handleSheet.replaceSync(`::slotted(.resize-handle){position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--user-color, #333);}`);
+  root.adoptedStyleSheets = [...root.adoptedStyleSheets, handleSheet];
 
   if (code) {
     if (code.css) {

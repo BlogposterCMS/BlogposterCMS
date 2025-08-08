@@ -131,6 +131,7 @@ export class CanvasGrid {
     if (!this.useBoundingBox) {
       const handle = document.createElement('div');
       handle.className = 'resize-handle';
+      handle.slot = 'resize-handle';
       el.appendChild(handle);
       this._bindResize(el);
     }

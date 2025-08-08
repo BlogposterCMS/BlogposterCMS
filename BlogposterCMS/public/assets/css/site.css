@@ -2160,6 +2160,15 @@ body.preview-desktop #content {
      -moz-user-select: none;
           user-select: none;
 }
+.canvas-item .resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  right: 0;
+  bottom: 0;
+  cursor: se-resize;
+  background: var(--user-color, #333);
+}
 
 .canvas-item.locked {
   pointer-events: auto;
@@ -2465,6 +2474,7 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
 }
 
 .page-content-widget .add-content-btn {
@@ -2480,56 +2490,91 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
   transform: scale(1.1);
 }
 
-.content-add-menu {
-  position: fixed;
+.page-content-widget .content-upload-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
   background: var(--color-white);
-  border-radius: 9px;
-  box-shadow: var(--shadow-card);
-  font-family: var(--font-body);
-  display: none;
-  z-index: 1000;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  list-style: none;
+  padding: 4px 0;
+  margin: 4px 0 0 0;
+  z-index: 10;
 }
 
-.content-add-menu button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: transparent;
-  border: none;
+.page-content-widget .content-upload-menu li {
+  padding: 6px 12px;
   cursor: pointer;
-  width: 100%;
-  text-align: left;
-  font-family: var(--font-body);
+  white-space: nowrap;
 }
 
-.content-add-menu button:hover {
+.page-content-widget .content-upload-menu li:hover {
   background: var(--color-light-gray, #f0f0f0);
 }
 
-.page-content-widget .content-list {
+.section-title {
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.selected-content,
+.design-gallery {
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
 }
 
-.page-content-widget .content-item {
+.design-card {
+  position: relative;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-white);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   cursor: pointer;
-  color: var(--user-color);
+}
+
+.design-card.selected {
+  outline: 2px solid var(--user-color);
+}
+
+.design-preview,
+.html-preview {
+  width: 100%;
+  height: 120px;
+  -o-object-fit: cover;
+     object-fit: cover;
+}
+
+.html-preview {
+  overflow: hidden;
+}
+
+.design-name {
+  padding: 4px 6px;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .delete-content-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   width: 20px;
   height: 20px;
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.2s ease;
+  background: var(--color-white);
+  border-radius: 50%;
+  padding: 2px;
 }
 
 .delete-content-btn:hover {
@@ -2540,26 +2585,6 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
   color: #bbb;
   padding: 10px 0;
   text-align: center;
-}
-
-.attached-content {
-  margin-top: 20px;
-}
-
-.layout-select-menu {
-  position: fixed;
-  background: var(--color-white);
-  border-radius: 9px;
-  box-shadow: var(--shadow-card);
-  font-family: var(--font-body);
-  padding: 8px;
-  display: none;
-  z-index: 1000;
-}
-
-.layout-select-menu button {
-  margin-top: 8px;
-  width: 100%;
 }
 
 /* =============================================================================
@@ -3040,24 +3065,5 @@ body.grid-mode .canvas-item {
   border: none;
 }
 body.grid-mode .bounding-box {
-  border: none;
-}
-body.grid-mode .bounding-box .bbox-handle {
-  display: none;
-}
-body.grid-mode .bounding-box .se {
-  display: block;
-  width: 10px;
-  height: 10px;
-  bottom: -4px;
-  right: -4px;
-  transform: translate(50%, 50%) scale(var(--inv-scale));
-  border-right: 2px solid var(--user-color, #333);
-  border-bottom: 2px solid var(--user-color, #333);
-  background: transparent;
-  cursor: nwse-resize;
-  border-radius: 0;
-}
-body.grid-mode:not(.dashboard-edit-mode) .bounding-box {
-  display: none;
+  display: none !important;
 }/*# sourceMappingURL=site.css.map */

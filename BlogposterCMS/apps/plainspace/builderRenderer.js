@@ -190,7 +190,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   }
 
-  contentEl.innerHTML = `<div id="builderGrid" class="canvas-grid builder-grid"></div>`;
+  contentEl.innerHTML = `<div id="builderGrid" class="pixel-grid builder-grid"></div>`;
   gridEl = document.getElementById('builderGrid');
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {

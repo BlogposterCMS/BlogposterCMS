@@ -171,7 +171,7 @@ export function editElement(el, onSave, clickEvent = null) {
   widget.dispatchEvent(new Event('editStart'));
 
   widget.setAttribute('gs-locked', 'true');
-  const grid = widget.closest('.canvas-grid')?.__grid;
+  const grid = widget.closest('.pixel-grid, .canvas-grid')?.__grid;
   grid?.update(widget, { locked: true, noMove: true, noResize: true });
 
   if (hitLayer) hitLayer.style.pointerEvents = 'none';

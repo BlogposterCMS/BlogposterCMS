@@ -24,6 +24,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Builder now uses a dedicated PixelGrid instead of CanvasGrid for layout editing.
 - Admin resize handle now uses the `move-diagonal-2.svg` icon.
 - Replaced legacy Feather icon references with new icon set paths.
 - CanvasGrid supports internal resize handles when bounding boxes are disabled, and the admin grid uses a 12×80px layout for stable percentage sizing.

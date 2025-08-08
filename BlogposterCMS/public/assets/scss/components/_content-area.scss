@@ -7,11 +7,14 @@
 }
 
   .canvas-grid,
-  .canvas-grid * {
+  .canvas-grid *,
+  .pixel-grid,
+  .pixel-grid * {
     box-sizing: content-box;
   }
-  
-.canvas-grid {
+
+.canvas-grid,
+.pixel-grid {
   width: 100%;
   min-height: 300px;
   position: relative;

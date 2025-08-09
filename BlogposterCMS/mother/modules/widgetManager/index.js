@@ -396,7 +396,7 @@ function pickTable(widgetType) {
 
 async function loadCommunityWidgets(motherEmitter, jwt) {
   console.log('[WIDGET MANAGER] Scanning community widgets...');
-  const baseDir = path.resolve(__dirname, '../../../public/plainspace/community');
+  const baseDir = path.resolve(__dirname, '../../../widgets');
 
   if (!fs.existsSync(baseDir)) {
     console.log('[WIDGET MANAGER] No community widgets folder =>', baseDir);
@@ -446,7 +446,7 @@ async function loadCommunityWidgets(motherEmitter, jwt) {
           widgetType,
           label,
           category,
-          content: `/plainspace/community/${dir}/widget.js`
+          content: `/widgets/${dir}/widget.js`
         },
         onceCallback(err => {
           if (err) {

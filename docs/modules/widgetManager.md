@@ -4,7 +4,7 @@ Stores widgets used by both the public site and the admin dashboard.
 
 ## Startup
 - Core module; creates `widgets_public` and `widgets_admin` tables.
-- Automatically registers widgets found under `public/plainspace/community`.
+- Automatically registers widgets found under `widgets`.
 
 ## Purpose
 - CRUD events for widgets.

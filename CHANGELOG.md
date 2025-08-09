@@ -53,6 +53,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Widget container shadows now apply only in the admin interface.
 - Replaced invalid icon references in admin menus and widgets with available icons.
 - Dashboard grid now keeps push-on-overlap enabled in static mode to avoid widget collisions.
 - appLoader now exports `initialize()` like other core modules, preventing server startup crashes.

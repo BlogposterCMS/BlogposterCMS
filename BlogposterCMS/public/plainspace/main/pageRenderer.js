@@ -90,6 +90,9 @@ function renderWidget(wrapper, def, code = null, lane = 'public') {
 
   const container = document.createElement('div');
   container.className = 'widget-container';
+  if (lane === 'admin') {
+    container.classList.add('admin-widget');
+  }
   container.style.width = '100%';
   container.style.height = '100%';
   // Prevent drag actions when interacting with form controls inside widgets on

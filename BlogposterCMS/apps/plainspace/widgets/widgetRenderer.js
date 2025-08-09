@@ -28,6 +28,7 @@ export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
 
   const container = document.createElement('div');
   container.className = 'widget-container';
+  container.classList.add('admin-widget');
   container.style.width = '100%';
   container.style.height = '100%';
 

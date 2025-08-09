@@ -259,6 +259,7 @@ function getModuleTokenForDbManager() {
   app.use('/admin/assets', express.static(path.join(publicPath, 'assets')));
   app.use('/build', express.static(buildPath));
   app.use('/apps', express.static(path.join(__dirname, 'apps')));
+  app.use('/widgets', express.static(path.join(__dirname, 'widgets')));
   app.use(
     '/plainspace',
     express.static(path.join(__dirname, 'apps', 'plainspace'))

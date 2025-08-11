@@ -55,6 +55,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Widget code imports now wait for API event registration in builder, admin, and public lanes, preventing race conditions on first API calls.
 - Page picker grid spans the full width with sensible column settings, preventing widgets from snapping back.
 - Widget container shadows now apply only in the admin interface.
 - Replaced invalid icon references in admin menus and widgets with available icons.

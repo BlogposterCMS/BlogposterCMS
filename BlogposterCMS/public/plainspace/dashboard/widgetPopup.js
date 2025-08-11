@@ -103,7 +103,7 @@ async function addWidget(def) {
   const { renderWidget } = await import(
     /* webpackIgnore: true */ '/apps/plainspace/widgets/widgetRenderer.js'
   );
-  renderWidget(wrapper, def, null, instance);
+  await renderWidget(wrapper, def, null, instance);
 
   // Activate the widget immediately when added in edit mode
   if (document.body.classList.contains('dashboard-edit-mode')) {

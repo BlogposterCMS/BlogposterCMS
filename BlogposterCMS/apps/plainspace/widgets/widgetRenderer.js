@@ -1,20 +1,24 @@
 import { addHitLayer, executeJs } from '../utils.js';
 import { registerElement } from '../editor/editor.js';
 
-function registerWidgetEvents(widgetDef) {
+async function registerWidgetEvents(widgetDef) {
   const raw = widgetDef?.metadata?.apiEvents;
   if (!raw || typeof window.meltdownEmit !== 'function') return;
   const list = Array.isArray(raw) ? raw : [raw];
-  const events = list.filter(ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev));
+  const events = list.filter(
+    ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev)
+  );
   if (!events.length) return;
   const jwt = window.ADMIN_TOKEN || window.PUBLIC_TOKEN;
   if (!jwt) return;
-  window.meltdownEmit('registerWidgetUsage', { jwt, events }).catch(err => {
+  try {
+    await window.meltdownEmit('registerWidgetUsage', { jwt, events });
+  } catch (err) {
     console.warn('[Builder] registerWidgetUsage failed for', widgetDef.id, err);
-  });
+  }
 }
 
-export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
+export async function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const instanceId = wrapper.dataset.instanceId;
   const data = customData || (codeMap && codeMap[instanceId]) || null;
   const content = wrapper.querySelector('.canvas-item-content');
@@ -47,7 +51,7 @@ export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   content.addEventListener('touchstart', stop, { capture: true, passive: true });
   root.appendChild(container);
 
-  registerWidgetEvents(widgetDef);
+  await registerWidgetEvents(widgetDef);
 
   if (data) {
     if (data.css) {
@@ -70,9 +74,12 @@ export function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const ctx = { id: instanceId, widgetId: widgetDef.id, metadata: widgetDef.metadata };
   if (window.ADMIN_TOKEN) ctx.jwt = window.ADMIN_TOKEN;
   const codeUrl = new URL(widgetDef.codeUrl, document.baseURI).href;
-  import(/* webpackIgnore: true */ codeUrl)
-    .then(m => m.render?.(container, ctx))
-    .catch(err => console.error('[Builder] widget import error', err));
+  try {
+    const m = await import(/* webpackIgnore: true */ codeUrl);
+    m.render?.(container, ctx);
+  } catch (err) {
+    console.error('[Builder] widget import error', err);
+  }
 
   if (widgetDef.id === 'textBox') addHitLayer(wrapper);
 }

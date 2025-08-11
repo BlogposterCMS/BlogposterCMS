@@ -67,20 +67,24 @@ function createDebouncedEmitter(delay = 150) {
 
 const emitDebounced = createDebouncedEmitter(100);
 
-function registerWidgetEvents(def, lane) {
+async function registerWidgetEvents(def, lane) {
   const raw = def?.metadata?.apiEvents;
   if (!raw || typeof window.meltdownEmit !== 'function') return;
   const list = Array.isArray(raw) ? raw : [raw];
-  const events = list.filter(ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev));
+  const events = list.filter(
+    ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev)
+  );
   if (!events.length) return;
   const jwt = lane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
   if (!jwt) return;
-  window.meltdownEmit('registerWidgetUsage', { jwt, events }).catch(err => {
+  try {
+    await window.meltdownEmit('registerWidgetUsage', { jwt, events });
+  } catch (err) {
     console.warn(`[Renderer] registerWidgetUsage failed for ${def.id}`, err);
-  });
+  }
 }
 
-function renderWidget(wrapper, def, code = null, lane = 'public') {
+async function renderWidget(wrapper, def, code = null, lane = 'public') {
   const root = wrapper.attachShadow({ mode: 'open' });
   const globalCss = getGlobalCssUrl(lane);
 
@@ -124,7 +128,7 @@ function renderWidget(wrapper, def, code = null, lane = 'public') {
   handleSlot.name = 'resize-handle';
   root.appendChild(handleSlot);
 
-  registerWidgetEvents(def, lane);
+  await registerWidgetEvents(def, lane);
 
   const handleSheet = new CSSStyleSheet();
   handleSheet.replaceSync(`::slotted(.resize-handle){position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--user-color, #333);}`);
@@ -154,9 +158,12 @@ function renderWidget(wrapper, def, code = null, lane = 'public') {
   if (lane === 'admin' && window.ADMIN_TOKEN) {
     ctx.jwt = window.ADMIN_TOKEN;
   }
-  import(def.codeUrl)
-    .then(m => m.render?.(container, ctx))
-    .catch(err => console.error(`[Widget ${def.id}] import error:`, err));
+  try {
+    const m = await import(def.codeUrl);
+    m.render?.(container, ctx);
+  } catch (err) {
+    console.error(`[Widget ${def.id}] import error:`, err);
+  }
 }
 
 function clearContentKeepHeader(el) {
@@ -295,7 +302,7 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
       const opts = res?.content ? JSON.parse(res.content) : null;
       applyWidgetOptions(wrapper, opts, grid);
     } catch {}
-    renderWidget(content, def, item.code || null, lane);
+    await renderWidget(content, def, item.code || null, lane);
     wrapper.classList.remove('loading');
   }
   return { gridEl, grid };
@@ -646,7 +653,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
           applyWidgetOptions(wrapper, opts, grid);
         } catch {}
 
-        renderWidget(content, def, item.code || null, lane);
+        await renderWidget(content, def, item.code || null, lane);
         wrapper.classList.remove('loading');
       }
       await renderAttachedContent(page, lane, allWidgets, contentEl);
@@ -744,7 +751,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         applyWidgetOptions(wrapper, opts, grid);
       } catch {}
 
-      renderWidget(content, def, meta.code || null, lane);
+      await renderWidget(content, def, meta.code || null, lane);
       wrapper.classList.remove('loading');
     }
 

@@ -219,3 +219,8 @@
     font-size: 0.95rem;
   }
 }
+
+// Ensure the page picker grid uses the full available width
+#pagePickerGrid {
+  width: 100%;
+}

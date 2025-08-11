@@ -7,9 +7,12 @@
 
   // Lightweight grid for arranging pages
   const gridEl = document.querySelector('#pagePickerGrid');
-  const columnWidth = 1;
-  const columns = Math.max(1, Math.floor(gridEl.clientWidth / columnWidth));
-const grid = initCanvasGrid({ cellHeight: 1, columnWidth, columns, pushOnOverlap: true, useBoundingBox: false }, gridEl);
+  gridEl.style.width = '100%';
+  gridEl.classList.remove('half-width', 'max-width');
+
+  const columnWidth = 80;
+  const columns = Infinity;
+  const grid = initCanvasGrid({ cellHeight: 1, columnWidth, columns, pushOnOverlap: true, useBoundingBox: false }, gridEl);
   // 1) load & render all public pages
   async function loadPages() {
     const { pages = [] } = await meltdownEmit('getPagesByLane', {

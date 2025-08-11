@@ -29,7 +29,7 @@ async function loadToPng() {
     _toPng = mod.toPng;
   } catch (err) {
     try {
-      const mod = await import('/assets/js/html-to-img.js');
+      const mod = await import('../assets/js/html-to-img.js');
       _toPng = mod.toPng;
     } catch (err2) {
       console.warn('[Builder] html-to-image unavailable', err2);

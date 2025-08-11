@@ -1,4 +1,4 @@
-import { init as initPixelGrid } from '../../../public/plainspace/main/pixelGrid.js';
+import { init as initPixelGrid } from '../main/pixelGrid.js';
 
 export function initGrid(gridEl, state, selectWidget) {
   const grid = initPixelGrid({ pushOnOverlap: true }, gridEl);

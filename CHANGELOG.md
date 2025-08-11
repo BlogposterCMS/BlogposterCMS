@@ -28,6 +28,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Migrated essential Plainspace modules to `public/plainspace`, allowing the `apps/plainspace` package to be removed without impacting the dashboard.
 - Top header now displays the official BlogposterCMS logo.
 - Widget Manager scans `widgets/` and serves widget scripts from `/widgets/<dir>/widget.js`.
 - Builder now uses a dedicated PixelGrid instead of CanvasGrid for layout editing.

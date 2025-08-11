@@ -8,7 +8,7 @@ export async function render(el) {
   }
 
   const { sanitizeHtml } = await import(
-    /* webpackIgnore: true */ '/apps/plainspace/editor/core/sanitizer.js'
+    /* webpackIgnore: true */ '/plainspace/editor/core/sanitizer.js'
   );
 
   const HTML_FOLDER = 'page-content';

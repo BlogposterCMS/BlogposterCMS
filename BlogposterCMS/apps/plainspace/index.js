@@ -1,6 +1,6 @@
-import { fetchPartial } from './dashboard/fetchPartial.js';
-import { initBuilder } from './builderRenderer.js';
-import { enableAutoEdit, sanitizeHtml } from './editor/editor.js';
+import { fetchPartial } from '/plainspace/dashboard/fetchPartial.js';
+import { initBuilder } from '/plainspace/builderRenderer.js';
+import { enableAutoEdit, sanitizeHtml } from '/plainspace/editor/editor.js';
 
 async function bootstrap() {
   const sidebarEl = document.getElementById('sidebar');

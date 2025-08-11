@@ -1,12 +1,12 @@
 import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
 const { sanitizeHtml } = await import(
-  /* webpackIgnore: true */ '/apps/plainspace/editor/core/sanitizer.js'
+  /* webpackIgnore: true */ '/plainspace/editor/core/sanitizer.js'
 );
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
 
-// Default rows for admin widgets (~100px with pixel grid)
+// Default rows for admin widgets (~100px with CanvasGrid)
 // Temporary patch: double the default height for larger widgets
 const DEFAULT_ADMIN_ROWS = 100;
 
@@ -469,8 +469,8 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         : (Number(config.layout?.layer) || (layoutNameParam ? 1 : 0));
 
       const [{ initBuilder }, { enableAutoEdit }] = await Promise.all([
-        import(/* webpackIgnore: true */ '/apps/plainspace/builderRenderer.js'),
-        import(/* webpackIgnore: true */ '/apps/plainspace/editor/core/editor.js')
+        import(/* webpackIgnore: true */ '/plainspace/builderRenderer.js'),
+        import(/* webpackIgnore: true */ '/plainspace/editor/core/editor.js')
       ]);
 
       await initBuilder(sidebarEl, contentEl, pageIdParam, startLayer, layoutNameParam);

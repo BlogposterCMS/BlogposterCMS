@@ -23,7 +23,7 @@ function escapeHtml(str) {
   }[c]));
 }
 
-test('GET /admin/app/plainspace/123 returns 200 with csrf token', async () => {
+test('GET /admin/app/designer/123 returns 200 with csrf token', async () => {
   const app = express();
   const csrfStub = (req, res, next) => { req.csrfToken = () => 'test-token'; next(); };
   app.get('/admin/app/:appName/:pageId?', csrfStub, async (req, res) => {
@@ -45,7 +45,7 @@ test('GET /admin/app/plainspace/123 returns 200 with csrf token', async () => {
     const s = app.listen(0, () => resolve(s));
   });
   const port = server.address().port;
-  const res = await axios.get(`http://localhost:${port}/admin/app/plainspace/123`);
+  const res = await axios.get(`http://localhost:${port}/admin/app/designer/123`);
   expect(res.status).toBe(200);
   expect(res.data).toContain('<meta name="csrf-token" content="test-token">');
   server.close();

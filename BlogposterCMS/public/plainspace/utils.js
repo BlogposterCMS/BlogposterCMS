@@ -1,5 +1,23 @@
 import { executeJs as exec } from './main/script-utils.js';
 
+let builderAppNameCache = null;
+export async function getBuilderAppName() {
+  if (builderAppNameCache !== null) return builderAppNameCache;
+  try {
+    const res = await window.meltdownEmit('listBuilderApps', {
+      jwt: window.ADMIN_TOKEN,
+      moduleName: 'appLoader',
+      moduleType: 'core'
+    });
+    const first = Array.isArray(res?.apps) && res.apps[0] ? res.apps[0].name : '';
+    builderAppNameCache = first ? String(first).replace(/[^a-z0-9_-]/gi, '') : '';
+  } catch (err) {
+    console.warn('[Builder] failed to resolve builder app', err);
+    builderAppNameCache = '';
+  }
+  return builderAppNameCache;
+}
+
 export function addHitLayer(widget) {
   const shield = document.createElement('div');
   shield.className = 'hit-layer';

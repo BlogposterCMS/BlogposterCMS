@@ -1,5 +1,7 @@
 // public/assets/admin/default/pageList.js
 
+import { getBuilderAppName } from '../../../utils.js';
+
 // Global emitter for all helper functions
 const meltdownEmit = window.meltdownEmit;
 
@@ -296,7 +298,10 @@ async function editPage(id) {
 }
 
 async function editLayout(id) {
-  window.location.href = `/admin/app/plainspace/${id}?layer=1`;
+  const builder = await getBuilderAppName();
+  if (builder) {
+    window.location.href = `/admin/app/${encodeURIComponent(builder)}/${id}?layer=1`;
+  }
 }
 
 async function toggleDraft(page) {

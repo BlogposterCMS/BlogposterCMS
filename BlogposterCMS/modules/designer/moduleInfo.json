@@ -1,0 +1,7 @@
+{
+  "moduleName": "designer",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Provides database operations for the Designer app.",
+  "permissions": []
+}

@@ -20,7 +20,7 @@ test('listBuilderApps returns available builders', async () => {
       try {
         expect(err).toBeFalsy();
         expect(Array.isArray(data.apps)).toBe(true);
-        expect(data.apps.find(a => a.name === 'plainspace')).toBeTruthy();
+        expect(data.apps.find(a => a.name === 'designer')).toBeTruthy();
         resolve();
       } catch (e) {
         reject(e);

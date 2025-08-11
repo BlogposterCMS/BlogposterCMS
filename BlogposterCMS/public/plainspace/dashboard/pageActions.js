@@ -1,3 +1,5 @@
+import { getBuilderAppName } from '../utils.js';
+
 export async function createNewPage() {
   const title = prompt('New page title:');
   if (!title) return;
@@ -13,8 +15,9 @@ export async function createNewPage() {
       status: 'published'
     }) || {};
 
-    if (pageId) {
-      window.location.href = `/admin/app/plainspace/${pageId}?layer=1`;
+    const builder = await getBuilderAppName();
+    if (pageId && builder) {
+      window.location.href = `/admin/app/${encodeURIComponent(builder)}/${pageId}?layer=1`;
     } else {
       window.location.reload();
     }
@@ -37,7 +40,10 @@ export async function createNewLayout() {
       layout: [],
       previewPath: ''
     });
-    window.location.href = `/admin/app/plainspace?layout=${encodeURIComponent(layoutName.trim())}`;
+    const builder = await getBuilderAppName();
+    if (builder) {
+      window.location.href = `/admin/app/${encodeURIComponent(builder)}?layout=${encodeURIComponent(layoutName.trim())}`;
+    }
   } catch (err) {
     alert('Error: ' + err.message);
   }

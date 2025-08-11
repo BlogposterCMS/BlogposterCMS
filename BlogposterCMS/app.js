@@ -262,10 +262,6 @@ function getModuleTokenForDbManager() {
   app.use('/widgets', express.static(path.join(__dirname, 'widgets')));
   app.use(
     '/plainspace',
-    express.static(path.join(__dirname, 'apps', 'plainspace'))
-  );
-  app.use(
-    '/plainspace',
     express.static(path.join(publicPath, 'plainspace'))
   );
   app.use('/assets', express.static(assetsPath));
@@ -366,18 +362,6 @@ function getModuleTokenForDbManager() {
   } catch (e) {
     console.error('[SERVER INIT] moduleLoader fizzled →', e.message);
   }
-
-  // Build app registry from /apps directory
-  try {
-    console.log('[SERVER INIT] Loading appLoader…');
-    const loadApps = require(path.join(__dirname, 'mother', 'modules', 'appLoader', 'index.js'));
-    await loadApps({ emitter: motherEmitter, jwt: dbManagerToken });
-    console.log('[SERVER INIT] appLoader done.');
-  } catch (e) {
-    console.error('[SERVER INIT] appLoader fizzled →', e.message);
-  }
-
-  
 
 // ──────────────────────────────────────────────────────────────────────────
 // 5) Meltdown API – proxy front-end requests into motherEmitter events

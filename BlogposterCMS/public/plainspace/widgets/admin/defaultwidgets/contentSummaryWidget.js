@@ -1,6 +1,10 @@
+import { getBuilderAppName } from '../../../utils.js';
+
 export async function render(el) {
   const meltdownEmit = window.meltdownEmit;
   const jwt = window.ADMIN_TOKEN;
+  const builderApp = await getBuilderAppName();
+  const builderUrl = builderApp ? `/admin/app/${encodeURIComponent(builderApp)}` : '';
 
   let templates = [];
   try {
@@ -78,7 +82,9 @@ export async function render(el) {
     const item = document.createElement('div');
     item.className = 'layout-gallery-item' + (t.isGlobal ? ' global-layout' : '');
     item.addEventListener('click', () => {
-      window.location.href = `/admin/app/plainspace?layout=${encodeURIComponent(t.name)}`;
+      if (builderUrl) {
+        window.location.href = `${builderUrl}?layout=${encodeURIComponent(t.name)}`;
+      }
     });
 
     const menuBtn = document.createElement('button');
@@ -105,7 +111,9 @@ export async function render(el) {
 
       menu.querySelector('.open-layout').onclick = ev => {
         ev.stopPropagation();
-        window.open(`/admin/app/plainspace?layout=${encodeURIComponent(t.name)}`, '_blank');
+        if (builderUrl) {
+          window.open(`${builderUrl}?layout=${encodeURIComponent(t.name)}`, '_blank');
+        }
         menu.classList.remove('open');
       };
 
@@ -258,7 +266,9 @@ export async function render(el) {
         layout: [],
         previewPath: ''
       });
-      window.location.href = `/admin/app/plainspace?layout=${encodeURIComponent(layoutName.trim())}`;
+      if (builderUrl) {
+        window.location.href = `${builderUrl}?layout=${encodeURIComponent(layoutName.trim())}`;
+      }
     } catch (err) {
       alert('Error: ' + err.message);
     }

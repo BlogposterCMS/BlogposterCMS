@@ -1,8 +1,8 @@
 {
-  "name": "plainspace",
+  "name": "designer",
   "title": "Page Builder",
   "icon": "layout",
-  "entry": "plainspace",
+  "entry": "designer",
   "permissions": ["builder.use"],
   "launchable": true,
   "tags": ["builder"]

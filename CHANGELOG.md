@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Introduced `modules/designer` to handle database operations for the standalone Designer app.
 - Documentation now covers declaring `apiEvents` in widget metadata for secure
   endpoint pre-registration.
 - Default widgets declare their API event usage in metadata, enabling secure pre-registration of endpoints.
@@ -28,6 +29,9 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Dashboard widgets and actions now resolve builder apps dynamically, removing hardcoded `/designer` paths so core features remain functional if the app is removed.
+- Core no longer hardcodes the Designer path; appLoader now serves the app dynamically so it can be removed cleanly.
+- Renamed `apps/plainspace` to `apps/designer` and updated routes to decouple it from `public/plainspace`.
 - Migrated essential Plainspace modules to `public/plainspace`, allowing the `apps/plainspace` package to be removed without impacting the dashboard.
 - Top header now displays the official BlogposterCMS logo.
 - Widget Manager scans `widgets/` and serves widget scripts from `/widgets/<dir>/widget.js`.

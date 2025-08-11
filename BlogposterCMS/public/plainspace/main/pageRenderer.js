@@ -6,7 +6,7 @@ const { sanitizeHtml } = await import(
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
 
-// Default rows for admin widgets (~100px with pixel grid)
+// Default rows for admin widgets (~100px with CanvasGrid)
 // Temporary patch: double the default height for larger widgets
 const DEFAULT_ADMIN_ROWS = 100;
 

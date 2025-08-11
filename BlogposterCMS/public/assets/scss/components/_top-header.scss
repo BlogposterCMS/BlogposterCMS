@@ -40,9 +40,11 @@
     flex: 1;
     margin: 0 24px;
     min-width: 80px;
+    overflow: visible;
     .logo-icon {
       width: auto;
-      height: 34px;
+      height: 63px;
+      margin-top: -4px;
       display: block;
     }
   }

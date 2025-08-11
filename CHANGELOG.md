@@ -28,6 +28,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Top header now displays the official BlogposterCMS logo.
 - Widget Manager scans `widgets/` and serves widget scripts from `/widgets/<dir>/widget.js`.
 - Builder now uses a dedicated PixelGrid instead of CanvasGrid for layout editing.
 - Admin resize handle now uses the `move-diagonal-2.svg` icon.

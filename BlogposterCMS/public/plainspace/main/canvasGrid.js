@@ -275,8 +275,22 @@ export class CanvasGrid {
   _enableDrag(el) {
     let startX, startY, startGX, startGY, dragging = false;
     let targetX = 0, targetY = 0;
-    const move = e => {
+
+    const inAdminHandle = evt => {
+      const widget = evt.target.closest('.widget-container.admin-widget');
+      if (!widget) return false;
+      const rect = widget.getBoundingClientRect();
+      const x = evt.clientX;
+      const y = evt.clientY;
+      return (
+        x >= rect.right - 24 && x <= rect.right - 8 &&
+        y >= rect.top + 8 && y <= rect.top + 24
+      );
+    };
+
+    const move = ev => {
       if (!dragging) return;
+      const e = ev.touches ? ev.touches[0] : ev;
       targetX = startGX * this.options.columnWidth + (e.clientX - startX);
       targetY = startGY * this.options.cellHeight + (e.clientY - startY);
       const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
@@ -285,19 +299,25 @@ export class CanvasGrid {
       this._updateBBox();
       el.dispatchEvent(new Event('dragmove', { bubbles: true }));
     };
+
     const up = () => {
       dragging = false;
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
+      document.removeEventListener('touchmove', move);
+      document.removeEventListener('touchend', up);
       const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
       this.update(el, { x: snap.x, y: snap.y });
       this._emit('dragstop', el);
     };
-    el.addEventListener('mousedown', e => {
-      if (e.target.closest('.bbox-handle')) return;
-      if (this.staticGrid) return;
+
+    const start = ev => {
+      const e = ev.touches ? ev.touches[0] : ev;
+      if (ev.target.closest('.bbox-handle')) return;
+      const allowed = !this.staticGrid || inAdminHandle(e);
+      if (!allowed) return;
       if (el.getAttribute('gs-locked') === 'true' || el.getAttribute('gs-no-move') === 'true') return;
-      e.preventDefault();
+      ev.preventDefault();
       this.select(el);
       startX = e.clientX; startY = e.clientY;
       startGX = +el.dataset.x || 0;
@@ -308,7 +328,12 @@ export class CanvasGrid {
       this._emit('dragstart', el);
       document.addEventListener('mousemove', move);
       document.addEventListener('mouseup', up);
-    });
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', up);
+    };
+
+    el.addEventListener('mousedown', start);
+    el.addEventListener('touchstart', start, { passive: false });
   }
 
   // snapToGrid, elementRect and rectsCollide are imported from grid-utils.js

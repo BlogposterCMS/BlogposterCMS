@@ -420,15 +420,16 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         );
         document.dispatchEvent(new CustomEvent('top-header-loaded'));
       }
-        if (mainHeaderEl) {
-          if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
-            mainHeaderEl.innerHTML = '';
-          } else {
-            mainHeaderEl.innerHTML = sanitizeHtml(
-              await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
-            );
-          }
+      if (mainHeaderEl) {
+        if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
+          mainHeaderEl.innerHTML = '';
+        } else {
+          mainHeaderEl.innerHTML = sanitizeHtml(
+            await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
+          );
+          document.dispatchEvent(new CustomEvent('main-header-loaded'));
         }
+      }
       const contentHeaderEl = document.getElementById('content-header');
       if (contentHeaderEl) {
         contentHeaderEl.innerHTML = sanitizeHtml(

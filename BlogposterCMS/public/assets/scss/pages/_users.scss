@@ -65,10 +65,32 @@
   border: none;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-}
+  position: relative;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 
-.users-tab.active {
-  border-bottom: 2px solid var(--user-color);
-  color: var(--user-color);
-  font-weight: bold;
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 3px;
+    background: var(--user-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &.active {
+    opacity: 1;
+    font-weight: 600;
+    &::after {
+      transform: scaleX(1);
+    }
+  }
 }

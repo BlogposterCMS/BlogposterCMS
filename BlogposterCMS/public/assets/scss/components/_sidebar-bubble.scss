@@ -19,7 +19,7 @@
     flex-direction: column;
     align-items: center;
 
-      .sidebar-item {
+    .sidebar-item {
         position: relative;
         width: 48px;
         height: 48px;
@@ -30,8 +30,7 @@
         justify-content: center;
         background: none;
         border-radius: 8px;
-        box-shadow: none;
-        transition: background 0.2s, box-shadow 0.2s;
+        transition: background 0.2s;
 
         .icon {
           width: 24px;
@@ -39,7 +38,8 @@
           display: block;
           margin: auto;
           fill: var(--color-text);
-          transition: fill 0.2s ease;
+          opacity: 0.6;
+          transition: opacity 0.2s ease;
         }
 
         .label {
@@ -62,10 +62,8 @@
           z-index: 1000;
         }
 
-        &:hover:not(.active) {
-          .icon {
-            fill: var(--user-color);
-          }
+        &:hover {
+          background: color-mix(in srgb, var(--user-color), transparent 92%);
           .label {
             opacity: 1;
             transform: translateY(-50%) translateX(8px) scale(1);
@@ -73,13 +71,18 @@
         }
 
         &.active {
-          background: color-mix(in srgb, var(--user-color), transparent 80%);
-          backdrop-filter: blur(8px);
-          border-radius: 50%;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-
           .icon {
-            fill: var(--user-color);
+            opacity: 0.9;
+          }
+          &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 4px;
+            bottom: 4px;
+            width: 4px;
+            border-radius: 2px;
+            background: var(--user-color);
           }
         }
       }

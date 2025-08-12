@@ -31,6 +31,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Changed
+- Sidebar menu icons are now flat, with an aero-glass bubble highlighting the active page in a light shade of the user's color.
 - Admin dashboard widgets now feature a glass-style look with drag handles and subtle hover animations.
 - Builder styles moved to `apps/designer/style.css` and removed from global `site.css` bundle.
 - Dashboard widgets and actions now resolve builder apps dynamically, removing hardcoded `/designer` paths so core features remain functional if the app is removed.

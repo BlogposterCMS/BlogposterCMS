@@ -28,58 +28,58 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--color-white);
-        border-radius: 50%;
-        box-shadow: var(--shadow-card);
-        transition: transform 0.2s, box-shadow 0.2s;
+        background: none;
+        border-radius: 8px;
+        box-shadow: none;
+        transition: background 0.2s, box-shadow 0.2s;
 
-      .icon {
-        width: 24px;
-        height: 24px;
-        display: block;
-        margin: auto;
-        fill: var(--color-text);
-        transition: fill 0.2s ease;
-      }
+        .icon {
+          width: 24px;
+          height: 24px;
+          display: block;
+          margin: auto;
+          fill: var(--color-text);
+          transition: fill 0.2s ease;
+        }
 
-      .label {
-        position: absolute;
-        top: 50%;
-        left: 100%;
-        transform: translateY(-50%) translateX(0) scale(0.8);
-        transform-origin: left center;
-        background: var(--color-white);
-        padding: 4px 8px;
-        border-radius: 4px;
-        box-shadow: var(--shadow-card);
-        font-family: var(--font-body);
-        font-size: 14px;
-        color: var(--color-text);
-        white-space: nowrap;
-        opacity: 0;
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        pointer-events: none;
-        z-index: 1000;
-      }
+        .label {
+          position: absolute;
+          top: 50%;
+          left: 100%;
+          transform: translateY(-50%) translateX(0) scale(0.8);
+          transform-origin: left center;
+          background: var(--color-white);
+          padding: 4px 8px;
+          border-radius: 4px;
+          box-shadow: var(--shadow-card);
+          font-family: var(--font-body);
+          font-size: 14px;
+          color: var(--color-text);
+          white-space: nowrap;
+          opacity: 0;
+          transition: opacity 0.2s ease, transform 0.2s ease;
+          pointer-events: none;
+          z-index: 1000;
+        }
 
         &:hover:not(.active) {
           .icon {
-            fill: var(--color-white);
+            fill: var(--user-color);
           }
           .label {
             opacity: 1;
             transform: translateY(-50%) translateX(8px) scale(1);
           }
-
-          background: var(--gradient-primary);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         &.active {
+          background: color-mix(in srgb, var(--user-color), transparent 80%);
+          backdrop-filter: blur(8px);
+          border-radius: 50%;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
           .icon {
             fill: var(--user-color);
-            filter: drop-shadow(0 0 6px var(--user-color))
-                     drop-shadow(0 0 2px var(--user-color));
           }
         }
       }

@@ -67,4 +67,4 @@ async function initTopHeader() {
 }
 
 document.addEventListener('DOMContentLoaded', initTopHeader);
-document.addEventListener('main-header-loaded', initTopHeader);
+document.addEventListener('top-header-loaded', initTopHeader);

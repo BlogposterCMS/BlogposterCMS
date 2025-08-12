@@ -192,6 +192,14 @@ function ensureLayout(layout = {}, lane = 'public') {
 
   const inherit = layout.inheritsLayout !== false;
 
+  if (inherit || layout.header) {
+    if (!document.getElementById('top-header')) {
+      const topHeader = document.createElement('header');
+      topHeader.id = 'top-header';
+      scope.appendChild(topHeader);
+    }
+  }
+
   if (inherit) {
     if (!document.getElementById('main-header')) {
       const mainHeader = document.createElement('header');
@@ -352,14 +360,13 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
   try {
     // 1. ROUTE BASICS
     const pathParts = window.location.pathname.split('/').filter(Boolean);
-    const adminIndex = pathParts.indexOf('admin');
-    const lane = adminIndex !== -1 ? 'admin' : 'public';
+    const lane = window.location.pathname.startsWith('/admin') ? 'admin' : 'public';
     ensureGlobalStyle(lane);
     let slug;
     if (window.PAGE_SLUG) {
       slug = window.PAGE_SLUG;
     } else {
-      const parts = lane === 'admin' ? pathParts.slice(adminIndex + 1) : pathParts;
+      const parts = lane === 'admin' ? pathParts.slice(1) : pathParts;
       slug = parts.join('-') || 'dashboard';
     }
     const DEBUG = window.DEBUG_RENDERER;
@@ -390,11 +397,13 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     ensureLayout(config.layout || {}, lane);
 
     // 3. DOM REFERENCES
+    const topHeaderEl = document.getElementById('top-header');
     const mainHeaderEl = document.getElementById('main-header');
     const sidebarEl = document.getElementById('sidebar');
     const contentEl = document.getElementById('content');
 
     if (slug === 'builder') {
+      topHeaderEl?.remove();
       mainHeaderEl?.remove();
       document.getElementById('content-header')?.remove();
     }
@@ -403,14 +412,20 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
     // 4. LOAD HEADER PARTIALS
     if (slug !== 'builder') {
+      if (topHeaderEl) {
+        topHeaderEl.innerHTML = sanitizeHtml(
+          await fetchPartialSafe(
+            config.layout?.header || 'top-header'
+          )
+        );
+        document.dispatchEvent(new CustomEvent('top-header-loaded'));
+      }
       if (mainHeaderEl) {
-        if (config.layout?.inheritsLayout === false) {
+        if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
           mainHeaderEl.innerHTML = '';
         } else {
           mainHeaderEl.innerHTML = sanitizeHtml(
-            await fetchPartialSafe(
-              config.layout?.mainHeader || config.layout?.header || 'main-header'
-            )
+            await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
           );
           document.dispatchEvent(new CustomEvent('main-header-loaded'));
         }

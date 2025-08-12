@@ -2,7 +2,15 @@ import { fetchPartial } from '../../public/plainspace/dashboard/fetchPartial.js'
 import { initBuilder } from '../../public/plainspace/builderRenderer.js';
 import { enableAutoEdit, sanitizeHtml } from '../../public/plainspace/editor/editor.js';
 
+function loadStyle() {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/apps/designer/style.css';
+  document.head.appendChild(link);
+}
+
 async function bootstrap() {
+  loadStyle();
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('content');
   try {

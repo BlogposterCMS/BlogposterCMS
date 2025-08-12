@@ -9,9 +9,16 @@
   --color-text: #222222; // Dunkler für mehr Kontrast
   --color-white: #FFFFFF;
   --color-white-dark: #F7F7F7; // Slightly darker white for dropdown controls
-  --user-color: #008080; // User-selected accent color
+  --accent-h: 180; // Default teal hue
+  --accent-s: 70%; // Normalized saturation
+  --accent-l: 50%; // Normalized lightness
+  --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l)); // User-selected accent color
   --color-primary: var(--user-color);
-  --gradient-primary: linear-gradient(90deg, var(--user-color), #FF00FF, #FFA500);
+  --gradient-primary: linear-gradient(
+    180deg,
+    hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12) 0%,
+    hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.04) 100%
+  );
   --shared-widget-color: #d4af37; // Gold highlight for shared widgets
   --shadow-card: 0 1px 28px rgba(0,0,0,0.07);
   --shadow-default: 0px 0px 0px 1px rgba(64, 87, 109, .04), 0px 6px 20px -4px rgba(64, 87, 109, .3);
@@ -20,4 +27,18 @@
   --font-body: 'Manrope', sans-serif;
   --font-heading: 'Oswald', sans-serif;
   --font-mono: monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a1a1a;
+    --color-secondary-light: #2a2a2a;
+    --color-text: #f0f0f0;
+    --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
+    --gradient-primary: linear-gradient(
+      180deg,
+      hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,
+      hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.06) 100%
+    );
+  }
 }

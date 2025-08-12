@@ -45,16 +45,37 @@
   .filter {
     font-family: var(--font-body);
     font-size: 14px;
-    color: #999;
-    background: #f6f6f6;
-    border-radius: 7px;
+    color: var(--color-dark);
+    background: none;
+    border: none;
     padding: 5px 12px;
     cursor: pointer;
-    transition: all 0.15s;
-    &.active,
+    position: relative;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -2px;
+      width: 100%;
+      height: 3px;
+      background: var(--user-color);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.2s ease;
+    }
+
     &:hover {
-      background: var(--gradient-primary);
-      color: #fff;
+      opacity: 1;
+    }
+
+    &.active {
+      opacity: 1;
+      &::after {
+        transform: scaleX(1);
+      }
     }
   }
 }

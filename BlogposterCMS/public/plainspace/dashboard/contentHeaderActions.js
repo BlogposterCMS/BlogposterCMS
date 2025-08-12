@@ -12,7 +12,7 @@ export function initContentHeader() {
       div.className = 'breadcrumb-segment';
       const link = document.createElement('a');
       link.href = '/admin' + currentPath;
-      link.textContent = '/' + seg;
+      link.textContent = seg;
       div.appendChild(link);
       breadcrumbEl.appendChild(div);
     });
@@ -25,13 +25,24 @@ export function initContentHeader() {
         const removed = children.shift();
         removed.remove();
         const firstLink = children[0].querySelector('a');
-        const segText = firstLink.textContent.slice(firstLink.textContent.lastIndexOf('/') + 1);
+        const segText = firstLink.textContent;
         firstLink.textContent = '...' + segText.slice(-4);
         children = Array.from(breadcrumbEl.children);
       }
     }
     adjustBreadcrumb();
     window.addEventListener('resize', adjustBreadcrumb);
+  }
+
+  const header = document.querySelector('.content-header');
+  if (header && !header.dataset.scrollBound) {
+    header.dataset.scrollBound = 'true';
+    const updateShadow = () => {
+      if (window.scrollY > 0) header.classList.add('scrolled');
+      else header.classList.remove('scrolled');
+    };
+    updateShadow();
+    window.addEventListener('scroll', updateShadow, { passive: true });
   }
 
   const editToggle = document.getElementById('edit-toggle');
@@ -89,5 +100,22 @@ export function initContentHeader() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', initContentHeader);
+export function highlightMainHeader() {
+  const links = document.querySelectorAll('.main-header .nav-icons a');
+  const path = window.location.pathname;
+  links.forEach(link => {
+    const href = link.getAttribute('href');
+    if (href && path.startsWith(href)) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initContentHeader();
+  highlightMainHeader();
+});
 document.addEventListener('content-header-loaded', initContentHeader);
+document.addEventListener('main-header-loaded', highlightMainHeader);

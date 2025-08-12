@@ -20,7 +20,6 @@ El Psy Kongroo
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 
 ### Changed
-- Merged the top header into the main header with left-aligned logo, centered navigation, and icons on the right.
 - Refined dashboard layout with a translucent top bar, a tinted workspace gap, and a responsive sidebar that highlights the active page.
 - Streamlined dashboard navigation with a glass top bar, rail-style sidebar,
   arrowed breadcrumbs, animated accent tabs, and a sticky header shadow.

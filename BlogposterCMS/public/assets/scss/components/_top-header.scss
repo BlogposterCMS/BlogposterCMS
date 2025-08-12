@@ -6,11 +6,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 24px;
-  background: var(--color-white);
-  border-bottom: 1px solid #eee;
-  min-height: 56px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+  padding: 6px 24px;
+  min-height: 40px;
+  background: color-mix(in srgb, var(--color-white), transparent 30%);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
 
   .left-icons,
   .right-icons {

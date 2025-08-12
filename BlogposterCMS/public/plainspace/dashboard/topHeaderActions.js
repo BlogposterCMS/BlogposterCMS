@@ -50,6 +50,20 @@ async function initTopHeader() {
       }
     });
   }
+
+  const sidebarItems = document.querySelectorAll('.sidebar .sidebar-item');
+  sidebarItems.forEach(item => {
+    if (item.dataset.bound) return;
+    item.dataset.bound = 'true';
+    try {
+      const link = new URL(item.getAttribute('href'), window.location.origin);
+      if (window.location.pathname.startsWith(link.pathname)) {
+        item.classList.add('active');
+      }
+    } catch (err) {
+      console.warn('[TopHeader] invalid sidebar link', err);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initTopHeader);

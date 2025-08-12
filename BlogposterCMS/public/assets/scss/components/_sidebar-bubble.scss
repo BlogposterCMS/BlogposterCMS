@@ -71,6 +71,7 @@
         }
 
         &.active {
+          background: color-mix(in srgb, var(--user-color), transparent 88%);
           .icon {
             opacity: 0.9;
           }
@@ -88,3 +89,13 @@
       }
     }
   }
+
+@media (max-width: 700px) {
+  .sidebar {
+    width: 48px;
+    padding: 12px 8px 0;
+  }
+  .sidebar .sidebar-nav .sidebar-item {
+    margin: 4px 0;
+  }
+}

@@ -192,15 +192,7 @@ function ensureLayout(layout = {}, lane = 'public') {
 
   const inherit = layout.inheritsLayout !== false;
 
-  if (inherit || layout.header) {
-    if (!document.getElementById('top-header')) {
-      const topHeader = document.createElement('header');
-      topHeader.id = 'top-header';
-      scope.appendChild(topHeader);
-    }
-  }
-
-  if (inherit) {
+  if (inherit || layout.header || layout.mainHeader) {
     if (!document.getElementById('main-header')) {
       const mainHeader = document.createElement('header');
       mainHeader.id = 'main-header';
@@ -397,13 +389,11 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     ensureLayout(config.layout || {}, lane);
 
     // 3. DOM REFERENCES
-    const topHeaderEl = document.getElementById('top-header');
     const mainHeaderEl = document.getElementById('main-header');
     const sidebarEl = document.getElementById('sidebar');
     const contentEl = document.getElementById('content');
 
     if (slug === 'builder') {
-      topHeaderEl?.remove();
       mainHeaderEl?.remove();
       document.getElementById('content-header')?.remove();
     }
@@ -412,16 +402,8 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
     // 4. LOAD HEADER PARTIALS
     if (slug !== 'builder') {
-      if (topHeaderEl) {
-        topHeaderEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(
-            config.layout?.header || 'top-header'
-          )
-        );
-        document.dispatchEvent(new CustomEvent('top-header-loaded'));
-      }
       if (mainHeaderEl) {
-        if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
+        if (config.layout?.inheritsLayout === false && !config.layout?.mainHeader) {
           mainHeaderEl.innerHTML = '';
         } else {
           mainHeaderEl.innerHTML = sanitizeHtml(

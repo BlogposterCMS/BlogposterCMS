@@ -1,5 +1,5 @@
 export default function initNotificationHub() {
-  const logo = document.querySelector('.top-header .logo');
+  const logo = document.querySelector('.main-header .logo');
   if (!logo || logo.dataset.bound) return;
   logo.dataset.bound = 'true';
 
@@ -52,4 +52,4 @@ export default function initNotificationHub() {
 }
 
 document.addEventListener('DOMContentLoaded', initNotificationHub);
-document.addEventListener('top-header-loaded', initNotificationHub);
+document.addEventListener('main-header-loaded', initNotificationHub);

@@ -1,4 +1,4 @@
-async function initTopHeader() {
+async function initMainHeader() {
   const userLink = document.getElementById('user-link');
   const logoutIcon = document.getElementById('logout-icon');
   const searchToggle = document.getElementById('search-toggle');
@@ -15,7 +15,7 @@ async function initTopHeader() {
         userLink.href = `/admin/settings/users/edit/${id}`;
       }
     } catch (err) {
-      console.error('[TopHeader] token parse failed', err);
+      console.error('[Header] token parse failed', err);
     }
   }
 
@@ -61,10 +61,10 @@ async function initTopHeader() {
         item.classList.add('active');
       }
     } catch (err) {
-      console.warn('[TopHeader] invalid sidebar link', err);
+      console.warn('[Header] invalid sidebar link', err);
     }
   });
 }
 
-document.addEventListener('DOMContentLoaded', initTopHeader);
-document.addEventListener('top-header-loaded', initTopHeader);
+document.addEventListener('DOMContentLoaded', initMainHeader);
+document.addEventListener('main-header-loaded', initMainHeader);

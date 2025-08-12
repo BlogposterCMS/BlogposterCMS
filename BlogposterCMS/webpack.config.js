@@ -13,7 +13,7 @@ const entry = {
   install: './public/assets/js/install.js',
   sortable: './public/assets/js/sortable.min.js',
   tokenLoader: './public/assets/js/tokenLoader.js',
-  topHeaderActions: './public/plainspace/dashboard/topHeaderActions.js',
+  mainHeaderActions: './public/plainspace/dashboard/mainHeaderActions.js',
   openExplorer: './public/assets/js/openExplorer.js',
   pageActions: './public/plainspace/dashboard/pageActions.js',
   fontsLoader: './public/assets/js/fontsLoader.js',

@@ -74,6 +74,8 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Corrected user edit widget color picker path to prevent import errors.
+- Top header user icon now links directly to the active user's profile.
 - Resolved module resolution errors in the Designer app by switching to relative plainspace and asset imports.
 - Widget code imports now wait for API event registration in builder, admin, and public lanes, preventing race conditions on first API calls.
 - Page picker grid spans the full width with sensible column settings, preventing widgets from snapping back.

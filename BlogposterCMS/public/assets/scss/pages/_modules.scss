@@ -38,7 +38,8 @@
 }
 
 .modules-tab.active {
-  border-bottom: 2px solid currentColor;
+  border-bottom: 2px solid var(--user-color);
+  color: var(--user-color);
   font-weight: bold;
 }
 

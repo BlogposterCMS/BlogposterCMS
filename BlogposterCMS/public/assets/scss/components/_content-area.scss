@@ -7,7 +7,7 @@
   flex-direction: column;
   margin-top: 5px;
   box-shadow:
-    0 0 4px color-mix(in srgb, var(--user-color), transparent 60%),
+    0 0 4px color-mix(in srgb, var(--user-color), transparent 90%),
     0 0 12px color-mix(in srgb, var(--user-color), transparent 80%);
   border-radius: 9px;
 }
@@ -24,7 +24,7 @@
   width: 100%;
   min-height: 300px;
   position: relative;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(8px);
   overflow-x: hidden;
   overflow-y: visible;

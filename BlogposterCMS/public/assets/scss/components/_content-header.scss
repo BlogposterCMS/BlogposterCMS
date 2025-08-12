@@ -19,8 +19,9 @@
   .content-header-center {
     flex: 1;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     overflow: hidden;
+    padding-left: 8px;
     .breadcrumb-segment {
       white-space: nowrap;
       a {

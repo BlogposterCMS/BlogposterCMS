@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Introduced dynamic breadcrumbs in the admin content header and removed page titles from the main header.
 - Converted left-side menus to a bubble layout and made active icons glow in the user's color.
 - Introduced `modules/designer` to handle database operations for the standalone Designer app.
 - Documentation now covers declaring `apiEvents` in widget metadata for secure

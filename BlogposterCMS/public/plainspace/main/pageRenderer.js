@@ -428,10 +428,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
               await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
             );
           }
-          if (lane === 'admin' && page.title) {
-            const t = mainHeaderEl.querySelector('.site-title');
-            if (t) t.textContent = page.title;
-          }
         }
       const contentHeaderEl = document.getElementById('content-header');
       if (contentHeaderEl) {

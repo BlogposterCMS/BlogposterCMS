@@ -83,6 +83,8 @@ function setAccentVariables(hex) {
   document.documentElement.style.setProperty('--accent-h', h);
   document.documentElement.style.setProperty('--accent-s', `${sNorm}%`);
   document.documentElement.style.setProperty('--accent-l', `${lNorm}%`);
+  const contrast = lNorm > 50 ? '#000000' : '#ffffff';
+  document.documentElement.style.setProperty('--color-primary-contrast', contrast);
   const normalizedHex = hslToHex(h, sNorm, lNorm);
   window.USER_COLOR = normalizedHex;
   updateSharedColor(normalizedHex);

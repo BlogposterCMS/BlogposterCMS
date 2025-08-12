@@ -20,6 +20,7 @@ El Psy Kongroo
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 
 ### Changed
+- Merged top header into main header with centered navigation and relocated logo and icons.
 - Refined dashboard layout with a translucent top bar, a tinted workspace gap, and a responsive sidebar that highlights the active page.
 - Streamlined dashboard navigation with a glass top bar, rail-style sidebar,
   arrowed breadcrumbs, animated accent tabs, and a sticky header shadow.
@@ -77,6 +78,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Main header now renders on admin routes served from subdirectories by using path segment detection.
 - Corrected user edit widget color picker path to prevent import errors.
 - Top header user icon now links directly to the active user's profile.
 - Resolved module resolution errors in the Designer app by switching to relative plainspace and asset imports.

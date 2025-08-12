@@ -1,8 +1,11 @@
 .main-content {
   display: flex;
-  flex-direction: row;   
-  background: var(--color-light-gray, #f6f6f7);
-
+  flex-direction: row;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--user-color), white 85%),
+    color-mix(in srgb, var(--user-color), white 95%)
+  );
 }
 
 #adminGrid {

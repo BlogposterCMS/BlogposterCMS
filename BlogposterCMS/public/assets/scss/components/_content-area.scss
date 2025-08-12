@@ -18,7 +18,8 @@
   width: 100%;
   min-height: 300px;
   position: relative;
-  background: var(--color-bg);
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
   overflow-x: hidden;
   overflow-y: visible;
   height: auto;
@@ -26,9 +27,8 @@
 .canvas-item {
   position: absolute;
   overflow: visible;
-  background: var(--color-white);
-  border-radius: 9px;
-  /*box-shadow: var(--shadow-card);*/
+  background: transparent;
+  border-radius: 14px;
   transition: all 0.2s ease;
   will-change: transform;
   z-index: 0; // baseline layer for widgets

@@ -8,6 +8,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'empty-sidebar',
         inheritsLayout: true
       },
@@ -20,6 +21,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
@@ -37,6 +39,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
@@ -54,6 +57,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
@@ -67,6 +71,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
@@ -80,6 +85,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
@@ -93,6 +99,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
@@ -106,6 +113,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
@@ -119,6 +127,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
@@ -132,6 +141,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
@@ -145,6 +155,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
@@ -158,6 +169,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
@@ -175,6 +187,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
@@ -192,6 +205,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
@@ -205,6 +219,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
@@ -222,6 +237,7 @@ module.exports.ADMIN_PAGES = [
     lane: 'admin',
     config: {
       layout: {
+        header: 'top-header',
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },

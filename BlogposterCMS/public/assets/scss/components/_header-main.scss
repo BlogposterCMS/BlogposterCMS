@@ -1,34 +1,26 @@
 /* =============================================================================
-   components/_header-main.scss — Combined Header
+   components/_header-main.scss — Icon‐Style Header Nav
    ============================================================================= */
 
 .main-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 24px;
-  min-height: 40px;
+  padding: 24px 25px;
+  justify-content: center;
   backdrop-filter: blur(6px);
   background: color-mix(in srgb, var(--color-white), transparent 20%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
 
-  .logo {
-    display: flex;
-    align-items: center;
-    min-width: 80px;
-
-    .logo-icon {
-      width: auto;
-      height: 63px;
-      margin-top: -4px;
-      display: block;
-    }
+  .site-title {
+    flex-grow: 1;
+    font-family: var(--font-heading);
+    font-size: 30px;
+    margin: 0;
+    color: var(--color-text);
   }
 
   .nav-icons {
-    flex: 1;
     display: flex;
-    justify-content: center;
     gap: 12px;
 
     a {
@@ -73,91 +65,6 @@
         &::after {
           transform: scaleX(1);
         }
-      }
-    }
-  }
-
-  .right-icons {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-
-    .icon {
-      width: 22px;
-      height: 22px;
-      fill: var(--color-text);
-      opacity: 0.8;
-      cursor: pointer;
-      transition: fill 0.2s, opacity 0.2s, transform 0.12s;
-
-      &:hover {
-        opacity: 1;
-        transform: scale(1.12);
-      }
-    }
-
-    .search-container {
-      position: relative;
-      display: flex;
-      align-items: center;
-
-      input {
-        position: absolute;
-        left: 100%;
-        margin-left: 8px;
-        width: 0;
-        opacity: 0;
-        pointer-events: none;
-        transition: width 0.2s ease, opacity 0.2s ease;
-        padding: 1.5rem 0.75rem 0.5rem;
-        border: none;
-        border-bottom: 2px solid #e4e4e4;
-        border-radius: 0;
-        font-size: 1rem;
-        background: transparent;
-        font-family: var(--font-body);
-        color: var(--color-text);
-
-        &:focus {
-          outline: none;
-          border-bottom-color: var(--user-color);
-        }
-      }
-
-      &.open input {
-        width: 160px;
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      .search-results {
-        position: absolute;
-        left: 100%;
-        margin-left: 8px;
-        width: 160px;
-        top: calc(100% + 4px);
-        background: var(--color-white);
-        border: 1px solid #ddd;
-        list-style: none;
-        margin: 4px 0 0;
-        padding: 0;
-        max-height: 200px;
-        overflow-y: auto;
-        display: none;
-        z-index: 20;
-
-        li {
-          padding: 4px 8px;
-          cursor: pointer;
-
-          &:hover {
-            background: #f0f0f0;
-          }
-        }
-      }
-
-      &.active .search-results {
-        display: block;
       }
     }
   }

@@ -5,7 +5,7 @@
 .main-header {
   display: flex;
   align-items: center;
-  padding: 30px 25px;
+  padding: 24px 25px;
   background: var(--color-white);
 
   .site-title {
@@ -24,7 +24,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 8px;
       text-decoration: none;
       font-family: var(--font-body);
@@ -40,11 +40,11 @@
       }
 
       &:hover {
-        background: var(--gradient-primary);
-        color: var(--color-white);
+        background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12);
+        color: var(--color-primary-contrast);
 
         .icon {
-          fill: var(--color-white);
+          fill: var(--color-primary-contrast);
         }
       }
     }

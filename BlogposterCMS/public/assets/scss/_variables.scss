@@ -14,6 +14,7 @@
   --accent-l: 50%; // Normalized lightness
   --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l)); // User-selected accent color
   --color-primary: var(--user-color);
+  --color-primary-contrast: #222222;
   --gradient-primary: linear-gradient(
     180deg,
     hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12) 0%,
@@ -35,6 +36,7 @@
     --color-secondary-light: #2a2a2a;
     --color-text: #f0f0f0;
     --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
+    --color-primary-contrast: #f0f0f0;
     --gradient-primary: linear-gradient(
       180deg,
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,

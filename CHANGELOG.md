@@ -21,6 +21,7 @@ El Psy Kongroo
 
 ### Changed
 - Admin dashboard widgets can now be repositioned via the drag handle even when not in edit mode.
+- Refined dashboard header and navigation: tighter top spacing, larger touch targets, subtler hover tint with automatic text/icon contrast, and aligned breadcrumbs.
 - Normalized user accent colors with HSL clamping and unified gradient logic for consistent theming.
 - Decoupled the top header from accent tinting and mirrored the accent color on module and user tabs.
 - Added dark mode variable defaults so accents appear softer on dark backgrounds.

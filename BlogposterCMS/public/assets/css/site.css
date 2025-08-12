@@ -442,9 +442,17 @@ body.dashboard-edit-mode .canvas-item {
   --color-text: #222222;
   --color-white: #FFFFFF;
   --color-white-dark: #F7F7F7;
-  --user-color: #008080;
+  --accent-h: 180;
+  --accent-s: 70%;
+  --accent-l: 50%;
+  --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
   --color-primary: var(--user-color);
-  --gradient-primary: linear-gradient(90deg, var(--user-color), #FF00FF, #FFA500);
+  --color-primary-contrast: #222222;
+  --gradient-primary: linear-gradient(
+    180deg,
+    hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12) 0%,
+    hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.04) 100%
+  );
   --shared-widget-color: #d4af37;
   --shadow-card: 0 1px 28px rgba(0,0,0,0.07);
   --shadow-default: 0px 0px 0px 1px rgba(64, 87, 109, .04), 0px 6px 20px -4px rgba(64, 87, 109, .3);
@@ -453,6 +461,20 @@ body.dashboard-edit-mode .canvas-item {
   --font-mono: monospace;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a1a1a;
+    --color-secondary-light: #2a2a2a;
+    --color-text: #f0f0f0;
+    --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
+    --color-primary-contrast: #f0f0f0;
+    --gradient-primary: linear-gradient(
+      180deg,
+      hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,
+      hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.06) 100%
+    );
+  }
+}
 /* =============================================================================
    Global Styles (ohne Login-spezifischen Kram)
    ============================================================================= */
@@ -506,6 +528,8 @@ body {
   -webkit-backdrop-filter: blur(4px);
           backdrop-filter: blur(4px);
   cursor: move;
+  pointer-events: all;
+  touch-action: none;
   background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
   background-size: 4px 4px;
 }
@@ -901,8 +925,9 @@ p {
 .main-header {
   display: flex;
   align-items: center;
-  padding: 30px 25px;
+  padding: 24px 25px;
   background: var(--color-white);
+  justify-content: center;
 }
 .main-header .site-title {
   flex-grow: 1;
@@ -919,7 +944,7 @@ p {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 8px;
   text-decoration: none;
   font-family: var(--font-body);
@@ -934,11 +959,11 @@ p {
   transition: fill 0.2s ease;
 }
 .main-header .nav-icons a:hover {
-  background: var(--gradient-primary);
-  color: var(--color-white);
+  background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12);
+  color: var(--color-primary-contrast);
 }
 .main-header .nav-icons a:hover .icon {
-  fill: var(--color-white);
+  fill: var(--color-primary-contrast);
 }
 
 /* =============================================================================
@@ -969,7 +994,6 @@ p {
   transition: fill 0.2s, opacity 0.2s, transform 0.12s;
 }
 .top-header .icon:hover {
-  fill: var(--user-color);
   opacity: 1;
   transform: scale(1.12);
 }
@@ -1121,8 +1145,9 @@ p {
 .content-header .content-header-center {
   flex: 1;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   overflow: hidden;
+  padding-left: 8px;
 }
 .content-header .content-header-center .breadcrumb-segment {
   white-space: nowrap;
@@ -1558,7 +1583,8 @@ p {
 }
 
 .modules-tab.active {
-  border-bottom: 2px solid currentColor;
+  border-bottom: 2px solid var(--user-color);
+  color: var(--user-color);
   font-weight: bold;
 }
 
@@ -2175,7 +2201,8 @@ p {
 }
 
 .users-tab.active {
-  border-bottom: 2px solid currentColor;
+  border-bottom: 2px solid var(--user-color);
+  color: var(--user-color);
   font-weight: bold;
 }
 

@@ -5,20 +5,17 @@ async function initTopHeader() {
   const searchContainer = document.querySelector('.search-container');
   const searchInput = document.getElementById('admin-search-input');
 
-  if (userLink && !userLink.dataset.bound && window.ADMIN_TOKEN && window.meltdownEmit) {
+  if (userLink && !userLink.dataset.bound && window.ADMIN_TOKEN) {
     userLink.dataset.bound = 'true';
     try {
-      const decoded = await window.meltdownEmit('validateToken', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'auth',
-        moduleType: 'core',
-        tokenToValidate: window.ADMIN_TOKEN
-      });
-      if (decoded && decoded.userId) {
-        userLink.href = `/admin/settings/users/edit/${decoded.userId}`;
+      const [, payload] = window.ADMIN_TOKEN.split('.');
+      const decoded = JSON.parse(atob(payload));
+      const id = decoded.userId || decoded.sub;
+      if (id) {
+        userLink.href = `/admin/settings/users/edit/${id}`;
       }
     } catch (err) {
-      console.error('[TopHeader] failed to decode token', err);
+      console.error('[TopHeader] token parse failed', err);
     }
   }
 

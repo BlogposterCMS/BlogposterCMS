@@ -1,4 +1,4 @@
-import { createColorPicker } from '../../editor/colorPicker.js';
+import { createColorPicker } from '../../editor/toolbar/colorPicker.js';
 
 export async function render(el) {
   const meltdownEmit = window.meltdownEmit;

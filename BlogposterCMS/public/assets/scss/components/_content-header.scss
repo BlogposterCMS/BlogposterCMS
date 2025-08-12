@@ -16,6 +16,26 @@
     gap: 12px;
   }
 
+  .content-header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    .breadcrumb-segment {
+      white-space: nowrap;
+      a {
+        color: var(--color-dark);
+        text-decoration: none;
+      }
+      &.current a {
+        font-weight: 600;
+      }
+    }
+    .breadcrumb-segment + .breadcrumb-segment {
+      margin-left: 8px;
+    }
+  }
+
   #dynamic-action-btn {
     display: none;
   }

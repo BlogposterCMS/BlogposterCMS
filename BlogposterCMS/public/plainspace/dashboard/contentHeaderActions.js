@@ -1,6 +1,39 @@
 import { showWidgetPopup, hideWidgetPopup } from './widgetPopup.js';
 
 export function initContentHeader() {
+  const breadcrumbEl = document.getElementById('content-breadcrumb');
+  if (breadcrumbEl) {
+    const path = window.location.pathname.replace(/^\/admin/, '');
+    const segments = path.split('/').filter(Boolean);
+    let currentPath = '';
+    segments.forEach(seg => {
+      currentPath += '/' + seg;
+      const div = document.createElement('div');
+      div.className = 'breadcrumb-segment';
+      const link = document.createElement('a');
+      link.href = '/admin' + currentPath;
+      link.textContent = '/' + seg;
+      div.appendChild(link);
+      breadcrumbEl.appendChild(div);
+    });
+    const items = breadcrumbEl.querySelectorAll('.breadcrumb-segment');
+    if (items.length) items[items.length - 1].classList.add('current');
+
+    function adjustBreadcrumb() {
+      let children = Array.from(breadcrumbEl.children);
+      while (breadcrumbEl.scrollWidth > breadcrumbEl.clientWidth && children.length > 1) {
+        const removed = children.shift();
+        removed.remove();
+        const firstLink = children[0].querySelector('a');
+        const segText = firstLink.textContent.slice(firstLink.textContent.lastIndexOf('/') + 1);
+        firstLink.textContent = '...' + segText.slice(-4);
+        children = Array.from(breadcrumbEl.children);
+      }
+    }
+    adjustBreadcrumb();
+    window.addEventListener('resize', adjustBreadcrumb);
+  }
+
   const editToggle = document.getElementById('edit-toggle');
   const actionBtn  = document.getElementById('dynamic-action-btn');
   const actionCfg  = window.CONTENT_ACTION;

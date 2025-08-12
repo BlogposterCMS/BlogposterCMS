@@ -2,19 +2,15 @@
    components/_top-header.scss — Clean Header mit Icons und zentriertem Logo
    ============================================================================= */
 
-#top-header {
-  background: rgba(255,255,255,0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-}
-
 .top-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 24px;
+  background: var(--color-white);
+  border-bottom: 1px solid #eee;
   min-height: 56px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
 
   .left-icons,
   .right-icons {

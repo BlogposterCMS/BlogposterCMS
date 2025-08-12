@@ -211,8 +211,10 @@ function ensureLayout(layout = {}, lane = 'public') {
   let mainContent = document.querySelector('.main-content');
   if (!mainContent) {
     mainContent = document.createElement('div');
-    mainContent.className = 'main-content';
+    mainContent.className = 'main-content workspace-shell';
     scope.appendChild(mainContent);
+  } else {
+    mainContent.classList.add('workspace-shell');
   }
 
   if ((inherit || layout.sidebar) && layout.sidebar !== 'empty-sidebar') {

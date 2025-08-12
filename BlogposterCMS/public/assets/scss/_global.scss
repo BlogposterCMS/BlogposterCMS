@@ -51,6 +51,8 @@ body {
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(4px);
   cursor: move;
+  pointer-events: all;
+  touch-action: none;
   background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
   background-size: 4px 4px;
 }

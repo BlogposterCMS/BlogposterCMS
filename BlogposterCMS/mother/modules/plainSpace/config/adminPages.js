@@ -12,6 +12,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'empty-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/home.svg',
       widgets: ['contentSummary', 'modulesList', 'pageStats']
     }
   },
@@ -25,6 +26,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/folder.svg',
       widgets: ['contentSummary'],
       actionButton: {
         icon: '/assets/icons/plus.svg',
@@ -43,6 +45,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/file-text.svg',
       actionButton: {
         icon: '/assets/icons/plus.svg',
         action: 'createNewPage'
@@ -61,6 +64,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/image.svg',
       widgets: ['mediaExplorer']
     }
   },
@@ -75,6 +79,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/puzzle.svg',
       widgets: ['widgetList']
     }
   },
@@ -89,6 +94,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/menu.svg',
       widgets: []
     }
   },
@@ -103,6 +109,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/layout-dashboard.svg',
       widgets: ['layoutTemplates']
     }
   },
@@ -117,6 +124,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/file-pen-line.svg',
       widgets: ['pageEditorWidget', 'pageContent']
 
     }
@@ -131,6 +139,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/cog.svg',
       widgets: []
     }
   },
@@ -145,6 +154,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/server.svg',
       widgets: ['systemInfo', 'systemSettings']
     }
   },
@@ -159,6 +169,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/users.svg',
       widgets: ['usersList']
     }
   },
@@ -173,6 +184,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/user-pen.svg',
       widgets: ['userEdit'],
       actionButton: {
         icon: '/assets/icons/save.svg',
@@ -191,6 +203,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/package.svg',
       widgets: ['modulesList'],
       actionButton: {
         icon: '/assets/icons/plus.svg',
@@ -209,6 +222,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/log-in.svg',
       widgets: ['loginStrategies']
     }
   },
@@ -223,6 +237,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/file-pen.svg',
       widgets: ['loginStrategyEdit'],
       actionButton: {
         icon: '/assets/icons/save.svg',
@@ -241,6 +256,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
+      icon: '/assets/icons/type.svg',
       widgets: ['fontsList']
     }
   }

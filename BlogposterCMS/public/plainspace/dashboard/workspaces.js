@@ -67,11 +67,17 @@ export async function initWorkspaceNav() {
     if (sidebarNav && workspaceSlug) {
       sidebarNav.innerHTML = '';
       const subpages = pages.filter(p => {
+        const parent = String(p.parentSlug || '').split('/')[0];
+        if (parent) return parent === workspaceSlug;
         const slug = String(p.slug || '');
         return slug.startsWith(workspaceSlug + '/') && slug !== workspaceSlug;
       });
       const pageKey = p => {
-        const parts = (p.parentSlug ? p.parentSlug + '/' + p.slug : p.slug).split('/');
+        if (p.parentSlug) {
+          const parts = (p.parentSlug + '/' + p.slug).split('/');
+          return parts.slice(1).join('/') || p.slug;
+        }
+        const parts = String(p.slug || '').split('/');
         return parts.slice(1).join('/') || p.slug;
       };
       const seen = new Set();

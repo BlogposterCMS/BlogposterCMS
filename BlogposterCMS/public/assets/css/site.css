@@ -1174,41 +1174,37 @@ p {
   transition: box-shadow 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-.content-header .content-header-left,
-.content-header .content-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.content-header .content-header-center {
+#content-breadcrumb {
   flex: 1;
   display: flex;
-  justify-content: center;
+  align-items: center;
   overflow: hidden;
   padding-left: 8px;
 }
-.content-header .content-header-center .breadcrumb-segment {
+#content-breadcrumb .breadcrumb-segment {
   display: flex;
   align-items: center;
   white-space: nowrap;
 }
-.content-header .content-header-center .breadcrumb-segment a {
+#content-breadcrumb .breadcrumb-segment a {
   color: rgba(0, 0, 0, 0.6);
   text-decoration: none;
 }
-.content-header .content-header-center .breadcrumb-segment.current a {
+#content-breadcrumb .breadcrumb-segment.current a {
   font-weight: 600;
 }
-.content-header .content-header-center .breadcrumb-segment + .breadcrumb-segment {
+#content-breadcrumb .breadcrumb-segment + .breadcrumb-segment {
   margin-left: 0;
 }
-.content-header .content-header-center .breadcrumb-segment + .breadcrumb-segment::before {
+#content-breadcrumb .breadcrumb-segment + .breadcrumb-segment::before {
   content: "›";
   margin: 0 6px;
   color: rgba(0, 0, 0, 0.6);
 }
-.content-header #dynamic-action-btn {
-  display: none;
+.content-header .content-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .content-header .icon {
   width: 20px;
@@ -1224,17 +1220,6 @@ p {
 .content-header .icon.spin {
   animation: spin 0.3s linear;
 }
-.content-header #dynamic-action-btn[src] {
-  border-radius: 50%;
-  overflow: hidden;
-  transition: transform 0.2s ease;
-}
-.content-header #dynamic-action-btn[src]:hover {
-  animation: action-hover 0.25s forwards;
-}
-.content-header #dynamic-action-btn[src]:active {
-  animation: action-click 0.2s forwards;
-}
 
 @keyframes spin {
   from {
@@ -1242,28 +1227,6 @@ p {
   }
   to {
     transform: rotate(360deg);
-  }
-}
-@keyframes action-hover {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-@keyframes action-click {
-  0% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(0.9);
-  }
-  100% {
-    transform: scale(1);
   }
 }
 .page-list-card, .news-detail-card, .news-list-card, .widget-list-card, .permissions-card, .user-list-card, .layout-gallery-card, .layout-list-card, .modules-list-card, .fonts-list-card, .login-strategies-card, .system-settings-card {

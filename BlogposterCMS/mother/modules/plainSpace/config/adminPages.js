@@ -179,7 +179,7 @@ module.exports.ADMIN_PAGES = [
   {
     title: 'User Editor',
     slug: 'edit',
-    parentSlug: 'settings-users',
+    parentSlug: 'settings/users',
     lane: 'admin',
     config: {
       layout: {
@@ -232,7 +232,7 @@ module.exports.ADMIN_PAGES = [
   {
     title: 'Strategy Editor',
     slug: 'edit',
-    parentSlug: 'settings-login',
+    parentSlug: 'settings/login',
     lane: 'admin',
     config: {
       layout: {

@@ -9,7 +9,15 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
 ## Purpose
 - Seeds the admin dashboard pages on first run.
 - Admin pages defined by community modules are automatically placed
-  under `/admin/pages/{slug}` when seeded.
+  under `/admin/pages/{slug}` when seeded. Pages may provide a
+  `parentSlug` to nest them under a workspace (for example
+  `parentSlug: 'content'` and `slug: 'pages'` becomes `content/pages`).
+  Use `/` in `parentSlug` for deeper nesting, e.g.,
+  `parentSlug: 'settings/users'` with `slug: 'edit'` yields
+  `settings/users/edit`.
+  Icons set in `config.icon` are copied to `meta.icon` during seeding and
+  used by the dashboard navigation; if `meta.icon` is missing the
+  navigator falls back to `config.icon`.
 - Provides `widget.registry.request.v1` for the page builder.
 - `seedAdminWidget` can attach width and height options when creating admin widgets.
 - Default admin widgets are seeded with options describing their suggested layout.

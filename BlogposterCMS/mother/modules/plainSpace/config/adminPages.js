@@ -13,7 +13,8 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/home.svg',
-      widgets: ['contentSummary', 'modulesList', 'pageStats']
+      widgets: ['contentSummary', 'modulesList', 'pageStats'],
+      workspace: 'home'
     }
   },
   {
@@ -31,7 +32,8 @@ module.exports.ADMIN_PAGES = [
       actionButton: {
         icon: '/assets/icons/plus.svg',
         action: 'createNewLayout'
-      }
+      },
+      workspace: 'content'
     }
   },
   {
@@ -140,7 +142,8 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/cog.svg',
-      widgets: []
+      widgets: [],
+      workspace: 'settings'
     }
   },
   {

@@ -7,7 +7,7 @@ El Psy Kongroo
 
 ### Added
 - Admin page seeding validates icon paths from `/assets/icons` and exposes them for dynamic navigation.
-- Admin pages declare a workspace only on the parent; child pages inherit it automatically for grouped navigation.
+- Root admin pages explicitly define their `workspace` slug; subpages no longer carry or inherit a workspace.
 - Dynamic workspace navigation populates header and sidebar links based on admin pages and includes creation shortcuts.
 - Introduced dynamic breadcrumbs in the admin content header and removed page titles from the main header.
 - Converted left-side menus to a bubble layout and made active icons glow in the user's color.
@@ -26,7 +26,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
-- Workspace navigation now infers the workspace from `parentSlug` or the page slug, removing the need to specify `workspace` in admin page configs.
+- Workspace navigation no longer infers workspaces from slugs; only pages with an explicit `workspace` matching their slug appear in the header.
 - Replaced widget popup overlay with a collapsible widgets panel featuring
   category filtering and search.
 - Refined dashboard layout with a translucent top bar, a tinted workspace gap, and a responsive sidebar that highlights the active page.

@@ -4,6 +4,8 @@
 require('dotenv').config();
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
+const fs = require('fs');
+const path = require('path');
 
 function meltdownEmit(emitter, event, payload) {
   return new Promise((resolve, reject) => {
@@ -52,6 +54,19 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     const finalSlugRaw  = [...prefixSegs, ...parentSegs, ...pageSegs].join('/');
 
     let finalSlugForCheck = finalSlugRaw.replace(/\//g, '-');
+
+    if (page.config?.icon) {
+      if (typeof page.config.icon !== 'string' || !page.config.icon.startsWith('/assets/icons/')) {
+        console.warn(`[plainSpace] Invalid icon path for admin page "${page.slug}":`, page.config.icon);
+        delete page.config.icon;
+      } else {
+        const iconFile = path.join(__dirname, '../../../public', page.config.icon);
+        if (!fs.existsSync(iconFile)) {
+          console.warn(`[plainSpace] Icon not found for admin page "${page.slug}":`, page.config.icon);
+          delete page.config.icon;
+        }
+      }
+    }
 
     if (parentSlugRaw) {
       const parentSlugSanitized = parentSlugRaw.replace(/\//g, '-');
@@ -106,6 +121,24 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
     if (exists) {
       console.log(`[plainSpace] Admin page "${finalSlugForCheck}" already exists.`);
+
+      if (page.config?.icon) {
+        const currentMeta = existingPage.meta || {};
+        if (currentMeta.icon !== page.config.icon) {
+          try {
+            await meltdownEmit(motherEmitter, 'updatePage', {
+              jwt,
+              moduleName: 'pagesManager',
+              moduleType: 'core',
+              pageId: existingPage.id,
+              meta: { ...currentMeta, icon: page.config.icon }
+            });
+            console.log(`[plainSpace] Updated icon for existing admin page "${finalSlugForCheck}".`);
+          } catch (err) {
+            console.error(`[plainSpace] Failed to update icon for admin page "${finalSlugForCheck}":`, err.message);
+          }
+        }
+      }
 
       if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
         const currentMeta = existingPage.meta || {};

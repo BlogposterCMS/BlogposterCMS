@@ -31,7 +31,10 @@ export async function initWorkspaceNav() {
       const createBtn = nav.querySelector('#workspace-create');
       nav.innerHTML = '';
       const top = pages.filter(
-        p => p.lane === 'admin' && inferWorkspace(p) === p.slug
+        p =>
+          p.lane === 'admin' &&
+          typeof p.meta?.workspace === 'string' &&
+          p.meta.workspace === p.slug
       );
       top.forEach(p => {
         const a = document.createElement('a');

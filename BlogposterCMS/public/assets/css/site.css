@@ -852,7 +852,7 @@ p {
   flex-direction: column;
   align-items: center;
 }
-.sidebar .sidebar-nav .sidebar-item {
+.sidebar .sidebar-nav .sidebar-item, .sidebar .sidebar-nav .sidebar-add-subpage {
   position: relative;
   width: 48px;
   height: 48px;
@@ -864,7 +864,7 @@ p {
   border-radius: 8px;
   transition: background 0.2s;
 }
-.sidebar .sidebar-nav .sidebar-item .icon {
+.sidebar .sidebar-nav .sidebar-item .icon, .sidebar .sidebar-nav .sidebar-add-subpage .icon {
   width: 24px;
   height: 24px;
   display: block;
@@ -873,7 +873,7 @@ p {
   opacity: 0.6;
   transition: opacity 0.2s ease;
 }
-.sidebar .sidebar-nav .sidebar-item .label {
+.sidebar .sidebar-nav .sidebar-item .label, .sidebar .sidebar-nav .sidebar-add-subpage .label {
   position: absolute;
   top: 50%;
   left: 100%;
@@ -892,20 +892,20 @@ p {
   pointer-events: none;
   z-index: 1000;
 }
-.sidebar .sidebar-nav .sidebar-item:hover {
+.sidebar .sidebar-nav .sidebar-item:hover, .sidebar .sidebar-nav .sidebar-add-subpage:hover {
   background: color-mix(in srgb, var(--user-color), transparent 92%);
 }
-.sidebar .sidebar-nav .sidebar-item:hover .label {
+.sidebar .sidebar-nav .sidebar-item:hover .label, .sidebar .sidebar-nav .sidebar-add-subpage:hover .label {
   opacity: 1;
   transform: translateY(-50%) translateX(8px) scale(1);
 }
-.sidebar .sidebar-nav .sidebar-item.active {
+.sidebar .sidebar-nav .sidebar-item.active, .sidebar .sidebar-nav .active.sidebar-add-subpage {
   background: color-mix(in srgb, var(--user-color), transparent 88%);
 }
-.sidebar .sidebar-nav .sidebar-item.active .icon {
+.sidebar .sidebar-nav .sidebar-item.active .icon, .sidebar .sidebar-nav .active.sidebar-add-subpage .icon {
   opacity: 0.9;
 }
-.sidebar .sidebar-nav .sidebar-item.active::before {
+.sidebar .sidebar-nav .sidebar-item.active::before, .sidebar .sidebar-nav .active.sidebar-add-subpage::before {
   content: "";
   position: absolute;
   left: 0;
@@ -924,7 +924,7 @@ p {
     width: 48px;
     padding: 12px 8px 0;
   }
-  .sidebar .sidebar-nav .sidebar-item {
+  .sidebar .sidebar-nav .sidebar-item, .sidebar .sidebar-nav .sidebar-add-subpage {
     margin: 4px 0;
   }
 }
@@ -951,6 +951,7 @@ p {
 .main-header .nav-icons {
   display: flex;
   gap: 12px;
+  flex: 1;
 }
 .main-header .nav-icons a {
   display: flex;
@@ -993,7 +994,8 @@ p {
   transform: scaleX(1);
 }
 .main-header .nav-icons #workspace-create {
-  padding: 10px;
+  margin-left: auto;
+  padding: 10px 14px;
 }
 
 /* =============================================================================

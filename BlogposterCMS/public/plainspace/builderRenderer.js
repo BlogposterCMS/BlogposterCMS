@@ -153,100 +153,42 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
 
 
-   let allWidgets = [];
-   try {
-     const widgetRes = await meltdownEmit('widget.registry.request.v1', {
-       lane: 'public',
-       moduleName: 'plainspace',
-       moduleType: 'core'
-     });
-     allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
-   } catch (err) {
-     console.error('[Builder] failed to load widgets', err);
-   }
+  let allWidgets = [];
+  try {
+    const widgetRes = await meltdownEmit('widget.registry.request.v1', {
+      lane: 'public',
+      moduleName: 'plainspace',
+      moduleType: 'core'
+    });
+    allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
+  } catch (err) {
+    console.error('[Builder] failed to load widgets', err);
+  }
 
-   const drawer = sidebarEl.querySelector('.widget-drawer');
-   const toggleBtn = sidebarEl.querySelector('.widget-toggle');
-   const closeBtn = sidebarEl.querySelector('.drawer-close');
-   const searchInput = sidebarEl.querySelector('#widgetSearch');
-   const categoriesEl = sidebarEl.querySelector('.widget-categories');
+  sidebarEl.querySelector('.drag-icons').innerHTML = allWidgets.map(w => `
+    <div class="sidebar-item drag-widget-icon" draggable="true" data-widget-id="${w.id}">
+      ${getWidgetIcon(w, ICON_MAP)}
+      <span class="label">${w.metadata.label}</span>
+    </div>
+  `).join('');
 
-   const grouped = {};
-   for (const w of allWidgets) {
-     const cat = w.metadata?.category || 'other';
-     if (!grouped[cat]) grouped[cat] = [];
-     grouped[cat].push(w);
-   }
+  sidebarEl.querySelectorAll('.drag-widget-icon').forEach(icon => {
+    icon.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', icon.dataset.widgetId);
+    });
+  });
 
-   Object.keys(grouped).sort().forEach(cat => {
-     const section = document.createElement('div');
-     section.className = 'widget-category';
-     const header = document.createElement('button');
-     header.className = 'category-header';
-     header.textContent = cat;
-     const list = document.createElement('div');
-     list.className = 'category-list';
-     grouped[cat].forEach(w => {
-       const item = document.createElement('div');
-       item.className = 'sidebar-item drag-widget-icon';
-       item.draggable = true;
-       item.dataset.widgetId = w.id;
-       const iconWrap = document.createElement('div');
-       iconWrap.innerHTML = getWidgetIcon(w, ICON_MAP);
-       if (iconWrap.firstElementChild) item.appendChild(iconWrap.firstElementChild);
-       const labelSpan = document.createElement('span');
-       labelSpan.className = 'label';
-       labelSpan.textContent = w.metadata.label;
-       item.appendChild(labelSpan);
-       list.appendChild(item);
-     });
-     header.addEventListener('click', () => {
-       list.classList.toggle('open');
-     });
-     section.append(header, list);
-     categoriesEl.appendChild(section);
-   });
-
-   sidebarEl.querySelectorAll('.drag-widget-icon').forEach(icon => {
-     icon.addEventListener('dragstart', e => {
-       e.dataTransfer.setData('text/plain', icon.dataset.widgetId);
-     });
-   });
-
-   searchInput?.addEventListener('input', () => {
-     const term = searchInput.value.toLowerCase();
-     sidebarEl.querySelectorAll('.drag-widget-icon').forEach(icon => {
-       const lbl = icon.querySelector('.label').textContent.toLowerCase();
-       icon.style.display = lbl.includes(term) ? '' : 'none';
-     });
-   });
-
-   function closeDrawer() {
-     drawer.classList.remove('open');
-     toggleBtn.setAttribute('aria-expanded', 'false');
-   }
-
-   toggleBtn?.addEventListener('click', () => {
-     const isOpen = drawer.classList.toggle('open');
-     toggleBtn.setAttribute('aria-expanded', String(isOpen));
-   });
-
-   closeBtn?.addEventListener('click', closeDrawer);
-   document.addEventListener('click', e => {
-     if (!sidebarEl.contains(e.target)) closeDrawer();
-   });
-
-   const textIcon = sidebarEl.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
-   const builderPanel = sidebarEl.querySelector('#builderPanel');
-   const collapseBtn = builderPanel?.querySelector('.collapse-btn');
-   if (textIcon && builderPanel && collapseBtn) {
-     textIcon.addEventListener('click', () => {
-       document.body.classList.toggle('panel-open');
-     });
-     collapseBtn.addEventListener('click', () => {
-       document.body.classList.remove('panel-open');
-     });
-   }
+  const textIcon = sidebarEl.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
+  const builderPanel = sidebarEl.querySelector('#builderPanel');
+  const collapseBtn = builderPanel?.querySelector('.collapse-btn');
+  if (textIcon && builderPanel && collapseBtn) {
+    textIcon.addEventListener('click', () => {
+      document.body.classList.toggle('panel-open');
+    });
+    collapseBtn.addEventListener('click', () => {
+      document.body.classList.remove('panel-open');
+    });
+  }
 
   contentEl.innerHTML = `<div id="builderGrid" class="pixel-grid builder-grid"></div>`;
   gridEl = document.getElementById('builderGrid');

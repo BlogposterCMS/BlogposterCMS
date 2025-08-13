@@ -332,7 +332,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
         : (params?.lane ?? params);
 
       const rows = await db.all(`
-        SELECT p.*, 
+        SELECT p.*, parent.slug AS parentSlug,
                t.language   AS trans_lang,
                t.title      AS trans_title,
                t.html       AS trans_html,
@@ -341,6 +341,8 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
                t.seo_title,
                t.seo_keywords
           FROM pagesManager_pages           p
+          LEFT JOIN pagesManager_pages parent
+                ON p.parent_id = parent.id
           LEFT JOIN pagesManager_page_translations t
                 ON p.id = t.page_id
          WHERE p.lane = ?
@@ -398,7 +400,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
       const lang   = params?.[1] ?? 'en';
 
       const row = await db.get(`
-        SELECT p.*,
+        SELECT p.*, parent.slug AS parentSlug,
                t.language AS trans_lang,
                t.title    AS trans_title,
                t.html,
@@ -407,6 +409,8 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
                t.seo_title,
                t.seo_keywords
           FROM pagesManager_pages p
+          LEFT JOIN pagesManager_pages parent
+                ON p.parent_id = parent.id
           LEFT JOIN pagesManager_page_translations t
                 ON p.id = t.page_id AND t.language = ?
          WHERE p.id = ?;
@@ -422,7 +426,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
     case 'GET_PAGE_BY_SLUG': {
       const [slug, lane = 'public', lang = 'en'] = params;
       const rows = await db.all(`
-        SELECT p.*, 
+        SELECT p.*, parent.slug AS parentSlug,
                t.language AS trans_lang,
                t.title    AS trans_title,
                t.html,
@@ -431,6 +435,8 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
                t.seo_title,
                t.seo_keywords
           FROM pagesManager_pages p
+          LEFT JOIN pagesManager_pages parent
+                ON p.parent_id = parent.id
           LEFT JOIN pagesManager_page_translations t
                 ON p.id = t.page_id AND t.language = ?
          WHERE p.slug = ?

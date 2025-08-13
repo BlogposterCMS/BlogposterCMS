@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Page retrieval queries now join parent pages and expose `parentSlug` in results.
 - Admin page seeding validates icon paths from `/assets/icons` and exposes them for dynamic navigation.
 - Root admin pages explicitly define their `workspace` slug; subpages no longer carry or inherit a workspace.
 - Dynamic workspace navigation populates header and sidebar links based on admin pages and includes creation shortcuts.

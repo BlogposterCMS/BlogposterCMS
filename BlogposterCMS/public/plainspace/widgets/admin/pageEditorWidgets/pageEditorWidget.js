@@ -185,6 +185,5 @@ export async function render(el) {
     }
   };
 
-  window.CONTENT_ACTION = { icon: '/assets/icons/save.svg', action: window.saveCurrentPage };
   document.dispatchEvent(new CustomEvent('content-header-loaded'));
 }

@@ -23,9 +23,11 @@ El Psy Kongroo
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 
 ### Removed
+- Support for dynamic action buttons in the content header.
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Breadcrumb now aligns to the left in the content header.
 - Workspace navigation no longer infers workspaces from slugs; only pages with an explicit `workspace` matching their slug appear in the header.
 - Replaced widget popup overlay with a collapsible widgets panel featuring
   category filtering and search.

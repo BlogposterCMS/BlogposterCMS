@@ -14,17 +14,10 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 
 
-  .content-header-left,
-  .content-header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .content-header-center {
+  #content-breadcrumb {
     flex: 1;
     display: flex;
-    justify-content: center;
+    align-items: center;
     overflow: hidden;
     padding-left: 8px;
 
@@ -54,8 +47,10 @@
     }
   }
 
-  #dynamic-action-btn {
-    display: none;
+  .content-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
   .icon {
@@ -73,32 +68,9 @@
     }
   }
 
-  #dynamic-action-btn[src] {
-    border-radius: 50%;
-    overflow: hidden;
-    transition: transform 0.2s ease;
-    &:hover {
-      animation: action-hover 0.25s forwards;
-    }
-    &:active {
-      animation: action-click 0.2s forwards;
-    }
-  }
 }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-@keyframes action-hover {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-
-@keyframes action-click {
-  0% { transform: scale(1); }
-  40% { transform: scale(0.9); }
-  100% { transform: scale(1); }
 }

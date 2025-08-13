@@ -382,8 +382,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     }
 
     const config = page.meta || {};
-    window.CONTENT_ACTION = config.actionButton || null;
-
     if (lane === 'admin' && page.title) {
       document.title = `${page.title} - Admin`;
     }

@@ -7,7 +7,7 @@ let escBound = false;
 
 /* ─────────── Popup ⇢ open ─────────── */
 export async function showWidgetPopup() {
-  ['top-header', 'main-header', 'pages-menu']
+  ['top-header', 'main-header']
     .forEach(id => document.getElementById(id)?.classList.add('dimmed'));
 
   if (!overlay) {
@@ -70,7 +70,7 @@ export async function showWidgetPopup() {
 export function hideWidgetPopup() {
   overlay?.classList.remove('open');
   document.body.classList.remove('widget-popup-open');
-  ['top-header', 'main-header', 'pages-menu']
+  ['top-header', 'main-header']
     .forEach(id => document.getElementById(id)?.classList.remove('dimmed'));
 }
 

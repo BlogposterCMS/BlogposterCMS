@@ -19,6 +19,9 @@ El Psy Kongroo
 - HTML uploads now go through the media manager to stay in the library and avoid overwriting existing files.
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 
+### Removed
+- Removed the right-side admin pages menu from the dashboard to streamline navigation.
+
 ### Changed
 - Refined dashboard layout with a translucent top bar, a tinted workspace gap, and a responsive sidebar that highlights the active page.
 - Streamlined dashboard navigation with a glass top bar, rail-style sidebar,

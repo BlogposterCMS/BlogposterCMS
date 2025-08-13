@@ -13,7 +13,6 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/home.svg',
-      workspace: 'home',
       widgets: ['contentSummary', 'modulesList', 'pageStats']
     }
   },
@@ -28,7 +27,6 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/folder.svg',
-      workspace: 'content',
       widgets: ['contentSummary'],
       actionButton: {
         icon: '/assets/icons/plus.svg',
@@ -142,7 +140,6 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/cog.svg',
-      workspace: 'settings',
       widgets: []
     }
   },

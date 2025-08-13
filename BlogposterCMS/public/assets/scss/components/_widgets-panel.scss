@@ -1,0 +1,95 @@
+/* ============================================================
+   Collapsible widgets side panel
+   ============================================================ */
+.widgets-panel,
+.widgets-toggle {
+  display: none;
+}
+
+.dashboard-edit-mode {
+  .widgets-toggle {
+    display: block;
+  }
+  .widgets-panel {
+    display: flex;
+  }
+}
+
+.widgets-toggle {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background: var(--user-color);
+  color: var(--color-white);
+  border: none;
+  border-radius: 6px 0 0 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.widgets-panel {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  width: 320px;
+  height: 100%;
+  background: var(--color-white);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  flex-direction: column;
+}
+
+.widgets-panel.open {
+  right: 0;
+}
+
+.widgets-panel-inner {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.widgets-search {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.widgets-category {
+  margin-bottom: 20px;
+}
+
+.category-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.widgets-list {
+  display: grid;
+  gap: 8px;
+}
+
+.widget-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--color-bg, #f3f4f6);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.widget-card:hover {
+  background: var(--color-bg-hover, #e5e7eb);
+}
+
+.widget-card .icon {
+  width: 20px;
+  height: 20px;
+}

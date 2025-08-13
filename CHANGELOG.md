@@ -26,6 +26,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Replaced widget popup overlay with a collapsible widgets panel featuring
+  category filtering and search.
 - Refined dashboard layout with a translucent top bar, a tinted workspace gap, and a responsive sidebar that highlights the active page.
 - Streamlined dashboard navigation with a glass top bar, rail-style sidebar,
   arrowed breadcrumbs, animated accent tabs, and a sticky header shadow.

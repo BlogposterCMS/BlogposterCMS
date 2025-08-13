@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Collapsible widget drawer groups widgets by category and stays hidden until opened, keeping the workspace clean.
 - Admin page seeding validates icon paths from `/assets/icons` and exposes them for dynamic navigation.
 - Dynamic workspace navigation populates header and sidebar links based on admin pages and includes creation shortcuts.
 - Introduced dynamic breadcrumbs in the admin content header and removed page titles from the main header.

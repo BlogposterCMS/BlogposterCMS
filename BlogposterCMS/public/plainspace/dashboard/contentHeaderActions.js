@@ -1,4 +1,4 @@
-import { showWidgetPopup, hideWidgetPopup } from './widgetPopup.js';
+// Widget panel toggle handled via custom events
 
 export function initContentHeader() {
   const breadcrumbEl = document.getElementById('content-breadcrumb');
@@ -76,8 +76,12 @@ export function initContentHeader() {
       editing = !isStatic;
       grid.pushOnOverlap = isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
-        editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/pencil-line.svg';
-      if (editing) showWidgetPopup(); else hideWidgetPopup();
+      editToggle.src = editing
+        ? '/assets/icons/check.svg'
+        : '/assets/icons/pencil-line.svg';
+      document.dispatchEvent(
+        new CustomEvent('ui:widgets:toggle', { detail: { open: false } })
+      );
     });
   }
   editToggle.addEventListener('click', async () => {
@@ -89,11 +93,9 @@ export function initContentHeader() {
       editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/pencil-line.svg';
     editToggle.classList.add('spin');
     setTimeout(() => editToggle.classList.remove('spin'), 300);
-    if (editing) {
-      showWidgetPopup();
-    } else {
-      hideWidgetPopup();
-    }
+    document.dispatchEvent(
+      new CustomEvent('ui:widgets:toggle', { detail: { open: false } })
+    );
     if (!editing && typeof window.saveAdminLayout === 'function') {
       try { await window.saveAdminLayout(); } catch(e) { console.error(e); }
     }

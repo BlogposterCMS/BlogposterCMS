@@ -19,11 +19,11 @@
     color: var(--color-text);
   }
 
-  .nav-icons {
-    display: flex;
-    gap: 12px;
+    .nav-icons {
+      display: flex;
+      gap: 12px;
 
-    a {
+      a {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -66,6 +66,10 @@
           transform: scaleX(1);
         }
       }
+    }
+
+    #workspace-create {
+      padding: 10px;
     }
   }
 }

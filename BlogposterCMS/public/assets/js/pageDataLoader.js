@@ -68,6 +68,7 @@
       'language',
       'lane',
       'parent_id',
+      'parentSlug',
       'is_content'
     ];
     window.pageDataPromise = load(

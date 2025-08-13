@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Sanitizer now exposes `parentSlug` in `pageDataLoader` so widgets can access hierarchical data.
 - Page retrieval queries now join parent pages and expose `parentSlug` in results.
 - Admin page seeding validates icon paths from `/assets/icons` and exposes them for dynamic navigation.
 - Root admin pages explicitly define their `workspace` slug; subpages no longer carry or inherit a workspace.
@@ -53,6 +54,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Sidebar subpage navigation prioritizes `parentSlug` and falls back to slug prefixes for legacy entries.
 - Sidebar subpage navigation now infers hierarchy from page slugs when `parentSlug` is absent.
 - Admin seeder now uses `/` in `parentSlug` for nested pages so workspace navigation can recognize them.
 - Sidebar navigation now resolves subpages via `parentSlug`/`slug` and displays icons from `meta.icon` or `config.icon`.

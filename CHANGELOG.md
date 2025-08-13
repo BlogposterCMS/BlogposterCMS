@@ -49,6 +49,10 @@ El Psy Kongroo
 - App registry now builds at startup via a dedicated `appLoader` core module scanning `apps/` manifests.
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
+### Fixed
+- Admin seeder now uses `/` in `parentSlug` for nested pages so workspace navigation can recognize them.
+- Sidebar navigation now resolves subpages via `parentSlug`/`slug` and displays icons from `meta.icon` or `config.icon`.
+
 ### Changed
 - Main content and content area now use the active user's color with light gradients.
 - Sidebar menu icons are now flat, with an aero-glass bubble highlighting the active page in a light shade of the user's color.

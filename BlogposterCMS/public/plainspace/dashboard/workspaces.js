@@ -20,10 +20,9 @@ export async function initWorkspaceNav() {
 
     const inferWorkspace = p => {
       if (typeof p.meta?.workspace === 'string') return p.meta.workspace;
-      const slug = String(p.slug || '');
-      if (slug.includes('/')) return slug.split('/')[0];
       if (typeof p.parentSlug === 'string') return p.parentSlug.split('/')[0];
-      return slug;
+      const slug = String(p.slug || '');
+      return slug.includes('/') ? slug.split('/')[0] : slug;
     };
 
     // Build top workspace navigation
@@ -42,7 +41,10 @@ export async function initWorkspaceNav() {
         a.href = href;
         a.textContent = p.title;
         const icon = document.createElement('img');
-        icon.src = typeof p.meta?.icon === 'string' ? p.meta.icon : '/assets/icons/file-box.svg';
+        icon.src =
+          (typeof p.meta?.icon === 'string' && p.meta.icon) ||
+          (typeof p.config?.icon === 'string' && p.config.icon) ||
+          '/assets/icons/file-box.svg';
         icon.className = 'icon';
         a.prepend(icon);
         if (window.location.pathname.startsWith(href)) {
@@ -65,22 +67,29 @@ export async function initWorkspaceNav() {
     if (sidebarNav && workspaceSlug) {
       sidebarNav.innerHTML = '';
       const subpages = pages.filter(
-        p => inferWorkspace(p) === workspaceSlug && inferWorkspace(p) !== p.slug
+        p => (p.parentSlug || '').split('/')[0] === workspaceSlug && p.slug !== workspaceSlug
       );
+      const pageKey = p => {
+        const parts = (p.parentSlug ? p.parentSlug + '/' + p.slug : p.slug).split('/');
+        return parts.slice(1).join('/') || p.slug;
+      };
       const seen = new Set();
       subpages.forEach(p => {
-        const rest = p.slug.slice((workspaceSlug + '/').length);
-        const first = rest.split('/')[0];
+        const key = pageKey(p);
+        const first = key.split('/')[0];
         if (!first || seen.has(first)) return;
         seen.add(first);
-        const base = pages.find(pg => pg.slug === `${workspaceSlug}/${first}`);
+        const base = pages.find(pg => pageKey(pg) === first);
         const title = base?.title || first;
         const a = document.createElement('a');
         const linkHref = `${ADMIN_BASE}${workspaceSlug}/${first}`;
         a.href = linkHref;
         a.className = 'sidebar-item';
         const icon = document.createElement('img');
-        icon.src = typeof base?.meta?.icon === 'string' ? base.meta.icon : '/assets/icons/file.svg';
+        icon.src =
+          (typeof base?.meta?.icon === 'string' && base.meta.icon) ||
+          (typeof base?.config?.icon === 'string' && base.config.icon) ||
+          '/assets/icons/file.svg';
         icon.className = 'icon';
         a.appendChild(icon);
         const span = document.createElement('span');

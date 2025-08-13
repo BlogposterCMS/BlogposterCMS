@@ -66,9 +66,10 @@ export async function initWorkspaceNav() {
     // Build sidebar subpage navigation
     if (sidebarNav && workspaceSlug) {
       sidebarNav.innerHTML = '';
-      const subpages = pages.filter(
-        p => (p.parentSlug || '').split('/')[0] === workspaceSlug && p.slug !== workspaceSlug
-      );
+      const subpages = pages.filter(p => {
+        const slug = String(p.slug || '');
+        return slug.startsWith(workspaceSlug + '/') && slug !== workspaceSlug;
+      });
       const pageKey = p => {
         const parts = (p.parentSlug ? p.parentSlug + '/' + p.slug : p.slug).split('/');
         return parts.slice(1).join('/') || p.slug;

@@ -57,17 +57,7 @@ body {
   background-size: 4px 4px;
 }
 
-.widget-container.admin-widget::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(to right, var(--user-color, #a0a0a0), rgba(255, 255, 255, 0));
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
-}
+
 
 .widget-placeholder {
   width: 100%;

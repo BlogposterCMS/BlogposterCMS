@@ -11,10 +11,8 @@
   backdrop-filter: blur(6px);
   z-index: 40;
   transition: box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 
-  &.scrolled {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
 
   .content-header-left,
   .content-header-right {
@@ -26,7 +24,7 @@
   .content-header-center {
     flex: 1;
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
     overflow: hidden;
     padding-left: 8px;
 

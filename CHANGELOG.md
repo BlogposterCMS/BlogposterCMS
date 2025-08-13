@@ -50,6 +50,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Sidebar subpage navigation now infers hierarchy from page slugs when `parentSlug` is absent.
 - Admin seeder now uses `/` in `parentSlug` for nested pages so workspace navigation can recognize them.
 - Sidebar navigation now resolves subpages via `parentSlug`/`slug` and displays icons from `meta.icon` or `config.icon`.
 

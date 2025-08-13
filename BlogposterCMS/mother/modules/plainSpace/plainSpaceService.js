@@ -45,6 +45,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
   for (const page of adminPages) {
     try {
     let parentId = null;
+    let parent = null;
 
     const prefixSegs = (prefixCommunity && page.lane === ADMIN_LANE) ? ['pages'] : [];
     const parentSegs = page.parentSlug ? page.parentSlug.split('/').filter(Boolean) : [];
@@ -71,7 +72,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     if (parentSlugRaw) {
       const parentSlugSanitized = parentSlugRaw.replace(/\//g, '-');
 
-      let parent = await meltdownEmit(motherEmitter, 'getPageBySlug', {
+      parent = await meltdownEmit(motherEmitter, 'getPageBySlug', {
         jwt,
         moduleName: 'pagesManager',
         moduleType: 'core',
@@ -102,9 +103,17 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           }]
         }).catch(err => { console.error(`[plainSpace] Error creating parent "${parentSlugRaw}":`, err.message); return null; });
         parentId = res?.pageId || null;
+        parent = parentId ? { id: parentId, meta: {} } : null;
       } else {
         parentId = parent.id;
       }
+    }
+
+    let pageWorkspace = null;
+    if (typeof page.config?.workspace === 'string' && /^[a-z0-9-]+$/.test(page.config.workspace)) {
+      pageWorkspace = page.config.workspace;
+    } else if (typeof parent?.meta?.workspace === 'string' && /^[a-z0-9-]+$/.test(parent.meta.workspace)) {
+      pageWorkspace = parent.meta.workspace;
     }
 
     const existingPage = await meltdownEmit(motherEmitter, 'getPageBySlug', {
@@ -114,81 +123,92 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       slug: finalSlugForCheck,
       lane: page.lane
     }).catch(() => null);
-
-    const exists = Array.isArray(existingPage)
-      ? existingPage.length > 0
-      : Boolean(existingPage);
+    const pageObj = Array.isArray(existingPage) ? existingPage[0] : existingPage;
+    const exists = !!pageObj;
 
     if (exists) {
       console.log(`[plainSpace] Admin page "${finalSlugForCheck}" already exists.`);
 
-      if (page.config?.icon) {
-        const currentMeta = existingPage.meta || {};
-        if (currentMeta.icon !== page.config.icon) {
-          try {
-            await meltdownEmit(motherEmitter, 'updatePage', {
-              jwt,
-              moduleName: 'pagesManager',
-              moduleType: 'core',
-              pageId: existingPage.id,
-              meta: { ...currentMeta, icon: page.config.icon }
-            });
-            console.log(`[plainSpace] Updated icon for existing admin page "${finalSlugForCheck}".`);
-          } catch (err) {
-            console.error(`[plainSpace] Failed to update icon for admin page "${finalSlugForCheck}":`, err.message);
-          }
+      const currentMeta = pageObj.meta || {};
+      const newMeta = { ...currentMeta };
+      let metaChanged = false;
+
+      if (page.config?.icon && currentMeta.icon !== page.config.icon) {
+        newMeta.icon = page.config.icon;
+        metaChanged = true;
+      }
+
+      if (pageWorkspace && currentMeta.workspace !== pageWorkspace) {
+        newMeta.workspace = pageWorkspace;
+        metaChanged = true;
+      }
+
+      let missingWidgets = [];
+      if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
+        const existingWidgets = Array.isArray(newMeta.widgets) ? newMeta.widgets.slice() : [];
+        missingWidgets = page.config.widgets.filter(w => !existingWidgets.includes(w));
+        if (missingWidgets.length) {
+          newMeta.widgets = [...existingWidgets, ...missingWidgets];
+          metaChanged = true;
         }
       }
 
-      if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
-        const currentMeta = existingPage.meta || {};
-        const existingWidgets = Array.isArray(currentMeta.widgets) ? currentMeta.widgets.slice() : [];
-        const missing = page.config.widgets.filter(w => !existingWidgets.includes(w));
+      if (metaChanged) {
+        try {
+          await meltdownEmit(motherEmitter, 'updatePage', {
+            jwt,
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            pageId: pageObj.id,
+            meta: newMeta
+          });
+          console.log(`[plainSpace] Updated metadata for existing admin page "${finalSlugForCheck}".`);
+        } catch (err) {
+          console.error(`[plainSpace] Failed to update metadata for admin page "${finalSlugForCheck}":`, err.message);
+        }
+      }
 
-        if (missing.length) {
-          const newMeta = { ...currentMeta, widgets: [...existingWidgets, ...missing] };
-          try {
-            await meltdownEmit(motherEmitter, 'updatePage', {
-              jwt,
-              moduleName: 'pagesManager',
-              moduleType: 'core',
-              pageId: existingPage.id,
-              meta: newMeta
-            });
-
-            const layoutRes = await meltdownEmit(motherEmitter, 'getLayoutForViewport', {
-              jwt,
-              moduleName: MODULE,
-              moduleType: 'core',
-              pageId: existingPage.id,
-              lane: page.lane,
-              viewport: 'desktop'
-            });
-            let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
-            const existingIds = layout.map(l => l.widgetId);
-            let y = layout.reduce((m, l) => Math.max(m, (l.y ?? 0) + (l.h ?? 4)), 0);
-            for (const w of missing) {
-              if (existingIds.includes(w)) continue;
-              layout.push({ id: `w${layout.length}`, widgetId: w, x: 0, y, w: 8, h: 4, code: null });
-              y += 4;
-            }
-            await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
-              jwt,
-              moduleName: MODULE,
-              moduleType: 'core',
-              pageId: existingPage.id,
-              lane: page.lane,
-              viewport: 'desktop',
-              layout
-            });
-            console.log(`[plainSpace] Updated widgets for existing admin page "${finalSlugForCheck}".`);
-          } catch (err) {
-            console.error(`[plainSpace] Failed to update admin page "${finalSlugForCheck}":`, err.message);
+      if (missingWidgets.length) {
+        try {
+          const layoutRes = await meltdownEmit(motherEmitter, 'getLayoutForViewport', {
+            jwt,
+            moduleName: MODULE,
+            moduleType: 'core',
+            pageId: pageObj.id,
+            lane: page.lane,
+            viewport: 'desktop'
+          });
+          let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
+          const existingIds = layout.map(l => l.widgetId);
+          let y = layout.reduce((m, l) => Math.max(m, (l.y ?? 0) + (l.h ?? 4)), 0);
+          for (const w of missingWidgets) {
+            if (existingIds.includes(w)) continue;
+            layout.push({ id: `w${layout.length}`, widgetId: w, x: 0, y, w: 8, h: 4, code: null });
+            y += 4;
           }
+          await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
+            jwt,
+            moduleName: MODULE,
+            moduleType: 'core',
+            pageId: pageObj.id,
+            lane: page.lane,
+            viewport: 'desktop',
+            layout
+          });
+          console.log(`[plainSpace] Updated widgets for existing admin page "${finalSlugForCheck}".`);
+        } catch (err) {
+          console.error(`[plainSpace] Failed to update admin page "${finalSlugForCheck}":`, err.message);
         }
       }
 
       continue;
+    }
+
+    const pageMeta = {};
+    if (page.config?.icon) pageMeta.icon = page.config.icon;
+    if (pageWorkspace) pageMeta.workspace = pageWorkspace;
+    if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
+      pageMeta.widgets = page.config.widgets;
     }
 
     const createRes = await meltdownEmit(motherEmitter, 'createPage', {
@@ -200,7 +220,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       lane: page.lane,
       status: 'published',
       parent_id: parentId,
-      meta: page.config,
+      meta: pageMeta,
       translations: [{
         language: 'en',
         title: page.title,

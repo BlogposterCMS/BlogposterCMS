@@ -4,6 +4,11 @@ export async function initWorkspaceNav() {
   const sidebarNav = document.getElementById('subpage-nav');
   if (!nav && !sidebarNav) return;
 
+  const ADMIN_BASE = (window.ADMIN_BASE || '/admin/').replace(/\/+/g, '/');
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const relPath = window.location.pathname.replace(new RegExp('^' + esc(ADMIN_BASE)), '');
+  const workspaceSlug = relPath.split('/')[0] || '';
+
   try {
     const res = await window.meltdownEmit('getPagesByLane', {
       jwt: window.ADMIN_TOKEN,
@@ -13,42 +18,56 @@ export async function initWorkspaceNav() {
     });
     const pages = Array.isArray(res?.pages) ? res.pages : Array.isArray(res) ? res : [];
 
-    const workspaceSlug = window.location.pathname.replace(/^\/admin\/?/, '').split('/')[0];
-
     // Build top workspace navigation
     if (nav) {
-      const existingCreate = nav.querySelector('#workspace-create');
-      if (existingCreate) nav.innerHTML = existingCreate.outerHTML; // keep create icon only
-
-      pages.filter(p => p.lane === 'admin' && !p.parentSlug).forEach(p => {
+      const createBtn = nav.querySelector('#workspace-create');
+      nav.innerHTML = '';
+      const isTopLevel = p => !String(p.slug).includes('/');
+      const top = pages.filter(
+        p => p.lane === 'admin' && (p.meta?.workspace === p.slug || isTopLevel(p))
+      );
+      top.forEach(p => {
         const a = document.createElement('a');
-        a.href = `/admin/${p.slug}`;
+        const href = ADMIN_BASE + p.slug;
+        a.href = href;
         a.textContent = p.title;
         const icon = document.createElement('img');
         icon.src = typeof p.meta?.icon === 'string' ? p.meta.icon : '/assets/icons/file-box.svg';
         icon.className = 'icon';
         a.prepend(icon);
+        if (window.location.pathname.startsWith(href)) {
+          a.classList.add('active');
+        }
         nav.appendChild(a);
       });
-
-      document.dispatchEvent(new CustomEvent('main-header-loaded'));
+      if (createBtn) {
+        createBtn.addEventListener('click', e => {
+          e.preventDefault();
+          document.dispatchEvent(
+            new CustomEvent('ui:action:run', { detail: { actionId: 'createWorkspace' } })
+          );
+        });
+        nav.appendChild(createBtn);
+      }
     }
 
     // Build sidebar subpage navigation
     if (sidebarNav && workspaceSlug) {
       sidebarNav.innerHTML = '';
-      const slugPrefix = workspaceSlug + '/';
-      const subpages = pages.filter(p => p.slug.startsWith(slugPrefix));
+      const subpages = pages.filter(
+        p => p.meta?.workspace === workspaceSlug && p.slug !== workspaceSlug
+      );
       const seen = new Set();
       subpages.forEach(p => {
-        const rest = p.slug.slice(slugPrefix.length);
+        const rest = p.slug.slice((workspaceSlug + '/').length);
         const first = rest.split('/')[0];
         if (!first || seen.has(first)) return;
         seen.add(first);
         const base = pages.find(pg => pg.slug === `${workspaceSlug}/${first}`);
         const title = base?.title || first;
         const a = document.createElement('a');
-        a.href = `/admin/${workspaceSlug}/${first}`;
+        const linkHref = `${ADMIN_BASE}${workspaceSlug}/${first}`;
+        a.href = linkHref;
         a.className = 'sidebar-item';
         const icon = document.createElement('img');
         icon.src = typeof base?.meta?.icon === 'string' ? base.meta.icon : '/assets/icons/file.svg';
@@ -58,7 +77,7 @@ export async function initWorkspaceNav() {
         span.className = 'label';
         span.textContent = title;
         a.appendChild(span);
-        if (window.location.pathname.startsWith(a.href.replace(window.location.origin,''))) {
+        if (window.location.pathname.startsWith(linkHref)) {
           a.classList.add('active');
         }
         sidebarNav.appendChild(a);
@@ -74,8 +93,17 @@ export async function initWorkspaceNav() {
       label.className = 'label';
       label.textContent = 'Add';
       add.appendChild(label);
+      add.addEventListener('click', e => {
+        e.preventDefault();
+        document.dispatchEvent(
+          new CustomEvent('ui:action:run', {
+            detail: { actionId: 'createSubpage', workspace: workspaceSlug }
+          })
+        );
+      });
       sidebarNav.appendChild(add);
     }
+
   } catch (err) {
     console.error('[workspaceNav] failed', err);
   }

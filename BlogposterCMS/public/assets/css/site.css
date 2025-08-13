@@ -861,7 +861,8 @@ p {
   flex-direction: column;
   align-items: center;
 }
-.sidebar .sidebar-nav .sidebar-item {
+.sidebar .sidebar-nav .sidebar-item,
+.sidebar .sidebar-nav .sidebar-add-subpage {
   position: relative;
   width: 48px;
   height: 48px;
@@ -871,18 +872,20 @@ p {
   justify-content: center;
   background: none;
   border-radius: 8px;
-  box-shadow: none;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: background 0.2s;
 }
-.sidebar .sidebar-nav .sidebar-item .icon {
+.sidebar .sidebar-nav .sidebar-item .icon,
+.sidebar .sidebar-nav .sidebar-add-subpage .icon {
   width: 24px;
   height: 24px;
   display: block;
   margin: auto;
   fill: var(--color-text);
-  transition: fill 0.2s ease;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 }
-.sidebar .sidebar-nav .sidebar-item .label {
+.sidebar .sidebar-nav .sidebar-item .label,
+.sidebar .sidebar-nav .sidebar-add-subpage .label {
   position: absolute;
   top: 50%;
   left: 100%;
@@ -901,22 +904,46 @@ p {
   pointer-events: none;
   z-index: 1000;
 }
-.sidebar .sidebar-nav .sidebar-item:hover:not(.active) .icon {
-  fill: var(--user-color);
+.sidebar .sidebar-nav .sidebar-item:hover,
+.sidebar .sidebar-nav .sidebar-add-subpage:hover {
+  background: color-mix(in srgb, var(--user-color), transparent 92%);
 }
-.sidebar .sidebar-nav .sidebar-item:hover:not(.active) .label {
+.sidebar .sidebar-nav .sidebar-item:hover .label,
+.sidebar .sidebar-nav .sidebar-add-subpage:hover .label {
   opacity: 1;
   transform: translateY(-50%) translateX(8px) scale(1);
 }
-.sidebar .sidebar-nav .sidebar-item.active {
-  background: color-mix(in srgb, var(--user-color), transparent 80%);
-  -webkit-backdrop-filter: blur(8px);
-          backdrop-filter: blur(8px);
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.sidebar .sidebar-nav .sidebar-item.active,
+.sidebar .sidebar-nav .sidebar-add-subpage.active {
+  background: color-mix(in srgb, var(--user-color), transparent 88%);
 }
-.sidebar .sidebar-nav .sidebar-item.active .icon {
-  fill: var(--user-color);
+.sidebar .sidebar-nav .sidebar-item.active .icon,
+.sidebar .sidebar-nav .sidebar-add-subpage.active .icon {
+  opacity: 0.9;
+}
+.sidebar .sidebar-nav .sidebar-item.active::before,
+.sidebar .sidebar-nav .sidebar-add-subpage.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--user-color);
+}
+.sidebar .sidebar-nav .sidebar-add-subpage {
+  margin-top: 8px;
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    width: 48px;
+    padding: 12px 8px 0;
+  }
+  .sidebar .sidebar-nav .sidebar-item {
+    margin: 4px 0;
+  }
 }
 
 /* =============================================================================
@@ -939,31 +966,51 @@ p {
 .main-header .nav-icons {
   display: flex;
   gap: 12px;
+  flex: 1;
 }
 .main-header .nav-icons a {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 10px 14px;
-  border-radius: 8px;
+  position: relative;
   text-decoration: none;
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--color-text);
-  transition: background 0.2s ease, color 0.2s ease;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 }
 .main-header .nav-icons a .icon {
   width: 20px;
   height: 20px;
-  fill: var(--color-primary);
-  transition: fill 0.2s ease;
+  fill: currentColor;
+  transition: opacity 0.2s ease;
+}
+.main-header .nav-icons a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--user-color);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
 }
 .main-header .nav-icons a:hover {
-  background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12);
-  color: var(--color-primary-contrast);
+  opacity: 1;
 }
-.main-header .nav-icons a:hover .icon {
-  fill: var(--color-primary-contrast);
+.main-header .nav-icons a.active {
+  opacity: 1;
+}
+.main-header .nav-icons a.active::after {
+  transform: scaleX(1);
+}
+.main-header .nav-icons #workspace-create {
+  margin-left: auto;
+  padding: 10px 14px;
 }
 
 /* =============================================================================

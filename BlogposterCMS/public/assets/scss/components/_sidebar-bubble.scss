@@ -89,6 +89,7 @@
       }
 
       .sidebar-add-subpage {
+        @extend .sidebar-item;
         margin-top: 8px;
       }
     }

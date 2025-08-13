@@ -7,6 +7,7 @@ El Psy Kongroo
 
 ### Added
 - Admin page seeding validates icon paths from `/assets/icons` and exposes them for dynamic navigation.
+- Admin pages declare a workspace only on the parent; child pages inherit it automatically for grouped navigation.
 - Dynamic workspace navigation populates header and sidebar links based on admin pages and includes creation shortcuts.
 - Introduced dynamic breadcrumbs in the admin content header and removed page titles from the main header.
 - Converted left-side menus to a bubble layout and made active icons glow in the user's color.

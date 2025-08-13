@@ -137,3 +137,4 @@ export async function initWorkspaceNav() {
 
 document.addEventListener('DOMContentLoaded', initWorkspaceNav);
 document.addEventListener('main-header-loaded', initWorkspaceNav);
+document.addEventListener('sidebar-loaded', initWorkspaceNav);

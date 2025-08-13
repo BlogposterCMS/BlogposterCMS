@@ -445,6 +445,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
           const textHtml = await fetchPartialSafe('text-panel', 'builder');
           panelContainer.innerHTML = sanitizeHtml(textHtml);
         }
+        document.dispatchEvent(new CustomEvent('sidebar-loaded'));
       }
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -484,6 +485,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         sidebarEl.innerHTML = '';
         sidebarEl.style.display = 'none';
       }
+      document.dispatchEvent(new CustomEvent('sidebar-loaded'));
     }
     // 7. FETCH WIDGET REGISTRY
     let widgetLane = lane === 'admin' ? (config.widgetLane || 'admin') : 'public';

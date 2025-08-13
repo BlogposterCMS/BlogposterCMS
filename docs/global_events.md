@@ -56,3 +56,12 @@ bindGlobalListeners(grid, (evt, e) => {
 ```
 
 This attaches all listeners to `grid` and logs every click. Feel free to filter for the events you care about.
+
+## Dashboard Load Events
+
+The page renderer emits custom DOM events after injecting major layout sections. These allow modules to initialize when parts of the dashboard become available.
+
+- `top-header-loaded`
+- `main-header-loaded`
+- `content-header-loaded`
+- `sidebar-loaded` – fired after the sidebar partial is inserted or cleared.

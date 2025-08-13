@@ -110,10 +110,23 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     }
 
     let pageWorkspace = null;
-    if (typeof page.config?.workspace === 'string' && /^[a-z0-9-]+$/.test(page.config.workspace)) {
+    if (
+      typeof page.config?.workspace === 'string' &&
+      /^[a-z0-9-]+$/.test(page.config.workspace)
+    ) {
       pageWorkspace = page.config.workspace;
-    } else if (typeof parent?.meta?.workspace === 'string' && /^[a-z0-9-]+$/.test(parent.meta.workspace)) {
+    } else if (
+      typeof parent?.meta?.workspace === 'string' &&
+      /^[a-z0-9-]+$/.test(parent.meta.workspace)
+    ) {
       pageWorkspace = parent.meta.workspace;
+    } else if (typeof page.parentSlug === 'string' && page.parentSlug) {
+      pageWorkspace = page.parentSlug.split('/')[0];
+    } else if (typeof page.slug === 'string') {
+      pageWorkspace = page.slug.split('/')[0];
+    }
+    if (pageWorkspace && !/^[a-z0-9-]+$/.test(pageWorkspace)) {
+      pageWorkspace = makeSlug(pageWorkspace);
     }
 
     const existingPage = await meltdownEmit(motherEmitter, 'getPageBySlug', {

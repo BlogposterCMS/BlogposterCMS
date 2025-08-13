@@ -436,7 +436,16 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
             as: 'translation'
           }
         },
+        {
+          $lookup: {
+            from: 'pages',
+            localField: 'parent_id',
+            foreignField: '_id',
+            as: 'parent'
+          }
+        },
         { $unwind: { path: '$translation', preserveNullAndEmptyArrays: true } },
+        { $unwind: { path: '$parent', preserveNullAndEmptyArrays: true } },
         { $sort: { created_at: -1 } },
         {
           $project: {
@@ -458,7 +467,8 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
             trans_css: '$translation.css',
             meta_desc: '$translation.meta_desc',
             seo_title: '$translation.seo_title',
-            seo_keywords: '$translation.seo_keywords'
+            seo_keywords: '$translation.seo_keywords',
+            parentSlug: '$parent.slug'
           }
         }
       ]).toArray();
@@ -486,8 +496,17 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
                                     page_id : page._id,
                                     language: lang
                                   });
-  
-      return { ...page, id: page.id || page._id.toHexString(), translation };
+
+      const parent = page.parent_id
+        ? await db.collection('pages').findOne({ _id: page.parent_id })
+        : null;
+
+      return {
+        ...page,
+        id: page.id || page._id.toHexString(),
+        translation,
+        parentSlug: parent ? parent.slug : null
+      };
     }
   
   
@@ -508,8 +527,17 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
                                     page_id : page._id,
                                     language: lang
                                   });
-  
-      return { ...page, id: page.id || page._id.toHexString(), translation };
+
+      const parent = page.parent_id
+        ? await db.collection('pages').findOne({ _id: page.parent_id })
+        : null;
+
+      return {
+        ...page,
+        id: page.id || page._id.toHexString(),
+        translation,
+        parentSlug: parent ? parent.slug : null
+      };
     }
   
   

@@ -369,13 +369,15 @@ switch (operation) {
         laneVal = params;
       }
       const { rows } = await client.query(`
-        SELECT p.*, 
+        SELECT p.*, parent.slug AS "parentSlug",
               t.language AS trans_lang,
               t.title AS trans_title,
               t.html  AS trans_html,
               t.css   AS trans_css,
               t.meta_desc, t.seo_title, t.seo_keywords
           FROM pagesManager.pages p
+          LEFT JOIN pagesManager.pages parent
+                ON p.parent_id = parent.id
           LEFT JOIN pagesManager.page_translations t
                 ON p.id = t.page_id
         WHERE p.lane = $1
@@ -424,10 +426,12 @@ switch (operation) {
       const lang   = params[1] || 'en';
 
       const { rows } = await client.query(`
-        SELECT p.*,
+        SELECT p.*, parent.slug AS "parentSlug",
               t.language AS trans_lang, t.title AS trans_title,
               t.html, t.css, t.meta_desc, t.seo_title, t.seo_keywords
           FROM pagesManager.pages p
+          LEFT JOIN pagesManager.pages parent
+                ON p.parent_id = parent.id
           LEFT JOIN pagesManager.page_translations t
                 ON p.id = t.page_id AND t.language = $2
         WHERE p.id = $1;
@@ -443,10 +447,12 @@ switch (operation) {
       const lang   = params[2] || 'en';
 
       const { rows } = await client.query(`
-        SELECT p.*,
+        SELECT p.*, parent.slug AS "parentSlug",
               t.language AS trans_lang, t.title AS trans_title,
               t.html, t.css, t.meta_desc, t.seo_title, t.seo_keywords
           FROM pagesManager.pages p
+          LEFT JOIN pagesManager.pages parent
+                ON p.parent_id = parent.id
           LEFT JOIN pagesManager.page_translations t
                 ON (p.id = t.page_id AND t.language = $3)
         WHERE p.slug = $1

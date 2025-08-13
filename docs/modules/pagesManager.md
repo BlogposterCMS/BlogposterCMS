@@ -26,3 +26,6 @@ Responsible for CRUD operations on pages and for generating default pages when t
 - `generateXmlSitemap`
 
 Permissions are checked for each sensitive operation to avoid unauthorized modifications.
+
+## Returned Data
+- Page retrieval events (`getPageBySlug`, `getPageById`, `getPagesByLane`) include a `parentSlug` field with the slug of the parent page when available.

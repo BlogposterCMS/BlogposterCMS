@@ -26,6 +26,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Workspace navigation now infers the workspace from `parentSlug` or the page slug, removing the need to specify `workspace` in admin page configs.
 - Replaced widget popup overlay with a collapsible widgets panel featuring
   category filtering and search.
 - Refined dashboard layout with a translucent top bar, a tinted workspace gap, and a responsive sidebar that highlights the active page.

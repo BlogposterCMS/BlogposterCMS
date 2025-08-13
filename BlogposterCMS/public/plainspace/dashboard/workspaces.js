@@ -18,13 +18,20 @@ export async function initWorkspaceNav() {
     });
     const pages = Array.isArray(res?.pages) ? res.pages : Array.isArray(res) ? res : [];
 
+    const inferWorkspace = p => {
+      if (typeof p.meta?.workspace === 'string') return p.meta.workspace;
+      const slug = String(p.slug || '');
+      if (slug.includes('/')) return slug.split('/')[0];
+      if (typeof p.parentSlug === 'string') return p.parentSlug.split('/')[0];
+      return slug;
+    };
+
     // Build top workspace navigation
     if (nav) {
       const createBtn = nav.querySelector('#workspace-create');
       nav.innerHTML = '';
-      const isTopLevel = p => !String(p.slug).includes('/');
       const top = pages.filter(
-        p => p.lane === 'admin' && (p.meta?.workspace === p.slug || isTopLevel(p))
+        p => p.lane === 'admin' && inferWorkspace(p) === p.slug
       );
       top.forEach(p => {
         const a = document.createElement('a');
@@ -55,7 +62,7 @@ export async function initWorkspaceNav() {
     if (sidebarNav && workspaceSlug) {
       sidebarNav.innerHTML = '';
       const subpages = pages.filter(
-        p => p.meta?.workspace === workspaceSlug && p.slug !== workspaceSlug
+        p => inferWorkspace(p) === workspaceSlug && inferWorkspace(p) !== p.slug
       );
       const seen = new Set();
       subpages.forEach(p => {

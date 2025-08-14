@@ -14,6 +14,10 @@ The dashboard allows you to manage pages, users and settings. Only authenticated
 
 ![Login screen](screenshots/Clean%20Login%20Interface.png)
 
+## Creating Workspaces and Subpages
+
+The admin interface includes two "+" buttons for quickly adding content. Clicking either reveals a sliding panel where you pick an icon and enter a name before submitting. The button on the left side of the header creates a workspace and the "+" button at the bottom of the sidebar adds a subpage to the current workspace.
+
 ## Admin Lane vs Public Lane
 
 BlogposterCMS separates widgets and pages into **admin** and **public** lanes:

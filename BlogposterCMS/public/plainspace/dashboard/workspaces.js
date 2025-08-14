@@ -51,13 +51,10 @@ export async function initWorkspaceNav() {
         nav.appendChild(a);
       });
       if (createBtn) {
-        createBtn.addEventListener('click', e => {
-          e.preventDefault();
-          document.dispatchEvent(
-            new CustomEvent('ui:action:run', { detail: { actionId: 'createWorkspace' } })
-          );
+        createBtn.addEventListener('click', () => {
+          showWorkspacePanel();
         });
-        nav.appendChild(createBtn);
+        nav.prepend(createBtn);
       }
     }
 
@@ -96,8 +93,7 @@ export async function initWorkspaceNav() {
         }
         sidebarNav.appendChild(a);
       });
-      const add = document.createElement('a');
-      add.href = '#';
+      const add = document.createElement('div');
       add.className = 'sidebar-item sidebar-add-subpage';
       const addIcon = document.createElement('img');
       addIcon.src = '/assets/icons/plus.svg';
@@ -107,13 +103,8 @@ export async function initWorkspaceNav() {
       label.className = 'label';
       label.textContent = 'Add';
       add.appendChild(label);
-      add.addEventListener('click', e => {
-        e.preventDefault();
-        document.dispatchEvent(
-          new CustomEvent('ui:action:run', {
-            detail: { actionId: 'createSubpage', workspace: workspaceSlug }
-          })
-        );
+      add.addEventListener('click', () => {
+        showSubpagePanel(workspaceSlug);
       });
       sidebarNav.appendChild(add);
     }
@@ -126,3 +117,149 @@ export async function initWorkspaceNav() {
 document.addEventListener('DOMContentLoaded', initWorkspaceNav);
 document.addEventListener('main-header-loaded', initWorkspaceNav);
 document.addEventListener('sidebar-loaded', initWorkspaceNav);
+
+function createSlidePanel(id, title) {
+  let panel = document.getElementById(id);
+  if (panel) {
+    panel.classList.add('open');
+    return panel;
+  }
+  panel = document.createElement('div');
+  panel.id = id;
+  panel.className = 'slide-panel';
+
+  const header = document.createElement('div');
+  header.className = 'slide-panel-header';
+  const h2 = document.createElement('h2');
+  h2.textContent = title;
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'close-btn';
+  close.textContent = '×';
+  close.addEventListener('click', () => panel.classList.remove('open'));
+  header.appendChild(h2);
+  header.appendChild(close);
+  panel.appendChild(header);
+  document.body.appendChild(panel);
+  requestAnimationFrame(() => panel.classList.add('open'));
+  return panel;
+}
+
+function buildIconList(container, onSelect) {
+  const icons = window.featherIcons || {};
+  Object.entries(icons).forEach(([name, path]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-option';
+    const img = document.createElement('img');
+    img.src = path;
+    img.alt = name;
+    img.className = 'icon';
+    btn.appendChild(img);
+    btn.addEventListener('click', () => onSelect(path));
+    container.appendChild(btn);
+  });
+}
+
+function showWorkspacePanel() {
+  const panel = createSlidePanel('workspace-panel', 'Create Workspace');
+  if (panel.querySelector('form')) return;
+  const form = document.createElement('form');
+
+  const iconPicker = document.createElement('div');
+  iconPicker.className = 'icon-picker';
+  const iconBtn = document.createElement('button');
+  iconBtn.type = 'button';
+  iconBtn.className = 'icon-picker-toggle';
+  const iconImg = document.createElement('img');
+  iconImg.src = '/assets/icons/file-box.svg';
+  iconImg.alt = 'icon';
+  iconImg.className = 'icon';
+  iconBtn.appendChild(iconImg);
+  iconPicker.appendChild(iconBtn);
+  const iconList = document.createElement('div');
+  iconList.className = 'icon-picker-list hidden';
+  buildIconList(iconList, src => {
+    iconImg.src = src;
+    iconBtn.dataset.icon = src;
+    iconList.classList.add('hidden');
+  });
+  iconPicker.appendChild(iconList);
+  iconBtn.addEventListener('click', () => iconList.classList.toggle('hidden'));
+
+  const nameLabel = document.createElement('label');
+  nameLabel.textContent = 'Workspace name';
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameLabel.appendChild(nameInput);
+
+  const createBtn = document.createElement('button');
+  createBtn.type = 'button';
+  createBtn.textContent = 'Create';
+  createBtn.addEventListener('click', () => {
+    const detail = {
+      actionId: 'createWorkspace',
+      name: nameInput.value.trim(),
+      icon: iconBtn.dataset.icon || iconImg.src
+    };
+    document.dispatchEvent(new CustomEvent('ui:action:run', { detail }));
+    panel.classList.remove('open');
+  });
+
+  form.appendChild(iconPicker);
+  form.appendChild(nameLabel);
+  form.appendChild(createBtn);
+  panel.appendChild(form);
+}
+
+function showSubpagePanel(workspace) {
+  const panel = createSlidePanel('subpage-panel', 'Create Subpage');
+  if (panel.querySelector('form')) return;
+  const form = document.createElement('form');
+
+  const iconPicker = document.createElement('div');
+  iconPicker.className = 'icon-picker';
+  const iconBtn = document.createElement('button');
+  iconBtn.type = 'button';
+  iconBtn.className = 'icon-picker-toggle';
+  const iconImg = document.createElement('img');
+  iconImg.src = '/assets/icons/file.svg';
+  iconImg.alt = 'icon';
+  iconImg.className = 'icon';
+  iconBtn.appendChild(iconImg);
+  iconPicker.appendChild(iconBtn);
+  const iconList = document.createElement('div');
+  iconList.className = 'icon-picker-list hidden';
+  buildIconList(iconList, src => {
+    iconImg.src = src;
+    iconBtn.dataset.icon = src;
+    iconList.classList.add('hidden');
+  });
+  iconPicker.appendChild(iconList);
+  iconBtn.addEventListener('click', () => iconList.classList.toggle('hidden'));
+
+  const nameLabel = document.createElement('label');
+  nameLabel.textContent = 'Page name';
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameLabel.appendChild(nameInput);
+
+  const createBtn = document.createElement('button');
+  createBtn.type = 'button';
+  createBtn.textContent = 'Create';
+  createBtn.addEventListener('click', () => {
+    const detail = {
+      actionId: 'createSubpage',
+      workspace,
+      name: nameInput.value.trim(),
+      icon: iconBtn.dataset.icon || iconImg.src
+    };
+    document.dispatchEvent(new CustomEvent('ui:action:run', { detail }));
+    panel.classList.remove('open');
+  });
+
+  form.appendChild(iconPicker);
+  form.appendChild(nameLabel);
+  form.appendChild(createBtn);
+  panel.appendChild(form);
+}

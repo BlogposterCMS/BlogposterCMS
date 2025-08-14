@@ -673,6 +673,26 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     window.adminPageContext = { pageId: page.id, lane };
     window.adminCurrentLayout = layout;
 
+    gridEl.addEventListener('dragover', e => {
+      if (!document.body.classList.contains('dashboard-edit-mode')) return;
+      e.preventDefault();
+    });
+
+    gridEl.addEventListener('drop', e => {
+      if (!document.body.classList.contains('dashboard-edit-mode')) return;
+      e.preventDefault();
+      const id = e.dataTransfer.getData('text/plain');
+      const widgets = Array.isArray(window.availableWidgets)
+        ? window.availableWidgets
+        : [];
+      const def = widgets.find(w => w.id === id);
+      if (!def || typeof window.addDashboardWidget !== 'function') return;
+      const rect = gridEl.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / grid.options.columnWidth);
+      const y = Math.floor((e.clientY - rect.top) / grid.options.cellHeight);
+      window.addDashboardWidget(def, { x, y });
+    });
+
     const CELL_W = grid.options.columnWidth;
     const CELL_H = grid.options.cellHeight;
     const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));

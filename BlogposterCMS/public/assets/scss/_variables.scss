@@ -9,6 +9,7 @@
   --color-text: #222222; // Dunkler für mehr Kontrast
   --color-white: #FFFFFF;
   --color-white-dark: #F7F7F7; // Slightly darker white for dropdown controls
+  --color-border: #e5e7eb; // Neutral border color
   --accent-h: 180; // Default teal hue
   --accent-s: 70%; // Normalized saturation
   --accent-l: 50%; // Normalized lightness
@@ -42,5 +43,6 @@
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.06) 100%
     );
+    --color-border: #333333;
   }
 }

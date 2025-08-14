@@ -69,6 +69,11 @@ function buildWidgets() {
         span.textContent = label;
         card.appendChild(span);
         card.addEventListener('click', () => addWidget(def));
+        card.draggable = true;
+        card.addEventListener('dragstart', ev => {
+          ev.dataTransfer.setData('text/plain', def.id);
+          ev.dataTransfer.effectAllowed = 'copy';
+        });
         list.appendChild(card);
       });
       if (list.children.length) {
@@ -104,10 +109,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-async function addWidget(def) {
+async function addWidget(def, pos = {}) {
   const grid = window.adminGrid;
-  if (!grid) return;
-  const wrapper = grid.addWidget({ x: 0, y: 0, w: 8, h: DEFAULT_ADMIN_ROWS });
+  if (!grid || !def) return;
+  const x = Number.isFinite(pos.x) ? pos.x : 0;
+  const y = Number.isFinite(pos.y) ? pos.y : 0;
+  const wrapper = grid.addWidget({ x, y, w: 8, h: DEFAULT_ADMIN_ROWS });
   wrapper.dataset.widgetId = def.id;
   wrapper.dataset.instanceId = `w${Math.random().toString(36).slice(2, 8)}`;
   const content = document.createElement('div');
@@ -137,3 +144,5 @@ async function addWidget(def) {
     new CustomEvent('ui:widget:add', { detail: { type: def.id } })
   );
 }
+
+window.addDashboardWidget = addWidget;

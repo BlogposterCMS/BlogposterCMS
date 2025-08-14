@@ -30,7 +30,7 @@ Widgets are small blocks of functionality (text blocks, images, counters, etc.) 
 - Widgets registered for the **public** lane render on live pages.
 - Widgets registered for the **admin** lane appear in the dashboard for building pages or showing statistics.
 
-Layouts and widgets are edited via drag and drop in the admin dashboard. The widget manager ensures only users with the appropriate permissions can create or modify widgets.
+Layouts and widgets are edited via drag and drop in the admin dashboard. While in edit mode, open the widget drawer and drag widgets onto the grid to place them. The widget manager ensures only users with the appropriate permissions can create or modify widgets.
 
 Widgets can provide layout hints when seeded. Administrators may specify width
 and height options such as `halfWidth`, `maxHeight` or `overflow` so the initial

@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Widgets panel now supports dragging widgets onto the dashboard grid.
 - Sanitizer now exposes `parentSlug` in `pageDataLoader` so widgets can access hierarchical data.
 - Page retrieval queries now join parent pages and expose `parentSlug` in results.
 - Admin page seeding validates icon paths from `/assets/icons` and exposes them for dynamic navigation.
@@ -29,6 +30,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Restyled widgets drawer to align with the overall admin UI.
 - Slug normalization now preserves slash-separated segments, and both seeding
   and admin navigation operate on full path slugs.
 - Breadcrumb now aligns to the left in the content header.

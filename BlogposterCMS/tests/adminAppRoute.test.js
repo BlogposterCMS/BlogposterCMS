@@ -4,13 +4,15 @@ const fs = require('fs');
 const path = require('path');
 
 function sanitizeSlug(str) {
-  return String(str)
+  const cleaned = String(str)
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 96);
+    .split('/')
+    .map(seg => seg.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+    .filter(Boolean)
+    .join('/');
+  return cleaned.substring(0, 96);
 }
 
 function escapeHtml(str) {

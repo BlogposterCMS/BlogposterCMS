@@ -57,8 +57,8 @@ export function initContentHeader() {
       grid.pushOnOverlap = isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
       editToggle.src = editing
-        ? '/assets/icons/check.svg'
-        : '/assets/icons/pencil-line.svg';
+        ? '/assets/icons/save.svg'
+        : '/assets/icons/square-pen.svg';
       document.dispatchEvent(
         new CustomEvent('ui:widgets:toggle', { detail: { open: false } })
       );
@@ -70,7 +70,7 @@ export function initContentHeader() {
     editing = !editing;
     grid.setStatic(!editing);
     document.body.classList.toggle('dashboard-edit-mode', editing);
-      editToggle.src = editing ? '/assets/icons/check.svg' : '/assets/icons/pencil-line.svg';
+      editToggle.src = editing ? '/assets/icons/save.svg' : '/assets/icons/square-pen.svg';
     editToggle.classList.add('spin');
     setTimeout(() => editToggle.classList.remove('spin'), 300);
     document.dispatchEvent(

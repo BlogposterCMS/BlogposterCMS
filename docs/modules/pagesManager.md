@@ -27,5 +27,10 @@ Responsible for CRUD operations on pages and for generating default pages when t
 
 Permissions are checked for each sensitive operation to avoid unauthorized modifications.
 
+## Slug Handling
+- Slugs may include `/` to denote hierarchy. Each segment is normalized independently,
+  so `content/My Page` becomes `content/my-page` and `Page Ünicode` becomes
+  `page/unicode`. The top-level segments `admin`, `app` and `api` remain reserved.
+
 ## Returned Data
 - Page retrieval events (`getPageBySlug`, `getPageById`, `getPagesByLane`) include a `parentSlug` field with the slug of the parent page when available.

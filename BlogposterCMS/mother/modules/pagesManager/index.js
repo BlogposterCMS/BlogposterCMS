@@ -226,13 +226,16 @@ function setupPagesManagerEvents(motherEmitter) {
       return callback(new Error('A non-empty "title" is required.'));
     }
   
-    const makeSlug = (str) => str
-      .toLowerCase()
-      .normalize('NFKD')            
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .substring(0, 96);
+    const makeSlug = (str) =>
+      String(str)
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .split('/')
+        .map(seg => seg.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+        .filter(Boolean)
+        .join('/')
+        .substring(0, 96);
   
     const baseSlug = rawSlug.trim() ? makeSlug(rawSlug) : makeSlug(mainTitle);
     if (!baseSlug) {
@@ -241,7 +244,8 @@ function setupPagesManagerEvents(motherEmitter) {
 
     let finalSlug = baseSlug;
     const RESERVED = ['admin', 'app', 'api'];
-    if (RESERVED.some(r => finalSlug === r || finalSlug.startsWith(`${r}/`))) {
+    const firstSeg = finalSlug.split('/')[0];
+    if (RESERVED.includes(firstSeg)) {
       return callback(new Error('Slug is reserved.'));
     }
     let tries = 0;

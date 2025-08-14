@@ -56,6 +56,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Slug sanitization now preserves slash-separated segments, fixing admin routes for nested pages.
 - Workspace navigation initializes after the sidebar renders via a new `sidebar-loaded` event.
 - Sidebar subpage navigation prioritizes `parentSlug` and falls back to slug prefixes for legacy entries.
 - Sidebar subpage navigation now infers hierarchy from page slugs when `parentSlug` is absent.

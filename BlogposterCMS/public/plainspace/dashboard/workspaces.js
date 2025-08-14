@@ -20,9 +20,7 @@ export async function initWorkspaceNav() {
 
     const inferWorkspace = p => {
       if (typeof p.meta?.workspace === 'string') return p.meta.workspace;
-      if (typeof p.parentSlug === 'string') return p.parentSlug.split('/')[0];
-      const slug = String(p.slug || '');
-      return slug.includes('/') ? slug.split('/')[0] : slug;
+      return String(p.slug || '').split('/')[0];
     };
 
     // Build top workspace navigation
@@ -66,27 +64,17 @@ export async function initWorkspaceNav() {
     // Build sidebar subpage navigation
     if (sidebarNav && workspaceSlug) {
       sidebarNav.innerHTML = '';
-      const subpages = pages.filter(p => {
-        const parent = String(p.parentSlug || '').split('/')[0];
-        if (parent) return parent === workspaceSlug;
-        const slug = String(p.slug || '');
-        return slug.startsWith(workspaceSlug + '/') && slug !== workspaceSlug;
-      });
-      const pageKey = p => {
-        if (p.parentSlug) {
-          const parts = (p.parentSlug + '/' + p.slug).split('/');
-          return parts.slice(1).join('/') || p.slug;
-        }
-        const parts = String(p.slug || '').split('/');
-        return parts.slice(1).join('/') || p.slug;
-      };
+      const subpages = pages.filter(p =>
+        p.slug.startsWith(workspaceSlug + '/') &&
+        p.slug !== workspaceSlug
+      );
       const seen = new Set();
       subpages.forEach(p => {
-        const key = pageKey(p);
-        const first = key.split('/')[0];
+        const [, ...rest] = p.slug.split('/');
+        const first = rest[0];
         if (!first || seen.has(first)) return;
         seen.add(first);
-        const base = pages.find(pg => pageKey(pg) === first);
+        const base = pages.find(pg => pg.slug === `${workspaceSlug}/${first}`);
         const title = base?.title || first;
         const a = document.createElement('a');
         const linkHref = `${ADMIN_BASE}${workspaceSlug}/${first}`;

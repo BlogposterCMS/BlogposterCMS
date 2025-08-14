@@ -54,7 +54,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     const parentSlugRaw = parentSegs.length ? [...prefixSegs, ...parentSegs].join('/') : null;
     const finalSlugRaw  = [...prefixSegs, ...parentSegs, ...pageSegs].join('/');
 
-    let finalSlugForCheck = finalSlugRaw.replace(/\//g, '-');
+    let finalSlugForCheck = finalSlugRaw;
 
     if (page.config?.icon) {
       if (typeof page.config.icon !== 'string' || !page.config.icon.startsWith('/assets/icons/')) {
@@ -70,13 +70,11 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     }
 
     if (parentSlugRaw) {
-      const parentSlugSanitized = parentSlugRaw.replace(/\//g, '-');
-
       parent = await meltdownEmit(motherEmitter, 'getPageBySlug', {
         jwt,
         moduleName: 'pagesManager',
         moduleType: 'core',
-        slug: parentSlugSanitized,
+        slug: parentSlugRaw,
         lane: page.lane
       }).catch(() => null);
 

@@ -29,6 +29,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Slug normalization now preserves slash-separated segments, and both seeding
+  and admin navigation operate on full path slugs.
 - Breadcrumb now aligns to the left in the content header.
 - Workspace navigation no longer infers workspaces from slugs; only pages with an explicit `workspace` matching their slug appear in the header.
 - Replaced widget popup overlay with a collapsible widgets panel featuring

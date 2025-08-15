@@ -1,5 +1,7 @@
 // Widget panel toggle handled via custom events
 
+import { bpDialog } from '/assets/js/bpDialog.js';
+
 export function initContentHeader() {
   const breadcrumbEl = document.getElementById('content-breadcrumb');
   if (breadcrumbEl) {
@@ -101,7 +103,10 @@ async function handleDeleteCurrentAdminPage() {
     let rel = window.location.pathname;
     if (rel.startsWith(ADMIN_BASE)) rel = rel.slice(ADMIN_BASE.length);
     rel = rel.replace(/^\/|\/$/g, '');
-    if (!rel) return alert('No admin page selected.');
+    if (!rel) {
+      await bpDialog.alert('No admin page selected.');
+      return;
+    }
 
     const res = await window.meltdownEmit('getPageBySlug', {
       jwt: window.ADMIN_TOKEN,
@@ -112,9 +117,12 @@ async function handleDeleteCurrentAdminPage() {
     });
 
     const page = Array.isArray(res) ? res[0] : res;
-    if (!page?.id) return alert('Page not found.');
+    if (!page?.id) {
+      await bpDialog.alert('Page not found.');
+      return;
+    }
 
-    if (!confirm(`Delete admin page "${page.title}" (${page.slug})?`)) return;
+    if (!(await bpDialog.confirm(`Delete admin page "${page.title}" (${page.slug})?`))) return;
 
     await window.meltdownEmit('deletePage', {
       jwt: window.ADMIN_TOKEN,
@@ -127,7 +135,7 @@ async function handleDeleteCurrentAdminPage() {
     window.location.href = ADMIN_BASE_CLEAN;
   } catch (err) {
     console.error('Delete failed', err);
-    alert('Failed to delete page: ' + (err?.message || err));
+    await bpDialog.alert('Failed to delete page: ' + (err?.message || err));
   }
 }
 

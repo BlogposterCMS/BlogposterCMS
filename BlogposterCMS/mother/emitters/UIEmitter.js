@@ -10,14 +10,19 @@
 const EventEmitter = require('events');
 
 // Liste erlaubter Events für Kontrolle & Debugging
-const KNOWN_UI_EVENTS = [
-  'registerAdminUI',
-  'unregisterAdminUI',
-  'switchAdminUI',
-  'ui:render',
-  'ui:themeLoaded',
-  'ui:meltdown', // optional fallback
-];
+  const KNOWN_UI_EVENTS = [
+    'registerAdminUI',
+    'unregisterAdminUI',
+    'switchAdminUI',
+    'ui:render',
+    'ui:themeLoaded',
+    'ui:meltdown', // optional fallback
+    'dialog:alert',
+    'dialog:confirm',
+    'dialog:prompt',
+    'dialog:confirm-preview',
+    'dialog:prompt-preview',
+  ];
 
 class UIEmitter extends EventEmitter {
   constructor() {
@@ -32,20 +37,20 @@ class UIEmitter extends EventEmitter {
 
     // Keine Listener? → Warnung
     if (!this.listenerCount(eventName)) {
-      console.warn([UI Emitter] No listeners for "${eventName}");
+      console.warn(`[UI Emitter] No listeners for "${eventName}"`);
       return false;
     }
 
     // Optionales Check: Ist das ein bekanntes UI-Event?
     if (!KNOWN_UI_EVENTS.includes(eventName)) {
-      console.warn([UI Emitter] ⚠️ UNKNOWN UI EVENT "${eventName}" from "${caller}");
+      console.warn(`[UI Emitter] ⚠️ UNKNOWN UI EVENT "${eventName}" from "${caller}"`);
     }
 
     try {
-      console.log([UI Emitter] Emitting "${eventName}" from "${caller}");
+      console.log(`[UI Emitter] Emitting "${eventName}" from "${caller}"`);
       return super.emit(eventName, ...args);
     } catch (err) {
-      console.error([UI Emitter] MELTDOWN: Error in "${eventName}" by "${uiName}" → ${err.message});
+      console.error(`[UI Emitter] MELTDOWN: Error in "${eventName}" by "${uiName}" → ${err.message}`);
       super.emit('ui:meltdown', {
         eventName,
         uiName,
@@ -59,4 +64,4 @@ class UIEmitter extends EventEmitter {
   }
 }
 
-module.exports = new UIEmitter();
+  module.exports = new UIEmitter();

@@ -66,14 +66,19 @@
   top: 100%;
   background: #fff;
   border: 1px solid color-mix(in srgb, var(--color-dark), transparent 80%);
-  border-radius: 4px;
-  padding: 4px;
-  gap: 4px;
+  border-radius: 8px;
+  padding: 8px;
+  gap: 8px;
   z-index: 10;
+  width: 240px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
 }
 
 .inline-create-field .icon-list.open {
-  display: flex;
+  display: grid;
 }
 
 .inline-create-field .icon-list button {
@@ -82,12 +87,13 @@
   padding: 4px;
   display: flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
 .inline-create-field .icon-list button img {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 }
 
 #subpage-floating-field {

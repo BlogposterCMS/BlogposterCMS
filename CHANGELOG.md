@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Icon button in subpage floating field now opens a lazily loaded grid of icons from `/assets/icons` and replaces the default icon upon selection.
 - Inline workspace and subpage fields now slide out with a left-side icon picker, centered name input, and right confirmation button.
 - Header and sidebar "+" buttons reveal inline fields for creating workspaces and subpages.
 - Widgets panel now supports dragging widgets onto the dashboard grid.

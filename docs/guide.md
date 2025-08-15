@@ -17,6 +17,7 @@ The dashboard allows you to manage pages, users and settings. Only authenticated
 ## Creating Workspaces and Subpages
 
 The admin interface includes two "+" buttons for quickly adding content. Clicking either reveals a sliding panel where you pick an icon and enter a name before submitting. The button on the left side of the header creates a workspace and the "+" button at the bottom of the sidebar adds a subpage to the current workspace. While the subpage field is open, the "+" icon switches to a "-" and its label is hidden so you can click it again to close the panel. Each inline field now slides out beside its trigger button and overlays surrounding content with a high z-index. The panel includes an icon chooser on the left, a centered text input, and a confirmation button on the right.
+The icon chooser loads the complete list of available icons from `/assets/icons` on demand and displays them in a floating grid, keeping the initial dashboard load fast.
 
 ## Admin Lane vs Public Lane
 

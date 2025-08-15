@@ -35,6 +35,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Icon picker grid widened to 360px for easier selection.
 - Reordered content header actions: delete page button now sits left of breadcrumbs, save and add widget buttons swapped sides, and icons updated.
 - Buttons no longer use box shadows for a cleaner look.
 - Revamped public login screen with card-focused layout, dotted grid background, brand-accented inputs, and inline error display.
@@ -71,11 +72,11 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.
 - Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.
 - Removed unused widgets-panel import from content header.
 - Quick action buttons now display correctly in edit mode via CSS instead of inline styles.
 - Widgets panel removes its floater when an external toggle is added later to avoid duplicate toggles.
-- Icon picker grid now closes after selecting an icon.
 - Subpage form submission now creates an admin subpage for the active workspace.
 - Workspace and subpage panels now gain slide-in styling and no longer display titles.
 - Slug sanitization now preserves slash-separated segments, fixing admin routes for nested pages.

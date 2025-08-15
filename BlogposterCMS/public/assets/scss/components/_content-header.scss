@@ -1,7 +1,6 @@
 .content-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 10px 24px;
   background: color-mix(in srgb, var(--color-white), transparent 20%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
@@ -51,6 +50,11 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    margin-left: auto;
+  }
+
+  #admin-delete-page {
+    margin-right: 8px;
   }
 
   .icon {

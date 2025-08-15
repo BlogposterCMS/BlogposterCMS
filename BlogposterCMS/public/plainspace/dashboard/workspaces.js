@@ -193,24 +193,33 @@ function showWorkspaceField() {
 }
 
 function showSubpageField(workspace) {
+  const addBtn = document.querySelector('.sidebar-add-subpage');
+  if (!addBtn) return;
+  const icon = addBtn.querySelector('img.icon');
+  const label = addBtn.querySelector('.label');
   const existing = document.getElementById('subpage-floating-field');
   if (existing) {
     existing.remove();
+    if (icon) icon.src = '/assets/icons/plus.svg';
+    if (label) label.style.display = '';
     return;
   }
-  const addBtn = document.querySelector('.sidebar-add-subpage');
-  if (!addBtn) return;
   const container = buildInlineField('subpage-floating-field', 'Page name', detail => {
     document.dispatchEvent(
       new CustomEvent('ui:action:run', {
         detail: { actionId: 'createSubpage', workspace, name: detail.name, icon: detail.icon }
       })
     );
+    container.remove();
+    if (icon) icon.src = '/assets/icons/plus.svg';
+    if (label) label.style.display = '';
   });
   document.body.appendChild(container);
   const rect = addBtn.getBoundingClientRect();
   container.style.left = `${rect.right + window.scrollX + 8}px`;
   container.style.top = `${rect.top + window.scrollY + rect.height / 2}px`;
   container.style.zIndex = '1000';
+  if (icon) icon.src = '/assets/icons/minus.svg';
+  if (label) label.style.display = 'none';
   requestAnimationFrame(() => container.classList.add('open'));
 }

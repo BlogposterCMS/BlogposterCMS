@@ -32,6 +32,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Subpage add button now switches to a minus and hides its label while the floating field is open, and the field gains a card-style shadow.
 - Subpage creation field renamed to `subpage-floating-field` and now floats next to its trigger button with a z-index of 1000.
 - Inline create field now slides out beside trigger buttons, overlays surrounding content, and positions relative to the trigger button for correct placement.
 - Edit toggle now uses a square-pen icon and switches to a save icon while editing.

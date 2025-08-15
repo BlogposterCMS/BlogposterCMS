@@ -69,6 +69,10 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.
+- Removed unused widgets-panel import from content header.
+- Quick action buttons now display correctly in edit mode via CSS instead of inline styles.
+- Widgets panel removes its floater when an external toggle is added later to avoid duplicate toggles.
 - Icon picker grid now closes after selecting an icon.
 - Subpage form submission now creates an admin subpage for the active workspace.
 - Workspace and subpage panels now gain slide-in styling and no longer display titles.

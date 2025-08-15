@@ -31,6 +31,16 @@ function createPanel() {
       );
     });
     document.body.appendChild(toggleBtn);
+    // Remove floater if external toggle appears later
+    const obs = new MutationObserver(() => {
+      const ext = document.getElementById('widgets-toggle-inline');
+      if (ext) {
+        toggleBtn.remove();
+        toggleBtn = ext;
+        obs.disconnect();
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
   } else {
     toggleBtn = externalToggle;
   }

@@ -1,18 +1,6 @@
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
-const togglePassword = document.getElementById('togglePassword');
-
-togglePassword.addEventListener('click', () => {
-  const pwd = document.getElementById('password');
-  const isText = pwd.type === 'text';
-  pwd.type = isText ? 'password' : 'text';
-  togglePassword.textContent = isText ? 'Show' : 'Hide';
-});
-
-loginForm.addEventListener('submit', async e => {
+document.getElementById('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const { username, password } = e.target;
-  loginError.textContent = '';
 
   const params = new URLSearchParams(window.location.search);
   let redirectTo = params.get('redirectTo') || '/admin';
@@ -50,6 +38,6 @@ loginForm.addEventListener('submit', async e => {
 
     window.location.assign(redirectTo);
   } catch (err) {
-    loginError.textContent = err.message || 'Login failed';
+    alert(err.message);
   }
 });

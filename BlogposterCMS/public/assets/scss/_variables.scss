@@ -16,10 +16,6 @@
   --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l)); // User-selected accent color
   --color-primary: var(--user-color);
   --color-primary-contrast: #222222;
-  --brand: var(--color-primary);
-  --brand-2: var(--color-primary);
-  --color-card: #ffffff;
-  --color-error: #d93025;
   --gradient-primary: linear-gradient(
     180deg,
     hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12) 0%,
@@ -42,10 +38,6 @@
     --color-text: #f0f0f0;
     --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
     --color-primary-contrast: #f0f0f0;
-    --brand: var(--color-primary);
-    --brand-2: var(--color-primary);
-    --color-card: #2a2a2a;
-    --color-error: #f28b82;
     --gradient-primary: linear-gradient(
       180deg,
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,

@@ -138,8 +138,13 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
   iconList.className = 'icon-list';
   let iconsLoaded = false;
 
-  iconBtn.addEventListener('click', async () => {
-    iconList.classList.toggle('open');
+  iconBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (iconList.classList.contains('open')) {
+      iconList.classList.remove('open');
+      return;
+    }
+    iconList.classList.add('open');
     if (!iconsLoaded) {
       iconsLoaded = true;
       try {

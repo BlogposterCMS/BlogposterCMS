@@ -35,6 +35,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Edit toggle button now uses icon-btn styling and no longer spins on activation.
 - Reordered content header actions: delete page button now sits left of breadcrumbs, save and add widget buttons swapped sides, and icons updated.
 - Buttons no longer use box shadows for a cleaner look.
 - Revamped public login screen with card-focused layout, dotted grid background, brand-accented inputs, and inline error display.

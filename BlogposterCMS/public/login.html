@@ -7,11 +7,9 @@
   <meta name="csrf-token" content="{{CSRF_TOKEN}}">
 </head>
 <body>
-  <h1 class="branding-top-left">BlogposterCMS</h1>
-
   <div class="app-scope login-page">
     <div class="login-form form-container">
-      <img id="logo" class="logo" src="/assets/icons/blogpostercms-logo.svg"" alt="BlogposterCMS Logo"/>
+      <img id="logo" class="logo" src="/assets/icons/blogpostercms-logo.svg" alt="BlogposterCMS Logo"/>
       <div class="cms-title">Welcome back!</div>
 
       <form id="loginForm">
@@ -20,14 +18,21 @@
           <label for="username">Username</label>
         </div>
 
-        <div class="field">
+        <div class="field password-field">
           <input id="password" name="password" type="password" required placeholder=" " autocomplete="current-password">
           <label for="password">Password</label>
+          <button type="button" id="togglePassword" class="password-toggle" aria-label="Toggle password visibility">Show</button>
         </div>
+        <div id="loginError" class="error-message" aria-live="polite"></div>
 
         <button class="button">Log In</button>
       </form>
-      <div id="publicLoginStrategies" class="strategy-buttons"></div>
+
+      <div class="secondary-actions">
+        <a href="/forgot-password" class="text-link">Forgot password?</a>
+        <a href="/register.html" class="text-link">Sign up</a>
+        <div id="publicLoginStrategies" class="strategy-buttons"></div>
+      </div>
     </div>
   </div>
 

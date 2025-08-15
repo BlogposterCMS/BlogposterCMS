@@ -193,20 +193,24 @@ function showWorkspaceField() {
 }
 
 function showSubpageField(workspace) {
-  const existing = document.getElementById('subpage-inline');
+  const existing = document.getElementById('subpage-floating-field');
   if (existing) {
     existing.remove();
     return;
   }
   const addBtn = document.querySelector('.sidebar-add-subpage');
   if (!addBtn) return;
-  const container = buildInlineField('subpage-inline', 'Page name', detail => {
+  const container = buildInlineField('subpage-floating-field', 'Page name', detail => {
     document.dispatchEvent(
       new CustomEvent('ui:action:run', {
         detail: { actionId: 'createSubpage', workspace, name: detail.name, icon: detail.icon }
       })
     );
   });
-  addBtn.appendChild(container);
+  document.body.appendChild(container);
+  const rect = addBtn.getBoundingClientRect();
+  container.style.left = `${rect.right + window.scrollX + 8}px`;
+  container.style.top = `${rect.top + window.scrollY + rect.height / 2}px`;
+  container.style.zIndex = '1000';
   requestAnimationFrame(() => container.classList.add('open'));
 }

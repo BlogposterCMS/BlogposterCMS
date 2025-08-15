@@ -77,14 +77,20 @@
   }
 
 .editor-quick-actions {
-  display: none;
+  display: flex;
   gap: .5rem;
-  margin-left: auto;
+  margin-left: 12px;
   align-items: center;
 }
 
-body.dashboard-edit-mode .editor-quick-actions {
-  display: flex;
+#widgets-toggle-inline,
+#admin-delete-page {
+  display: none;
+}
+
+body.dashboard-edit-mode #widgets-toggle-inline,
+body.dashboard-edit-mode #admin-delete-page {
+  display: inline-flex;
 }
 
 .icon-btn {

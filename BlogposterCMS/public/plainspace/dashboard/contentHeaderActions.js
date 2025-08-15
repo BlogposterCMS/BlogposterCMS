@@ -47,42 +47,16 @@ export function initContentHeader() {
     window.addEventListener('scroll', updateShadow, { passive: true });
   }
 
-  // Actions-Container (rechts)
-  let actions = header.querySelector('.editor-quick-actions');
-  if (!actions) {
-    actions = document.createElement('div');
-    actions.className = 'editor-quick-actions';
-    header.appendChild(actions);
-  }
-
-  // Visibility handled via CSS: body.dashboard-edit-mode .editor-quick-actions
-
-  // Widgets-Button (ersetzt den alten Floater)
-  let widgetsBtn = header.querySelector('#widgets-toggle-inline');
-  if (!widgetsBtn) {
-    widgetsBtn = document.createElement('button');
-    widgetsBtn.id = 'widgets-toggle-inline';
-    widgetsBtn.className = 'icon-btn';
-    widgetsBtn.title = 'Widgets';
-    widgetsBtn.innerHTML = '<img src="/assets/icons/layout-grid.svg" alt="Widgets">';
+  const widgetsBtn = document.getElementById('widgets-toggle-inline');
+  if (widgetsBtn) {
     widgetsBtn.addEventListener('click', () => {
       const open = !document.getElementById('widgets-panel')?.classList.contains('open');
       document.dispatchEvent(new CustomEvent('ui:widgets:toggle', { detail: { open } }));
     });
-    actions.appendChild(widgetsBtn);
   }
 
-  // Delete-Button (Admin-Page löschen)
-  let deleteBtn = header.querySelector('#admin-delete-page');
-  if (!deleteBtn) {
-    deleteBtn = document.createElement('button');
-    deleteBtn.id = 'admin-delete-page';
-    deleteBtn.className = 'icon-btn danger';
-    deleteBtn.title = 'Delete this admin page';
-    deleteBtn.innerHTML = '<img src="/assets/icons/x.svg" alt="Delete">';
-    deleteBtn.addEventListener('click', handleDeleteCurrentAdminPage);
-    actions.appendChild(deleteBtn);
-  }
+  const deleteBtn = document.getElementById('admin-delete-page');
+  if (deleteBtn) deleteBtn.addEventListener('click', handleDeleteCurrentAdminPage);
 
   const editToggle = document.getElementById('edit-toggle');
   if (!editToggle) return;

@@ -75,16 +75,6 @@
           .icon {
             opacity: 0.9;
           }
-          &::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 4px;
-            bottom: 4px;
-            width: 4px;
-            border-radius: 2px;
-            background: var(--user-color);
-          }
         }
       }
 

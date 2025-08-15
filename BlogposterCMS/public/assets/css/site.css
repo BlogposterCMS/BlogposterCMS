@@ -445,6 +445,7 @@ body.dashboard-edit-mode .canvas-item {
   --color-text: #222222;
   --color-white: #FFFFFF;
   --color-white-dark: #F7F7F7;
+  --color-border: #e5e7eb;
   --accent-h: 180;
   --accent-s: 70%;
   --accent-l: 50%;
@@ -476,6 +477,7 @@ body.dashboard-edit-mode .canvas-item {
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.06) 100%
     );
+    --color-border: #333333;
   }
 }
 /* =============================================================================
@@ -905,16 +907,6 @@ p {
 .sidebar .sidebar-nav .sidebar-item.active .icon, .sidebar .sidebar-nav .active.sidebar-add-subpage .icon {
   opacity: 0.9;
 }
-.sidebar .sidebar-nav .sidebar-item.active::before, .sidebar .sidebar-nav .active.sidebar-add-subpage::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 4px;
-  border-radius: 2px;
-  background: var(--user-color);
-}
 .sidebar .sidebar-nav .sidebar-add-subpage {
   margin-top: 8px;
 }
@@ -1174,29 +1166,29 @@ p {
   transition: box-shadow 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-#content-breadcrumb {
+.content-header #content-breadcrumb {
   flex: 1;
   display: flex;
   align-items: center;
   overflow: hidden;
   padding-left: 8px;
 }
-#content-breadcrumb .breadcrumb-segment {
+.content-header #content-breadcrumb .breadcrumb-segment {
   display: flex;
   align-items: center;
   white-space: nowrap;
 }
-#content-breadcrumb .breadcrumb-segment a {
+.content-header #content-breadcrumb .breadcrumb-segment a {
   color: rgba(0, 0, 0, 0.6);
   text-decoration: none;
 }
-#content-breadcrumb .breadcrumb-segment.current a {
+.content-header #content-breadcrumb .breadcrumb-segment.current a {
   font-weight: 600;
 }
-#content-breadcrumb .breadcrumb-segment + .breadcrumb-segment {
+.content-header #content-breadcrumb .breadcrumb-segment + .breadcrumb-segment {
   margin-left: 0;
 }
-#content-breadcrumb .breadcrumb-segment + .breadcrumb-segment::before {
+.content-header #content-breadcrumb .breadcrumb-segment + .breadcrumb-segment::before {
   content: "›";
   margin: 0 6px;
   color: rgba(0, 0, 0, 0.6);
@@ -2364,111 +2356,102 @@ p {
 }
 
 /* ============================================================
-   Overlay – still darkens the page
-============================================================ */
-.widget-popup-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
+   Collapsible widgets side panel
+   ============================================================ */
+.widgets-panel,
+.widgets-toggle {
   display: none;
-  pointer-events: none;
-  /* dark rectangle ONLY over the left sidebar */
 }
-.widget-popup-overlay.open {
+
+.dashboard-edit-mode .widgets-toggle {
   display: block;
 }
-.widget-popup-overlay::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0; /* stick to left edge */
-  width: 75px; /* sidebar width */
-  height: 100%;
-  background: rgba(255, 255, 255, 0.6901960784);
-  pointer-events: none; /* sidebar already disabled via .dimmed */
+.dashboard-edit-mode .widgets-panel {
+  display: flex;
 }
 
-/* ============================================================
-   Dock bar (replaces centred modal)
-============================================================ */
-.widget-popup-container {
-  /* stick to top, full width */
+.widgets-toggle {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background: var(--user-color);
+  color: var(--color-white);
+  border: none;
+  border-radius: 6px 0 0 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.widgets-panel {
   position: fixed;
   top: 0;
-  left: 0;
+  right: -320px;
+  width: 320px;
+  height: 100%;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-default);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  flex-direction: column;
+}
+
+.widgets-panel.open {
   right: 0;
-  height: 160px;
-  /* adjust to taste */
-  padding: 12px 24px 16px;
-  background: var(--color-white);
-  border-radius: 0 0 10px 10px; /* rounded bottom only */
-  /* horizontal gallery */
-  display: grid;
-  grid-auto-flow: column; /* items flow left→right */
-  grid-auto-columns: 200px; /* card width */
-  gap: 20px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  z-index: 1001; /* above the backdrop */
 }
 
-.widget-popup-container,
-.widget-popup-backdrop { /* keep this if you still use a sidebar backdrop */
-  pointer-events: auto; /* ← these CAN receive clicks */
+.widgets-panel-inner {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
 }
 
-/* ============================================================
-   Widget list entry
-============================================================ */
-.widget-popup-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--color-white);
-  border-radius: 8px;
-  box-shadow: var(--shadow-card);
-  width: 100%; /* respect grid-auto-columns */
-}
-
-.widget-title {
+.widgets-search {
+  width: 100%;
+  margin-bottom: 12px;
   padding: 6px 8px;
-  text-align: center;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
 }
 
-.widget-add-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 50%;
-  background: var(--user-color);
+.widgets-category {
+  margin-bottom: 20px;
+}
+
+.category-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.widgets-list {
+  display: grid;
+  gap: 8px;
+}
+
+.widget-card {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.widget-add-btn:hover {
-  opacity: 0.75;
-}
-.widget-add-btn img, .widget-add-btn svg {
-  width: 16px;
-  height: 16px;
+  gap: 8px;
+  padding: 8px;
+  background: var(--color-secondary-light);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: grab;
+  transition: background 0.2s;
 }
 
-/* ============================================================
-   Dimmed areas (headers / sidebar) – unchanged
-============================================================ */
-.dimmed {
-  pointer-events: none;
-  filter: brightness(0.3);
+.widget-card:hover {
+  background: var(--color-white-dark);
+}
+
+.widget-card:active {
+  cursor: grabbing;
+}
+
+.widget-card .icon {
+  width: 20px;
+  height: 20px;
 }
 
 body.grid-mode .canvas-item {

@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  overflow: hidden;
+  overflow: visible;
 
   width: 0;
   opacity: 0;
@@ -20,7 +20,7 @@
 }
 
 .inline-create-field.open {
-  width: 320px;
+  width: 360px;
   opacity: 1;
 }
 

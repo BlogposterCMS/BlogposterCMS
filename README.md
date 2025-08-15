@@ -35,6 +35,12 @@ A system that’s as **intuitive as a design tool**, as **flexible as a develope
   Place responsive widgets exactly where you want them.
   The UX is “usable” now – aiming for Canva-level fluidity.
 
+  * 🗂️ **Workspace-Driven Navigation**
+  Organize pages by workspace with dynamic headers, quick-create panels, and nested subpages for sane site structure.
+
+* 📤 **Static Export & Media Manager** *(Alpha)*
+  Publish builder designs as static HTML/CSS/JS and manage assets safely in the media library.
+
 * 📦 **Database Freedom**
   PostgreSQL, MongoDB, SQLite – pick your weapon.
   No “our way or the highway” here.

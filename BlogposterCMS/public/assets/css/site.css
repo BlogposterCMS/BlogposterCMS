@@ -4,31 +4,41 @@
    ============================================================================= */
 .app-scope.login-page {
   position: relative;
-  background-color: #f5f7fa;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  background: var(--color-bg);
+}
+
+.app-scope.login-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.05;
+  color: var(--color-text);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .login-form {
-  position: relative;
   width: 100%;
   max-width: 400px;
-  padding: 2.5rem;
-  background-color: #fff;
-  border-radius: 24px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.07);
+  padding: 24px;
+  background-color: var(--color-card);
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 1;
 }
 
 .login-form .cms-title {
   font-family: var(--font-heading);
   font-size: 24px;
-  color: #333;
+  color: var(--color-text);
   font-weight: 600;
   margin-bottom: 1.5rem;
   text-align: center;
@@ -57,17 +67,17 @@
   width: 100%;
   padding: 12px 16px;
   border-radius: 8px;
-  border: none;
-  background: #f1f3f6;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary-light);
   font-size: 14px;
-  color: #444;
-  transition: box-shadow 0.2s ease;
-  box-shadow: inset 0 0 0 2px transparent;
+  color: var(--color-text);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .field input:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px #008080;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 40%, transparent);
 }
 
 .field label {
@@ -77,15 +87,16 @@
   font-size: 14px;
   color: #aaa;
   pointer-events: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  background: transparent;
 }
 
 .field input:not(:-moz-placeholder) + label {
   top: -8px;
   left: 12px;
   font-size: 12px;
-  color: #008080;
-  background: white;
+  color: var(--brand);
+  background: var(--color-card);
   padding: 0 4px;
   font-weight: 500;
 }
@@ -95,74 +106,58 @@
   top: -8px;
   left: 12px;
   font-size: 12px;
-  color: #008080;
-  background: white;
+  color: var(--brand);
+  background: var(--color-card);
   padding: 0 4px;
   font-weight: 500;
 }
 
-/* =============================================================================
-   Gradient Button Styling (wie auf deinem Bild!)
-   ============================================================================= */
-.app-scope .button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 32px;
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: none;
   border: none;
-  border-radius: 12px;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(90deg, #3acfd5, #3a4ed5, #c93ad5, #ff3a79, #ffbc3a);
-  background-size: 200% 200%;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  color: var(--color-text);
+  transition: color 0.18s ease;
 }
 
-.app-scope .button:hover {
-  background-position: right center;
+.password-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
-/* =============================================================================
-   Optional: SVG-Overlay und Branding (aus deinem ursprünglichen Code)
-   ============================================================================= */
-.app-scope.login-page::before {
-  content: "";
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 400px;
-  height: 300px;
-  background: url("/assets/images/bg-bars-fixed-corner.svg") no-repeat bottom right;
-  background-size: contain;
+.error-message {
+  width: 100%;
+  color: var(--color-error);
+  font-size: 14px;
+  margin-top: 0.25rem;
+  min-height: 1rem;
+}
+
+.secondary-actions {
+  margin-top: 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 14px;
+}
+
+.secondary-actions a {
+  color: var(--color-text);
+  opacity: 0.8;
+  text-decoration: none;
+  transition: opacity 0.18s ease;
+}
+
+.secondary-actions a:hover,
+.secondary-actions a:focus-visible {
   opacity: 1;
-  z-index: -2;
-  pointer-events: none;
-}
-
-.app-scope.login-page::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-color: rgba(255, 255, 255, 0.8);
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Branding oben links (optional) */
-.branding-top-left {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
-  opacity: 0.9;
-  z-index: 1;
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 /* =============================================================================
@@ -170,31 +165,41 @@
    ============================================================================= */
 .app-scope.login-page {
   position: relative;
-  background-color: #f5f7fa;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  background: var(--color-bg);
+}
+
+.app-scope.login-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.05;
+  color: var(--color-text);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .login-form {
-  position: relative;
   width: 100%;
   max-width: 400px;
-  padding: 2.5rem;
-  background-color: #fff;
-  border-radius: 24px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.07);
+  padding: 24px;
+  background-color: var(--color-card);
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 1;
 }
 
 .login-form .cms-title {
   font-family: var(--font-heading);
   font-size: 24px;
-  color: #333;
+  color: var(--color-text);
   font-weight: 600;
   margin-bottom: 1.5rem;
   text-align: center;
@@ -223,17 +228,17 @@
   width: 100%;
   padding: 12px 16px;
   border-radius: 8px;
-  border: none;
-  background: #f1f3f6;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary-light);
   font-size: 14px;
-  color: #444;
-  transition: box-shadow 0.2s ease;
-  box-shadow: inset 0 0 0 2px transparent;
+  color: var(--color-text);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .field input:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px #008080;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 40%, transparent);
 }
 
 .field label {
@@ -243,15 +248,16 @@
   font-size: 14px;
   color: #aaa;
   pointer-events: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  background: transparent;
 }
 
 .field input:not(:-moz-placeholder) + label {
   top: -8px;
   left: 12px;
   font-size: 12px;
-  color: #008080;
-  background: white;
+  color: var(--brand);
+  background: var(--color-card);
   padding: 0 4px;
   font-weight: 500;
 }
@@ -261,74 +267,58 @@
   top: -8px;
   left: 12px;
   font-size: 12px;
-  color: #008080;
-  background: white;
+  color: var(--brand);
+  background: var(--color-card);
   padding: 0 4px;
   font-weight: 500;
 }
 
-/* =============================================================================
-   Gradient Button Styling (wie auf deinem Bild!)
-   ============================================================================= */
-.app-scope .button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 32px;
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: none;
   border: none;
-  border-radius: 12px;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(90deg, #3acfd5, #3a4ed5, #c93ad5, #ff3a79, #ffbc3a);
-  background-size: 200% 200%;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  color: var(--color-text);
+  transition: color 0.18s ease;
 }
 
-.app-scope .button:hover {
-  background-position: right center;
+.password-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
-/* =============================================================================
-   Optional: SVG-Overlay und Branding (aus deinem ursprünglichen Code)
-   ============================================================================= */
-.app-scope.login-page::before {
-  content: "";
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 400px;
-  height: 300px;
-  background: url("/assets/images/bg-bars-fixed-corner.svg") no-repeat bottom right;
-  background-size: contain;
+.error-message {
+  width: 100%;
+  color: var(--color-error);
+  font-size: 14px;
+  margin-top: 0.25rem;
+  min-height: 1rem;
+}
+
+.secondary-actions {
+  margin-top: 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 14px;
+}
+
+.secondary-actions a {
+  color: var(--color-text);
+  opacity: 0.8;
+  text-decoration: none;
+  transition: opacity 0.18s ease;
+}
+
+.secondary-actions a:hover,
+.secondary-actions a:focus-visible {
   opacity: 1;
-  z-index: -2;
-  pointer-events: none;
-}
-
-.app-scope.login-page::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-color: rgba(255, 255, 255, 0.8);
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Branding oben links (optional) */
-.branding-top-left {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
-  opacity: 0.9;
-  z-index: 1;
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 .main-content {
@@ -452,6 +442,10 @@ body.dashboard-edit-mode .canvas-item {
   --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
   --color-primary: var(--user-color);
   --color-primary-contrast: #222222;
+  --brand: var(--color-primary);
+  --brand-2: var(--color-primary);
+  --color-card: #ffffff;
+  --color-error: #d93025;
   --gradient-primary: linear-gradient(
     180deg,
     hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12) 0%,
@@ -472,6 +466,10 @@ body.dashboard-edit-mode .canvas-item {
     --color-text: #f0f0f0;
     --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
     --color-primary-contrast: #f0f0f0;
+    --brand: var(--color-primary);
+    --brand-2: var(--color-primary);
+    --color-card: #2a2a2a;
+    --color-error: #f28b82;
     --gradient-primary: linear-gradient(
       180deg,
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,
@@ -599,40 +597,24 @@ p {
   padding: 14px 32px;
   border: none;
   border-radius: 12px;
-  color: #ffffff;
+  color: var(--color-white);
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(90deg, #3acfd5, #3a4ed5, #c93ad5, #ff3a79, #ffbc3a);
-  background-size: 200%;
-  background-position: left center;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  opacity: 1;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+  background: var(--brand);
+  background-image: linear-gradient(90deg, var(--brand), var(--brand-2));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .app-scope .button:hover {
-  background-position: right center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-/* Optional: Dezenter Glanzeffekt beim Hover */
-.app-scope .button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  height: 100%;
-  width: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  transform: skewX(-45deg);
-  transition: left 0.5s ease;
-}
-
-.app-scope .button:hover::before {
-  left: 150%;
+.app-scope .button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 .app-scope form {
@@ -945,7 +927,8 @@ p {
   gap: 12px;
   flex: 1;
 }
-.main-header .nav-icons a {
+.main-header .nav-icons a,
+.main-header .nav-icons .nav-button {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -958,13 +941,15 @@ p {
   opacity: 0.6;
   transition: opacity 0.2s ease;
 }
-.main-header .nav-icons a .icon {
+.main-header .nav-icons a .icon,
+.main-header .nav-icons .nav-button .icon {
   width: 20px;
   height: 20px;
   fill: currentColor;
   transition: opacity 0.2s ease;
 }
-.main-header .nav-icons a::after {
+.main-header .nav-icons a::after,
+.main-header .nav-icons .nav-button::after {
   content: "";
   position: absolute;
   left: 0;
@@ -976,17 +961,19 @@ p {
   transform-origin: left;
   transition: transform 0.2s ease;
 }
-.main-header .nav-icons a:hover {
+.main-header .nav-icons a:hover,
+.main-header .nav-icons .nav-button:hover {
   opacity: 1;
 }
-.main-header .nav-icons a.active {
+.main-header .nav-icons a.active,
+.main-header .nav-icons .nav-button.active {
   opacity: 1;
 }
-.main-header .nav-icons a.active::after {
+.main-header .nav-icons a.active::after,
+.main-header .nav-icons .nav-button.active::after {
   transform: scaleX(1);
 }
 .main-header .nav-icons #workspace-create {
-  margin-left: auto;
   padding: 10px 14px;
 }
 
@@ -1221,6 +1208,109 @@ p {
     transform: rotate(360deg);
   }
 }
+/* =============================================================================
+   components/_inline-add.scss — Inline sliding form for quick adds
+   ============================================================================= */
+.inline-create-field {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: visible;
+  width: 0;
+  opacity: 0;
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.inline-create-field.open {
+  width: 360px;
+  opacity: 1;
+}
+
+.inline-create-field input {
+  flex: 1;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 8px;
+  background-color: #f1f3f6;
+  font-size: 15px;
+  color: #333;
+  box-shadow: inset 0 0 0 2px transparent;
+}
+
+.inline-create-field input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #008080;
+  background-color: #fff;
+}
+
+.inline-create-field button {
+  padding: 6px 10px;
+}
+
+.inline-create-field .icon-button {
+  padding: 6px;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.inline-create-field .icon-button img {
+  width: 20px;
+  height: 20px;
+}
+
+.inline-create-field .icon-list {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-dark), transparent 80%);
+  border-radius: 8px;
+  padding: 8px;
+  gap: 8px;
+  z-index: 10;
+  width: 240px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
+}
+
+.inline-create-field .icon-list.open {
+  display: grid;
+}
+
+.inline-create-field .icon-list button {
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.inline-create-field .icon-list button img {
+  width: 24px;
+  height: 24px;
+}
+
+#subpage-floating-field {
+  background: var(--color-white);
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+}
+
 .page-list-card, .news-detail-card, .news-list-card, .widget-list-card, .permissions-card, .user-list-card, .layout-gallery-card, .layout-list-card, .modules-list-card, .fonts-list-card, .login-strategies-card, .system-settings-card {
   margin: 0 auto;
   min-width: 280px;

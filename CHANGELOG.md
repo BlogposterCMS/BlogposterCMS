@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Inline workspace and subpage fields now slide out with a left-side icon picker, centered name input, and right confirmation button.
 - Header and sidebar "+" buttons reveal inline fields for creating workspaces and subpages.
 - Widgets panel now supports dragging widgets onto the dashboard grid.
 - Sanitizer now exposes `parentSlug` in `pageDataLoader` so widgets can access hierarchical data.

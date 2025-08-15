@@ -119,7 +119,7 @@ document.addEventListener('main-header-loaded', initWorkspaceNav);
 document.addEventListener('sidebar-loaded', initWorkspaceNav);
 
 // Build inline sliding field with icon picker, text input and confirm button
-function buildInlineField(id, placeholder, submitHandler) {
+function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
   const container = document.createElement('div');
   container.id = id;
   container.className = 'inline-create-field';
@@ -154,7 +154,8 @@ function buildInlineField(id, placeholder, submitHandler) {
           img.src = `/assets/icons/${name}`;
           img.alt = name.replace('.svg', '');
           btn.appendChild(img);
-          btn.addEventListener('click', () => {
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
             selectedIcon = `/assets/icons/${name}`;
             iconImg.src = selectedIcon;
             iconList.classList.remove('open');
@@ -173,7 +174,15 @@ function buildInlineField(id, placeholder, submitHandler) {
 
   const createBtn = document.createElement('button');
   createBtn.type = 'button';
-  createBtn.textContent = 'Create';
+  if (iconConfirm) {
+    createBtn.className = 'icon-button confirm-button';
+    const confirmImg = document.createElement('img');
+    confirmImg.src = '/assets/icons/corner-down-right.svg';
+    confirmImg.alt = 'Create';
+    createBtn.appendChild(confirmImg);
+  } else {
+    createBtn.textContent = 'Create';
+  }
   createBtn.addEventListener('click', () => {
     submitHandler({ name: input.value.trim(), icon: selectedIcon });
     container.remove();
@@ -198,7 +207,7 @@ function showWorkspaceField() {
         detail: { actionId: 'createWorkspace', name: detail.name, icon: detail.icon }
       })
     );
-  });
+  }, false);
   btn.appendChild(container);
   requestAnimationFrame(() => container.classList.add('open'));
 }
@@ -215,16 +224,54 @@ function showSubpageField(workspace) {
     if (label) label.style.display = '';
     return;
   }
-  const container = buildInlineField('subpage-floating-field', 'Page name', detail => {
-    document.dispatchEvent(
-      new CustomEvent('ui:action:run', {
-        detail: { actionId: 'createSubpage', workspace, name: detail.name, icon: detail.icon }
-      })
-    );
-    container.remove();
-    if (icon) icon.src = '/assets/icons/plus.svg';
-    if (label) label.style.display = '';
-  });
+  const container = buildInlineField(
+    'subpage-floating-field',
+    'Page name',
+    async detail => {
+      const makeSlug = str =>
+        String(str)
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      const slugPart = makeSlug(detail.name);
+      if (!slugPart) return;
+      try {
+        let parentId = null;
+        try {
+          const parentRes = await window.meltdownEmit('getPageBySlug', {
+            jwt: window.ADMIN_TOKEN,
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            slug: workspace,
+            lane: 'admin'
+          });
+          const parent = parentRes?.data ?? parentRes ?? null;
+          parentId = parent?.id || null;
+        } catch (err) {
+          console.error('Failed to fetch parent page', err);
+        }
+        await window.meltdownEmit('createPage', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'pagesManager',
+          moduleType: 'core',
+          title: detail.name,
+          slug: `${workspace}/${slugPart}`,
+          lane: 'admin',
+          status: 'published',
+          parent_id: parentId,
+          meta: { icon: detail.icon }
+        });
+        if (icon) icon.src = '/assets/icons/plus.svg';
+        if (label) label.style.display = '';
+        window.location.reload();
+      } catch (err) {
+        console.error('Failed to create subpage', err);
+      }
+    },
+    true
+  );
   document.body.appendChild(container);
   const rect = addBtn.getBoundingClientRect();
   container.style.left = `${rect.right + window.scrollX + 8}px`;

@@ -36,6 +36,7 @@ El Psy Kongroo
 - Subpage add button now switches to a minus and hides its label while the floating field is open, and the field gains a card-style shadow.
 - Subpage creation field renamed to `subpage-floating-field` and now floats next to its trigger button with a z-index of 1000.
 - Inline create field now slides out beside trigger buttons, overlays surrounding content, and positions relative to the trigger button for correct placement.
+- Create button in subpage floating field now uses a corner-down-right icon instead of text.
 - Edit toggle now uses a square-pen icon and switches to a save icon while editing.
 - Restyled widgets drawer to align with the overall admin UI.
 - Slug normalization now preserves slash-separated segments, and both seeding
@@ -65,6 +66,8 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Icon picker grid now closes after selecting an icon.
+- Subpage form submission now creates an admin subpage for the active workspace.
 - Workspace and subpage panels now gain slide-in styling and no longer display titles.
 - Slug sanitization now preserves slash-separated segments, fixing admin routes for nested pages.
 - Workspace navigation initializes after the sidebar renders via a new `sidebar-loaded` event.

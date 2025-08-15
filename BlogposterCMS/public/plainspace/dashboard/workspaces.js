@@ -136,24 +136,35 @@ function buildInlineField(id, placeholder, submitHandler) {
 
   const iconList = document.createElement('div');
   iconList.className = 'icon-list';
-  const iconNames = ['file-box', 'file-text', 'file-image'];
-  iconNames.forEach(name => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    const img = document.createElement('img');
-    img.src = `/assets/icons/${name}.svg`;
-    img.alt = name;
-    btn.appendChild(img);
-    btn.addEventListener('click', () => {
-      selectedIcon = `/assets/icons/${name}.svg`;
-      iconImg.src = selectedIcon;
-      iconList.classList.remove('open');
-    });
-    iconList.appendChild(btn);
-  });
+  let iconsLoaded = false;
 
-  iconBtn.addEventListener('click', () => {
+  iconBtn.addEventListener('click', async () => {
     iconList.classList.toggle('open');
+    if (!iconsLoaded) {
+      iconsLoaded = true;
+      try {
+        const res = await fetch('/assets/icon-list.json');
+        if (!res.ok) throw new Error('Failed to load icons');
+        const iconNames = await res.json();
+        iconNames.forEach(name => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const img = document.createElement('img');
+          img.loading = 'lazy';
+          img.src = `/assets/icons/${name}`;
+          img.alt = name.replace('.svg', '');
+          btn.appendChild(img);
+          btn.addEventListener('click', () => {
+            selectedIcon = `/assets/icons/${name}`;
+            iconImg.src = selectedIcon;
+            iconList.classList.remove('open');
+          });
+          iconList.appendChild(btn);
+        });
+      } catch (err) {
+        console.error('Failed to load icons', err);
+      }
+    }
   });
 
   const input = document.createElement('input');

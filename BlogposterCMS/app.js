@@ -266,6 +266,18 @@ function getModuleTokenForDbManager() {
     '/plainspace',
     express.static(path.join(publicPath, 'plainspace'))
   );
+
+  // Expose icon manifest for client-side pickers
+  app.get('/assets/icon-list.json', async (req, res) => {
+    try {
+      const files = await fs.promises.readdir(path.join(assetsPath, 'icons'));
+      const icons = files.filter(f => f.endsWith('.svg'));
+      res.json(icons);
+    } catch (err) {
+      res.status(500).json({ error: 'Unable to load icons' });
+    }
+  });
+
   app.use('/assets', express.static(assetsPath));
   app.use('/themes', express.static(path.join(publicPath, 'themes')));
   app.use('/favicon.ico', express.static(path.join(publicPath,'favicon.ico')));

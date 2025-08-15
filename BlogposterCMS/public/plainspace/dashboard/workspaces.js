@@ -118,6 +118,60 @@ document.addEventListener('DOMContentLoaded', initWorkspaceNav);
 document.addEventListener('main-header-loaded', initWorkspaceNav);
 document.addEventListener('sidebar-loaded', initWorkspaceNav);
 
+// Build inline sliding field with icon picker, text input and confirm button
+function buildInlineField(id, placeholder, submitHandler) {
+  const container = document.createElement('div');
+  container.id = id;
+  container.className = 'inline-create-field';
+
+  let selectedIcon = '/assets/icons/file-box.svg';
+
+  const iconBtn = document.createElement('button');
+  iconBtn.type = 'button';
+  iconBtn.className = 'icon-button';
+  const iconImg = document.createElement('img');
+  iconImg.src = selectedIcon;
+  iconImg.alt = 'Select icon';
+  iconBtn.appendChild(iconImg);
+
+  const iconList = document.createElement('div');
+  iconList.className = 'icon-list';
+  const iconNames = ['file-box', 'file-text', 'file-image'];
+  iconNames.forEach(name => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    const img = document.createElement('img');
+    img.src = `/assets/icons/${name}.svg`;
+    img.alt = name;
+    btn.appendChild(img);
+    btn.addEventListener('click', () => {
+      selectedIcon = `/assets/icons/${name}.svg`;
+      iconImg.src = selectedIcon;
+      iconList.classList.remove('open');
+    });
+    iconList.appendChild(btn);
+  });
+
+  iconBtn.addEventListener('click', () => {
+    iconList.classList.toggle('open');
+  });
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = placeholder;
+
+  const createBtn = document.createElement('button');
+  createBtn.type = 'button';
+  createBtn.textContent = 'Create';
+  createBtn.addEventListener('click', () => {
+    submitHandler({ name: input.value.trim(), icon: selectedIcon });
+    container.remove();
+  });
+
+  container.append(iconBtn, iconList, input, createBtn);
+  return container;
+}
+
 // Show inline form beside add buttons without using a full slide panel
 function showWorkspaceField() {
   const existing = document.getElementById('workspace-inline');
@@ -127,25 +181,13 @@ function showWorkspaceField() {
   }
   const btn = document.getElementById('workspace-create');
   if (!btn) return;
-  const container = document.createElement('form');
-  container.id = 'workspace-inline';
-  container.className = 'inline-create-field';
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.placeholder = 'Workspace name';
-  const createBtn = document.createElement('button');
-  createBtn.type = 'button';
-  createBtn.textContent = 'Create';
-  createBtn.addEventListener('click', () => {
-    const detail = {
-      actionId: 'createWorkspace',
-      name: input.value.trim()
-    };
-    document.dispatchEvent(new CustomEvent('ui:action:run', { detail }));
-    container.remove();
+  const container = buildInlineField('workspace-inline', 'Workspace name', detail => {
+    document.dispatchEvent(
+      new CustomEvent('ui:action:run', {
+        detail: { actionId: 'createWorkspace', name: detail.name, icon: detail.icon }
+      })
+    );
   });
-  container.appendChild(input);
-  container.appendChild(createBtn);
   btn.insertAdjacentElement('afterend', container);
   requestAnimationFrame(() => container.classList.add('open'));
 }
@@ -158,26 +200,13 @@ function showSubpageField(workspace) {
   }
   const addBtn = document.querySelector('.sidebar-add-subpage');
   if (!addBtn) return;
-  const container = document.createElement('form');
-  container.id = 'subpage-inline';
-  container.className = 'inline-create-field';
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.placeholder = 'Page name';
-  const createBtn = document.createElement('button');
-  createBtn.type = 'button';
-  createBtn.textContent = 'Create';
-  createBtn.addEventListener('click', () => {
-    const detail = {
-      actionId: 'createSubpage',
-      workspace,
-      name: input.value.trim()
-    };
-    document.dispatchEvent(new CustomEvent('ui:action:run', { detail }));
-    container.remove();
+  const container = buildInlineField('subpage-inline', 'Page name', detail => {
+    document.dispatchEvent(
+      new CustomEvent('ui:action:run', {
+        detail: { actionId: 'createSubpage', workspace, name: detail.name, icon: detail.icon }
+      })
+    );
   });
-  container.appendChild(input);
-  container.appendChild(createBtn);
   addBtn.insertAdjacentElement('afterend', container);
   requestAnimationFrame(() => container.classList.add('open'));
 }

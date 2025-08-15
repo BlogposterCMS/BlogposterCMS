@@ -991,10 +991,20 @@ p {
 }
 
 .editor-quick-actions {
-  display: none;
+  display: flex;
   gap: 0.5rem;
-  margin-left: auto;
+  margin-left: 12px;
   align-items: center;
+}
+
+#widgets-toggle-inline,
+#admin-delete-page {
+  display: none;
+}
+
+body.dashboard-edit-mode #widgets-toggle-inline,
+body.dashboard-edit-mode #admin-delete-page {
+  display: inline-flex;
 }
 
 .icon-btn {
@@ -1004,12 +1014,13 @@ p {
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  border: 1px solid var(--border, #e5e7eb);
+  border: none;
   background: var(--bg, #fff);
   cursor: pointer;
 }
 
-.icon-btn img {
+.icon-btn img,
+.icon-btn svg {
   width: 18px;
   height: 18px;
 }
@@ -1022,8 +1033,20 @@ p {
   border-color: #fca5a5;
 }
 
+.icon-btn.danger svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
 .icon-btn.danger:hover {
   background: #fee2e2;
+  color: #dc2626;
+}
+
+body.dashboard-edit-mode #edit-toggle:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  color: #059669;
 }
 
 /* =============================================================================
@@ -1189,7 +1212,6 @@ p {
 .content-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 10px 24px;
   background: color-mix(in srgb, var(--color-white), transparent 20%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
@@ -1233,6 +1255,10 @@ p {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
+}
+.content-header #admin-delete-page {
+  margin-right: 8px;
 }
 .content-header .icon {
   width: 20px;
@@ -1245,18 +1271,7 @@ p {
   opacity: 1;
   transform: scale(1.1);
 }
-.content-header .icon.spin {
-  animation: spin 0.3s linear;
-}
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
 /* =============================================================================
    components/_inline-add.scss — Inline sliding form for quick adds
    ============================================================================= */
@@ -1326,7 +1341,7 @@ p {
   padding: 8px;
   gap: 8px;
   z-index: 10;
-  width: 240px;
+  width: 360px;
   max-height: 200px;
   overflow-y: auto;
   display: grid;

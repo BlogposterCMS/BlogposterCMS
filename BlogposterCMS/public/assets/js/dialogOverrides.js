@@ -5,29 +5,24 @@
   const nativePrompt = window.prompt.bind(window);
 
   function hasEmitter() {
-    return window.motherEmitter && typeof window.motherEmitter.emit === 'function';
+    return window.uiEmitter && typeof window.uiEmitter.emit === 'function';
   }
 
   window.alert = function(msg) {
     if (hasEmitter()) {
-      window.motherEmitter.emit('ui:showPopup', {
+      window.uiEmitter.emit('dialog:alert', {
         title: 'Hinweis',
-        content: String(msg)
+        message: String(msg)
       });
-    } else {
-      nativeAlert(String(msg));
+      return;
     }
+    nativeAlert(String(msg));
   };
 
   window.confirm = function(msg) {
     if (hasEmitter()) {
-      return new Promise(resolve => {
-        window.motherEmitter.emit('ui:showConfirm', {
-          title: 'Bitte bestätigen',
-          content: String(msg),
-          onYes: () => resolve(true),
-          onNo: () => resolve(false)
-        });
+      window.uiEmitter.emit('dialog:confirm-preview', {
+        message: String(msg)
       });
     }
     return nativeConfirm(String(msg));
@@ -35,14 +30,9 @@
 
   window.prompt = function(msg, def = '') {
     if (hasEmitter()) {
-      return new Promise(resolve => {
-        window.motherEmitter.emit('ui:showPrompt', {
-          title: 'Eingabe erforderlich',
-          content: String(msg),
-          defaultValue: String(def),
-          onSubmit: value => resolve(value),
-          onCancel: () => resolve(null)
-        });
+      window.uiEmitter.emit('dialog:prompt-preview', {
+        message: String(msg),
+        defaultValue: String(def)
       });
     }
     return nativePrompt(String(msg), String(def));

@@ -104,7 +104,8 @@ body.dashboard-edit-mode #admin-delete-page {
   background: var(--bg, #fff);
   cursor: pointer;
 }
-.icon-btn img {
+.icon-btn img,
+.icon-btn svg {
   width: 18px;
   height: 18px;
 }
@@ -114,6 +115,17 @@ body.dashboard-edit-mode #admin-delete-page {
 .icon-btn.danger {
   border-color: #fca5a5;
 }
+.icon-btn.danger svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
 .icon-btn.danger:hover {
   background: #fee2e2;
+  color: #dc2626;
+}
+
+body.dashboard-edit-mode #edit-toggle:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  color: #059669;
 }

@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
 - Header action bar now includes inline widgets toggle and delete buttons; widgets panel can use existing external toggles.
 - Icon button in subpage floating field now opens a lazily loaded grid of icons from `/assets/icons` and replaces the default icon upon selection.
 - Inline workspace and subpage fields now slide out with a left-side icon picker, centered name input, and right confirmation button.

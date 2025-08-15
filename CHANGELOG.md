@@ -32,6 +32,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Inline create field now slides out beside trigger buttons, overlays surrounding content, and attaches inside the trigger button for correct positioning.
 - Edit toggle now uses a square-pen icon and switches to a save icon while editing.
 - Restyled widgets drawer to align with the overall admin UI.
 - Slug normalization now preserves slash-separated segments, and both seeding

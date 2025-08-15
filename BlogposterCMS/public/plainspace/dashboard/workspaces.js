@@ -188,7 +188,7 @@ function showWorkspaceField() {
       })
     );
   });
-  btn.insertAdjacentElement('afterend', container);
+  btn.appendChild(container);
   requestAnimationFrame(() => container.classList.add('open'));
 }
 
@@ -207,6 +207,6 @@ function showSubpageField(workspace) {
       })
     );
   });
-  addBtn.insertAdjacentElement('afterend', container);
+  addBtn.appendChild(container);
   requestAnimationFrame(() => container.classList.add('open'));
 }

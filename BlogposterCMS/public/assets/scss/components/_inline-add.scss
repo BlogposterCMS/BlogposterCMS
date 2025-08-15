@@ -3,18 +3,24 @@
    ============================================================================= */
 
 .inline-create-field {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  z-index: 1000;
+
   display: flex;
   align-items: center;
   gap: 8px;
   overflow: hidden;
-  max-width: 0;
+
+  width: 0;
   opacity: 0;
-  transition: max-width 0.3s ease, opacity 0.3s ease;
-  position: relative;
+  transition: width 0.3s ease, opacity 0.3s ease;
 }
 
 .inline-create-field.open {
-  max-width: 320px;
+  width: 320px;
   opacity: 1;
 }
 

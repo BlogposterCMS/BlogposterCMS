@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
+- Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
 - Client-side `uiEmitter` stub and preview handlers ensure dialog hooks are available before other scripts.
 - Dialog overrides keep `confirm`/`prompt` synchronous, emit preview events through `uiEmitter`, and expose a new `bpDialog` async helper for custom popups.
 - Header action bar now includes inline widgets toggle and delete buttons; widgets panel can use existing external toggles.

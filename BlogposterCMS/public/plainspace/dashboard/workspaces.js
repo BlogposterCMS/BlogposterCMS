@@ -138,13 +138,22 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
   iconList.className = 'icon-list';
   let iconsLoaded = false;
 
+  function handleClickOutside(e) {
+    if (!container.contains(e.target)) {
+      iconList.classList.remove('open');
+      document.removeEventListener('click', handleClickOutside);
+    }
+  }
+
   iconBtn.addEventListener('click', async e => {
     e.stopPropagation();
     if (iconList.classList.contains('open')) {
       iconList.classList.remove('open');
+      document.removeEventListener('click', handleClickOutside);
       return;
     }
     iconList.classList.add('open');
+    document.addEventListener('click', handleClickOutside);
     if (!iconsLoaded) {
       iconsLoaded = true;
       try {
@@ -164,6 +173,7 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
             selectedIcon = `/assets/icons/${name}`;
             iconImg.src = selectedIcon;
             iconList.classList.remove('open');
+            document.removeEventListener('click', handleClickOutside);
           });
           iconList.appendChild(btn);
         });

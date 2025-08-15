@@ -37,6 +37,7 @@ El Psy Kongroo
 
 ### Changed
 - Admin content header deletion uses async `bpDialog.confirm` instead of native `confirm`.
+- Save button in content header now highlights green on hover; delete icon turns red using SVG fill.
 - Edit toggle button now uses icon-btn styling and no longer spins on activation.
 - Icon picker grid widened to 360px for easier selection.
 - Reordered content header actions: delete page button now sits left of breadcrumbs, save and add widget buttons swapped sides, and icons updated.
@@ -110,6 +111,7 @@ El Psy Kongroo
 
 ### Fixed
 - Corrected `UIEmitter` logging strings to avoid runtime syntax errors.
+- Icon picker panel now closes on outside clicks and no longer obscures its trigger button.
 - Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.
 - Clicking the inline widget toggle no longer closes the panel immediately when the icon is clicked, ensuring the widgets panel slides in as expected.
 - Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.

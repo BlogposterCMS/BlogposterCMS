@@ -83,6 +83,10 @@
   align-items: center;
 }
 
+body.dashboard-edit-mode .editor-quick-actions {
+  display: flex;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;

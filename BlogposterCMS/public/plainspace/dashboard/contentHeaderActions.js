@@ -1,5 +1,4 @@
 // Widget panel toggle handled via custom events
-import { openWidgetsPanel } from './widgetsPanel.js';
 
 export function initContentHeader() {
   const breadcrumbEl = document.getElementById('content-breadcrumb');
@@ -56,10 +55,7 @@ export function initContentHeader() {
     header.appendChild(actions);
   }
 
-  // Nur im Edit-Mode sichtbar halten
-  const setEditModeUI = editing => {
-    actions.style.display = editing ? '' : 'none';
-  };
+  // Visibility handled via CSS: body.dashboard-edit-mode .editor-quick-actions
 
   // Widgets-Button (ersetzt den alten Floater)
   let widgetsBtn = header.querySelector('#widgets-toggle-inline');
@@ -72,7 +68,6 @@ export function initContentHeader() {
     widgetsBtn.addEventListener('click', () => {
       const open = !document.getElementById('widgets-panel')?.classList.contains('open');
       document.dispatchEvent(new CustomEvent('ui:widgets:toggle', { detail: { open } }));
-      // alternativ direkt: openWidgetsPanel(true);
     });
     actions.appendChild(widgetsBtn);
   }
@@ -101,7 +96,6 @@ export function initContentHeader() {
       grid.pushOnOverlap = isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
       editToggle.src = editing ? '/assets/icons/save.svg' : '/assets/icons/square-pen.svg';
-      setEditModeUI(editing);
       document.dispatchEvent(new CustomEvent('ui:widgets:toggle', { detail: { open: false } }));
     });
   }
@@ -114,7 +108,6 @@ export function initContentHeader() {
     editToggle.src = editing ? '/assets/icons/save.svg' : '/assets/icons/square-pen.svg';
     editToggle.classList.add('spin');
     setTimeout(() => editToggle.classList.remove('spin'), 300);
-    setEditModeUI(editing);
     document.dispatchEvent(new CustomEvent('ui:widgets:toggle', { detail: { open: false } }));
     if (!editing && typeof window.saveAdminLayout === 'function') {
       try {
@@ -125,17 +118,16 @@ export function initContentHeader() {
     }
   });
 
-  // Initialzustand
-  setEditModeUI(document.body.classList.contains('dashboard-edit-mode'));
+  // No additional JS needed for initial state: CSS handles visibility
 }
 
 // Hilfsfunktion: aktuelle Admin-Seite bestimmen und löschen
 async function handleDeleteCurrentAdminPage() {
   try {
-    const ADMIN_BASE = window.ADMIN_BASE || '/admin/';
-    const rel = window.location.pathname
-      .replace(new RegExp('^' + ADMIN_BASE), '')
-      .replace(/^\/|\/$/g, '');
+    const ADMIN_BASE = (window.ADMIN_BASE || '/admin/').replace(/\/+/g, '/');
+    let rel = window.location.pathname;
+    if (rel.startsWith(ADMIN_BASE)) rel = rel.slice(ADMIN_BASE.length);
+    rel = rel.replace(/^\/|\/$/g, '');
     if (!rel) return alert('No admin page selected.');
 
     const res = await window.meltdownEmit('getPageBySlug', {

@@ -117,7 +117,8 @@ document.addEventListener('ui:widgets:toggle', ev => toggle(ev.detail?.open));
 
 document.addEventListener('click', ev => {
   if (!panel || !panel.classList.contains('open')) return;
-  if (!panel.contains(ev.target) && ev.target !== toggleBtn) toggle(false);
+  const clickedToggle = toggleBtn && (toggleBtn === ev.target || toggleBtn.contains(ev.target));
+  if (!panel.contains(ev.target) && !clickedToggle) toggle(false);
 });
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -71,6 +71,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Clicking the inline widget toggle no longer closes the panel immediately when the icon is clicked, ensuring the widgets panel slides in as expected.
 - Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.
 - Removed unused widgets-panel import from content header.
 - Quick action buttons now display correctly in edit mode via CSS instead of inline styles.

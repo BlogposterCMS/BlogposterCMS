@@ -63,7 +63,7 @@
   display: none;
   position: absolute;
   left: 0;
-  top: 100%;
+  top: calc(100% + 4px);
   background: #fff;
   border: 1px solid color-mix(in srgb, var(--color-dark), transparent 80%);
   border-radius: 8px;

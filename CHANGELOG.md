@@ -108,6 +108,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Icon picker panel now closes on outside clicks and no longer obscures its trigger button.
 - Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.
 - Clicking the inline widget toggle no longer closes the panel immediately when the icon is clicked, ensuring the widgets panel slides in as expected.
 - Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.

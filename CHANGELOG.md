@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
 - Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
 - Header action bar now includes inline widgets toggle and delete buttons; widgets panel can use existing external toggles.
 - Icon button in subpage floating field now opens a lazily loaded grid of icons from `/assets/icons` and replaces the default icon upon selection.

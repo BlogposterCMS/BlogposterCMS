@@ -76,3 +76,35 @@
     }
   }
 }
+
+.editor-quick-actions {
+  display: none;
+  gap: .5rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  cursor: pointer;
+}
+.icon-btn img {
+  width: 18px;
+  height: 18px;
+}
+.icon-btn:hover {
+  background: var(--hover, #f7f7f7);
+}
+.icon-btn.danger {
+  border-color: #fca5a5;
+}
+.icon-btn.danger:hover {
+  background: #fee2e2;
+}

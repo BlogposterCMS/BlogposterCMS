@@ -16,18 +16,24 @@ function createPanel() {
     </div>`;
   document.body.appendChild(panel);
 
-  toggleBtn = document.createElement('button');
-  toggleBtn.id = 'widgets-toggle';
-  toggleBtn.className = 'widgets-toggle';
-  toggleBtn.type = 'button';
-  toggleBtn.textContent = 'Widgets +';
-  toggleBtn.addEventListener('click', () => {
-    const open = !panel.classList.contains('open');
-    document.dispatchEvent(
-      new CustomEvent('ui:widgets:toggle', { detail: { open } })
-    );
-  });
-  document.body.appendChild(toggleBtn);
+  // ⬇️ Nur eigenen Toggle bauen, wenn NICHT extern vorhanden
+  const externalToggle = document.getElementById('widgets-toggle-inline');
+  if (!externalToggle) {
+    toggleBtn = document.createElement('button');
+    toggleBtn.id = 'widgets-toggle';
+    toggleBtn.className = 'widgets-toggle';
+    toggleBtn.type = 'button';
+    toggleBtn.textContent = 'Widgets +';
+    toggleBtn.addEventListener('click', () => {
+      const open = !panel.classList.contains('open');
+      document.dispatchEvent(
+        new CustomEvent('ui:widgets:toggle', { detail: { open } })
+      );
+    });
+    document.body.appendChild(toggleBtn);
+  } else {
+    toggleBtn = externalToggle;
+  }
 
   buildWidgets();
 }
@@ -92,15 +98,16 @@ function toggle(open) {
   panel.classList.toggle('open', isOpen);
 }
 
-document.addEventListener('ui:widgets:toggle', ev => {
-  toggle(ev.detail?.open);
-});
+// kleine Helfer-API, damit externe Buttons es aufrufen können
+export function openWidgetsPanel(forceOpen = true) {
+  toggle(forceOpen);
+}
+
+document.addEventListener('ui:widgets:toggle', ev => toggle(ev.detail?.open));
 
 document.addEventListener('click', ev => {
   if (!panel || !panel.classList.contains('open')) return;
-  if (!panel.contains(ev.target) && ev.target !== toggleBtn) {
-    toggle(false);
-  }
+  if (!panel.contains(ev.target) && ev.target !== toggleBtn) toggle(false);
 });
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -6,8 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
-- Workspace and subpage creation panels slide in with an icon picker, name field and submit button.
-- Header and sidebar "+" buttons now open sliding panels for creating workspaces and subpages with icon selection.
+- Header and sidebar "+" buttons reveal inline fields for creating workspaces and subpages.
 - Widgets panel now supports dragging widgets onto the dashboard grid.
 - Sanitizer now exposes `parentSlug` in `pageDataLoader` so widgets can access hierarchical data.
 - Page retrieval queries now join parent pages and expose `parentSlug` in results.
@@ -61,6 +60,7 @@ El Psy Kongroo
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
 
 ### Fixed
+- Workspace and subpage panels now gain slide-in styling and no longer display titles.
 - Slug sanitization now preserves slash-separated segments, fixing admin routes for nested pages.
 - Workspace navigation initializes after the sidebar renders via a new `sidebar-loaded` event.
 - Sidebar subpage navigation prioritizes `parentSlug` and falls back to slug prefixes for legacy entries.

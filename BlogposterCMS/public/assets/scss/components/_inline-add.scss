@@ -1,0 +1,29 @@
+/* =============================================================================
+   components/_inline-add.scss — Inline sliding form for quick adds
+   ============================================================================= */
+
+.inline-create-field {
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  transition: max-width 0.3s ease, opacity 0.3s ease;
+}
+
+.inline-create-field.open {
+  max-width: 320px;
+  opacity: 1;
+}
+
+.inline-create-field input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--color-dark), transparent 80%);
+  border-radius: 4px;
+}
+
+.inline-create-field button {
+  padding: 6px 10px;
+}
+

@@ -73,6 +73,7 @@ El Psy Kongroo
 
 ### Fixed
 - Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.
+- Clicking the inline widget toggle no longer closes the panel immediately when the icon is clicked, ensuring the widgets panel slides in as expected.
 - Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.
 - Removed unused widgets-panel import from content header.
 - Quick action buttons now display correctly in edit mode via CSS instead of inline styles.

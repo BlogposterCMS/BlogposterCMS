@@ -6,7 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
-- Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
+- Client-side `uiEmitter` stub and preview handlers ensure dialog hooks are available before other scripts.
+- Dialog overrides keep `confirm`/`prompt` synchronous, emit preview events through `uiEmitter`, and expose a new `bpDialog` async helper for custom popups.
 - Header action bar now includes inline widgets toggle and delete buttons; widgets panel can use existing external toggles.
 - Icon button in subpage floating field now opens a lazily loaded grid of icons from `/assets/icons` and replaces the default icon upon selection.
 - Inline workspace and subpage fields now slide out with a left-side icon picker, centered name input, and right confirmation button.
@@ -35,6 +36,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Admin content header deletion uses async `bpDialog.confirm` instead of native `confirm`.
 - Save button in content header now highlights green on hover; delete icon turns red using SVG fill.
 - Edit toggle button now uses icon-btn styling and no longer spins on activation.
 - Icon picker grid widened to 360px for easier selection.
@@ -108,6 +110,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Corrected `UIEmitter` logging strings to avoid runtime syntax errors.
 - Icon picker panel now closes on outside clicks and no longer obscures its trigger button.
 - Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.
 - Clicking the inline widget toggle no longer closes the panel immediately when the icon is clicked, ensuring the widgets panel slides in as expected.

@@ -35,6 +35,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Save button in content header now highlights green on hover; delete icon turns red using SVG fill.
 - Edit toggle button now uses icon-btn styling and no longer spins on activation.
 - Icon picker grid widened to 360px for easier selection.
 - Reordered content header actions: delete page button now sits left of breadcrumbs, save and add widget buttons swapped sides, and icons updated.

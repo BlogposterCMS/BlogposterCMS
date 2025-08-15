@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Workspace and subpage creation panels slide in with an icon picker, name field and submit button.
+- Header and sidebar "+" buttons now open sliding panels for creating workspaces and subpages with icon selection.
 - Widgets panel now supports dragging widgets onto the dashboard grid.
 - Sanitizer now exposes `parentSlug` in `pageDataLoader` so widgets can access hierarchical data.
 - Page retrieval queries now join parent pages and expose `parentSlug` in results.

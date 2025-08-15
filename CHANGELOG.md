@@ -35,6 +35,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Edit toggle button now uses icon-btn styling and no longer spins on activation.
 - Icon picker grid widened to 360px for easier selection.
 - Reordered content header actions: delete page button now sits left of breadcrumbs, save and add widget buttons swapped sides, and icons updated.
 - Buttons no longer use box shadows for a cleaner look.
@@ -70,24 +71,6 @@ El Psy Kongroo
 - Seeded `builder.use` permission for controlling Page Builder access.
 - App registry now builds at startup via a dedicated `appLoader` core module scanning `apps/` manifests.
 - Webpack auto-maps app entry points based on each app's `app.json` manifest.
-
-### Fixed
-- Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.
-- Clicking the inline widget toggle no longer closes the panel immediately when the icon is clicked, ensuring the widgets panel slides in as expected.
-- Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.
-- Removed unused widgets-panel import from content header.
-- Quick action buttons now display correctly in edit mode via CSS instead of inline styles.
-- Widgets panel removes its floater when an external toggle is added later to avoid duplicate toggles.
-- Subpage form submission now creates an admin subpage for the active workspace.
-- Workspace and subpage panels now gain slide-in styling and no longer display titles.
-- Slug sanitization now preserves slash-separated segments, fixing admin routes for nested pages.
-- Workspace navigation initializes after the sidebar renders via a new `sidebar-loaded` event.
-- Sidebar subpage navigation prioritizes `parentSlug` and falls back to slug prefixes for legacy entries.
-- Sidebar subpage navigation now infers hierarchy from page slugs when `parentSlug` is absent.
-- Admin seeder now uses `/` in `parentSlug` for nested pages so workspace navigation can recognize them.
-- Sidebar navigation now resolves subpages via `parentSlug`/`slug` and displays icons from `meta.icon` or `config.icon`.
-
-### Changed
 - Main content and content area now use the active user's color with light gradients.
 - Sidebar menu icons are now flat, with an aero-glass bubble highlighting the active page in a light shade of the user's color.
 - Admin dashboard widgets now feature a glass-style look with drag handles and subtle hover animations.
@@ -124,6 +107,20 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.
+- Clicking the inline widget toggle no longer closes the panel immediately when the icon is clicked, ensuring the widgets panel slides in as expected.
+- Admin page deletion now trims ADMIN_BASE without regex, handling special characters safely.
+- Removed unused widgets-panel import from content header.
+- Quick action buttons now display correctly in edit mode via CSS instead of inline styles.
+- Widgets panel removes its floater when an external toggle is added later to avoid duplicate toggles.
+- Subpage form submission now creates an admin subpage for the active workspace.
+- Workspace and subpage panels now gain slide-in styling and no longer display titles.
+- Slug sanitization now preserves slash-separated segments, fixing admin routes for nested pages.
+- Workspace navigation initializes after the sidebar renders via a new `sidebar-loaded` event.
+- Sidebar subpage navigation prioritizes `parentSlug` and falls back to slug prefixes for legacy entries.
+- Sidebar subpage navigation now infers hierarchy from page slugs when `parentSlug` is absent.
+- Admin seeder now uses `/` in `parentSlug` for nested pages so workspace navigation can recognize them.
+- Sidebar navigation now resolves subpages via `parentSlug`/`slug` and displays icons from `meta.icon` or `config.icon`.
 - Corrected user edit widget color picker path to prevent import errors.
 - Top header user icon now links directly to the active user's profile.
 - Resolved module resolution errors in the Designer app by switching to relative plainspace and asset imports.

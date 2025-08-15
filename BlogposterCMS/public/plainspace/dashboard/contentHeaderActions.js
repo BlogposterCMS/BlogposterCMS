@@ -60,6 +60,7 @@ export function initContentHeader() {
 
   const editToggle = document.getElementById('edit-toggle');
   if (!editToggle) return;
+  const editIcon = editToggle.querySelector('img');
 
   let editing = false;
   if (window.adminGrid && typeof window.adminGrid.on === 'function') {
@@ -69,7 +70,7 @@ export function initContentHeader() {
       editing = !isStatic;
       grid.pushOnOverlap = isStatic;
       document.body.classList.toggle('dashboard-edit-mode', editing);
-      editToggle.src = editing ? '/assets/icons/save.svg' : '/assets/icons/square-pen.svg';
+      if (editIcon) editIcon.src = editing ? '/assets/icons/save.svg' : '/assets/icons/square-pen.svg';
       document.dispatchEvent(new CustomEvent('ui:widgets:toggle', { detail: { open: false } }));
     });
   }
@@ -79,9 +80,7 @@ export function initContentHeader() {
     editing = !editing;
     grid.setStatic(!editing);
     document.body.classList.toggle('dashboard-edit-mode', editing);
-    editToggle.src = editing ? '/assets/icons/save.svg' : '/assets/icons/square-pen.svg';
-    editToggle.classList.add('spin');
-    setTimeout(() => editToggle.classList.remove('spin'), 300);
+    if (editIcon) editIcon.src = editing ? '/assets/icons/save.svg' : '/assets/icons/square-pen.svg';
     document.dispatchEvent(new CustomEvent('ui:widgets:toggle', { detail: { open: false } }));
     if (!editing && typeof window.saveAdminLayout === 'function') {
       try {

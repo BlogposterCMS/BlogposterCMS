@@ -8,7 +8,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--color-bg);
 }
 
 .app-scope.login-page::before {
@@ -169,7 +168,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--color-bg);
 }
 
 .app-scope.login-page::before {
@@ -602,19 +600,34 @@ p {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.18s ease, box-shadow 0.18s ease;
-  background: var(--brand);
-  background-image: linear-gradient(90deg, var(--brand), var(--brand-2));
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #3acfd5, #3a4ed5, #c93ad5, #ff3a79, #ffbc3a);
+  background-size: 200%;
+  background-position: left center;
+  opacity: 1;
 }
 
 .app-scope .button:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  background-position: right center;
 }
 
-.app-scope .button:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+/* Optional: Dezenter Glanzeffekt beim Hover */
+.app-scope .button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  height: 100%;
+  width: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: skewX(-45deg);
+  transition: left 0.5s ease;
+}
+
+.app-scope .button:hover::before {
+  left: 150%;
 }
 
 .app-scope form {
@@ -975,6 +988,42 @@ p {
 }
 .main-header .nav-icons #workspace-create {
   padding: 10px 14px;
+}
+
+.editor-quick-actions {
+  display: none;
+  gap: 0.5rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  cursor: pointer;
+}
+
+.icon-btn img {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-btn:hover {
+  background: var(--hover, #f7f7f7);
+}
+
+.icon-btn.danger {
+  border-color: #fca5a5;
+}
+
+.icon-btn.danger:hover {
+  background: #fee2e2;
 }
 
 /* =============================================================================

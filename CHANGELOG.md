@@ -119,6 +119,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Community modules now accept loader-issued JWTs and sign their event payloads; dummyModule and docs updated accordingly.
 - Corrected `UIEmitter` logging strings to avoid runtime syntax errors.
 - Icon picker panel now closes on outside clicks and no longer obscures its trigger button.
 - Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.

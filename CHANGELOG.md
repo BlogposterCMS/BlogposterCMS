@@ -40,6 +40,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.
 - Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.
 - Login page background now uses the same dotted grid as the dashboard workspace.
 - Page list inline editing now debounces input, handles Enter/Escape keys, and normalizes slugs to remove duplicate slashes and leading or trailing dashes.

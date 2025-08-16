@@ -1,5 +1,5 @@
 import { getBuilderAppName } from '../../../../utils.js';
-import { bpDialog } from '../../../../../assets/js/bpDialog.js';
+import { bpDialog } from '/assets/js/bpDialog.js';
 import { pageService } from './pageService.js';
 
 const escapeHtml = str => {

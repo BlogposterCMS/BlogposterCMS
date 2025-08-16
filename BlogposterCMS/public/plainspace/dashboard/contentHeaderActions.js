@@ -1,6 +1,6 @@
 // Widget panel toggle handled via custom events
 
-import { bpDialog } from '../../assets/js/bpDialog.js';
+import { bpDialog } from '/assets/js/bpDialog.js';
 
 export function initContentHeader() {
   const breadcrumbEl = document.getElementById('content-breadcrumb');

@@ -207,23 +207,36 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
   return container;
 }
 
-// Show inline form beside add buttons without using a full slide panel
+// Show floating workspace creation field, hiding header menu and toggling icon
 function showWorkspaceField() {
-  const existing = document.getElementById('workspace-inline');
+  const nav = document.getElementById('workspace-nav');
+  const btn = document.getElementById('workspace-create');
+  if (!nav || !btn) return;
+  const icon = btn.querySelector('img.icon');
+  const existing = document.getElementById('workspace-floating-field');
   if (existing) {
     existing.remove();
+    nav.querySelectorAll('a').forEach(a => (a.style.display = ''));
+    if (icon) icon.src = '/assets/icons/plus.svg';
     return;
   }
-  const btn = document.getElementById('workspace-create');
-  if (!btn) return;
-  const container = buildInlineField('workspace-inline', 'Workspace name', detail => {
+  nav.querySelectorAll('a').forEach(a => (a.style.display = 'none'));
+  if (icon) icon.src = '/assets/icons/minus.svg';
+  const container = buildInlineField('workspace-floating-field', 'Workspace name', detail => {
     document.dispatchEvent(
       new CustomEvent('ui:action:run', {
         detail: { actionId: 'createWorkspace', name: detail.name, icon: detail.icon }
       })
     );
+    container.remove();
+    nav.querySelectorAll('a').forEach(a => (a.style.display = ''));
+    if (icon) icon.src = '/assets/icons/plus.svg';
   }, false);
-  btn.appendChild(container);
+  document.body.appendChild(container);
+  const rect = btn.getBoundingClientRect();
+  container.style.left = `${rect.right + window.scrollX + 8}px`;
+  container.style.top = `${rect.top + window.scrollY + rect.height / 2}px`;
+  container.style.zIndex = '1000';
   requestAnimationFrame(() => container.classList.add('open'));
 }
 

@@ -38,6 +38,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Login page background now uses the same dotted grid as the dashboard workspace.
 - Admin content header deletion uses async `bpDialog.confirm` instead of native `confirm`.
 - Save button in content header now highlights green on hover; delete icon turns red using SVG fill.
 - Edit toggle button now uses icon-btn styling and no longer spins on activation.

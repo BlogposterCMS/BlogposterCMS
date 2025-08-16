@@ -6,7 +6,7 @@ BlogposterCMS follows a modular design. Core features and optional extensions ar
 - **Optional modules** can be placed in the top-level `modules/` directory. The Module Loader runs a health check in a sandbox before activating them. This isolation prevents a bad plugin from crashing the whole system.
 - **Events** are used instead of direct function calls. Modules emit events to perform actions such as database operations, authentication or theme management. Tokens in the payload ensure that only authorised modules can request sensitive operations.
 
-When creating your own modules, start by exporting an `initialize` function that receives `{ motherEmitter, jwt, isCore }`. See the existing modules for reference.
+When creating your own modules, start by exporting an `initialize` function that receives `{ motherEmitter, jwt, nonce, isCore }`. `jwt` is issued by the Module Loader and must be included with every non‑public event. `nonce` protects against replay attacks. Core modules also receive `isCore` to reflect their trust level. Modules no longer need to call `issueModuleToken`; the loader handles token issuance during initialization.
 
 ## The JWT Event Bus
 

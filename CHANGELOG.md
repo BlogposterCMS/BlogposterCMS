@@ -37,10 +37,12 @@ El Psy Kongroo
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 
 ### Removed
+- Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
 - Support for dynamic action buttons in the content header.
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.
 - Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.
 - Login page background now uses the same dotted grid as the dashboard workspace.
 - Page list inline editing now debounces input, handles Enter/Escape keys, and normalizes slugs to remove duplicate slashes and leading or trailing dashes.
@@ -121,6 +123,7 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Confirm dialogs no longer stall when no handler resolves the UI event.
 - Community modules now accept loader-issued JWTs and sign their event payloads; dummyModule and docs updated accordingly.
 - Password visibility toggle now always stays within the login input field.
 - Corrected `UIEmitter` logging strings to avoid runtime syntax errors.

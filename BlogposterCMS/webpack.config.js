@@ -54,7 +54,9 @@ module.exports = {
     clean: true
   },
   resolve: {
-    // Alias removed: Builder uses relative paths
+    alias: {
+      '/assets': path.resolve(__dirname, 'public/assets')
+    }
   },
   devtool: 'source-map'
 };

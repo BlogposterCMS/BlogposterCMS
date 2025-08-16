@@ -13,7 +13,6 @@ This folder provides additional information on installing, configuring and exten
 - [Configuration Overview](configuration.md)
 - [Meltdown Event Bus](meltdown_event_bus.md)
 - [Notification System](notification_system.md)
-- [Dialog Hooks](dialog_hooks.md)
 - [Global DOM Events](global_events.md)
 - [How Login Strategies Work](how_login_strategies_work.md)
 - [Custom Post Types](custom_post_types.md)

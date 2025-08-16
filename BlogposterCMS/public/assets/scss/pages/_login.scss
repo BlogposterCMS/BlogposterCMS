@@ -16,10 +16,12 @@
   content: '';
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--user-color), transparent 70%) 1px,
+    transparent 0
+  );
   background-size: 20px 20px;
-  opacity: 0.05;
-  color: var(--color-text);
   pointer-events: none;
   z-index: -1;
 }

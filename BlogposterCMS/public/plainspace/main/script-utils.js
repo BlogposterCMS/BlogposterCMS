@@ -11,7 +11,7 @@ export function executeJs(code, wrapper, root, context = 'App') {
   if (/^import\s|^export\s/m.test(code)) {
     const blob = new Blob([code], { type: 'text/javascript' });
     const url = URL.createObjectURL(blob);
-    import(url).then(m => {
+    import(/* webpackIgnore: true */ url).then(m => {
       if (typeof m.render === 'function') {
         try { m.render.call(wrapper, root); } catch (err) {
           console.error(`[${context}] module render error`, err);

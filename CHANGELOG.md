@@ -5,7 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-
+### Fixed
+- Resolved broken import path for dashboard dialog helper and silenced dynamic import warnings during build.
 
 ### Added
 - Introduced `pageService` to centralize page data access through the event bus.

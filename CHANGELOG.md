@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Password visibility toggle now always stays within the login input field.
+
 ### Added
 - Introduced `pageService` to centralize page data access through the event bus.
 - Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.

@@ -78,6 +78,10 @@
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
+.password-field input {
+  padding-right: 56px;
+}
+
 .field input:focus {
   outline: none;
   border-color: var(--brand);
@@ -108,9 +112,13 @@
 
 .password-toggle {
   position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
+  top: 0;
+  right: 8px;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;

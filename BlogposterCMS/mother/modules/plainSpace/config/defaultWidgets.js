@@ -236,7 +236,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetId: 'pageList',
     widgetType: ADMIN_LANE,
     label: 'Page List',
-    content: '/plainspace/widgets/admin/defaultwidgets/pageList.js',
+    content: '/plainspace/widgets/admin/defaultwidgets/pageList/pageList.js',
     category: 'core',
     metadata: {
       apiEvents: [

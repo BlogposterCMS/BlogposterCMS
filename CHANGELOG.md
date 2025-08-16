@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Introduced `pageService` to centralize page data access through the event bus.
 - Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
 - Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
 - Client-side `uiEmitter` stub and preview handlers ensure dialog hooks are available before other scripts.
@@ -39,6 +40,10 @@ El Psy Kongroo
 
 ### Changed
 - Login page background now uses the same dotted grid as the dashboard workspace.
+- Page list inline editing now debounces input, handles Enter/Escape keys, and normalizes slugs to remove duplicate slashes and leading or trailing dashes.
+- Page status toggles apply changes immediately with rollback on failure, and setting a start page refreshes the list to update the home badge.
+- Moved `pageService` into the `pageList` widget folder for better encapsulation.
+- Page list widget now separates data fetching, rendering, filtering, and inline editing while using dialog-based prompts.
 - Admin content header deletion uses async `bpDialog.confirm` instead of native `confirm`.
 - Save button in content header now highlights green on hover; delete icon turns red using SVG fill.
 - Edit toggle button now uses icon-btn styling and no longer spins on activation.

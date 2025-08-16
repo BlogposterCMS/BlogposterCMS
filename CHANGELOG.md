@@ -5,6 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+
+
 ### Added
 - Introduced `pageService` to centralize page data access through the event bus.
 - Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
@@ -120,6 +122,7 @@ El Psy Kongroo
 
 ### Fixed
 - Community modules now accept loader-issued JWTs and sign their event payloads; dummyModule and docs updated accordingly.
+- Password visibility toggle now always stays within the login input field.
 - Corrected `UIEmitter` logging strings to avoid runtime syntax errors.
 - Icon picker panel now closes on outside clicks and no longer obscures its trigger button.
 - Icon picker grid now closes after selecting an icon or re-clicking the trigger icon.

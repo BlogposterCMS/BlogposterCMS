@@ -159,7 +159,7 @@ async function renderWidget(wrapper, def, code = null, lane = 'public') {
     ctx.jwt = window.ADMIN_TOKEN;
   }
   try {
-    const m = await import(def.codeUrl);
+    const m = await import(/* webpackIgnore: true */ def.codeUrl);
     m.render?.(container, ctx);
   } catch (err) {
     console.error(`[Widget ${def.id}] import error:`, err);

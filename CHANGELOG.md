@@ -39,6 +39,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.
 - Login page background now uses the same dotted grid as the dashboard workspace.
 - Page list inline editing now debounces input, handles Enter/Escape keys, and normalizes slugs to remove duplicate slashes and leading or trailing dashes.
 - Page status toggles apply changes immediately with rollback on failure, and setting a start page refreshes the list to update the home badge.

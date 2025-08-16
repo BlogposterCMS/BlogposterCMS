@@ -6,7 +6,9 @@ The module's `apiDefinition.json` shows how to declare external services and act
 
 ## Startup
 - Loaded from `modules/dummyModule` when present.
-- Only requires the `motherEmitter` object during initialization.
+- Exports `initialize({ motherEmitter, jwt, nonce })`.
+  - `jwt` is issued by the Module Loader and must be included in every non‑public event payload.
+  - `nonce` helps prevent replay attacks and can be ignored if unused.
 
 ## Purpose
 - Logs whenever a page is published using a fictional external service.
@@ -19,6 +21,7 @@ The module's `apiDefinition.json` shows how to declare external services and act
 
 ## Security Notes
 - Sanitises page titles and IDs before logging.
+- Each `motherEmitter.emit()` call includes the provided `jwt`, `moduleName` and `moduleType`.
 - Never store real API tokens in `apiDefinition.json`—use environment variables instead.
 
 Use this module as a starting point for your own experiments. Copy the folder,

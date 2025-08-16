@@ -9,6 +9,7 @@
  *
  * - No Express routes because we do NOT receive an `app` instance.
  * - Only `motherEmitter` is provided for DB, hooks and apiCoreRequest.
+ * - A JWT and nonce are supplied by the module loader for authenticated events.
  */
 
 'use strict';
@@ -16,15 +17,17 @@
 module.exports = {
     /**
      * Called by the moduleLoader:
-     *    await dummyModule.initialize({ motherEmitter });
+     *    await dummyModule.initialize({ motherEmitter, jwt, nonce });
      *
      * Inside this function you may:
      *   - register events
      *   - call "apiCoreRequest"
      *   - trigger "performDbOperation" / "createDatabase"
      */
-    async initialize({ motherEmitter }) {
+    async initialize({ motherEmitter, jwt, nonce }) {
       console.log('[DUMMY MODULE] Initializing dummyModule...');
+      // jwt => signed token issued by the loader; include in all non-public events
+      // nonce => unique value for replay protection (not used in this demo)
   
       // 1) Example hook: pagePublished
       motherEmitter.on('pagePublished', (pageObj) => {
@@ -38,6 +41,9 @@ module.exports = {
         motherEmitter.emit(
           'apiCoreRequest',
           {
+            jwt,
+            moduleName: 'dummyModule',
+            moduleType: 'community',
             service: 'dummyService',    // => in apiDefinition.json definiert
             action : 'logPagePublish',  // => "actionName": "logPagePublish"
             payload: { pageId: pageObj.id, title: pageObj.title }
@@ -64,6 +70,7 @@ module.exports = {
       motherEmitter.emit(
         'performDbOperation',
         {
+          jwt,
           moduleName: 'dummyModule',
           moduleType: 'community',
           operation: createTableSQL,
@@ -87,6 +94,7 @@ module.exports = {
         motherEmitter.emit(
           'performDbOperation',
           {
+            jwt,
             moduleName: 'dummyModule',
             moduleType: 'community',
             operation: insertSQL,

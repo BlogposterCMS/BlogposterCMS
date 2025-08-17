@@ -68,33 +68,28 @@ function mergeAllPermissions(motherEmitter, jwt, rolesArr, doneCallback) {
     return doneCallback(merged);
   }
 
-  // fix invalid roles in DB
-  const caseLines = invalidRoles.map(r => {
-    const jsonStr = JSON.stringify(r.perms);
-    return `WHEN ${r.id} THEN '${jsonStr}'`;
-  }).join('\n');
+  // fix invalid roles in DB without raw SQL
+  console.warn('[USER MGMT] mergeAllPermissions => Attempting to fix invalid perms in DB =>', invalidRoles);
 
-  const idList = invalidRoles.map(r => r.id).join(',');
-  const rawSQL = `
-    UPDATE "usermanagement"."roles"
-    SET permissions = CASE id
-      ${caseLines}
-      ELSE permissions
-    END
-    WHERE id IN (${idList});
-  `;
+  const updates = invalidRoles.map(r => new Promise((resolve) => {
+    motherEmitter.emit('dbUpdate', {
+      jwt,
+      moduleName: 'userManagement',
+      table: 'roles',
+      where: { id: r.id },
+      data: {
+        permissions: JSON.stringify(r.perms),
+        updated_at: new Date().toISOString()
+      }
+    }, (err) => {
+      if (err) {
+        console.error('[USER MGMT] mergeAllPermissions => Could not fix role', r.id, err.message);
+      }
+      resolve();
+    });
+  }));
 
-  console.warn('[USER MGMT] mergeAllPermissions => Attempting to fix invalid perms in DB =>', rawSQL);
-
-  motherEmitter.emit('dbUpdate', {
-    jwt,
-    moduleName: 'userManagement',
-    table: '__rawSQL__',
-    data: { rawSQL }
-  }, (updateErr) => {
-    if (updateErr) {
-      console.error('[USER MGMT] mergeAllPermissions => Could not fix roles =>', updateErr.message);
-    }
+  Promise.all(updates).finally(() => {
     doneCallback(merged); // proceed either way
   });
 }

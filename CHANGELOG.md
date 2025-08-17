@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Replaced raw SQL in user role permission fixes with parameterized `dbUpdate` calls and routed page table migrations through a dedicated placeholder for cross-database compatibility.
 - Added `INIT_APP_REGISTRY_TABLE` placeholder and MongoDB/PostgreSQL handlers so the app registry schema boots on all databases.
 - Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 

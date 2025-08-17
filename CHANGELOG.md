@@ -78,6 +78,9 @@ El Psy Kongroo
 - Decoupled the top header from accent tinting and mirrored the accent color on module and user tabs.
 - Added dark mode variable defaults so accents appear softer on dark backgrounds.
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
+
+### Fixed
+- Module loader now notifies and deactivates community modules missing `index.js` so they never appear as loadable.
 - Apps can expose a builder by adding a `builder` tag in their manifest.
 - Builder publish now saves designs under `/builder/{designName}/` and records file metadata for safe overwrites.
 - Publishing a design triggers a database save of the layout template.

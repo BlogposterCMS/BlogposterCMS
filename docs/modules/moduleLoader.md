@@ -21,6 +21,8 @@ During sandbox execution the module receives a very limited `process.env` contai
 
 Every module folder must export an `initialize` function and include `moduleInfo.json` with metadata.
 
+If a module folder lacks `index.js`, the loader emits a system-level error notification and disables the module so it cannot be activated accidentally.
+
 ## Module Uploads
 
 Administrators can install additional modules through the admin interface. The upload button in the Modules page header accepts a single ZIP archive. For security reasons the archive is extracted in a temporary directory and validated before activation.

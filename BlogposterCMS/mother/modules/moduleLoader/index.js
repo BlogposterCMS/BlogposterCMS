@@ -268,7 +268,14 @@ async function attemptModuleLoad(
 
   const indexJsPath = path.join(modulesPath, moduleName, 'index.js');
   if (!fs.existsSync(indexJsPath)) {
-    console.warn(`[MODULE LOADER] Missing index.js in '${moduleName}'. Skipping load.`);
+    notify({
+      moduleName,
+      notificationType: 'system',
+      priority: 'error',
+      message: `[MODULE LOADER] Missing index.js in '${moduleName}'. Module disabled.`
+    });
+    await deactivateModule(motherEmitter, jwt, moduleName, 'Missing index.js');
+    motherEmitter.emit('removeListenersByModule', { moduleName });
     return false;
   }
 

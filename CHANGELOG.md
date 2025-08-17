@@ -80,6 +80,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Module loader no longer logs a success message for modules that deactivate during loading.
 - Module loader now notifies and deactivates community modules missing `index.js` so they never appear as loadable.
 - Apps can expose a builder by adding a `builder` tag in their manifest.
 - Builder publish now saves designs under `/builder/{designName}/` and records file metadata for safe overwrites.

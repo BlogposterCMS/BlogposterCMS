@@ -285,6 +285,13 @@ async function attemptModuleLoad(
 
   let loadFailed = false;
   let modEntry;
+  let wasDeactivated = false;
+  const deactivationListener = (payload) => {
+    if (payload && payload.moduleName === moduleName) {
+      wasDeactivated = true;
+    }
+  };
+  motherEmitter.on('deactivateModule', deactivationListener);
 
   try {
     if (ALLOW_INDIVIDUAL_SANDBOX) {
@@ -319,6 +326,7 @@ async function attemptModuleLoad(
   }
 
   if (loadFailed) {
+    motherEmitter.off('deactivateModule', deactivationListener);
     return false;
   }
 
@@ -352,7 +360,17 @@ async function attemptModuleLoad(
       );
     });
   }
+  const deactivateAndReturn = () => {
+    motherEmitter.off('deactivateModule', deactivationListener);
+    return false;
+  };
 
+  if (wasDeactivated) {
+    console.warn(`[MODULE LOADER] Module "${moduleName}" deactivated during load.`);
+    return deactivateAndReturn();
+  }
+
+  motherEmitter.off('deactivateModule', deactivationListener);
   console.log(`[MODULE LOADER] Successfully loaded => ${moduleName}`);
   return true;
 

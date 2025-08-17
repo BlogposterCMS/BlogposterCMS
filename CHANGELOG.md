@@ -5,8 +5,6 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-### Fixed
-- Resolved broken import path for dashboard dialog helper and silenced dynamic import warnings during build.
 
 ### Added
 - Introduced `pageService` to centralize page data access through the event bus.
@@ -124,6 +122,8 @@ El Psy Kongroo
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
 
 ### Fixed
+- Corrected HTML escaping in the Page List admin widget to restore widget loading and prevent XSS issues.
+- Resolved broken import path for dashboard dialog helper and silenced dynamic import warnings during build.
 - Confirm dialogs no longer stall when no handler resolves the UI event.
 - Community modules now accept loader-issued JWTs and sign their event payloads; dummyModule and docs updated accordingly.
 - Password visibility toggle now always stays within the login input field.

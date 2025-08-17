@@ -84,10 +84,6 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
-- appLoader fully removes legacy registry selects, avoiding `SELECT_APP_BY_NAME` syntax errors during startup.
-- pagesManager now alters the `pagesManager_pages` table only after creation, preventing `SQLITE_RANGE` column errors.
-- appLoader registers apps via a single SQLite upsert, removing placeholder selects that triggered syntax errors.
-- pagesManager migration adds the `weight` column with direct `ALTER TABLE` and defaulting logic, avoiding `SQLITE_RANGE` binding issues.
 - appLoader now creates its registry table via `performDbOperation` with SQLite-friendly SQL, preventing "near 'INIT_APP_REGISTRY_TABLE'" errors.
 - pagesManager ensures the `weight` column exists before index creation, preventing "no such column: weight" failures during upgrades.
 - appLoader uses SQLite-friendly schema and placeholders, resolving `unrecognized token ':'` database errors.

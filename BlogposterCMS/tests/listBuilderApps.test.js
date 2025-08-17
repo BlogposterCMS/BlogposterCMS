@@ -4,7 +4,7 @@ const appLoader = require('../mother/modules/appLoader/index.js');
 
 class MockEmitter extends EventEmitter {
   emit(event, payload, cb) {
-    if (event === 'dbUpdate' || event === 'dbSelect' || event === 'performDbOperation') {
+    if (event === 'dbUpdate' || event === 'dbSelect') {
       if (typeof cb === 'function') cb(null, []);
       return true;
     }

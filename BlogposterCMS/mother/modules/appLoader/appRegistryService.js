@@ -30,39 +30,57 @@ async function ensureAppRegistrySchema(motherEmitter, jwt) {
 }
 
 async function registerOrUpdateApp(motherEmitter, jwt, appName, appInfo, isActive, lastError) {
-  const sql = `
-    INSERT INTO appLoader_app_registry (app_name, is_active, last_error, app_info, updated_at)
-    VALUES (?,?,?,?,CURRENT_TIMESTAMP)
-    ON CONFLICT(app_name) DO UPDATE SET
-      is_active = excluded.is_active,
-      last_error = excluded.last_error,
-      app_info = excluded.app_info,
-      updated_at = CURRENT_TIMESTAMP;
-  `;
-
-  const params = [
+  const rows = await runDbSelectPlaceholder(motherEmitter, jwt, 'SELECT_APP_BY_NAME', { appName });
+  const data = {
     appName,
-    isActive ? 1 : 0,
-    lastError || null,
-    JSON.stringify(appInfo || {})
-  ];
+    isActive: !!isActive,
+    lastError: lastError || null,
+    appInfo: JSON.stringify(appInfo || {})
+  };
+  const placeholder = rows.length === 0 ? 'INSERT_APP_REGISTRY_ENTRY' : 'UPDATE_APP_REGISTRY_ENTRY';
+  await runDbUpdatePlaceholder(motherEmitter, jwt, placeholder, data);
+}
 
-  await new Promise((resolve, reject) => {
+function runDbUpdatePlaceholder(motherEmitter, jwt, rawSQLPlaceholder, dataObj) {
+  return new Promise((resolve, reject) => {
     motherEmitter.emit(
-      'performDbOperation',
+      'dbUpdate',
       {
         jwt,
         moduleName: 'appLoader',
         moduleType: 'core',
-        operation: sql,
-        params
+        table: '__rawSQL__',
+        where: {},
+        data: { rawSQL: rawSQLPlaceholder, ...dataObj }
       },
       err => err ? reject(err) : resolve()
     );
   });
 }
 
+function runDbSelectPlaceholder(motherEmitter, jwt, rawSQLPlaceholder, dataObj) {
+  return new Promise((resolve, reject) => {
+    motherEmitter.emit(
+      'dbSelect',
+      {
+        jwt,
+        moduleName: 'appLoader',
+        moduleType: 'core',
+        table: '__rawSQL__',
+        data: { rawSQL: rawSQLPlaceholder, ...dataObj }
+      },
+      (err, result) => {
+        if (err) return reject(err);
+        const rows = Array.isArray(result) ? result : (result?.rows || []);
+        resolve(rows);
+      }
+    );
+  });
+}
+
 module.exports = {
   ensureAppRegistrySchema,
-  registerOrUpdateApp
+  registerOrUpdateApp,
+  runDbUpdatePlaceholder,
+  runDbSelectPlaceholder
 };

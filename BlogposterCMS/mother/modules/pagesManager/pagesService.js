@@ -74,7 +74,25 @@ function ensurePageSchemaAndTable(motherEmitter, jwt, nonce) {
               return reject(tableErr);
             }
             console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_TABLE" done.');
-            resolve();
+
+            // Ensure columns and indexes exist across databases
+            motherEmitter.emit(
+              'dbUpdate',
+              {
+                ...meltdownPayload,
+                table: '__rawSQL__',
+                where: {},
+                data: { rawSQL: 'CHECK_AND_ALTER_PAGES_TABLE' }
+              },
+              (alterErr) => {
+                if (alterErr) {
+                  console.error('[PAGE SERVICE] Error checking/altering pages table =>', alterErr.message);
+                  return reject(alterErr);
+                }
+                console.log('[PAGE SERVICE] Placeholder "CHECK_AND_ALTER_PAGES_TABLE" done.');
+                resolve();
+              }
+            );
           }
         );
       }

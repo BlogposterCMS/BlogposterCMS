@@ -230,6 +230,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
           updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
           title       TEXT,
           meta        TEXT,      -- JSON as TEXT
+          weight      INTEGER DEFAULT 0,
           UNIQUE (slug, lane)
         );
 
@@ -254,6 +255,8 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
           ON pagesManager_pages(language)
           WHERE is_start = 1;
       `);
+      await db.run(`CREATE INDEX IF NOT EXISTS pages_lane_weight_created_at ON pagesManager_pages (lane, weight, created_at DESC);`);
+      await db.run(`CREATE INDEX IF NOT EXISTS pages_parent_weight_created_at ON pagesManager_pages (parent_id, weight, created_at DESC);`);
       return { done: true };
     }
 
@@ -276,8 +279,12 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
       await addCol('lane', "lane TEXT NOT NULL DEFAULT 'public'");
       await addCol('title', 'title TEXT');
       await addCol('meta', 'meta TEXT');
+      await addCol('weight', 'weight INTEGER DEFAULT 0');
+      await db.run(`UPDATE pagesManager_pages SET weight = 0 WHERE weight IS NULL;`);
+      await db.run(`DROP INDEX IF EXISTS pages_slug_unique;`);
       await db.run(`CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_lane_unique ON pagesManager_pages (slug, lane);`);
-      await db.run(`CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_unique ON pagesManager_pages (slug);`);
+      await db.run(`CREATE INDEX IF NOT EXISTS pages_lane_weight_created_at ON pagesManager_pages (lane, weight, created_at DESC);`);
+      await db.run(`CREATE INDEX IF NOT EXISTS pages_parent_weight_created_at ON pagesManager_pages (parent_id, weight, created_at DESC);`);
       return { done: true };
     }
 
@@ -293,17 +300,19 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
         lane = 'public',
         language = 'en',
         title = '',
-        meta = null
+        meta = null,
+        weight = 0
       } = p;
 
       const metaVal = (meta && typeof meta === 'object') ? JSON.stringify(meta) : meta;
+      const weightVal = Number(weight) || 0;
 
       const { lastID: pageId } = await db.run(`
         INSERT INTO pagesManager_pages
-          (title, meta, slug, status, seo_image, is_start, parent_id, is_content, language, lane,
+          (title, meta, weight, slug, status, seo_image, is_start, parent_id, is_content, language, lane,
            created_at, updated_at)
-        VALUES (?,?,?,?,?,0,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
-      `, [title, metaVal, slug, status, seo_image, parent_id, is_content, language, lane]);
+        VALUES (?,?,?,?,?,?,0,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+      `, [title, metaVal, weightVal, slug, status, seo_image, parent_id, is_content, language, lane]);
 
       for (const t of translations) {
         await db.run(`
@@ -346,7 +355,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
           LEFT JOIN pagesManager_page_translations t
                 ON p.id = t.page_id
          WHERE p.lane = ?
-         ORDER BY p.created_at DESC;
+         ORDER BY p.weight ASC, p.created_at DESC;
       `, [laneVal]);
 
       for (const r of rows) {
@@ -371,7 +380,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
       const rows = await db.all(`
         SELECT * FROM pagesManager_pages
          WHERE parent_id = ?
-         ORDER BY created_at DESC;
+         ORDER BY weight ASC, created_at DESC;
       `, [parentId]);
 
       for (const r of rows) {
@@ -384,7 +393,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
     }
 
     case 'GET_ALL_PAGES': {
-      const rows = await db.all(`SELECT * FROM pagesManager_pages ORDER BY id DESC;`);
+      const rows = await db.all(`SELECT * FROM pagesManager_pages ORDER BY weight ASC, id DESC;`);
 
       for (const r of rows) {
         if (typeof r.meta === 'string') {
@@ -464,15 +473,19 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
         lane = 'public',
         language = 'en',
         title = '',
-        meta = null
+        meta = null,
+        weight
       } = p;
 
       const metaVal = (meta && typeof meta === 'object') ? JSON.stringify(meta) : meta;
+      const hasWeight = Object.prototype.hasOwnProperty.call(p, 'weight');
+      const weightVal = hasWeight ? Number(weight) || 0 : null;
 
       await db.run(`
         UPDATE pagesManager_pages
            SET title      = ?,
                meta       = ?,
+               weight     = COALESCE(?, weight),
                slug       = ?,
                status     = ?,
                seo_image  = ?,
@@ -482,7 +495,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
                language   = ?,
                updated_at = CURRENT_TIMESTAMP
          WHERE id = ?;
-      `, [title, metaVal, slug, status, seo_image, parent_id, is_content, lane, language, pageId]);
+      `, [title, metaVal, weightVal, slug, status, seo_image, parent_id, is_content, lane, language, pageId]);
 
       for (const t of translations) {
         await db.run(`
@@ -584,7 +597,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
           LEFT JOIN pagesManager_page_translations t ON p.id = t.page_id
          WHERE (? = 'all' OR p.lane = ?)
            AND (p.title LIKE ? OR p.slug LIKE ? OR t.title LIKE ?)
-         ORDER BY p.created_at DESC
+         ORDER BY p.weight ASC, p.created_at DESC
          LIMIT ?;
       `, [lane, lane, q, q, q, limit]);
       return rows;

@@ -7,6 +7,7 @@ El Psy Kongroo
 
 
 ### Added
+- Added database-backed `weight` field to pages to control header and sidebar menu ordering.
 - Introduced `pageService` to centralize page data access through the event bus.
 - Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
 - Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
@@ -41,6 +42,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Removed slug-only unique index in relational databases, backfilled page weights, and added composite indexes for faster page sorting.
 - Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.
 - Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.
 - Login page background now uses the same dotted grid as the dashboard workspace.

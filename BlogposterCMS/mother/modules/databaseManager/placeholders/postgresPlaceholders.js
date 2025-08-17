@@ -207,6 +207,7 @@ switch (operation) {
           /* NEW COLUMNS: */
           title       TEXT,
           meta        JSONB,
+          weight      INT         DEFAULT 0,
           /* Composite unique constraint: slug+lane */
           UNIQUE (slug, lane)
         );
@@ -227,6 +228,14 @@ switch (operation) {
           UNIQUE (page_id, language)
         );
       `);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS pages_lane_weight_created_at
+          ON pagesManager.pages (lane, weight, created_at DESC);
+      `);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS pages_parent_weight_created_at
+          ON pagesManager.pages (parent_id, weight, created_at DESC);
+      `);
       return { done: true };
     }
 
@@ -245,6 +254,9 @@ switch (operation) {
       `);
       await client.query(`
         DROP INDEX IF EXISTS pagesManager.pages_slug_key;
+      `);
+      await client.query(`
+        DROP INDEX IF EXISTS pages_slug_unique;
       `);
 
       /* 2. Add any columns that might still be missing (one by one) */
@@ -274,6 +286,13 @@ switch (operation) {
         ALTER TABLE pagesManager.pages
           ADD COLUMN IF NOT EXISTS meta JSONB;
       `);
+      await client.query(`
+        ALTER TABLE pagesManager.pages
+          ADD COLUMN IF NOT EXISTS weight INT DEFAULT 0;
+      `);
+      await client.query(`
+        UPDATE pagesManager.pages SET weight = 0 WHERE weight IS NULL;
+      `);
 
       /* 3. Create (or verify) the *proper* composite unique index */
       await client.query(`
@@ -281,16 +300,19 @@ switch (operation) {
           ON pagesManager.pages (slug, lane);
       `);
 
-      await client.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_unique
-          ON pagesManager.pages (slug);
-      `);
-
       /* 4. One start page per language – this index was already fine */
       await client.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS pages_start_unique
           ON pagesManager.pages (language)
           WHERE is_start = true;
+      `);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS pages_lane_weight_created_at
+          ON pagesManager.pages (lane, weight, created_at DESC);
+      `);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS pages_parent_weight_created_at
+          ON pagesManager.pages (parent_id, weight, created_at DESC);
       `);
 
       return { done: true };
@@ -310,26 +332,29 @@ switch (operation) {
         language,
         /* NEW fields: */
         title,
-        meta
+        meta,
+        weight
       } = p;
+      const weightVal = Number(weight) || 0;
 
       const result = await client.query(`
           INSERT INTO pagesManager.pages
-            (title, meta, slug, status, seo_image, is_start, parent_id, is_content, language, lane,
+            (title, meta, weight, slug, status, seo_image, is_start, parent_id, is_content, language, lane,
             created_at, updated_at)
           VALUES
-            ($1, $2, $3, $4, $5, false, $6, $7, $8, $9, NOW(), NOW())
+            ($1, $2, $3, $4, $5, $6, false, $7, $8, $9, $10, NOW(), NOW())
           RETURNING id;
       `, [
         /* $1 */ title       || '',
         /* $2 */ meta        || null,
-        /* $3 */ slug,
-        /* $4 */ status      || 'draft',
-        /* $5 */ seo_image   || '',
-        /* $6 */ parent_id   || null,
-        /* $7 */ is_content  || false,
-        /* $8 */ language    || 'en',
-        /* $9 */ lane        || 'public'
+        /* $3 */ weightVal,
+        /* $4 */ slug,
+        /* $5 */ status      || 'draft',
+        /* $6 */ seo_image   || '',
+        /* $7 */ parent_id   || null,
+        /* $8 */ is_content  || false,
+        /* $9 */ language    || 'en',
+        /*$10 */ lane        || 'public'
       ]);
 
       const pageId = result.rows[0].id;
@@ -381,7 +406,7 @@ switch (operation) {
           LEFT JOIN pagesManager.page_translations t
                 ON p.id = t.page_id
         WHERE p.lane = $1
-        ORDER BY p.created_at DESC
+        ORDER BY p.weight ASC, p.created_at DESC
       `, [laneVal]);
 
       return rows;
@@ -404,7 +429,7 @@ switch (operation) {
         SELECT *
           FROM pagesManager.pages
         WHERE parent_id = $1
-        ORDER BY created_at DESC;
+        ORDER BY weight ASC, created_at DESC;
       `, [parentId]);
 
       return rows;
@@ -415,7 +440,7 @@ switch (operation) {
       const { rows } = await client.query(`
         SELECT *
           FROM pagesManager.pages
-        ORDER BY id DESC
+        ORDER BY weight ASC, id DESC
       `);
       return rows;
     }
@@ -477,34 +502,39 @@ switch (operation) {
         language,
         /* NEW fields: */
         title,
-        meta
+        meta,
+        weight
       } = p;
+      const hasWeight = Object.prototype.hasOwnProperty.call(p, 'weight');
+      const weightVal = hasWeight ? Number(weight) || 0 : null;
 
       // Update main page
       await client.query(`
         UPDATE pagesManager.pages
           SET title     = $2,
               meta      = $3,
-              slug      = $4,
-              status    = $5,
-              seo_image = $6,
-              parent_id = $7,
-              is_content= $8,
-              lane      = $9,
-              language  = $10,
+              weight    = COALESCE($4, weight),
+              slug      = $5,
+              status    = $6,
+              seo_image = $7,
+              parent_id = $8,
+              is_content= $9,
+              lane      = $10,
+              language  = $11,
               updated_at= NOW()
         WHERE id = $1;
       `, [
         /* $1 */ pageId,
         /* $2 */ title       || '',
         /* $3 */ meta        || null,
-        /* $4 */ slug,
-        /* $5 */ status,
-        /* $6 */ seo_image,
-        /* $7 */ parent_id,
-        /* $8 */ is_content  || false,
-        /* $9 */ lane        || 'public',
-        /*$10*/ language     || 'en'
+        /* $4 */ weightVal,
+        /* $5 */ slug,
+        /* $6 */ status,
+        /* $7 */ seo_image,
+        /* $8 */ parent_id,
+        /* $9 */ is_content  || false,
+        /*$10*/ lane        || 'public',
+        /*$11*/ language     || 'en'
       ]);
 
       // Upsert translations
@@ -640,7 +670,7 @@ switch (operation) {
              p.slug  ILIKE $1 OR
              t.title ILIKE $1
            )
-         ORDER BY p.created_at DESC
+         ORDER BY p.weight ASC, p.created_at DESC
          LIMIT $3;
       `, [q, lane, limit]);
 

@@ -228,7 +228,6 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
      */
     case 'INIT_PAGES_TABLE': {
       await createIndexWithRetry(db.collection('pages'), { slug: 1, lane: 1 }, { unique: true }).catch(() => {});
-      await createIndexWithRetry(db.collection('pages'), { slug: 1 }, { unique: true }).catch(() => {});
       // For "page_translations", we want (page_id, language) unique
       await createIndexWithRetry(
         db.collection('page_translations'),
@@ -238,7 +237,9 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
       // If you like, you might also want an index on `parent_id` for quick child lookups:
       await createIndexWithRetry(db.collection('pages'), { parent_id: 1 }).catch(() => {});
-  
+      await createIndexWithRetry(db.collection('pages'), { lane: 1, weight: 1, created_at: -1 }).catch(() => {});
+      await createIndexWithRetry(db.collection('pages'), { parent_id: 1, weight: 1, created_at: -1 }).catch(() => {});
+
       return { done: true };
     }
   
@@ -287,6 +288,12 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         { $set: { meta: null } }
       );
 
+      // Add weight if it doesn\'t exist
+      await db.collection('pages').updateMany(
+        { weight: { $exists: false } },
+        { $set: { weight: 0 } }
+      );
+
       // Add id string if missing
       await db.collection('pages').updateMany(
         { id: { $exists: false } },
@@ -306,7 +313,10 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         { slug: 1, lane: 1 },
         { unique: true }
       ).catch(() => {});
-  
+      await db.collection('pages').dropIndex({ slug: 1 }).catch(() => {});
+      await createIndexWithRetry(db.collection('pages'), { lane: 1, weight: 1, created_at: -1 }).catch(() => {});
+      await createIndexWithRetry(db.collection('pages'), { parent_id: 1, weight: 1, created_at: -1 }).catch(() => {});
+
       return { done: true };
     }
   
@@ -342,8 +352,10 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         lane,
         language,
         title,
-        meta
+        meta,
+        weight
       } = p;
+      const weightVal = Number(weight) || 0;
   
       // 1) Insert main doc
       const newId = new ObjectId();
@@ -360,6 +372,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         language   : (language || 'en').toLowerCase(),
         title      : title || '',
         meta       : meta || null,
+        weight     : weightVal,
         created_at : new Date().toISOString(),
         updated_at : new Date().toISOString()
       });
@@ -392,7 +405,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       if (!parentId) return [];
       const childPages = await db.collection('pages')
                                 .find({ parent_id: parentId })
-                                .sort({ created_at: -1 })
+                                .sort({ weight: 1, created_at: -1 })
                                 .toArray();
       return childPages.map(p => ({
         ...p,
@@ -407,7 +420,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'GET_ALL_PAGES': {
       const allPages = await db.collection('pages')
                               .find({})
-                              .sort({ _id: -1 })
+                              .sort({ weight: 1, _id: -1 })
                               .toArray();
       return allPages.map(p => ({
         ...p,
@@ -446,7 +459,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         },
         { $unwind: { path: '$translation', preserveNullAndEmptyArrays: true } },
         { $unwind: { path: '$parent', preserveNullAndEmptyArrays: true } },
-        { $sort: { created_at: -1 } },
+        { $sort: { weight: 1, created_at: -1 } },
         {
           $project: {
             _id: 1,
@@ -558,28 +571,31 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         lane,
         language,
         title,
-        meta
+        meta,
+        weight
       } = p;
-  
+
       // 1) Update the main page
       const idObj = parseObjectId(pageId);
       if (!idObj) return { done: false };
+      const updateDoc = {
+        slug,
+        status,
+        seo_image,
+        parent_id : parseObjectId(parent_id),
+        is_content: !!is_content,
+        lane      : lane || 'public',
+        language  : (language || 'en').toLowerCase(),
+        title     : title || '',
+        meta      : meta || null,
+        updated_at: new Date().toISOString()
+      };
+      if (Object.prototype.hasOwnProperty.call(p, 'weight')) {
+        updateDoc.weight = Number(weight) || 0;
+      }
       await db.collection('pages').updateOne(
         { _id: idObj },
-        {
-          $set: {
-            slug,
-            status,
-            seo_image,
-            parent_id : parseObjectId(parent_id),
-            is_content: !!is_content,
-            lane      : lane || 'public',
-            language  : (language || 'en').toLowerCase(),
-            title     : title || '',
-            meta      : meta || null,
-            updated_at: new Date().toISOString()
-          }
-        }
+        { $set: updateDoc }
       );
   
       // 2) Upsert translations
@@ -744,7 +760,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
       const pages = await db.collection('pages')
                             .find(filter)
-                            .sort({ created_at: -1 })
+                            .sort({ weight: 1, created_at: -1 })
                             .limit(limit)
                             .toArray();
 

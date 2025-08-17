@@ -6,6 +6,7 @@ module.exports.ADMIN_PAGES = [
     title: 'Home',
     slug: 'home',
     lane: 'admin',
+    weight: 10,
     config: {
       layout: {
         header: 'top-header',
@@ -21,6 +22,7 @@ module.exports.ADMIN_PAGES = [
     title: 'Content',
     slug: 'content',
     lane: 'admin',
+    weight: 20,
     config: {
       layout: {
         header: 'top-header',
@@ -41,6 +43,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'pages',
     parentSlug: 'content',
     lane: 'admin',
+    weight: 10,
     config: {
       layout: {
         header: 'top-header',
@@ -60,6 +63,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'media',
     parentSlug: 'content',
     lane: 'admin',
+    weight: 20,
     config: {
       layout: {
         header: 'top-header',
@@ -75,6 +79,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'widgets',
     parentSlug: 'content',
     lane: 'admin',
+    weight: 30,
     config: {
       layout: {
         header: 'top-header',
@@ -90,6 +95,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'menu',
     parentSlug: 'content',
     lane: 'admin',
+    weight: 40,
     config: {
       layout: {
         header: 'top-header',
@@ -105,6 +111,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'layouts',
     parentSlug: 'content',
     lane: 'admin',
+    weight: 50,
     config: {
       layout: {
         header: 'top-header',
@@ -120,6 +127,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'edit',
     parentSlug: 'pages',
     lane: 'admin',
+    weight: 10,
     config: {
       layout: {
         header: 'top-header',
@@ -135,6 +143,7 @@ module.exports.ADMIN_PAGES = [
     title: 'Settings',
     slug: 'settings',
     lane: 'admin',
+    weight: 30,
     config: {
       layout: {
         header: 'top-header',
@@ -151,6 +160,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'system',
     parentSlug: 'settings',
     lane: 'admin',
+    weight: 10,
     config: {
       layout: {
         header: 'top-header',
@@ -166,6 +176,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'users',
     parentSlug: 'settings',
     lane: 'admin',
+    weight: 20,
     config: {
       layout: {
         header: 'top-header',
@@ -181,6 +192,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'edit',
     parentSlug: 'settings/users',
     lane: 'admin',
+    weight: 10,
     config: {
       layout: {
         header: 'top-header',
@@ -200,6 +212,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'modules',
     parentSlug: 'settings',
     lane: 'admin',
+    weight: 30,
     config: {
       layout: {
         header: 'top-header',
@@ -219,6 +232,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'login',
     parentSlug: 'settings',
     lane: 'admin',
+    weight: 40,
     config: {
       layout: {
         header: 'top-header',
@@ -234,6 +248,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'edit',
     parentSlug: 'settings/login',
     lane: 'admin',
+    weight: 10,
     config: {
       layout: {
         header: 'top-header',
@@ -253,6 +268,7 @@ module.exports.ADMIN_PAGES = [
     slug: 'fonts',
     parentSlug: 'settings',
     lane: 'admin',
+    weight: 50,
     config: {
       layout: {
         header: 'top-header',

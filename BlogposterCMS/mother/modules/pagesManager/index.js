@@ -206,8 +206,10 @@ function setupPagesManagerEvents(motherEmitter) {
       is_content = false,
       lane = 'public',
       language = 'en',
-      meta = null
+      meta = null,
+      weight: rawWeight = 0
     } = payload || {};
+    const weight = Number(rawWeight) || 0;
   
     if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
       return callback(new Error('[pagesManager] createPage => invalid meltdown payload.'));
@@ -288,7 +290,8 @@ function setupPagesManagerEvents(motherEmitter) {
               is_content,
               language,
               title: mainTitle,
-              meta
+              meta,
+              weight
             }
          }
        },
@@ -599,10 +602,13 @@ function setupPagesManagerEvents(motherEmitter) {
         parent_id,
         is_content,
         lane = 'public',
-        language = 'en',
-        title = '',
-        meta = null
-      } = payload || {};
+      language = 'en',
+      title = '',
+      meta = null,
+      weight: rawWeight2
+    } = payload || {};
+    const hasWeight = Object.prototype.hasOwnProperty.call(payload || {}, 'weight');
+    const weight = hasWeight ? Number(rawWeight2) || 0 : undefined;
 
       if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
         return callback(new Error('[pagesManager] updatePage => invalid meltdown payload.'));
@@ -640,7 +646,8 @@ function setupPagesManagerEvents(motherEmitter) {
               lane,
               language,
               title,
-              meta
+              meta,
+              ...(hasWeight ? { weight } : {})
             }
           }
         },

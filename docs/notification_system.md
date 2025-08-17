@@ -12,6 +12,12 @@ method. When the CMS starts, the manager loads the `integrationsRegistry.json`
 file to determine which integrations are active and passes their stored config to
 `initialize`.
 
+Integrations can also expose a `fields` array describing their configuration
+requirements. The registry mirrors this metadata so the admin UI can present
+tailored forms instead of generic key/value inputs. If an integration exposes a
+`verify` function, the manager runs it on startup and skips initialization when
+verification fails.
+
 Example registry entry:
 ```json
 {
@@ -22,7 +28,10 @@ Example registry entry:
       "port": 587,
       "user": "myuser",
       "pass": "mypassword"
-    }
+    },
+    "fields": [
+      { "name": "host", "label": "SMTP Host", "required": true }
+    ]
   }
 }
 ```
@@ -37,7 +46,11 @@ integrations receive the payload. If an integration throws an error during
 notification delivery, it is logged but the CMS continues running.
 
 This system ensures important events (such as module meltdowns) can alert
-administrators via the channels they prefer.
+administrators via the channels they prefer. Built-in integrations include a
+file logger and a Slack webhook sender that relies only on Node's core `https`
+module. The Slack integration only accepts `https://hooks.slack.com/` URLs,
+times out after five seconds and a channel override works only when the webhook
+is configured to allow it.
 
 ## Notification Hub
 

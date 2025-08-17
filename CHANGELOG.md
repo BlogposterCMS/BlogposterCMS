@@ -7,6 +7,7 @@ El Psy Kongroo
 
 
 ### Added
+- Slack notifications via incoming webhook using only core `https` module; integrations can now expose field metadata for the admin UI.
 - Introduced `pageService` to centralize page data access through the event bus.
 - Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
 - Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
@@ -80,6 +81,9 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Notification manager now verifies integrations before initializing; FileLog
+  creates missing log directories and Slack webhook calls enforce
+  `hooks.slack.com` with a five-second timeout.
 - Module loader now notifies and deactivates community modules missing `index.js` so they never appear as loadable.
 - Apps can expose a builder by adding a `builder` tag in their manifest.
 - Builder publish now saves designs under `/builder/{designName}/` and records file metadata for safe overwrites.

@@ -41,6 +41,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Notification emitter now uses a safe wrapper with console fallback across core loaders; appLoader emits warning notifications for missing or invalid manifests; default admin page widget spacing prevents layout overlaps.
 - Module loader wraps module initialization in try/catch, emits system notifications on failure, and skips success logs when a module is deactivated. Widget seeding and app registry updates now report errors through the notification system.
 - Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.
 - Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.

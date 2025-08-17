@@ -9,13 +9,21 @@ const {
 const { hasPermission } = require('../userManagement/permissionUtils');
 const notificationEmitter = require('../../emitters/notificationEmitter');
 
+const notify = (payload) => {
+  try {
+    notificationEmitter.emit('notify', payload);
+  } catch (e) {
+    console.error('[NOTIFY-FALLBACK]', payload?.message || payload, e?.message);
+  }
+};
+
 async function loadAllApps({ motherEmitter, jwt, baseDir }) {
   const appsPath = baseDir || path.resolve(__dirname, '../../../apps');
 
   try {
     await ensureAppRegistrySchema(motherEmitter, jwt);
   } catch (err) {
-    notificationEmitter.emit('notify', {
+    notify({
       moduleName: 'appLoader',
       notificationType: 'system',
       priority: 'error',
@@ -25,12 +33,22 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
   }
 
   if (!jwt) {
-    console.warn('[APP LOADER] No meltdown JWT => cannot build app registry.');
+    notify({
+      moduleName: 'appLoader',
+      notificationType: 'system',
+      priority: 'warning',
+      message: '[APP LOADER] No meltdown JWT => cannot build app registry.'
+    });
     return;
   }
 
   if (!fs.existsSync(appsPath)) {
-    console.warn('[APP LOADER] apps dir not found =>', appsPath);
+    notify({
+      moduleName: 'appLoader',
+      notificationType: 'system',
+      priority: 'warning',
+      message: `[APP LOADER] apps dir not found => ${appsPath}`
+    });
     return;
   }
 
@@ -40,11 +58,16 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
     const appName = dirent.name;
     const manifestPath = path.join(appsPath, appName, 'app.json');
     if (!fs.existsSync(manifestPath)) {
-      console.warn(`[APP LOADER] Missing app.json for "${appName}"`);
+      notify({
+        moduleName: 'appLoader',
+        notificationType: 'system',
+        priority: 'warning',
+        message: `[APP LOADER] Missing app.json for "${appName}"`
+      });
       try {
         await registerOrUpdateApp(motherEmitter, jwt, appName, null, false, 'Missing app.json');
       } catch (err) {
-        notificationEmitter.emit('notify', {
+        notify({
           moduleName: 'appLoader',
           notificationType: 'system',
           priority: 'error',
@@ -58,11 +81,16 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
     try {
       manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     } catch (err) {
-      console.warn(`[APP LOADER] Invalid app.json for "${appName}" =>`, err.message);
+      notify({
+        moduleName: 'appLoader',
+        notificationType: 'system',
+        priority: 'warning',
+        message: `[APP LOADER] Invalid app.json for "${appName}": ${err.message}`
+      });
       try {
         await registerOrUpdateApp(motherEmitter, jwt, appName, null, false, 'Invalid app.json');
       } catch (err2) {
-        notificationEmitter.emit('notify', {
+        notify({
           moduleName: 'appLoader',
           notificationType: 'system',
           priority: 'error',
@@ -75,7 +103,7 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
     try {
       await registerOrUpdateApp(motherEmitter, jwt, appName, manifest, true, null);
     } catch (err) {
-      notificationEmitter.emit('notify', {
+      notify({
         moduleName: 'appLoader',
         notificationType: 'system',
         priority: 'error',
@@ -88,7 +116,7 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
 module.exports = {
   async initialize({ motherEmitter, isCore, jwt, baseDir }) {
     if (!isCore) {
-      notificationEmitter.emit('notify', {
+      notify({
         moduleName: 'appLoader',
         notificationType: 'system',
         priority: 'error',

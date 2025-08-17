@@ -18,7 +18,16 @@ const path = require('path');
 const vm = require('vm');
 
 // Falls Sie einen eigenen NotificationEmitter haben, könnten Sie den hier integrieren:
-const  notificationEmitter  = require('../../emitters/notificationEmitter');
+const notificationEmitter = require('../../emitters/notificationEmitter');
+
+// Safe wrapper to avoid losing critical errors when the emitter is missing
+const notify = (payload) => {
+  try {
+    notificationEmitter.emit('notify', payload);
+  } catch (e) {
+    console.error('[NOTIFY-FALLBACK]', payload?.message || payload, e?.message);
+  }
+};
 
 // meltdown registry - unsere Database-Helferlein
 const {
@@ -323,7 +332,7 @@ async function attemptModuleLoad(
         },
         (err2) => {
           if (err2) {
-            notificationEmitter.emit('notify', {
+            notify({
               moduleName,
               notificationType: 'system',
               priority: 'error',
@@ -342,7 +351,7 @@ async function attemptModuleLoad(
 
   async function handleModuleError(err, moduleName, motherEmitter, jwt) {
     const errorMsg = `[E_MODULE_LOAD_FAILED] Error loading "${moduleName}": ${err.message}`;
-    notificationEmitter.emit('notify', {
+    notify({
       moduleName,
       notificationType: 'system',
       priority: 'error',

@@ -8,6 +8,14 @@ const fs = require('fs');
 const path = require('path');
 const notificationEmitter = require('../../emitters/notificationEmitter');
 
+const notify = (payload) => {
+  try {
+    notificationEmitter.emit('notify', payload);
+  } catch (e) {
+    console.error('[NOTIFY-FALLBACK]', payload?.message || payload, e?.message);
+  }
+};
+
 function meltdownEmit(emitter, event, payload) {
   return new Promise((resolve, reject) => {
     const callback = onceCallback((err, res) => {
@@ -59,12 +67,22 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
     if (page.config?.icon) {
       if (typeof page.config.icon !== 'string' || !page.config.icon.startsWith('/assets/icons/')) {
-        console.warn(`[plainSpace] Invalid icon path for admin page "${page.slug}":`, page.config.icon);
+        notify({
+          moduleName: MODULE,
+          notificationType: 'system',
+          priority: 'warning',
+          message: `[plainSpace] Invalid icon path for admin page "${page.slug}": ${page.config.icon}`
+        });
         delete page.config.icon;
       } else {
         const iconFile = path.join(__dirname, '../../../public', page.config.icon);
         if (!fs.existsSync(iconFile)) {
-          console.warn(`[plainSpace] Icon not found for admin page "${page.slug}":`, page.config.icon);
+          notify({
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'warning',
+            message: `[plainSpace] Icon not found for admin page "${page.slug}": ${page.config.icon}`
+          });
           delete page.config.icon;
         }
       }
@@ -101,7 +119,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
             seoKeywords: ''
           }]
         }).catch(err => {
-          notificationEmitter.emit('notify', {
+          notify({
             moduleName: MODULE,
             notificationType: 'system',
             priority: 'error',
@@ -174,7 +192,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           });
           console.log(`[plainSpace] Updated metadata for existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
-          notificationEmitter.emit('notify', {
+          notify({
             moduleName: MODULE,
             notificationType: 'system',
             priority: 'error',
@@ -212,7 +230,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           });
           console.log(`[plainSpace] Updated widgets for existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
-          notificationEmitter.emit('notify', {
+          notify({
             moduleName: MODULE,
             notificationType: 'system',
             priority: 'error',
@@ -259,7 +277,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
         id: `w${idx}`,
         widgetId: wId,
         x: 0,
-        y: idx * 2,
+        y: idx * 4,
         w: 8,
         h: 4,
         code: null
@@ -276,7 +294,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
         });
         console.log(`[plainSpace] Default layout seeded for "${finalSlugForCheck}".`);
       } catch (err) {
-        notificationEmitter.emit('notify', {
+        notify({
           moduleName: MODULE,
           notificationType: 'system',
           priority: 'error',
@@ -285,7 +303,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       }
     }
     } catch(err) {
-      notificationEmitter.emit('notify', {
+      notify({
         moduleName: MODULE,
         notificationType: 'system',
         priority: 'error',
@@ -318,7 +336,7 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
       },
       onceCallback((err, rows) => {
         if (err) {
-          notificationEmitter.emit('notify', {
+          notify({
             moduleName: MODULE,
             notificationType: 'system',
             priority: 'error',
@@ -348,7 +366,7 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
       },
       onceCallback((err) => {
         if (err) {
-          notificationEmitter.emit('notify', {
+          notify({
             moduleName: MODULE,
             notificationType: 'system',
             priority: 'error',
@@ -389,7 +407,7 @@ async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) 
     });
     console.log(`[plainSpace] Stored layout options for ${widgetData.widgetId}.`);
   } catch (err) {
-    notificationEmitter.emit('notify', {
+    notify({
       moduleName: MODULE,
       notificationType: 'system',
       priority: 'error',

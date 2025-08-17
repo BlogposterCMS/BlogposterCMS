@@ -5,7 +5,7 @@
  * meltdown => dbUpdate with placeholders:
  *   - INIT_PAGES_SCHEMA
  *   - INIT_PAGES_TABLE
- *   - CHECK_AND_ALTER_PAGES_TABLE
+ *   weight migration and indexes run via raw SQL after table creation
  */
 
 require('dotenv').config();
@@ -60,13 +60,7 @@ function ensurePageSchemaAndTable(motherEmitter, jwt, nonce) {
         }
         console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_SCHEMA" done.');
 
-        try {
-          await checkAndAlterPagesTable(motherEmitter, jwt, nonce);
-        } catch (alterErr) {
-          return reject(alterErr);
-        }
-
-        // meltdown => dbUpdate => 'INIT_PAGES_TABLE'
+        // After schema creation ensure the table exists
         motherEmitter.emit(
           'dbUpdate',
           {
@@ -75,13 +69,19 @@ function ensurePageSchemaAndTable(motherEmitter, jwt, nonce) {
             where: {},
             data: { rawSQL: 'INIT_PAGES_TABLE' }
           },
-          (tableErr) => {
+          async (tableErr) => {
             if (tableErr) {
               console.error('[PAGE SERVICE] Error creating pages table =>', tableErr.message);
               return reject(tableErr);
             }
             console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_TABLE" done.');
-            resolve();
+
+            try {
+              await checkAndAlterPagesTable(motherEmitter, jwt, nonce);
+              resolve();
+            } catch (alterErr) {
+              reject(alterErr);
+            }
           }
         );
       }
@@ -100,56 +100,83 @@ function checkAndAlterPagesTable(motherEmitter, jwt, nonce) {
       nonce
     };
 
-    // Retrieve current table info to determine if the "weight" column exists
     motherEmitter.emit(
-      'dbSelect',
+      'dbUpdate',
       {
         ...basePayload,
         table: '__rawSQL__',
-        data: { rawSQL: 'PRAGMA table_info(pagesManager_pages);' }
+        where: {},
+        data: { rawSQL: 'ALTER TABLE pagesManager_pages ADD COLUMN weight INTEGER DEFAULT 0;' }
       },
-      (infoErr, result = []) => {
-        if (infoErr) {
-          console.error('[PAGE SERVICE] Failed to inspect pages table =>', infoErr.message);
-          return reject(infoErr);
+      (alterErr) => {
+        if (alterErr && !/duplicate column/i.test(String(alterErr.message))) {
+          console.error('[PAGE SERVICE] Error adding weight column =>', alterErr.message);
+          return reject(alterErr);
         }
 
-        const rows = Array.isArray(result) ? result : (result?.rows || []);
-        if (rows.length === 0) return resolve();
-
-        const hasWeight = rows.some(r => r.name === 'weight');
-        if (hasWeight) return resolve();
-
-        // Add the missing column and backfill existing rows
         motherEmitter.emit(
           'dbUpdate',
           {
             ...basePayload,
             table: '__rawSQL__',
             where: {},
-            data: { rawSQL: 'ALTER TABLE pagesManager_pages ADD COLUMN weight INTEGER DEFAULT 0;' }
+            data: { rawSQL: 'UPDATE pagesManager_pages SET weight = 0 WHERE weight IS NULL;' }
           },
-          (alterErr) => {
-            if (alterErr && !/duplicate column/i.test(String(alterErr.message))) {
-              console.error('[PAGE SERVICE] Error adding weight column =>', alterErr.message);
-              return reject(alterErr);
+          (updateErr) => {
+            if (updateErr) {
+              console.error('[PAGE SERVICE] Error normalising weight column =>', updateErr.message);
+              return reject(updateErr);
             }
 
+            // Create indexes after ensuring the column
             motherEmitter.emit(
               'dbUpdate',
               {
                 ...basePayload,
                 table: '__rawSQL__',
                 where: {},
-                data: { rawSQL: 'UPDATE pagesManager_pages SET weight = 0 WHERE weight IS NULL;' }
+                data: { rawSQL: 'CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_lane_unique ON pagesManager_pages (slug, lane);' }
               },
-              (updateErr) => {
-                if (updateErr) {
-                  console.error('[PAGE SERVICE] Error normalising weight column =>', updateErr.message);
-                  return reject(updateErr);
+              (idxErr1) => {
+                if (idxErr1) {
+                  console.error('[PAGE SERVICE] Error creating slug/lane index =>', idxErr1.message);
+                  return reject(idxErr1);
                 }
-                console.log('[PAGE SERVICE] Added missing "weight" column to pages table.');
-                resolve();
+
+                motherEmitter.emit(
+                  'dbUpdate',
+                  {
+                    ...basePayload,
+                    table: '__rawSQL__',
+                    where: {},
+                    data: { rawSQL: 'CREATE INDEX IF NOT EXISTS pages_lane_weight_created_at ON pagesManager_pages (lane, weight, created_at DESC);' }
+                  },
+                  (idxErr2) => {
+                    if (idxErr2) {
+                      console.error('[PAGE SERVICE] Error creating lane/weight index =>', idxErr2.message);
+                      return reject(idxErr2);
+                    }
+
+                    motherEmitter.emit(
+                      'dbUpdate',
+                      {
+                        ...basePayload,
+                        table: '__rawSQL__',
+                        where: {},
+                        data: { rawSQL: 'CREATE INDEX IF NOT EXISTS pages_parent_weight_created_at ON pagesManager_pages (parent_id, weight, created_at DESC);' }
+                      },
+                      (idxErr3) => {
+                        if (idxErr3) {
+                          console.error('[PAGE SERVICE] Error creating parent/weight index =>', idxErr3.message);
+                          return reject(idxErr3);
+                        }
+
+                        console.log('[PAGE SERVICE] Added missing "weight" column to pages table.');
+                        resolve();
+                      }
+                    );
+                  }
+                );
               }
             );
           }

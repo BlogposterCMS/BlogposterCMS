@@ -712,49 +712,6 @@ case 'SELECT_MODULE_BY_NAME': {
   return rows;
 }
 
-case 'INSERT_APP_REGISTRY_ENTRY': {
-  const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
-  const {
-    appName,
-    isActive = 0,
-    lastError = null,
-    appInfo = '{}'
-  } = p;
-  await db.run(
-    `INSERT INTO appLoader_app_registry (app_name, is_active, last_error, app_info, updated_at)
-     VALUES (?,?,?,?,CURRENT_TIMESTAMP);`,
-    [appName, isActive ? 1 : 0, lastError, appInfo]
-  );
-  return { done: true };
-}
-
-case 'UPDATE_APP_REGISTRY_ENTRY': {
-  const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
-  const {
-    appName,
-    isActive = 0,
-    lastError = null,
-    appInfo = '{}'
-  } = p;
-  await db.run(
-    `UPDATE appLoader_app_registry
-        SET is_active = ?, last_error = ?, app_info = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE app_name = ?;`,
-    [isActive ? 1 : 0, lastError, appInfo, appName]
-  );
-  return { done: true };
-}
-
-case 'SELECT_APP_BY_NAME': {
-  const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
-  const { appName } = p;
-  const rows = await db.all(
-    `SELECT * FROM appLoader_app_registry WHERE app_name = ?;`,
-    [appName]
-  );
-  return rows;
-}
-
 /* ────────────────────────────────────────────────────────────────
    DEPENDENCY LOADER
    ─────────────────────────────────────────────────────────────── */

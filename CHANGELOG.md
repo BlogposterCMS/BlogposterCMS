@@ -84,6 +84,10 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- pagesManager now adds a missing `weight` column during initialization so migrations no longer deactivate the module.
+- appLoader uses SQLite-friendly schema and placeholders, resolving `unrecognized token ':'` database errors.
+- plainSpace seeding now defines the slug reference before try/catch and skips when pagesManager is inactive, preventing runtime reference errors and noisy warnings.
+- Module loader listens for `targetModuleName` deactivation events to avoid logging successful loads for modules that were actually disabled.
 - Notification manager now verifies integrations before initializing; FileLog creates missing log directories and Slack webhook calls enforce `hooks.slack.com` with a five-second timeout.
 - Module loader no longer logs a success message for modules that deactivate during loading.
 - Module loader now notifies and deactivates community modules missing `index.js` so they never appear as loadable.

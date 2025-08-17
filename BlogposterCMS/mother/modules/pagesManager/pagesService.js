@@ -94,28 +94,66 @@ function checkAndAlterPagesTable(motherEmitter, jwt, nonce) {
   return new Promise((resolve, reject) => {
     console.log('[PAGE SERVICE] Checking/altering pages table/collection...');
 
-    const meltdownPayload = {
+    const basePayload = {
       jwt,
-      moduleName : 'pagesManager',
-      moduleType : 'core',
+      moduleName: 'pagesManager',
+      moduleType: 'core',
       nonce
     };
 
+    // Retrieve current table info to determine if the "weight" column exists
     motherEmitter.emit(
-      'dbUpdate',
+      'dbSelect',
       {
-        ...meltdownPayload,
+        ...basePayload,
         table: '__rawSQL__',
-        where: {},
-        data: { rawSQL: 'CHECK_AND_ALTER_PAGES_TABLE' }
+        data: { rawSQL: 'PRAGMA table_info(pagesManager_pages);' }
       },
-      (err) => {
-        if (err) {
-          console.error('[PAGE SERVICE] Error altering pages table =>', err.message);
-          return reject(err);
+      (infoErr, result = []) => {
+        if (infoErr) {
+          console.error('[PAGE SERVICE] Failed to inspect pages table =>', infoErr.message);
+          return reject(infoErr);
         }
-        console.log('[PAGE SERVICE] Placeholder "CHECK_AND_ALTER_PAGES_TABLE" done. Possibly meltdown is calm now.');
-        resolve();
+
+        const rows = Array.isArray(result) ? result : (result?.rows || []);
+        const hasWeight = rows.some(r => r.name === 'weight');
+
+        if (hasWeight) return resolve();
+
+        // Add the missing column and backfill existing rows
+        motherEmitter.emit(
+          'dbUpdate',
+          {
+            ...basePayload,
+            table: '__rawSQL__',
+            where: {},
+            data: { rawSQL: 'ALTER TABLE pagesManager_pages ADD COLUMN weight INTEGER DEFAULT 0;' }
+          },
+          (alterErr) => {
+            if (alterErr && !/duplicate column/i.test(String(alterErr.message))) {
+              console.error('[PAGE SERVICE] Error adding weight column =>', alterErr.message);
+              return reject(alterErr);
+            }
+
+            motherEmitter.emit(
+              'dbUpdate',
+              {
+                ...basePayload,
+                table: '__rawSQL__',
+                where: {},
+                data: { rawSQL: 'UPDATE pagesManager_pages SET weight = 0 WHERE weight IS NULL;' }
+              },
+              (updateErr) => {
+                if (updateErr) {
+                  console.error('[PAGE SERVICE] Error normalising weight column =>', updateErr.message);
+                  return reject(updateErr);
+                }
+                console.log('[PAGE SERVICE] Added missing "weight" column to pages table.');
+                resolve();
+              }
+            );
+          }
+        );
       }
     );
   });

@@ -713,6 +713,66 @@ case 'SELECT_MODULE_BY_NAME': {
 }
 
 /* ────────────────────────────────────────────────────────────────
+   APP LOADER
+   ─────────────────────────────────────────────────────────────── */
+case 'INIT_APP_REGISTRY_TABLE': {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS appLoader_app_registry (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      app_name    TEXT UNIQUE NOT NULL,
+      is_active   INTEGER DEFAULT 0,
+      last_error  TEXT,
+      app_info    TEXT  DEFAULT '{}',
+      updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  return { done: true };
+}
+
+case 'INSERT_APP_REGISTRY_ENTRY': {
+  const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+  const {
+    appName,
+    isActive = 0,
+    lastError = null,
+    appInfo = '{}'
+  } = p;
+  await db.run(
+    `INSERT INTO appLoader_app_registry (app_name, is_active, last_error, app_info, updated_at)
+     VALUES (?,?,?,?,CURRENT_TIMESTAMP);`,
+    [appName, isActive ? 1 : 0, lastError, appInfo]
+  );
+  return { done: true };
+}
+
+case 'UPDATE_APP_REGISTRY_ENTRY': {
+  const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+  const {
+    appName,
+    isActive = 0,
+    lastError = null,
+    appInfo = '{}'
+  } = p;
+  await db.run(
+    `UPDATE appLoader_app_registry
+        SET is_active = ?, last_error = ?, app_info = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE app_name = ?;`,
+    [isActive ? 1 : 0, lastError, appInfo, appName]
+  );
+  return { done: true };
+}
+
+case 'SELECT_APP_BY_NAME': {
+  const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+  const { appName } = p;
+  const rows = await db.all(
+    `SELECT * FROM appLoader_app_registry WHERE app_name = ?;`,
+    [appName]
+  );
+  return rows;
+}
+
+/* ────────────────────────────────────────────────────────────────
    DEPENDENCY LOADER
    ─────────────────────────────────────────────────────────────── */
 case 'CHECK_DB_EXISTS_DEPENDENCYLOADER': {

@@ -6,7 +6,6 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
-- Replaced direct SQL in pagesManager with placeholders (`CHECK_PAGES_TABLE`/`ADD_WEIGHT_COLUMN`) for database-agnostic weight migrations.
 - Added `INIT_APP_REGISTRY_TABLE` placeholder and MongoDB/PostgreSQL handlers so the app registry schema boots on all databases.
 - Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 
@@ -42,6 +41,7 @@ El Psy Kongroo
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 
 ### Removed
+- Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
 - Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
 - Support for dynamic action buttons in the content header.
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.

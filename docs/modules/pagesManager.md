@@ -4,7 +4,6 @@ Responsible for CRUD operations on pages and for generating default pages when t
 
 ## Startup
 - Core module; ensures its database schema exists then seeds default pages if needed.
-- Uses placeholder operations (`CHECK_PAGES_TABLE` and `ADD_WEIGHT_COLUMN`) to keep the schema database-agnostic and ensure the `weight` column exists.
 
 ## Purpose
 - Provides events to create, retrieve and update pages.

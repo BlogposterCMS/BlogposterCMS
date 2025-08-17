@@ -14,10 +14,8 @@
   content: "";
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--user-color), transparent 70%) 1px, transparent 0);
   background-size: 20px 20px;
-  opacity: 0.05;
-  color: var(--color-text);
   pointer-events: none;
   z-index: -1;
 }
@@ -73,6 +71,10 @@
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
+.password-field input {
+  padding-right: 56px;
+}
+
 .field input:focus {
   outline: none;
   border-color: var(--brand);
@@ -113,9 +115,13 @@
 
 .password-toggle {
   position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
+  top: 0;
+  right: 8px;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
@@ -174,10 +180,8 @@
   content: "";
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--user-color), transparent 70%) 1px, transparent 0);
   background-size: 20px 20px;
-  opacity: 0.05;
-  color: var(--color-text);
   pointer-events: none;
   z-index: -1;
 }
@@ -233,6 +237,10 @@
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
+.password-field input {
+  padding-right: 56px;
+}
+
 .field input:focus {
   outline: none;
   border-color: var(--brand);
@@ -273,9 +281,13 @@
 
 .password-toggle {
   position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
+  top: 0;
+  right: 8px;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
@@ -916,6 +928,49 @@ p {
   }
 }
 /* =============================================================================
+   components/_floating-labels.scss — Global floating labels using sidebar style
+   ============================================================================= */
+[alt]::after, [title]::after, [aria-label]::after, [data-label]::after {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%) translateX(0) scale(0.8);
+  transform-origin: left center;
+  background: var(--color-white);
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 1000;
+}
+[alt]:hover::after, [title]:hover::after, [aria-label]:hover::after, [data-label]:hover::after, [alt]:focus::after, [title]:focus::after, [aria-label]:focus::after, [data-label]:focus::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(8px) scale(1);
+}
+
+[data-label]::after {
+  content: attr(data-label);
+}
+
+[aria-label]::after {
+  content: attr(aria-label);
+}
+
+[title]::after {
+  content: attr(title);
+}
+
+[alt]::after {
+  content: attr(alt);
+}
+
+/* =============================================================================
    components/_header-main.scss — Icon‐Style Header Nav
    ============================================================================= */
 .main-header {
@@ -1334,7 +1389,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
   display: none;
   position: absolute;
   left: 0;
-  top: 100%;
+  top: calc(100% + 4px);
   background: #fff;
   border: 1px solid color-mix(in srgb, var(--color-dark), transparent 80%);
   border-radius: 8px;
@@ -1367,7 +1422,8 @@ body.dashboard-edit-mode #edit-toggle:hover {
   height: 24px;
 }
 
-#subpage-floating-field {
+#subpage-floating-field,
+#workspace-floating-field {
   background: var(--color-white);
   padding: 8px;
   border-radius: 8px;

@@ -1,6 +1,6 @@
 {
   "moduleName": "pagesManager",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Manages pages and default content.",
   "developer": "Blogposter Team"
 }

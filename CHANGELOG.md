@@ -8,6 +8,7 @@ El Psy Kongroo
 
 ### Added
 - Added database-backed `weight` field to pages to control header and sidebar menu ordering.
+- Slack notifications via incoming webhook using only core `https` module; integrations can now expose field metadata for the admin UI.
 - Introduced `pageService` to centralize page data access through the event bus.
 - Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
 - Global dialog overrides funnel alert/confirm/prompt through UI events for custom popups.
@@ -44,6 +45,8 @@ El Psy Kongroo
 ### Changed
 - Mongo pages placeholders now drop slug indexes by name, store timestamps as `Date`, filter lane queries by language, and sitemap generation sorts by recent updates.
 - Removed slug-only unique index in relational databases, backfilled page weights, and added composite indexes for faster page sorting.
+- Notification emitter now uses a safe wrapper with console fallback across core loaders; appLoader emits warning notifications for missing or invalid manifests; default admin page widget spacing prevents layout overlaps.
+- Module loader wraps module initialization in try/catch, emits system notifications on failure, and skips success logs when a module is deactivated. Widget seeding and app registry updates now report errors through the notification system.
 - Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.
 - Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.
 - Login page background now uses the same dotted grid as the dashboard workspace.
@@ -79,6 +82,11 @@ El Psy Kongroo
 - Decoupled the top header from accent tinting and mirrored the accent color on module and user tabs.
 - Added dark mode variable defaults so accents appear softer on dark backgrounds.
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
+
+### Fixed
+- Notification manager now verifies integrations before initializing; FileLog creates missing log directories and Slack webhook calls enforce `hooks.slack.com` with a five-second timeout.
+- Module loader no longer logs a success message for modules that deactivate during loading.
+- Module loader now notifies and deactivates community modules missing `index.js` so they never appear as loadable.
 - Apps can expose a builder by adding a `builder` tag in their manifest.
 - Builder publish now saves designs under `/builder/{designName}/` and records file metadata for safe overwrites.
 - Publishing a design triggers a database save of the layout template.
@@ -123,8 +131,6 @@ El Psy Kongroo
 - Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.
 - Builder publication moves entire folders in one operation and requires the `builder.publish` permission.
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
-
-### Fixed
 - Corrected HTML escaping in the Page List admin widget to restore widget loading and prevent XSS issues.
 - Resolved broken import path for dashboard dialog helper and silenced dynamic import warnings during build.
 - Confirm dialogs no longer stall when no handler resolves the UI event.

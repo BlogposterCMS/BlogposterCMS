@@ -23,9 +23,12 @@ module.exports = {
       const integration = integrations[name];
       if (!integration.active) continue;
       try {
+        if (typeof integration.module.verify === 'function') {
+          await integration.module.verify(integration.config);
+        }
         activeInstances[name] = await integration.module.initialize(integration.config);
       } catch (err) {
-        console.error(`[NOTIFICATION MANAGER] Failed to init integration "${name}" =>`, err.message);
+        console.error(`[NOTIFICATION MANAGER] Init "${name}" failed =>`, err.message);
       }
     }
 

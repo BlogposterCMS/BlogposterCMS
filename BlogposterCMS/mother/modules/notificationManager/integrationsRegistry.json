@@ -7,18 +7,74 @@
       "secure": false,
       "user": "myuser",
       "pass": "mypassword"
-    }
+    },
+    "fields": [
+      {
+        "name": "host",
+        "label": "SMTP Host",
+        "required": true
+      },
+      {
+        "name": "port",
+        "label": "Port",
+        "required": true
+      },
+      {
+        "name": "secure",
+        "label": "Use TLS",
+        "required": false
+      },
+      {
+        "name": "user",
+        "label": "Username",
+        "required": false
+      },
+      {
+        "name": "pass",
+        "label": "Password",
+        "required": false
+      }
+    ]
   },
   "Slack": {
     "active": false,
     "config": {
       "webhookUrl": "https://hooks.slack.com/services/..."
-    }
+    },
+    "fields": [
+      {
+        "name": "webhookUrl",
+        "label": "Webhook URL",
+        "required": true
+      },
+      {
+        "name": "defaultChannel",
+        "label": "Default Channel",
+        "required": false
+      },
+      {
+        "name": "username",
+        "label": "Username",
+        "required": false
+      },
+      {
+        "name": "icon",
+        "label": "Icon Emoji",
+        "required": false
+      }
+    ]
   },
   "FileLog": {
     "active": true,
     "config": {
       "logPath": "./mother/modules/notificationManager/blogposter.log"
-    }
+    },
+    "fields": [
+      {
+        "name": "logPath",
+        "label": "Log File Path",
+        "required": true
+      }
+    ]
   }
 }

@@ -5,7 +5,7 @@ Builds the app registry by scanning `apps/*/app.json` manifests during startup. 
 ## Startup
 - Core module executed during boot before the server begins listening.
 - Reads each `app.json` manifest under `apps/` and records metadata for the app.
-- Skips malformed or inaccessible manifests and logs warnings.
+- Skips malformed or inaccessible manifests and emits warning notifications.
 
 ## Purpose
 - Maintains an in-memory registry of available apps.
@@ -17,4 +17,4 @@ Builds the app registry by scanning `apps/*/app.json` manifests during startup. 
 - Only whitelisted fields are stored; unexpected properties are ignored.
 - Registry consumers should still validate user input before loading assets.
 
-The module keeps app discovery isolated so untrusted manifests cannot crash the server or expose sensitive paths.
+The module keeps app discovery isolated so untrusted manifests cannot crash the server or expose sensitive paths. Notifications use a wrapper that falls back to `console.error` if the emitter is missing.

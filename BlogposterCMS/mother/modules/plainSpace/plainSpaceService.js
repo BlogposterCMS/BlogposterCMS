@@ -6,6 +6,15 @@ const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const fs = require('fs');
 const path = require('path');
+const notificationEmitter = require('../../emitters/notificationEmitter');
+
+const notify = (payload) => {
+  try {
+    notificationEmitter.emit('notify', payload);
+  } catch (e) {
+    console.error('[NOTIFY-FALLBACK]', payload?.message || payload, e?.message);
+  }
+};
 
 function meltdownEmit(emitter, event, payload) {
   return new Promise((resolve, reject) => {
@@ -58,12 +67,22 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
     if (page.config?.icon) {
       if (typeof page.config.icon !== 'string' || !page.config.icon.startsWith('/assets/icons/')) {
-        console.warn(`[plainSpace] Invalid icon path for admin page "${page.slug}":`, page.config.icon);
+        notify({
+          moduleName: MODULE,
+          notificationType: 'system',
+          priority: 'warning',
+          message: `[plainSpace] Invalid icon path for admin page "${page.slug}": ${page.config.icon}`
+        });
         delete page.config.icon;
       } else {
         const iconFile = path.join(__dirname, '../../../public', page.config.icon);
         if (!fs.existsSync(iconFile)) {
-          console.warn(`[plainSpace] Icon not found for admin page "${page.slug}":`, page.config.icon);
+          notify({
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'warning',
+            message: `[plainSpace] Icon not found for admin page "${page.slug}": ${page.config.icon}`
+          });
           delete page.config.icon;
         }
       }
@@ -99,7 +118,15 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
             seoTitle: parentTitle,
             seoKeywords: ''
           }]
-        }).catch(err => { console.error(`[plainSpace] Error creating parent "${parentSlugRaw}":`, err.message); return null; });
+        }).catch(err => {
+          notify({
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Error creating parent "${parentSlugRaw}": ${err.message}`
+          });
+          return null;
+        });
         parentId = res?.pageId || null;
         parent = parentId ? { id: parentId, meta: {} } : null;
       } else {
@@ -165,7 +192,12 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           });
           console.log(`[plainSpace] Updated metadata for existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
-          console.error(`[plainSpace] Failed to update metadata for admin page "${finalSlugForCheck}":`, err.message);
+          notify({
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Failed to update metadata for admin page "${finalSlugForCheck}": ${err.message}`
+          });
         }
       }
 
@@ -198,7 +230,12 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           });
           console.log(`[plainSpace] Updated widgets for existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
-          console.error(`[plainSpace] Failed to update admin page "${finalSlugForCheck}":`, err.message);
+          notify({
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Failed to update admin page "${finalSlugForCheck}": ${err.message}`
+          });
         }
       }
 
@@ -240,7 +277,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
         id: `w${idx}`,
         widgetId: wId,
         x: 0,
-        y: idx * 2,
+        y: idx * 4,
         w: 8,
         h: 4,
         code: null
@@ -257,11 +294,21 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
         });
         console.log(`[plainSpace] Default layout seeded for "${finalSlugForCheck}".`);
       } catch (err) {
-        console.error(`[plainSpace] Failed to seed layout for "${finalSlugForCheck}":`, err.message);
+        notify({
+          moduleName: MODULE,
+          notificationType: 'system',
+          priority: 'error',
+          message: `[plainSpace] Failed to seed layout for "${finalSlugForCheck}": ${err.message}`
+        });
       }
     }
     } catch(err) {
-      console.error(`[plainSpace] Error creating "${finalSlugForCheck}":`, err.message);
+      notify({
+        moduleName: MODULE,
+        notificationType: 'system',
+        priority: 'error',
+        message: `[plainSpace] Error creating "${finalSlugForCheck}": ${err.message}`
+      });
     }
   }
 }
@@ -289,7 +336,12 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
       },
       onceCallback((err, rows) => {
         if (err) {
-          console.error(`[plainSpace] Error checking widget "${widgetId}":`, err.message);
+          notify({
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Error checking widget "${widgetId}": ${err.message}`
+          });
           return resolve(false);
         }
         resolve(Array.isArray(rows) && rows.length > 0);
@@ -314,7 +366,12 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
       },
       onceCallback((err) => {
         if (err) {
-          console.error(`[plainSpace] createWidget failed for "${widgetId}":`, err.message);
+          notify({
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] createWidget failed for "${widgetId}": ${err.message}`
+          });
         } else {
           console.log(`[plainSpace] Widget "${widgetId}" successfully created.`);
         }
@@ -350,7 +407,12 @@ async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) 
     });
     console.log(`[plainSpace] Stored layout options for ${widgetData.widgetId}.`);
   } catch (err) {
-    console.error(`[plainSpace] Failed to store layout options for ${widgetData.widgetId}:`, err.message);
+    notify({
+      moduleName: MODULE,
+      notificationType: 'system',
+      priority: 'error',
+      message: `[plainSpace] Failed to store layout options for ${widgetData.widgetId}: ${err.message}`
+    });
   }
 }
 

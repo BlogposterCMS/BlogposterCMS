@@ -18,7 +18,16 @@ const path = require('path');
 const vm = require('vm');
 
 // Falls Sie einen eigenen NotificationEmitter haben, könnten Sie den hier integrieren:
-const  notificationEmitter  = require('../../emitters/notificationEmitter');
+const notificationEmitter = require('../../emitters/notificationEmitter');
+
+// Safe wrapper to avoid losing critical errors when the emitter is missing
+const notify = (payload) => {
+  try {
+    notificationEmitter.emit('notify', payload);
+  } catch (e) {
+    console.error('[NOTIFY-FALLBACK]', payload?.message || payload, e?.message);
+  }
+};
 
 // meltdown registry - unsere Database-Helferlein
 const {
@@ -259,7 +268,14 @@ async function attemptModuleLoad(
 
   const indexJsPath = path.join(modulesPath, moduleName, 'index.js');
   if (!fs.existsSync(indexJsPath)) {
-    console.warn(`[MODULE LOADER] Missing index.js in '${moduleName}'. Skipping load.`);
+    notify({
+      moduleName,
+      notificationType: 'system',
+      priority: 'error',
+      message: `[MODULE LOADER] Missing index.js in '${moduleName}'. Module disabled.`
+    });
+    await deactivateModule(motherEmitter, jwt, moduleName, 'Missing index.js');
+    motherEmitter.emit('removeListenersByModule', { moduleName });
     return false;
   }
 
@@ -267,8 +283,10 @@ async function attemptModuleLoad(
     console.log(`[MODULE LOADER] Auto-retry => "${moduleName}" gets another chance.`);
   }
 
+  let loadFailed = false;
+  let modEntry;
+
   try {
-    let modEntry;
     if (ALLOW_INDIVIDUAL_SANDBOX) {
       modEntry = loadModuleSandboxed(indexJsPath);
     } else {
@@ -276,60 +294,82 @@ async function attemptModuleLoad(
       // Laden wir's eben direkt. Möge der Chaosgott uns gnädig sein.
       modEntry = require(indexJsPath);
     }
-
-    // Erst mal Health-Check
-    await performHealthCheck(modEntry, moduleName, app, jwt);
-
-    // Wenn wir hier sind, lief der Health-Check sauber
-    // => Modul "richtig" initialisieren
-    await modEntry.initialize({
-      motherEmitter,
-      app,
-      isCore: false,
-      jwt
-    });
-
-    // Erfolgreiches Laden => last_error leeren
-    await updateModuleLastError(motherEmitter, jwt, moduleName, null);
-
-    // Falls Auto-Retry => wieder aktivieren
-    if (isAutoRetry) {
-      console.log(`[MODULE LOADER] Auto-retry => reactivating "${moduleName}".`);
-      await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'activateModuleInRegistry',
-          {
-            jwt,
-            moduleName: 'moduleLoader',
-            moduleType: 'core',
-            targetModuleName: moduleName
-          },
-          (err2) => {
-            if (err2) {
-              console.error(`[MODULE LOADER] Failed to activate "${moduleName}" =>`, err2.message);
-              return reject(err2);
-            }
-            resolve();
-          }
-        );
-      });
-    }
-
-    console.log(`[MODULE LOADER] Successfully loaded => ${moduleName}`);
-    // Falls Sie Benachrichtigungen verwenden wollen, könnten Sie hier was rausschicken:
-    // notificationEmitter?.notify({...});
-    return true;
   } catch (err) {
+    loadFailed = true;
+    await handleModuleError(err, moduleName, motherEmitter, jwt);
+  }
+
+  if (!loadFailed) {
+    try {
+      // Erst mal Health-Check
+      await performHealthCheck(modEntry, moduleName, app, jwt);
+
+      // Wenn wir hier sind, lief der Health-Check sauber
+      // => Modul "richtig" initialisieren
+      await modEntry.initialize({
+        motherEmitter,
+        app,
+        isCore: false,
+        jwt
+      });
+    } catch (err) {
+      loadFailed = true;
+      await handleModuleError(err, moduleName, motherEmitter, jwt);
+    }
+  }
+
+  if (loadFailed) {
+    return false;
+  }
+
+  // Erfolgreiches Laden => last_error leeren
+  await updateModuleLastError(motherEmitter, jwt, moduleName, null);
+
+  // Falls Auto-Retry => wieder aktivieren
+  if (isAutoRetry) {
+    console.log(`[MODULE LOADER] Auto-retry => reactivating "${moduleName}".`);
+    await new Promise((resolve, reject) => {
+      motherEmitter.emit(
+        'activateModuleInRegistry',
+        {
+          jwt,
+          moduleName: 'moduleLoader',
+          moduleType: 'core',
+          targetModuleName: moduleName
+        },
+        (err2) => {
+          if (err2) {
+            notify({
+              moduleName,
+              notificationType: 'system',
+              priority: 'error',
+              message: `[MODULE LOADER] Failed to activate "${moduleName}": ${err2.message}`
+            });
+            return reject(err2);
+          }
+          resolve();
+        }
+      );
+    });
+  }
+
+  console.log(`[MODULE LOADER] Successfully loaded => ${moduleName}`);
+  return true;
+
+  async function handleModuleError(err, moduleName, motherEmitter, jwt) {
     const errorMsg = `[E_MODULE_LOAD_FAILED] Error loading "${moduleName}": ${err.message}`;
-    console.error(`[MODULE LOADER] ${errorMsg}`);
+    notify({
+      moduleName,
+      notificationType: 'system',
+      priority: 'error',
+      message: `[MODULE LOADER] ${moduleName} konnte nicht geladen werden: ${err.message}`
+    });
 
     // Deaktivieren in DB
     await deactivateModule(motherEmitter, jwt, moduleName, errorMsg);
 
     // Emitter aufräumen
     motherEmitter.emit('removeListenersByModule', { moduleName });
-
-    return false;
   }
 }
 

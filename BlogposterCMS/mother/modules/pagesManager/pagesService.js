@@ -53,12 +53,18 @@ function ensurePageSchemaAndTable(motherEmitter, jwt, nonce) {
         where: {},
         data: { rawSQL: 'INIT_PAGES_SCHEMA' }
       },
-      (schemaErr) => {
+      async (schemaErr) => {
         if (schemaErr) {
           console.error('[PAGE SERVICE] Error creating pages schema =>', schemaErr.message);
           return reject(schemaErr);
         }
         console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_SCHEMA" done.');
+
+        try {
+          await checkAndAlterPagesTable(motherEmitter, jwt, nonce);
+        } catch (alterErr) {
+          return reject(alterErr);
+        }
 
         // meltdown => dbUpdate => 'INIT_PAGES_TABLE'
         motherEmitter.emit(
@@ -69,20 +75,13 @@ function ensurePageSchemaAndTable(motherEmitter, jwt, nonce) {
             where: {},
             data: { rawSQL: 'INIT_PAGES_TABLE' }
           },
-          async (tableErr) => {
+          (tableErr) => {
             if (tableErr) {
               console.error('[PAGE SERVICE] Error creating pages table =>', tableErr.message);
               return reject(tableErr);
             }
             console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_TABLE" done.');
-
-            // meltdown => 'CHECK_AND_ALTER_PAGES_TABLE'
-            try {
-              await checkAndAlterPagesTable(motherEmitter, jwt, nonce);
-              resolve();
-            } catch (alterErr) {
-              reject(alterErr);
-            }
+            resolve();
           }
         );
       }
@@ -116,8 +115,9 @@ function checkAndAlterPagesTable(motherEmitter, jwt, nonce) {
         }
 
         const rows = Array.isArray(result) ? result : (result?.rows || []);
-        const hasWeight = rows.some(r => r.name === 'weight');
+        if (rows.length === 0) return resolve();
 
+        const hasWeight = rows.some(r => r.name === 'weight');
         if (hasWeight) return resolve();
 
         // Add the missing column and backfill existing rows

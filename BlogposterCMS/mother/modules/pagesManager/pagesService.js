@@ -5,7 +5,8 @@
  * meltdown => dbUpdate with placeholders:
  *   - INIT_PAGES_SCHEMA
  *   - INIT_PAGES_TABLE
- *   - CHECK_AND_ALTER_PAGES_TABLE
+ *   - CHECK_PAGES_TABLE
+ *   - ADD_WEIGHT_COLUMN
  */
 
 require('dotenv').config();
@@ -106,7 +107,7 @@ function checkAndAlterPagesTable(motherEmitter, jwt, nonce) {
       {
         ...basePayload,
         table: '__rawSQL__',
-        data: { rawSQL: 'PRAGMA table_info(pagesManager_pages);' }
+        data: { rawSQL: 'CHECK_PAGES_TABLE' }
       },
       (infoErr, result = []) => {
         if (infoErr) {
@@ -115,43 +116,25 @@ function checkAndAlterPagesTable(motherEmitter, jwt, nonce) {
         }
 
         const rows = Array.isArray(result) ? result : (result?.rows || []);
-        if (rows.length === 0) return resolve();
-
         const hasWeight = rows.some(r => r.name === 'weight');
         if (hasWeight) return resolve();
 
-        // Add the missing column and backfill existing rows
+        // Add the missing column and backfill existing rows via placeholder
         motherEmitter.emit(
           'dbUpdate',
           {
             ...basePayload,
             table: '__rawSQL__',
             where: {},
-            data: { rawSQL: 'ALTER TABLE pagesManager_pages ADD COLUMN weight INTEGER DEFAULT 0;' }
+            data: { rawSQL: 'ADD_WEIGHT_COLUMN' }
           },
           (alterErr) => {
-            if (alterErr && !/duplicate column/i.test(String(alterErr.message))) {
+            if (alterErr) {
               console.error('[PAGE SERVICE] Error adding weight column =>', alterErr.message);
               return reject(alterErr);
             }
-
-            motherEmitter.emit(
-              'dbUpdate',
-              {
-                ...basePayload,
-                table: '__rawSQL__',
-                where: {},
-                data: { rawSQL: 'UPDATE pagesManager_pages SET weight = 0 WHERE weight IS NULL;' }
-              },
-              (updateErr) => {
-                if (updateErr) {
-                  console.error('[PAGE SERVICE] Error normalising weight column =>', updateErr.message);
-                  return reject(updateErr);
-                }
-                console.log('[PAGE SERVICE] Added missing "weight" column to pages table.');
-                resolve();
-              }
-            );
+            console.log('[PAGE SERVICE] Added missing "weight" column to pages table.');
+            resolve();
           }
         );
       }

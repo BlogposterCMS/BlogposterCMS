@@ -242,8 +242,20 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
       return { done: true };
     }
-  
-  
+
+    case 'CHECK_PAGES_TABLE': {
+      const doc = await db.collection('pages').findOne({ weight: { $exists: true } });
+      return doc ? [{ name: 'weight' }] : [];
+    }
+
+    case 'ADD_WEIGHT_COLUMN': {
+      await db.collection('pages').updateMany(
+        { weight: { $exists: false } },
+        { $set: { weight: 0 } }
+      );
+      return { done: true };
+    }
+
     /**
      *  3) Since we can’t literally 'ALTER TABLE', we approximate the Postgres approach:
      *     - Add 'language' field if missing (default 'en')

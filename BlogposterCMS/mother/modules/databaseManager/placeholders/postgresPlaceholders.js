@@ -239,6 +239,29 @@ switch (operation) {
       return { done: true };
     }
 
+    case 'CHECK_PAGES_TABLE': {
+      const { rows } = await client.query(`
+        SELECT column_name AS name
+          FROM information_schema.columns
+         WHERE table_schema = 'pagesManager'
+           AND table_name   = 'pages';
+      `);
+      return rows;
+    }
+
+    case 'ADD_WEIGHT_COLUMN': {
+      await client.query(`
+        ALTER TABLE pagesManager.pages
+          ADD COLUMN IF NOT EXISTS weight INT DEFAULT 0;
+      `);
+      await client.query(`
+        UPDATE pagesManager.pages
+           SET weight = 0
+         WHERE weight IS NULL;
+      `);
+      return { done: true };
+    }
+
     /* ---------- MIGRATION / SELF‑HEALING PATCH ---------- */
     case 'CHECK_AND_ALTER_PAGES_TABLE': {
       /* 0. In case someone “accidentally” removed slug earlier … */

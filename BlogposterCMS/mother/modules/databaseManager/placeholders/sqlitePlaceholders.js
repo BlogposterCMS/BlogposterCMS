@@ -260,6 +260,21 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
       return { done: true };
     }
 
+    case 'CHECK_PAGES_TABLE': {
+      const cols = await db.all(`PRAGMA table_info(pagesManager_pages);`);
+      return Array.isArray(cols) ? cols : [];
+    }
+
+    case 'ADD_WEIGHT_COLUMN': {
+      try {
+        await db.run(`ALTER TABLE pagesManager_pages ADD COLUMN weight INTEGER DEFAULT 0;`);
+      } catch (e) {
+        if (!/duplicate column/i.test(String(e.message))) throw e;
+      }
+      await db.run(`UPDATE pagesManager_pages SET weight = 0 WHERE weight IS NULL;`);
+      return { done: true };
+    }
+
     case 'CHECK_AND_ALTER_PAGES_TABLE': {
       const cols = await db.all(`PRAGMA table_info(pagesManager_pages);`);
       const names = Array.isArray(cols) ? cols.map(c => c.name) : [];

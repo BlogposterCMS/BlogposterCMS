@@ -81,9 +81,8 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
-- Notification manager now verifies integrations before initializing; FileLog
-  creates missing log directories and Slack webhook calls enforce
-  `hooks.slack.com` with a five-second timeout.
+- Notification manager now verifies integrations before initializing; FileLog creates missing log directories and Slack webhook calls enforce `hooks.slack.com` with a five-second timeout.
+- Module loader no longer logs a success message for modules that deactivate during loading.
 - Module loader now notifies and deactivates community modules missing `index.js` so they never appear as loadable.
 - Apps can expose a builder by adding a `builder` tag in their manifest.
 - Builder publish now saves designs under `/builder/{designName}/` and records file metadata for safe overwrites.
@@ -129,8 +128,6 @@ El Psy Kongroo
 - Static builder route `/p/{slug}` checks the Pages database first, letting dynamic pages win on slug collisions.
 - Builder publication moves entire folders in one operation and requires the `builder.publish` permission.
 - Generated builder pages include a canonical link to `/p/{slug}` to mitigate duplicate content.
-
-### Fixed
 - Corrected HTML escaping in the Page List admin widget to restore widget loading and prevent XSS issues.
 - Resolved broken import path for dashboard dialog helper and silenced dynamic import warnings during build.
 - Confirm dialogs no longer stall when no handler resolves the UI event.

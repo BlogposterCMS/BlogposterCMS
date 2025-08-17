@@ -5,12 +5,14 @@ Builds the app registry by scanning `apps/*/app.json` manifests during startup. 
 ## Startup
 - Core module executed during boot before the server begins listening.
 - Reads each `app.json` manifest under `apps/` and records metadata for the app.
+- Ensures the persistent `app_registry` table exists via the `INIT_APP_REGISTRY_TABLE` placeholder.
 - Skips malformed or inaccessible manifests and emits warning notifications.
 
 ## Purpose
 - Maintains an in-memory registry of available apps.
 - Exposes a meltdown event `getAppRegistry` that returns the registry to authorised callers.
 - Supplies Webpack with entry point information so app bundles can be resolved automatically.
+- Persists registry entries through database placeholders, supporting SQLite, PostgreSQL and MongoDB backends.
 
 ## Security Notes
 - Manifest paths are resolved and normalised to block directory traversal.

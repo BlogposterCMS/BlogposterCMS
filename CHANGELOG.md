@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Added `INIT_APP_REGISTRY_TABLE` placeholder and MongoDB/PostgreSQL handlers so the app registry schema boots on all databases.
+- Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 
 ### Added
 - Added database-backed `weight` field to pages to control header and sidebar menu ordering.

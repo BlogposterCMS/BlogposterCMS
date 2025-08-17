@@ -4,29 +4,7 @@ async function ensureAppRegistrySchema(motherEmitter, jwt) {
   if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount('dbUpdate') === 0) {
     return; // allows tests to run with a minimal emitter
   }
-  const createTableSQL = `
-    CREATE TABLE IF NOT EXISTS appLoader_app_registry (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      app_name    TEXT UNIQUE NOT NULL,
-      is_active   INTEGER DEFAULT 0,
-      last_error  TEXT,
-      app_info    TEXT DEFAULT '{}',
-      updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  await new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'performDbOperation',
-      {
-        jwt,
-        moduleName: 'appLoader',
-        moduleType: 'core',
-        operation: createTableSQL,
-        params: []
-      },
-      err => err ? reject(err) : resolve()
-    );
-  });
+  await runDbUpdatePlaceholder(motherEmitter, jwt, 'INIT_APP_REGISTRY_TABLE', {});
 }
 
 async function registerOrUpdateApp(motherEmitter, jwt, appName, appInfo, isActive, lastError) {

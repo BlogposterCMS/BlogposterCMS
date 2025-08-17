@@ -712,23 +712,6 @@ case 'SELECT_MODULE_BY_NAME': {
   return rows;
 }
 
-/* ────────────────────────────────────────────────────────────────
-   APP LOADER
-   ─────────────────────────────────────────────────────────────── */
-case 'INIT_APP_REGISTRY_TABLE': {
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS appLoader_app_registry (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      app_name    TEXT UNIQUE NOT NULL,
-      is_active   INTEGER DEFAULT 0,
-      last_error  TEXT,
-      app_info    TEXT  DEFAULT '{}',
-      updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-  return { done: true };
-}
-
 case 'INSERT_APP_REGISTRY_ENTRY': {
   const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
   const {

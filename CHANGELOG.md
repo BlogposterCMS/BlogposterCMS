@@ -84,7 +84,8 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
-- pagesManager now adds a missing `weight` column during initialization so migrations no longer deactivate the module.
+- appLoader now creates its registry table via `performDbOperation` with SQLite-friendly SQL, preventing "near 'INIT_APP_REGISTRY_TABLE'" errors.
+- pagesManager ensures the `weight` column exists before index creation, preventing "no such column: weight" failures during upgrades.
 - appLoader uses SQLite-friendly schema and placeholders, resolving `unrecognized token ':'` database errors.
 - plainSpace seeding now defines the slug reference before try/catch and skips when pagesManager is inactive, preventing runtime reference errors and noisy warnings.
 - Module loader listens for `targetModuleName` deactivation events to avoid logging successful loads for modules that were actually disabled.

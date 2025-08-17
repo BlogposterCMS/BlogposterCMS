@@ -779,7 +779,69 @@ switch (operation) {
       );
       return rows;
     }
-    
+
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // APP LOADER
+    // ─────────────────────────────────────────────────────────────────────────
+    case 'INIT_APP_REGISTRY_TABLE': {
+      await client.query(`CREATE SCHEMA IF NOT EXISTS apploader;`);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "apploader"."app_registry" (
+          id SERIAL PRIMARY KEY,
+          app_name VARCHAR(255) UNIQUE NOT NULL,
+          is_active BOOLEAN DEFAULT FALSE,
+          last_error TEXT,
+          app_info JSONB DEFAULT '{}'::jsonb,
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      return { done: true };
+    }
+
+    case 'INSERT_APP_REGISTRY_ENTRY': {
+      const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+      const {
+        appName,
+        isActive = false,
+        lastError = null,
+        appInfo = '{}'
+      } = p;
+      await client.query(
+        `INSERT INTO "apploader"."app_registry" (app_name, is_active, last_error, app_info, updated_at)
+         VALUES ($1, $2, $3, $4::jsonb, NOW());`,
+        [appName, !!isActive, lastError, appInfo]
+      );
+      return { done: true };
+    }
+
+    case 'UPDATE_APP_REGISTRY_ENTRY': {
+      const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+      const {
+        appName,
+        isActive = false,
+        lastError = null,
+        appInfo = '{}'
+      } = p;
+      await client.query(
+        `UPDATE "apploader"."app_registry"
+            SET is_active = $2, last_error = $3, app_info = $4::jsonb, updated_at = NOW()
+          WHERE app_name = $1;`,
+        [appName, !!isActive, lastError, appInfo]
+      );
+      return { done: true };
+    }
+
+    case 'SELECT_APP_BY_NAME': {
+      const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+      const { appName } = p;
+      const { rows } = await client.query(
+        `SELECT * FROM "apploader"."app_registry" WHERE app_name = $1;`,
+        [appName]
+      );
+      return rows;
+    }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // DEPENDENCY LOADER

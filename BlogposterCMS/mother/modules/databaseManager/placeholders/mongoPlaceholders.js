@@ -888,6 +888,76 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // APP LOADER
+    // ─────────────────────────────────────────────────────────────────────────
+    case 'INIT_APP_REGISTRY_TABLE': {
+      await db.createCollection('app_registry').catch(() => {});
+      await db.collection('app_registry')
+               .createIndex({ app_name: 1 }, { unique: true })
+               .catch(() => {});
+      return { done: true };
+    }
+
+    case 'INSERT_APP_REGISTRY_ENTRY': {
+      const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+      const {
+        appName,
+        isActive = false,
+        lastError = null,
+        appInfo = '{}'
+      } = p;
+      let infoObj;
+      try {
+        infoObj = typeof appInfo === 'string' ? JSON.parse(appInfo) : (appInfo || {});
+      } catch {
+        infoObj = {};
+      }
+      await db.collection('app_registry').insertOne({
+        app_name: appName,
+        is_active: !!isActive,
+        last_error: lastError,
+        app_info: infoObj,
+        updated_at: new Date().toISOString()
+      });
+      return { done: true };
+    }
+
+    case 'UPDATE_APP_REGISTRY_ENTRY': {
+      const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+      const {
+        appName,
+        isActive = false,
+        lastError = null,
+        appInfo = '{}'
+      } = p;
+      let infoObj;
+      try {
+        infoObj = typeof appInfo === 'string' ? JSON.parse(appInfo) : (appInfo || {});
+      } catch {
+        infoObj = {};
+      }
+      await db.collection('app_registry').updateOne(
+        { app_name: appName },
+        {
+          $set: {
+            is_active: !!isActive,
+            last_error: lastError,
+            app_info: infoObj,
+            updated_at: new Date().toISOString()
+          }
+        }
+      );
+      return { done: true };
+    }
+
+    case 'SELECT_APP_BY_NAME': {
+      const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
+      const { appName } = p;
+      const doc = await db.collection('app_registry').findOne({ app_name: appName });
+      return doc ? [doc] : [];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // DEPENDENCY LOADER
     // ─────────────────────────────────────────────────────────────────────────
     case 'CHECK_DB_EXISTS_DEPENDENCYLOADER': {

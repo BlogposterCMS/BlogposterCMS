@@ -36,3 +36,5 @@ Permissions are checked for each sensitive operation to avoid unauthorized modif
 ## Returned Data
 - Page retrieval events (`getPageBySlug`, `getPageById`, `getPagesByLane`) include a `parentSlug` field with the slug of the parent page when available.
 - Each page also exposes a `weight` integer (default `0`). Admin interfaces sort header and sidebar menus using this field.
+- `getPagesByLane` accepts an optional `language` to limit translations to a single locale per page.
+- **Update semantics:** `updatePage` only modifies the `weight` when the field is supplied. Omitting `weight` keeps the existing value.

@@ -336,9 +336,19 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
     }
 
     case 'GET_PAGES_BY_LANE': {
-      const laneVal = Array.isArray(params)
-        ? (typeof params[0] === 'object' ? params[0].lane : params[0])
-        : (params?.lane ?? params);
+      let laneVal;
+      let lang = 'en';
+      if (Array.isArray(params)) {
+        const first = params[0];
+        laneVal = typeof first === 'object' ? first.lane : first;
+        if (first && typeof first === 'object' && first.language) lang = first.language;
+      } else if (params && typeof params === 'object') {
+        laneVal = params.lane ?? params;
+        if (params.language) lang = params.language;
+      } else {
+        laneVal = params;
+      }
+      lang = String(lang).toLowerCase();
 
       const rows = await db.all(`
         SELECT p.*, parent.slug AS parentSlug,
@@ -353,10 +363,10 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
           LEFT JOIN pagesManager_pages parent
                 ON p.parent_id = parent.id
           LEFT JOIN pagesManager_page_translations t
-                ON p.id = t.page_id
+                ON p.id = t.page_id AND t.language = ?
          WHERE p.lane = ?
          ORDER BY p.weight ASC, p.created_at DESC;
-      `, [laneVal]);
+      `, [lang, laneVal]);
 
       for (const r of rows) {
         if (typeof r.meta === 'string') {
@@ -577,7 +587,7 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
         SELECT slug, updated_at, is_start
           FROM pagesManager_pages
          WHERE status = 'published'
-         ORDER BY id ASC;
+         ORDER BY updated_at DESC;
       `);
       return rows;
     }

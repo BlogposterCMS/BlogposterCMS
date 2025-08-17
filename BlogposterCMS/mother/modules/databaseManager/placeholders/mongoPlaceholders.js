@@ -313,7 +313,45 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         { slug: 1, lane: 1 },
         { unique: true }
       ).catch(() => {});
-      await db.collection('pages').dropIndex({ slug: 1 }).catch(() => {});
+      try {
+        const idx = await db.collection('pages').indexes();
+        const byKey = idx.find(i => JSON.stringify(i.key) === JSON.stringify({ slug: 1 }));
+        if (byKey?.name) await db.collection('pages').dropIndex(byKey.name);
+      } catch (e) {
+        // ignore
+      }
+      await db.collection('pages').updateMany(
+        { created_at: { $exists: false } },
+        { $set: { created_at: new Date() } }
+      );
+      await db.collection('pages').updateMany(
+        { updated_at: { $exists: false } },
+        { $set: { updated_at: new Date() } }
+      );
+      await db.collection('pages').updateMany(
+        { created_at: { $type: 'string' } },
+        [ { $set: { created_at: { $toDate: '$created_at' } } } ]
+      );
+      await db.collection('pages').updateMany(
+        { updated_at: { $type: 'string' } },
+        [ { $set: { updated_at: { $toDate: '$updated_at' } } } ]
+      );
+      await db.collection('page_translations').updateMany(
+        { created_at: { $exists: false } },
+        { $set: { created_at: new Date() } }
+      );
+      await db.collection('page_translations').updateMany(
+        { updated_at: { $exists: false } },
+        { $set: { updated_at: new Date() } }
+      );
+      await db.collection('page_translations').updateMany(
+        { created_at: { $type: 'string' } },
+        [ { $set: { created_at: { $toDate: '$created_at' } } } ]
+      );
+      await db.collection('page_translations').updateMany(
+        { updated_at: { $type: 'string' } },
+        [ { $set: { updated_at: { $toDate: '$updated_at' } } } ]
+      );
       await createIndexWithRetry(db.collection('pages'), { lane: 1, weight: 1, created_at: -1 }).catch(() => {});
       await createIndexWithRetry(db.collection('pages'), { parent_id: 1, weight: 1, created_at: -1 }).catch(() => {});
 
@@ -373,8 +411,8 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         title      : title || '',
         meta       : meta || null,
         weight     : weightVal,
-        created_at : new Date().toISOString(),
-        updated_at : new Date().toISOString()
+        created_at : new Date(),
+        updated_at : new Date()
       });
   
       // 2) Insert translations
@@ -387,8 +425,8 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         meta_desc   : t.metaDesc,
         seo_title   : t.seoTitle,
         seo_keywords: t.seoKeywords,
-        created_at  : new Date().toISOString(),
-        updated_at  : new Date().toISOString()
+        created_at  : new Date(),
+        updated_at  : new Date()
       }));
       await db.collection('page_translations').insertMany(translationDocs);
   
@@ -430,22 +468,28 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     case 'GET_PAGES_BY_LANE': {
       let laneVal;
+      let lang = 'en';
       if (Array.isArray(params)) {
         const first = params[0];
         laneVal = typeof first === 'object' && first !== null ? first.lane : first;
+        if (first && typeof first === 'object' && first.language) lang = first.language;
       } else if (params && typeof params === 'object') {
         laneVal = params.lane;
+        if (params.language) lang = params.language;
       } else {
         laneVal = params;
       }
+      lang = String(lang).toLowerCase();
 
       const pages = await db.collection('pages').aggregate([
         { $match: { lane: laneVal } },
         {
           $lookup: {
             from: 'page_translations',
-            localField: '_id',
-            foreignField: 'page_id',
+            let: { pid: '$_id' },
+            pipeline: [
+              { $match: { $expr: { $and: [ { $eq: ['$page_id', '$$pid'] }, { $eq: ['$language', lang] } ] } } }
+            ],
             as: 'translation'
           }
         },
@@ -588,7 +632,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         language  : (language || 'en').toLowerCase(),
         title     : title || '',
         meta      : meta || null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date()
       };
       if (Object.prototype.hasOwnProperty.call(p, 'weight')) {
         updateDoc.weight = Number(weight) || 0;
@@ -613,7 +657,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
               meta_desc   : t.metaDesc,
               seo_title   : t.seoTitle,
               seo_keywords: t.seoKeywords,
-              updated_at  : new Date().toISOString()
+              updated_at  : new Date()
             }
           },
           { upsert: true }
@@ -669,7 +713,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
                 $set: {
                   is_start  : true,
                   language,
-                  updated_at: new Date().toISOString()
+                  updated_at: new Date()
                 }
               },
               { session }
@@ -691,7 +735,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
             $set: {
               is_start  : true,
               language,
-              updated_at: new Date().toISOString()
+              updated_at: new Date()
             }
           }
         );
@@ -741,7 +785,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       const pages = await db.collection('pages')
                             .find({ status: 'published' })
                             .project({ slug: 1, updated_at: 1, is_start: 1 })
-                            .sort({ _id: 1 })
+                            .sort({ updated_at: -1 })
                             .toArray();
 
       return pages;

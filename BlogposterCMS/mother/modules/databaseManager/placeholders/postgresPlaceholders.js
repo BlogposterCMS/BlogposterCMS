@@ -385,14 +385,18 @@ switch (operation) {
     /* ---------- GET_PAGES_BY_LANE ---------- */
     case 'GET_PAGES_BY_LANE': {
       let laneVal;
+      let lang = 'en';
       if (Array.isArray(params)) {
         const first = params[0];
         laneVal = typeof first === 'object' && first !== null ? first.lane : first;
+        if (first && typeof first === 'object' && first.language) lang = first.language;
       } else if (params && typeof params === 'object') {
         laneVal = params.lane;
+        if (params.language) lang = params.language;
       } else {
         laneVal = params;
       }
+      lang = String(lang).toLowerCase();
       const { rows } = await client.query(`
         SELECT p.*, parent.slug AS "parentSlug",
               t.language AS trans_lang,
@@ -404,10 +408,10 @@ switch (operation) {
           LEFT JOIN pagesManager.pages parent
                 ON p.parent_id = parent.id
           LEFT JOIN pagesManager.page_translations t
-                ON p.id = t.page_id
+                ON p.id = t.page_id AND t.language = $2
         WHERE p.lane = $1
         ORDER BY p.weight ASC, p.created_at DESC
-      `, [laneVal]);
+      `, [laneVal, lang]);
 
       return rows;
     }
@@ -644,7 +648,7 @@ switch (operation) {
         SELECT slug, updated_at, is_start
           FROM pagesManager.pages
         WHERE status='published'
-        ORDER BY id ASC
+        ORDER BY updated_at DESC
       `);
 
       return rows;

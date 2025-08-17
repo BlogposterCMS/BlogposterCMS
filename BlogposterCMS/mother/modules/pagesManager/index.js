@@ -361,14 +361,14 @@ function setupPagesManagerEvents(motherEmitter) {
   motherEmitter.on('getPagesByLane', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      const { jwt, moduleName, moduleType, lane } = payload || {};
+      const { jwt, moduleName, moduleType, lane, language } = payload || {};
       if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
         return callback(new Error('[pagesManager] getPagesByLane => invalid meltdown payload.'));
       }
       if (!lane || !['public','admin'].includes(lane)) {
         return callback(new Error('A valid "lane" argument ("public"|"admin") is required.'));
       }
-
+      const lang = language && typeof language === 'string' ? language.toLowerCase() : undefined;
       motherEmitter.emit(
         'dbSelect',
         {
@@ -378,7 +378,7 @@ function setupPagesManagerEvents(motherEmitter) {
           table: '__rawSQL__',
           data: {
             rawSQL: 'GET_PAGES_BY_LANE',
-            params: { lane }
+            params: { lane, language: lang }
           }
         },
         (err, rows = []) => {

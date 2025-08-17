@@ -42,6 +42,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Mongo pages placeholders now drop slug indexes by name, store timestamps as `Date`, filter lane queries by language, and sitemap generation sorts by recent updates.
 - Removed slug-only unique index in relational databases, backfilled page weights, and added composite indexes for faster page sorting.
 - Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.
 - Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.

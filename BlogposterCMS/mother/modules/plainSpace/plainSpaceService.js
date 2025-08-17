@@ -51,19 +51,25 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       .replace(/^-+|-+$/g, '')
       .substring(0, 96);
 
+  if (!motherEmitter.listenerCount('getPageBySlug') || !motherEmitter.listenerCount('createPage')) {
+    console.warn('[plainSpace] pagesManager not active. Skipping admin page seeding.');
+    return;
+  }
+
   for (const page of adminPages) {
+    let finalSlugForCheck = '';
     try {
-    let parentId = null;
-    let parent = null;
+      let parentId = null;
+      let parent = null;
 
-    const prefixSegs = (prefixCommunity && page.lane === ADMIN_LANE) ? ['pages'] : [];
-    const parentSegs = page.parentSlug ? page.parentSlug.split('/').filter(Boolean) : [];
-    const pageSegs   = page.slug.split('/').filter(Boolean);
+      const prefixSegs = (prefixCommunity && page.lane === ADMIN_LANE) ? ['pages'] : [];
+      const parentSegs = page.parentSlug ? page.parentSlug.split('/').filter(Boolean) : [];
+      const pageSegs   = page.slug.split('/').filter(Boolean);
 
-    const parentSlugRaw = parentSegs.length ? [...prefixSegs, ...parentSegs].join('/') : null;
-    const finalSlugRaw  = [...prefixSegs, ...parentSegs, ...pageSegs].join('/');
+      const parentSlugRaw = parentSegs.length ? [...prefixSegs, ...parentSegs].join('/') : null;
+      const finalSlugRaw  = [...prefixSegs, ...parentSegs, ...pageSegs].join('/');
 
-    let finalSlugForCheck = finalSlugRaw;
+      finalSlugForCheck = finalSlugRaw;
 
     if (page.config?.icon) {
       if (typeof page.config.icon !== 'string' || !page.config.icon.startsWith('/assets/icons/')) {

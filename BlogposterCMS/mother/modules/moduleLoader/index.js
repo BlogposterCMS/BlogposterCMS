@@ -287,7 +287,8 @@ async function attemptModuleLoad(
   let modEntry;
   let wasDeactivated = false;
   const deactivationListener = (payload) => {
-    if (payload && payload.moduleName === moduleName) {
+    const target = payload && (payload.moduleName || payload.targetModuleName);
+    if (target === moduleName) {
       wasDeactivated = true;
     }
   };

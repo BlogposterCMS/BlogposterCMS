@@ -13,6 +13,7 @@ The module's `apiDefinition.json` shows how to declare external services and act
 ## Purpose
 - Logs whenever a page is published using a fictional external service.
 - Shows how to perform simple database operations.
+- Demonstrates SQLite-friendly table creation for cross-database compatibility.
 - Listens for a custom `dummyAction` event that inserts data into a table.
 
 ## Listened Events

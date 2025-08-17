@@ -62,9 +62,9 @@ module.exports = {
       //    Here we create a simple "dummy table" if it doesn't exist.
       const createTableSQL = `
         CREATE TABLE IF NOT EXISTS dummy_dummytable (
-          id SERIAL PRIMARY KEY,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
           data TEXT,
-          created_at TIMESTAMP DEFAULT NOW()
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
       `;
       motherEmitter.emit(

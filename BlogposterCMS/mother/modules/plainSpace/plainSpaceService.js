@@ -157,6 +157,8 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       const currentMeta = pageObj.meta || {};
       const newMeta = { ...currentMeta };
       let metaChanged = false;
+      const pageWeight = Number(page.weight) || 0;
+      const weightChanged = pageWeight !== Number(pageObj.weight || 0);
 
       if (page.config?.icon && currentMeta.icon !== page.config.icon) {
         newMeta.icon = page.config.icon;
@@ -181,17 +183,19 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
         }
       }
 
-      if (metaChanged) {
+      if (metaChanged || weightChanged) {
         try {
           await meltdownEmit(motherEmitter, 'updatePage', {
             jwt,
             moduleName: 'pagesManager',
             moduleType: 'core',
             pageId: pageObj.id,
-            meta: newMeta
+            meta: metaChanged ? newMeta : currentMeta,
+            weight: pageWeight
           });
-          console.log(`[plainSpace] Updated metadata for existing admin page "${finalSlugForCheck}".`);
+          console.log(`[plainSpace] Updated existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
+          console.error(`[plainSpace] Failed to update admin page "${finalSlugForCheck}":`, err.message);
           notify({
             moduleName: MODULE,
             notificationType: 'system',
@@ -259,6 +263,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       status: 'published',
       parent_id: parentId,
       meta: pageMeta,
+      weight: Number(page.weight) || 0,
       translations: [{
         language: 'en',
         title: page.title,

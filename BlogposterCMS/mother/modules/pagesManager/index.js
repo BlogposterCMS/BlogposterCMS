@@ -206,8 +206,10 @@ function setupPagesManagerEvents(motherEmitter) {
       is_content = false,
       lane = 'public',
       language = 'en',
-      meta = null
+      meta = null,
+      weight: rawWeight = 0
     } = payload || {};
+    const weight = Number(rawWeight) || 0;
   
     if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
       return callback(new Error('[pagesManager] createPage => invalid meltdown payload.'));
@@ -288,7 +290,8 @@ function setupPagesManagerEvents(motherEmitter) {
               is_content,
               language,
               title: mainTitle,
-              meta
+              meta,
+              weight
             }
          }
        },
@@ -358,14 +361,14 @@ function setupPagesManagerEvents(motherEmitter) {
   motherEmitter.on('getPagesByLane', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      const { jwt, moduleName, moduleType, lane } = payload || {};
+      const { jwt, moduleName, moduleType, lane, language } = payload || {};
       if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
         return callback(new Error('[pagesManager] getPagesByLane => invalid meltdown payload.'));
       }
       if (!lane || !['public','admin'].includes(lane)) {
         return callback(new Error('A valid "lane" argument ("public"|"admin") is required.'));
       }
-
+      const lang = language && typeof language === 'string' ? language.toLowerCase() : undefined;
       motherEmitter.emit(
         'dbSelect',
         {
@@ -375,7 +378,7 @@ function setupPagesManagerEvents(motherEmitter) {
           table: '__rawSQL__',
           data: {
             rawSQL: 'GET_PAGES_BY_LANE',
-            params: { lane }
+            params: { lane, language: lang }
           }
         },
         (err, rows = []) => {
@@ -599,10 +602,13 @@ function setupPagesManagerEvents(motherEmitter) {
         parent_id,
         is_content,
         lane = 'public',
-        language = 'en',
-        title = '',
-        meta = null
-      } = payload || {};
+      language = 'en',
+      title = '',
+      meta = null,
+      weight: rawWeight2
+    } = payload || {};
+    const hasWeight = Object.prototype.hasOwnProperty.call(payload || {}, 'weight');
+    const weight = hasWeight ? Number(rawWeight2) || 0 : undefined;
 
       if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
         return callback(new Error('[pagesManager] updatePage => invalid meltdown payload.'));
@@ -640,7 +646,8 @@ function setupPagesManagerEvents(motherEmitter) {
               lane,
               language,
               title,
-              meta
+              meta,
+              ...(hasWeight ? { weight } : {})
             }
           }
         },

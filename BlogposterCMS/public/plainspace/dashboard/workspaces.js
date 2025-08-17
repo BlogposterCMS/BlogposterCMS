@@ -17,6 +17,7 @@ export async function initWorkspaceNav() {
       lane: 'admin'
     });
     const pages = Array.isArray(res?.pages) ? res.pages : Array.isArray(res) ? res : [];
+    const compareWeight = (a, b) => (a.weight ?? 0) - (b.weight ?? 0);
 
     const inferWorkspace = p => {
       if (typeof p.meta?.workspace === 'string') return p.meta.workspace;
@@ -32,7 +33,7 @@ export async function initWorkspaceNav() {
           p.lane === 'admin' &&
           typeof p.meta?.workspace === 'string' &&
           p.meta.workspace === p.slug
-      );
+      ).sort(compareWeight);
       top.forEach(p => {
         const a = document.createElement('a');
         const href = ADMIN_BASE + p.slug;
@@ -61,26 +62,26 @@ export async function initWorkspaceNav() {
     // Build sidebar subpage navigation
     if (sidebarNav && workspaceSlug) {
       sidebarNav.innerHTML = '';
-      const subpages = pages.filter(p =>
-        p.slug.startsWith(workspaceSlug + '/') &&
-        p.slug !== workspaceSlug
-      );
-      const seen = new Set();
-      subpages.forEach(p => {
-        const [, ...rest] = p.slug.split('/');
-        const first = rest[0];
-        if (!first || seen.has(first)) return;
-        seen.add(first);
+      const subMap = new Map();
+      pages.forEach(p => {
+        if (!p.slug.startsWith(workspaceSlug + '/') || p.slug === workspaceSlug) return;
+        const segs = p.slug.split('/');
+        const first = segs[1];
+        if (!first || subMap.has(first)) return;
         const base = pages.find(pg => pg.slug === `${workspaceSlug}/${first}`);
-        const title = base?.title || first;
+        subMap.set(first, base || p);
+      });
+      const subpages = Array.from(subMap.values()).sort(compareWeight);
+      subpages.forEach(p => {
+        const title = p.title || p.slug.split('/').pop();
         const a = document.createElement('a');
-        const linkHref = `${ADMIN_BASE}${workspaceSlug}/${first}`;
+        const linkHref = `${ADMIN_BASE}${p.slug}`;
         a.href = linkHref;
         a.className = 'sidebar-item';
         const icon = document.createElement('img');
         icon.src =
-          (typeof base?.meta?.icon === 'string' && base.meta.icon) ||
-          (typeof base?.config?.icon === 'string' && base.config.icon) ||
+          (typeof p.meta?.icon === 'string' && p.meta.icon) ||
+          (typeof p.config?.icon === 'string' && p.config.icon) ||
           '/assets/icons/file.svg';
         icon.className = 'icon';
         a.appendChild(icon);

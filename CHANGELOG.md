@@ -7,6 +7,7 @@ El Psy Kongroo
 
 
 ### Added
+- Added database-backed `weight` field to pages to control header and sidebar menu ordering.
 - Slack notifications via incoming webhook using only core `https` module; integrations can now expose field metadata for the admin UI.
 - Introduced `pageService` to centralize page data access through the event bus.
 - Elements with `title`, `aria-label`, or `data-label` now display sidebar-style floating labels on hover for consistent tooltips.
@@ -42,6 +43,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Mongo pages placeholders now drop slug indexes by name, store timestamps as `Date`, filter lane queries by language, and sitemap generation sorts by recent updates.
+- Removed slug-only unique index in relational databases, backfilled page weights, and added composite indexes for faster page sorting.
 - Notification emitter now uses a safe wrapper with console fallback across core loaders; appLoader emits warning notifications for missing or invalid manifests; default admin page widget spacing prevents layout overlaps.
 - Module loader wraps module initialization in try/catch, emits system notifications on failure, and skips success logs when a module is deactivated. Widget seeding and app registry updates now report errors through the notification system.
 - Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.

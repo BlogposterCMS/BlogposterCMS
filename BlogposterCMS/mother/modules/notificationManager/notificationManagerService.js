@@ -29,13 +29,17 @@ async function loadIntegrations() {
 
     // Falls in registry noch kein Eintrag => standard
     if (!registry[name]) {
-      registry[name] = { active: false, config: {} };
+      registry[name] = { active: false, config: {}, fields: [] };
     }
-    
+
+    // Sync optional field metadata so the admin UI can render forms
+    registry[name].fields = integrationModule.fields || registry[name].fields || [];
+
     loaded[name] = {
       name,
       active: registry[name].active,
       config: registry[name].config,
+      fields: registry[name].fields,
       module: integrationModule
     };
   }

@@ -3,6 +3,8 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 const EventEmitter = require('events');
+const https = require('https');
+const { PassThrough } = require('stream');
 
 function loadNotificationManager() {
   const base = path.resolve(__dirname, '../mother/modules/notificationManager');
@@ -52,5 +54,34 @@ test('getRecentNotifications returns array', async () => {
   const { getRecentNotifications } = require('../mother/modules/notificationManager/notificationManagerService');
   const list = getRecentNotifications(1);
   assert(Array.isArray(list), 'should return array');
+});
+
+test('slack webhook sends message', async () => {
+  const slack = require('../mother/modules/notificationManager/integrations/slack-webhook');
+  const mock = jest.spyOn(https, 'request').mockImplementation((options, cb) => {
+    const res = new PassThrough();
+    process.nextTick(() => {
+      res.emit('data', 'ok');
+      res.emit('end');
+    });
+    if (cb) cb(res);
+    return {
+      write() {},
+      end() {},
+      on() {},
+      setTimeout() {},
+      destroy() {}
+    };
+  });
+  await slack.verify({ webhookUrl: 'https://hooks.slack.com/services/test' });
+  const inst = await slack.initialize({ webhookUrl: 'https://hooks.slack.com/services/test' });
+  await inst.notify({ moduleName: 't', message: 'hi', priority: 'info' });
+  expect(mock).toHaveBeenCalled();
+  mock.mockRestore();
+});
+
+test('slack verify rejects non-slack host', async () => {
+  const slack = require('../mother/modules/notificationManager/integrations/slack-webhook');
+  await expect(slack.verify({ webhookUrl: 'https://example.com/foo' })).rejects.toThrow('hooks.slack.com');
 });
 

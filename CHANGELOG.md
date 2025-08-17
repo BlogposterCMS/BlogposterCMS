@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Corrected HTML escaping in the Page List admin widget to restore widget loading and prevent XSS issues.
 - Resolved broken import path for dashboard dialog helper and silenced dynamic import warnings during build.
 
 ### Added

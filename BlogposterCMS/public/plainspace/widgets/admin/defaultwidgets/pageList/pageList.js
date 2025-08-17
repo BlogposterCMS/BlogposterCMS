@@ -3,7 +3,9 @@ import { bpDialog } from '/assets/js/bpDialog.js';
 import { pageService } from './pageService.js';
 
 const escapeHtml = str => {
-  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+  map['"'] = '&quot;';
+  map["'"] = '&#39;';
   return String(str).replace(/[&<>"']/g, c => map[c]);
 };
 

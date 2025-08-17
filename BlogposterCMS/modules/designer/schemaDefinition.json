@@ -1,0 +1,13 @@
+{
+  "tables": [
+    {
+      "name": "designer_layouts",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "name", "type": "string" },
+        { "name": "layout_json", "type": "text" },
+        { "name": "updated_at", "type": "timestamp" }
+      ]
+    }
+  ]
+}

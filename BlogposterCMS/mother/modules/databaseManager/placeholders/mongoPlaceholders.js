@@ -242,8 +242,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
       return { done: true };
     }
-  
-  
+
     /**
      *  3) Since we can’t literally 'ALTER TABLE', we approximate the Postgres approach:
      *     - Add 'language' field if missing (default 'en')

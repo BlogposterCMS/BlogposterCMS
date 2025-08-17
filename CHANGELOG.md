@@ -38,6 +38,9 @@ El Psy Kongroo
 - `/p/{slug}` route rewrites to builder HTML files without exposing library paths.
 - `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
+
+### Changed
+ - Designer module provisions its own schema via `createDatabase`/`applySchemaDefinition` and switches to high-level CRUD events to prevent automatic deactivation on constraint errors.
 - HTML uploads now go through the media manager to stay in the library and avoid overwriting existing files.
 - Documented new `appLoader` core module that securely builds the app registry from manifests.
 

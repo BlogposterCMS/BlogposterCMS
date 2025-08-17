@@ -6,6 +6,7 @@ const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const fs = require('fs');
 const path = require('path');
+const notificationEmitter = require('../../emitters/notificationEmitter');
 
 function meltdownEmit(emitter, event, payload) {
   return new Promise((resolve, reject) => {
@@ -99,7 +100,15 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
             seoTitle: parentTitle,
             seoKeywords: ''
           }]
-        }).catch(err => { console.error(`[plainSpace] Error creating parent "${parentSlugRaw}":`, err.message); return null; });
+        }).catch(err => {
+          notificationEmitter.emit('notify', {
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Error creating parent "${parentSlugRaw}": ${err.message}`
+          });
+          return null;
+        });
         parentId = res?.pageId || null;
         parent = parentId ? { id: parentId, meta: {} } : null;
       } else {
@@ -165,7 +174,12 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           });
           console.log(`[plainSpace] Updated metadata for existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
-          console.error(`[plainSpace] Failed to update metadata for admin page "${finalSlugForCheck}":`, err.message);
+          notificationEmitter.emit('notify', {
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Failed to update metadata for admin page "${finalSlugForCheck}": ${err.message}`
+          });
         }
       }
 
@@ -198,7 +212,12 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           });
           console.log(`[plainSpace] Updated widgets for existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
-          console.error(`[plainSpace] Failed to update admin page "${finalSlugForCheck}":`, err.message);
+          notificationEmitter.emit('notify', {
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Failed to update admin page "${finalSlugForCheck}": ${err.message}`
+          });
         }
       }
 
@@ -257,11 +276,21 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
         });
         console.log(`[plainSpace] Default layout seeded for "${finalSlugForCheck}".`);
       } catch (err) {
-        console.error(`[plainSpace] Failed to seed layout for "${finalSlugForCheck}":`, err.message);
+        notificationEmitter.emit('notify', {
+          moduleName: MODULE,
+          notificationType: 'system',
+          priority: 'error',
+          message: `[plainSpace] Failed to seed layout for "${finalSlugForCheck}": ${err.message}`
+        });
       }
     }
     } catch(err) {
-      console.error(`[plainSpace] Error creating "${finalSlugForCheck}":`, err.message);
+      notificationEmitter.emit('notify', {
+        moduleName: MODULE,
+        notificationType: 'system',
+        priority: 'error',
+        message: `[plainSpace] Error creating "${finalSlugForCheck}": ${err.message}`
+      });
     }
   }
 }
@@ -289,7 +318,12 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
       },
       onceCallback((err, rows) => {
         if (err) {
-          console.error(`[plainSpace] Error checking widget "${widgetId}":`, err.message);
+          notificationEmitter.emit('notify', {
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] Error checking widget "${widgetId}": ${err.message}`
+          });
           return resolve(false);
         }
         resolve(Array.isArray(rows) && rows.length > 0);
@@ -314,7 +348,12 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
       },
       onceCallback((err) => {
         if (err) {
-          console.error(`[plainSpace] createWidget failed for "${widgetId}":`, err.message);
+          notificationEmitter.emit('notify', {
+            moduleName: MODULE,
+            notificationType: 'system',
+            priority: 'error',
+            message: `[plainSpace] createWidget failed for "${widgetId}": ${err.message}`
+          });
         } else {
           console.log(`[plainSpace] Widget "${widgetId}" successfully created.`);
         }
@@ -350,7 +389,12 @@ async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) 
     });
     console.log(`[plainSpace] Stored layout options for ${widgetData.widgetId}.`);
   } catch (err) {
-    console.error(`[plainSpace] Failed to store layout options for ${widgetData.widgetId}:`, err.message);
+    notificationEmitter.emit('notify', {
+      moduleName: MODULE,
+      notificationType: 'system',
+      priority: 'error',
+      message: `[plainSpace] Failed to store layout options for ${widgetData.widgetId}: ${err.message}`
+    });
   }
 }
 

@@ -41,6 +41,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Module loader wraps module initialization in try/catch, emits system notifications on failure, and skips success logs when a module is deactivated. Widget seeding and app registry updates now report errors through the notification system.
 - Dashboard scripts now import `bpDialog` from `/assets/js` to avoid relative path breakage.
 - Workspace create button now hides existing workspace links and opens a floating field with matching minus icon.
 - Login page background now uses the same dotted grid as the dashboard workspace.

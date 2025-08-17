@@ -12,6 +12,7 @@ During sandbox execution the module receives a very limited `process.env` contai
 - Maintains a registry of installed modules.
 - Loads modules and retries failed ones automatically.
 - Serves front-end assets for GrapesJS modules when present.
+- Emits system notifications and deactivates modules when initialization fails, so broken modules never appear as loaded.
 
 ## Listened Events
 - `getModuleRegistry`

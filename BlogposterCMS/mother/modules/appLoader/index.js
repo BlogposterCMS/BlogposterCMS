@@ -7,6 +7,7 @@ const {
   registerOrUpdateApp
 } = require('./appRegistryService');
 const { hasPermission } = require('../userManagement/permissionUtils');
+const notificationEmitter = require('../../emitters/notificationEmitter');
 
 async function loadAllApps({ motherEmitter, jwt, baseDir }) {
   const appsPath = baseDir || path.resolve(__dirname, '../../../apps');
@@ -14,7 +15,12 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
   try {
     await ensureAppRegistrySchema(motherEmitter, jwt);
   } catch (err) {
-    console.error('[APP LOADER] Failed to ensure schema:', err.message);
+    notificationEmitter.emit('notify', {
+      moduleName: 'appLoader',
+      notificationType: 'system',
+      priority: 'error',
+      message: `[APP LOADER] Failed to ensure schema: ${err.message}`
+    });
     return;
   }
 
@@ -38,7 +44,12 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
       try {
         await registerOrUpdateApp(motherEmitter, jwt, appName, null, false, 'Missing app.json');
       } catch (err) {
-        console.error('[APP LOADER] DB update failed =>', err.message);
+        notificationEmitter.emit('notify', {
+          moduleName: 'appLoader',
+          notificationType: 'system',
+          priority: 'error',
+          message: `[APP LOADER] DB update failed: ${err.message}`
+        });
       }
       continue;
     }
@@ -51,7 +62,12 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
       try {
         await registerOrUpdateApp(motherEmitter, jwt, appName, null, false, 'Invalid app.json');
       } catch (err2) {
-        console.error('[APP LOADER] DB update failed =>', err2.message);
+        notificationEmitter.emit('notify', {
+          moduleName: 'appLoader',
+          notificationType: 'system',
+          priority: 'error',
+          message: `[APP LOADER] DB update failed: ${err2.message}`
+        });
       }
       continue;
     }
@@ -59,7 +75,12 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
     try {
       await registerOrUpdateApp(motherEmitter, jwt, appName, manifest, true, null);
     } catch (err) {
-      console.error('[APP LOADER] Failed to register app "'+appName+'" =>', err.message);
+      notificationEmitter.emit('notify', {
+        moduleName: 'appLoader',
+        notificationType: 'system',
+        priority: 'error',
+        message: `[APP LOADER] Failed to register app "${appName}": ${err.message}`
+      });
     }
   }
 }
@@ -67,7 +88,12 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
 module.exports = {
   async initialize({ motherEmitter, isCore, jwt, baseDir }) {
     if (!isCore) {
-      console.error('[APP LOADER] Must be loaded as a core module.');
+      notificationEmitter.emit('notify', {
+        moduleName: 'appLoader',
+        notificationType: 'system',
+        priority: 'error',
+        message: '[APP LOADER] Must be loaded as a core module.'
+      });
       return;
     }
 

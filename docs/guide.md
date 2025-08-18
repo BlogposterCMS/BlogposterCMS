@@ -16,6 +16,10 @@ The dashboard allows you to manage pages, users and settings. Only authenticated
 
 Elements with `title`, `aria-label`, or `data-label` attributes automatically reveal an animated floating label on hover, mirroring the sidebar tooltip style.
 
+## Button System
+
+Use the global `.button` classes for consistent actions across the dashboard. Variants such as `.primary`, `.ghost`, `.outline`, `.text` and `.danger` cover common intents, while size modifiers `.sm` and `.lg` adjust height. Apply `.block` for full‑width buttons and wrap related actions in a `.button-group` to handle spacing and wrapping. Buttons accept optional icons via a child `.icon` element and expose an `.is-loading` state for spinners.
+
 ## Creating Workspaces and Subpages
 
   The admin interface includes two "+" buttons for quickly adding content. Clicking either reveals a sliding panel where you pick an icon and enter a name before submitting. The button on the left side of the header creates a workspace and the "+" button at the bottom of the sidebar adds a subpage to the current workspace. When the workspace field is open, existing workspace links are hidden and the "+" icon switches to a "-" so you can click it again to close the panel. The subpage button behaves the same way, hiding its label while the field is open. Each inline field now slides out beside its trigger button and overlays surrounding content with a high z-index. The panel includes an icon chooser on the left, a centered text input, and a corner-down-right confirmation button on the right.

@@ -6,9 +6,11 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- Rewrote global button styles with gradient primary and ghost secondary variants while preserving the login screen's custom button.
 - Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
 
 ### Fixed
+- Install wizard indicators drop default list markers and active step forms stack vertically for clearer progress.
 - Global form styles exclude step forms and install wizard steps hide by default with explicit active-state displays.
 - Inject development auto-login only when the configured dev user exists, keeping auth strict and preventing redirect loops.
 - Install wizard now hides inactive steps and applies consistent flex buttons after rebuilding assets.

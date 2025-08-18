@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- Expanded button system with standardized variants, sizes, icon spacing and loading state while keeping the login screen's custom styling.
 - Rewrote global button styles with gradient primary and ghost secondary variants while preserving the login screen's custom button.
 - Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
 

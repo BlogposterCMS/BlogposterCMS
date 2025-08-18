@@ -165,170 +165,173 @@
   outline-offset: 2px;
 }
 
-/* =============================================================================
-   Login Page Styles
-   ============================================================================= */
-.app-scope.login-page {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
+/* Keep original gradient button on login page */
+.app-scope.login-page .button {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  align-items: center;
-}
-
-.app-scope.login-page::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--user-color), transparent 70%) 1px, transparent 0);
-  background-size: 20px 20px;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.login-form {
-  width: 100%;
-  max-width: 400px;
-  padding: 24px;
-  background-color: var(--color-card);
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.login-form .cms-title {
-  font-family: var(--font-heading);
-  font-size: 24px;
-  color: var(--color-text);
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  opacity: 0.9;
-}
-
-.login-form .logo {
-  width: 100px;
-  margin-bottom: 1rem;
-}
-
-.login-form form {
-  width: 100%;
-}
-
-/* =============================================================================
-   Input Fields Styling
-   ============================================================================= */
-.field {
-  width: 100%;
-  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
   position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #3acfd5, #3a4ed5, #c93ad5, #ff3a79, #ffbc3a);
+  background-size: 200%;
+  background-position: left center;
 }
 
-.field input {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-secondary-light);
-  font-size: 14px;
-  color: var(--color-text);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+.app-scope.login-page .button:hover {
+  background-position: right center;
 }
 
-.password-field input {
-  padding-right: 56px;
-}
-
-.field input:focus {
-  outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 40%, transparent);
-}
-
-.field label {
-  position: absolute;
-  top: 12px;
-  left: 16px;
-  font-size: 14px;
-  color: #aaa;
-  pointer-events: none;
-  transition: all 0.15s ease;
-  background: transparent;
-}
-
-.field input:not(:-moz-placeholder) + label {
-  top: -8px;
-  left: 12px;
-  font-size: 12px;
-  color: var(--brand);
-  background: var(--color-card);
-  padding: 0 4px;
-  font-weight: 500;
-}
-
-.field input:not(:placeholder-shown) + label,
-.field input:focus + label {
-  top: -8px;
-  left: 12px;
-  font-size: 12px;
-  color: var(--brand);
-  background: var(--color-card);
-  padding: 0 4px;
-  font-weight: 500;
-}
-
-.password-toggle {
+.app-scope.login-page .button::before {
+  content: "";
   position: absolute;
   top: 0;
-  right: 8px;
+  left: -100%;
   height: 100%;
-  width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-text);
-  transition: color 0.18s ease;
+  width: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: skewX(-45deg);
+  transition: left 0.5s ease;
 }
 
-.password-toggle:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+.app-scope.login-page .button:hover::before {
+  left: 150%;
 }
 
-.error-message {
-  width: 100%;
-  color: var(--color-error);
-  font-size: 14px;
-  margin-top: 0.25rem;
-  min-height: 1rem;
-}
-
-.secondary-actions {
-  margin-top: 1rem;
-  text-align: center;
+.app-scope form:not(.step) {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 8px; /* optimaler Abstand zwischen Feldern */
+  position: relative;
+}
+
+.app-scope .field {
+  position: relative;
+  width: 100%;
+}
+
+.app-scope .field input,
+.app-scope .field textarea {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 8px;
+  border: none;
+  background-color: #f1f3f6;
+  font-size: 15px;
+  color: #333;
+  transition: box-shadow 0.2s ease;
+  box-shadow: inset 0 0 0 2px transparent;
+}
+
+.app-scope .field input:focus,
+.app-scope .field textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #008080;
+  background-color: #ffffff;
+}
+
+.app-scope .field label {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: #888;
+  pointer-events: none;
   font-size: 14px;
+  transition: all 0.2s ease;
 }
 
-.secondary-actions a {
-  color: var(--color-text);
-  opacity: 0.8;
-  text-decoration: none;
-  transition: opacity 0.18s ease;
+.app-scope .field input:not(:-moz-placeholder) + label, .app-scope .field textarea:not(:-moz-placeholder) + label {
+  top: -7px;
+  left: 14px;
+  font-size: 12px;
+  color: #008080;
+  background: #ffffff;
+  padding: 0 4px;
+  font-weight: 500;
 }
 
-.secondary-actions a:hover,
-.secondary-actions a:focus-visible {
+.app-scope .field input:not(:placeholder-shown) + label,
+.app-scope .field input:focus + label,
+.app-scope .field textarea:not(:placeholder-shown) + label,
+.app-scope .field textarea:focus + label {
+  top: -7px;
+  left: 14px;
+  font-size: 12px;
+  color: #008080;
+  background: #ffffff;
+  padding: 0 4px;
+  font-weight: 500;
+}
+
+.app-scope form .button {
+  margin-top: 14px;
+}
+
+.install-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.install-steps li {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border);
+  opacity: 0.7;
+}
+.install-steps li.active {
+  background: var(--brand);
   opacity: 1;
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+  transform: scale(1.1);
+}
+
+.app-scope .step {
+  display: none;
+}
+
+.app-scope form.step.active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.app-scope .step.active:not(form) {
+  display: block;
+}
+
+.login-form .actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.color-picker-toggle {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.app-scope form.step.active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
 .main-content {
@@ -597,120 +600,56 @@ p {
   outline: none;
 }
 
+.dev-mode-banner {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(255, 0, 0, 0.1);
+  color: #c00;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
 /* =============================================================================
-   Buttons (angepasst an modernes Login-Design)
+   Buttons
    ============================================================================= */
 .app-scope .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 32px;
-  border: none;
+  height: 42px;
+  padding: 0 18px;
   border-radius: 12px;
-  color: var(--color-white);
-  font-family: var(--font-body);
-  font-size: 14px;
   font-weight: 600;
+  line-height: 42px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(90deg, #3acfd5, #3a4ed5, #c93ad5, #ff3a79, #ffbc3a);
-  background-size: 200%;
-  background-position: left center;
-  opacity: 1;
+  transition: filter 0.18s ease;
+}
+
+.app-scope .button:not(.ghost) {
+  background: var(--gradient-primary);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.app-scope .button.ghost {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  box-shadow: none;
 }
 
 .app-scope .button:hover {
-  background-position: right center;
+  filter: brightness(0.98);
 }
 
-/* Optional: Dezenter Glanzeffekt beim Hover */
-.app-scope .button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  height: 100%;
-  width: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  transform: skewX(-45deg);
-  transition: left 0.5s ease;
-}
-
-.app-scope .button:hover::before {
-  left: 150%;
-}
-
-.app-scope form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px; /* optimaler Abstand zwischen Feldern */
-  position: relative;
-}
-
-.app-scope .field {
-  position: relative;
-  width: 100%;
-}
-
-.app-scope .field input,
-.app-scope .field textarea {
-  width: 100%;
-  padding: 14px 18px;
-  border-radius: 8px;
-  border: none;
-  background-color: #f1f3f6;
-  font-size: 15px;
-  color: #333;
-  transition: box-shadow 0.2s ease;
-  box-shadow: inset 0 0 0 2px transparent;
-}
-
-.app-scope .field input:focus,
-.app-scope .field textarea:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px #008080;
-  background-color: #ffffff;
-}
-
-.app-scope .field label {
-  position: absolute;
-  top: 14px;
-  left: 18px;
-  font-family: var(--font-body);
-  font-weight: 500;
-  color: #888;
-  pointer-events: none;
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
-
-.app-scope .field input:not(:-moz-placeholder) + label, .app-scope .field textarea:not(:-moz-placeholder) + label {
-  top: -7px;
-  left: 14px;
-  font-size: 12px;
-  color: #008080;
-  background: #ffffff;
-  padding: 0 4px;
-  font-weight: 500;
-}
-
-.app-scope .field input:not(:placeholder-shown) + label,
-.app-scope .field input:focus + label,
-.app-scope .field textarea:not(:placeholder-shown) + label,
-.app-scope .field textarea:focus + label {
-  top: -7px;
-  left: 14px;
-  font-size: 12px;
-  color: #008080;
-  background: #ffffff;
-  padding: 0 4px;
-  font-weight: 500;
-}
-
-.app-scope form .button {
-  margin-top: 14px;
+.app-scope .button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 40%, transparent);
+  outline-offset: 2px;
 }
 
 .custom-select {

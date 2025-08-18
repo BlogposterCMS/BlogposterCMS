@@ -21,12 +21,10 @@
   }
 }
 
-/* Verstecke alles */
 .app-scope .step {
   display: none;
 }
 
-/* Formular-Step aktiv = flex */
 .app-scope form.step.active {
   display: flex;
   flex-direction: column;
@@ -34,7 +32,7 @@
   width: 100%;
 }
 
-/* Andere Steps (divs) aktiv = block */
+
 .app-scope .step.active:not(form) {
   display: block;
 }
@@ -51,4 +49,11 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.app-scope form.step.active {
+  display: flex;
+  flex-direction: column; 
+  gap: 12px;              
+  width: 100%;            
 }

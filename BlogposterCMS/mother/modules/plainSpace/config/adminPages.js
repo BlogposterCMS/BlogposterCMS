@@ -13,7 +13,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'empty-sidebar',
         inheritsLayout: true
       },
-      icon: '/assets/icons/home.svg',
+      icon: '/assets/icons/house.svg',
       widgets: ['contentSummary', 'modulesList', 'pageStats'],
       workspace: 'home'
     }
@@ -29,7 +29,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'default-sidebar',
         inheritsLayout: true
       },
-      icon: '/assets/icons/folder.svg',
+      icon: '/assets/icons/file-box.svg',
       widgets: ['contentSummary'],
       actionButton: {
         icon: '/assets/icons/plus.svg',
@@ -150,7 +150,7 @@ module.exports.ADMIN_PAGES = [
         sidebar: 'settings-sidebar',
         inheritsLayout: true
       },
-      icon: '/assets/icons/cog.svg',
+      icon: '/assets/icons/settings.svg',
       widgets: [],
       workspace: 'settings'
     }

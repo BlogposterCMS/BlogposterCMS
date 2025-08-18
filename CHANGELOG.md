@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Inject development auto-login only when the configured dev user exists, keeping auth strict and preventing redirect loops.
 - Install wizard now hides inactive steps and applies consistent flex buttons after rebuilding assets.
 - Updated dummyModule table creation SQL for SQLite compatibility, preventing syntax errors on startup.
 - Replaced raw SQL in user role permission fixes with parameterized `dbUpdate` calls and routed page table migrations through a dedicated placeholder for cross-database compatibility.

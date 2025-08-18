@@ -68,7 +68,10 @@ function requireAuthCookie(req, res, next) {
               'getUserDetailsByUsername',
               { jwt: moduleTok, moduleName: 'userManagement', moduleType: 'core', username: devUser },
               (uErr, user) => {
-                if (uErr || !user) return finalize();
+                if (uErr || !user) {
+                  // DEV-User fehlt → kein Auto-Login, normal zum Login umleiten
+                  return finalize();
+                }
                 motherEmitter.emit(
                   'finalizeUserLogin',
                   {

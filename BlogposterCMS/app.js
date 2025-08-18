@@ -182,6 +182,7 @@ function getModuleTokenForDbManager() {
   // Instantiate Express
   const app  = express();
   const port = process.env.PORT || 3000;
+  const installLockPath = path.join(__dirname, 'install.lock');
 
   // Helper to sanitize slugs for safe use in HTML/JS contexts
   function sanitizeSlug(str) {
@@ -900,10 +901,21 @@ app.get('/login', csrfProtection, async (req, res) => {
 
 // Convenience redirect for first-time registration
 
-app.post('/install', csrfProtection, async (req, res) => {
-  const { name, username, email, password, favoriteColor } = req.body || {};
-  if (!name || !username || !email || !password) {
+app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
+  const { username, email, password, favoriteColor, siteName } = req.body || {};
+  if (!username || !email || !password) {
     return res.status(400).send('Missing fields');
+  }
+  if (fs.existsSync(installLockPath)) {
+    return res.status(403).send('Already installed');
+  }
+  const forbidden = ['admin', 'root', 'test'];
+  if (forbidden.includes(String(username).toLowerCase())) {
+    return res.status(400).send('Username not allowed');
+  }
+  const strong = password.length >= 12 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
+  if (!strong) {
+    return res.status(400).send('Password too weak');
   }
   try {
     const pubTok = await new Promise((resolve, reject) => {
@@ -948,7 +960,7 @@ app.post('/install', csrfProtection, async (req, res) => {
           username: username.trim(),
           password,
           email: email.trim(),
-          displayName: name.trim(),
+          displayName: username.trim(),
           uiColor: favoriteColor,
           role: 'admin'
         },
@@ -968,6 +980,22 @@ app.post('/install', csrfProtection, async (req, res) => {
         err => (err ? reject(err) : resolve())
       );
     });
+    if (siteName) {
+      await new Promise((resolve, reject) => {
+        motherEmitter.emit(
+          'setSetting',
+          {
+            jwt: dbManagerToken,
+            moduleName: 'settingsManager',
+            moduleType: 'core',
+            key: 'SITE_NAME',
+            value: String(siteName).trim()
+          },
+          err => (err ? reject(err) : resolve())
+        );
+      });
+    }
+    fs.writeFileSync(installLockPath, 'installed');
     res.json({ success: true });
   } catch (err) {
     console.error('[POST /install] Error:', err);
@@ -976,6 +1004,9 @@ app.post('/install', csrfProtection, async (req, res) => {
 });
 
 app.get('/install', csrfProtection, async (req, res) => {
+  if (fs.existsSync(installLockPath)) {
+    return res.redirect('/login');
+  }
   try {
     const pubTok = await new Promise((r, j) => motherEmitter.emit('issuePublicToken', { purpose: 'firstInstallCheck', moduleName: 'auth' }, (e, d) => e ? j(e) : r(d)));
     const val = await new Promise((r, j) => motherEmitter.emit('getPublicSetting', { jwt: pubTok, moduleName: 'settingsManager', moduleType: 'core', key: 'FIRST_INSTALL_DONE' }, (e, d) => e ? j(e) : r(d)));

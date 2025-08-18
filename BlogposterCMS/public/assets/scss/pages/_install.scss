@@ -1,1 +1,35 @@
 @import 'login';
+
+.install-steps {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+
+  li {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-border);
+
+    &.active {
+      background: var(--brand);
+    }
+  }
+}
+
+.step {
+  display: none;
+}
+
+.step.active {
+  display: block;
+}
+
+.color-picker-toggle {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}

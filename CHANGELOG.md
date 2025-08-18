@@ -12,6 +12,8 @@ El Psy Kongroo
 - Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 
 ### Added
+- First-run install wizard with multi-step flow, custom color picker and install lock.
+- Installer enforces strong passwords and blocks common usernames.
 - Optional development auto-login for localhost via `DEV_AUTOLOGIN`; weak credentials require `ALLOW_WEAK_CREDS` and are blocked in production. A red "Development mode" banner now appears on all pages when not in production.
 - Added database-backed `weight` field to pages to control header and sidebar menu ordering.
 - Slack notifications via incoming webhook using only core `https` module; integrations can now expose field metadata for the admin UI.

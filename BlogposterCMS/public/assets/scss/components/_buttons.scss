@@ -1,39 +1,110 @@
-/* =============================================================================
-   Buttons
-   ============================================================================= */
-
-.app-scope .button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 42px;
-  padding: 0 18px;
-  border-radius: 12px;
-  font-weight: 600;
-  line-height: 42px;
-  cursor: pointer;
-  transition: filter 0.18s ease;
+/* ===== Global Buttons ===== */
+:root{
+  --btn-radius: 12px;
+  --btn-h: 42px;
+  --btn-gap: 8px;
+  --btn-shadow: 0 2px 8px rgba(0,0,0,.06);
+  --gradient-primary: linear-gradient(180deg, #34c6d9, #7a5cff);
 }
 
-.app-scope .button:not(.ghost) {
-  background: var(--gradient-primary);
-  color: #fff;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+/* Base */
+.app-scope .button{
+  --bg: var(--color-card);
+  --fg: var(--color-text);
+  --bd: var(--color-border);
+  display:inline-flex; align-items:center; justify-content:center;
+  gap: var(--btn-gap);
+  height: var(--btn-h); padding: 0 16px;
+  border-radius: var(--btn-radius);
+  border:1px solid var(--bd);
+  min-width:120px;
+  background: var(--bg); color: var(--fg);
+  font-weight:600; line-height: var(--btn-h);
+  cursor:pointer; user-select:none;
+  transition: filter .15s ease, box-shadow .15s ease, transform .02s ease;
+}
+.app-scope .button:disabled,
+.app-scope .button[aria-disabled="true"]{
+  opacity:.6; filter:saturate(.8) brightness(.96); cursor:not-allowed;
+  box-shadow:none; transform:none;
 }
 
-.app-scope .button.ghost {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-  box-shadow: none;
+/* Focus */
+.app-scope .button:focus-visible{
+  outline:2px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset:2px;
+}
+.app-scope .button.ghost:focus-visible,
+.app-scope .button.outline:focus-visible{
+  outline-color: color-mix(in srgb, var(--brand) 60%, transparent);
 }
 
-.app-scope .button:hover {
-  filter: brightness(.98);
+/* Variants */
+.app-scope .button.primary{
+  --bg: var(--gradient-primary);
+  --fg: #fff; --bd: transparent;
+  border-color: var(--bd); box-shadow: var(--btn-shadow);
+}
+.app-scope .button.ghost{
+  --bg: var(--color-card);
+  --fg: var(--color-text);
+  --bd: var(--color-border);
+  box-shadow:none;
+}
+.app-scope .button.outline{
+  --bg: transparent; --fg: var(--color-text); --bd: var(--brand);
+}
+.app-scope .button.text{
+  --bg: transparent; --fg: var(--brand); --bd: transparent;
+  height:auto; line-height:normal; padding:4px 6px; border:none;
 }
 
-.app-scope .button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand) 40%, transparent);
-  outline-offset: 2px;
+/* Danger */
+.app-scope .button.danger{
+  --bg: linear-gradient(180deg,#ff5a5a,#e33a3a);
+  --fg:#fff; --bd: transparent;
+  box-shadow: var(--btn-shadow);
 }
+.app-scope .button.danger:not(:disabled):hover{ filter: brightness(.97) saturate(1.05); }
+
+/* Hover (keine Kirmes) */
+.app-scope .button:not(:disabled):hover{ filter: brightness(.98); }
+.app-scope .button:not(:disabled):active{ transform: translateY(1px); }
+
+/* Sizes */
+.app-scope .button.sm{ --btn-h: 34px; padding:0 12px; border-radius:10px; font-weight:600; }
+.app-scope .button.lg{ --btn-h: 48px; padding:0 20px; border-radius:14px; }
+.app-scope .button.block{ width:100%; min-width:0; }
+
+/* Icon support */
+.app-scope .button .icon{ display:inline-flex; width:1.1em; height:1.1em; line-height:0; }
+.app-scope .button .icon+span,
+.app-scope .button span+.icon{ margin-left:6px; }
+
+/* Loading state */
+.app-scope .button.is-loading{
+  pointer-events:none; position:relative; color:transparent;
+}
+.app-scope .button.is-loading::after{
+  content:""; position:absolute; width:16px; height:16px; border-radius:50%;
+  border:2px solid color-mix(in srgb, var(--fg) 30%, transparent);
+  border-top-color: var(--fg); animation: spin .7s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg);} }
+
+/* Button group */
+.app-scope .button-group{
+  display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .app-scope .button{ transition:none; }
+  .app-scope .button.is-loading::after{ animation:none; }
+}
+
+/* Dark mode tweaks */
+[data-theme="dark"] .app-scope .button.ghost{
+  --bd: color-mix(in srgb, var(--color-border) 80%, #000 20%);
+}
+

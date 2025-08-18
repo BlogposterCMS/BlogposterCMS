@@ -6,12 +6,14 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- Primary buttons on install screens now have a wider footprint and clearer disabled styling.
 - Refined button styles with higher disabled contrast, block and group utilities, reduced-motion support and dark-mode ghost borders.
 - Expanded button system with standardized variants, sizes, icon spacing and loading state while keeping the login screen's custom styling.
 - Rewrote global button styles with gradient primary and ghost secondary variants while preserving the login screen's custom button.
 - Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
 
 ### Fixed
+- Start setup and Continue buttons on the install wizard now use the primary style for better visibility.
 - Install screen no longer inherits login page button styles.
 - Install wizard indicators drop default list markers and active step forms stack vertically for clearer progress.
 - Global form styles exclude step forms and install wizard steps hide by default with explicit active-state displays.

@@ -43,19 +43,78 @@ function attachWildcardIfAdmin(decoded) {
  *     – No token? → polite redirect to /login
  * ──────────────────────────────────────────────────────────────── */
 function requireAuthCookie(req, res, next) {
-  const token = req.cookies?.admin_jwt;
+  let token = req.cookies?.admin_jwt;
+
+  if (!token && process.env.NODE_ENV === 'development' && process.env.DEV_AUTOLOGIN === 'true') {
+    const localIps = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+    const devUser = process.env.DEV_USER || 'admin';
+    if (localIps.includes(req.ip) && process.env.AUTH_MODULE_INTERNAL_SECRET) {
+      try {
+        motherEmitter.emit(
+          'issueModuleToken',
+          {
+            skipJWT: true,
+            authModuleSecret: process.env.AUTH_MODULE_INTERNAL_SECRET,
+            moduleType: 'core',
+            moduleName: 'auth',
+            signAsModule: 'userManagement',
+            trustLevel: 'high'
+          },
+          (err, moduleTok) => {
+            if (err || !moduleTok) {
+              return finalize();
+            }
+            motherEmitter.emit(
+              'getUserDetailsByUsername',
+              { jwt: moduleTok, moduleName: 'userManagement', moduleType: 'core', username: devUser },
+              (uErr, user) => {
+                if (uErr || !user) return finalize();
+                motherEmitter.emit(
+                  'finalizeUserLogin',
+                  {
+                    jwt: moduleTok,
+                    moduleName: 'userManagement',
+                    moduleType: 'core',
+                    userId: user.id,
+                    extraData: { provider: 'devAutoLogin' }
+                  },
+                  (fErr, finalUser) => {
+                    if (fErr || !finalUser) return finalize();
+                    res.cookie('admin_jwt', finalUser.jwt, {
+                      path: '/',
+                      httpOnly: true,
+                      sameSite: 'strict',
+                      secure: false,
+                      maxAge: 2 * 60 * 60 * 1000
+                    });
+                    token = finalUser.jwt;
+                    req.user = finalUser;
+                    next();
+                  }
+                );
+              }
+            );
+          }
+        );
+        return; // async path
+      } catch (e) {
+        // fall through to normal flow
+      }
+    }
+  }
+
+  function finalize() {
+    const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+    return res.redirect(jump);
+  }
 
   if (!token) {
-    const jump =
-      `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
-    return res.redirect(jump);
+    return finalize();
   }
 
   verifyToken(token, (err, decoded) => {
     if (err || !decoded) {
-      const jump =
-        `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
-      return res.redirect(jump);
+      return finalize();
     }
 
     attachWildcardIfAdmin(decoded);

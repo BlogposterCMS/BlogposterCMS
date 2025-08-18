@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Changed
+- Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
+
 ### Fixed
 - Updated dummyModule table creation SQL for SQLite compatibility, preventing syntax errors on startup.
 - Replaced raw SQL in user role permission fixes with parameterized `dbUpdate` calls and routed page table migrations through a dedicated placeholder for cross-database compatibility.

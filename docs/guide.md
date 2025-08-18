@@ -46,7 +46,7 @@ layout matches the desired size. All built-in admin widgets ship with sensible
 defaults for their width and height so a freshly seeded dashboard is usable
 immediately.
 
-Widgets are arranged with a CanvasGrid drag-and-drop layout. The sequence below demonstrates arranging widgets from an empty grid to a customized dashboard.
+Widgets are arranged with a CanvasGrid drag-and-drop layout. Its twelve columns automatically resize to fill the available space, preventing dead zones at the edges. The sequence below demonstrates arranging widgets from an empty grid to a customized dashboard.
 
 ![Initial grid view](screenshots/Arrange%20Your%20Dashboard%20Freely.png)
 ![Adding widgets](screenshots/Perfectly%20Adaptive%20Widgets.png)

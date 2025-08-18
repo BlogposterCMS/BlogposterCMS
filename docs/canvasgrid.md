@@ -18,7 +18,21 @@ Initialize the grid in your admin scripts:
 ```js
 import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
-const grid = initCanvasGrid({ cellHeight: 1, columnWidth: 1 }, '#builderGrid');
+const gridEl = document.querySelector('#builderGrid');
+const grid = initCanvasGrid({ cellHeight: 1, columnWidth: 1 }, gridEl);
+```
+
+Adjust the column width on resize so the grid spans the full container:
+
+```js
+const columnCount = 12;
+function setColumnWidth() {
+  const width = gridEl.getBoundingClientRect().width;
+  grid.options.columnWidth = width / columnCount;
+  grid.widgets.forEach(w => grid.update(w));
+}
+setColumnWidth();
+window.addEventListener('resize', setColumnWidth);
 ```
 
 Widgets can be added or updated programmatically:

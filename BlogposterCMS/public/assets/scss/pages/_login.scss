@@ -162,3 +162,51 @@
   outline-offset: 2px;
 }
 
+/* Keep original gradient button on login page */
+.app-scope.login-page .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #3acfd5,
+    #3a4ed5,
+    #c93ad5,
+    #ff3a79,
+    #ffbc3a
+  );
+  background-size: 200%;
+  background-position: left center;
+}
+
+.app-scope.login-page .button:hover {
+  background-position: right center;
+}
+
+.app-scope.login-page .button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  height: 100%;
+  width: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: skewX(-45deg);
+  transition: left 0.5s ease;
+}
+
+.app-scope.login-page .button:hover::before {
+  left: 150%;
+}
+

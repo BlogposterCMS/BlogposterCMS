@@ -1,52 +1,39 @@
 /* =============================================================================
-   Buttons (angepasst an modernes Login-Design)
+   Buttons
    ============================================================================= */
 
 .app-scope .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 32px;
-  border: none;
+  height: 42px;
+  padding: 0 18px;
   border-radius: 12px;
-  color: var(--color-white);
-  font-family: var(--font-body);
-  font-size: 14px;
   font-weight: 600;
+  line-height: 42px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    90deg,
-    #3acfd5,
-    #3a4ed5,
-    #c93ad5,
-    #ff3a79,
-    #ffbc3a
-  );
-  background-size: 200%;
-  background-position: left center;
-  opacity: 1;
+  transition: filter 0.18s ease;
+}
+
+.app-scope .button:not(.ghost) {
+  background: var(--gradient-primary);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+.app-scope .button.ghost {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  box-shadow: none;
 }
 
 .app-scope .button:hover {
-  background-position: right center;
+  filter: brightness(.98);
 }
 
-/* Optional: Dezenter Glanzeffekt beim Hover */
-.app-scope .button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  height: 100%;
-  width: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  transform: skewX(-45deg);
-  transition: left 0.5s ease;
-}
-
-.app-scope .button:hover::before {
-  left: 150%;
+.app-scope .button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 40%, transparent);
+  outline-offset: 2px;
 }

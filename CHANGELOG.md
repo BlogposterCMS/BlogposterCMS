@@ -9,6 +9,7 @@ El Psy Kongroo
 - Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
 
 ### Fixed
+- Global form styles exclude step forms and install wizard steps hide by default with explicit active-state displays.
 - Inject development auto-login only when the configured dev user exists, keeping auth strict and preventing redirect loops.
 - Install wizard now hides inactive steps and applies consistent flex buttons after rebuilding assets.
 - Updated dummyModule table creation SQL for SQLite compatibility, preventing syntax errors on startup.

@@ -1,5 +1,3 @@
-@import 'login';
-
 .install-steps {
   display: flex;
   justify-content: center;
@@ -18,11 +16,18 @@
   }
 }
 
-.step {
+/* Verstecke alles */
+.app-scope .step {
   display: none;
 }
 
-.step.active {
+/* Formular-Step aktiv = flex */
+.app-scope form.step.active {
+  display: flex;
+}
+
+/* Andere Steps (divs) aktiv = block */
+.app-scope .step.active:not(form) {
   display: block;
 }
 

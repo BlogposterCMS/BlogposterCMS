@@ -1,4 +1,4 @@
-.app-scope form {
+.app-scope form:not(.step) {
   display: flex;
   flex-direction: column;
   gap: 8px; /* optimaler Abstand zwischen Feldern */

@@ -14,15 +14,31 @@
       <img id="logo" class="logo" src="/assets/logo/logo_blogposter_min_transparent.png" alt="BlogposterCMS Logo"/>
       <div class="cms-title">Initial Setup</div>
 
-      <form id="installForm">
-        <div class="field">
-          <input id="name" name="name" required placeholder=" ">
-          <label for="name">Name</label>
-        </div>
+      <ul class="install-steps">
+        <li class="active"></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
 
+      <div id="step-welcome" class="step active">
+        <p>Let's set up Blogposter in 2 min. No bullshit.</p>
+        <div class="actions">
+          <button id="startSetup" class="button">Start setup</button>
+          <a href="/docs" class="button ghost">Docs</a>
+        </div>
+      </div>
+
+      <form id="adminForm" class="step">
         <div class="field">
           <input id="username" name="username" required placeholder=" " autocomplete="username">
           <label for="username">Username</label>
+        </div>
+
+        <div class="field password-field">
+          <input id="password" name="password" type="password" required placeholder=" " autocomplete="new-password">
+          <label for="password">Password</label>
+          <div id="pwStrength" class="error-message"></div>
         </div>
 
         <div class="field">
@@ -30,18 +46,33 @@
           <label for="email">Email</label>
         </div>
 
-        <div class="field">
-          <input id="password" name="password" type="password" required placeholder=" " autocomplete="new-password">
-          <label for="password">Password</label>
-        </div>
-
-        <div class="field">
-          <input id="favoriteColor" name="favoriteColor" type="color" value="#008080">
-          <label for="favoriteColor">Favorite Color</label>
-        </div>
-
-        <button type="submit" class="button">Install</button>
+        <button type="submit" class="button">Continue</button>
       </form>
+
+      <form id="siteForm" class="step">
+        <div class="field">
+          <input id="projectName" name="projectName" placeholder=" ">
+          <label for="projectName">Project name</label>
+        </div>
+
+        <div class="field">
+          <input id="favoriteColor" name="favoriteColor" type="hidden" value="#008080">
+          <button type="button" id="colorPickerToggle" class="color-picker-toggle" style="background-color:#008080"></button>
+          <label for="colorPickerToggle">Favorite color</label>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="skipSite" class="button ghost">Skip all</button>
+          <button type="submit" class="button">Continue</button>
+        </div>
+      </form>
+
+      <div id="step-finish" class="step">
+        <p>Setup complete!</p>
+        <div class="actions">
+          <a id="finishLogin" class="button" href="/login">Go to Dashboard</a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -49,6 +80,6 @@
   <script type="module" src="/assets/js/faviconLoader.js"></script>
   <script type="module" src="/assets/js/fontsLoader.js"></script>
   <script type="module" src="/assets/js/customSelect.js"></script>
-  <script src="/assets/js/install.js"></script>
+  <script type="module" src="/assets/js/install.js"></script>
 </body>
 </html>

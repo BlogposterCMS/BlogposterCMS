@@ -17,6 +17,9 @@ Key variables to review:
 | `TOKEN_SALT_HIGH` etc. | Additional salts used to derive secrets per trust level. |
 | `ENABLE_API` | Enables a lightweight REST API on `API_PORT` when set to `true`. |
 | `ALLOW_REGISTRATION` | If `true`, users may self-register via the public event. |
+| `DEV_AUTOLOGIN` | When `true`, localhost requests auto-login using `DEV_USER`. |
+| `DEV_USER` | Username used for development auto-login. |
+| `ALLOW_WEAK_CREDS` | Set to `I_KNOW_THIS_IS_LOCAL` to permit short passwords in dev. |
 
 > **Note:** When `CONTENT_DB_TYPE` is `postgres` the database manager will
 > create a `databasemanager` schema inside the main Postgres database. This step

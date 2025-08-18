@@ -75,6 +75,16 @@ function abort(msg, howToFix) {
   process.exit(1);
 }
 
+function injectDevBanner(html) {
+  if (process.env.NODE_ENV !== 'production') {
+    return html.replace(
+      '</body>',
+      '<script src="/assets/js/devBanner.js"></script></body>'
+    );
+  }
+  return html;
+}
+
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
   abort(
     'Missing or too‑short JWT_SECRET (min. 64 random hex chars).',
@@ -377,6 +387,43 @@ function getModuleTokenForDbManager() {
     console.error('[SERVER INIT] moduleLoader fizzled →', e.message);
   }
 
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const umToken = await new Promise((resolve, reject) => {
+        motherEmitter.emit(
+          'issueModuleToken',
+          {
+            skipJWT: true,
+            authModuleSecret: AUTH_MODULE_SECRET,
+            moduleType: 'core',
+            moduleName: 'auth',
+            signAsModule: 'userManagement',
+            trustLevel: 'high'
+          },
+          (err, tok) => (err ? reject(err) : resolve(tok))
+        );
+      });
+      const users = await new Promise((resolve, reject) => {
+        motherEmitter.emit(
+          'getAllUsers',
+          { jwt: umToken, moduleName: 'userManagement', moduleType: 'core' },
+          (err, data) => (err ? reject(err) : resolve(data || []))
+        );
+      });
+      const weak = users.filter(
+        u => u.username === 'admin' || !u.password || u.password.length < 60
+      );
+      if (weak.length) {
+        abort(
+          'Weak credentials detected for production.',
+          'Remove default admin user and ensure all passwords are at least 12 characters.'
+        );
+      }
+    } catch (err) {
+      abort('Failed to verify user credentials: ' + err.message);
+    }
+  }
+
 // ──────────────────────────────────────────────────────────────────────────
 // 5) Meltdown API – proxy front-end requests into motherEmitter events
 // ──────────────────────────────────────────────────────────────────────────
@@ -501,6 +548,19 @@ app.post('/api/meltdown/batch', async (req, res) => {
 app.post('/admin/api/login', loginLimiter, csrfProtection, async (req, res) => {
 
   const { username, password } = req.body;
+
+  const localIps = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+  const weakPw = typeof password === 'string' && password.length < 12;
+  const weakCreds = (username === 'admin' && password === '123') || weakPw;
+  if (weakCreds) {
+    const allowWeak = process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL';
+    if (isProduction || !localIps.includes(req.ip) || !allowWeak) {
+      return res
+        .status(401)
+        .json({ success: false, error: 'Weak credentials not allowed' });
+    }
+  }
+
   try {
     // 1) Issue a “login” public JWT that’s safe for CSRF-guarded flows
     const loginJwt = await new Promise((resolve, reject) => {
@@ -609,6 +669,7 @@ app.get('/admin/home', csrfProtection, async (req, res) => {
           '</head>',
           `<meta name="csrf-token" content="${req.csrfToken()}"></head>`
         );
+        html = injectDevBanner(html);
         return res.send(html);
       } catch (err) {
         console.warn('[GET /admin/home] Invalid admin token =>', err.message);
@@ -624,15 +685,17 @@ app.get('/admin/home', csrfProtection, async (req, res) => {
     // User nicht eingeloggt, sende login.html mit CSRF-Token
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
     html = html.replace(
-      '{{CSRF_TOKEN}}', 
+      '{{CSRF_TOKEN}}',
       req.csrfToken()
     );
+    html = injectDevBanner(html);
     return res.send(html);
 
   } catch (err) {
     console.error('[ADMIN /home] Error:', err);
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
     html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
+    html = injectDevBanner(html);
     return res.send(html);
   }
 });
@@ -689,8 +752,9 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     ? rawEntry
     : `build/${rawEntry}.js`;
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title><link rel="stylesheet" href="/assets/css/site.css"><script src="/build/meltdownEmitter.js"></script><script src="/build/icons.js"></script></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
-  return res.send(html);
+    let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title><link rel="stylesheet" href="/assets/css/site.css"><script src="/build/meltdownEmitter.js"></script><script src="/build/icons.js"></script></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
+    html = injectDevBanner(html);
+    return res.send(html);
 });
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -783,6 +847,7 @@ app.get('/admin/*', csrfProtection, async (req, res, next) => {
       </script>
     </head>`;
     html = html.replace('</head>', inject);
+    html = injectDevBanner(html);
 
     res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
     res.send(html);
@@ -824,6 +889,7 @@ app.get('/login', csrfProtection, async (req, res) => {
 
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
     html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
+    html = injectDevBanner(html);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.send(html);
   } catch (err) {
@@ -919,6 +985,7 @@ app.get('/install', csrfProtection, async (req, res) => {
     }
     let html = fs.readFileSync(path.join(publicPath, 'install.html'), 'utf8');
     html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
+    html = injectDevBanner(html);
     res.send(html);
   } catch (err) {
     console.error('[GET /install] Error:', err);

@@ -111,3 +111,17 @@ body {
   *:focus-visible {
   outline: none;
 }
+
+// Development mode banner
+.dev-mode-banner {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(255, 0, 0, 0.1);
+  color: #c00;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 9999;
+  pointer-events: none;
+}

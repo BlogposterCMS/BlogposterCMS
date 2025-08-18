@@ -5,6 +5,7 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
 - **Environment secrets** – Never commit real secret values to version control. Copy `env.sample` to `.env` and provide strong random strings for all salts and tokens.
  - **HTTPS** – When running in production, place the app behind HTTPS and set `APP_ENV=production` (or `NODE_ENV=production`) to enable secure cookies and redirects.
 - **Rate limiting** – `config/security.js` sets limits for login attempts and meltdown API calls. Tune these using `LOGIN_LIMIT_MAX` and `API_RATE_LIMIT_MAX` if needed.
+- **Weak credentials** – Logins with passwords under 12 characters are only accepted from `localhost` when `ALLOW_WEAK_CREDS=I_KNOW_THIS_IS_LOCAL`. Production startup aborts if a user named `admin` or a short password is detected.
 - **CSRF protection** – Admin routes use CSRF tokens to prevent cross-site request forgery. Clients must include the token when authenticating or performing sensitive actions.
 - **Module sandboxing** – Optional modules run inside a minimal sandbox built with Node's `vm` module. Only `path` and `fs` can be required and network access is blocked. Faulty or malicious modules are deactivated automatically when health checks fail.
 - **JWT event bus** – All internal actions pass through the meltdown event bus. Each event carries a signed token and is validated before execution to prevent unauthorized operations.

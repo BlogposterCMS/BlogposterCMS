@@ -45,6 +45,11 @@
   --fg: #fff; --bd: transparent;
   border-color: var(--bd); box-shadow: var(--btn-shadow);
 }
+.app-scope .button.primary:disabled{
+  filter: saturate(.85) brightness(.95);
+  opacity: .75;
+  box-shadow: none;
+}
 .app-scope .button.ghost{
   --bg: var(--color-card);
   --fg: var(--color-text);

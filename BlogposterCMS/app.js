@@ -85,12 +85,36 @@ function injectDevBanner(html) {
   return html;
 }
 
-function injectEnvVars(html) {
-  const allowWeak = process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL';
-  return html
-    .replace('{{DEV_AUTOLOGIN}}', process.env.DEV_AUTOLOGIN === 'true' ? 'true' : '')
-    .replace('{{DEV_USER}}', process.env.DEV_USER || '')
-    .replace('{{ALLOW_WEAK_CREDS}}', allowWeak ? 'true' : '');
+async function isDevAutoLoginAllowed() {
+  const devAuto = process.env.NODE_ENV === 'development' && process.env.DEV_AUTOLOGIN === 'true';
+  if (!devAuto) return false;
+  try {
+    const moduleTok = await new Promise((resolve, reject) => {
+      motherEmitter.emit(
+        'issueModuleToken',
+        {
+          skipJWT: true,
+          authModuleSecret: AUTH_MODULE_SECRET,
+          moduleType: 'core',
+          moduleName: 'auth',
+          signAsModule: 'userManagement',
+          trustLevel: 'high'
+        },
+        (e, t) => (e ? reject(e) : resolve(t))
+      );
+    });
+    const devUser = process.env.DEV_USER || 'admin';
+    const user = await new Promise((resolve, reject) => {
+      motherEmitter.emit(
+        'getUserDetailsByUsername',
+        { jwt: moduleTok, moduleName: 'userManagement', moduleType: 'core', username: devUser },
+        (e, u) => (e ? reject(e) : resolve(u))
+      );
+    });
+    return Boolean(user);
+  } catch (_) {
+    return false;
+  }
 }
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
@@ -692,20 +716,23 @@ app.get('/admin/home', csrfProtection, async (req, res) => {
     }
 
     // User nicht eingeloggt, sende login.html mit CSRF-Token
+    const devAutoLoginAllowed = await isDevAutoLoginAllowed();
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
-    html = html.replace(
-      '{{CSRF_TOKEN}}',
-      req.csrfToken()
-    );
-    html = injectEnvVars(html);
+    html = html.replace('{{CSRF_TOKEN}}', req.csrfToken())
+      .replace('{{DEV_AUTOLOGIN}}', devAutoLoginAllowed ? 'true' : '')
+      .replace('{{DEV_USER}}', process.env.DEV_USER || '')
+      .replace('{{ALLOW_WEAK_CREDS}}', (process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL') ? 'true' : '');
     html = injectDevBanner(html);
     return res.send(html);
 
   } catch (err) {
     console.error('[ADMIN /home] Error:', err);
+    const devAutoLoginAllowed = await isDevAutoLoginAllowed();
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
-    html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
-    html = injectEnvVars(html);
+    html = html.replace('{{CSRF_TOKEN}}', req.csrfToken())
+      .replace('{{DEV_AUTOLOGIN}}', devAutoLoginAllowed ? 'true' : '')
+      .replace('{{DEV_USER}}', process.env.DEV_USER || '')
+      .replace('{{ALLOW_WEAK_CREDS}}', (process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL') ? 'true' : '');
     html = injectDevBanner(html);
     return res.send(html);
   }
@@ -898,9 +925,12 @@ app.get('/login', csrfProtection, async (req, res) => {
     }
   }
 
+    const devAutoLoginAllowed = await isDevAutoLoginAllowed();
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
-    html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
-    html = injectEnvVars(html);
+    html = html.replace('{{CSRF_TOKEN}}', req.csrfToken())
+      .replace('{{DEV_AUTOLOGIN}}', devAutoLoginAllowed ? 'true' : '')
+      .replace('{{DEV_USER}}', process.env.DEV_USER || '')
+      .replace('{{ALLOW_WEAK_CREDS}}', (process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL') ? 'true' : '');
     html = injectDevBanner(html);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.send(html);
@@ -1028,9 +1058,12 @@ app.get('/install', csrfProtection, async (req, res) => {
     if (val === 'true' || userCount > 0) {
       return res.redirect('/login');
     }
+    const devAutoLoginAllowed = await isDevAutoLoginAllowed();
     let html = fs.readFileSync(path.join(publicPath, 'install.html'), 'utf8');
-    html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
-    html = injectEnvVars(html);
+    html = html.replace('{{CSRF_TOKEN}}', req.csrfToken())
+      .replace('{{DEV_AUTOLOGIN}}', devAutoLoginAllowed ? 'true' : '')
+      .replace('{{DEV_USER}}', process.env.DEV_USER || '')
+      .replace('{{ALLOW_WEAK_CREDS}}', (process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL') ? 'true' : '');
     html = injectDevBanner(html);
     res.send(html);
   } catch (err) {

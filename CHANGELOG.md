@@ -6,12 +6,14 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Install wizard now hides inactive steps and applies consistent flex buttons after rebuilding assets.
 - Updated dummyModule table creation SQL for SQLite compatibility, preventing syntax errors on startup.
 - Replaced raw SQL in user role permission fixes with parameterized `dbUpdate` calls and routed page table migrations through a dedicated placeholder for cross-database compatibility.
 - Added `INIT_APP_REGISTRY_TABLE` placeholder and MongoDB/PostgreSQL handlers so the app registry schema boots on all databases.
 - Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 
 ### Added
+- Confirm password field in setup and environment-driven allowance for weak dev credentials with optional auto-login; top-left branding now uses the SVG logo.
 - First-run install wizard with multi-step flow, custom color picker and install lock.
 - Installer enforces strong passwords and blocks common usernames.
 - Optional development auto-login for localhost via `DEV_AUTOLOGIN`; weak credentials require `ALLOW_WEAK_CREDS` and are blocked in production. A red "Development mode" banner now appears on all pages when not in production.

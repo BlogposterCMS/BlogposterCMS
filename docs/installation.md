@@ -27,7 +27,7 @@ This guide describes how to set up BlogposterCMS for local development. Producti
    npm start
    ```
 6. **Run the setup wizard**
-   Open `http://localhost:3000/install` and complete the short wizard to create the first admin user and site profile.
+   Open `http://localhost:3000/install` and complete the short wizard to create the first admin user and site profile. You'll be asked to confirm the admin password.
 7. **Open the CMS**
    Navigate to `http://localhost:3000/` in your browser. The admin area lives under `/admin`.
 

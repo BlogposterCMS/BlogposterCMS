@@ -1,6 +1,9 @@
 const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
 const togglePassword = document.getElementById('togglePassword');
+const allowWeak = document.querySelector('meta[name="allow-weak-creds"]')?.content === 'true';
+const devAutologin = document.querySelector('meta[name="dev-autologin"]')?.content === 'true';
+const devUser = document.querySelector('meta[name="dev-user"]')?.content || 'admin';
 
 togglePassword.addEventListener('click', () => {
   const pwd = document.getElementById('password');
@@ -53,3 +56,9 @@ loginForm.addEventListener('submit', async e => {
     loginError.textContent = err.message || 'Login failed';
   }
 });
+
+if (devAutologin && allowWeak) {
+  loginForm.username.value = devUser;
+  loginForm.password.value = '123';
+  loginForm.dispatchEvent(new Event('submit'));
+}

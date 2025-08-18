@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Changed
+- Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
+
 ### Fixed
 - Install wizard now hides inactive steps and applies consistent flex buttons after rebuilding assets.
 - Updated dummyModule table creation SQL for SQLite compatibility, preventing syntax errors on startup.

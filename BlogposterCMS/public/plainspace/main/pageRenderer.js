@@ -255,7 +255,7 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     gridEl.className = 'canvas-grid';
     target.appendChild(gridEl);
     const columnWidth = 1;
-    const columns = 12;
+    const columns = Infinity;
     grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth, columns }, gridEl);
   }
   const pending = [];
@@ -656,16 +656,22 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     gridEl.id = 'adminGrid';
     gridEl.className = 'canvas-grid';
     contentEl.appendChild(gridEl);
-    const columnWidth = 80;
-    const columns = 12;
+    const columnCount = 12;
     const grid = initCanvasGrid({
       cellHeight: 1,
-      columnWidth,
-      columns,
+      columnWidth: 1,
+      columns: columnCount,
       percentageMode: true,
       pushOnOverlap: true,
       useBoundingBox: false
     }, gridEl);
+    function setColumnWidth() {
+      const gridWidth = gridEl.getBoundingClientRect().width;
+      grid.options.columnWidth = gridWidth / columnCount;
+      grid.widgets.forEach(w => grid.update(w));
+    }
+    setColumnWidth();
+    window.addEventListener('resize', setColumnWidth);
     grid.setStatic(true);
     document.body.classList.add('grid-mode');
     grid.on('change', () => {});

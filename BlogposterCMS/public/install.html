@@ -5,9 +5,14 @@
   <title>Install BlogposterCMS</title>
   <link rel="stylesheet" href="/assets/css/site.css" />
   <meta name="csrf-token" content="{{CSRF_TOKEN}}">
+  <meta name="allow-weak-creds" content="{{ALLOW_WEAK_CREDS}}">
+  <meta name="dev-autologin" content="{{DEV_AUTOLOGIN}}">
+  <meta name="dev-user" content="{{DEV_USER}}">
 </head>
 <body>
-  <h1 class="branding-top-left">BlogposterCMS</h1>
+  <a class="branding-top-left" href="/">
+    <img src="/assets/icons/blogpostercms-logo.svg" alt="BlogposterCMS Logo" width="120">
+  </a>
 
   <div class="app-scope login-page">
     <div class="login-form form-container">
@@ -41,12 +46,19 @@
           <div id="pwStrength" class="error-message"></div>
         </div>
 
+        <div class="field password-field">
+          <input id="confirmPassword" name="confirmPassword" type="password" required placeholder=" " autocomplete="new-password">
+          <label for="confirmPassword">Confirm password</label>
+        </div>
+
         <div class="field">
           <input id="email" name="email" type="email" required placeholder=" " autocomplete="email">
           <label for="email">Email</label>
         </div>
 
-        <button type="submit" class="button">Continue</button>
+        <div class="actions">
+          <button type="submit" class="button">Continue</button>
+        </div>
       </form>
 
       <form id="siteForm" class="step">

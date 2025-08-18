@@ -45,6 +45,7 @@ function setStep(i) {
 
 document.getElementById('startSetup').addEventListener('click', () => setStep(1));
 
+const allowWeak = document.querySelector('meta[name="allow-weak-creds"]')?.content === 'true';
 const data = { favoriteColor: '#008080' };
 
 function passwordStrong(pw) {
@@ -56,14 +57,19 @@ document.getElementById('adminForm').addEventListener('submit', e => {
   const form = e.target;
   const username = form.username.value.trim();
   const password = form.password.value;
+  const confirmPassword = form.confirmPassword.value;
   const email = form.email.value.trim();
   const errBox = document.getElementById('pwStrength');
 
-  if (['admin', 'root', 'test'].includes(username.toLowerCase())) {
-    errBox.textContent = "Username is not allowed.";
+  if (password !== confirmPassword) {
+    errBox.textContent = 'Passwords do not match.';
     return;
   }
-  if (!passwordStrong(password)) {
+  if (['admin', 'root', 'test'].includes(username.toLowerCase()) && !allowWeak) {
+    errBox.textContent = 'Username is not allowed.';
+    return;
+  }
+  if (!passwordStrong(password) && !allowWeak) {
     errBox.textContent = 'Password is too weak.';
     return;
   }

@@ -85,6 +85,14 @@ function injectDevBanner(html) {
   return html;
 }
 
+function injectEnvVars(html) {
+  const allowWeak = process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL';
+  return html
+    .replace('{{DEV_AUTOLOGIN}}', process.env.DEV_AUTOLOGIN === 'true' ? 'true' : '')
+    .replace('{{DEV_USER}}', process.env.DEV_USER || '')
+    .replace('{{ALLOW_WEAK_CREDS}}', allowWeak ? 'true' : '');
+}
+
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
   abort(
     'Missing or too‑short JWT_SECRET (min. 64 random hex chars).',
@@ -689,6 +697,7 @@ app.get('/admin/home', csrfProtection, async (req, res) => {
       '{{CSRF_TOKEN}}',
       req.csrfToken()
     );
+    html = injectEnvVars(html);
     html = injectDevBanner(html);
     return res.send(html);
 
@@ -696,6 +705,7 @@ app.get('/admin/home', csrfProtection, async (req, res) => {
     console.error('[ADMIN /home] Error:', err);
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
     html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
+    html = injectEnvVars(html);
     html = injectDevBanner(html);
     return res.send(html);
   }
@@ -890,6 +900,7 @@ app.get('/login', csrfProtection, async (req, res) => {
 
     let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
     html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
+    html = injectEnvVars(html);
     html = injectDevBanner(html);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.send(html);
@@ -909,12 +920,15 @@ app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
   if (fs.existsSync(installLockPath)) {
     return res.status(403).send('Already installed');
   }
+  const localIps = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+  const allowWeak = process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL';
+  const isLocal = localIps.includes(req.ip);
   const forbidden = ['admin', 'root', 'test'];
-  if (forbidden.includes(String(username).toLowerCase())) {
+  if (forbidden.includes(String(username).toLowerCase()) && (!allowWeak || !isLocal)) {
     return res.status(400).send('Username not allowed');
   }
   const strong = password.length >= 12 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
-  if (!strong) {
+  if (!strong && (!allowWeak || !isLocal)) {
     return res.status(400).send('Password too weak');
   }
   try {
@@ -1016,6 +1030,7 @@ app.get('/install', csrfProtection, async (req, res) => {
     }
     let html = fs.readFileSync(path.join(publicPath, 'install.html'), 'utf8');
     html = html.replace('{{CSRF_TOKEN}}', req.csrfToken());
+    html = injectEnvVars(html);
     html = injectDevBanner(html);
     res.send(html);
   } catch (err) {

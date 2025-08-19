@@ -1,3 +1,27 @@
+// Build the "Create workspace" button with proper semantics
+function buildWorkspaceButton() {
+  const btn = document.createElement('button');
+  btn.id = 'workspace-create';
+  btn.className = 'nav-button';
+  btn.type = 'button';
+  btn.title = 'Create workspace';
+  btn.setAttribute('aria-label', 'Create workspace');
+  const img = document.createElement('img');
+  img.src = '/assets/icons/plus.svg';
+  img.className = 'icon';
+  img.alt = '';
+  btn.appendChild(img);
+  btn.appendChild(document.createTextNode('Workspace'));
+  return btn;
+}
+
+// Ensure the workspace button has a single click handler
+function attachCreateHandler(btn) {
+  const clone = btn.cloneNode(true);
+  clone.addEventListener('click', showWorkspaceField);
+  return clone;
+}
+
 // Handles dynamic workspace and subpage navigation
 export async function initWorkspaceNav() {
   const nav = document.getElementById('workspace-nav');
@@ -26,7 +50,7 @@ export async function initWorkspaceNav() {
 
     // Build top workspace navigation
     if (nav) {
-      const createBtn = nav.querySelector('#workspace-create');
+      let createBtn = nav.querySelector('#workspace-create');
       nav.innerHTML = '';
       const top = pages.filter(
         p =>
@@ -51,12 +75,8 @@ export async function initWorkspaceNav() {
         }
         nav.appendChild(a);
       });
-      if (createBtn) {
-        createBtn.addEventListener('click', () => {
-          showWorkspaceField();
-        });
-        nav.prepend(createBtn);
-      }
+      createBtn = attachCreateHandler(createBtn || buildWorkspaceButton());
+      nav.prepend(createBtn);
     }
 
     // Build sidebar subpage navigation
@@ -211,7 +231,7 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
 // Show floating workspace creation field, hiding header menu and toggling icon
 function showWorkspaceField() {
   const nav = document.getElementById('workspace-nav');
-  const btn = document.getElementById('workspace-create');
+  const btn = nav?.querySelector('#workspace-create');
   if (!nav || !btn) return;
   const icon = btn.querySelector('img.icon');
   const existing = document.getElementById('workspace-floating-field');

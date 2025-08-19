@@ -1,4 +1,5 @@
 import { applyWidgetOptions } from '../main/widgetOptions.js';
+import { attachDashboardControls } from './widgetControls.js';
 
 const DEFAULT_ADMIN_ROWS = 20;
 let panel;
@@ -155,6 +156,7 @@ async function addWidget(def, pos = {}) {
     /* webpackIgnore: true */ '/plainspace/widgets/widgetRenderer.js'
   );
   await renderWidget(wrapper, def, null, instance);
+  attachDashboardControls(wrapper, grid);
   if (document.body.classList.contains('dashboard-edit-mode')) {
     grid.select(wrapper);
   }

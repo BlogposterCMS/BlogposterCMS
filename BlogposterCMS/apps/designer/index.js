@@ -24,6 +24,15 @@ async function bootstrap() {
 
   await initBuilder(sidebarEl, contentEl, pageId, startLayer, layoutNameParam);
   enableAutoEdit();
+
+  window.parent.postMessage({ type: 'builder-ready' }, '*');
 }
+
+window.addEventListener('message', (e) => {
+  const msg = e.data || {};
+  if (msg.type === 'refresh') {
+    window.location.reload();
+  }
+});
 
 document.addEventListener('DOMContentLoaded', bootstrap);

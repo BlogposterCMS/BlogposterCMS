@@ -37,6 +37,7 @@ const { hasPermission } = require('./mother/modules/userManagement/permissionUti
 
 const { motherEmitter, meltdownForModule } = require('./mother/emitters/motherEmitter');
 const moduleNameFromStack = require('./mother/utils/moduleNameFromStack');
+const { registerOrUpdateApp, runDbSelectPlaceholder } = require('./mother/modules/appLoader/appRegistryService');
 
 function handleGlobalError(err) {
   console.error('[GLOBAL] Unhandled error =>', err);
@@ -237,6 +238,39 @@ function getModuleTokenForDbManager() {
       '"': '&quot;',
       "'": '&#39;'
     }[c]));
+  }
+
+  async function issueAppLoaderJwt() {
+    return new Promise((resolve, reject) => {
+      motherEmitter.emit(
+        'issueModuleToken',
+        {
+          skipJWT: true,
+          authModuleSecret: AUTH_MODULE_SECRET,
+          moduleType: 'core',
+          moduleName: 'appLoader',
+          signAsModule: 'appLoader',
+          trustLevel: 'high'
+        },
+        (err, tok) => (err ? reject(err) : resolve(tok))
+      );
+    });
+  }
+
+  async function getAppRegistryInfo(appName) {
+    try {
+      const jwt = await issueAppLoaderJwt();
+      const rows = await runDbSelectPlaceholder(
+        motherEmitter,
+        jwt,
+        'SELECT_APP_BY_NAME',
+        { appName }
+      );
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('[appRegistry] lookup failed', err.message);
+      return null;
+    }
   }
 
   // Helper to verify an admin JWT against the current user database
@@ -660,6 +694,83 @@ app.get('/admin/logout', (req, res) => {
   res.redirect('/login');
 });
 
+// App install endpoint
+app.post('/admin/api/apps/install', csrfProtection, async (req, res) => {
+  const adminJwt = req.cookies?.admin_jwt;
+  if (!adminJwt) return res.status(401).send('Unauthorized');
+  let decoded;
+  try {
+    decoded = await validateAdminToken(adminJwt);
+  } catch (err) {
+    return res.status(401).send('Unauthorized');
+  }
+  if (!hasPermission(decoded, 'builder.manage')) {
+    return res.status(403).send('Forbidden');
+  }
+
+  const appName = sanitizeSlug(req.body?.appName || '');
+  const sourceDir = typeof req.body?.sourceDir === 'string' ? req.body.sourceDir : '';
+  if (!appName || !sourceDir) return res.status(400).send('Missing parameters');
+  const appsRoot = path.join(__dirname, 'apps');
+  const src = path.resolve(sourceDir);
+  if (!src.startsWith(appsRoot) || !fs.existsSync(src)) {
+    return res.status(400).send('Invalid source');
+  }
+  const dest = path.join(appsRoot, appName);
+  try {
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.cpSync(src, dest, { recursive: true });
+    const manifestPath = path.join(dest, 'app.json');
+    if (!fs.existsSync(manifestPath)) {
+      return res.status(400).send('Invalid app');
+    }
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const indexPath = path.join(dest, 'index.html');
+    const hasIndexHtml = fs.existsSync(indexPath);
+    const isBuilt = hasIndexHtml;
+    const jwt = await issueAppLoaderJwt();
+    await registerOrUpdateApp(
+      motherEmitter,
+      jwt,
+      appName,
+      { ...manifest, hasIndexHtml, isBuilt },
+      isBuilt,
+      hasIndexHtml ? null : 'Missing index.html'
+    );
+    res.status(201).json({ installed: appName });
+  } catch (err) {
+    console.warn('[APP INSTALL] failed', err);
+    res.status(500).send('Install failed');
+  }
+});
+
+// App uninstall endpoint
+app.delete('/admin/api/apps/:appName', csrfProtection, async (req, res) => {
+  const adminJwt = req.cookies?.admin_jwt;
+  if (!adminJwt) return res.status(401).send('Unauthorized');
+  let decoded;
+  try {
+    decoded = await validateAdminToken(adminJwt);
+  } catch (err) {
+    return res.status(401).send('Unauthorized');
+  }
+  if (!hasPermission(decoded, 'builder.manage')) {
+    return res.status(403).send('Forbidden');
+  }
+  const appName = sanitizeSlug(req.params.appName);
+  const appsRoot = path.join(__dirname, 'apps');
+  const dest = path.join(appsRoot, appName);
+  try {
+    fs.rmSync(dest, { recursive: true, force: true });
+    const jwt = await issueAppLoaderJwt();
+    await registerOrUpdateApp(motherEmitter, jwt, appName, null, false, 'Uninstalled');
+    res.json({ removed: appName });
+  } catch (err) {
+    console.warn('[APP UNINSTALL] failed', err);
+    res.status(500).send('Uninstall failed');
+  }
+});
+
 
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -784,12 +895,22 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     return res.status(403).send('Forbidden');
   }
 
+  const registry = await getAppRegistryInfo(appName);
+  let registryInfo = {};
+  try {
+    registryInfo = registry && registry.app_info ? JSON.parse(registry.app_info) : {};
+  } catch (_) {}
+  const indexPath = path.join(appDir, 'index.html');
+  if (!registryInfo.hasIndexHtml || !registryInfo.isBuilt || !fs.existsSync(indexPath)) {
+    return res.status(500).send('App build missing');
+  }
+
   const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
   const pageId = sanitizeSlug(req.params.pageId || '');
   const pageQuery = pageId ? `?pageId=${encodeURIComponent(pageId)}` : '';
   const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
 
-  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><script>window.CSRF_TOKEN=${JSON.stringify(req.csrfToken())};window.ADMIN_TOKEN=${JSON.stringify(adminJwt)};</script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
+  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><script src="/build/meltdownEmitter.js"></script><script>window.CSRF_TOKEN=${JSON.stringify(req.csrfToken())};window.ADMIN_TOKEN=${JSON.stringify(adminJwt)};</script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe><script>const f=document.getElementById('app-frame');window.addEventListener('message',ev=>{if(ev.source!==f.contentWindow)return;const msg=ev.data||{};if(!msg.type)return;window.meltdownEmit('dispatchAppEvent',{jwt:window.ADMIN_TOKEN,moduleName:'appLoader',moduleType:'core',appName:${JSON.stringify(appName)},event:msg.type,data:msg.data||{}}).catch(e=>console.warn('[AppFrame] dispatch failed',e));});</script></body></html>`;
   html = injectDevBanner(html);
   return res.send(html);
 });

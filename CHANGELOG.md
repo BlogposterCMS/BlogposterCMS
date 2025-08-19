@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- App registry tracks build status and index availability; app route refuses unbuilt apps and forwards iframe events via `dispatchAppEvent`.
 - App launcher now loads apps inside an isolated iframe and passes CSRF and admin tokens via the parent window to keep APIs working without leaking dashboard styles.
 - Primary buttons now follow the user's accent color in the dashboard and fall back to neutral form tones on the install route.
 - Primary buttons on install screens now have a wider footprint and clearer disabled styling.
@@ -27,6 +28,7 @@ El Psy Kongroo
 - Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 
 ### Added
+- Admin endpoints to install or uninstall apps while updating the registry.
 - Confirm password field in setup and environment-driven allowance for weak dev credentials with optional auto-login; top-left branding now uses the SVG logo.
 - First-run install wizard with multi-step flow, custom color picker and install lock.
 - Installer enforces strong passwords and blocks common usernames.

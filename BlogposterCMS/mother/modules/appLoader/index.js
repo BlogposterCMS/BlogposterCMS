@@ -100,8 +100,19 @@ async function loadAllApps({ motherEmitter, jwt, baseDir }) {
       continue;
     }
 
+    const indexPath = path.join(appsPath, appName, 'index.html');
+    const hasIndexHtml = fs.existsSync(indexPath);
+    const isBuilt = hasIndexHtml; // treat presence of index.html as valid build
+    const appInfo = { ...manifest, hasIndexHtml, isBuilt };
     try {
-      await registerOrUpdateApp(motherEmitter, jwt, appName, manifest, true, null);
+      await registerOrUpdateApp(
+        motherEmitter,
+        jwt,
+        appName,
+        appInfo,
+        isBuilt,
+        hasIndexHtml ? null : 'Missing index.html'
+      );
     } catch (err) {
       notify({
         moduleName: 'appLoader',
@@ -158,6 +169,15 @@ module.exports = {
           }
         }
         callback(null, { apps: result });
+      } catch (err) {
+        callback(err);
+      }
+    });
+
+    motherEmitter.on('dispatchAppEvent', (payload, callback) => {
+      try {
+        motherEmitter.emit('appLoader:appEvent', payload);
+        callback(null, { ok: true });
       } catch (err) {
         callback(err);
       }

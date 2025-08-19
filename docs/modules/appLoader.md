@@ -7,12 +7,19 @@ Builds the app registry by scanning `apps/*/app.json` manifests during startup. 
 - Reads each `app.json` manifest under `apps/` and records metadata for the app.
 - Ensures the persistent `app_registry` table exists via the `INIT_APP_REGISTRY_TABLE` placeholder.
 - Skips malformed or inaccessible manifests and emits warning notifications.
+- Stores whether an app has a built `index.html` and marks apps without one as inactive.
 
 ## Purpose
 - Maintains an in-memory registry of available apps.
 - Exposes a meltdown event `getAppRegistry` that returns the registry to authorised callers.
+- Handles `dispatchAppEvent` messages forwarded from sandboxed iframes and re-emits them as `appLoader:appEvent` for other modules.
 - Supplies Webpack with entry point information so app bundles can be resolved automatically.
 - Persists registry entries through database placeholders, supporting SQLite, PostgreSQL and MongoDB backends.
+
+## APIs
+- `POST /admin/api/apps/install` – copy an app folder into `apps/` and register it.
+- `DELETE /admin/api/apps/:appName` – remove an app folder and mark the registry entry inactive.
+- Both endpoints require an authenticated admin with `builder.manage` permission.
 
 ## Security Notes
 - Manifest paths are resolved and normalised to block directory traversal.

@@ -301,6 +301,9 @@ export class CanvasGrid {
     };
 
     const up = () => {
+      if (dragging) {
+        el.classList.remove('dragging');
+      }
       dragging = false;
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
@@ -325,6 +328,7 @@ export class CanvasGrid {
       targetX = startGX * this.options.columnWidth;
       targetY = startGY * this.options.cellHeight;
       dragging = true;
+      el.classList.add('dragging');
       this._emit('dragstart', el);
       document.addEventListener('mousemove', move);
       document.addEventListener('mouseup', up);

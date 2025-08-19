@@ -52,6 +52,8 @@ immediately.
 
 Widgets are arranged with a CanvasGrid drag-and-drop layout. Its twelve columns automatically resize to fill the available space, preventing dead zones at the edges. The sequence below demonstrates arranging widgets from an empty grid to a customized dashboard.
 
+Each widget now includes a resize toggle to switch between a small four-column width and a large eight-column width, making layout adjustments quick and intuitive.
+
 ![Initial grid view](screenshots/Arrange%20Your%20Dashboard%20Freely.png)
 ![Adding widgets](screenshots/Perfectly%20Adaptive%20Widgets.png)
 ![Final layout](screenshots/Your%20Dashboard,%20Your%20Way.png)

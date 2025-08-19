@@ -204,6 +204,32 @@ export function attachRemoveButton(el, grid, pageId, scheduleAutosave) {
   return btn;
 }
 
+export function attachResizeButton(el, grid) {
+  const btn = document.createElement('button');
+  btn.className = 'widget-resize';
+  btn.dataset.state = 'small';
+  const setIcon = () => {
+    btn.innerHTML = window.featherIcon
+      ? window.featherIcon(btn.dataset.state === 'small' ? 'maximize' : 'minimize')
+      : '';
+  };
+  setIcon();
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const w = parseInt(el.getAttribute('gs-w')) || 4;
+    const newW = w <= 4 ? 8 : 4;
+    grid.update(el, { w: newW });
+    btn.dataset.state = newW <= 4 ? 'small' : 'large';
+    setIcon();
+    grid._updateGridHeight();
+    grid._emit('change', el);
+  });
+
+  el.appendChild(btn);
+  return btn;
+}
+
 export function attachLockOnClick(el, selectWidget) {
   el.addEventListener('click', e => {
     e.stopPropagation();

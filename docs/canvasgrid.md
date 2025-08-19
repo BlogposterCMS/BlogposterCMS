@@ -10,6 +10,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 - Optional push mode prevents overlaps by moving surrounding widgets out of the way.
 - Percentage based sizing lets layouts adapt responsively.
 - All mouse, touch and keyboard events are forwarded through `bindGlobalListeners` for centralized handling.
+- Widgets receive a `dragging` class while moved so interfaces can reveal context‑sensitive controls.
 
 ## Usage
 

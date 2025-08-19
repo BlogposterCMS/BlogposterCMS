@@ -44,13 +44,64 @@
   overflow: visible;
   background: transparent;
   border-radius: 14px;
+  border: 2px solid transparent;
   transition: all 0.2s ease;
   will-change: transform;
   z-index: 0; // baseline layer for widgets
 }
 
-// Highlight widgets while the admin layout is editable
+// Dashboard editing styles
 body.dashboard-edit-mode .canvas-item {
+  border: 2px solid transparent;
+}
+
+body.dashboard-edit-mode .canvas-item .widget-remove,
+body.dashboard-edit-mode .canvas-item .widget-resize,
+body.dashboard-edit-mode .canvas-item .widget-menu {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.dashboard-edit-mode .canvas-item .widget-resize {
+  position: absolute;
+  top: 2px;
+  right: 26px;
+  background: transparent;
   border: none;
+  padding: 2px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+}
+
+body.dashboard-edit-mode .canvas-item.dragging .widget-remove,
+body.dashboard-edit-mode .canvas-item.selected .widget-remove,
+body.dashboard-edit-mode .canvas-item.dragging .widget-resize,
+body.dashboard-edit-mode .canvas-item.selected .widget-resize,
+body.dashboard-edit-mode .canvas-item.dragging .widget-menu,
+body.dashboard-edit-mode .canvas-item.selected .widget-menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.dashboard-edit-mode .canvas-item:hover .widget-remove,
+body.dashboard-edit-mode .canvas-item:hover .widget-resize,
+body.dashboard-edit-mode .canvas-item:hover .widget-menu {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.dashboard-edit-mode .canvas-item.dragging,
+body.dashboard-edit-mode .canvas-item.selected {
+  border-color: var(--user-color);
+}
+
+body.dashboard-edit-mode .canvas-item[data-global="true"].dragging,
+body.dashboard-edit-mode .canvas-item[data-global="true"].selected {
+  border-color: var(--shared-widget-color, #d4af37);
+}
+
+body.dashboard-edit-mode .canvas-item:hover {
+  border-color: transparent;
 }
 

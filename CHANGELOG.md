@@ -7,6 +7,7 @@ El Psy Kongroo
 
 
 ### Added
+- Dashboard widgets reveal control buttons only when selected or dragging and include a resize toggle for quick width changes.
 - Admin endpoints to install or uninstall apps while updating the registry.
 - Confirm password field in setup and environment-driven allowance for weak dev credentials with optional auto-login; top-left branding now uses the SVG logo.
 - First-run install wizard with multi-step flow, custom color picker and install lock.

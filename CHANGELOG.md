@@ -5,27 +5,6 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-### Changed
-- App registry tracks build status and index availability; app route refuses unbuilt apps and forwards iframe events via `dispatchAppEvent`.
-- App launcher now loads apps inside an isolated iframe and passes CSRF and admin tokens via the parent window to keep APIs working without leaking dashboard styles.
-- Primary buttons now follow the user's accent color in the dashboard and fall back to neutral form tones on the install route.
-- Primary buttons on install screens now have a wider footprint and clearer disabled styling.
-- Refined button styles with higher disabled contrast, block and group utilities, reduced-motion support and dark-mode ghost borders.
-- Expanded button system with standardized variants, sizes, icon spacing and loading state while keeping the login screen's custom styling.
-- Rewrote global button styles with gradient primary and ghost secondary variants while preserving the login screen's custom button.
-- Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
-
-### Fixed
-- Start setup and Continue buttons on the install wizard now use the primary style for better visibility.
-- Install screen no longer inherits login page button styles.
-- Install wizard indicators drop default list markers and active step forms stack vertically for clearer progress.
-- Global form styles exclude step forms and install wizard steps hide by default with explicit active-state displays.
-- Inject development auto-login only when the configured dev user exists, keeping auth strict and preventing redirect loops.
-- Install wizard now hides inactive steps and applies consistent flex buttons after rebuilding assets.
-- Updated dummyModule table creation SQL for SQLite compatibility, preventing syntax errors on startup.
-- Replaced raw SQL in user role permission fixes with parameterized `dbUpdate` calls and routed page table migrations through a dedicated placeholder for cross-database compatibility.
-- Added `INIT_APP_REGISTRY_TABLE` placeholder and MongoDB/PostgreSQL handlers so the app registry schema boots on all databases.
-- Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 
 ### Added
 - Admin endpoints to install or uninstall apps while updating the registry.
@@ -61,10 +40,7 @@ El Psy Kongroo
 - `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
 
-### Changed
- - Designer module provisions its own schema via `createDatabase`/`applySchemaDefinition` and switches to high-level CRUD events to prevent automatic deactivation on constraint errors.
-- HTML uploads now go through the media manager to stay in the library and avoid overwriting existing files.
-- Documented new `appLoader` core module that securely builds the app registry from manifests.
+
 
 ### Removed
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
@@ -73,6 +49,18 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- App registry tracks build status and index availability; app route refuses unbuilt apps and forwards iframe events via `dispatchAppEvent`.
+- App launcher now loads apps inside an isolated iframe and passes CSRF and admin tokens via the parent window to keep APIs working without leaking dashboard styles.
+- Header "Create workspace" button now displays only an icon for a cleaner navigation header.
+- Primary buttons now follow the user's accent color in the dashboard and fall back to neutral form tones on the install route.
+- Primary buttons on install screens now have a wider footprint and clearer disabled styling.
+- Refined button styles with higher disabled contrast, block and group utilities, reduced-motion support and dark-mode ghost borders.
+- Expanded button system with standardized variants, sizes, icon spacing and loading state while keeping the login screen's custom styling.
+- Rewrote global button styles with gradient primary and ghost secondary variants while preserving the login screen's custom button.
+- Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
+ - Designer module provisions its own schema via `createDatabase`/`applySchemaDefinition` and switches to high-level CRUD events to prevent automatic deactivation on constraint errors.
+- HTML uploads now go through the media manager to stay in the library and avoid overwriting existing files.
+- Documented new `appLoader` core module that securely builds the app registry from manifests.
 - Mongo pages placeholders now drop slug indexes by name, store timestamps as `Date`, filter lane queries by language, and sitemap generation sorts by recent updates.
 - Removed slug-only unique index in relational databases, backfilled page weights, and added composite indexes for faster page sorting.
 - Notification emitter now uses a safe wrapper with console fallback across core loaders; appLoader emits warning notifications for missing or invalid manifests; default admin page widget spacing prevents layout overlaps.
@@ -114,6 +102,18 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Workspace flyout creates a top-level page and collapses the icon picker upon submission.
+- "Create workspace" header button is built programmatically as a semantic `<button>` and always wires its click handler even when the template omits it.
+- Start setup and Continue buttons on the install wizard now use the primary style for better visibility.
+- Install screen no longer inherits login page button styles.
+- Install wizard indicators drop default list markers and active step forms stack vertically for clearer progress.
+- Global form styles exclude step forms and install wizard steps hide by default with explicit active-state displays.
+- Inject development auto-login only when the configured dev user exists, keeping auth strict and preventing redirect loops.
+- Install wizard now hides inactive steps and applies consistent flex buttons after rebuilding assets.
+- Updated dummyModule table creation SQL for SQLite compatibility, preventing syntax errors on startup.
+- Replaced raw SQL in user role permission fixes with parameterized `dbUpdate` calls and routed page table migrations through a dedicated placeholder for cross-database compatibility.
+- Added `INIT_APP_REGISTRY_TABLE` placeholder and MongoDB/PostgreSQL handlers so the app registry schema boots on all databases.
+- Restored appLoader placeholders across SQLite, PostgreSQL and MongoDB, preventing placeholder strings from running as raw SQL.
 - appLoader now creates its registry table via `performDbOperation` with SQLite-friendly SQL, preventing "near 'INIT_APP_REGISTRY_TABLE'" errors.
 - pagesManager ensures the `weight` column exists before index creation, preventing "no such column: weight" failures during upgrades.
 - appLoader uses SQLite-friendly schema and placeholders, resolving `unrecognized token ':'` database errors.

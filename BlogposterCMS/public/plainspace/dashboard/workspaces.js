@@ -1,3 +1,26 @@
+// Build the "Create workspace" button with proper semantics
+function buildWorkspaceButton() {
+  const btn = document.createElement('button');
+  btn.id = 'workspace-create';
+  btn.className = 'nav-button';
+  btn.type = 'button';
+  btn.title = 'Create workspace';
+  btn.setAttribute('aria-label', 'Create workspace');
+  const img = document.createElement('img');
+  img.src = '/assets/icons/plus.svg';
+  img.className = 'icon';
+  img.alt = '';
+  btn.appendChild(img);
+  return btn;
+}
+
+// Ensure the workspace button has a single click handler
+function attachCreateHandler(btn) {
+  const clone = btn.cloneNode(true);
+  clone.addEventListener('click', showWorkspaceField);
+  return clone;
+}
+
 // Handles dynamic workspace and subpage navigation
 export async function initWorkspaceNav() {
   const nav = document.getElementById('workspace-nav');
@@ -26,7 +49,7 @@ export async function initWorkspaceNav() {
 
     // Build top workspace navigation
     if (nav) {
-      const createBtn = nav.querySelector('#workspace-create');
+      let createBtn = nav.querySelector('#workspace-create');
       nav.innerHTML = '';
       const top = pages.filter(
         p =>
@@ -51,12 +74,8 @@ export async function initWorkspaceNav() {
         }
         nav.appendChild(a);
       });
-      if (createBtn) {
-        createBtn.addEventListener('click', () => {
-          showWorkspaceField();
-        });
-        nav.prepend(createBtn);
-      }
+      createBtn = attachCreateHandler(createBtn || buildWorkspaceButton());
+      nav.prepend(createBtn);
     }
 
     // Build sidebar subpage navigation
@@ -200,6 +219,8 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
     createBtn.textContent = 'Create';
   }
   createBtn.addEventListener('click', () => {
+    iconList.classList.remove('open');
+    document.removeEventListener('click', handleClickOutside);
     submitHandler({ name: input.value.trim(), icon: selectedIcon });
     container.remove();
   });
@@ -211,7 +232,7 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
 // Show floating workspace creation field, hiding header menu and toggling icon
 function showWorkspaceField() {
   const nav = document.getElementById('workspace-nav');
-  const btn = document.getElementById('workspace-create');
+  const btn = nav?.querySelector('#workspace-create');
   if (!nav || !btn) return;
   const icon = btn.querySelector('img.icon');
   const existing = document.getElementById('workspace-floating-field');
@@ -223,16 +244,42 @@ function showWorkspaceField() {
   }
   nav.querySelectorAll('a').forEach(a => (a.style.display = 'none'));
   if (icon) icon.src = '/assets/icons/minus.svg';
-  const container = buildInlineField('workspace-floating-field', 'Workspace name', detail => {
-    document.dispatchEvent(
-      new CustomEvent('ui:action:run', {
-        detail: { actionId: 'createWorkspace', name: detail.name, icon: detail.icon }
-      })
-    );
-    container.remove();
-    nav.querySelectorAll('a').forEach(a => (a.style.display = ''));
-    if (icon) icon.src = '/assets/icons/plus.svg';
-  }, false);
+  const container = buildInlineField(
+    'workspace-floating-field',
+    'Workspace name',
+    async detail => {
+      const makeSlug = str =>
+        String(str)
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      const slugPart = makeSlug(detail.name);
+      if (!slugPart) return;
+      try {
+        await window.meltdownEmit('createPage', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'pagesManager',
+          moduleType: 'core',
+          title: detail.name,
+          slug: slugPart,
+          lane: 'admin',
+          status: 'published',
+          parent_id: null,
+          meta: { icon: detail.icon, workspace: slugPart }
+        });
+        // UI bereinigen und zum neuen Workspace springen
+        container.remove();
+        nav.querySelectorAll('a').forEach(a => (a.style.display = ''));
+        if (icon) icon.src = '/assets/icons/plus.svg';
+        window.location.href = `${(window.ADMIN_BASE || '/admin/').replace(/\/+/g, '/')}${slugPart}`;
+      } catch (err) {
+        console.error('Failed to create workspace', err);
+      }
+    },
+    true
+  );
   document.body.appendChild(container);
   const rect = btn.getBoundingClientRect();
   container.style.left = `${rect.right + window.scrollX + 8}px`;

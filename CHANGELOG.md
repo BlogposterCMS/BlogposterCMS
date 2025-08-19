@@ -50,6 +50,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Hover effects and drag handles for admin widgets now only appear in dashboard edit mode.
 - App registry tracks build status and index availability; app route refuses unbuilt apps and forwards iframe events via `dispatchAppEvent`.
 - App launcher now loads apps inside an isolated iframe and passes CSRF and admin tokens via the parent window to keep APIs working without leaking dashboard styles.
 - Header "Create workspace" button now displays only an icon for a cleaner navigation header.

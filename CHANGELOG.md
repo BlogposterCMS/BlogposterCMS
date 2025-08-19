@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- Primary buttons now follow the user's accent color in the dashboard and fall back to neutral form tones on the install route.
 - Primary buttons on install screens now have a wider footprint and clearer disabled styling.
 - Refined button styles with higher disabled contrast, block and group utilities, reduced-motion support and dark-mode ghost borders.
 - Expanded button system with standardized variants, sizes, icon spacing and loading state while keeping the login screen's custom styling.

@@ -23,7 +23,7 @@ Use the global `.button` classes for consistent actions across the dashboard. Va
 ## Creating Workspaces and Subpages
 
   The admin interface includes two "+" buttons for quickly adding content. Clicking either reveals a sliding panel where you pick an icon and enter a name before submitting. The button on the left side of the header creates a workspace and the "+" button at the bottom of the sidebar adds a subpage to the current workspace. When the workspace field is open, existing workspace links are hidden and the "+" icon switches to a "-" so you can click it again to close the panel. The subpage button behaves the same way, hiding its label while the field is open. Each inline field now slides out beside its trigger button and overlays surrounding content with a high z-index. The panel includes an icon chooser on the left, a centered text input, and a corner-down-right confirmation button on the right.
-  The icon chooser loads the complete list of available icons from `/assets/icons` on demand and displays them in a floating grid. After selecting an icon the grid closes automatically, and submitting the form immediately creates the workspace or subpage.
+  The icon chooser loads the complete list of available icons from `/assets/icons` on demand and displays them in a floating grid. After selecting an icon the grid closes automatically and it also collapses when you confirm, which immediately creates the workspace or subpage.
 
 ## Admin Lane vs Public Lane
 

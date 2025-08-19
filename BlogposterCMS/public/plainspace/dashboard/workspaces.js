@@ -11,7 +11,6 @@ function buildWorkspaceButton() {
   img.className = 'icon';
   img.alt = '';
   btn.appendChild(img);
-  btn.appendChild(document.createTextNode('Workspace'));
   return btn;
 }
 
@@ -220,6 +219,8 @@ function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
     createBtn.textContent = 'Create';
   }
   createBtn.addEventListener('click', () => {
+    iconList.classList.remove('open');
+    document.removeEventListener('click', handleClickOutside);
     submitHandler({ name: input.value.trim(), icon: selectedIcon });
     container.remove();
   });
@@ -243,16 +244,42 @@ function showWorkspaceField() {
   }
   nav.querySelectorAll('a').forEach(a => (a.style.display = 'none'));
   if (icon) icon.src = '/assets/icons/minus.svg';
-  const container = buildInlineField('workspace-floating-field', 'Workspace name', detail => {
-    document.dispatchEvent(
-      new CustomEvent('ui:action:run', {
-        detail: { actionId: 'createWorkspace', name: detail.name, icon: detail.icon }
-      })
-    );
-    container.remove();
-    nav.querySelectorAll('a').forEach(a => (a.style.display = ''));
-    if (icon) icon.src = '/assets/icons/plus.svg';
-  }, false);
+  const container = buildInlineField(
+    'workspace-floating-field',
+    'Workspace name',
+    async detail => {
+      const makeSlug = str =>
+        String(str)
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      const slugPart = makeSlug(detail.name);
+      if (!slugPart) return;
+      try {
+        await window.meltdownEmit('createPage', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'pagesManager',
+          moduleType: 'core',
+          title: detail.name,
+          slug: slugPart,
+          lane: 'admin',
+          status: 'published',
+          parent_id: null,
+          meta: { icon: detail.icon, workspace: slugPart }
+        });
+        // UI bereinigen und zum neuen Workspace springen
+        container.remove();
+        nav.querySelectorAll('a').forEach(a => (a.style.display = ''));
+        if (icon) icon.src = '/assets/icons/plus.svg';
+        window.location.href = `${(window.ADMIN_BASE || '/admin/').replace(/\/+/g, '/')}${slugPart}`;
+      } catch (err) {
+        console.error('Failed to create workspace', err);
+      }
+    },
+    true
+  );
   document.body.appendChild(container);
   const rect = btn.getBoundingClientRect();
   container.style.left = `${rect.right + window.scrollX + 8}px`;

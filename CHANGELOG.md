@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- Header "Create workspace" button now displays only an icon for a cleaner navigation header.
 - Primary buttons now follow the user's accent color in the dashboard and fall back to neutral form tones on the install route.
 - Primary buttons on install screens now have a wider footprint and clearer disabled styling.
 - Refined button styles with higher disabled contrast, block and group utilities, reduced-motion support and dark-mode ghost borders.
@@ -14,6 +15,7 @@ El Psy Kongroo
 - Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
 
 ### Fixed
+- Workspace flyout creates a top-level page and collapses the icon picker upon submission.
 - "Create workspace" header button is built programmatically as a semantic `<button>` and always wires its click handler even when the template omits it.
 - Start setup and Continue buttons on the install wizard now use the primary style for better visibility.
 - Install screen no longer inherits login page button styles.

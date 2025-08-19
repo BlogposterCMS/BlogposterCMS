@@ -62,6 +62,18 @@ body.dashboard-edit-mode .canvas-item .widget-menu {
   pointer-events: none;
 }
 
+body.dashboard-edit-mode .canvas-item .widget-remove {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+}
+
 body.dashboard-edit-mode .canvas-item .widget-resize {
   position: absolute;
   top: 2px;

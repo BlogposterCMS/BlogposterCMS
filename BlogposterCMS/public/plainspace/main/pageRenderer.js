@@ -1,5 +1,6 @@
 import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
+import { attachDashboardControls } from '../dashboard/widgetControls.js';
 const { sanitizeHtml } = await import(
   /* webpackIgnore: true */ '/plainspace/editor/core/sanitizer.js'
 );
@@ -676,6 +677,10 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     document.body.classList.add('grid-mode');
     grid.on('change', () => {});
     window.adminGrid = grid;
+    if (typeof grid.on === 'function') {
+      grid.on('dragstart', el => el.classList.add('dragging'));
+      grid.on('dragstop', el => el.classList.remove('dragging'));
+    }
     window.adminPageContext = { pageId: page.id, lane };
     window.adminCurrentLayout = layout;
 
@@ -756,6 +761,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       } catch {}
 
       await renderWidget(content, def, meta.code || null, lane);
+      attachDashboardControls(wrapper, grid);
       wrapper.classList.remove('loading');
     }
 

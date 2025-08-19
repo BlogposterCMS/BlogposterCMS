@@ -43,6 +43,13 @@ const el = grid.addWidget({ x: 0, y: 0, w: 2, h: 2 });
 
 grid.update(el, { x: 1, y: 1 });
 ```
+CanvasGrid emits `dragstart` and `dragstop` events for individual widgets. Use them to toggle UI state:
+
+```js
+grid.on('dragstart', el => el.classList.add('dragging'));
+grid.on('dragstop', el => el.classList.remove('dragging'));
+```
+
 
 Listen for the `change` event to persist layout updates when users move or resize widgets.
 

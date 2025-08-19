@@ -4,7 +4,6 @@
   --btn-h: 42px;
   --btn-gap: 8px;
   --btn-shadow: 0 2px 8px rgba(0,0,0,.06);
-  --gradient-primary: linear-gradient(180deg, #34c6d9, #7a5cff);
 }
 
 /* Base */
@@ -41,8 +40,8 @@
 
 /* Variants */
 .app-scope .button.primary{
-  --bg: var(--gradient-primary);
-  --fg: #fff; --bd: transparent;
+  --bg: var(--color-primary);
+  --fg: var(--color-primary-contrast); --bd: transparent;
   border-color: var(--bd); box-shadow: var(--btn-shadow);
 }
 .app-scope .button.primary:disabled{

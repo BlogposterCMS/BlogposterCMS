@@ -25,21 +25,19 @@ function escapeHtml(str) {
   }[c]));
 }
 
-test('GET /admin/app/designer/123 returns 200 with csrf token', async () => {
+test('GET /admin/app/designer/123 returns iframe with tokens', async () => {
   const app = express();
   const csrfStub = (req, res, next) => { req.csrfToken = () => 'test-token'; next(); };
   app.get('/admin/app/:appName/:pageId?', csrfStub, async (req, res) => {
     const appName = sanitizeSlug(req.params.appName);
-    const appDir = path.join(__dirname, '..', 'apps', appName);
-    const manifestPath = path.join(appDir, 'app.json');
+    const manifestPath = path.join(__dirname, '..', 'apps', appName, 'app.json');
     if (!fs.existsSync(manifestPath)) return res.status(404).send('App not found');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
-    const rawEntry = String(manifest.entry || '').replace(/[^a-zA-Z0-9_\-/\.]/g, '');
-    const entry = rawEntry.includes('/') || rawEntry.endsWith('.js')
-      ? rawEntry
-      : `build/${rawEntry}.js`;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title><link rel="stylesheet" href="/assets/css/site.css"></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
+    const pageId = sanitizeSlug(req.params.pageId || '');
+    const pageQuery = pageId ? `?pageId=${encodeURIComponent(pageId)}` : '';
+    const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
+    const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><script>window.CSRF_TOKEN='${req.csrfToken()}';</script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
     res.send(html);
   });
 
@@ -49,6 +47,7 @@ test('GET /admin/app/designer/123 returns 200 with csrf token', async () => {
   const port = server.address().port;
   const res = await axios.get(`http://localhost:${port}/admin/app/designer/123`);
   expect(res.status).toBe(200);
-  expect(res.data).toContain('<meta name="csrf-token" content="test-token">');
+  expect(res.data).toContain("window.CSRF_TOKEN='test-token'");
+  expect(res.data).toContain('<iframe id="app-frame" src="/apps/designer/index.html?pageId=123"');
   server.close();
 });

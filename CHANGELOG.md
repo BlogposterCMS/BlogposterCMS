@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- App launcher now loads apps inside an isolated iframe and passes CSRF and admin tokens via the parent window to keep APIs working without leaking dashboard styles.
 - Primary buttons now follow the user's accent color in the dashboard and fall back to neutral form tones on the install route.
 - Primary buttons on install screens now have a wider footprint and clearer disabled styling.
 - Refined button styles with higher disabled contrast, block and group utilities, reduced-motion support and dark-mode ghost borders.

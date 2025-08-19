@@ -2,7 +2,8 @@
 
 The `designer` module persists layouts for the standalone Designer app using the event bus.
 It demonstrates how community modules provision their own schema and run CRUD operations
-without touching database drivers directly.
+without touching database drivers directly. The Designer UI now runs inside an iframe
+(`admin/app/designer`) so its styles and scripts remain isolated from the dashboard.
 
 ## Startup
 - Loaded from `modules/designer` when present.

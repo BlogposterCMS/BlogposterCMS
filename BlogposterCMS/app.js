@@ -785,14 +785,13 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
   }
 
   const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
-  const rawEntry = String(manifest.entry || '').replace(/[^a-zA-Z0-9_\-/\.]/g, '');
-  const entry = rawEntry.includes('/') || rawEntry.endsWith('.js')
-    ? rawEntry
-    : `build/${rawEntry}.js`;
+  const pageId = sanitizeSlug(req.params.pageId || '');
+  const pageQuery = pageId ? `?pageId=${encodeURIComponent(pageId)}` : '';
+  const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
 
-    let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="csrf-token" content="${req.csrfToken()}"><title>${titleSafe}</title><link rel="stylesheet" href="/assets/css/site.css"><script src="/build/meltdownEmitter.js"></script><script src="/build/icons.js"></script></head><body><div id="sidebar"></div><div id="content"></div><script type="module" src="/${entry}"></script></body></html>`;
-    html = injectDevBanner(html);
-    return res.send(html);
+  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><script>window.CSRF_TOKEN=${JSON.stringify(req.csrfToken())};window.ADMIN_TOKEN=${JSON.stringify(adminJwt)};</script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
+  html = injectDevBanner(html);
+  return res.send(html);
 });
 
 // ──────────────────────────────────────────────────────────────────────────

@@ -26,8 +26,18 @@ export async function initWorkspaceNav() {
 
     // Build top workspace navigation
     if (nav) {
-      const createBtn = nav.querySelector('#workspace-create');
+      let createBtn = document.getElementById('workspace-create');
       nav.innerHTML = '';
+      if (!createBtn) {
+        createBtn = document.createElement('div');
+        createBtn.id = 'workspace-create';
+        createBtn.className = 'nav-button';
+        const img = document.createElement('img');
+        img.src = '/assets/icons/plus.svg';
+        img.className = 'icon';
+        img.alt = 'Create workspace';
+        createBtn.appendChild(img);
+      }
       const top = pages.filter(
         p =>
           p.lane === 'admin' &&
@@ -51,12 +61,8 @@ export async function initWorkspaceNav() {
         }
         nav.appendChild(a);
       });
-      if (createBtn) {
-        createBtn.addEventListener('click', () => {
-          showWorkspaceField();
-        });
-        nav.prepend(createBtn);
-      }
+      createBtn.onclick = showWorkspaceField;
+      nav.prepend(createBtn);
     }
 
     // Build sidebar subpage navigation

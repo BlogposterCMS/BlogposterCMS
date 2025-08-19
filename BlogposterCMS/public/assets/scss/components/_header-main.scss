@@ -37,6 +37,9 @@
         color: var(--color-text);
         opacity: 0.6;
         transition: opacity 0.2s ease;
+        background: none;
+        border: none;
+        cursor: pointer;
 
         .icon {
           width: 20px;

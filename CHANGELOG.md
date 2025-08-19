@@ -14,7 +14,7 @@ El Psy Kongroo
 - Dashboard grid columns now auto-resize to fill the container, eliminating dead space on wide viewports.
 
 ### Fixed
-- "Create workspace" button now always appears and wires its click handler even if header markup omits it.
+- "Create workspace" header button is built programmatically as a semantic `<button>` and always wires its click handler even when the template omits it.
 - Start setup and Continue buttons on the install wizard now use the primary style for better visibility.
 - Install screen no longer inherits login page button styles.
 - Install wizard indicators drop default list markers and active step forms stack vertically for clearer progress.

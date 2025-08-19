@@ -125,3 +125,22 @@ body {
   z-index: 9999;
   pointer-events: none;
 }
+
+/* Restrict admin widget hover and drag handle to dashboard edit mode */
+body.dashboard-edit-mode .widget-container.admin-widget:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
+}
+
+body:not(.dashboard-edit-mode) .widget-container.admin-widget:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transform: none;
+}
+
+body.dashboard-edit-mode .widget-container.admin-widget::before {
+  display: block;
+}
+
+body:not(.dashboard-edit-mode) .widget-container.admin-widget::before {
+  display: none;
+}

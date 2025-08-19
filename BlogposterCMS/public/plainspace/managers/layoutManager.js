@@ -1,5 +1,5 @@
 import { getWidgetIcon } from '../renderer/renderUtils.js';
-import { attachEditButton, attachRemoveButton, attachLockOnClick } from '../renderer/widgetActions.js';
+import { attachEditButton, attachRemoveButton, attachLockOnClick, attachResizeButton } from '../renderer/widgetActions.js';
 import { attachOptionsMenu } from '../widgets/widgetMenu.js';
 import { renderWidget } from '../widgets/widgetRenderer.js';
 
@@ -47,6 +47,7 @@ export function applyLayout(layout, {
     content.innerHTML = `${getWidgetIcon(widgetDef, iconMap)}<span>${widgetDef.metadata?.label || widgetDef.id}</span>`;
     wrapper.appendChild(content);
     attachRemoveButton(wrapper, grid, null, () => {});
+    attachResizeButton(wrapper, grid);
     const editBtn = attachEditButton(wrapper, widgetDef, codeMap, null, () => {});
     attachOptionsMenu(wrapper, widgetDef, editBtn, { grid, pageId: null, scheduleAutosave: () => {}, activeLayer: layerIndex, codeMap, genId: () => instId });
     attachLockOnClick(wrapper);

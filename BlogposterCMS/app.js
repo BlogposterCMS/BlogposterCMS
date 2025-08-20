@@ -909,7 +909,11 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
   const pageQuery = pageId ? `?pageId=${encodeURIComponent(pageId)}` : '';
   const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
 
-  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><script src="/build/meltdownEmitter.js"></script><script>window.CSRF_TOKEN=${JSON.stringify(req.csrfToken())};window.ADMIN_TOKEN=${JSON.stringify(adminJwt)};</script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe><script>const f=document.getElementById('app-frame');window.addEventListener('message',ev=>{if(ev.source!==f.contentWindow)return;const msg=ev.data||{};if(!msg.type)return;window.meltdownEmit('dispatchAppEvent',{jwt:window.ADMIN_TOKEN,moduleName:'appLoader',moduleType:'core',appName:${JSON.stringify(appName)},event:msg.type,data:msg.data||{}}).catch(e=>console.warn('[AppFrame] dispatch failed',e));});</script></body></html>`;
+  const csrfSafe = escapeHtml(req.csrfToken());
+  const adminSafe = escapeHtml(adminJwt);
+  const appSafe = escapeHtml(appName);
+
+  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${csrfSafe}"><meta name="admin-token" content="${adminSafe}"><meta name="app-name" content="${appSafe}"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
   html = injectDevBanner(html);
   return res.send(html);
 });

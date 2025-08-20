@@ -7,6 +7,7 @@ El Psy Kongroo
 
 
 ### Fixed
+- Removed inline scripts from admin app loader to enforce Content Security Policy compliance.
 - Widget action chrome and drag shadows now activate only in dashboard edit mode, keeping controls hidden during regular viewing.
 
 ### Added

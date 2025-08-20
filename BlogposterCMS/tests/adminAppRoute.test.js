@@ -39,7 +39,7 @@ test('GET /admin/app/designer/123 returns iframe with tokens', async () => {
     const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
     const indexPath = path.join(__dirname, '..', 'apps', appName, 'index.html');
     if (!fs.existsSync(indexPath)) return res.status(500).send('App build missing');
-    const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><script src="/build/meltdownEmitter.js"></script><script>window.CSRF_TOKEN='${req.csrfToken()}';</script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe><script>/*postMessage bridge*/</script></body></html>`;
+    const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${escapeHtml(req.csrfToken())}"><meta name="admin-token" content="test-admin-token"><meta name="app-name" content="${appName}"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
     res.send(html);
   });
 
@@ -49,7 +49,7 @@ test('GET /admin/app/designer/123 returns iframe with tokens', async () => {
   const port = server.address().port;
   const res = await axios.get(`http://localhost:${port}/admin/app/designer/123`);
   expect(res.status).toBe(200);
-  expect(res.data).toContain("window.CSRF_TOKEN='test-token'");
+  expect(res.data).toContain('<meta name="csrf-token" content="test-token">');
   expect(res.data).toContain('<iframe id="app-frame" src="/apps/designer/index.html?pageId=123"');
   server.close();
 });

@@ -6,9 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 
-### Fixed
-- Removed inline scripts from admin app loader to enforce Content Security Policy compliance.
-- Widget action chrome and drag shadows now activate only in dashboard edit mode, keeping controls hidden during regular viewing.
+
 
 ### Added
 - Dashboard now injects its own remove and resize controls and tracks drag state via CanvasGrid events, revealing buttons only when selected or dragging.
@@ -108,7 +106,9 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
-- App loader now requests module tokens with a valid JWT instead of using `skipJWT`, preventing unauthorized token issuance.
+- Restore missing resize and delete controls for dashboard widgets and ensure drag or selection styling overrides hover effects.
+- Removed inline scripts from admin app loader to enforce Content Security Policy compliance.
+- Widget action chrome and drag shadows now activate only in dashboard edit mode, keeping controls hidden during regular viewing.- App loader now requests module tokens with a valid JWT instead of using `skipJWT`, preventing unauthorized token issuance.
 - Workspace flyout creates a top-level page and collapses the icon picker upon submission.
 - "Create workspace" header button is built programmatically as a semantic `<button>` and always wires its click handler even when the template omits it.
 - Start setup and Continue buttons on the install wizard now use the primary style for better visibility.

@@ -6,7 +6,8 @@
  */
 export function attachDashboardControls(el, grid) {
   if (!el || !grid) return;
-  if (!document.body.classList.contains('dashboard-edit-mode')) return;
+  // Avoid adding duplicate controls if already attached
+  if (el.querySelector('.widget-remove')) return;
 
   // Remove button
   const removeBtn = document.createElement('button');

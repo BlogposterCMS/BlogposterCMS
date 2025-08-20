@@ -7,6 +7,7 @@ El Psy Kongroo
 
 
 ### Fixed
+- Restore missing resize and delete controls for dashboard widgets and ensure drag or selection styling overrides hover effects.
 - Widget action chrome and drag shadows now activate only in dashboard edit mode, keeping controls hidden during regular viewing.
 
 ### Added

@@ -240,13 +240,12 @@ function getModuleTokenForDbManager() {
     }[c]));
   }
 
-  async function issueAppLoaderJwt() {
+  async function issueAppLoaderJwt(jwt) {
     return new Promise((resolve, reject) => {
       motherEmitter.emit(
         'issueModuleToken',
         {
-          skipJWT: true,
-          authModuleSecret: AUTH_MODULE_SECRET,
+          jwt,
           moduleType: 'core',
           moduleName: 'appLoader',
           signAsModule: 'appLoader',
@@ -257,9 +256,9 @@ function getModuleTokenForDbManager() {
     });
   }
 
-  async function getAppRegistryInfo(appName) {
+  async function getAppRegistryInfo(baseJwt, appName) {
     try {
-      const jwt = await issueAppLoaderJwt();
+      const jwt = await issueAppLoaderJwt(baseJwt);
       const rows = await runDbSelectPlaceholder(
         motherEmitter,
         jwt,
@@ -728,7 +727,7 @@ app.post('/admin/api/apps/install', csrfProtection, async (req, res) => {
     const indexPath = path.join(dest, 'index.html');
     const hasIndexHtml = fs.existsSync(indexPath);
     const isBuilt = hasIndexHtml;
-    const jwt = await issueAppLoaderJwt();
+    const jwt = await issueAppLoaderJwt(adminJwt);
     await registerOrUpdateApp(
       motherEmitter,
       jwt,
@@ -762,7 +761,7 @@ app.delete('/admin/api/apps/:appName', csrfProtection, async (req, res) => {
   const dest = path.join(appsRoot, appName);
   try {
     fs.rmSync(dest, { recursive: true, force: true });
-    const jwt = await issueAppLoaderJwt();
+    const jwt = await issueAppLoaderJwt(adminJwt);
     await registerOrUpdateApp(motherEmitter, jwt, appName, null, false, 'Uninstalled');
     res.json({ removed: appName });
   } catch (err) {
@@ -895,7 +894,7 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     return res.status(403).send('Forbidden');
   }
 
-  const registry = await getAppRegistryInfo(appName);
+  const registry = await getAppRegistryInfo(adminJwt, appName);
   let registryInfo = {};
   try {
     registryInfo = registry && registry.app_info ? JSON.parse(registry.app_info) : {};

@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 
+### Fixed
+- Widget action chrome and drag shadows now activate only in dashboard edit mode, keeping controls hidden during regular viewing.
+
 ### Added
 - Dashboard now injects its own remove and resize controls and tracks drag state via CanvasGrid events, revealing buttons only when selected or dragging.
 - Admin endpoints to install or uninstall apps while updating the registry.

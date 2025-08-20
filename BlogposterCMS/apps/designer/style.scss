@@ -161,28 +161,12 @@
   }
 }
 
-.canvas-item .widget-remove {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  background: transparent;
-  border: none;
-  padding: 2px;
-  cursor: pointer;
-  z-index: 1000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-
-.canvas-item .widget-edit {
-  display: none;
-}
-
+.canvas-item .widget-remove,
+.canvas-item .widget-resize,
 .canvas-item .widget-menu {
+  display: none;
   position: absolute;
   top: 2px;
-  right: 2px;
   background: transparent;
   border: none;
   padding: 2px;
@@ -193,11 +177,45 @@
   transition: opacity 0.2s ease;
 }
 
+.canvas-item .widget-remove { left: 2px; }
+.canvas-item .widget-resize { right: 26px; }
+.canvas-item .widget-menu { right: 2px; }
 
-.canvas-item:hover .widget-menu,
-.canvas-item:hover .widget-remove {
+.canvas-item .widget-edit { display: none; }
+
+body.builder-mode .canvas-item .widget-remove,
+body.builder-mode .canvas-item .widget-resize,
+body.builder-mode .canvas-item .widget-menu {
+  display: block;
+}
+
+body.builder-mode .canvas-item.dragging .widget-remove,
+body.builder-mode .canvas-item.selected .widget-remove,
+body.builder-mode .canvas-item.is-dragging .widget-remove,
+body.builder-mode .canvas-item.dragging .widget-resize,
+body.builder-mode .canvas-item.selected .widget-resize,
+body.builder-mode .canvas-item.is-dragging .widget-resize,
+body.builder-mode .canvas-item.dragging .widget-menu,
+body.builder-mode .canvas-item.selected .widget-menu,
+body.builder-mode .canvas-item.is-dragging .widget-menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.builder-mode .canvas-item:hover .widget-remove,
+body.builder-mode .canvas-item:hover .widget-resize,
+body.builder-mode .canvas-item:hover .widget-menu {
   opacity: 0;
   pointer-events: none;
+}
+
+body.builder-mode .canvas-item.dragging,
+body.builder-mode .canvas-item.is-dragging {
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+
+body.builder-mode .canvas-item:hover {
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
 }
 
 .widget-options-menu {
@@ -456,6 +474,8 @@ body.preview-desktop #content {
 .canvas-item {
   pointer-events: auto;
   user-select: none;
+  box-shadow: none;
+  transition: box-shadow .15s ease;
 
   .resize-handle {
     position: absolute;

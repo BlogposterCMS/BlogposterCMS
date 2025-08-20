@@ -104,6 +104,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- App loader now requests module tokens with a valid JWT instead of using `skipJWT`, preventing unauthorized token issuance.
 - Workspace flyout creates a top-level page and collapses the icon picker upon submission.
 - "Create workspace" header button is built programmatically as a semantic `<button>` and always wires its click handler even when the template omits it.
 - Start setup and Continue buttons on the install wizard now use the primary style for better visibility.

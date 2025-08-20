@@ -45,9 +45,18 @@
   background: transparent;
   border-radius: 14px;
   border: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: all 0.2s ease, box-shadow .15s ease;
   will-change: transform;
   z-index: 0; // baseline layer for widgets
+  box-shadow: none;
+}
+
+.canvas-item .widget-remove,
+.canvas-item .widget-resize,
+.canvas-item .widget-menu {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 // Dashboard editing styles
@@ -58,8 +67,7 @@ body.dashboard-edit-mode .canvas-item {
 body.dashboard-edit-mode .canvas-item .widget-remove,
 body.dashboard-edit-mode .canvas-item .widget-resize,
 body.dashboard-edit-mode .canvas-item .widget-menu {
-  opacity: 0;
-  pointer-events: none;
+  display: block;
 }
 
 body.dashboard-edit-mode .canvas-item .widget-remove {
@@ -88,10 +96,13 @@ body.dashboard-edit-mode .canvas-item .widget-resize {
 
 body.dashboard-edit-mode .canvas-item.dragging .widget-remove,
 body.dashboard-edit-mode .canvas-item.selected .widget-remove,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-remove,
 body.dashboard-edit-mode .canvas-item.dragging .widget-resize,
 body.dashboard-edit-mode .canvas-item.selected .widget-resize,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-resize,
 body.dashboard-edit-mode .canvas-item.dragging .widget-menu,
-body.dashboard-edit-mode .canvas-item.selected .widget-menu {
+body.dashboard-edit-mode .canvas-item.selected .widget-menu,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-menu {
   opacity: 1;
   pointer-events: auto;
 }
@@ -103,7 +114,6 @@ body.dashboard-edit-mode .canvas-item:hover .widget-menu {
   pointer-events: none;
 }
 
-body.dashboard-edit-mode .canvas-item.dragging,
 body.dashboard-edit-mode .canvas-item.selected {
   border-color: var(--user-color);
 }
@@ -113,7 +123,14 @@ body.dashboard-edit-mode .canvas-item[data-global="true"].selected {
   border-color: var(--shared-widget-color, #d4af37);
 }
 
+body.dashboard-edit-mode .canvas-item.dragging,
+body.dashboard-edit-mode .canvas-item.is-dragging {
+  border-color: var(--user-color);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+
 body.dashboard-edit-mode .canvas-item:hover {
   border-color: transparent;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
 }
 

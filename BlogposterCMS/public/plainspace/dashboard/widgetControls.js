@@ -6,6 +6,7 @@
  */
 export function attachDashboardControls(el, grid) {
   if (!el || !grid) return;
+  if (!document.body.classList.contains('dashboard-edit-mode')) return;
 
   // Remove button
   const removeBtn = document.createElement('button');
@@ -51,4 +52,7 @@ export function attachDashboardControls(el, grid) {
     }
   });
   el.appendChild(resizeBtn);
+
+  el.addEventListener('dragstart', () => el.classList.add('is-dragging'));
+  el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
 }

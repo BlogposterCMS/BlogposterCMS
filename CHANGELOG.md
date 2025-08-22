@@ -106,6 +106,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Designer app now receives CSRF and admin tokens via `postMessage`, removing inline scripts that violated CSP.
 - Restore missing resize and delete controls for dashboard widgets and ensure drag or selection styling overrides hover effects.
 - Removed inline scripts from admin app loader to enforce Content Security Policy compliance.
 - Widget action chrome and drag shadows now activate only in dashboard edit mode, keeping controls hidden during regular viewing.- App loader now requests module tokens with a valid JWT instead of using `skipJWT`, preventing unauthorized token issuance.

@@ -24,3 +24,4 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Sanitises layout names to avoid injection or log issues.
 - Every database call includes the loader issued `jwt` and module information.
 - Uses high level `dbSelect`, `dbInsert` and `dbUpdate` events to avoid raw SQL.
+- CSRF and admin tokens are delivered via `postMessage` from the dashboard instead of inline scripts to satisfy strict CSP policies.

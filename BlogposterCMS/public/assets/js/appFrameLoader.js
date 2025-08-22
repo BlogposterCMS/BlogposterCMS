@@ -10,6 +10,14 @@
   const frame = document.getElementById('app-frame');
   if (!frame) return;
 
+  frame.addEventListener('load', () => {
+    frame.contentWindow.postMessage({
+      type: 'init-tokens',
+      csrfToken: window.CSRF_TOKEN,
+      adminToken: window.ADMIN_TOKEN,
+    }, '*');
+  });
+
   window.addEventListener('message', ev => {
     if (ev.source !== frame.contentWindow) return;
     const msg = ev.data || {};

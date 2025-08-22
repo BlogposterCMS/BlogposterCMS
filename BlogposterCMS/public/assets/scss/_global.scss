@@ -14,8 +14,9 @@ body {
 }
 
 // Prevent accidental text selection when dragging widgets
-// Style only applies to admin widgets
-.widget-container.admin-widget {
+// Styles apply to admin widgets and canvas items to avoid shadow DOM overrides
+.widget-container.admin-widget,
+canvas-item {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -31,16 +32,19 @@ body {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.widget-container.admin-widget.loading {
+.widget-container.admin-widget.loading,
+canvas-item.loading {
   opacity: 0;
 }
 
-.widget-container.admin-widget:hover {
+.widget-container.admin-widget:hover,
+canvas-item:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: scale(1.02);
 }
 
-.widget-container.admin-widget::before {
+.widget-container.admin-widget::before,
+canvas-item::before {
   content: '';
   position: absolute;
   top: 8px;
@@ -127,20 +131,24 @@ body {
 }
 
 /* Restrict admin widget hover and drag handle to dashboard edit mode */
-body.dashboard-edit-mode .widget-container.admin-widget:hover {
+body.dashboard-edit-mode .widget-container.admin-widget:hover,
+body.dashboard-edit-mode canvas-item:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: scale(1.02);
 }
 
-body:not(.dashboard-edit-mode) .widget-container.admin-widget:hover {
+body:not(.dashboard-edit-mode) .widget-container.admin-widget:hover,
+body:not(.dashboard-edit-mode) canvas-item:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transform: none;
 }
 
-body.dashboard-edit-mode .widget-container.admin-widget::before {
+body.dashboard-edit-mode .widget-container.admin-widget::before,
+body.dashboard-edit-mode canvas-item::before {
   display: block;
 }
 
-body:not(.dashboard-edit-mode) .widget-container.admin-widget::before {
+body:not(.dashboard-edit-mode) .widget-container.admin-widget::before,
+body:not(.dashboard-edit-mode) canvas-item::before {
   display: none;
 }

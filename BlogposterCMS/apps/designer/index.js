@@ -2,7 +2,11 @@ import { fetchPartial } from '../../public/plainspace/dashboard/fetchPartial.js'
 import { initBuilder } from '../../public/plainspace/builderRenderer.js';
 import { enableAutoEdit, sanitizeHtml } from '../../public/plainspace/editor/editor.js';
 
+let bootstrapped = false;
+
 async function bootstrap() {
+  if (bootstrapped) return;
+  bootstrapped = true;
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('content');
   try {
@@ -28,11 +32,21 @@ async function bootstrap() {
   window.parent.postMessage({ type: 'builder-ready' }, '*');
 }
 
+function maybeBootstrap() {
+  if (window.CSRF_TOKEN && typeof window.ADMIN_TOKEN !== 'undefined' && document.readyState !== 'loading') {
+    bootstrap();
+  }
+}
+
 window.addEventListener('message', (e) => {
   const msg = e.data || {};
-  if (msg.type === 'refresh') {
+  if (msg.type === 'init-tokens') {
+    window.CSRF_TOKEN = msg.csrfToken;
+    window.ADMIN_TOKEN = msg.adminToken;
+    maybeBootstrap();
+  } else if (msg.type === 'refresh') {
     window.location.reload();
   }
 });
 
-document.addEventListener('DOMContentLoaded', bootstrap);
+document.addEventListener('DOMContentLoaded', maybeBootstrap);

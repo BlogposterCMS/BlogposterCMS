@@ -15,22 +15,7 @@ body {
 
 // Prevent accidental text selection when dragging widgets
 // Styles apply to admin widgets and canvas items to avoid shadow DOM overrides
-.widget-container.admin-widget,
-canvas-item {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  padding: 28px 22px 14px 22px;
-  position: relative;
-  background: rgba(255, 255, 255, 0.6);
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 14px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
+
 
 .widget-container.admin-widget.loading,
 canvas-item.loading {
@@ -45,20 +30,7 @@ canvas-item:hover {
 
 .widget-container.admin-widget::before,
 canvas-item::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(4px);
-  cursor: move;
-  pointer-events: all;
-  touch-action: none;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
-  background-size: 4px 4px;
+
 }
 
 

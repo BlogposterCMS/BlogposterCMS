@@ -12,7 +12,7 @@
 
   const columnWidth = 80;
   const columns = Infinity;
-  const grid = initCanvasGrid({ cellHeight: 1, columnWidth, columns, pushOnOverlap: true, useBoundingBox: false }, gridEl);
+  const grid = initCanvasGrid({ cellHeight: 1, columnWidth, columns, pushOnOverlap: true, useBoundingBox: true }, gridEl);
   // 1) load & render all public pages
   async function loadPages() {
     const { pages = [] } = await meltdownEmit('getPagesByLane', {

@@ -664,7 +664,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       columns: columnCount,
       percentageMode: true,
       pushOnOverlap: true,
-      useBoundingBox: false
+      useBoundingBox: true
     }, gridEl);
     function setColumnWidth() {
       const gridWidth = gridEl.getBoundingClientRect().width;

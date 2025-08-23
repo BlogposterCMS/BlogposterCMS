@@ -277,6 +277,23 @@
   margin-top: 14px;
 }
 
+.app-scope.install-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.app-scope.install-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--user-color), transparent 70%) 1px, transparent 0);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .install-steps {
   list-style: none;
   padding: 0;
@@ -317,6 +334,16 @@
   display: flex;
   gap: 12px;
   justify-content: center;
+}
+
+.login-form .actions .button.primary {
+  min-width: 140px;
+}
+
+.app-scope.install-page .button.primary {
+  --bg: var(--color-border);
+  --fg: var(--color-text);
+  --bd: var(--color-border);
 }
 
 .color-picker-toggle {
@@ -391,17 +418,133 @@
 }
 
 .canvas-item {
-  position: absolute;
-  overflow: visible;
-  background: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  padding: 28px 22px 14px 22px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.6);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 14px;
-  transition: all 0.2s ease;
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  position: absolute;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease, box-shadow 0.15s ease;
   will-change: transform;
   z-index: 0;
+  box-shadow: none;
+}
+
+canvas-item:before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(4px);
+          backdrop-filter: blur(4px);
+  cursor: move;
+  pointer-events: all;
+  touch-action: none;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+.canvas-item-content {
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-item .widget-remove,
+.canvas-item .widget-resize,
+.canvas-item .widget-menu {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 body.dashboard-edit-mode .canvas-item {
+  border: 2px solid transparent;
+}
+
+body.dashboard-edit-mode .canvas-item .widget-remove,
+body.dashboard-edit-mode .canvas-item .widget-resize,
+body.dashboard-edit-mode .canvas-item .widget-menu {
+  display: block;
+}
+
+body.dashboard-edit-mode .canvas-item .widget-remove {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  background: transparent;
   border: none;
+  padding: 2px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+}
+
+body.dashboard-edit-mode .canvas-item .widget-resize {
+  position: absolute;
+  top: 2px;
+  right: 26px;
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+}
+
+body.dashboard-edit-mode .canvas-item.dragging .widget-remove,
+body.dashboard-edit-mode .canvas-item.selected .widget-remove,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-remove,
+body.dashboard-edit-mode .canvas-item.dragging .widget-resize,
+body.dashboard-edit-mode .canvas-item.selected .widget-resize,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-resize,
+body.dashboard-edit-mode .canvas-item.dragging .widget-menu,
+body.dashboard-edit-mode .canvas-item.selected .widget-menu,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover .widget-remove,
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover .widget-resize,
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover .widget-menu {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.dashboard-edit-mode .canvas-item.selected {
+  border-color: var(--user-color);
+}
+
+body.dashboard-edit-mode .canvas-item[data-global=true].dragging,
+body.dashboard-edit-mode .canvas-item[data-global=true].selected {
+  border-color: var(--shared-widget-color, #d4af37);
+}
+
+body.dashboard-edit-mode .canvas-item.dragging,
+body.dashboard-edit-mode .canvas-item.is-dragging {
+  border-color: var(--user-color);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover {
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
 /* =============================================================================
@@ -506,48 +649,15 @@ body {
   color: var(--color-text);
 }
 
-.widget-container.admin-widget {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  padding: 28px 22px 14px 22px;
-  position: relative;
-  background: rgba(255, 255, 255, 0.6);
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 14px;
-  -webkit-backdrop-filter: blur(10px);
-          backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.widget-container.admin-widget.loading {
+.widget-container.admin-widget.loading,
+canvas-item.loading {
   opacity: 0;
 }
 
-.widget-container.admin-widget:hover {
+.widget-container.admin-widget:hover,
+canvas-item:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: scale(1.02);
-}
-
-.widget-container.admin-widget::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.6);
-  -webkit-backdrop-filter: blur(4px);
-          backdrop-filter: blur(4px);
-  cursor: move;
-  pointer-events: all;
-  touch-action: none;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
-  background-size: 4px 4px;
 }
 
 .widget-placeholder {
@@ -613,43 +723,216 @@ p {
   pointer-events: none;
 }
 
-/* =============================================================================
-   Buttons
-   ============================================================================= */
+/* Restrict admin widget hover and drag handle to dashboard edit mode */
+body.dashboard-edit-mode .widget-container.admin-widget:hover,
+body.dashboard-edit-mode canvas-item:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
+}
+
+body:not(.dashboard-edit-mode) .widget-container.admin-widget:hover,
+body:not(.dashboard-edit-mode) canvas-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transform: none;
+}
+
+body.dashboard-edit-mode .widget-container.admin-widget::before,
+body.dashboard-edit-mode canvas-item::before {
+  display: block;
+}
+
+body:not(.dashboard-edit-mode) .widget-container.admin-widget::before,
+body:not(.dashboard-edit-mode) canvas-item::before {
+  display: none;
+}
+
+/* ===== Global Buttons ===== */
+:root {
+  --btn-radius: 12px;
+  --btn-h: 42px;
+  --btn-gap: 8px;
+  --btn-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+/* Base */
 .app-scope .button {
+  --bg: var(--color-card);
+  --fg: var(--color-text);
+  --bd: var(--color-border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
-  padding: 0 18px;
-  border-radius: 12px;
+  gap: var(--btn-gap);
+  height: var(--btn-h);
+  padding: 0 16px;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--bd);
+  min-width: 120px;
+  background: var(--bg);
+  color: var(--fg);
   font-weight: 600;
-  line-height: 42px;
+  line-height: var(--btn-h);
   cursor: pointer;
-  transition: filter 0.18s ease;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+  transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
 }
 
-.app-scope .button:not(.ghost) {
-  background: var(--gradient-primary);
-  color: #fff;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+.app-scope .button:disabled,
+.app-scope .button[aria-disabled=true] {
+  opacity: 0.6;
+  filter: saturate(0.8) brightness(0.96);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
-.app-scope .button.ghost {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
+/* Focus */
+.app-scope .button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.app-scope .button.ghost:focus-visible,
+.app-scope .button.outline:focus-visible {
+  outline-color: color-mix(in srgb, var(--brand) 60%, transparent);
+}
+
+/* Variants */
+.app-scope .button.primary {
+  --bg: var(--color-primary);
+  --fg: var(--color-primary-contrast);
+  --bd: transparent;
+  border-color: var(--bd);
+  box-shadow: var(--btn-shadow);
+}
+
+.app-scope .button.primary:disabled {
+  filter: saturate(0.85) brightness(0.95);
+  opacity: 0.75;
   box-shadow: none;
 }
 
-.app-scope .button:hover {
+.app-scope .button.ghost {
+  --bg: var(--color-card);
+  --fg: var(--color-text);
+  --bd: var(--color-border);
+  box-shadow: none;
+}
+
+.app-scope .button.outline {
+  --bg: transparent;
+  --fg: var(--color-text);
+  --bd: var(--brand);
+}
+
+.app-scope .button.text {
+  --bg: transparent;
+  --fg: var(--brand);
+  --bd: transparent;
+  height: auto;
+  line-height: normal;
+  padding: 4px 6px;
+  border: none;
+}
+
+/* Danger */
+.app-scope .button.danger {
+  --bg: linear-gradient(180deg,#ff5a5a,#e33a3a);
+  --fg:#fff;
+  --bd: transparent;
+  box-shadow: var(--btn-shadow);
+}
+
+.app-scope .button.danger:not(:disabled):hover {
+  filter: brightness(0.97) saturate(1.05);
+}
+
+/* Hover (keine Kirmes) */
+.app-scope .button:not(:disabled):hover {
   filter: brightness(0.98);
 }
 
-.app-scope .button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand) 40%, transparent);
-  outline-offset: 2px;
+.app-scope .button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* Sizes */
+.app-scope .button.sm {
+  --btn-h: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.app-scope .button.lg {
+  --btn-h: 48px;
+  padding: 0 20px;
+  border-radius: 14px;
+}
+
+.app-scope .button.block {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Icon support */
+.app-scope .button .icon {
+  display: inline-flex;
+  width: 1.1em;
+  height: 1.1em;
+  line-height: 0;
+}
+
+.app-scope .button .icon + span,
+.app-scope .button span + .icon {
+  margin-left: 6px;
+}
+
+/* Loading state */
+.app-scope .button.is-loading {
+  pointer-events: none;
+  position: relative;
+  color: transparent;
+}
+
+.app-scope .button.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--fg) 30%, transparent);
+  border-top-color: var(--fg);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Button group */
+.app-scope .button-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .app-scope .button {
+    transition: none;
+  }
+  .app-scope .button.is-loading::after {
+    animation: none;
+  }
+}
+/* Dark mode tweaks */
+[data-theme=dark] .app-scope .button.ghost {
+  --bd: color-mix(in srgb, var(--color-border) 80%, #000 20%);
 }
 
 .custom-select {
@@ -947,6 +1230,9 @@ p {
   color: var(--color-text);
   opacity: 0.6;
   transition: opacity 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 .main-header .nav-icons a .icon,
 .main-header .nav-icons .nav-button .icon {
@@ -981,7 +1267,7 @@ p {
   transform: scaleX(1);
 }
 .main-header .nav-icons #workspace-create {
-  padding: 10px 14px;
+  padding: 10px;
 }
 
 .editor-quick-actions {
@@ -2607,5 +2893,73 @@ body.grid-mode .canvas-item {
   border: none;
 }
 body.grid-mode .bounding-box {
-  display: none !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--user-color, #333);
+  pointer-events: none;
+  box-sizing: border-box;
+  z-index: 1000;
+}
+body.grid-mode .bounding-box .bbox-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--user-color, #333);
+  border-radius: 50%;
+  pointer-events: all;
+  transform: scale(var(--inv-scale));
+}
+body.grid-mode .bounding-box .nw {
+  top: -4px;
+  left: -4px;
+  transform: translate(-50%, -50%) scale(var(--inv-scale));
+  cursor: nwse-resize;
+}
+body.grid-mode .bounding-box .n {
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%) scale(var(--inv-scale));
+  cursor: ns-resize;
+}
+body.grid-mode .bounding-box .ne {
+  top: -4px;
+  right: -4px;
+  transform: translate(50%, -50%) scale(var(--inv-scale));
+  cursor: nesw-resize;
+}
+body.grid-mode .bounding-box .e {
+  top: 50%;
+  right: -4px;
+  transform: translateY(-50%) scale(var(--inv-scale));
+  cursor: ew-resize;
+}
+body.grid-mode .bounding-box .se {
+  bottom: -4px;
+  right: -4px;
+  transform: translate(50%, 50%) scale(var(--inv-scale));
+  cursor: nwse-resize;
+}
+body.grid-mode .bounding-box .s {
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) scale(var(--inv-scale));
+  cursor: ns-resize;
+}
+body.grid-mode .bounding-box .sw {
+  bottom: -4px;
+  left: -4px;
+  transform: translate(-50%, 50%) scale(var(--inv-scale));
+  cursor: nesw-resize;
+}
+body.grid-mode .bounding-box .w {
+  top: 50%;
+  left: -4px;
+  transform: translateY(-50%) scale(var(--inv-scale));
+  cursor: ew-resize;
+}
+body.grid-mode .bounding-box.disabled {
+  display: none;
 }/*# sourceMappingURL=site.css.map */

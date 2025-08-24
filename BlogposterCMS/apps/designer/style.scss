@@ -592,6 +592,7 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
   pointer-events: none;
   box-sizing: border-box;
   z-index: 1000;
+  will-change: transform, width, height;
   .bbox-handle {
     position: absolute;
     width: 8px;

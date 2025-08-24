@@ -1,5 +1,4 @@
 // public/plainspace/main/BoundingBoxManager.js
-import { localRect } from './grid-utils.js';
 
 export class BoundingBoxManager extends EventTarget {
   constructor(canvas) {
@@ -13,6 +12,7 @@ export class BoundingBoxManager extends EventTarget {
     this.box.className = 'selection-box bounding-box';
     this.box.style.pointerEvents = 'none';
     this.box.style.display = 'none';
+    this.box.style.position = 'fixed';
     this.canvas.appendChild(this.box);
 
     this.handles = {};
@@ -89,12 +89,12 @@ export class BoundingBoxManager extends EventTarget {
     const scale = parseFloat(
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
-    const { x, y, w, h } = localRect(this.widget, this.canvas, scale);
-    const width = Math.max(w, this.MIN_W);
-    const height = Math.max(h, this.MIN_H);
+    const r = this.widget.getBoundingClientRect();
+    const width = Math.max(r.width, this.MIN_W);
+    const height = Math.max(r.height, this.MIN_H);
     const dpr = window.devicePixelRatio || 1;
-    const rx = Math.round(x * dpr) / dpr;
-    const ry = Math.round(y * dpr) / dpr;
+    const rx = Math.round(r.left * dpr) / dpr;
+    const ry = Math.round(r.top * dpr) / dpr;
     const rw = Math.round(width * dpr) / dpr;
     const rh = Math.round(height * dpr) / dpr;
     this.box.style.transform = `translate(${rx}px, ${ry}px)`;
@@ -118,10 +118,10 @@ export class BoundingBoxManager extends EventTarget {
     const scale = parseFloat(
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
-    const { w, h } = localRect(this.widget, this.canvas, scale);
+    const r = this.widget.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    const width = Math.round(Math.max(w, this.MIN_W) * dpr) / dpr;
-    const height = Math.round(Math.max(h, this.MIN_H) * dpr) / dpr;
+    const width = Math.round(Math.max(r.width, this.MIN_W) * dpr) / dpr;
+    const height = Math.round(Math.max(r.height, this.MIN_H) * dpr) / dpr;
     if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
       this.update();
       return true;

@@ -12,6 +12,7 @@ body.grid-mode {
     pointer-events: none;
     box-sizing: border-box;
     z-index: 1000;
+    will-change: transform, width, height;
 
     .bbox-handle {
       position: absolute;

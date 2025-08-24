@@ -5,6 +5,10 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Bounding box uses a fixed overlay and `will-change` hint for steadier rendering.
+- Bounding box updates now round to device pixels and throttle via `requestAnimationFrame` for smoother interactions.
+
 
 
 

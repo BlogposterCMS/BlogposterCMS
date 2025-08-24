@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Bounding box updates now round to device pixels and throttle via `requestAnimationFrame` for smoother interactions.
+
 
 
 

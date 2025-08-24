@@ -417,6 +417,10 @@
   background-size: 20px 20px;
 }
 
+.canvas-grid {
+  contain: layout paint size;
+}
+
 .canvas-item {
   user-select: none;
   -webkit-user-select: none;
@@ -439,10 +443,9 @@
   transition: all 0.2s ease, box-shadow 0.15s ease;
   will-change: transform;
   z-index: 0;
-  box-shadow: none;
 }
 
-canvas-item:before {
+.canvas-item:before {
   content: "";
   position: absolute;
   top: 8px;
@@ -458,6 +461,13 @@ canvas-item:before {
   touch-action: none;
   background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
   background-size: 4px 4px;
+}
+
+.canvas-item.dragging {
+  transition: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  will-change: transform;
 }
 
 .canvas-item-content {
@@ -652,12 +662,6 @@ body {
 .widget-container.admin-widget.loading,
 canvas-item.loading {
   opacity: 0;
-}
-
-.widget-container.admin-widget:hover,
-canvas-item:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  transform: scale(1.02);
 }
 
 .widget-placeholder {
@@ -2896,12 +2900,11 @@ body.grid-mode .bounding-box {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
   border: 1px dashed var(--user-color, #333);
   pointer-events: none;
   box-sizing: border-box;
   z-index: 1000;
+  will-change: transform, width, height;
 }
 body.grid-mode .bounding-box .bbox-handle {
   position: absolute;

@@ -5,6 +5,10 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Bounding box positions now account for canvas scroll and zoom via `localRect`, retaining the `will-change` hint for stable rendering.
+- Bounding box updates now round to device pixels and throttle via `requestAnimationFrame` for smoother interactions.
+
 
 
 

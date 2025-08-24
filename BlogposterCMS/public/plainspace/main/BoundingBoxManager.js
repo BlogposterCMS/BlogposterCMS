@@ -13,6 +13,7 @@ export class BoundingBoxManager extends EventTarget {
     this.box.className = 'selection-box bounding-box';
     this.box.style.pointerEvents = 'none';
     this.box.style.display = 'none';
+    // CSS definiert bereits "position:absolute" für relative Platzierung im Canvas
     this.canvas.appendChild(this.box);
 
     this.handles = {};
@@ -25,7 +26,15 @@ export class BoundingBoxManager extends EventTarget {
       this.handles[p] = h;
     });
 
-    this._updateHandler = () => this.update();
+    this._scheduled = false;
+    this._updateHandler = () => {
+      if (this._scheduled) return;
+      this._scheduled = true;
+      requestAnimationFrame(() => {
+        this._scheduled = false;
+        this.update();
+      });
+    };
     this._ro = new ResizeObserver(this._updateHandler);
     this._onLoad = null;
     this.canvas.addEventListener('scroll', this._updateHandler, true);
@@ -82,9 +91,12 @@ export class BoundingBoxManager extends EventTarget {
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
     const { x, y, w, h } = localRect(this.widget, this.canvas, scale);
-    const width = Math.max(w, this.MIN_W);
-    const height = Math.max(h, this.MIN_H);
-    this.box.style.transform = `translate(${x}px, ${y}px)`;
+    const dpr = window.devicePixelRatio || 1;
+    const rx = Math.round(x * dpr) / dpr;
+    const ry = Math.round(y * dpr) / dpr;
+    const width = Math.round(Math.max(w, this.MIN_W) * dpr) / dpr;
+    const height = Math.round(Math.max(h, this.MIN_H) * dpr) / dpr;
+    this.box.style.transform = `translate(${rx}px, ${ry}px)`;
     this.box.style.width = `${width}px`;
     this.box.style.height = `${height}px`;
     this.box.style.setProperty('--inv-scale', String(1 / scale));
@@ -106,8 +118,9 @@ export class BoundingBoxManager extends EventTarget {
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
     const { w, h } = localRect(this.widget, this.canvas, scale);
-    const width = Math.max(w, this.MIN_W);
-    const height = Math.max(h, this.MIN_H);
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.round(Math.max(w, this.MIN_W) * dpr) / dpr;
+    const height = Math.round(Math.max(h, this.MIN_H) * dpr) / dpr;
     if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
       this.update();
       return true;

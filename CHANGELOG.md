@@ -6,13 +6,17 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Drag handlers now sync transformations and bounding box updates via `requestAnimationFrame` to prevent jitter when moving widgets.
 - Bounding box positions now account for canvas scroll and zoom via `localRect`, retaining the `will-change` hint for stable rendering.
 - Bounding box updates now round to device pixels and throttle via `requestAnimationFrame` for smoother interactions.
+- Widget dragging now disables transitions, shadows and filters while the canvas grid uses CSS containment to isolate layout work.
+- Column width calculations round to whole pixels to prevent subpixel snapping jitter.
 
 
 
 
 ### Added
+- CanvasGrid exposes an optional `liveSnap` flag to enable per-frame snapping during drags.
 - Dashboard now injects its own remove and resize controls and tracks drag state via CanvasGrid events, revealing buttons only when selected or dragging.
 - Admin endpoints to install or uninstall apps while updating the registry.
 - Confirm password field in setup and environment-driven allowance for weak dev credentials with optional auto-login; top-left branding now uses the SVG logo.
@@ -56,6 +60,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- CanvasGrid drags now move smoothly without snapping until release.
+- Drag and resize interactions now rely on Pointer Events with capture for consistent cross-device input.
 - Admin widget container styles now also apply to canvas items to prevent shadow DOM overrides.
 - Hover effects and drag handles for admin widgets now only appear in dashboard edit mode.
 - App registry tracks build status and index availability; app route refuses unbuilt apps and forwards iframe events via `dispatchAppEvent`.

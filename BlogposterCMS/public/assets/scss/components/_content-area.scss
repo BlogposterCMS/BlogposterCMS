@@ -39,6 +39,10 @@
   );
   background-size: 20px 20px;
 }
+
+.canvas-grid {
+  contain: layout paint size;
+}
 .canvas-item {
 
 
@@ -80,6 +84,13 @@ canvas-item:before{
   touch-action: none;
   background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
   background-size: 4px 4px;
+}
+
+.canvas-item.dragging {
+  transition: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  will-change: transform;
 }
 
 .canvas-item-content{

@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Bounding box updates now run in the next animation frame so the selection box stays aligned during drags.
+- Drag handle styles correctly target `.canvas-item:before` to ensure grip visibility.
 - Drag handlers now sync transformations and bounding box updates via `requestAnimationFrame` to prevent jitter when moving widgets.
 - Bounding box positions now account for canvas scroll and zoom via `localRect`, retaining the `will-change` hint for stable rendering.
 - Bounding box updates now round to device pixels and throttle via `requestAnimationFrame` for smoother interactions.

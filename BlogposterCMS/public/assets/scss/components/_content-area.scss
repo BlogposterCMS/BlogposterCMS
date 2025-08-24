@@ -69,7 +69,7 @@
   z-index: 0; // baseline layer for widgets
   box-shadow: none;
 }
-canvas-item:before{
+.canvas-item:before{
     content: '';
   position: absolute;
   top: 8px;

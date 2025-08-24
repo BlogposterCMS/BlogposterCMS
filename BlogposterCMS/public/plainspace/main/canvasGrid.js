@@ -306,8 +306,10 @@ export class CanvasGrid {
       } else {
         el.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
       }
-      this._updateBBox();
+      // Drag-Event sofort auslösen…
       el.dispatchEvent(new Event('dragmove', { bubbles: true }));
+      // …und das BBox-Update in den nächsten Frame schieben.
+      requestAnimationFrame(() => this._updateBBox());
     };
 
     const move = e => {

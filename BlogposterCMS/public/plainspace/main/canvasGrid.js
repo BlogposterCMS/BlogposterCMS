@@ -14,7 +14,8 @@ export class CanvasGrid {
         columns: Infinity,
         rows: Infinity,
         pushOnOverlap: false,
-        percentageMode: false
+        percentageMode: false,
+        liveSnap: false
       },
       options
     );
@@ -185,33 +186,8 @@ export class CanvasGrid {
     if (this.useBoundingBox && !el) {
       if (!this.bboxManager) return;
       let startX, startY, startW, startH, startGX, startGY, pos;
-      const move = e => {
-        const widget = this.activeEl;
-        if (!widget || pos == null) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        let w = startW, h = startH;
-        let gx = startGX, gy = startGY;
-        if (pos.includes('e')) w += dx;
-        if (pos.includes('s')) h += dy;
-        if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
-        if (pos.includes('n')) { h -= dy; gy += Math.round(dy / this.options.cellHeight); }
-        w = Math.max(20, w);
-        h = Math.max(20, h);
-        const opts = { w: Math.round(w / this.options.columnWidth), h: Math.round(h / this.options.cellHeight) };
-        if (pos.includes('w')) opts.x = gx;
-        if (pos.includes('n')) opts.y = gy;
-        this.update(widget, opts);
-        widget.dispatchEvent(new Event('resizemove', { bubbles: true }));
-      };
-      const up = () => {
-        if (pos != null) this._emit('resizestop', this.activeEl);
-        pos = null;
-        document.removeEventListener('mousemove', move);
-        document.removeEventListener('mouseup', up);
-      };
       Object.values(this.bboxManager.handles).forEach(h => {
-        h.addEventListener('mousedown', e => {
+        h.addEventListener('pointerdown', e => {
           const widget = this.activeEl;
           if (!widget || this.staticGrid) return;
           if (widget.getAttribute('gs-locked') === 'true' ||
@@ -225,36 +201,41 @@ export class CanvasGrid {
           startW = rect.width; startH = rect.height;
           startGX = +widget.dataset.x || 0;
           startGY = +widget.dataset.y || 0;
+          const move = ev => {
+            const dx = ev.clientX - startX;
+            const dy = ev.clientY - startY;
+            let w = startW, hVal = startH;
+            let gx = startGX, gy = startGY;
+            if (pos.includes('e')) w += dx;
+            if (pos.includes('s')) hVal += dy;
+            if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
+            if (pos.includes('n')) { hVal -= dy; gy += Math.round(dy / this.options.cellHeight); }
+            w = Math.max(20, w);
+            hVal = Math.max(20, hVal);
+            const opts = { w: Math.round(w / this.options.columnWidth), h: Math.round(hVal / this.options.cellHeight) };
+            if (pos.includes('w')) opts.x = gx;
+            if (pos.includes('n')) opts.y = gy;
+            this.update(widget, opts);
+            widget.dispatchEvent(new Event('resizemove', { bubbles: true }));
+          };
+          const up = ev => {
+            if (pos != null) this._emit('resizestop', this.activeEl);
+            pos = null;
+            document.removeEventListener('pointermove', move);
+            document.removeEventListener('pointerup', up);
+            h.releasePointerCapture?.(ev.pointerId);
+          };
           this._emit('resizestart', widget);
-          document.addEventListener('mousemove', move);
-          document.addEventListener('mouseup', up);
+          document.addEventListener('pointermove', move);
+          document.addEventListener('pointerup', up);
+          h.setPointerCapture?.(e.pointerId);
         });
       });
     } else if (!this.useBoundingBox && el) {
       const handle = el.querySelector('.resize-handle');
       if (!handle) return;
       let startX, startY, startW, startH;
-      const move = e => {
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        let w = startW + dx;
-        let h = startH + dy;
-        const minW = (+el.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
-        const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
-        w = Math.max(minW, w);
-        h = Math.max(minH, h);
-        this.update(el, {
-          w: Math.round(w / this.options.columnWidth),
-          h: Math.round(h / this.options.cellHeight)
-        });
-        el.dispatchEvent(new Event('resizemove', { bubbles: true }));
-      };
-      const up = () => {
-        document.removeEventListener('mousemove', move);
-        document.removeEventListener('mouseup', up);
-        this._emit('resizestop', el);
-      };
-      handle.addEventListener('mousedown', e => {
+      handle.addEventListener('pointerdown', e => {
         if (this.staticGrid) return;
         if (el.getAttribute('gs-locked') === 'true' ||
             el.getAttribute('gs-no-resize') === 'true') {
@@ -265,9 +246,31 @@ export class CanvasGrid {
         const rect = el.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
         startW = rect.width; startH = rect.height;
+        const move = ev => {
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+          let w = startW + dx;
+          let hVal = startH + dy;
+          const minW = (+el.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
+          const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
+          w = Math.max(minW, w);
+          hVal = Math.max(minH, hVal);
+          this.update(el, {
+            w: Math.round(w / this.options.columnWidth),
+            h: Math.round(hVal / this.options.cellHeight)
+          });
+          el.dispatchEvent(new Event('resizemove', { bubbles: true }));
+        };
+        const up = ev => {
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', up);
+          handle.releasePointerCapture?.(ev.pointerId);
+          this._emit('resizestop', el);
+        };
         this._emit('resizestart', el);
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', up);
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', up);
+        handle.setPointerCapture?.(e.pointerId);
       });
     }
   }
@@ -275,6 +278,7 @@ export class CanvasGrid {
   _enableDrag(el) {
     let startX, startY, startGX, startGY, dragging = false;
     let targetX = 0, targetY = 0;
+    let frame = null;
 
     const inAdminHandle = evt => {
       const widget = evt.target.closest('.widget-container.admin-widget');
@@ -288,39 +292,54 @@ export class CanvasGrid {
       );
     };
 
-    const move = ev => {
-      if (!dragging) return;
-      const e = ev.touches ? ev.touches[0] : ev;
-      targetX = startGX * this.options.columnWidth + (e.clientX - startX);
-      targetY = startGY * this.options.cellHeight + (e.clientY - startY);
-      const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
-      el.style.transform =
-        `translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`;
+    const apply = () => {
+      frame = null;
+      if (this.options.liveSnap) {
+        const snap = snapToGrid(
+          targetX,
+          targetY,
+          this.options.columnWidth,
+          this.options.cellHeight
+        );
+        el.style.transform =
+          `translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`;
+      } else {
+        el.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
+      }
       this._updateBBox();
       el.dispatchEvent(new Event('dragmove', { bubbles: true }));
     };
 
-    const up = () => {
+    const move = e => {
+      if (!dragging) return;
+      targetX = startGX * this.options.columnWidth + (e.clientX - startX);
+      targetY = startGY * this.options.cellHeight + (e.clientY - startY);
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+
+    const up = e => {
       if (dragging) {
         el.classList.remove('dragging');
       }
       dragging = false;
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-      document.removeEventListener('touchmove', move);
-      document.removeEventListener('touchend', up);
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = null;
+      }
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      el.releasePointerCapture?.(e.pointerId);
       const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
       this.update(el, { x: snap.x, y: snap.y });
       this._emit('dragstop', el);
     };
 
-    const start = ev => {
-      const e = ev.touches ? ev.touches[0] : ev;
-      if (ev.target.closest('.bbox-handle')) return;
+    const start = e => {
+      if (e.target.closest('.bbox-handle')) return;
       const allowed = !this.staticGrid || inAdminHandle(e);
       if (!allowed) return;
       if (el.getAttribute('gs-locked') === 'true' || el.getAttribute('gs-no-move') === 'true') return;
-      ev.preventDefault();
+      e.preventDefault();
       this.select(el);
       startX = e.clientX; startY = e.clientY;
       startGX = +el.dataset.x || 0;
@@ -330,14 +349,12 @@ export class CanvasGrid {
       dragging = true;
       el.classList.add('dragging');
       this._emit('dragstart', el);
-      document.addEventListener('mousemove', move);
-      document.addEventListener('mouseup', up);
-      document.addEventListener('touchmove', move, { passive: false });
-      document.addEventListener('touchend', up);
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      el.setPointerCapture?.(e.pointerId);
     };
 
-    el.addEventListener('mousedown', start);
-    el.addEventListener('touchstart', start, { passive: false });
+    el.addEventListener('pointerdown', start);
   }
 
   // snapToGrid, elementRect and rectsCollide are imported from grid-utils.js

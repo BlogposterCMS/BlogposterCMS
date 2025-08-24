@@ -668,7 +668,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     }, gridEl);
     function setColumnWidth() {
       const gridWidth = gridEl.getBoundingClientRect().width;
-      grid.options.columnWidth = gridWidth / columnCount;
+      grid.options.columnWidth = Math.round(gridWidth / columnCount);
       grid.widgets.forEach(w => grid.update(w));
     }
     setColumnWidth();

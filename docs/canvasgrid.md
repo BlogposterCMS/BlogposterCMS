@@ -5,12 +5,13 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 ## Features
 
 - 1px baseline grid for pixel-perfect placement
-- GPU‑accelerated transforms keep dragging and resizing smooth at 60fps.
+- GPU‑accelerated transforms and requestAnimationFrame updates keep dragging and resizing smooth at 60fps.
 - Widgets remain inside the grid and can be layered using `data-layer` for z-index control.
+- Widgets snap to the grid on drag stop; enable `liveSnap` for per-frame snapping during drags.
 - Optional push mode prevents overlaps by moving surrounding widgets out of the way.
 - Percentage based sizing lets layouts adapt responsively.
-- All mouse, touch and keyboard events are forwarded through `bindGlobalListeners` for centralized handling.
-- Widgets receive a `dragging` class while moved so interfaces can reveal context‑sensitive controls.
+- All pointer and keyboard events are forwarded through `bindGlobalListeners` for centralized handling.
+- Widgets receive a `dragging` class while moved so interfaces can reveal context‑sensitive controls and temporarily drop transitions, shadows and filters for maximum performance.
 
 ## Usage
 
@@ -21,6 +22,7 @@ import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
 const gridEl = document.querySelector('#builderGrid');
 const grid = initCanvasGrid({ cellHeight: 1, columnWidth: 1 }, gridEl);
+// pass { liveSnap: true } to snap widgets during drags
 ```
 
 Adjust the column width on resize so the grid spans the full container:
@@ -29,7 +31,7 @@ Adjust the column width on resize so the grid spans the full container:
 const columnCount = 12;
 function setColumnWidth() {
   const width = gridEl.getBoundingClientRect().width;
-  grid.options.columnWidth = width / columnCount;
+  grid.options.columnWidth = Math.round(width / columnCount);
   grid.widgets.forEach(w => grid.update(w));
 }
 setColumnWidth();

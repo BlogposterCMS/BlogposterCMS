@@ -1,4 +1,5 @@
 // public/plainspace/main/BoundingBoxManager.js
+import { localRect } from './grid-utils.js';
 
 export class BoundingBoxManager extends EventTarget {
   constructor(canvas) {
@@ -12,7 +13,6 @@ export class BoundingBoxManager extends EventTarget {
     this.box.className = 'selection-box bounding-box';
     this.box.style.pointerEvents = 'none';
     this.box.style.display = 'none';
-    this.box.style.position = 'fixed';
     this.canvas.appendChild(this.box);
 
     this.handles = {};
@@ -25,15 +25,7 @@ export class BoundingBoxManager extends EventTarget {
       this.handles[p] = h;
     });
 
-    this._scheduled = false;
-    this._updateHandler = () => {
-      if (this._scheduled) return;
-      this._scheduled = true;
-      requestAnimationFrame(() => {
-        this._scheduled = false;
-        this.update();
-      });
-    };
+    this._updateHandler = () => this.update();
     this._ro = new ResizeObserver(this._updateHandler);
     this._onLoad = null;
     this.canvas.addEventListener('scroll', this._updateHandler, true);
@@ -89,17 +81,12 @@ export class BoundingBoxManager extends EventTarget {
     const scale = parseFloat(
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
-    const r = this.widget.getBoundingClientRect();
-    const width = Math.max(r.width, this.MIN_W);
-    const height = Math.max(r.height, this.MIN_H);
-    const dpr = window.devicePixelRatio || 1;
-    const rx = Math.round(r.left * dpr) / dpr;
-    const ry = Math.round(r.top * dpr) / dpr;
-    const rw = Math.round(width * dpr) / dpr;
-    const rh = Math.round(height * dpr) / dpr;
-    this.box.style.transform = `translate(${rx}px, ${ry}px)`;
-    this.box.style.width = `${rw}px`;
-    this.box.style.height = `${rh}px`;
+    const { x, y, w, h } = localRect(this.widget, this.canvas, scale);
+    const width = Math.max(w, this.MIN_W);
+    const height = Math.max(h, this.MIN_H);
+    this.box.style.transform = `translate(${x}px, ${y}px)`;
+    this.box.style.width = `${width}px`;
+    this.box.style.height = `${height}px`;
     this.box.style.setProperty('--inv-scale', String(1 / scale));
   }
 
@@ -118,10 +105,9 @@ export class BoundingBoxManager extends EventTarget {
     const scale = parseFloat(
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
-    const r = this.widget.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const width = Math.round(Math.max(r.width, this.MIN_W) * dpr) / dpr;
-    const height = Math.round(Math.max(r.height, this.MIN_H) * dpr) / dpr;
+    const { w, h } = localRect(this.widget, this.canvas, scale);
+    const width = Math.max(w, this.MIN_W);
+    const height = Math.max(h, this.MIN_H);
     if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
       this.update();
       return true;

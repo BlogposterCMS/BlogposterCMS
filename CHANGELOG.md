@@ -6,6 +6,10 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Designer app imports Plainspace modules via `/plainspace` to avoid `coming-soon` placeholders when loading builder scripts.
+- Hover cursor updates are throttled with `requestAnimationFrame`, resize edges widen on touch devices and disabled bounding boxes no longer intercept clicks.
+- Bounding box frame now provides edge cursors, scales its hit area with zoom and starts widget drags without synthetic pointer events; designer retains its classic handles.
+- Reverted accidental designer stylesheet edits; bounding box handles remain in the standalone designer.
 - Bounding box updates now run in the next animation frame so the selection box stays aligned during drags.
 - Drag handle styles correctly target `.canvas-item:before` to ensure grip visibility.
 - Drag handlers now sync transformations and bounding box updates via `requestAnimationFrame` to prevent jitter when moving widgets.
@@ -62,6 +66,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Bounding box resizing now uses the frame itself instead of separate handles.
 - CanvasGrid drags now move smoothly without snapping until release.
 - Drag and resize interactions now rely on Pointer Events with capture for consistent cross-device input.
 - Admin widget container styles now also apply to canvas items to prevent shadow DOM overrides.

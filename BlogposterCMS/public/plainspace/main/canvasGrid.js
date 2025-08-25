@@ -15,7 +15,8 @@ export class CanvasGrid {
         rows: Infinity,
         pushOnOverlap: false,
         percentageMode: false,
-        liveSnap: false
+        liveSnap: false,
+        bboxHandles: true
       },
       options
     );
@@ -29,8 +30,11 @@ export class CanvasGrid {
     this.widgets = [];
     this.activeEl = null;
     this.useBoundingBox = this.options.useBoundingBox !== false;
+    this.bboxHandles = this.options.bboxHandles !== false;
     if (this.useBoundingBox) {
-      this.bboxManager = new BoundingBoxManager(this.el);
+      this.bboxManager = new BoundingBoxManager(this.el, {
+        handles: this.bboxHandles
+      });
       this.bbox = this.bboxManager.box;
       this._bindResize();
     } else {
@@ -185,51 +189,103 @@ export class CanvasGrid {
   _bindResize(el) {
     if (this.useBoundingBox && !el) {
       if (!this.bboxManager) return;
+      const box = this.bboxManager.box;
+      box.style.pointerEvents = 'auto';
       let startX, startY, startW, startH, startGX, startGY, pos;
-      Object.values(this.bboxManager.handles).forEach(h => {
-        h.addEventListener('pointerdown', e => {
-          const widget = this.activeEl;
-          if (!widget || this.staticGrid) return;
-          if (widget.getAttribute('gs-locked') === 'true' ||
-              widget.getAttribute('gs-no-resize') === 'true') {
-            return;
-          }
-          e.stopPropagation();
-          pos = h.dataset.pos;
+
+      const edgeSize = () => {
+        const inv = parseFloat(getComputedStyle(box).getPropertyValue('--inv-scale') || '1');
+        const base = navigator.maxTouchPoints > 0 ? 14 : 10;
+        return base * inv;
+      };
+
+      let _hoverRAF = null, _lastEvt = null;
+      const updateCursor = e => {
+        _lastEvt = e;
+        if (_hoverRAF) return;
+        _hoverRAF = requestAnimationFrame(() => {
+          _hoverRAF = null;
+          const evt = _lastEvt; _lastEvt = null;
+          const widget = this.activeEl; if (!widget) return;
           const rect = widget.getBoundingClientRect();
-          startX = e.clientX; startY = e.clientY;
-          startW = rect.width; startH = rect.height;
-          startGX = +widget.dataset.x || 0;
-          startGY = +widget.dataset.y || 0;
-          const move = ev => {
-            const dx = ev.clientX - startX;
-            const dy = ev.clientY - startY;
-            let w = startW, hVal = startH;
-            let gx = startGX, gy = startGY;
-            if (pos.includes('e')) w += dx;
-            if (pos.includes('s')) hVal += dy;
-            if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
-            if (pos.includes('n')) { hVal -= dy; gy += Math.round(dy / this.options.cellHeight); }
-            w = Math.max(20, w);
-            hVal = Math.max(20, hVal);
-            const opts = { w: Math.round(w / this.options.columnWidth), h: Math.round(hVal / this.options.cellHeight) };
-            if (pos.includes('w')) opts.x = gx;
-            if (pos.includes('n')) opts.y = gy;
-            this.update(widget, opts);
-            widget.dispatchEvent(new Event('resizemove', { bubbles: true }));
-          };
-          const up = ev => {
-            if (pos != null) this._emit('resizestop', this.activeEl);
-            pos = null;
-            document.removeEventListener('pointermove', move);
-            document.removeEventListener('pointerup', up);
-            h.releasePointerCapture?.(ev.pointerId);
-          };
-          this._emit('resizestart', widget);
-          document.addEventListener('pointermove', move);
-          document.addEventListener('pointerup', up);
-          h.setPointerCapture?.(e.pointerId);
+          const edge = edgeSize();
+          const ox = evt.clientX - rect.left;
+          const oy = evt.clientY - rect.top;
+          let p = '';
+          if (oy < edge) p += 'n';
+          else if (oy > rect.height - edge) p += 's';
+          if (ox < edge) p += 'w';
+          else if (ox > rect.width - edge) p += 'e';
+          box.style.cursor = ({
+            n: 'ns-resize',
+            s: 'ns-resize',
+            e: 'ew-resize',
+            w: 'ew-resize',
+            ne: 'nesw-resize',
+            sw: 'nesw-resize',
+            nw: 'nwse-resize',
+            se: 'nwse-resize'
+          })[p] || 'move';
         });
+      };
+
+      box.addEventListener('pointermove', updateCursor);
+      box.addEventListener('pointerleave', () => { box.style.cursor = 'move'; });
+
+      box.addEventListener('pointerdown', e => {
+        const widget = this.activeEl;
+        if (!widget || this.staticGrid) return;
+        if (widget.getAttribute('gs-locked') === 'true' ||
+            widget.getAttribute('gs-no-resize') === 'true') {
+          return;
+        }
+        const rect = widget.getBoundingClientRect();
+        const edge = edgeSize();
+        const offsetX = e.clientX - rect.left;
+        const offsetY = e.clientY - rect.top;
+        pos = '';
+        if (offsetY < edge) pos += 'n';
+        else if (offsetY > rect.height - edge) pos += 's';
+        if (offsetX < edge) pos += 'w';
+        else if (offsetX > rect.width - edge) pos += 'e';
+        if (!pos) {
+          e.stopPropagation();
+          widget._gridDragStart?.(e);
+          return;
+        }
+        e.stopPropagation();
+        startX = e.clientX; startY = e.clientY;
+        startW = rect.width; startH = rect.height;
+        startGX = +widget.dataset.x || 0;
+        startGY = +widget.dataset.y || 0;
+        const move = ev => {
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+          let w = startW, hVal = startH;
+          let gx = startGX, gy = startGY;
+          if (pos.includes('e')) w += dx;
+          if (pos.includes('s')) hVal += dy;
+          if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
+          if (pos.includes('n')) { hVal -= dy; gy += Math.round(dy / this.options.cellHeight); }
+          w = Math.max(20, w);
+          hVal = Math.max(20, hVal);
+          const opts = { w: Math.round(w / this.options.columnWidth), h: Math.round(hVal / this.options.cellHeight) };
+          if (pos.includes('w')) opts.x = gx;
+          if (pos.includes('n')) opts.y = gy;
+          this.update(widget, opts);
+          widget.dispatchEvent(new Event('resizemove', { bubbles: true }));
+        };
+        const up = ev => {
+          if (pos != null) this._emit('resizestop', this.activeEl);
+          pos = null;
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', up);
+          box.releasePointerCapture?.(ev.pointerId);
+        };
+        this._emit('resizestart', widget);
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', up);
+        box.setPointerCapture?.(e.pointerId);
       });
     } else if (!this.useBoundingBox && el) {
       const handle = el.querySelector('.resize-handle');
@@ -336,8 +392,7 @@ export class CanvasGrid {
       this._emit('dragstop', el);
     };
 
-    const start = e => {
-      if (e.target.closest('.bbox-handle')) return;
+    const startDrag = e => {
       const allowed = !this.staticGrid || inAdminHandle(e);
       if (!allowed) return;
       if (el.getAttribute('gs-locked') === 'true' || el.getAttribute('gs-no-move') === 'true') return;
@@ -356,7 +411,13 @@ export class CanvasGrid {
       el.setPointerCapture?.(e.pointerId);
     };
 
+    const start = e => {
+      if (e.target.closest('.bbox-handle') || e.target.closest('.bounding-box')) return;
+      startDrag(e);
+    };
+
     el.addEventListener('pointerdown', start);
+    el._gridDragStart = startDrag;
   }
 
   // snapToGrid, elementRect and rectsCollide are imported from grid-utils.js
@@ -405,6 +466,7 @@ export class CanvasGrid {
     }
     if (this.useBoundingBox && this.bboxManager) {
       this.bboxManager.setWidget(el);
+      this.bboxManager.box.style.cursor = 'move';
     }
     this._updateBBox();
   }

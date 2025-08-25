@@ -1,6 +1,6 @@
-import { fetchPartial } from '../../public/plainspace/dashboard/fetchPartial.js';
-import { initBuilder } from '../../public/plainspace/builderRenderer.js';
-import { enableAutoEdit, sanitizeHtml } from '../../public/plainspace/editor/editor.js';
+import { fetchPartial } from '../../plainspace/dashboard/fetchPartial.js';
+import { initBuilder } from '../../plainspace/builderRenderer.js';
+import { enableAutoEdit, sanitizeHtml } from '../../plainspace/editor/editor.js';
 
 let bootstrapped = false;
 

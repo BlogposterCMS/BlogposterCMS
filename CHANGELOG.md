@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- CanvasGrid now resets cursors and clears temporary resize styles after snapping; resize previews bundle pointer moves with `requestAnimationFrame` for smoother feedback.
+- CanvasGrid resizing no longer snaps to the grid while dragging, providing smooth pixel-based previews before snapping on release.
 - Designer app imports Plainspace modules via `/plainspace` to avoid `coming-soon` placeholders when loading builder scripts.
 - Hover cursor updates are throttled with `requestAnimationFrame`, resize edges widen on touch devices and disabled bounding boxes no longer intercept clicks.
 - Bounding box frame now provides edge cursors, scales its hit area with zoom and starts widget drags without synthetic pointer events; designer retains its classic handles.
@@ -22,6 +24,7 @@ El Psy Kongroo
 
 
 ### Added
+- Optional `liveSnapResize` flag to enable per-frame snapping during resizes.
 - CanvasGrid exposes an optional `liveSnap` flag to enable per-frame snapping during drags.
 - Dashboard now injects its own remove and resize controls and tracks drag state via CanvasGrid events, revealing buttons only when selected or dragging.
 - Admin endpoints to install or uninstall apps while updating the registry.

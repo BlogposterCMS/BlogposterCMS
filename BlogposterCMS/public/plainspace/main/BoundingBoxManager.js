@@ -2,7 +2,7 @@
 import { localRect } from './grid-utils.js';
 
 export class BoundingBoxManager extends EventTarget {
-  constructor(canvas) {
+  constructor(canvas, opts = {}) {
     super();
     this.canvas = canvas;
     this.widget = null;
@@ -17,14 +17,16 @@ export class BoundingBoxManager extends EventTarget {
     this.canvas.appendChild(this.box);
 
     this.handles = {};
-    const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-    positions.forEach(p => {
-      const h = document.createElement('div');
-      h.className = `bbox-handle ${p}`;
-      h.dataset.pos = p;
-      this.box.appendChild(h);
-      this.handles[p] = h;
-    });
+    if (opts.handles !== false) {
+      const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+      positions.forEach(p => {
+        const h = document.createElement('div');
+        h.className = `bbox-handle ${p}`;
+        h.dataset.pos = p;
+        this.box.appendChild(h);
+        this.handles[p] = h;
+      });
+    }
 
     this._scheduled = false;
     this._updateHandler = () => {

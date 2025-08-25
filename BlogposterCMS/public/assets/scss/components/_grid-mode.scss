@@ -3,82 +3,17 @@ body.grid-mode {
     border: none;
   }
 
-  // Hide bounding boxes in dashboard grid mode.
+  // Selection frame doubles as resize handle.
   .bounding-box {
     position: absolute;
     top: 0;
     left: 0;
     border: 1px dashed var(--user-color, #333);
-    pointer-events: none;
+    pointer-events: auto;
     box-sizing: border-box;
     z-index: 1000;
     will-change: transform, width, height;
-
-    .bbox-handle {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: var(--user-color, #333);
-      border-radius: 50%;
-      pointer-events: all;
-      transform: scale(var(--inv-scale));
-    }
-
-    .nw {
-      top: -4px;
-      left: -4px;
-      transform: translate(-50%, -50%) scale(var(--inv-scale));
-      cursor: nwse-resize;
-    }
-
-    .n {
-      top: -4px;
-      left: 50%;
-      transform: translateX(-50%) scale(var(--inv-scale));
-      cursor: ns-resize;
-    }
-
-    .ne {
-      top: -4px;
-      right: -4px;
-      transform: translate(50%, -50%) scale(var(--inv-scale));
-      cursor: nesw-resize;
-    }
-
-    .e {
-      top: 50%;
-      right: -4px;
-      transform: translateY(-50%) scale(var(--inv-scale));
-      cursor: ew-resize;
-    }
-
-    .se {
-      bottom: -4px;
-      right: -4px;
-      transform: translate(50%, 50%) scale(var(--inv-scale));
-      cursor: nwse-resize;
-    }
-
-    .s {
-      bottom: -4px;
-      left: 50%;
-      transform: translateX(-50%) scale(var(--inv-scale));
-      cursor: ns-resize;
-    }
-
-    .sw {
-      bottom: -4px;
-      left: -4px;
-      transform: translate(-50%, 50%) scale(var(--inv-scale));
-      cursor: nesw-resize;
-    }
-
-    .w {
-      top: 50%;
-      left: -4px;
-      transform: translateY(-50%) scale(var(--inv-scale));
-      cursor: ew-resize;
-    }
+    cursor: move;
   }
 
   .bounding-box.disabled {

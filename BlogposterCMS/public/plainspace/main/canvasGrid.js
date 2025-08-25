@@ -263,42 +263,50 @@ export class CanvasGrid {
         const startPY = startGY * this.options.cellHeight;
         let curW = startW, curH = startH, curPX = startPX, curPY = startPY;
         const live = this.options.liveSnapResize;
+        let _resizeRAF = null, _lastEvt;
         const move = ev => {
-          const dx = ev.clientX - startX;
-          const dy = ev.clientY - startY;
-          if (live) {
-            let w = startW, hVal = startH;
-            let gx = startGX, gy = startGY;
-            if (pos.includes('e')) w += dx;
-            if (pos.includes('s')) hVal += dy;
-            if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
-            if (pos.includes('n')) { hVal -= dy; gy += Math.round(dy / this.options.cellHeight); }
-            w = Math.max(20, w);
-            hVal = Math.max(20, hVal);
-            const opts = {
-              w: Math.round(w / this.options.columnWidth),
-              h: Math.round(hVal / this.options.cellHeight)
-            };
-            if (pos.includes('w')) opts.x = gx;
-            if (pos.includes('n')) opts.y = gy;
-            this.update(widget, opts);
-          } else {
-            let w = startW, hVal = startH;
-            let px = startPX, py = startPY;
-            if (pos.includes('e')) w += dx;
-            if (pos.includes('s')) hVal += dy;
-            if (pos.includes('w')) { w -= dx; px += dx; }
-            if (pos.includes('n')) { hVal -= dy; py += dy; }
-            const minW = (+widget.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
-            const minH = (+widget.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
-            if (w < minW) { px += w - minW; w = minW; }
-            if (hVal < minH) { py += hVal - minH; hVal = minH; }
-            curW = w; curH = hVal; curPX = px; curPY = py;
-            widget.style.width = `${w}px`;
-            widget.style.height = `${hVal}px`;
-            widget.style.transform = `translate3d(${px}px, ${py}px, 0)`;
-          }
-          widget.dispatchEvent(new Event('resizemove', { bubbles: true }));
+          _lastEvt = ev;
+          if (_resizeRAF) return;
+          _resizeRAF = requestAnimationFrame(() => {
+            _resizeRAF = null;
+            const e = _lastEvt; _lastEvt = null;
+            if (!e) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (live) {
+              let w = startW, hVal = startH;
+              let gx = startGX, gy = startGY;
+              if (pos.includes('e')) w += dx;
+              if (pos.includes('s')) hVal += dy;
+              if (pos.includes('w')) { w -= dx; gx += Math.round(dx / this.options.columnWidth); }
+              if (pos.includes('n')) { hVal -= dy; gy += Math.round(dy / this.options.cellHeight); }
+              w = Math.max(20, w);
+              hVal = Math.max(20, hVal);
+              const opts = {
+                w: Math.round(w / this.options.columnWidth),
+                h: Math.round(hVal / this.options.cellHeight)
+              };
+              if (pos.includes('w')) opts.x = gx;
+              if (pos.includes('n')) opts.y = gy;
+              this.update(widget, opts);
+            } else {
+              let w = startW, hVal = startH;
+              let px = startPX, py = startPY;
+              if (pos.includes('e')) w += dx;
+              if (pos.includes('s')) hVal += dy;
+              if (pos.includes('w')) { w -= dx; px += dx; }
+              if (pos.includes('n')) { hVal -= dy; py += dy; }
+              const minW = (+widget.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
+              const minH = (+widget.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
+              if (w < minW) { px += w - minW; w = minW; }
+              if (hVal < minH) { py += hVal - minH; hVal = minH; }
+              curW = w; curH = hVal; curPX = px; curPY = py;
+              widget.style.width = `${w}px`;
+              widget.style.height = `${hVal}px`;
+              widget.style.transform = `translate3d(${px}px, ${py}px, 0)`;
+            }
+            widget.dispatchEvent(new Event('resizemove', { bubbles: true }));
+          });
         };
         const up = ev => {
           document.removeEventListener('pointermove', move);
@@ -310,7 +318,11 @@ export class CanvasGrid {
             const snapX = Math.round(curPX / this.options.columnWidth);
             const snapY = Math.round(curPY / this.options.cellHeight);
             this.update(widget, { w: snapW, h: snapH, x: snapX, y: snapY });
+            widget.style.removeProperty('width');
+            widget.style.removeProperty('height');
+            widget.style.removeProperty('transform');
           }
+          box.style.cursor = 'move';
           if (pos != null) this._emit('resizestop', this.activeEl);
           pos = null;
         };
@@ -340,35 +352,43 @@ export class CanvasGrid {
         const startPY = startGY * this.options.cellHeight;
         let curW = startW, curH = startH, curPX = startPX, curPY = startPY;
         const live = this.options.liveSnapResize;
+        let _resizeRAF = null, _lastEvt;
         const move = ev => {
-          const dx = ev.clientX - startX;
-          const dy = ev.clientY - startY;
-          if (live) {
-            let w = startW + dx;
-            let hVal = startH + dy;
-            const minW = (+el.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
-            const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
-            w = Math.max(minW, w);
-            hVal = Math.max(minH, hVal);
-            this.update(el, {
-              w: Math.round(w / this.options.columnWidth),
-              h: Math.round(hVal / this.options.cellHeight)
-            });
-          } else {
-            let w = startW + dx;
-            let hVal = startH + dy;
-            let px = startPX;
-            let py = startPY;
-            const minW = (+el.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
-            const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
-            if (w < minW) w = minW;
-            if (hVal < minH) hVal = minH;
-            curW = w; curH = hVal; curPX = px; curPY = py;
-            el.style.width = `${w}px`;
-            el.style.height = `${hVal}px`;
-            el.style.transform = `translate3d(${px}px, ${py}px, 0)`;
-          }
-          el.dispatchEvent(new Event('resizemove', { bubbles: true }));
+          _lastEvt = ev;
+          if (_resizeRAF) return;
+          _resizeRAF = requestAnimationFrame(() => {
+            _resizeRAF = null;
+            const e = _lastEvt; _lastEvt = null;
+            if (!e) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (live) {
+              let w = startW + dx;
+              let hVal = startH + dy;
+              const minW = (+el.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
+              const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
+              w = Math.max(minW, w);
+              hVal = Math.max(minH, hVal);
+              this.update(el, {
+                w: Math.round(w / this.options.columnWidth),
+                h: Math.round(hVal / this.options.cellHeight)
+              });
+            } else {
+              let w = startW + dx;
+              let hVal = startH + dy;
+              let px = startPX;
+              let py = startPY;
+              const minW = (+el.getAttribute('gs-min-w') || 1) * this.options.columnWidth;
+              const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
+              if (w < minW) w = minW;
+              if (hVal < minH) hVal = minH;
+              curW = w; curH = hVal; curPX = px; curPY = py;
+              el.style.width = `${w}px`;
+              el.style.height = `${hVal}px`;
+              el.style.transform = `translate3d(${px}px, ${py}px, 0)`;
+            }
+            el.dispatchEvent(new Event('resizemove', { bubbles: true }));
+          });
         };
         const up = ev => {
           document.removeEventListener('pointermove', move);
@@ -380,6 +400,9 @@ export class CanvasGrid {
             const snapX = Math.round(curPX / this.options.columnWidth);
             const snapY = Math.round(curPY / this.options.cellHeight);
             this.update(el, { w: snapW, h: snapH, x: snapX, y: snapY });
+            el.style.removeProperty('width');
+            el.style.removeProperty('height');
+            el.style.removeProperty('transform');
           }
           this._emit('resizestop', el);
         };

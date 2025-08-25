@@ -8,7 +8,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 - GPU‑accelerated transforms and requestAnimationFrame updates keep dragging and resizing smooth at 60fps.
 - Bounding box frame doubles as a resize handle with edge-aware cursors and touch-friendly hit areas.
 - Widgets remain inside the grid and can be layered using `data-layer` for z-index control.
-- Widgets snap to the grid on drag stop; enable `liveSnap` for per-frame snapping during drags.
+- Widgets snap to the grid on drag or resize stop; enable `liveSnap` or `liveSnapResize` for per-frame snapping during drags or resizes.
 - Optional push mode prevents overlaps by moving surrounding widgets out of the way.
 - Percentage based sizing lets layouts adapt responsively.
 - All pointer and keyboard events are forwarded through `bindGlobalListeners` for centralized handling.
@@ -23,7 +23,7 @@ import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
 const gridEl = document.querySelector('#builderGrid');
 const grid = initCanvasGrid({ cellHeight: 1, columnWidth: 1 }, gridEl);
-// pass { liveSnap: true } to snap widgets during drags
+// pass { liveSnap: true, liveSnapResize: true } to snap widgets during drags and resizes
 ```
 
 Adjust the column width on resize so the grid spans the full container:

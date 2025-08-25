@@ -14,6 +14,7 @@ body.grid-mode {
     z-index: 1000;
     will-change: transform, width, height;
     cursor: move;
+    touch-action: none;
   }
 
   .bounding-box.disabled {

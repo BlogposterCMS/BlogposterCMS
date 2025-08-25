@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Hover cursor updates are throttled with `requestAnimationFrame`, resize edges widen on touch devices and disabled bounding boxes no longer intercept clicks.
 - Bounding box frame now provides edge cursors, scales its hit area with zoom and starts widget drags without synthetic pointer events; designer retains its classic handles.
 - Reverted accidental designer stylesheet edits; bounding box handles remain in the standalone designer.
 - Bounding box updates now run in the next animation frame so the selection box stays aligned during drags.

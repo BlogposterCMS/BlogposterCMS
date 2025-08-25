@@ -15,7 +15,8 @@ export class CanvasGrid {
         rows: Infinity,
         pushOnOverlap: false,
         percentageMode: false,
-        liveSnap: false
+        liveSnap: false,
+        bboxHandles: true
       },
       options
     );
@@ -29,8 +30,11 @@ export class CanvasGrid {
     this.widgets = [];
     this.activeEl = null;
     this.useBoundingBox = this.options.useBoundingBox !== false;
+    this.bboxHandles = this.options.bboxHandles !== false;
     if (this.useBoundingBox) {
-      this.bboxManager = new BoundingBoxManager(this.el, { handles: false });
+      this.bboxManager = new BoundingBoxManager(this.el, {
+        handles: this.bboxHandles
+      });
       this.bbox = this.bboxManager.box;
       this._bindResize();
     } else {
@@ -191,33 +195,38 @@ export class CanvasGrid {
 
       const edgeSize = () => {
         const inv = parseFloat(getComputedStyle(box).getPropertyValue('--inv-scale') || '1');
-        return 8 * inv;
+        const base = navigator.maxTouchPoints > 0 ? 14 : 10;
+        return base * inv;
       };
 
+      let _hoverRAF = null, _lastEvt = null;
       const updateCursor = e => {
-        const widget = this.activeEl;
-        if (!widget) return;
-        const rect = widget.getBoundingClientRect();
-        const edge = edgeSize();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
-        let c = 'move';
-        let p = '';
-        if (offsetY < edge) p += 'n';
-        else if (offsetY > rect.height - edge) p += 's';
-        if (offsetX < edge) p += 'w';
-        else if (offsetX > rect.width - edge) p += 'e';
-        const map = {
-          n: 'ns-resize',
-          s: 'ns-resize',
-          e: 'ew-resize',
-          w: 'ew-resize',
-          ne: 'nesw-resize',
-          sw: 'nesw-resize',
-          nw: 'nwse-resize',
-          se: 'nwse-resize'
-        };
-        box.style.cursor = map[p] || c;
+        _lastEvt = e;
+        if (_hoverRAF) return;
+        _hoverRAF = requestAnimationFrame(() => {
+          _hoverRAF = null;
+          const evt = _lastEvt; _lastEvt = null;
+          const widget = this.activeEl; if (!widget) return;
+          const rect = widget.getBoundingClientRect();
+          const edge = edgeSize();
+          const ox = evt.clientX - rect.left;
+          const oy = evt.clientY - rect.top;
+          let p = '';
+          if (oy < edge) p += 'n';
+          else if (oy > rect.height - edge) p += 's';
+          if (ox < edge) p += 'w';
+          else if (ox > rect.width - edge) p += 'e';
+          box.style.cursor = ({
+            n: 'ns-resize',
+            s: 'ns-resize',
+            e: 'ew-resize',
+            w: 'ew-resize',
+            ne: 'nesw-resize',
+            sw: 'nesw-resize',
+            nw: 'nwse-resize',
+            se: 'nwse-resize'
+          })[p] || 'move';
+        });
       };
 
       box.addEventListener('pointermove', updateCursor);
@@ -457,6 +466,7 @@ export class CanvasGrid {
     }
     if (this.useBoundingBox && this.bboxManager) {
       this.bboxManager.setWidget(el);
+      this.bboxManager.box.style.cursor = 'move';
     }
     this._updateBBox();
   }

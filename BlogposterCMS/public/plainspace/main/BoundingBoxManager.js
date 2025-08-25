@@ -132,6 +132,7 @@ export class BoundingBoxManager extends EventTarget {
 
   setDisabled(flag) {
     this.box.classList.toggle('disabled', flag);
+    this.box.style.pointerEvents = flag ? 'none' : 'auto';
     if (flag) this.hide();
   }
 }

@@ -1,0 +1,66 @@
+.builder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: var(--color-white);
+  border-bottom: 1px solid #eee;
+  min-height: 56px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 120;
+}
+
+.builder-header .builder-back-btn,
+.builder-header .builder-save-btn,
+.builder-header .builder-preview-btn,
+.builder-header .builder-publish-btn,
+.builder-header .builder-menu-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.builder-header .layout-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.builder-header .layout-name {
+  font-size: 1.25rem;
+  font-weight: 500;
+  outline: none;
+}
+
+.builder-header .edit-name-icon {
+  margin-left: 6px;
+  cursor: pointer;
+}
+
+.builder-header .layout-name-input {
+  font-size: 1.25rem;
+  padding: 4px 8px;
+  flex: 1;
+}
+
+body.preview-mode .builder-header .builder-save-btn,
+body.preview-mode .builder-header .layout-info {
+  display: none;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--color-white);
+  border-bottom: 1px solid #eee;
+  padding: 6px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 60;
+}

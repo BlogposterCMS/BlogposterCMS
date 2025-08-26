@@ -72,6 +72,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Designer app stylesheet split into component-specific SCSS files for easier maintenance.
 - Bounding box resizing now uses the frame itself instead of separate handles.
 - CanvasGrid drags now move smoothly without snapping until release.
 - Drag and resize interactions now rely on Pointer Events with capture for consistent cross-device input.

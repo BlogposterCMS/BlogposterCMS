@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.
+- Bounding box is consistently rendered above widgets and widget content is disabled in edit mode, keeping resize handles usable.
 - Bounding box now uses transparent edge overlays, keeping widget buttons and native resize handles clickable.
 - CanvasGrid now resets cursors and clears temporary resize styles after snapping; resize previews bundle pointer moves with `requestAnimationFrame` for smoother feedback.
 - CanvasGrid resizing no longer snaps to the grid while dragging, providing smooth pixel-based previews before snapping on release.

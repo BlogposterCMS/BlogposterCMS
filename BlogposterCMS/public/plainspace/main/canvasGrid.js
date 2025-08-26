@@ -266,10 +266,10 @@ export class CanvasGrid {
             const snapH = Math.round(curH / this.options.cellHeight);
             const snapX = Math.round(curPX / this.options.columnWidth);
             const snapY = Math.round(curPY / this.options.cellHeight);
-            this.update(widget, { w: snapW, h: snapH, x: snapX, y: snapY });
             widget.style.removeProperty('width');
             widget.style.removeProperty('height');
             widget.style.removeProperty('transform');
+            this.update(widget, { w: snapW, h: snapH, x: snapX, y: snapY });
           }
           if (pos != null) this._emit('resizestop', this.activeEl);
           pos = null;
@@ -349,10 +349,10 @@ export class CanvasGrid {
             const snapH = Math.round(curH / this.options.cellHeight);
             const snapX = Math.round(curPX / this.options.columnWidth);
             const snapY = Math.round(curPY / this.options.cellHeight);
-            this.update(el, { w: snapW, h: snapH, x: snapX, y: snapY });
             el.style.removeProperty('width');
             el.style.removeProperty('height');
             el.style.removeProperty('transform');
+            this.update(el, { w: snapW, h: snapH, x: snapX, y: snapY });
           }
           this._emit('resizestop', el);
         };

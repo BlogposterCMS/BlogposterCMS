@@ -13,8 +13,19 @@ export class BoundingBoxManager extends EventTarget {
     this.box.className = 'selection-box bounding-box';
     this.box.style.pointerEvents = 'none';
     this.box.style.display = 'none';
+    const base = navigator.maxTouchPoints > 0 ? 14 : 10;
+    this.box.style.setProperty('--edge-base', `${base}px`);
     // CSS definiert bereits "position:absolute" für relative Platzierung im Canvas
     this.canvas.appendChild(this.box);
+
+    this.edges = {};
+    ['n', 'e', 's', 'w', 'ne', 'se', 'sw', 'nw'].forEach(p => {
+      const edge = document.createElement('div');
+      edge.className = `bbox-edge ${p}`;
+      edge.dataset.pos = p;
+      this.box.appendChild(edge);
+      this.edges[p] = edge;
+    });
 
     this.handles = {};
     if (opts.handles !== false) {
@@ -132,7 +143,9 @@ export class BoundingBoxManager extends EventTarget {
 
   setDisabled(flag) {
     this.box.classList.toggle('disabled', flag);
-    this.box.style.pointerEvents = flag ? 'none' : 'auto';
+    Object.values(this.edges).forEach(edge => {
+      edge.style.pointerEvents = flag ? 'none' : 'auto';
+    });
     if (flag) this.hide();
   }
 }

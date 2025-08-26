@@ -190,71 +190,20 @@ export class CanvasGrid {
   _bindResize(el) {
     if (this.useBoundingBox && !el) {
       if (!this.bboxManager) return;
-      const box = this.bboxManager.box;
-      box.style.pointerEvents = 'auto';
+      const edges = Object.values(this.bboxManager.edges);
       let startX, startY, startW, startH, startGX, startGY, pos;
 
-      const edgeSize = () => {
-        const inv = parseFloat(getComputedStyle(box).getPropertyValue('--inv-scale') || '1');
-        const base = navigator.maxTouchPoints > 0 ? 14 : 10;
-        return base * inv;
-      };
-
-      let _hoverRAF = null, _lastEvt = null;
-      const updateCursor = e => {
-        _lastEvt = e;
-        if (_hoverRAF) return;
-        _hoverRAF = requestAnimationFrame(() => {
-          _hoverRAF = null;
-          const evt = _lastEvt; _lastEvt = null;
-          const widget = this.activeEl; if (!widget) return;
-          const rect = widget.getBoundingClientRect();
-          const edge = edgeSize();
-          const ox = evt.clientX - rect.left;
-          const oy = evt.clientY - rect.top;
-          let p = '';
-          if (oy < edge) p += 'n';
-          else if (oy > rect.height - edge) p += 's';
-          if (ox < edge) p += 'w';
-          else if (ox > rect.width - edge) p += 'e';
-          box.style.cursor = ({
-            n: 'ns-resize',
-            s: 'ns-resize',
-            e: 'ew-resize',
-            w: 'ew-resize',
-            ne: 'nesw-resize',
-            sw: 'nesw-resize',
-            nw: 'nwse-resize',
-            se: 'nwse-resize'
-          })[p] || 'move';
-        });
-      };
-
-      box.addEventListener('pointermove', updateCursor);
-      box.addEventListener('pointerleave', () => { box.style.cursor = 'move'; });
-
-      box.addEventListener('pointerdown', e => {
+      const startResize = e => {
         const widget = this.activeEl;
         if (!widget || this.staticGrid) return;
         if (widget.getAttribute('gs-locked') === 'true' ||
             widget.getAttribute('gs-no-resize') === 'true') {
           return;
         }
-        const rect = widget.getBoundingClientRect();
-        const edge = edgeSize();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
-        pos = '';
-        if (offsetY < edge) pos += 'n';
-        else if (offsetY > rect.height - edge) pos += 's';
-        if (offsetX < edge) pos += 'w';
-        else if (offsetX > rect.width - edge) pos += 'e';
-        if (!pos) {
-          e.stopPropagation();
-          widget._gridDragStart?.(e);
-          return;
-        }
+        pos = e.currentTarget.dataset.pos;
+        if (!pos) return;
         e.stopPropagation();
+        const rect = widget.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
         startW = rect.width; startH = rect.height;
         startGX = +widget.dataset.x || 0;
@@ -311,7 +260,7 @@ export class CanvasGrid {
         const up = ev => {
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', up);
-          box.releasePointerCapture?.(ev.pointerId);
+          e.currentTarget.releasePointerCapture?.(ev.pointerId);
           if (!live) {
             const snapW = Math.round(curW / this.options.columnWidth);
             const snapH = Math.round(curH / this.options.cellHeight);
@@ -322,15 +271,16 @@ export class CanvasGrid {
             widget.style.removeProperty('height');
             widget.style.removeProperty('transform');
           }
-          box.style.cursor = 'move';
           if (pos != null) this._emit('resizestop', this.activeEl);
           pos = null;
         };
         this._emit('resizestart', widget);
         document.addEventListener('pointermove', move);
         document.addEventListener('pointerup', up);
-        box.setPointerCapture?.(e.pointerId);
-      });
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+      };
+
+      edges.forEach(edge => edge.addEventListener('pointerdown', startResize));
     } else if (!this.useBoundingBox && el) {
       const handle = el.querySelector('.resize-handle');
       if (!handle) return;

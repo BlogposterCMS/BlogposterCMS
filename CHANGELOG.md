@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Bounding box now uses transparent edge overlays, keeping widget buttons and native resize handles clickable.
 - CanvasGrid now resets cursors and clears temporary resize styles after snapping; resize previews bundle pointer moves with `requestAnimationFrame` for smoother feedback.
 - CanvasGrid resizing no longer snaps to the grid while dragging, providing smooth pixel-based previews before snapping on release.
 - Designer app imports Plainspace modules via `/plainspace` to avoid `coming-soon` placeholders when loading builder scripts.

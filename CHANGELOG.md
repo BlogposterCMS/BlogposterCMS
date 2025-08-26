@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- CanvasGrid pointer handlers now verify `currentTarget` and resize handles before releasing pointer capture to avoid null errors.
 - Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.
 - Bounding box is consistently rendered above widgets and widget content is disabled in edit mode, keeping resize handles usable.
 - Bounding box now uses transparent edge overlays, keeping widget buttons and native resize handles clickable.

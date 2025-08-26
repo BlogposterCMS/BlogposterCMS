@@ -55,7 +55,9 @@ module.exports = {
   },
   resolve: {
     alias: {
-      '/assets': path.resolve(__dirname, 'public/assets')
+      '/assets': path.resolve(__dirname, 'public/assets'),
+      '/plainspace': path.resolve(__dirname, 'public/plainspace'),
+      'assets': path.resolve(__dirname, 'public/assets')
     }
   },
   devtool: 'source-map'

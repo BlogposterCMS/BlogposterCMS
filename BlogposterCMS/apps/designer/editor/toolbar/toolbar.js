@@ -1,4 +1,4 @@
-import { createColorPicker } from '../../../assets/js/colorPicker.js';
+import { createColorPicker } from '/assets/js/colorPicker.js';
 import {
   state,
   setApplyHandlers,

@@ -20,6 +20,7 @@ import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveF
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 import { BoundingBoxManager } from '/plainspace/main/BoundingBoxManager.js';
+import { canvasGrid } from '/plainspace/main/canvasGrid.js';
 
 let _toPng;
 async function loadToPng() {
@@ -29,7 +30,7 @@ async function loadToPng() {
     _toPng = mod.toPng;
   } catch (err) {
     try {
-      const mod = await import('../assets/js/html-to-img.js');
+      const mod = await import('/assets/js/html-to-img.js');
       _toPng = mod.toPng;
     } catch (err2) {
       console.warn('[Designer] html-to-image unavailable', err2);

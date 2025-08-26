@@ -19,7 +19,7 @@ import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
-import { BoundingBoxManager } from './main/BoundingBoxManager.js';
+import { BoundingBoxManager } from '/plainspace/main/BoundingBoxManager.js';
 
 let _toPng;
 async function loadToPng() {

@@ -1,4 +1,4 @@
-import { executeJs as exec } from './main/script-utils.js';
+import { executeJs as exec } from '/plainspace/main/script-utils.js';
 
 export function addHitLayer(widget) {
   const shield = document.createElement('div');

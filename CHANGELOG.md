@@ -10,6 +10,7 @@ El Psy Kongroo
 - Designer app uses shared sanitizer module instead of editor dependency.
 
 ### Fixed
+- Restored shared grid modules (`canvasGrid`, `BoundingBoxManager`, `grid-utils`, `globalEvents`) to `plainspace/main` so the designer app no longer contains framework code.
 - Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.
 - Bounding box is consistently rendered above widgets and widget content is disabled in edit mode, keeping resize handles usable.
 - Bounding box now uses transparent edge overlays, keeping widget buttons and native resize handles clickable.

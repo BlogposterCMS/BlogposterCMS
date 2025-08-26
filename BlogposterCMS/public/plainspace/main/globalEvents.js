@@ -1,4 +1,4 @@
-//public/plainspace/main/globalEvents.js
+// public/plainspace/main/globalEvents.js
 export function bindGlobalListeners(rootEl, emit) {
   const rafEvents = new Set(['mousemove', 'touchmove', 'scroll', 'dragover', 'wheel']);
   const rootEvents = [

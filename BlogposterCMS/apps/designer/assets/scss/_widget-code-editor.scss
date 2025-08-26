@@ -1,0 +1,34 @@
+.widget-code-editor {
+  position: fixed;
+  top: 0;
+  width: 280px;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 8px;
+  z-index: 1000;
+  display: none;
+}
+
+.widget-code-editor.right {
+  left: 0;
+}
+
+.widget-code-editor.left {
+  left: 0;
+}
+
+.widget-code-editor textarea {
+  width: 100%;
+  height: 60px;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+}
+
+
+.widget-code-editor .editor-actions {
+  text-align: right;
+}
+
+.widget-code-editor .media-btn {
+  margin-right: auto;
+}

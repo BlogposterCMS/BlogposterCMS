@@ -1,0 +1,61 @@
+.widget-options-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: var(--color-white);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-body);
+  display: none;
+  z-index: 1000;
+}
+
+.builder-options-menu {
+  position: fixed;
+  background: var(--color-white);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-body);
+  display: none;
+  z-index: 1000;
+}
+
+.builder-options-menu button,
+.builder-options-menu label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-body);
+}
+
+.builder-options-menu label {
+  cursor: pointer;
+}
+
+.builder-options-menu button:hover,
+.builder-options-menu label:hover {
+  background: var(--color-light-gray, #f0f0f0);
+}
+
+.widget-options-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 9px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-body);
+}
+
+.widget-options-menu button:hover {
+  background: var(--color-light-gray, #f0f0f0);
+}

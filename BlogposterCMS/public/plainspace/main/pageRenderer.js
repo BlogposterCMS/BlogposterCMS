@@ -676,7 +676,28 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     window.addEventListener('resize', setColumnWidth);
     grid.setStatic(true);
     document.body.classList.add('grid-mode');
-    grid.on('change', () => {});
+    async function persistLayout() {
+      const items = Array.from(document.querySelectorAll('.canvas-grid .canvas-item')).map(el => ({
+        id:   el.dataset.pageId || el.id,
+        x:    +el.dataset.x || 0,
+        y:    +el.dataset.y || 0,
+        w:    +el.getAttribute('gs-w') || 1,
+        h:    +el.getAttribute('gs-h') || 1,
+        layer:+el.dataset.layer || 0,
+      }));
+      try {
+        // TODO: adjust event name/payload to match backend API
+        await window.meltdownEmit?.('saveDashboardLayout', {
+          jwt: window.ADMIN_TOKEN,
+          layout: items,
+        });
+      } catch (err) {
+        console.error('layout save failed', err);
+      }
+    }
+    grid.on('dragstop', persistLayout);
+    grid.on('resizestop', persistLayout);
+    grid.on('change', persistLayout);
     window.adminGrid = grid;
     if (typeof grid.on === 'function') {
       grid.on('dragstart', el => el.classList.add('dragging'));

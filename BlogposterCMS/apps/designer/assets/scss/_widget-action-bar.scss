@@ -1,0 +1,21 @@
+.widget-action-bar {
+  position: absolute;
+  background: var(--color-white);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  font-family: var(--font-body);
+  gap: 4px;
+  padding: 2px;
+  z-index: 1000;
+}
+
+.widget-action-bar button {
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+

@@ -3,95 +3,92 @@ body.grid-mode {
     border: none;
   }
 
-  .canvas-grid {
-    // Selection frame doubles as resize handle.
-    .bounding-box {
+  // Selection frame doubles as resize handle.
+  .bounding-box {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 1px dashed var(--user-color, #333);
+    pointer-events: none;
+    box-sizing: border-box;
+    z-index: 1000;
+    will-change: transform, width, height;
+    cursor: move;
+    touch-action: none;
+    --edge-hit: calc(var(--edge-base) * var(--inv-scale));
+
+    .bbox-edge {
       position: absolute;
-      top: 0;
-      left: 0;
-      border: 1px dashed var(--user-color, #333);
-      pointer-events: none !important;
-      box-sizing: border-box;
-      z-index: 2000;
-      will-change: transform, width, height;
-      cursor: move;
+      pointer-events: auto;
       touch-action: none;
-      --edge-hit: calc(var(--edge-base) * var(--inv-scale));
-
-      .bbox-edge {
-        position: absolute;
-        pointer-events: auto !important;
-        touch-action: none;
-        z-index: 2000;
-      }
-
-      .bbox-edge.n {
-        cursor: ns-resize;
-        left: 0;
-        right: 0;
-        top: calc(-0.5 * var(--edge-hit));
-        height: var(--edge-hit);
-      }
-
-      .bbox-edge.s {
-        cursor: ns-resize;
-        left: 0;
-        right: 0;
-        bottom: calc(-0.5 * var(--edge-hit));
-        height: var(--edge-hit);
-      }
-
-      .bbox-edge.e {
-        cursor: ew-resize;
-        top: 0;
-        bottom: 0;
-        right: calc(-0.5 * var(--edge-hit));
-        width: var(--edge-hit);
-      }
-
-      .bbox-edge.w {
-        cursor: ew-resize;
-        top: 0;
-        bottom: 0;
-        left: calc(-0.5 * var(--edge-hit));
-        width: var(--edge-hit);
-      }
-
-      .bbox-edge.ne {
-        cursor: nesw-resize;
-        top: calc(-0.5 * var(--edge-hit));
-        right: calc(-0.5 * var(--edge-hit));
-        width: var(--edge-hit);
-        height: var(--edge-hit);
-      }
-
-      .bbox-edge.se {
-        cursor: nwse-resize;
-        bottom: calc(-0.5 * var(--edge-hit));
-        right: calc(-0.5 * var(--edge-hit));
-        width: var(--edge-hit);
-        height: var(--edge-hit);
-      }
-
-      .bbox-edge.sw {
-        cursor: nesw-resize;
-        bottom: calc(-0.5 * var(--edge-hit));
-        left: calc(-0.5 * var(--edge-hit));
-        width: var(--edge-hit);
-        height: var(--edge-hit);
-      }
-
-      .bbox-edge.nw {
-        cursor: nwse-resize;
-        top: calc(-0.5 * var(--edge-hit));
-        left: calc(-0.5 * var(--edge-hit));
-        width: var(--edge-hit);
-        height: var(--edge-hit);
-      }
     }
 
-    .bounding-box.disabled {
-      display: none;
+    .bbox-edge.n {
+      cursor: ns-resize;
+      left: 0;
+      right: 0;
+      top: calc(-0.5 * var(--edge-hit));
+      height: var(--edge-hit);
     }
+
+    .bbox-edge.s {
+      cursor: ns-resize;
+      left: 0;
+      right: 0;
+      bottom: calc(-0.5 * var(--edge-hit));
+      height: var(--edge-hit);
+    }
+
+    .bbox-edge.e {
+      cursor: ew-resize;
+      top: 0;
+      bottom: 0;
+      right: calc(-0.5 * var(--edge-hit));
+      width: var(--edge-hit);
+    }
+
+    .bbox-edge.w {
+      cursor: ew-resize;
+      top: 0;
+      bottom: 0;
+      left: calc(-0.5 * var(--edge-hit));
+      width: var(--edge-hit);
+    }
+
+    .bbox-edge.ne {
+      cursor: nesw-resize;
+      top: calc(-0.5 * var(--edge-hit));
+      right: calc(-0.5 * var(--edge-hit));
+      width: var(--edge-hit);
+      height: var(--edge-hit);
+    }
+
+    .bbox-edge.se {
+      cursor: nwse-resize;
+      bottom: calc(-0.5 * var(--edge-hit));
+      right: calc(-0.5 * var(--edge-hit));
+      width: var(--edge-hit);
+      height: var(--edge-hit);
+    }
+
+    .bbox-edge.sw {
+      cursor: nesw-resize;
+      bottom: calc(-0.5 * var(--edge-hit));
+      left: calc(-0.5 * var(--edge-hit));
+      width: var(--edge-hit);
+      height: var(--edge-hit);
+    }
+
+    .bbox-edge.nw {
+      cursor: nwse-resize;
+      top: calc(-0.5 * var(--edge-hit));
+      left: calc(-0.5 * var(--edge-hit));
+      width: var(--edge-hit);
+      height: var(--edge-hit);
+    }
+  }
+
+  .bounding-box.disabled {
+    display: none;
   }
 }

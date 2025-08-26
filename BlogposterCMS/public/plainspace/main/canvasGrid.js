@@ -200,9 +200,7 @@ export class CanvasGrid {
             widget.getAttribute('gs-no-resize') === 'true') {
           return;
         }
-        const grabEl = e.currentTarget;
-        const pid = e.pointerId ?? null;
-        pos = grabEl.dataset.pos;
+        pos = e.currentTarget.dataset.pos;
         if (!pos) return;
         e.stopPropagation();
         const rect = widget.getBoundingClientRect();
@@ -262,16 +260,16 @@ export class CanvasGrid {
         const up = ev => {
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', up);
-          if (pid != null) grabEl.releasePointerCapture?.(pid);
+          e.currentTarget.releasePointerCapture?.(ev.pointerId);
           if (!live) {
             const snapW = Math.round(curW / this.options.columnWidth);
             const snapH = Math.round(curH / this.options.cellHeight);
             const snapX = Math.round(curPX / this.options.columnWidth);
             const snapY = Math.round(curPY / this.options.cellHeight);
-            this.update(widget, { w: snapW, h: snapH, x: snapX, y: snapY });
             widget.style.removeProperty('width');
             widget.style.removeProperty('height');
             widget.style.removeProperty('transform');
+            this.update(widget, { w: snapW, h: snapH, x: snapX, y: snapY });
           }
           if (pos != null) this._emit('resizestop', this.activeEl);
           pos = null;
@@ -279,7 +277,7 @@ export class CanvasGrid {
         this._emit('resizestart', widget);
         document.addEventListener('pointermove', move);
         document.addEventListener('pointerup', up);
-        if (pid != null) grabEl.setPointerCapture?.(pid);
+        e.currentTarget.setPointerCapture?.(e.pointerId);
       };
 
       edges.forEach(edge => edge.addEventListener('pointerdown', startResize));
@@ -351,10 +349,10 @@ export class CanvasGrid {
             const snapH = Math.round(curH / this.options.cellHeight);
             const snapX = Math.round(curPX / this.options.columnWidth);
             const snapY = Math.round(curPY / this.options.cellHeight);
-            this.update(el, { w: snapW, h: snapH, x: snapX, y: snapY });
             el.style.removeProperty('width');
             el.style.removeProperty('height');
             el.style.removeProperty('transform');
+            this.update(el, { w: snapW, h: snapH, x: snapX, y: snapY });
           }
           this._emit('resizestop', el);
         };
@@ -424,7 +422,6 @@ export class CanvasGrid {
       el.releasePointerCapture?.(e.pointerId);
       const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
       this.update(el, { x: snap.x, y: snap.y });
-      if (!this.options.liveSnap) el.style.removeProperty('transform');
       this._emit('dragstop', el);
     };
 

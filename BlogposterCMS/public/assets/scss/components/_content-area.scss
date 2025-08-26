@@ -109,7 +109,6 @@
 // Dashboard editing styles
 body.dashboard-edit-mode .canvas-item {
   border: 2px solid transparent;
-  pointer-events: none;
 }
 
 body.dashboard-edit-mode .canvas-item .widget-remove,
@@ -122,13 +121,6 @@ body.dashboard-edit-mode .canvas-item-content {
   pointer-events: none;
 }
 
-body.dashboard-edit-mode .canvas-item .hit-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: auto;
-  z-index: 2000;
-}
-
 body.dashboard-edit-mode .canvas-item .widget-remove {
   position: absolute;
   top: 2px;
@@ -137,8 +129,7 @@ body.dashboard-edit-mode .canvas-item .widget-remove {
   border: none;
   padding: 2px;
   cursor: pointer;
-  z-index: 2001;
-  pointer-events: auto;
+  z-index: 1000;
   transition: opacity 0.2s ease;
 }
 
@@ -150,8 +141,7 @@ body.dashboard-edit-mode .canvas-item .widget-resize {
   border: none;
   padding: 2px;
   cursor: pointer;
-  z-index: 2001;
-  pointer-events: auto;
+  z-index: 1000;
   transition: opacity 0.2s ease;
 }
 

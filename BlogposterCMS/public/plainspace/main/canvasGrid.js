@@ -260,7 +260,7 @@ export class CanvasGrid {
         const up = ev => {
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', up);
-          e.currentTarget.releasePointerCapture?.(ev.pointerId);
+          e.currentTarget?.releasePointerCapture?.(ev.pointerId);
           if (!live) {
             const snapW = Math.round(curW / this.options.columnWidth);
             const snapH = Math.round(curH / this.options.cellHeight);
@@ -277,7 +277,7 @@ export class CanvasGrid {
         this._emit('resizestart', widget);
         document.addEventListener('pointermove', move);
         document.addEventListener('pointerup', up);
-        e.currentTarget.setPointerCapture?.(e.pointerId);
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
       };
 
       edges.forEach(edge => edge.addEventListener('pointerdown', startResize));
@@ -343,7 +343,7 @@ export class CanvasGrid {
         const up = ev => {
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', up);
-          handle.releasePointerCapture?.(ev.pointerId);
+          handle?.releasePointerCapture?.(ev.pointerId);
           if (!live) {
             const snapW = Math.round(curW / this.options.columnWidth);
             const snapH = Math.round(curH / this.options.cellHeight);
@@ -359,7 +359,7 @@ export class CanvasGrid {
         this._emit('resizestart', el);
         document.addEventListener('pointermove', move);
         document.addEventListener('pointerup', up);
-        handle.setPointerCapture?.(e.pointerId);
+        handle?.setPointerCapture?.(e.pointerId);
       });
     }
   }
@@ -419,7 +419,7 @@ export class CanvasGrid {
       }
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
-      el.releasePointerCapture?.(e.pointerId);
+      el?.releasePointerCapture?.(e.pointerId);
       const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
       this.update(el, { x: snap.x, y: snap.y });
       this._emit('dragstop', el);
@@ -441,7 +441,7 @@ export class CanvasGrid {
       this._emit('dragstart', el);
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
-      el.setPointerCapture?.(e.pointerId);
+      el?.setPointerCapture?.(e.pointerId);
     };
 
     const start = e => {

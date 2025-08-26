@@ -117,6 +117,10 @@ body.dashboard-edit-mode .canvas-item .widget-menu {
   display: block;
 }
 
+body.dashboard-edit-mode .canvas-item-content {
+  pointer-events: none;
+}
+
 body.dashboard-edit-mode .canvas-item .widget-remove {
   position: absolute;
   top: 2px;

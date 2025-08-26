@@ -116,6 +116,7 @@ export class BoundingBoxManager extends EventTarget {
   }
 
   show() {
+    this.canvas.appendChild(this.box);
     this.box.style.display = 'block';
   }
 

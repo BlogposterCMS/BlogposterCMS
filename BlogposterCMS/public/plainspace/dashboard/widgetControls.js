@@ -9,14 +9,6 @@ export function attachDashboardControls(el, grid) {
   // Avoid adding duplicate controls if already attached
   if (el.querySelector('.widget-remove')) return;
 
-  // Overlay to capture drag events while widget body is non-interactive
-  const hit = document.createElement('div');
-  hit.className = 'hit-layer';
-  hit.addEventListener('pointerdown', ev => {
-    el._gridDragStart?.(ev);
-  });
-  el.appendChild(hit);
-
   // Remove button
   const removeBtn = document.createElement('button');
   removeBtn.className = 'widget-remove';

@@ -6,9 +6,6 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
-- Edit mode enables drag/resize by toggling CanvasGrid static state and ensuring bounding-box and hit-layer pointer events don't block controls.
-- Resize handlers release pointer capture on the correct element, preventing errors and ensuring consistent snapping.
-- Drag and resize now clear preview transforms after snapping so widgets keep their new size and position.
 - Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.
 - Bounding box is consistently rendered above widgets and widget content is disabled in edit mode, keeping resize handles usable.
 - Bounding box now uses transparent edge overlays, keeping widget buttons and native resize handles clickable.
@@ -30,7 +27,6 @@ El Psy Kongroo
 
 
 ### Added
-- Dashboard layout saves widget positions after drag or resize via `saveDashboardLayout`.
 - Optional `liveSnapResize` flag to enable per-frame snapping during resizes.
 - CanvasGrid exposes an optional `liveSnap` flag to enable per-frame snapping during drags.
 - Dashboard now injects its own remove and resize controls and tracks drag state via CanvasGrid events, revealing buttons only when selected or dragging.

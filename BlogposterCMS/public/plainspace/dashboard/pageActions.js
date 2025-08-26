@@ -1,4 +1,4 @@
-import { getBuilderAppName } from '../utils.js';
+import { getDesignerAppName } from '../utils.js';
 
 export async function createNewPage() {
   const title = prompt('New page title:');
@@ -15,9 +15,9 @@ export async function createNewPage() {
       status: 'published'
     }) || {};
 
-    const builder = await getBuilderAppName();
-    if (pageId && builder) {
-      window.location.href = `/admin/app/${encodeURIComponent(builder)}/${pageId}?layer=1`;
+    const designer = await getDesignerAppName();
+    if (pageId && designer) {
+      window.location.href = `/admin/app/${encodeURIComponent(designer)}/${pageId}?layer=1`;
     } else {
       window.location.reload();
     }
@@ -40,9 +40,9 @@ export async function createNewLayout() {
       layout: [],
       previewPath: ''
     });
-    const builder = await getBuilderAppName();
-    if (builder) {
-      window.location.href = `/admin/app/${encodeURIComponent(builder)}?layout=${encodeURIComponent(layoutName.trim())}`;
+    const designer = await getDesignerAppName();
+    if (designer) {
+      window.location.href = `/admin/app/${encodeURIComponent(designer)}?layout=${encodeURIComponent(layoutName.trim())}`;
     }
   } catch (err) {
     alert('Error: ' + err.message);

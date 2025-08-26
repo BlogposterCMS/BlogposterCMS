@@ -14,7 +14,7 @@ import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 
-import { addHitLayer, applyBuilderTheme, wrapCss, executeJs } from './utils.js';
+import { addHitLayer, applyDesignerTheme, wrapCss, executeJs } from './utils.js';
 import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
@@ -32,7 +32,7 @@ async function loadToPng() {
       const mod = await import('../assets/js/html-to-img.js');
       _toPng = mod.toPng;
     } catch (err2) {
-      console.warn('[Builder] html-to-image unavailable', err2);
+      console.warn('[Designer] html-to-image unavailable', err2);
       _toPng = async () => '';
     }
   }
@@ -162,7 +162,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
     allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
   } catch (err) {
-    console.error('[Builder] failed to load widgets', err);
+    console.error('[Designer] failed to load widgets', err);
   }
 
   sidebarEl.querySelector('.drag-icons').innerHTML = allWidgets.map(w => `
@@ -202,7 +202,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     codeMap: ensureCodeMap(),
     getLayer: () => activeLayer
   };
-  await applyBuilderTheme();
+  await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
   const grid = initGrid(gridEl, state, selectWidget);
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
@@ -315,10 +315,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
         globalLayoutName = globalRes?.name || null;
       } catch (err) {
-        console.warn('[Builder] failed to load global layout', err);
+        console.warn('[Designer] failed to load global layout', err);
       }
     } catch (err) {
-      console.error('[Builder] load layout or page error', err);
+      console.error('[Designer] load layout or page error', err);
     }
   }
   else {
@@ -332,7 +332,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         });
         initialLayout = Array.isArray(tplRes?.layout) ? tplRes.layout : [];
       } catch (err) {
-        console.warn('[Builder] failed to load layout template', err);
+        console.warn('[Designer] failed to load layout template', err);
       }
     }
     try {
@@ -344,7 +344,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
       globalLayoutName = globalRes?.name || null;
     } catch (err) {
-      console.warn('[Builder] failed to load global layout', err);
+      console.warn('[Designer] failed to load global layout', err);
     }
   }
 
@@ -544,7 +544,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       const toPng = await loadToPng();
       return await toPng(gridEl, { cacheBust: true });
     } catch (err) {
-      console.error('[Builder] preview capture error', err);
+      console.error('[Designer] preview capture error', err);
       return '';
     }
   }
@@ -585,7 +585,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
       alert('Layout template saved');
     } catch (err) {
-      console.error('[Builder] saveLayoutTemplate error', err);
+      console.error('[Designer] saveLayoutTemplate error', err);
       alert('Save failed: ' + err.message);
     }
   });
@@ -675,7 +675,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         name
       });
     } catch (err) {
-      console.warn('[Builder] getPublishedDesignMeta', err);
+      console.warn('[Designer] getPublishedDesignMeta', err);
     }
     try {
       await meltdownEmit('deleteLocalItem', {
@@ -686,7 +686,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         itemName: existingMeta?.path ? existingMeta.path.split('/').pop() : safeName
       });
     } catch (err) {
-      console.warn('[Builder] deleteLocalItem', err);
+      console.warn('[Designer] deleteLocalItem', err);
     }
     try {
       await meltdownEmit('saveLayoutTemplate', {
@@ -724,7 +724,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       });
       alert('Layout published');
     } catch (err) {
-      console.error('[Builder] publish error', err);
+      console.error('[Designer] publish error', err);
       alert('Publish failed: ' + err.message);
     }
   });

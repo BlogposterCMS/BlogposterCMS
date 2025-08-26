@@ -5,6 +5,10 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Changed
+- Builder modules relocated into the standalone designer app, removing dashboard references and loading the designer via AppLoader.
+- Designer app uses shared sanitizer module instead of editor dependency.
+
 ### Fixed
 - Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.
 - Bounding box is consistently rendered above widgets and widget content is disabled in edit mode, keeping resize handles usable.

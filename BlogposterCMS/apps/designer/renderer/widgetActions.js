@@ -63,7 +63,7 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
             updateRender();
           }
         } catch (err) {
-          console.error('[Builder] openMediaExplorer error', err);
+          console.error('[Designer] openMediaExplorer error', err);
         }
       });
 
@@ -98,7 +98,7 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
             overlay.updateRender && overlay.updateRender();
           }
         } catch (err) {
-          console.error('[Builder] openMediaExplorer error', err);
+          console.error('[Designer] openMediaExplorer error', err);
         }
       };
     }
@@ -110,7 +110,7 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
         const resp = await window.fetchWithTimeout(new URL(widgetDef.codeUrl, document.baseURI).href);
         codeData.sourceJs = await resp.text();
       } catch (err) {
-        console.error('[Builder] fetch widget source error', err);
+        console.error('[Designer] fetch widget source error', err);
         codeData.sourceJs = '';
       }
     }

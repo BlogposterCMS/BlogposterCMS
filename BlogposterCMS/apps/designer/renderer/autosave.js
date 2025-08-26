@@ -38,6 +38,6 @@ export async function saveCurrentLayout({ autosave = false } = {}, ctx) {
     ctx.lastSavedLayoutStr = layoutStr;
     ctx.pendingSave = false;
   } catch (err) {
-    console.error('[Builder] saveLayoutForViewport error', err);
+    console.error('[Designer] saveLayoutForViewport error', err);
   }
 }

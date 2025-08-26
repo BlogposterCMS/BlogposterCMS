@@ -1,6 +1,7 @@
-import { fetchPartial } from '../../public/plainspace/dashboard/fetchPartial.js';
-import { initBuilder } from '../../public/plainspace/builderRenderer.js';
-import { enableAutoEdit, sanitizeHtml } from '../../public/plainspace/editor/editor.js';
+import { fetchPartial } from './fetchPartial.js';
+import { initBuilder } from './builderRenderer.js';
+import { enableAutoEdit } from './editor/editor.js';
+import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
 
 let bootstrapped = false;
 
@@ -17,7 +18,7 @@ async function bootstrap() {
       panelContainer.innerHTML = sanitizeHtml(textHtml);
     }
   } catch (err) {
-    console.error('[Builder App] Failed to load sidebar:', err);
+    console.error('[Designer App] Failed to load sidebar:', err);
   }
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -29,7 +30,7 @@ async function bootstrap() {
   await initBuilder(sidebarEl, contentEl, pageId, startLayer, layoutNameParam);
   enableAutoEdit();
 
-  window.parent.postMessage({ type: 'builder-ready' }, '*');
+  window.parent.postMessage({ type: 'designer-ready' }, '*');
 }
 
 function maybeBootstrap() {

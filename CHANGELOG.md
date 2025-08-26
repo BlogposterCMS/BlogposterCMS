@@ -5,28 +5,6 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-### Fixed
-- CanvasGrid pointer handlers now verify `currentTarget` and resize handles before releasing pointer capture to avoid null errors.
-- Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.
-- Bounding box is consistently rendered above widgets and widget content is disabled in edit mode, keeping resize handles usable.
-- Bounding box now uses transparent edge overlays, keeping widget buttons and native resize handles clickable.
-- CanvasGrid now resets cursors and clears temporary resize styles after snapping; resize previews bundle pointer moves with `requestAnimationFrame` for smoother feedback.
-- CanvasGrid resizing no longer snaps to the grid while dragging, providing smooth pixel-based previews before snapping on release.
-- Designer app imports Plainspace modules via `/plainspace` to avoid `coming-soon` placeholders when loading builder scripts.
-- Hover cursor updates are throttled with `requestAnimationFrame`, resize edges widen on touch devices and disabled bounding boxes no longer intercept clicks.
-- Bounding box frame now provides edge cursors, scales its hit area with zoom and starts widget drags without synthetic pointer events; designer retains its classic handles.
-- Reverted accidental designer stylesheet edits; bounding box handles remain in the standalone designer.
-- Bounding box updates now run in the next animation frame so the selection box stays aligned during drags.
-- Drag handle styles correctly target `.canvas-item:before` to ensure grip visibility.
-- Drag handlers now sync transformations and bounding box updates via `requestAnimationFrame` to prevent jitter when moving widgets.
-- Bounding box positions now account for canvas scroll and zoom via `localRect`, retaining the `will-change` hint for stable rendering.
-- Bounding box updates now round to device pixels and throttle via `requestAnimationFrame` for smoother interactions.
-- Widget dragging now disables transitions, shadows and filters while the canvas grid uses CSS containment to isolate layout work.
-- Column width calculations round to whole pixels to prevent subpixel snapping jitter.
-
-
-
-
 ### Added
 - Optional `liveSnapResize` flag to enable per-frame snapping during resizes.
 - CanvasGrid exposes an optional `liveSnap` flag to enable per-frame snapping during drags.
@@ -73,6 +51,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Builder modules relocated into the standalone designer app, removing dashboard references and loading the designer via AppLoader.
+- Designer app uses shared sanitizer module instead of editor dependency.
 - Designer app stylesheet split into component-specific SCSS files for easier maintenance.
 - Bounding box resizing now uses the frame itself instead of separate handles.
 - CanvasGrid drags now move smoothly without snapping until release.
@@ -132,6 +112,24 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Restored shared grid modules (`canvasGrid`, `BoundingBoxManager`, `grid-utils`, `globalEvents`) to `plainspace/main` so the designer app no longer contains framework code.
+- CanvasGrid pointer handlers now verify `currentTarget` and resize handles before releasing pointer capture to avoid null errors.
+- Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.
+- Bounding box is consistently rendered above widgets and widget content is disabled in edit mode, keeping resize handles usable.
+- Bounding box now uses transparent edge overlays, keeping widget buttons and native resize handles clickable.
+- CanvasGrid now resets cursors and clears temporary resize styles after snapping; resize previews bundle pointer moves with `requestAnimationFrame` for smoother feedback.
+- CanvasGrid resizing no longer snaps to the grid while dragging, providing smooth pixel-based previews before snapping on release.
+- Designer app imports Plainspace modules via `/plainspace` to avoid `coming-soon` placeholders when loading builder scripts.
+- Hover cursor updates are throttled with `requestAnimationFrame`, resize edges widen on touch devices and disabled bounding boxes no longer intercept clicks.
+- Bounding box frame now provides edge cursors, scales its hit area with zoom and starts widget drags without synthetic pointer events; designer retains its classic handles.
+- Reverted accidental designer stylesheet edits; bounding box handles remain in the standalone designer.
+- Bounding box updates now run in the next animation frame so the selection box stays aligned during drags.
+- Drag handle styles correctly target `.canvas-item:before` to ensure grip visibility.
+- Drag handlers now sync transformations and bounding box updates via `requestAnimationFrame` to prevent jitter when moving widgets.
+- Bounding box positions now account for canvas scroll and zoom via `localRect`, retaining the `will-change` hint for stable rendering.
+- Bounding box updates now round to device pixels and throttle via `requestAnimationFrame` for smoother interactions.
+- Widget dragging now disables transitions, shadows and filters while the canvas grid uses CSS containment to isolate layout work.
+- Column width calculations round to whole pixels to prevent subpixel snapping jitter.
 - Designer app now receives CSRF and admin tokens via `postMessage`, removing inline scripts that violated CSP.
 - Restore missing resize and delete controls for dashboard widgets and ensure drag or selection styling overrides hover effects.
 - Removed inline scripts from admin app loader to enforce Content Security Policy compliance.

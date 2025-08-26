@@ -2,7 +2,7 @@ import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
 import { attachDashboardControls } from '../dashboard/widgetControls.js';
 const { sanitizeHtml } = await import(
-  /* webpackIgnore: true */ '/plainspace/editor/core/sanitizer.js'
+  /* webpackIgnore: true */ '/plainspace/sanitizer.js'
 );
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
@@ -10,7 +10,6 @@ import { applyWidgetOptions } from './widgetOptions.js';
 // Default rows for admin widgets (~100px with CanvasGrid)
 // Temporary patch: double the default height for larger widgets
 const DEFAULT_ADMIN_ROWS = 100;
-
 
 function getGlobalCssUrl(lane) {
   if (lane === 'admin') return '/assets/css/site.css';
@@ -26,10 +25,6 @@ function ensureGlobalStyle(lane) {
   link.href = url;
   link.dataset.globalStyle = lane;
   document.head.appendChild(link);
-
-
-  // In builder mode widgets import the theme in their shadow roots.
-  // Avoid injecting the theme globally so the builder UI remains untouched.
 }
 
 async function fetchPartialSafe(name, type) {
@@ -395,83 +390,38 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     const sidebarEl = document.getElementById('sidebar');
     const contentEl = document.getElementById('content');
 
-    if (slug === 'builder') {
-      topHeaderEl?.remove();
-      mainHeaderEl?.remove();
-      document.getElementById('content-header')?.remove();
-    }
-
     if (!contentEl) return;
 
     // 4. LOAD HEADER PARTIALS
-    if (slug !== 'builder') {
-      if (topHeaderEl) {
-        topHeaderEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(
-            config.layout?.header || 'top-header'
-          )
+    if (topHeaderEl) {
+      topHeaderEl.innerHTML = sanitizeHtml(
+        await fetchPartialSafe(
+          config.layout?.header || 'top-header'
+        )
+      );
+      document.dispatchEvent(new CustomEvent('top-header-loaded'));
+    }
+    if (mainHeaderEl) {
+      if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
+        mainHeaderEl.innerHTML = '';
+      } else {
+        mainHeaderEl.innerHTML = sanitizeHtml(
+          await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
         );
-        document.dispatchEvent(new CustomEvent('top-header-loaded'));
-      }
-      if (mainHeaderEl) {
-        if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
-          mainHeaderEl.innerHTML = '';
-        } else {
-          mainHeaderEl.innerHTML = sanitizeHtml(
-            await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
-          );
-          document.dispatchEvent(new CustomEvent('main-header-loaded'));
-        }
-      }
-      const contentHeaderEl = document.getElementById('content-header');
-      if (contentHeaderEl) {
-        contentHeaderEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(
-            config.layout?.contentHeader || 'content-header'
-          )
-        );
-        document.dispatchEvent(new CustomEvent('content-header-loaded'));
+        document.dispatchEvent(new CustomEvent('main-header-loaded'));
       }
     }
-
-    // 5. HANDLE BUILDER PAGE SEPARATELY
-    if (slug === 'builder') {
-      const builderSidebar = config.layout?.sidebar || 'sidebar-builder';
-      if (sidebarEl) {
-        sidebarEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(builderSidebar)
-        );
-        const panelContainer = sidebarEl.querySelector('#builderPanel');
-        if (panelContainer) {
-          const textHtml = await fetchPartialSafe('text-panel', 'builder');
-          panelContainer.innerHTML = sanitizeHtml(textHtml);
-        }
-        document.dispatchEvent(new CustomEvent('sidebar-loaded'));
-      }
-
-      const urlParams = new URLSearchParams(window.location.search);
-      // Pass page IDs as strings so MongoDB ObjectIds remain intact. Postgres
-      // will cast numeric strings automatically.
-      const pageIdParam = urlParams.get('pageId') || null;
-      const layoutNameParam = urlParams.get('layout') || null;
-      const startLayerParam = parseInt(urlParams.get('layer'), 10);
-      const startLayer = Number.isFinite(startLayerParam)
-        ? startLayerParam
-        : (Number(config.layout?.layer) || (layoutNameParam ? 1 : 0));
-
-      const [{ initBuilder }, { enableAutoEdit }] = await Promise.all([
-        import(/* webpackIgnore: true */ '/plainspace/builderRenderer.js'),
-        import(/* webpackIgnore: true */ '/plainspace/editor/core/editor.js')
-      ]);
-
-      await initBuilder(sidebarEl, contentEl, pageIdParam, startLayer, layoutNameParam);
-
-      enableAutoEdit();
-
-      return;
+    const contentHeaderEl = document.getElementById('content-header');
+    if (contentHeaderEl) {
+      contentHeaderEl.innerHTML = sanitizeHtml(
+        await fetchPartialSafe(
+          config.layout?.contentHeader || 'content-header'
+        )
+      );
+      document.dispatchEvent(new CustomEvent('content-header-loaded'));
     }
 
-    // 6. LOAD SIDEBAR PARTIAL FOR NON-BUILDER
+    // 5. LOAD SIDEBAR PARTIAL
     const sidebarPartial = (config.layout?.inheritsLayout === false)
       ? 'empty-sidebar'
       : (config.layout?.sidebar || 'default-sidebar');
@@ -488,7 +438,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       }
       document.dispatchEvent(new CustomEvent('sidebar-loaded'));
     }
-    // 7. FETCH WIDGET REGISTRY
+    // 6. FETCH WIDGET REGISTRY
     let widgetLane = lane === 'admin' ? (config.widgetLane || 'admin') : 'public';
     // Prevent misconfigured pages from requesting admin widgets on the public lane
     if (lane !== 'admin' && widgetLane === 'admin') {
@@ -522,7 +472,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       console.warn('[Renderer] failed to load global layout', err);
     }
 
-    // 8. PUBLIC PAGE: render widgets using stored layout in static grid
+    // 7. PUBLIC PAGE: render widgets using stored layout in static grid
     if (lane !== 'admin') {
       if (config.layoutTemplate) {
         let layoutArr = [];

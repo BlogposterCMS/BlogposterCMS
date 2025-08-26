@@ -1,4 +1,4 @@
-import { getBuilderAppName } from '../../../../utils.js';
+import { getDesignerAppName } from '../../../../utils.js';
 import { bpDialog } from '/assets/js/bpDialog.js';
 import { pageService } from './pageService.js';
 
@@ -266,9 +266,9 @@ async function editPage(id) {
 }
 
 async function editLayout(id) {
-  const builder = await getBuilderAppName();
-  if (builder) {
-    window.location.href = `/admin/app/${encodeURIComponent(builder)}/${id}?layer=1`;
+  const designer = await getDesignerAppName();
+  if (designer) {
+    window.location.href = `/admin/app/${encodeURIComponent(designer)}/${id}?layer=1`;
   }
 }
 

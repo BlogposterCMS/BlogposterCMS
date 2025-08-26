@@ -1,6 +1,6 @@
-// public/plainspace/main/pixelGrid.js
+// apps/designer/main/pixelGrid.js
 // Pixel-based drag & resize grid for the builder
-import { CanvasGrid } from './canvasGrid.js';
+import { CanvasGrid } from '/plainspace/main/canvasGrid.js';
 
 export class PixelGrid extends CanvasGrid {
   constructor(options = {}, el) {

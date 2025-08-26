@@ -14,7 +14,7 @@ async function registerWidgetEvents(widgetDef) {
   try {
     await window.meltdownEmit('registerWidgetUsage', { jwt, events });
   } catch (err) {
-    console.warn('[Builder] registerWidgetUsage failed for', widgetDef.id, err);
+    console.warn('[Designer] registerWidgetUsage failed for', widgetDef.id, err);
   }
 }
 
@@ -67,7 +67,7 @@ export async function renderWidget(wrapper, widgetDef, codeMap, customData = nul
       });
     }
     if (data.js) {
-      try { executeJs(data.js, wrapper, root); } catch (e) { console.error('[Builder] custom js error', e); }
+      try { executeJs(data.js, wrapper, root); } catch (e) { console.error('[Designer] custom js error', e); }
     }
     return;
   }
@@ -78,7 +78,7 @@ export async function renderWidget(wrapper, widgetDef, codeMap, customData = nul
     const m = await import(/* webpackIgnore: true */ codeUrl);
     m.render?.(container, ctx);
   } catch (err) {
-    console.error('[Builder] widget import error', err);
+    console.error('[Designer] widget import error', err);
   }
 
   if (widgetDef.id === 'textBox') addHitLayer(wrapper);

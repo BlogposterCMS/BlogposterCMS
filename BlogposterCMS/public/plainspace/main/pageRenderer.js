@@ -674,7 +674,8 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     }
     setColumnWidth();
     window.addEventListener('resize', setColumnWidth);
-    grid.setStatic(true);
+    const isEdit = document.body.classList.contains('dashboard-edit-mode');
+    grid.setStatic(!isEdit);
     document.body.classList.add('grid-mode');
     async function persistLayout() {
       const items = Array.from(document.querySelectorAll('.canvas-grid .canvas-item')).map(el => ({

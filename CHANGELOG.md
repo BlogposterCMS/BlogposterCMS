@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Edit mode enables drag/resize by toggling CanvasGrid static state and ensuring bounding-box and hit-layer pointer events don't block controls.
 - Resize handlers release pointer capture on the correct element, preventing errors and ensuring consistent snapping.
 - Drag and resize now clear preview transforms after snapping so widgets keep their new size and position.
 - Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.

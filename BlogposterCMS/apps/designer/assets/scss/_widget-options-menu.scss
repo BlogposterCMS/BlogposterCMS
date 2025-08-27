@@ -1,61 +1,248 @@
+// Canva-inspired Widget Options Menu
 .widget-options-menu {
   position: fixed;
   top: 0;
   left: 0;
-  background: var(--color-white);
-  border-radius: 9px;
-  box-shadow: var(--shadow-card);
-  font-family: var(--font-body);
+  min-width: 200px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px;
   display: none;
   z-index: 1000;
+  backdrop-filter: blur(10px);
+  animation: menuSlideIn 0.2s ease;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+    color: var(--color-text, #333);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      transform: translateX(2px);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    .icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+    }
+
+    &:hover .icon {
+      opacity: 1;
+    }
+
+    // Specific button styling
+    &.menu-edit {
+      &:hover {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+
+        .icon {
+          filter: hue-rotate(240deg);
+        }
+      }
+    }
+
+    &.menu-copy {
+      &:hover {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+
+        .icon {
+          filter: hue-rotate(120deg);
+        }
+      }
+    }
+
+    &.menu-template {
+      &:hover {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+
+        .icon {
+          filter: hue-rotate(60deg);
+        }
+      }
+    }
+
+    &.menu-delete {
+      &:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+
+        .icon {
+          filter: hue-rotate(0deg) saturate(2);
+        }
+      }
+    }
+  }
+
+  // Menu separator
+  .menu-separator {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+    margin: 6px 0;
+  }
+
+  &.show {
+    display: block;
+  }
 }
 
 .builder-options-menu {
   position: fixed;
-  background: var(--color-white);
-  border-radius: 9px;
-  box-shadow: var(--shadow-card);
-  font-family: var(--font-body);
+  min-width: 220px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px;
   display: none;
   z-index: 1000;
+  backdrop-filter: blur(10px);
+  animation: menuSlideIn 0.2s ease;
+
+  button,
+  label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+    color: var(--color-text, #333);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      transform: translateX(2px);
+    }
+
+    .icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+
+    // Checkbox styling
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      appearance: none;
+      position: relative;
+
+      &:checked {
+        background: var(--accent-color, #007bff);
+        border-color: var(--accent-color, #007bff);
+
+        &::after {
+          content: '✓';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          color: white;
+          font-size: 10px;
+          font-weight: bold;
+        }
+      }
+
+      &:hover {
+        border-color: var(--accent-color, #007bff);
+      }
+    }
+
+    // Undo/Redo specific styling
+    &.menu-undo:hover {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+    }
+
+    &.menu-redo:hover {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+
+    // Preview buttons
+    &.menu-preview:hover {
+      background: rgba(99, 102, 241, 0.1);
+      color: #6366f1;
+    }
+
+    // Export/Save buttons
+    &.menu-export:hover,
+    &.menu-save:hover {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+  }
+
+  &.show {
+    display: block;
+  }
 }
 
-.builder-options-menu button,
-.builder-options-menu label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  font-family: var(--font-body);
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-.builder-options-menu label {
-  cursor: pointer;
-}
+// Mobile adjustments
+@media (max-width: 768px) {
+  .widget-options-menu,
+  .builder-options-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    max-height: 60vh;
+    overflow-y: auto;
 
-.builder-options-menu button:hover,
-.builder-options-menu label:hover {
-  background: var(--color-light-gray, #f0f0f0);
-}
+    button,
+    label {
+      padding: 14px 16px;
+      font-size: 16px;
 
-.widget-options-menu button {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 9px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  font-family: var(--font-body);
-}
-
-.widget-options-menu button:hover {
-  background: var(--color-light-gray, #f0f0f0);
+      .icon {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
 }

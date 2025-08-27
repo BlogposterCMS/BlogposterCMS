@@ -1,66 +1,364 @@
+// Canva-inspired Header Design
 .builder-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 24px;
+  padding: 12px 24px;
   background: var(--color-white);
-  border-bottom: 1px solid #eee;
-  min-height: 56px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-  gap: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  min-height: 64px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  gap: 16px;
   position: sticky;
   top: 0;
   z-index: 120;
+  backdrop-filter: blur(10px);
+
+  // Left section - Logo and navigation
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-color, #007bff);
+      text-decoration: none;
+    }
+
+    .builder-back-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--color-text, #333);
+      font-size: 14px;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      svg, img {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  // Center section - Project info
+  .layout-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    max-width: 400px;
+    margin: 0 auto;
+
+    .layout-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      outline: none;
+      background: transparent;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      flex: 1;
+      text-align: center;
+      color: var(--color-text, #333);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      &:focus {
+        background: white;
+        box-shadow: 0 0 0 2px var(--accent-color, #007bff);
+      }
+    }
+
+    .layout-name-input {
+      font-size: 1.25rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      border: 2px solid var(--accent-color, #007bff);
+      border-radius: 8px;
+      outline: none;
+      flex: 1;
+      text-align: center;
+      background: white;
+      color: var(--color-text, #333);
+    }
+
+    .edit-name-icon {
+      padding: 6px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--color-text, #666);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--color-text, #333);
+      }
+
+      svg, img {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  // Right section - Actions
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .builder-save-btn,
+    .builder-preview-btn,
+    .builder-publish-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      text-decoration: none;
+
+      svg, img {
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+
+    .builder-save-btn {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--color-text, #333);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      &.saved {
+        background: #22c55e;
+        color: white;
+      }
+    }
+
+    .builder-preview-btn {
+      background: #6366f1;
+      color: white;
+
+      &:hover {
+        background: #5856eb;
+      }
+    }
+
+    .builder-publish-btn {
+      background: var(--accent-color, #007bff);
+      color: white;
+
+      &:hover {
+        background: #0056b3;
+      }
+    }
+
+    .builder-menu-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--color-text, #333);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      svg, img {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
 }
 
-.builder-header .builder-back-btn,
-.builder-header .builder-save-btn,
-.builder-header .builder-preview-btn,
-.builder-header .builder-publish-btn,
-.builder-header .builder-menu-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.builder-header .layout-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-}
-
-.builder-header .layout-name {
-  font-size: 1.25rem;
-  font-weight: 500;
-  outline: none;
-}
-
-.builder-header .edit-name-icon {
-  margin-left: 6px;
-  cursor: pointer;
-}
-
-.builder-header .layout-name-input {
-  font-size: 1.25rem;
-  padding: 4px 8px;
-  flex: 1;
-}
-
-body.preview-mode .builder-header .builder-save-btn,
-body.preview-mode .builder-header .layout-info {
+// Builder options menu styling
+.builder-options-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 200px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px;
+  z-index: 200;
   display: none;
+
+  button, label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-text, #333);
+    transition: all 0.2s ease;
+    text-align: left;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+  }
+
+  &.show {
+    display: block;
+    animation: menuSlideIn 0.2s ease;
+  }
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Preview mode adjustments
+body.preview-mode .builder-header {
+  .builder-save-btn,
+  .layout-info {
+    display: none;
+  }
+
+  .header-right {
+    margin-left: auto;
+  }
 }
 
 .preview-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   background: var(--color-white);
-  border-bottom: 1px solid #eee;
-  padding: 6px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 16px;
   position: sticky;
   top: 0;
   z-index: 60;
+  backdrop-filter: blur(10px);
+
+  .preview-device-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-text, #333);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    &.active {
+      background: var(--accent-color, #007bff);
+      color: white;
+    }
+
+    svg, img {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .builder-header {
+    padding: 8px 16px;
+    gap: 8px;
+
+    .header-left .logo {
+      display: none;
+    }
+
+    .layout-info {
+      max-width: 200px;
+
+      .layout-name,
+      .layout-name-input {
+        font-size: 1rem;
+      }
+    }
+
+    .header-right {
+      gap: 8px;
+
+      .builder-save-btn,
+      .builder-preview-btn,
+      .builder-publish-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+
+        span:not(.icon) {
+          display: none;
+        }
+      }
+    }
+  }
 }

@@ -1,21 +1,133 @@
+// Canva-inspired Widget Action Bar
 .widget-action-bar {
   position: absolute;
-  background: var(--color-white);
-  border-radius: 9px;
-  box-shadow: var(--shadow-card);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
-  font-family: var(--font-body);
   gap: 4px;
-  padding: 2px;
+  padding: 6px;
   z-index: 1000;
+  backdrop-filter: blur(10px);
+  animation: actionBarSlideIn 0.2s ease;
+
+  button {
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: var(--color-text, #333);
+    position: relative;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.9);
+    }
+
+    // Lock button specific styling
+    &.action-lock {
+      &:hover {
+        background: #f59e0b;
+        color: white;
+      }
+
+      &.locked {
+        background: #f59e0b;
+        color: white;
+      }
+    }
+
+    // Duplicate button
+    &.action-duplicate {
+      &:hover {
+        background: #10b981;
+        color: white;
+      }
+    }
+
+    // Delete button
+    &.action-delete {
+      &:hover {
+        background: #ef4444;
+        color: white;
+      }
+    }
+
+    // Menu button
+    &.action-menu {
+      &:hover {
+        background: #6366f1;
+        color: white;
+      }
+    }
+
+    svg, img {
+      width: 16px;
+      height: 16px;
+      transition: all 0.2s ease;
+    }
+
+    // Tooltip
+    &::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 200;
+    }
+
+    &:hover::after {
+      opacity: 1;
+    }
+  }
+
+  // Positioning variants
+  &.top {
+    transform: translateY(-100%) translateY(-8px);
+  }
+
+  &.bottom {
+    transform: translateY(8px);
+  }
+
+  &.left {
+    transform: translateX(-100%) translateX(-8px);
+  }
+
+  &.right {
+    transform: translateX(8px);
+  }
 }
 
-.widget-action-bar button {
-  background: transparent;
-  border: none;
-  padding: 2px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+@keyframes actionBarSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 

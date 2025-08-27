@@ -1,17 +1,55 @@
+// Canva-inspired Canvas Design
 // Highlight widget wrapper on hover using the active user's color
 .builder-mode .canvas-item {
   border: 2px solid transparent;
-  transition: border-color 0.2s ease;
-}
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
 
-.builder-mode .canvas-item:hover,
-.builder-mode .canvas-item.selected {
-  border-color: var(--user-color);
-}
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(45deg, var(--user-color, #007bff), transparent, var(--user-color, #007bff));
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
 
-.builder-mode .canvas-item[data-global="true"]:hover,
-.builder-mode .canvas-item[data-global="true"].selected {
-  border-color: var(--shared-widget-color, #d4af37);
+  &:hover {
+    border-color: var(--user-color, #007bff);
+    box-shadow: 0 4px 20px rgba(0, 123, 255, 0.15);
+    transform: translateY(-2px);
+
+    &::before {
+      opacity: 0.1;
+    }
+  }
+
+  &.selected {
+    border-color: var(--user-color, #007bff);
+    box-shadow: 0 8px 24px rgba(0, 123, 255, 0.2);
+    transform: translateY(-2px);
+
+    &::before {
+      opacity: 0.15;
+    }
+  }
+
+  // Global widgets have special styling
+  &[data-global="true"] {
+    &:hover,
+    &.selected {
+      border-color: var(--shared-widget-color, #d4af37);
+      box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
+
+      &::before {
+        background: linear-gradient(45deg, var(--shared-widget-color, #d4af37), transparent, var(--shared-widget-color, #d4af37));
+      }
+    }
+  }
 }
 
 // Hide native resize handles when using the bounding box
@@ -24,73 +62,117 @@
   display: none !important;
 }
 
-
+// Main content area styling
 body.builder-mode #content {
-  margin-left: 57px;
-  height: calc(100vh - 79px);
-  overflow-y: auto;
-  padding-top: 0; // toolbar sits inside the content area
-  box-sizing: border-box;
+  margin-left: 72px; // Updated for new sidebar width
+  height: calc(100vh - 64px); // Updated for new header height
+  overflow: hidden; // Prevent scrollbars on main container
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  position: relative;
+
+  // Canvas container
+  #builderGrid {
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+    background: white;
+    border-radius: 12px 0 0 0;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+    position: relative;
+
+    &::before {
+      content: '';
+      position: fixed;
+      top: 64px;
+      left: 72px;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 20%, rgba(0, 123, 255, 0.02) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.02) 0%, transparent 50%),
+        linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      pointer-events: none;
+      z-index: -1;
+    }
+  }
 }
 
-body.builder-mode.panel-open #content {
-  margin-left: 336px;
-  transform: scale(0.9);
-  transform-origin: top left;
+// Panel open state
+body.builder-mode.panel-open {
+  #content {
+    margin-left: 364px; // sidebar + panel width
+    transform: scale(0.95);
+    transform-origin: top left;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .builder-panel {
+    display: flex;
+  }
+
+  #builderGrid {
+    border-radius: 12px;
+    overflow: hidden;
+  }
 }
 
-body.builder-mode.panel-open .builder-panel {
-  display: flex;
-}
-
-body.builder-mode.panel-open #builderGrid {
-  transform: scale(0.9);
-  transform-origin: top left;
-  margin-top: 56px;
-  height: calc(100% - 56px);
-  min-height: calc(100% - 56px);
-}
-
+// Updated dimensions
 body.builder-mode #builderGrid {
-  margin-top: 56px;
-  height: calc(100% - 56px);
-  min-height: calc(100% - 56px);
+  margin-top: 0; // Removed as we handle this with padding
+  height: 100%;
+  min-height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 // Ensure themed widget content matches its wrapper dimensions
 body.builder-mode .canvas-item-content.builder-themed {
   width: 100%;
   height: 100%;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
+// Hide headers in builder mode
 body.builder-mode #top-header,
 body.builder-mode #main-header {
   display: none;
 }
 
-body.preview-mode .builder-sidebar,
-body.preview-mode .widget-code-editor,
-body.preview-mode .widget-options-menu,
-body.preview-mode .builder-options-menu,
-body.preview-mode .canvas-item .widget-remove,
-body.preview-mode .canvas-item .widget-edit,
-body.preview-mode .canvas-item .widget-menu {
-  display: none !important;
+// Preview mode styling
+body.preview-mode {
+  .builder-sidebar,
+  .widget-code-editor,
+  .widget-options-menu,
+  .builder-options-menu,
+  .canvas-item .widget-remove,
+  .canvas-item .widget-edit,
+  .canvas-item .widget-menu,
+  .text-block-editor-toolbar {
+    display: none !important;
+  }
+
+  #builderGrid {
+    pointer-events: none;
+    margin-top: 0;
+    height: calc(100vh - 64px);
+    min-height: calc(100vh - 64px);
+    background: white;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #content {
+    margin-left: 0;
+    background: white;
+
+    &::before {
+      display: none;
+    }
+  }
 }
 
-
-body.preview-mode #builderGrid {
-  pointer-events: none;
-  margin-top: 56px;
-  height: calc(100% - 56px);
-  min-height: calc(100% - 56px);
-}
-
-body.preview-mode #content {
-  margin-left: 0;
-}
-
-
+// Preview device modes
 body.preview-mobile {
   --preview-width: 400px;
 }
@@ -103,28 +185,52 @@ body.preview-desktop {
   --preview-width: 1200px;
 }
 
-body.preview-mobile #content,
-body.preview-tablet #content,
-body.preview-desktop #content {
-  margin-left: auto;
-  margin-right: auto;
-  max-width: none;
+body.preview-mobile,
+body.preview-tablet,
+body.preview-desktop {
+  #content {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: var(--preview-width);
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+  }
 }
 
+// Widget styling improvements
 .canvas-item {
   pointer-events: auto;
   user-select: none;
-  box-shadow: none;
-  transition: box-shadow .15s ease;
+  transition: all 0.3s ease;
+  position: relative;
 
   .resize-handle {
     position: absolute;
-    width: 12px;
-    height: 12px;
-    right: 0;
-    bottom: 0;
+    width: 16px;
+    height: 16px;
+    right: -8px;
+    bottom: -8px;
     cursor: se-resize;
-    background: var(--user-color, #333);
+    background: var(--user-color, #007bff);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 100;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: white;
+      border-radius: 50%;
+    }
+  }
+
+  &:hover .resize-handle,
+  &.selected .resize-handle {
+    opacity: 1;
   }
 }
 
@@ -140,183 +246,253 @@ body.preview-desktop #content {
 .canvas-item[gs-locked="true"]::after {
   content: '';
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
-  background: url('/assets/icons/lock.svg') no-repeat center/contain;
+  bottom: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background: rgba(245, 158, 11, 0.9);
+  border-radius: 50%;
+  background-image: url('/assets/icons/lock.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px;
   pointer-events: none;
   z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .canvas-item[data-global="true"]::before {
   content: '';
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
-  background: url('/assets/icons/globe.svg') no-repeat center/contain;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background: rgba(212, 175, 55, 0.9);
+  border-radius: 50%;
+  background-image: url('/assets/icons/globe.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px;
   pointer-events: none;
   z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+// Layer management
 body.builder-mode .canvas-item.inactive-layer {
-  opacity: 0.6;
+  opacity: 0.4;
   position: relative;
   pointer-events: none;
-}
+  filter: grayscale(0.5);
 
-body.builder-mode .canvas-item.inactive-layer::after {
-  content: 'change layer to edit this widget';
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--color-text);
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  opacity: 0;
-  pointer-events: auto;
-  transition: opacity 0.2s ease;
-}
-
-body.builder-mode .canvas-item.inactive-layer:hover::after {
-  opacity: 1;
-}
-
-.builder-version {
-  position: fixed;
-  left: 0;
-  bottom: 32px;
-  padding: 2px 4px;
-  font-size: 10px;
-  color: var(--color-text);
-  background: rgba(255, 255, 255, 0.6);
-  pointer-events: none;
-  z-index: 50;
-}
-
-.layout-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  display: flex;
-  gap: 4px;
-  padding: 4px 8px;
-  background: var(--color-white);
-  border-top: 1px solid #eee;
-  z-index: 60;
-
-  button {
-    background: transparent;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
+  &::after {
+    content: 'Switch to this layer to edit';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--color-text, #333);
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    opacity: 0;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
   }
 
-  .active {
-    font-weight: 600;
+  &:hover::after {
+    opacity: 1;
   }
-
 }
 
+// Enhanced bounding box
 .bounding-box {
   position: absolute;
   top: 0;
   left: 0;
-  border: 1px dashed var(--user-color, #333);
+  border: 2px solid var(--user-color, #007bff);
   pointer-events: none;
   box-sizing: border-box;
   z-index: 1000;
   will-change: transform, width, height;
+  border-radius: 8px;
+  background: rgba(0, 123, 255, 0.05);
+
   .bbox-handle {
     position: absolute;
-    width: 8px;
-    height: 8px;
-    background: var(--user-color, #333);
+    width: 12px;
+    height: 12px;
+    background: var(--user-color, #007bff);
+    border: 2px solid white;
     border-radius: 50%;
     pointer-events: all;
     transform: scale(var(--inv-scale));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(calc(var(--inv-scale) * 1.2));
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
   }
+
+  // Handle positions
   .nw {
-    top: -4px;
-    left: -4px;
-    transform: translate(-50%, -50%) scale(var(--inv-scale));
+    top: -6px;
+    left: -6px;
     cursor: nwse-resize;
   }
   .n {
-    top: -4px;
+    top: -6px;
     left: 50%;
     transform: translateX(-50%) scale(var(--inv-scale));
     cursor: ns-resize;
   }
   .ne {
-    top: -4px;
-    right: -4px;
-    transform: translate(50%, -50%) scale(var(--inv-scale));
+    top: -6px;
+    right: -6px;
     cursor: nesw-resize;
   }
   .e {
     top: 50%;
-    right: -4px;
+    right: -6px;
     transform: translateY(-50%) scale(var(--inv-scale));
     cursor: ew-resize;
   }
   .se {
-    bottom: -4px;
-    right: -4px;
-    transform: translate(50%, 50%) scale(var(--inv-scale));
+    bottom: -6px;
+    right: -6px;
     cursor: nwse-resize;
   }
   .s {
-    bottom: -4px;
+    bottom: -6px;
     left: 50%;
     transform: translateX(-50%) scale(var(--inv-scale));
     cursor: ns-resize;
   }
   .sw {
-    bottom: -4px;
-    left: -4px;
-    transform: translate(-50%, 50%) scale(var(--inv-scale));
+    bottom: -6px;
+    left: -6px;
     cursor: nesw-resize;
   }
   .w {
     top: 50%;
-    left: -4px;
+    left: -6px;
     transform: translateY(-50%) scale(var(--inv-scale));
     cursor: ew-resize;
   }
+
+  &.disabled {
+    display: none;
+  }
 }
 
-.bounding-box.disabled {
-  display: none;
-}
-
+// Selection box
 .selection-box {
   position: absolute;
-  border: 1px dashed var(--user-color, #0aa);
+  border: 2px dashed var(--user-color, #007bff);
+  background: rgba(0, 123, 255, 0.05);
+  border-radius: 4px;
   transform-origin: 0 0;
 }
 
-.selection-box::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border: 2px solid currentColor;
-  transform: scale(var(--inv-scale));
+// Layout bar (bottom controls)
+.layout-bar {
+  position: fixed;
+  bottom: 0;
+  left: 72px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  z-index: 60;
+  backdrop-filter: blur(10px);
+
+  button {
+    background: transparent;
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--color-text, #666);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--color-text, #333);
+    }
+
+    &.active {
+      background: var(--accent-color, #007bff);
+      color: white;
+      font-weight: 500;
+    }
+  }
+
+  .zoom-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    button {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 50%;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.08);
+      }
+    }
+
+    .zoom-level {
+      min-width: 60px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--color-text, #666);
+    }
+  }
+}
+
+// Version indicator
+.builder-version {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--color-text, #999);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
   pointer-events: none;
+  z-index: 50;
+  backdrop-filter: blur(4px);
 }
 
-.hit-layer {
-  pointer-events: auto;
-}
-
+// Text editing states
 .canvas-item .editable {
   cursor: text;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: 2px solid var(--accent-color, #007bff);
+    outline-offset: 2px;
+    background: rgba(255, 255, 255, 0.9);
+  }
 }
 
 .canvas-item:not(.editing) .hit-layer {
@@ -326,6 +502,11 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
 .canvas-item.editing {
   z-index: 9999;
   cursor: text;
+
+  .hit-layer {
+    pointer-events: none;
+    cursor: text;
+  }
 }
 
 .canvas-item.selected .hit-layer,
@@ -336,7 +517,34 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
 
 .builder-mode .canvas-item.selected,
 .builder-mode .canvas-item.editing {
-  -webkit-user-select: text;
-     -moz-user-select: text;
-          user-select: text;
+  user-select: text;
+}
+
+// Responsive adjustments
+@media (max-width: 1024px) {
+  body.builder-mode #content {
+    margin-left: 60px;
+  }
+
+  .layout-bar {
+    left: 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  body.builder-mode #content {
+    margin-left: 0;
+    margin-bottom: 60px;
+  }
+
+  .layout-bar {
+    left: 0;
+    bottom: 60px;
+  }
+
+  body.builder-mode.panel-open #content {
+    margin-left: 0;
+    margin-bottom: calc(50vh + 60px);
+    transform: none;
+  }
 }

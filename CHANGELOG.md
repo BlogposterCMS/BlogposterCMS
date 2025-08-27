@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Bounding box is hidden during drags and grid commits deferred to drag end for smoother interactions.
 - Restored `setDisabled` method on grid-core `BoundingBoxManager` for builder compatibility.
 - Pixel-grid bounding box size now derives from DOM geometry, fixing offsets with rotated or padded widgets.
 - Pixel-grid bounding box now matches widget dimensions exactly and stays in sync through live snapping.

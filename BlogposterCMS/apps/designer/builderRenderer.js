@@ -60,7 +60,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   if (!displayPorts.length) displayPorts.push(...DEFAULT_PORTS);
 
   // Temporary patch: larger default widget height
-  const DEFAULT_ROWS = 100; // around 100px with pixel grid
+  const DEFAULT_ROWS = 100; // default widget height (~100px)
   const ICON_MAP = {
     systemInfo: 'info',
     activityLog: 'list',
@@ -219,12 +219,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (el) selectWidget(el);        // … Action-Bar zeigen
   });
   grid.on("dragstart", () => {
+    grid.bboxManager?.hide?.();
     actionBar.style.display = "none";
   });
   grid.on("resizestart", () => {
     actionBar.style.display = "none";
   });
   grid.on("dragstop", () => {
+    grid.bboxManager?.show?.();
     if (state.activeWidgetEl) selectWidget(state.activeWidgetEl);
   });
   grid.on("resizestop", () => {
@@ -376,10 +378,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       relX = (e.offsetX || 0) - rect.left;
       relY = (e.offsetY || 0) - rect.top;
     }
+    const columnCount = grid.options.columns || 12;
     const [x, y, w, h] = [
-      Math.floor((relX / rect.width) * 64) || 0,
-      Math.floor((relY / rect.height) * DEFAULT_ROWS) || 0,
-      8,
+      Math.floor((relX / rect.width) * columnCount) || 0,
+      Math.floor(relY / grid.options.cellHeight) || 0,
+      4,
       DEFAULT_ROWS
     ];
 
@@ -396,7 +399,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     wrapper.style.zIndex = String(activeLayer);
     wrapper.setAttribute('gs-w', w);
     wrapper.setAttribute('gs-h', h);
-    wrapper.setAttribute('gs-min-w', 4);
+    wrapper.setAttribute('gs-min-w', 1);
     wrapper.setAttribute('gs-min-h', DEFAULT_ROWS);
 
     const content = document.createElement('div');

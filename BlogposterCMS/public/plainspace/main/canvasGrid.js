@@ -116,6 +116,10 @@ export class CanvasGrid {
     if (this.options.percentageMode) {
       const gridW = this.el.clientWidth || 1;
       const gridH = this.el.clientHeight || 1;
+      const xPercent = Math.min((x * columnWidth / gridW) * 100, 100);
+      const yPercent = Math.min((y * cellHeight / gridH) * 100, 100);
+      el.dataset.xPercent = xPercent;
+      el.dataset.yPercent = yPercent;
       if (recalc) {
         const wPercent = Math.min((w * columnWidth / gridW) * 100, 100);
         const hPercent = Math.min((h * cellHeight / gridH) * 100, 100);
@@ -169,7 +173,7 @@ export class CanvasGrid {
     }
   }
 
-  update(el, opts = {}) {
+  update(el, opts = {}, meta = {}) {
     if (!el) return;
     if (opts.x != null) el.dataset.x = opts.x;
     if (opts.y != null) el.dataset.y = opts.y;
@@ -184,7 +188,7 @@ export class CanvasGrid {
     if (this.pushOnOverlap) this._resolveCollisions(el);
     if (el === this.activeEl) this._updateBBox();
     this._updateGridHeight();
-    this._emit('change', el);
+    if (!meta.silent) this._emit('change', el);
   }
 
   _bindResize(el) {
@@ -383,13 +387,21 @@ export class CanvasGrid {
 
     const apply = () => {
       frame = null;
+      const snap = snapToGrid(
+        targetX,
+        targetY,
+        this.options.columnWidth,
+        this.options.cellHeight
+      );
+      el.dataset.x = snap.x;
+      el.dataset.y = snap.y;
+      if (this.options.percentageMode) {
+        const gridW = this.el.clientWidth || 1;
+        const gridH = this.el.clientHeight || 1;
+        el.dataset.xPercent = Math.min((snap.x * this.options.columnWidth / gridW) * 100, 100);
+        el.dataset.yPercent = Math.min((snap.y * this.options.cellHeight / gridH) * 100, 100);
+      }
       if (this.options.liveSnap) {
-        const snap = snapToGrid(
-          targetX,
-          targetY,
-          this.options.columnWidth,
-          this.options.cellHeight
-        );
         el.style.transform =
           `translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`;
       } else {

@@ -12,7 +12,7 @@ export function applyLayout(layout, {
   append = false,
   iconMap = {}
 } = {}) {
-  const DEFAULT_ROWS = 20;
+  const DEFAULT_ROWS = 100;
   if (!append) {
     if (grid && typeof grid.removeAll === 'function') {
       grid.removeAll();
@@ -35,12 +35,20 @@ export function applyLayout(layout, {
     wrapper.dataset.instanceId = instId;
     wrapper.dataset.global = isGlobal ? 'true' : 'false';
     wrapper.dataset.layer = String(layerIndex);
-    wrapper.dataset.x = item.x ?? 0;
-    wrapper.dataset.y = item.y ?? 0;
+    const cols = grid?.options?.columns || 12;
+    const cellH = grid?.options?.cellHeight || 1;
+    const gridH = gridEl?.getBoundingClientRect().height || 1;
+    const rows = gridH / cellH;
+    const x = item.xPercent != null ? Math.round((item.xPercent / 100) * cols) : (item.x ?? 0);
+    const y = item.yPercent != null ? Math.round((item.yPercent / 100) * rows) : (item.y ?? 0);
+    const w = item.wPercent != null ? Math.max(1, Math.round((item.wPercent / 100) * cols)) : (item.w ?? 4);
+    const h = item.hPercent != null ? Math.max(1, Math.round((item.hPercent / 100) * rows)) : (item.h ?? DEFAULT_ROWS);
+    wrapper.dataset.x = x;
+    wrapper.dataset.y = y;
     wrapper.style.zIndex = layerIndex.toString();
-    wrapper.setAttribute('gs-w', item.w ?? 8);
-    wrapper.setAttribute('gs-h', item.h ?? DEFAULT_ROWS);
-    wrapper.setAttribute('gs-min-w', 4);
+    wrapper.setAttribute('gs-w', w);
+    wrapper.setAttribute('gs-h', h);
+    wrapper.setAttribute('gs-min-w', 1);
     wrapper.setAttribute('gs-min-h', DEFAULT_ROWS);
     const content = document.createElement('div');
     content.className = 'canvas-item-content builder-themed';

@@ -1,19 +1,33 @@
-import { init as initPixelGrid } from '../main/pixelGrid.js';
+import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
 export function initGrid(gridEl, state, selectWidget) {
-  const grid = initPixelGrid(
+  const columnCount = 12;
+  const grid = initCanvasGrid(
     {
-      pushOnOverlap: false,
-      columns: Infinity,
+      columns: columnCount,
       rows: Infinity,
+      pushOnOverlap: false,
       liveSnap: false,
       liveSnapResize: false,
-      percentageMode: false,
+      percentageMode: true,
       bboxHandles: true
     },
     gridEl
   );
   gridEl.__grid = grid;
+
+  let cwRAF = null;
+  function setColumnWidth() {
+    if (cwRAF) return;
+    cwRAF = requestAnimationFrame(() => {
+      cwRAF = null;
+      const width = gridEl.getBoundingClientRect().width || 1;
+      grid.options.columnWidth = width / grid.options.columns;
+      grid.widgets.forEach(w => grid.update(w, {}, { silent: true }));
+    });
+  }
+  setColumnWidth();
+  window.addEventListener('resize', setColumnWidth);
 
   grid.on('change', el => {
     if (el) selectWidget(el);
@@ -28,10 +42,10 @@ export function getCurrentLayout(gridEl, codeMap) {
     id: el.dataset.instanceId,
     widgetId: el.dataset.widgetId,
     global: el.dataset.global === 'true',
-    x: +el.dataset.x || 0,
-    y: +el.dataset.y || 0,
-    w: +el.getAttribute('gs-w'),
-    h: +el.getAttribute('gs-h'),
+    xPercent: +el.dataset.xPercent || 0,
+    yPercent: +el.dataset.yPercent || 0,
+    wPercent: +el.dataset.wPercent || 0,
+    hPercent: +el.dataset.hPercent || 0,
     code: codeMap[el.dataset.instanceId] || null
   }));
 }
@@ -43,10 +57,10 @@ export function getCurrentLayoutForLayer(gridEl, idx, codeMap) {
     id: el.dataset.instanceId,
     widgetId: el.dataset.widgetId,
     global: el.dataset.global === 'true',
-    x: +el.dataset.x || 0,
-    y: +el.dataset.y || 0,
-    w: +el.getAttribute('gs-w'),
-    h: +el.getAttribute('gs-h'),
+    xPercent: +el.dataset.xPercent || 0,
+    yPercent: +el.dataset.yPercent || 0,
+    wPercent: +el.dataset.wPercent || 0,
+    hPercent: +el.dataset.hPercent || 0,
     code: codeMap[el.dataset.instanceId] || null
   }));
 }

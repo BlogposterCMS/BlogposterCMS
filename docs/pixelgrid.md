@@ -1,6 +1,7 @@
 # PixelGrid
 
-PixelGrid powers the designer application's drag-and-drop interface using a standalone implementation built on the shared grid core modules.
+PixelGrid is a legacy grid system built on the shared grid core modules.
+The builder now uses `CanvasGrid` for responsive layouts, but PixelGrid remains available for reference and potential niche use cases.
 
 ## Features
 

@@ -6,7 +6,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 
 - 1px baseline grid for pixel-perfect placement
 - GPU‑accelerated transforms and requestAnimationFrame updates keep dragging and resizing smooth at 60fps.
-- Transparent edge overlays handle resizing while the bounding box stays click-through, keeping internal widget controls accessible.
+- Transparent edge overlays and corner handles handle resizing while the bounding box stays click-through, keeping internal widget controls accessible.
 - Widgets remain inside the grid and can be layered using `data-layer` for z-index control.
 - Widgets snap to the grid on drag or resize stop; enable `liveSnap` or `liveSnapResize` for per-frame snapping during drags or resizes.
 - Optional push mode prevents overlaps by moving surrounding widgets out of the way.

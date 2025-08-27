@@ -1,3 +1,5 @@
+@use '../../../public/assets/scss/variables' as *;
+@use '../../../public/assets/scss/components/grid-mode';
 @use 'variables';
 @use 'header';
 @use 'sidebar';

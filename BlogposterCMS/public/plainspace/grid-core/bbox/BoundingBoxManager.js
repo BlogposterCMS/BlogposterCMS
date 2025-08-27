@@ -63,6 +63,15 @@ export class BoundingBoxManager extends EventTarget {
     this.box.style.height = `${h}px`;
   }
 
+  setDisabled(flag) {
+    // API-Kompatibilität zu altem Manager (Dashboard/Builder erwarten das)
+    this.box.classList.toggle('disabled', flag);
+    Object.values(this.edges).forEach(edge => {
+      edge.style.pointerEvents = flag ? 'none' : 'auto';
+    });
+    if (flag) this.hide();
+  }
+
   show() {
     this.box.style.display = 'block';
   }

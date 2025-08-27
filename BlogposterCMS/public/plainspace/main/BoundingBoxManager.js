@@ -100,6 +100,22 @@ export class BoundingBoxManager extends EventTarget {
 
   update() {
     if (!this.widget) return;
+    if (this.canvas.classList.contains('pixel-grid')) {
+      const x = +this.widget.dataset.x || 0;
+      const y = +this.widget.dataset.y || 0;
+      const w = +this.widget.getAttribute('gs-w') || 1;
+      const h = +this.widget.getAttribute('gs-h') || 1;
+      const dpr = window.devicePixelRatio || 1;
+      const rx = Math.round(x * dpr) / dpr;
+      const ry = Math.round(y * dpr) / dpr;
+      const width = Math.round(Math.max(w, this.MIN_W) * dpr) / dpr;
+      const height = Math.round(Math.max(h, this.MIN_H) * dpr) / dpr;
+      this.box.style.transform = `translate(${rx}px, ${ry}px)`;
+      this.box.style.width = `${width}px`;
+      this.box.style.height = `${height}px`;
+      this.box.style.setProperty('--inv-scale', '1');
+      return;
+    }
     const scale = parseFloat(
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );
@@ -128,6 +144,18 @@ export class BoundingBoxManager extends EventTarget {
     if (!this.widget) return false;
     const prevW = parseFloat(this.box.style.width) || 0;
     const prevH = parseFloat(this.box.style.height) || 0;
+    if (this.canvas.classList.contains('pixel-grid')) {
+      const w = +this.widget.getAttribute('gs-w') || 1;
+      const h = +this.widget.getAttribute('gs-h') || 1;
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.round(Math.max(w, this.MIN_W) * dpr) / dpr;
+      const height = Math.round(Math.max(h, this.MIN_H) * dpr) / dpr;
+      if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
+        this.update();
+        return true;
+      }
+      return false;
+    }
     const scale = parseFloat(
       getComputedStyle(this.canvas).getPropertyValue('--canvas-scale') || '1'
     );

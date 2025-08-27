@@ -114,6 +114,8 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Bounding box in pixel-grid builder computes position from widget dataset
+  coordinates so rotated or narrow elements stay aligned.
 - Restored shared grid modules (`canvasGrid`, `BoundingBoxManager`, `grid-utils`, `globalEvents`) to `plainspace/main` so the designer app no longer contains framework code.
 - CanvasGrid pointer handlers now verify `currentTarget` and resize handles before releasing pointer capture to avoid null errors.
 - Resizing widgets no longer jumps them to the origin on release by cleaning temporary styles before snapping.

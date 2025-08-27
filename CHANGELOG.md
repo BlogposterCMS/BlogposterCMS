@@ -51,6 +51,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Builder grid disables push-on-overlap, live snapping and percentage mode for
+  pixel-perfect placement without moving neighbouring widgets.
 - Builder modules relocated into the standalone designer app, removing dashboard references and loading the designer via AppLoader.
 - Designer app uses shared sanitizer module instead of editor dependency.
 - Designer app stylesheet split into component-specific SCSS files for easier maintenance.

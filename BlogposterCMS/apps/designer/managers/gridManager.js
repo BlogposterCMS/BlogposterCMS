@@ -1,7 +1,18 @@
 import { init as initPixelGrid } from '../main/pixelGrid.js';
 
 export function initGrid(gridEl, state, selectWidget) {
-  const grid = initPixelGrid({ pushOnOverlap: true }, gridEl);
+  const grid = initPixelGrid(
+    {
+      pushOnOverlap: false,
+      columns: Infinity,
+      rows: Infinity,
+      liveSnap: false,
+      liveSnapResize: false,
+      percentageMode: false,
+      bboxHandles: true
+    },
+    gridEl
+  );
   gridEl.__grid = grid;
 
   grid.on('change', el => {

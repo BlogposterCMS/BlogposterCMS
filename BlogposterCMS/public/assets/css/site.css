@@ -2918,6 +2918,11 @@ body.grid-mode .bounding-box .bbox-edge {
   pointer-events: auto;
   touch-action: none;
 }
+body.grid-mode .bounding-box .bbox-handle {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
 body.grid-mode .bounding-box .bbox-edge.n {
   cursor: ns-resize;
   left: 0;

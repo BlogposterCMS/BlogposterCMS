@@ -1,4 +1,142 @@
 @charset "UTF-8";
+/* =============================================================================
+   Global Variables (Branding)
+   ============================================================================= */
+:root {
+  --color-bg: #ffffff;
+  --color-secondary-light: #F5F5F5;
+  --color-text: #222222;
+  --color-white: #FFFFFF;
+  --color-white-dark: #F7F7F7;
+  --color-border: #e5e7eb;
+  --accent-h: 180;
+  --accent-s: 70%;
+  --accent-l: 50%;
+  --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+  --color-primary: var(--user-color);
+  --color-primary-contrast: #222222;
+  --brand: var(--color-primary);
+  --brand-2: var(--color-primary);
+  --color-card: #ffffff;
+  --color-error: #d93025;
+  --gradient-primary: linear-gradient(
+    180deg,
+    hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12) 0%,
+    hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.04) 100%
+  );
+  --shared-widget-color: #d4af37;
+  --shadow-card: 0 1px 28px rgba(0,0,0,0.07);
+  --shadow-default: 0px 0px 0px 1px rgba(64, 87, 109, .04), 0px 6px 20px -4px rgba(64, 87, 109, .3);
+  --font-body: "Manrope", sans-serif;
+  --font-heading: "Oswald", sans-serif;
+  --font-mono: monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a1a1a;
+    --color-secondary-light: #2a2a2a;
+    --color-text: #f0f0f0;
+    --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
+    --color-primary-contrast: #f0f0f0;
+    --brand: var(--color-primary);
+    --brand-2: var(--color-primary);
+    --color-card: #2a2a2a;
+    --color-error: #f28b82;
+    --gradient-primary: linear-gradient(
+      180deg,
+      hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,
+      hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.06) 100%
+    );
+    --color-border: #333333;
+  }
+}
+body.grid-mode .canvas-item {
+  border: none;
+}
+body.grid-mode .bounding-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px dashed var(--user-color, #333);
+  pointer-events: none;
+  box-sizing: border-box;
+  z-index: 1000;
+  will-change: transform, width, height;
+  cursor: move;
+  touch-action: none;
+  --edge-hit: calc(var(--edge-base) * var(--inv-scale));
+}
+body.grid-mode .bounding-box .bbox-edge {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+body.grid-mode .bounding-box .bbox-handle {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+body.grid-mode .bounding-box .bbox-edge.n {
+  cursor: ns-resize;
+  left: 0;
+  right: 0;
+  top: calc(-0.5 * var(--edge-hit));
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.s {
+  cursor: ns-resize;
+  left: 0;
+  right: 0;
+  bottom: calc(-0.5 * var(--edge-hit));
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.e {
+  cursor: ew-resize;
+  top: 0;
+  bottom: 0;
+  right: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.w {
+  cursor: ew-resize;
+  top: 0;
+  bottom: 0;
+  left: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.ne {
+  cursor: nesw-resize;
+  top: calc(-0.5 * var(--edge-hit));
+  right: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.se {
+  cursor: nwse-resize;
+  bottom: calc(-0.5 * var(--edge-hit));
+  right: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.sw {
+  cursor: nesw-resize;
+  bottom: calc(-0.5 * var(--edge-hit));
+  left: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.nw {
+  cursor: nwse-resize;
+  top: calc(-0.5 * var(--edge-hit));
+  left: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box.disabled {
+  display: none;
+}
+
 :root {
   --accent-color: #007bff;
   --accent-color-hover: #0056b3;

@@ -488,7 +488,7 @@ export class PixelGrid {
     const noResize = this.activeEl.getAttribute('gs-no-resize') === 'true';
     const noMove = this.activeEl.getAttribute('gs-no-move') === 'true';
     const disabled = noResize && noMove;
-    manager.setDisabled(disabled);
+    if (typeof manager.setDisabled === 'function') manager.setDisabled(disabled);
   }
 
   select(el) {

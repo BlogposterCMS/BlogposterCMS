@@ -12,6 +12,7 @@ El Psy Kongroo
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Added
+- `PixelGrid.update` accepts an optional `{ silent: true }` flag to avoid spamming `change` events during live interactions.
 - Designer app uses standalone `PixelGrid` built on grid-core modules.
 - Moved `globalEvents` helper into grid-core for shared consumption.
 - Initial `grid-core` module with geometry helpers, bounding box manager and lightweight event emitter for upcoming grid refactor.

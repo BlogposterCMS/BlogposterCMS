@@ -169,7 +169,7 @@ export class PixelGrid {
     }
   }
 
-  update(el, opts = {}) {
+  update(el, opts = {}, meta = {}) {
     if (!el) return;
     if (opts.x != null) el.dataset.x = opts.x;
     if (opts.y != null) el.dataset.y = opts.y;
@@ -184,7 +184,7 @@ export class PixelGrid {
     if (this.pushOnOverlap) this._resolveCollisions(el);
     if (el === this.activeEl) this._updateBBox();
     this._updateGridHeight();
-    this._emit('change', el);
+    if (!meta.silent) this._emit('change', el);
   }
 
   _bindResize(el) {
@@ -237,7 +237,7 @@ export class PixelGrid {
               };
               if (pos.includes('w')) opts.x = gx;
               if (pos.includes('n')) opts.y = gy;
-              this.update(widget, opts);
+              this.update(widget, opts, { silent: true });
             } else {
               let w = startW, hVal = startH;
               let px = startPX, py = startPY;
@@ -319,10 +319,14 @@ export class PixelGrid {
               const minH = (+el.getAttribute('gs-min-h') || 1) * this.options.cellHeight;
               w = Math.max(minW, w);
               hVal = Math.max(minH, hVal);
-              this.update(el, {
-                w: Math.round(w / this.options.columnWidth),
-                h: Math.round(hVal / this.options.cellHeight)
-              });
+              this.update(
+                el,
+                {
+                  w: Math.round(w / this.options.columnWidth),
+                  h: Math.round(hVal / this.options.cellHeight)
+                },
+                { silent: true }
+              );
             } else {
               let w = startW + dx;
               let hVal = startH + dy;

@@ -8,6 +8,7 @@ PixelGrid powers the designer application's drag-and-drop interface using a stan
 - Updates widget geometry directly from the DOM without percentage modes or magic
 - Bounding box with resize handles provided by the core `BoundingBoxManager`
 - Emits `dragstart`, `dragmove`, `dragstop`, `resizestart`, `resizemove`, `resizestop` and `change` events
+- `update(el, opts, { silent: true })` suppresses `change` events during live drags or resizes
 
 ## Usage
 

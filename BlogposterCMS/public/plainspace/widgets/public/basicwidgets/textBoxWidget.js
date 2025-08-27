@@ -10,7 +10,7 @@ export async function render(el, ctx = {}) {
   const editable = document.createElement('div');
   editable.className = 'editable';
   editable.textContent = 'Lorem ipsum dolor sit amet';
-  editable.setAttribute('contenteditable', 'true');
+  editable.dataset.textEditable = '';
 
   if (ctx.id) {
     editable.id = `text-widget-${ctx.id}-editable`;

@@ -382,7 +382,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const [x, y, w, h] = [
       Math.floor((relX / rect.width) * columnCount) || 0,
       Math.floor(relY / grid.options.cellHeight) || 0,
-      3,
+      4,
       DEFAULT_ROWS
     ];
 

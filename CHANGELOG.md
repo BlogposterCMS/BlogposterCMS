@@ -15,9 +15,11 @@ El Psy Kongroo
 
 ### Changed
 - Default builder widget width increased to four columns for better initial sizing.
+- Builder grid column width recalculation is debounced via `requestAnimationFrame` and widget layouts persist percentage-based coordinates.
 
 ### Added
 - Updated CanvasGrid documentation to cover responsive builder configuration.
+- `CanvasGrid.update` accepts an optional `{ silent: true }` flag to suppress `change` events during internal recalculations.
 - `PixelGrid.update` accepts an optional `{ silent: true }` flag to avoid spamming `change` events during live interactions.
 - Designer app uses standalone `PixelGrid` built on grid-core modules.
 - Moved `globalEvents` helper into grid-core for shared consumption.

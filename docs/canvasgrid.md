@@ -36,10 +36,15 @@ const grid = initCanvasGrid({
 Adjust the column width on resize so the grid spans the full container:
 
 ```js
+let cwRAF = null;
 function setColumnWidth() {
-  const width = gridEl.getBoundingClientRect().width;
-  grid.options.columnWidth = width / grid.options.columns;
-  grid.widgets.forEach(w => grid.update(w));
+  if (cwRAF) return;
+  cwRAF = requestAnimationFrame(() => {
+    cwRAF = null;
+    const width = gridEl.getBoundingClientRect().width || 1;
+    grid.options.columnWidth = width / grid.options.columns;
+    grid.widgets.forEach(w => grid.update(w, {}, { silent: true }));
+  });
 }
 setColumnWidth();
 window.addEventListener('resize', setColumnWidth);
@@ -61,6 +66,8 @@ grid.on('dragstop', el => el.classList.remove('dragging'));
 
 
 Listen for the `change` event to persist layout updates when users move or resize widgets.
+
+When `percentageMode` is enabled, the grid keeps `data-*Percent` attributes (`xPercent`, `yPercent`, `wPercent`, `hPercent`) in sync so you can store layouts in relative units.
 
 Grid calculations are shared through `grid-utils.js`. Import helpers like
 `snapToGrid`, `elementRect` and `rectsCollide` to keep widget logic

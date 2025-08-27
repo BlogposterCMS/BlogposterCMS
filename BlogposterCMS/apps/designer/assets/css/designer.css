@@ -1737,6 +1737,180 @@ body.builder-mode .canvas-item:hover {
   margin-right: auto;
 }
 
+/* Color Picker Styling - Canva-like Design */
+.color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  min-width: 200px;
+  max-width: 280px;
+  z-index: 10000;
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+  animation: colorPickerFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.color-picker.hidden {
+  display: none;
+}
+.color-picker.floating {
+  position: absolute;
+  z-index: 10000;
+}
+.color-picker .color-section {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.color-picker .color-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  padding: 0;
+  background: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.color-picker .color-circle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+.color-picker .color-circle.active {
+  border-color: var(--accent-color, #007bff);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+  transform: scale(1.05);
+}
+.color-picker .color-circle.active::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+.color-picker .color-circle.add-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 18px;
+  font-weight: bold;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.color-picker .color-circle.add-custom:hover {
+  background: #f1f5f9;
+  border-color: var(--accent-color, #007bff);
+  color: var(--accent-color, #007bff);
+  transform: scale(1.1);
+}
+.color-picker .color-circle[style*="background-color: #FF0000"]:hover, .color-picker .color-circle[style*="background-color: #ff0000"]:hover {
+  box-shadow: 0 4px 16px rgba(255, 0, 0, 0.3);
+}
+.color-picker .color-circle[style*="background-color: #00FF00"]:hover, .color-picker .color-circle[style*="background-color: #00ff00"]:hover, .color-picker .color-circle[style*="background-color: #008000"]:hover {
+  box-shadow: 0 4px 16px rgba(0, 255, 0, 0.3);
+}
+.color-picker .color-circle[style*="background-color: #0000FF"]:hover, .color-picker .color-circle[style*="background-color: #0000ff"]:hover, .color-picker .color-circle[style*="background-color: #4169E1"]:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 255, 0.3);
+}
+.color-picker .color-circle[style*="background-color: #000000"]:hover, .color-picker .color-circle[style*="background-color: #000"]:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.color-picker .color-input {
+  width: 80px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+  outline: none;
+  transition: all 0.2s ease;
+  background: white;
+  color: var(--color-text, #333);
+}
+.color-picker .color-input:focus {
+  border-color: var(--accent-color, #007bff);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  background: white;
+}
+.color-picker .color-section-label {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  grid-column: 1/-1;
+}
+.color-picker .color-picker-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--color-text, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+.color-picker .color-picker-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-text, #333);
+  transform: scale(1.1);
+}
+.color-picker > div {
+  position: relative;
+}
+.color-picker > div:not(:last-child) {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+@keyframes colorPickerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 768px) {
+  .color-picker {
+    min-width: 180px;
+    padding: 12px;
+  }
+  .color-picker .color-section {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .color-picker .color-circle {
+    width: 28px;
+    height: 28px;
+  }
+}
 .builder-mode .canvas-item {
   border: 2px solid transparent;
   border-radius: 8px;

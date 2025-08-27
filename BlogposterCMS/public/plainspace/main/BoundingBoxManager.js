@@ -36,6 +36,8 @@ export class BoundingBoxManager extends EventTarget {
         h.dataset.pos = p;
         this.box.appendChild(h);
         this.handles[p] = h;
+        h.style.pointerEvents = 'auto';
+        h.style.touchAction = 'none';
       });
     }
 

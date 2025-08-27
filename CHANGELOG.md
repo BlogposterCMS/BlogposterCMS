@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+### Fixed
+- Designer now bundles grid-mode styles locally instead of loading global `site.css`, keeping builder UI isolated.
+- Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Added
 - Optional `liveSnapResize` flag to enable per-frame snapping during resizes.

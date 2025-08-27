@@ -23,6 +23,12 @@ body.grid-mode {
       touch-action: none;
     }
 
+    .bbox-handle {
+      position: absolute;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
     .bbox-edge.n {
       cursor: ns-resize;
       left: 0;

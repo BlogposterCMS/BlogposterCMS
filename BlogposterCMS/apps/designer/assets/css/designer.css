@@ -2086,4 +2086,90 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
     margin-bottom: calc(50vh + 60px);
     transform: none;
   }
-}/*# sourceMappingURL=designer.css.map */
+}
+body.grid-mode .canvas-item {
+  border: none;
+}
+body.grid-mode .bounding-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px dashed var(--user-color, #333);
+  pointer-events: none;
+  box-sizing: border-box;
+  z-index: 1000;
+  will-change: transform, width, height;
+  cursor: move;
+  touch-action: none;
+  --edge-hit: calc(var(--edge-base) * var(--inv-scale));
+}
+body.grid-mode .bounding-box .bbox-edge {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+body.grid-mode .bounding-box .bbox-handle {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+body.grid-mode .bounding-box .bbox-edge.n {
+  cursor: ns-resize;
+  left: 0;
+  right: 0;
+  top: calc(-0.5 * var(--edge-hit));
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.s {
+  cursor: ns-resize;
+  left: 0;
+  right: 0;
+  bottom: calc(-0.5 * var(--edge-hit));
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.e {
+  cursor: ew-resize;
+  top: 0;
+  bottom: 0;
+  right: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.w {
+  cursor: ew-resize;
+  top: 0;
+  bottom: 0;
+  left: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.ne {
+  cursor: nesw-resize;
+  top: calc(-0.5 * var(--edge-hit));
+  right: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.se {
+  cursor: nwse-resize;
+  bottom: calc(-0.5 * var(--edge-hit));
+  right: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.sw {
+  cursor: nesw-resize;
+  bottom: calc(-0.5 * var(--edge-hit));
+  left: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box .bbox-edge.nw {
+  cursor: nwse-resize;
+  top: calc(-0.5 * var(--edge-hit));
+  left: calc(-0.5 * var(--edge-hit));
+  width: var(--edge-hit);
+  height: var(--edge-hit);
+}
+body.grid-mode .bounding-box.disabled {
+  display: none;
+}
+/*# sourceMappingURL=designer.css.map */

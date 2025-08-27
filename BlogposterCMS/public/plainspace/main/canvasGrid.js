@@ -190,7 +190,7 @@ export class CanvasGrid {
   _bindResize(el) {
     if (this.useBoundingBox && !el) {
       if (!this.bboxManager) return;
-      const edges = Object.values(this.bboxManager.edges);
+      const parts = this.bboxManager.box.querySelectorAll('.bbox-edge, .bbox-handle');
       let startX, startY, startW, startH, startGX, startGY, pos;
 
       const startResize = e => {
@@ -280,7 +280,7 @@ export class CanvasGrid {
         e.currentTarget?.setPointerCapture?.(e.pointerId);
       };
 
-      edges.forEach(edge => edge.addEventListener('pointerdown', startResize));
+      parts.forEach(part => part.addEventListener('pointerdown', startResize, { passive: false }));
     } else if (!this.useBoundingBox && el) {
       const handle = el.querySelector('.resize-handle');
       if (!handle) return;

@@ -2,7 +2,6 @@
 // Highlight widget wrapper on hover using the active user's color
 .builder-mode .canvas-item {
   border: 2px solid transparent;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 8px;
   position: relative;
   overflow: hidden;
@@ -11,10 +10,8 @@
     content: '';
     position: absolute;
     inset: -2px;
-    background: linear-gradient(45deg, var(--user-color, #007bff), transparent, var(--user-color, #007bff));
     border-radius: 10px;
     opacity: 0;
-    transition: opacity 0.3s ease;
     z-index: -1;
   }
 
@@ -201,7 +198,6 @@ body.preview-desktop {
 .canvas-item {
   pointer-events: auto;
   user-select: none;
-  transition: all 0.3s ease;
   position: relative;
 
   .resize-handle {

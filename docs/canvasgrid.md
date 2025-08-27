@@ -4,13 +4,12 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 
 ## Features
 
-- 1px baseline grid for pixel-perfect placement
+- Configurable column count with responsive widths and percentage-based sizing for consistent layouts.
 - GPU‑accelerated transforms and requestAnimationFrame updates keep dragging and resizing smooth at 60fps.
 - Transparent edge overlays and corner handles handle resizing while the bounding box stays click-through, keeping internal widget controls accessible.
 - Widgets remain inside the grid and can be layered using `data-layer` for z-index control.
 - Widgets snap to the grid on drag or resize stop; enable `liveSnap` or `liveSnapResize` for per-frame snapping during drags or resizes.
 - Optional push mode prevents overlaps by moving surrounding widgets out of the way.
-- Percentage based sizing lets layouts adapt responsively.
 - All pointer and keyboard events are forwarded through `bindGlobalListeners` for centralized handling.
 - Widgets receive a `dragging` class while moved so interfaces can reveal context‑sensitive controls and temporarily drop transitions, shadows and filters for maximum performance.
 
@@ -22,17 +21,24 @@ Initialize the grid in your admin scripts:
 import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
 const gridEl = document.querySelector('#builderGrid');
-const grid = initCanvasGrid({ cellHeight: 1, columnWidth: 1 }, gridEl);
+const grid = initCanvasGrid({
+  columns: 12,
+  rows: Infinity,
+  pushOnOverlap: false,
+  liveSnap: false,
+  liveSnapResize: false,
+  percentageMode: true,
+  bboxHandles: true
+}, gridEl);
 // pass { liveSnap: true, liveSnapResize: true } to snap widgets during drags and resizes
 ```
 
 Adjust the column width on resize so the grid spans the full container:
 
 ```js
-const columnCount = 12;
 function setColumnWidth() {
   const width = gridEl.getBoundingClientRect().width;
-  grid.options.columnWidth = Math.round(width / columnCount);
+  grid.options.columnWidth = width / grid.options.columns;
   grid.widgets.forEach(w => grid.update(w));
 }
 setColumnWidth();

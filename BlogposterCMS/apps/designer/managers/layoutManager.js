@@ -12,7 +12,7 @@ export function applyLayout(layout, {
   append = false,
   iconMap = {}
 } = {}) {
-  const DEFAULT_ROWS = 20;
+  const DEFAULT_ROWS = 100;
   if (!append) {
     if (grid && typeof grid.removeAll === 'function') {
       grid.removeAll();
@@ -38,9 +38,9 @@ export function applyLayout(layout, {
     wrapper.dataset.x = item.x ?? 0;
     wrapper.dataset.y = item.y ?? 0;
     wrapper.style.zIndex = layerIndex.toString();
-    wrapper.setAttribute('gs-w', item.w ?? 8);
+    wrapper.setAttribute('gs-w', item.w ?? 4);
     wrapper.setAttribute('gs-h', item.h ?? DEFAULT_ROWS);
-    wrapper.setAttribute('gs-min-w', 4);
+    wrapper.setAttribute('gs-min-w', 1);
     wrapper.setAttribute('gs-min-h', DEFAULT_ROWS);
     const content = document.createElement('div');
     content.className = 'canvas-item-content builder-themed';

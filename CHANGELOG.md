@@ -13,7 +13,11 @@ El Psy Kongroo
 - Designer now bundles grid-mode styles locally instead of loading global `site.css`, keeping builder UI isolated.
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
+### Changed
+- Default builder widget width increased to four columns for better initial sizing.
+
 ### Added
+- Updated CanvasGrid documentation to cover responsive builder configuration.
 - `PixelGrid.update` accepts an optional `{ silent: true }` flag to avoid spamming `change` events during live interactions.
 - Designer app uses standalone `PixelGrid` built on grid-core modules.
 - Moved `globalEvents` helper into grid-core for shared consumption.
@@ -63,6 +67,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Builder grid now uses responsive CanvasGrid with 12 columns, percentage-based sizing and dynamic column widths.
 - Builder grid disables push-on-overlap, live snapping and percentage mode for
   pixel-perfect placement without moving neighbouring widgets.
 - Builder modules relocated into the standalone designer app, removing dashboard references and loading the designer via AppLoader.

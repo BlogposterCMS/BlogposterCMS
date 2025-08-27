@@ -1,19 +1,28 @@
-import { init as initPixelGrid } from '../main/pixelGrid.js';
+import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
 export function initGrid(gridEl, state, selectWidget) {
-  const grid = initPixelGrid(
+  const columnCount = 12;
+  const grid = initCanvasGrid(
     {
-      pushOnOverlap: false,
-      columns: Infinity,
+      columns: columnCount,
       rows: Infinity,
+      pushOnOverlap: false,
       liveSnap: false,
       liveSnapResize: false,
-      percentageMode: false,
+      percentageMode: true,
       bboxHandles: true
     },
     gridEl
   );
   gridEl.__grid = grid;
+
+  function setColumnWidth() {
+    const width = gridEl.getBoundingClientRect().width;
+    grid.options.columnWidth = width / columnCount;
+    grid.widgets.forEach(w => grid.update(w));
+  }
+  setColumnWidth();
+  window.addEventListener('resize', setColumnWidth);
 
   grid.on('change', el => {
     if (el) selectWidget(el);

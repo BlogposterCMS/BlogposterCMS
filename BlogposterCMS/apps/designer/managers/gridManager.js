@@ -6,8 +6,8 @@ export function initGrid(gridEl, state, selectWidget) {
       pushOnOverlap: false,
       columns: Infinity,
       rows: Infinity,
-      liveSnap: true,
-      liveSnapResize: true,
+      liveSnap: false,
+      liveSnapResize: false,
       percentageMode: false,
       bboxHandles: true
     },

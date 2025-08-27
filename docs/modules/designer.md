@@ -25,3 +25,8 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Every database call includes the loader issued `jwt` and module information.
 - Uses high level `dbSelect`, `dbInsert` and `dbUpdate` events to avoid raw SQL.
 - CSRF and admin tokens are delivered via `postMessage` from the dashboard instead of inline scripts to satisfy strict CSP policies.
+
+## Grid configuration
+- The builder relies on `PixelGrid` with a 1px baseline and disables push-on-overlap,
+  live snapping and percentage mode for precise positioning without moving
+  neighbouring widgets.

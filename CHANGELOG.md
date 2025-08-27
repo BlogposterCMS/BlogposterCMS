@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Pixel-grid bounding box size now derives from DOM geometry, fixing offsets with rotated or padded widgets.
 - Pixel-grid bounding box now matches widget dimensions exactly and stays in sync through live snapping.
 - Restored generated builder stylesheet and removed manual CSS edits that would be overwritten on rebuild.
 - Designer now bundles grid-mode styles locally instead of loading global `site.css`, keeping builder UI isolated.

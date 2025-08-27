@@ -315,13 +315,13 @@ body.builder-mode .canvas-item.inactive-layer {
   position: absolute;
   top: 0;
   left: 0;
-  border: 2px solid var(--user-color, #007bff);
+  border: 1px dashed var(--user-color, #007bff);
   pointer-events: none;
   box-sizing: border-box;
   z-index: 1000;
   will-change: transform, width, height;
-  border-radius: 8px;
-  background: rgba(0, 123, 255, 0.05);
+  border-radius: 0;
+  background: none;
 
   .bbox-handle {
     position: absolute;
@@ -395,10 +395,13 @@ body.builder-mode .canvas-item.inactive-layer {
 // Selection box
 .selection-box {
   position: absolute;
+  transform-origin: 0 0;
+}
+
+.selection-box:not(.bounding-box) {
   border: 2px dashed var(--user-color, #007bff);
   background: rgba(0, 123, 255, 0.05);
   border-radius: 4px;
-  transform-origin: 0 0;
 }
 
 // Layout bar (bottom controls)

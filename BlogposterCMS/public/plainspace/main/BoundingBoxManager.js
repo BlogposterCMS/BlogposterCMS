@@ -103,15 +103,15 @@ export class BoundingBoxManager extends EventTarget {
   update() {
     if (!this.widget) return;
     if (this.canvas.classList.contains('pixel-grid')) {
-      const x = +this.widget.dataset.x || 0;
-      const y = +this.widget.dataset.y || 0;
-      const w = +this.widget.getAttribute('gs-w') || 1;
-      const h = +this.widget.getAttribute('gs-h') || 1;
+      const x = parseFloat(this.widget.dataset.x) || 0;
+      const y = parseFloat(this.widget.dataset.y) || 0;
+      const w = parseFloat(this.widget.getAttribute('gs-w')) || 1;
+      const h = parseFloat(this.widget.getAttribute('gs-h')) || 1;
       const dpr = window.devicePixelRatio || 1;
       const rx = Math.round(x * dpr) / dpr;
       const ry = Math.round(y * dpr) / dpr;
-      const width = Math.round(Math.max(w, this.MIN_W) * dpr) / dpr;
-      const height = Math.round(Math.max(h, this.MIN_H) * dpr) / dpr;
+      const width = Math.round(w * dpr) / dpr;
+      const height = Math.round(h * dpr) / dpr;
       this.box.style.transform = `translate(${rx}px, ${ry}px)`;
       this.box.style.width = `${width}px`;
       this.box.style.height = `${height}px`;
@@ -147,11 +147,11 @@ export class BoundingBoxManager extends EventTarget {
     const prevW = parseFloat(this.box.style.width) || 0;
     const prevH = parseFloat(this.box.style.height) || 0;
     if (this.canvas.classList.contains('pixel-grid')) {
-      const w = +this.widget.getAttribute('gs-w') || 1;
-      const h = +this.widget.getAttribute('gs-h') || 1;
+      const w = parseFloat(this.widget.getAttribute('gs-w')) || 1;
+      const h = parseFloat(this.widget.getAttribute('gs-h')) || 1;
       const dpr = window.devicePixelRatio || 1;
-      const width = Math.round(Math.max(w, this.MIN_W) * dpr) / dpr;
-      const height = Math.round(Math.max(h, this.MIN_H) * dpr) / dpr;
+      const width = Math.round(w * dpr) / dpr;
+      const height = Math.round(h * dpr) / dpr;
       if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
         this.update();
         return true;

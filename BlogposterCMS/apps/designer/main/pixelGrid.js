@@ -42,6 +42,7 @@ export class PixelGrid {
       this.bboxManager = null;
       this.bbox = null;
     }
+    this.bboxManagerHidden = false;
     this._resizeObserver = new ResizeObserver(entries => {
       if (this.activeEl && entries.some(e => e.target === this.activeEl)) {
         this._updateBBox();
@@ -387,22 +388,17 @@ export class PixelGrid {
 
     const apply = () => {
       frame = null;
+      const gx = Math.round(targetX / this.options.columnWidth);
+      const gy = Math.round(targetY / this.options.cellHeight);
+      el.dataset.x = gx;
+      el.dataset.y = gy;
       if (this.options.liveSnap) {
-        const snap = snapToGrid(
-          targetX,
-          targetY,
-          this.options.columnWidth,
-          this.options.cellHeight
-        );
-        el.style.transform =
-          `translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`;
-      } else {
-        el.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
+        targetX = gx * this.options.columnWidth;
+        targetY = gy * this.options.cellHeight;
       }
-      // Drag-Event sofort auslösen…
+      el.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
       el.dispatchEvent(new Event('dragmove', { bubbles: true }));
-      // …und das BBox-Update in den nächsten Frame schieben.
-      requestAnimationFrame(() => this._updateBBox());
+      if (!this.bboxManagerHidden) this._updateBBox();
     };
 
     const move = e => {
@@ -424,8 +420,13 @@ export class PixelGrid {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       el?.releasePointerCapture?.(e.pointerId);
-      const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
-      this.update(el, { x: snap.x, y: snap.y });
+      const gx = Math.round(targetX / this.options.columnWidth);
+      const gy = Math.round(targetY / this.options.cellHeight);
+      this.update(el, { x: gx, y: gy });
+      if (this.useBoundingBox && this.bboxManager) {
+        this.bboxManager.setWidget(el);
+        this.bboxManagerHidden = false;
+      }
       this._emit('dragstop', el);
     };
 
@@ -435,6 +436,10 @@ export class PixelGrid {
       if (el.getAttribute('gs-locked') === 'true' || el.getAttribute('gs-no-move') === 'true') return;
       e.preventDefault();
       this.select(el);
+      if (this.useBoundingBox && this.bboxManager) {
+        this.bboxManager.hide();
+        this.bboxManagerHidden = true;
+      }
       startX = e.clientX; startY = e.clientY;
       startGX = +el.dataset.x || 0;
       startGY = +el.dataset.y || 0;

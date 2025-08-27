@@ -12,6 +12,9 @@ El Psy Kongroo
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Added
+- Designer app uses standalone `PixelGrid` built on grid-core modules.
+- Moved `globalEvents` helper into grid-core for shared consumption.
+- Initial `grid-core` module with geometry helpers, bounding box manager and lightweight event emitter for upcoming grid refactor.
 - Optional `liveSnapResize` flag to enable per-frame snapping during resizes.
 - CanvasGrid exposes an optional `liveSnap` flag to enable per-frame snapping during drags.
 - Dashboard now injects its own remove and resize controls and tracks drag state via CanvasGrid events, revealing buttons only when selected or dragging.

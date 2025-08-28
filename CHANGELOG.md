@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- CanvasGrid zoom now anchors to its center, keeping the grid positioned while scaling.
 - Text widget no longer sets `contenteditable` by default, allowing toolbar actions to apply to entire widget when only selected.
 - Bounding box is hidden during drags and grid commits deferred to drag end for smoother interactions.
 - Restored `setDisabled` method on grid-core `BoundingBoxManager` for builder compatibility.

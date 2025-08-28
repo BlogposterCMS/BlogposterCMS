@@ -75,16 +75,22 @@ export class CanvasGrid {
       });
     }
 
-    // Zoom state and handler (Ctrl + wheel). Keep the point under the cursor
-    // fixed by adjusting scroll while changing scale.
+    // Zoom state and handler (Ctrl + wheel). Keep the grid centered while
+    // scaling by anchoring to the element's midpoint instead of the cursor
+    // position.
     this.scale = 1;
     this.el.style.setProperty('--canvas-scale', '1');
-    this.el.style.transformOrigin = 'top left';
+    this.el.style.transformOrigin = 'center center';
     const wheelZoom = e => {
       if (!e.ctrlKey) return;
       e.preventDefault();
       const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      this.setScale(this.scale * factor, { x: e.clientX, y: e.clientY });
+      const rect = this.el.getBoundingClientRect();
+      const anchor = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+      this.setScale(this.scale * factor, anchor);
     };
     this.el.addEventListener('wheel', wheelZoom, { passive: false });
   }

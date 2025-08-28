@@ -10,6 +10,23 @@ import {
   applyToolbarChange
 } from '../core/editor.js';
 import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from '../core/selection.js';
+import { fetchPartial } from '../../fetchPartial.js';
+import { sanitizeHtml } from '../../../../public/plainspace/sanitizer.js';
+
+// Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
+function DBG(...args) {
+  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/toolbar]', ...args); } catch (e) {}
+}
+
+function ensureActiveEditable() {
+  if (state.activeEl && document.body.contains(state.activeEl)) return state.activeEl;
+  const w = document.querySelector('.canvas-item.selected');
+  let editable = w ? getRegisteredEditable(w) : null;
+  if (!editable && w) editable = w.querySelector('[data-text-editable], .editable');
+  if (editable) state.activeEl = editable;
+  DBG('ensureActiveEditable', { activeId: state.activeEl?.id, widgetId: w?.id });
+  return state.activeEl;
+}
 
 let updateButtonStates = () => {};
 
@@ -21,13 +38,8 @@ export function updateToolbarPosition() {
   if (!header) return;
   const rect = header.getBoundingClientRect();
   state.toolbar.style.top = rect.bottom + 'px';
-  const content = document.getElementById('content');
-  if (content) {
-    const cRect = content.getBoundingClientRect();
-    state.toolbar.style.left = cRect.left + 'px';
-  } else {
-    state.toolbar.style.left = '0';
-  }
+  // Clear any inline horizontal positioning so CSS can center it
+  state.toolbar.style.left = '';
 }
 
 function parseColor(val) {
@@ -83,9 +95,36 @@ function splitRangeBoundaries(range) {
 function applyStyleInternal(prop, value) {
   restoreSelection();
   if (!state.activeEl) return;
-  const sel = window.getSelection();
+  // Ensure target is the inner editable, not a wrapper
+  if (!('textEditable' in (state.activeEl.dataset || {}))) {
+    const innerEditable = state.activeEl.querySelector?.('[data-text-editable]');
+    if (innerEditable) state.activeEl = innerEditable;
+  }
+  const targetEl = state.activeEl;
+  DBG('applyStyleInternal', { prop, value, targetId: targetEl?.id, targetCls: targetEl?.className });
+  // Detect mode early and clear any stale ranges when not editing
+  const widgetEl = targetEl?.closest?.('.canvas-item');
+  const isEditMode =
+    (targetEl && targetEl.getAttribute('contenteditable') === 'true') ||
+    (widgetEl && widgetEl.classList?.contains('editing'));
+  DBG('mode', { isEditMode, contenteditable: targetEl?.getAttribute('contenteditable') });
+
+  if (!isEditMode) {
+    const s = window.getSelection?.();
+    if (s && s.removeAllRanges) s.removeAllRanges();
+    state.preservedRange = null;
+    DBG('cleared selection because not edit mode');
+  }
+
+  let sel = window.getSelection();
   let range = null;
-  if (sel && sel.rangeCount && !sel.isCollapsed && state.activeEl.contains(sel.anchorNode) && state.activeEl.contains(sel.focusNode)) {
+  if (
+    sel &&
+    sel.rangeCount &&
+    !sel.isCollapsed &&
+    targetEl.contains(sel.anchorNode) &&
+    targetEl.contains(sel.focusNode)
+  ) {
     range = sel.getRangeAt(0);
   } else if (state.preservedRange && !state.preservedRange.collapsed) {
     range = state.preservedRange.cloneRange();
@@ -93,6 +132,7 @@ function applyStyleInternal(prop, value) {
     sel.addRange(range);
   }
   const hasRange = !!range;
+  DBG('selection', { hasRange, preserved: !!state.preservedRange });
   const normalizeSize = v => parseFloat(v).toFixed(2);
 
   const touch = el => {
@@ -100,14 +140,18 @@ function applyStyleInternal(prop, value) {
     const inlineVal = el.style[prop];
     let isAlreadySet;
     if (prop === 'fontSize') {
+      // For font size, always set the explicit value on the carrier (no toggle)
       isAlreadySet = normalizeSize(computedVal) === normalizeSize(value);
+      DBG('touch:fontSize', { elId: el.id, elCls: el.className, from: computedVal, to: value, same: isAlreadySet });
+      el.style.fontSize = value;
     } else {
       isAlreadySet = inlineVal === value || computedVal === value;
-    }
-    if (isAlreadySet) {
-      el.style[prop] = '';
-    } else {
-      el.style[prop] = value;
+      DBG('touch', { elId: el.id, elCls: el.className, computedVal, inlineVal, value, isAlreadySet });
+      if (isAlreadySet) {
+        el.style[prop] = '';
+      } else {
+        el.style[prop] = value;
+      }
     }
     if (el.tagName === 'SPAN' && !el.getAttribute('style')) {
       el.replaceWith(...el.childNodes);
@@ -116,6 +160,28 @@ function applyStyleInternal(prop, value) {
 
   if (hasRange) {
     splitRangeBoundaries(range);
+    // Special handling for fontSize: prefer surroundContents for clean wrapping
+    if (prop === 'fontSize') {
+      try {
+        const wrap = document.createElement('span');
+        wrap.style.fontSize = value;
+        range.surroundContents(wrap);
+        const newRange = document.createRange();
+        newRange.selectNodeContents(wrap);
+        // Update the actual selection to the new wrapped contents
+        const sel2 = window.getSelection();
+        sel2.removeAllRanges();
+        sel2.addRange(newRange);
+        // Keep both preservedRange trackers in sync
+        state.preservedRange = newRange.cloneRange();
+        saveSelection();
+        DBG('range-apply:surroundContents', { wrapped: true });
+        updateButtonStates();
+        return;
+      } catch (e) {
+        DBG('range-apply:surroundContents failed -> walker fallback', e?.message || e);
+      }
+    }
     let walkerRoot = range.commonAncestorContainer;
     if (walkerRoot.nodeType === 3) {
       walkerRoot = walkerRoot.parentNode;
@@ -129,6 +195,7 @@ function applyStyleInternal(prop, value) {
     );
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
+    DBG('range-apply', { nodes: nodes.length });
     nodes.forEach(text => {
       let carrier = text.parentElement;
       if (carrier.tagName !== 'SPAN') {
@@ -140,11 +207,26 @@ function applyStyleInternal(prop, value) {
       touch(carrier);
     });
   } else {
-    touch(state.activeEl);
+    // Edit mode but no active selection: do not style whole element
+    // Selection mode (not contenteditable): style whole element
+    if (!isEditMode) {
+      DBG('whole-element-apply', { targetId: targetEl?.id });
+      touch(targetEl);
+      try {
+        if (window.DEBUG_TEXT_EDITOR) {
+          const prevOutline = targetEl.style.outline;
+          targetEl.style.outline = '1px dashed magenta';
+          setTimeout(() => { try { targetEl.style.outline = prevOutline; } catch(e){} }, 600);
+        }
+      } catch (e) {}
+    } else {
+      DBG('edit-mode-no-selection-skip');
+    }
   }
 
   state.preservedRange = hasRange ? range.cloneRange() : null;
   saveSelection();
+  DBG('done', { preservedRange: !!state.preservedRange });
   updateButtonStates();
 }
 
@@ -195,7 +277,11 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   state.toolbar.addEventListener('pointerdown', ev => {
     saveSelection();
-    ev.preventDefault();
+    // Allow default for interactive controls so their click fires reliably
+    const allowDefault = ev.target.closest?.(
+      '.fs-options, .ff-options, .fs-btn, .ff-btn, .tb-btn, .color-picker-toggle, .fs-dec, .fs-inc, input, select, button'
+    );
+    if (!allowDefault) ev.preventDefault();
     ev.stopPropagation();
   }, true);
 
@@ -203,8 +289,31 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   function updateFontSizeInput() {
     if (!state.activeEl || !fsInput) return;
-    const computedSize = window.getComputedStyle(state.activeEl).fontSize;
-    fsInput.value = parseFloat(computedSize);
+    const el = state.activeEl;
+    const sel = window.getSelection();
+    let useEl = el;
+    if (
+      sel && sel.rangeCount && !sel.isCollapsed &&
+      el.contains(sel.anchorNode) && el.contains(sel.focusNode)
+    ) {
+      // Find first text node in range and use its parent for size
+      const range = sel.getRangeAt(0);
+      let walkerRoot = range.commonAncestorContainer;
+      if (walkerRoot.nodeType === 3) walkerRoot = walkerRoot.parentNode;
+      const walker = document.createTreeWalker(
+        walkerRoot,
+        NodeFilter.SHOW_TEXT,
+        { acceptNode: n => range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }
+      );
+      while (walker.nextNode()) {
+        const parent = walker.currentNode?.parentElement;
+        if (parent) { useEl = parent; break; }
+      }
+    }
+    const computedSize = window.getComputedStyle(useEl).fontSize;
+    const numeric = parseFloat(computedSize);
+    if (!Number.isNaN(numeric)) fsInput.value = numeric;
+    DBG('updateFontSizeInput', { targetId: useEl?.id, fontSize: computedSize });
   }
 
   updateButtonStates = function() {
@@ -221,6 +330,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       setActiveButtonAppearance(btn, active);
     }
     updateFontSizeInput();
+    updateFontLabelFromSelection();
   };
 
   document.addEventListener('selectionchange', () => {
@@ -242,12 +352,21 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     const btn = ev.target.closest('button[data-cmd]');
     if (!btn) return;
     ev.preventDefault();
+    // Always resolve the editable for the currently selected widget
+    // to avoid acting on the wrong element when state gets stale.
+    const w = document.querySelector('.canvas-item.selected');
+    let editable = w ? getRegisteredEditable(w) : null;
+    if (!editable && w) {
+      editable = w.querySelector('[data-text-editable], .editable');
+    }
+    if (editable) state.activeEl = editable;
+    // Fallback if no widget is selected, keep existing activeEl if valid
     if (!state.activeEl || !document.body.contains(state.activeEl)) {
-      const w = document.querySelector('.canvas-item.selected');
-      state.activeEl = w ? getRegisteredEditable(w) : null;
+      state.activeEl = editable || null;
     }
     if (!state.activeEl) return;
     const cmd = btn.dataset.cmd;
+    DBG('toolbar-click', { cmd, widgetId: w?.id, editableId: editable?.id, activeId: state.activeEl?.id });
     if (cmd === 'bold') toggleStyle('fontWeight', 'bold');
     if (cmd === 'italic') toggleStyle('fontStyle', 'italic');
     if (cmd === 'underline') toggleStyle('textDecoration', 'underline');
@@ -281,8 +400,8 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     },
     onClose: () => colorBtn.focus()
   });
-  state.colorPicker.el.classList.add('floating', 'hidden');
-  document.body.appendChild(state.colorPicker.el);
+  // Prepare color picker for panel usage; keep hidden until panel opens.
+  state.colorPicker.el.classList.add('hidden');
   state.colorPicker.el.addEventListener('pointerdown', ev => {
     if (
       ev.target.classList.contains('swatch') ||
@@ -293,19 +412,105 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       ev.stopPropagation();
     }
   }, true);
-  colorBtn.addEventListener('click', () => {
+  async function openColorSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const panelContainer = sidebar?.querySelector('#builderPanel');
+    if (!panelContainer) return false;
+
+    // Ensure the color panel markup exists; preload by index.js, else fetch lazily
+    let colorPanel = panelContainer.querySelector('.color-panel');
+    if (!colorPanel) {
+      try {
+        const html = await fetchPartial('color-panel', 'builder');
+        panelContainer.insertAdjacentHTML('beforeend', sanitizeHtml(html));
+        colorPanel = panelContainer.querySelector('.color-panel');
+      } catch (e) {
+        console.warn('[Toolbar] Failed to fetch color panel:', e);
+        // Fallback: show floating picker if partial unavailable
+        return false;
+      }
+    }
+
+    // Hide other builder panels (e.g., text-panel) and show color panel only
+    panelContainer.querySelectorAll('.builder-panel').forEach(p => {
+      p.style.display = p.classList.contains('color-panel') ? '' : 'none';
+    });
+
+    // Mount the color picker inside the panel content container
+    const host = colorPanel.querySelector('.color-panel-content') || colorPanel;
+    if (state.colorPicker.el.parentElement !== host) {
+      host.appendChild(state.colorPicker.el);
+    }
+    state.colorPicker.el.classList.remove('hidden');
+    // Reset any floating styles
+    state.colorPicker.el.classList.remove('floating');
+    state.colorPicker.el.style.position = '';
+    state.colorPicker.el.style.left = '';
+    state.colorPicker.el.style.top = '';
+
+    // Wire collapse button
+    const collapseBtn = colorPanel.querySelector('.collapse-btn');
+    if (collapseBtn && !collapseBtn.__bpBound) {
+      collapseBtn.__bpBound = true;
+      collapseBtn.addEventListener('click', () => closeColorSidebar());
+    }
+
+    document.body.classList.add('panel-open', 'panel-opening');
+    setTimeout(() => document.body.classList.remove('panel-opening'), 200);
+    return true;
+  }
+
+  function closeColorSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const panelContainer = sidebar?.querySelector('#builderPanel');
+    // Hide color panel and show other panels back (e.g., text-panel)
+    panelContainer?.querySelectorAll('.builder-panel').forEach(p => {
+      if (p.classList.contains('color-panel')) {
+        p.style.display = 'none';
+      } else {
+        p.style.display = '';
+      }
+    });
+    // Hide picker content
+    state.colorPicker.hide();
+    document.body.classList.add('panel-closing');
+    document.body.classList.remove('panel-open');
+    setTimeout(() => document.body.classList.remove('panel-closing'), 200);
+    try { colorBtn.focus(); } catch (e) {}
+  }
+
+  colorBtn.addEventListener('click', async () => {
     saveSelection();
-    if (state.colorPicker.el.classList.contains('hidden')) {
-      const rect = colorBtn.getBoundingClientRect();
-      state.colorPicker.showAt(
-        rect.left + window.scrollX,
-        rect.bottom + window.scrollY
-      );
-    } else {
-      state.colorPicker.hide();
+    // If color sidebar already open -> close it (toggle)
+    const sidebar = document.getElementById('sidebar');
+    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const colorPanel = panelContainer?.querySelector('.color-panel');
+    const colorPanelVisible = !!(colorPanel && colorPanel.style.display !== 'none' && document.body.classList.contains('panel-open') && !state.colorPicker.el.classList.contains('hidden'));
+    if (colorPanelVisible) { closeColorSidebar(); return; }
+    // Prefer sidebar panel if available; otherwise fall back to floating picker
+    if (!(await openColorSidebar())) {
+      // Fallback: ensure picker is attached to body for floating mode
+      if (!document.body.contains(state.colorPicker.el)) {
+        state.colorPicker.el.classList.add('floating');
+        document.body.appendChild(state.colorPicker.el);
+      }
+      if (state.colorPicker.el.classList.contains('hidden')) {
+        const rect = colorBtn.getBoundingClientRect();
+        state.colorPicker.showAt(
+          rect.left + window.scrollX,
+          rect.bottom + window.scrollY
+        );
+      } else {
+        state.colorPicker.hide();
+      }
     }
   });
-  document.addEventListener('selected', () => state.colorPicker.hide());
+
+  // When selection changes to a new widget, close/hide picker and panel
+  document.addEventListener('selected', () => {
+    state.colorPicker.hide();
+    // Do not auto-close the panel here; only hide picker to avoid flicker.
+  });
   colorWrapper.appendChild(colorBtn);
   state.toolbar.appendChild(colorWrapper);
 
@@ -317,22 +522,181 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   const fsDropdown = state.toolbar.querySelector('.fs-dropdown');
   const fsOptions = state.toolbar.querySelector('.fs-options');
   const fsBtn = state.toolbar.querySelector('.fs-btn');
+  let fsPortal = null;
+  let fsOriginalParent = null;
+  let ffPortal = null;
+  let ffOriginalParent = null;
+
+  function positionFsOptions() {
+    if (!fsDropdown.classList.contains('open')) return;
+    const btnRect = fsBtn.getBoundingClientRect();
+    Object.assign(fsOptions.style, {
+      position: 'fixed',
+      left: Math.round(btnRect.left + btnRect.width / 2) + 'px',
+      top: Math.round(btnRect.bottom + 6) + 'px',
+      transform: 'translateX(-50%)',
+      zIndex: '100000',
+      display: 'block',
+      background: '#fff',
+      border: '1px solid rgba(0,0,0,0.06)',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+      padding: '4px',
+      maxHeight: '240px',
+      overflowY: 'auto',
+      minWidth: '120px',
+    });
+    DBG('fs-dropdown position', { left: fsOptions.style.left, top: fsOptions.style.top });
+  }
+
+  function openFsDropdown() {
+    fsDropdown.classList.add('open');
+    // Create portal container once
+    if (!fsPortal) {
+      fsPortal = document.createElement('div');
+      fsPortal.className = 'fs-options-portal';
+      fsPortal.style.position = 'fixed';
+      fsPortal.style.left = '0';
+      fsPortal.style.top = '0';
+      fsPortal.style.zIndex = '100000';
+      document.body.appendChild(fsPortal);
+    }
+    // Move options into portal to escape any overflow clipping
+    if (fsOptions.parentElement !== fsPortal) {
+      fsOriginalParent = fsOptions.parentElement;
+      fsPortal.appendChild(fsOptions);
+    }
+    positionFsOptions();
+  }
+
+  function closeFsDropdown() {
+    fsDropdown.classList.remove('open');
+    // Return options to original parent
+    if (fsOriginalParent && fsOptions.parentElement === fsPortal) {
+      fsOriginalParent.appendChild(fsOptions);
+    }
+    fsOptions.removeAttribute('style');
+  }
+
+  function positionFfOptions() {
+    if (!ffDropdown.classList.contains('open')) return;
+    const btnRect = ffBtn.getBoundingClientRect();
+    Object.assign(ffOptions.style, {
+      position: 'fixed',
+      left: Math.round(btnRect.left + btnRect.width / 2) + 'px',
+      top: Math.round(btnRect.bottom + 6) + 'px',
+      transform: 'translateX(-50%)',
+      zIndex: '100000',
+      display: 'block',
+      background: '#fff',
+      border: '1px solid rgba(0,0,0,0.06)',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+      maxHeight: '240px',
+      overflowY: 'auto',
+      minWidth: '200px'
+    });
+    DBG('ff-dropdown position', { left: ffOptions.style.left, top: ffOptions.style.top });
+  }
+
+  function openFfDropdown() {
+    ffDropdown.classList.add('open');
+    if (!ffPortal) {
+      ffPortal = document.createElement('div');
+      ffPortal.className = 'ff-options-portal';
+      ffPortal.style.position = 'fixed';
+      ffPortal.style.left = '0';
+      ffPortal.style.top = '0';
+      ffPortal.style.zIndex = '100000';
+      document.body.appendChild(ffPortal);
+    }
+    if (ffOptions.parentElement !== ffPortal) {
+      ffOriginalParent = ffOptions.parentElement;
+      ffPortal.appendChild(ffOptions);
+    }
+    positionFfOptions();
+  }
+
+  function closeFfDropdown() {
+    ffDropdown.classList.remove('open');
+    if (ffOriginalParent && ffOptions.parentElement === ffPortal) {
+      ffOriginalParent.appendChild(ffOptions);
+    }
+    ffOptions.removeAttribute('style');
+  }
+
+  function extractFirstFontFamily(val) {
+    const s = String(val || '');
+    const m = s.match(/^\s*("([^"]+)"|'([^']+)'|([^,]+))/);
+    let name = m ? (m[2] || m[3] || m[4] || '') : '';
+    return name.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+  }
+
+  function resolveActiveFontCarrier() {
+    if (!state.activeEl) return null;
+    const el = state.activeEl;
+    const sel = window.getSelection();
+    let useEl = el;
+    if (
+      sel && sel.rangeCount && !sel.isCollapsed &&
+      el.contains(sel.anchorNode) && el.contains(sel.focusNode)
+    ) {
+      const range = sel.getRangeAt(0);
+      let walkerRoot = range.commonAncestorContainer;
+      if (walkerRoot.nodeType === 3) walkerRoot = walkerRoot.parentNode;
+      const walker = document.createTreeWalker(
+        walkerRoot,
+        NodeFilter.SHOW_TEXT,
+        { acceptNode: n => range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }
+      );
+      while (walker.nextNode()) {
+        const parent = walker.currentNode?.parentElement;
+        if (parent) { useEl = parent; break; }
+      }
+    }
+    return useEl;
+  }
+
+  function updateFontLabelFromSelection() {
+    try {
+      const carrier = resolveActiveFontCarrier();
+      if (!carrier) return;
+      const fam = getComputedStyle(carrier).fontFamily;
+      const name = extractFirstFontFamily(fam) || 'Font';
+      ffLabel.textContent = name;
+    } catch (_) {}
+  }
 
   const populateFonts = () => {
     const fonts = Array.isArray(window.AVAILABLE_FONTS) ? window.AVAILABLE_FONTS : [];
     ffOptions.innerHTML = fonts
       .map(f => `<span data-font="${f}" style="font-family:'${f}'">${f}</span>`)
       .join('');
-    if (fonts.length) ffLabel.textContent = fonts[0];
+    if (!fonts.length) {
+      ffLabel.textContent = 'No fonts';
+      ffBtn.disabled = true;
+      ffBtn.title = 'No font providers configured. Add one in Font Manager.';
+      closeFfDropdown();
+    } else {
+      ffBtn.disabled = false;
+      ffBtn.title = '';
+      // Prefer current selection font if present; otherwise first available
+      const carrier = resolveActiveFontCarrier();
+      const fam = carrier ? getComputedStyle(carrier).fontFamily : '';
+      const current = extractFirstFontFamily(fam);
+      const pick = fonts.find(f => f.toLowerCase() === String(current || '').toLowerCase());
+      ffLabel.textContent = pick || fonts[0];
+    }
   };
   populateFonts();
   document.addEventListener('fontsUpdated', populateFonts);
+  document.addEventListener('fontsError', populateFonts);
 
   state.toolbar.querySelector('.fs-inc').addEventListener('click', () => {
+    ensureActiveEditable();
     saveSelection();
     const input = state.toolbar.querySelector('.fs-input');
     const newSize = (parseFloat(input.value) || 16) + 1;
     input.value = newSize;
+    DBG('fs-inc', { newSize, activeId: state.activeEl?.id, ce: state.activeEl?.getAttribute?.('contenteditable') });
     applySize(newSize);
     if (state.activeEl) {
       state.activeEl.dispatchEvent(new Event('input'));
@@ -340,10 +704,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   });
 
   state.toolbar.querySelector('.fs-dec').addEventListener('click', () => {
+    ensureActiveEditable();
     saveSelection();
     const input = state.toolbar.querySelector('.fs-input');
     const newSize = Math.max((parseFloat(input.value) || 16) - 1, 1);
     input.value = newSize;
+    DBG('fs-dec', { newSize, activeId: state.activeEl?.id, ce: state.activeEl?.getAttribute?.('contenteditable') });
     applySize(newSize);
     if (state.activeEl) {
       state.activeEl.dispatchEvent(new Event('input'));
@@ -358,48 +724,96 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   };
 
   fsBtn.addEventListener('click', () => {
-    fsDropdown.classList.toggle('open');
-    const input = state.toolbar.querySelector('.fs-input');
-    input.focus();
+    if (fsDropdown.classList.contains('open')) {
+      closeFsDropdown();
+    } else {
+      openFsDropdown();
+      const input = state.toolbar.querySelector('.fs-input');
+      input.focus();
+    }
   });
 
   ffBtn.addEventListener('click', () => {
-    ffControl.classList.toggle('open');
+    if (ffBtn.disabled) {
+      alert('No fonts available. Configure a provider in Font Manager.');
+      return;
+    }
+    if (ffDropdown.classList.contains('open')) {
+      closeFfDropdown();
+    } else {
+      openFfDropdown();
+    }
   });
 
   document.addEventListener('click', ev => {
-    if (!ffControl.contains(ev.target)) ffControl.classList.remove('open');
+    if (!(ffControl.contains(ev.target) || ffOptions.contains(ev.target))) closeFfDropdown();
   });
 
   ffOptions.addEventListener('click', ev => {
     const opt = ev.target.closest('span[data-font]');
     if (!opt) return;
     applyFont(opt.dataset.font);
-    ffControl.classList.remove('open');
+    ffLabel.textContent = opt.dataset.font;
+    closeFfDropdown();
   });
+
+  // Preserve selection when picking a font from portalized options
+  ffOptions.addEventListener('pointerdown', ev => {
+    const opt = ev.target.closest('span[data-font]');
+    if (!opt) return;
+    ensureActiveEditable();
+    saveSelection();
+    ev.preventDefault();
+    ev.stopPropagation();
+    applyFont(opt.dataset.font);
+    ffLabel.textContent = opt.dataset.font;
+    closeFfDropdown();
+  }, true);
 
   ['pointerdown', 'click'].forEach(evt => {
     fsInput.addEventListener(evt, ev => ev.stopPropagation());
   });
 
   const fsInputHandler = () => {
-    fsDropdown.classList.add('open');
+    openFsDropdown();
     filterOptions(fsInput.value);
+    positionFsOptions();
   };
   fsInput.addEventListener('focus', fsInputHandler);
   fsInput.addEventListener('input', fsInputHandler);
-  fsInput.addEventListener('change', () => applySize(fsInput.value));
+  fsInput.addEventListener('change', () => { ensureActiveEditable(); saveSelection(); DBG('fs-input-change', { value: fsInput.value, activeId: state.activeEl?.id, ce: state.activeEl?.getAttribute?.('contenteditable') }); applySize(fsInput.value); });
   fsInput.addEventListener('blur', () => {
-    setTimeout(() => fsDropdown.classList.remove('open'), 150);
+    setTimeout(() => closeFsDropdown(), 150);
   });
 
   fsOptions.addEventListener('click', ev => {
     const opt = ev.target.closest('span[data-size]');
     if (!opt) return;
+    ensureActiveEditable();
     saveSelection();
+    DBG('fs-option', { size: opt.dataset.size, activeId: state.activeEl?.id, ce: state.activeEl?.getAttribute?.('contenteditable') });
     applySize(opt.dataset.size);
-    fsDropdown.classList.remove('open');
+    closeFsDropdown();
   });
+  // Ensure selection is preserved and apply works even if click is canceled
+  fsOptions.addEventListener('pointerdown', ev => {
+    const opt = ev.target.closest('span[data-size]');
+    if (!opt) return;
+    ensureActiveEditable();
+    saveSelection();
+    DBG('fs-option(pointerdown)', { size: opt.dataset.size, activeId: state.activeEl?.id, ce: state.activeEl?.getAttribute?.('contenteditable') });
+    ev.preventDefault();
+    ev.stopPropagation();
+    applySize(opt.dataset.size);
+    closeFsDropdown();
+  }, true);
+
+  const repositionFs = () => positionFsOptions();
+  window.addEventListener('scroll', repositionFs);
+  window.addEventListener('resize', repositionFs);
+  const repositionFf = () => positionFfOptions();
+  window.addEventListener('scroll', repositionFf);
+  window.addEventListener('resize', repositionFf);
 
   state.toolbar.addEventListener('input', e => {
     const target = e.target;

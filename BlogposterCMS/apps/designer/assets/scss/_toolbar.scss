@@ -16,6 +16,8 @@
   border: 1px solid rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(10px);
   max-width: 90vw;
+  /* Allow dropdowns to escape the toolbar vertically while preserving horizontal scrolling */
+  overflow: visible;
   overflow-x: auto;
 
   &::-webkit-scrollbar {
@@ -150,6 +152,7 @@
     background: rgba(0, 0, 0, 0.04);
     border-radius: 8px;
     padding: 4px;
+    overflow: visible;
 
     .fs-dec,
     .fs-inc {
@@ -174,6 +177,7 @@
 
     .fs-dropdown {
       position: relative;
+      overflow: visible;
 
       .fs-btn {
         display: flex;

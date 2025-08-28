@@ -931,7 +931,9 @@ body.builder-mode.panel-open .builder-panel {
   display: flex;
 }
 body.builder-mode.panel-open #content {
-  margin-left: 364px;
+  --content-offset: 364px;
+  margin-left: var(--content-offset);
+  width: calc(100% - var(--content-offset));
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -949,7 +951,9 @@ body.builder-mode.panel-open #content {
     width: 240px;
   }
   body.builder-mode.panel-open #content {
-    margin-left: 312px;
+    --content-offset: 312px;
+    margin-left: var(--content-offset);
+    width: calc(100% - var(--content-offset));
   }
 }
 @media (max-width: 768px) {
@@ -1000,11 +1004,15 @@ body.builder-mode.panel-open #content {
     border-radius: 12px 12px 0 0;
   }
   body.builder-mode #content {
+    --content-offset: 0px;
     margin-left: 0;
+    width: 100%;
     margin-bottom: 60px;
   }
   body.builder-mode.panel-open #content {
+    --content-offset: 0px;
     margin-left: 0;
+    width: 100%;
     margin-bottom: calc(50vh + 60px);
   }
 }
@@ -1025,6 +1033,8 @@ body.builder-mode.panel-open #content {
   -webkit-backdrop-filter: blur(10px);
           backdrop-filter: blur(10px);
   max-width: 90vw;
+  /* Allow dropdowns to escape the toolbar vertically while preserving horizontal scrolling */
+  overflow: visible;
   overflow-x: auto;
 }
 .text-block-editor-toolbar::-webkit-scrollbar {
@@ -1138,6 +1148,7 @@ body.builder-mode.panel-open #content {
   background: rgba(0, 0, 0, 0.04);
   border-radius: 8px;
   padding: 4px;
+  overflow: visible;
 }
 .text-block-editor-toolbar .font-size-control .fs-dec,
 .text-block-editor-toolbar .font-size-control .fs-inc {
@@ -1161,6 +1172,7 @@ body.builder-mode.panel-open #content {
 }
 .text-block-editor-toolbar .font-size-control .fs-dropdown {
   position: relative;
+  overflow: visible;
 }
 .text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn {
   display: flex;
@@ -1958,15 +1970,21 @@ body.builder-mode .canvas-item:hover {
 }
 
 body.builder-mode #content {
-  margin-left: 72px;
+  --content-offset: 72px;
+  margin-left: var(--content-offset);
+  width: calc(100% - var(--content-offset));
   height: calc(100vh - 64px);
   overflow: hidden;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
 }
 body.builder-mode #content #builderGrid {
   height: 100%;
   width: 100%;
+  max-width: 1400px;
   overflow: auto;
   background: white;
   border-radius: 12px 0 0 0;
@@ -1986,7 +2004,9 @@ body.builder-mode #content #builderGrid::before {
 }
 
 body.builder-mode.panel-open #content {
-  margin-left: 364px;
+  --content-offset: 364px;
+  margin-left: var(--content-offset);
+  width: calc(100% - var(--content-offset));
   transform: scale(0.95);
   transform-origin: top left;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

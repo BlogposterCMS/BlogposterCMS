@@ -1,6 +1,11 @@
 import { initGlobalEvents, onGlobalEvent } from '/plainspace/grid-core/globalEvents.js';
 import { styleMatches, elementHasStyle } from '../utils/styleUtils.js';
 
+// Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
+function DBG(...args) {
+  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/sel]', ...args); } catch (e) {}
+}
+
 const preservedRanges = new WeakMap();
 let activeEl = null; // placeholder, will be set by editor-core
 export function bindActiveElementGetter(getter) {
@@ -18,6 +23,7 @@ export function saveSelection() {
   const el = activeEl && activeEl();
   if (sel && el && sel.rangeCount && !sel.isCollapsed && el.contains(sel.anchorNode) && el.contains(sel.focusNode)) {
     preservedRanges.set(el, sel.getRangeAt(0).cloneRange());
+    DBG('saveSelection', { targetId: el?.id });
   }
 }
 
@@ -28,6 +34,7 @@ export function restoreSelection() {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
+    DBG('restoreSelection', { targetId: el?.id });
   }
 }
 
@@ -49,11 +56,13 @@ export function isSelectionStyled(prop, value) {
     !el.contains(sel.anchorNode) ||
     !el.contains(sel.focusNode)
   ) {
+    DBG('isSelectionStyled: no-range -> element', { prop, value, targetId: el?.id });
     return elementHasStyle(el, prop, value);
   }
   const range = sel.getRangeAt(0);
   if (sel.anchorNode === sel.focusNode) {
     const node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+    DBG('isSelectionStyled: single-node', { prop, value, nodeTag: node?.tagName });
     return elementHasStyle(node, prop, value);
   }
   let walkerRoot = range.commonAncestorContainer;
@@ -76,6 +85,7 @@ export function isSelectionStyled(prop, value) {
   while (walker.nextNode()) {
     carriers.add(walker.currentNode.parentElement);
   }
+  DBG('isSelectionStyled: range', { prop, value, carriers: carriers.size });
   return [...carriers].every(elm => elementHasStyle(elm, prop, value));
 }
 

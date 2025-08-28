@@ -15,6 +15,11 @@ import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 
 import { addHitLayer, applyDesignerTheme, wrapCss, executeJs } from './utils.js';
+
+// Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
+function DBG(...args) {
+  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/builder]', ...args); } catch (e) {}
+}
 import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
@@ -189,7 +194,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   }
 
-  contentEl.innerHTML = `<div id="builderGrid" class="pixel-grid builder-grid"></div>`;
+    // Use a plain builder grid container. CanvasGrid will add its own
+  // `canvas-grid` class; avoid `pixel-grid` here so zoom scaling via
+  // CSS variable works with the BoundingBoxManager.
+  contentEl.innerHTML = `<div id="builderGrid" class="builder-grid"></div>`;
   gridEl = document.getElementById('builderGrid');
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
@@ -211,9 +219,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function selectWidget(el) {
     baseSelectWidget(el);
     if (!el) return;
-    const editable = getRegisteredEditable(el);
+    let editable = getRegisteredEditable(el);
+    if (!editable) {
+      // Fallback: resolve inner editable inside widget DOM
+      editable = el.querySelector('[data-text-editable], .editable');
+    }
     setActiveElement(editable);
     showToolbar();
+    DBG('selectWidget', { widgetId: el?.id, editableId: editable?.id });
   }
   grid.on('change', el => {          // jedes Mal, wenn das Grid ein Widget anfasst …
     if (el) selectWidget(el);        // … Action-Bar zeigen
@@ -822,6 +835,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (layoutName === globalLayoutName) return;
     layoutBar = document.createElement('div');
     layoutBar.className = 'layout-bar';
+
+    // Layer buttons
     layoutLayers.forEach((layer, idx) => {
       const btn = document.createElement('button');
       btn.textContent = idx === 0 ? 'Global' : `Layer ${idx}`;
@@ -829,6 +844,63 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       btn.addEventListener('click', () => switchLayer(idx));
       layoutBar.appendChild(btn);
     });
+
+    // Zoom controls (10% � 500%, default 100%)
+    const zoomWrap = document.createElement('div');
+    zoomWrap.className = 'zoom-controls';
+    const zoomOut = document.createElement('button');
+    zoomOut.title = 'Zoom out';
+    zoomOut.innerHTML = window.featherIcon ? window.featherIcon('minus') : '<img src="/assets/icons/zoom-out.svg" alt="-" />';
+    const zoomLevel = document.createElement('span');
+    zoomLevel.className = 'zoom-level';
+    const zoomSlider = document.createElement('input');
+    zoomSlider.type = 'range';
+    zoomSlider.min = '10';
+    zoomSlider.max = '500';
+    zoomSlider.step = '1';
+    zoomSlider.value = '100';
+    zoomSlider.style.width = '180px';
+    const zoomIn = document.createElement('button');
+    zoomIn.title = 'Zoom in';
+    zoomIn.innerHTML = window.featherIcon ? window.featherIcon('plus') : '<img src="/assets/icons/zoom-in.svg" alt="+" />';
+
+    let zoomPct = 100;
+    function applyZoom(pct) {
+      zoomPct = Math.max(10, Math.min(500, Math.round(pct)));
+      zoomSlider.value = String(zoomPct);
+      zoomLevel.textContent = `${zoomPct}%`;
+      const scale = zoomPct / 100;
+      if (gridEl) {
+        gridEl.style.transformOrigin = 'top left';
+        gridEl.style.transform = `scale(${scale})`;
+        gridEl.style.setProperty('--canvas-scale', String(scale));
+        // Notify overlays like the BoundingBoxManager
+        gridEl.dispatchEvent(new Event('zoom', { bubbles: true }));
+      }
+    }
+    // Initial zoom
+    applyZoom(100);
+
+    zoomOut.addEventListener('click', () => applyZoom(zoomPct - 10));
+    zoomIn.addEventListener('click', () => applyZoom(zoomPct + 10));
+    zoomSlider.addEventListener('input', () => applyZoom(parseInt(zoomSlider.value, 10) || 100));
+
+    // Shift + Wheel to control zoom
+    const wheelHandler = e => {
+      if (!e.shiftKey) return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -10 : 10;
+      applyZoom(zoomPct + delta);
+    };
+    // passive:false is required to be able to preventDefault on wheel
+    gridEl.addEventListener('wheel', wheelHandler, { passive: false });
+
+    zoomWrap.appendChild(zoomOut);
+    zoomWrap.appendChild(zoomSlider);
+    zoomWrap.appendChild(zoomLevel);
+    zoomWrap.appendChild(zoomIn);
+    layoutBar.appendChild(zoomWrap);
+
     document.body.appendChild(layoutBar);
   }
 

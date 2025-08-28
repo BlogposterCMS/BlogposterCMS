@@ -16,6 +16,15 @@ async function bootstrap() {
     if (panelContainer) {
       const textHtml = await fetchPartial('text-panel', 'builder');
       panelContainer.innerHTML = sanitizeHtml(textHtml);
+      // Preload color panel (kept hidden until opened from toolbar)
+      try {
+        const colorHtml = await fetchPartial('color-panel', 'builder');
+        panelContainer.insertAdjacentHTML('beforeend', sanitizeHtml(colorHtml));
+        const colorPanel = panelContainer.querySelector('.color-panel');
+        if (colorPanel) colorPanel.style.display = 'none';
+      } catch (e) {
+        console.warn('[Designer App] Failed to load color panel:', e);
+      }
     }
   } catch (err) {
     console.error('[Designer App] Failed to load sidebar:', err);

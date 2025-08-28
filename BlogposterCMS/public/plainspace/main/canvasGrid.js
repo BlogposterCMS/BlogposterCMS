@@ -50,11 +50,43 @@ export class CanvasGrid {
     this._emitter = new EventTarget();
     bindGlobalListeners(this.el, (evt, e) => this._emit(evt, e));
     this._updateGridHeight();
+    // Observe container size changes (e.g., sidebar open/close) and
+    // recompute column width so percentage-based layout stays correct.
+    try {
+      const _ro = new ResizeObserver(() => {
+        // Use clientWidth to avoid counting CSS transforms applied to
+        // the container (e.g. when the sidebar "plops" open we scale
+        // #content). getBoundingClientRect() would include the scale
+        // and break our column width math.
+        const w = this.el?.clientWidth || parseFloat(getComputedStyle(this.el).width) || 1;
+        const cols = this.options.columns || 1;
+        this.options.columnWidth = w / cols;
+        this.widgets.forEach(wi => this._applyPosition(wi, false));
+        // If something is selected, ensure the bbox follows
+        this._updateBBox();
+      });
+      _ro.observe(this.el);
+      this._containerRO = _ro;
+    } catch (_) { /* ResizeObserver not supported */ }
+
     if (this.options.percentageMode) {
       window.addEventListener('resize', () => {
         this.widgets.forEach(w => this._applyPosition(w, false));
       });
     }
+
+    // Zoom state and handler (Ctrl + wheel). Keep the point under the cursor
+    // fixed by adjusting scroll while changing scale.
+    this.scale = 1;
+    this.el.style.setProperty('--canvas-scale', '1');
+    this.el.style.transformOrigin = 'top left';
+    const wheelZoom = e => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      this.setScale(this.scale * factor, { x: e.clientX, y: e.clientY });
+    };
+    this.el.addEventListener('wheel', wheelZoom, { passive: false });
   }
 
   on(evt, cb) {
@@ -63,6 +95,33 @@ export class CanvasGrid {
 
   _emit(evt, detail) {
     this._emitter.dispatchEvent(new CustomEvent(evt, { detail }));
+  }
+
+  _currentScale() {
+    const v = parseFloat(getComputedStyle(this.el).getPropertyValue('--canvas-scale') || '1');
+    return Number.isFinite(v) && v > 0 ? v : 1;
+  }
+
+  setScale(next, anchor = null) {
+    const prev = this.scale || this._currentScale();
+    const clamped = Math.max(0.1, Math.min(5, next));
+    this.scale = clamped;
+    if (anchor) {
+      const rect = this.el.getBoundingClientRect();
+      const dx = anchor.x - rect.left;
+      const dy = anchor.y - rect.top;
+      const L0 = this.el.scrollLeft;
+      const T0 = this.el.scrollTop;
+      const L1 = (dx / prev) + L0 - (dx / clamped);
+      const T1 = (dy / prev) + T0 - (dy / clamped);
+      requestAnimationFrame(() => {
+        this.el.scrollLeft = L1;
+        this.el.scrollTop = T1;
+      });
+    }
+    this.el.style.transform = `scale(${clamped})`;
+    this.el.style.setProperty('--canvas-scale', String(clamped));
+    this.el.dispatchEvent(new Event('zoom', { bubbles: true }));
   }
 
   _updateGridHeight() {
@@ -207,11 +266,12 @@ export class CanvasGrid {
         pos = e.currentTarget.dataset.pos;
         if (!pos) return;
         e.stopPropagation();
-        const rect = widget.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
-        startW = rect.width; startH = rect.height;
+        // Use grid data and column size for unscaled starting values
         startGX = +widget.dataset.x || 0;
         startGY = +widget.dataset.y || 0;
+        startW = (+widget.getAttribute('gs-w') || 1) * this.options.columnWidth;
+        startH = (+widget.getAttribute('gs-h') || 1) * this.options.cellHeight;
         const startPX = startGX * this.options.columnWidth;
         const startPY = startGY * this.options.cellHeight;
         let curW = startW, curH = startH, curPX = startPX, curPY = startPY;
@@ -224,8 +284,9 @@ export class CanvasGrid {
             _resizeRAF = null;
             const e = _lastEvt; _lastEvt = null;
             if (!e) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+            const sc = this._currentScale();
+            const dx = (e.clientX - startX) / sc;
+            const dy = (e.clientY - startY) / sc;
             if (live) {
               let w = startW, hVal = startH;
               let gx = startGX, gy = startGY;
@@ -297,11 +358,11 @@ export class CanvasGrid {
         }
         e.stopPropagation();
         this.select(el);
-        const rect = el.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
-        startW = rect.width; startH = rect.height;
         startGX = +el.dataset.x || 0;
         startGY = +el.dataset.y || 0;
+        startW = (+el.getAttribute('gs-w') || 1) * this.options.columnWidth;
+        startH = (+el.getAttribute('gs-h') || 1) * this.options.cellHeight;
         const startPX = startGX * this.options.columnWidth;
         const startPY = startGY * this.options.cellHeight;
         let curW = startW, curH = startH, curPX = startPX, curPY = startPY;
@@ -314,8 +375,9 @@ export class CanvasGrid {
             _resizeRAF = null;
             const e = _lastEvt; _lastEvt = null;
             if (!e) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+            const sc = this._currentScale();
+            const dx = (e.clientX - startX) / sc;
+            const dy = (e.clientY - startY) / sc;
             if (live) {
               let w = startW + dx;
               let hVal = startH + dy;
@@ -415,8 +477,9 @@ export class CanvasGrid {
 
     const move = e => {
       if (!dragging) return;
-      targetX = startGX * this.options.columnWidth + (e.clientX - startX);
-      targetY = startGY * this.options.cellHeight + (e.clientY - startY);
+      const sc = this._currentScale();
+      targetX = startGX * this.options.columnWidth + (e.clientX - startX) / sc;
+      targetY = startGY * this.options.cellHeight + (e.clientY - startY) / sc;
       if (!frame) frame = requestAnimationFrame(apply);
     };
 

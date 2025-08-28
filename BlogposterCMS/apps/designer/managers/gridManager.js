@@ -18,16 +18,29 @@ export function initGrid(gridEl, state, selectWidget) {
 
   let cwRAF = null;
   function setColumnWidth() {
+    // Recalculate based on the element's clientWidth to ignore any
+    // CSS transforms (e.g. panel-open scales the #content). Using
+    // getBoundingClientRect() would include transforms and produce
+    // incorrect column widths.
     if (cwRAF) return;
     cwRAF = requestAnimationFrame(() => {
       cwRAF = null;
-      const width = gridEl.getBoundingClientRect().width || 1;
+      const width = gridEl.clientWidth ||
+        // Fallback to computed style if clientWidth is 0 (detached?)
+        parseFloat(getComputedStyle(gridEl).width) ||
+        // Last resort
+        (gridEl.getBoundingClientRect().width || 1);
       grid.options.columnWidth = width / grid.options.columns;
+      // Trigger a silent update so widgets re-render to the new width
       grid.widgets.forEach(w => grid.update(w, {}, { silent: true }));
     });
   }
   setColumnWidth();
   window.addEventListener('resize', setColumnWidth);
+  // Also observe direct size changes of the grid container (e.g. sidebar toggles).
+  const __gridRO = new ResizeObserver(() => setColumnWidth());
+  __gridRO.observe(gridEl);
+  gridEl.__gridRO = __gridRO;
 
   grid.on('change', el => {
     if (el) selectWidget(el);

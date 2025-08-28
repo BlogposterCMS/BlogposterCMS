@@ -1,5 +1,10 @@
 import { sanitizeHtml } from './sanitizer.js';
 import { isSelectionStyled, restoreSelection, saveSelection, bindActiveElementGetter } from './selection.js';
+
+// Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
+function DBG(...args) {
+  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/core]', ...args); } catch (e) {}
+}
 import { recordChange } from './history.js';
 import { initToolbar, showToolbar, hideToolbar } from '../toolbar/toolbar.js';
 import { isValidTag } from './allowedTags.js';
@@ -54,6 +59,7 @@ function updateAndDispatch(el) {
 export function toggleStyle(prop, value) {
   if (!state.activeEl) return;
   const prev = state.activeEl.outerHTML;
+  DBG('toggleStyle', { prop, value, activeId: state.activeEl?.id, ce: state.activeEl?.getAttribute?.('contenteditable') });
   toggleStyleInternal(prop, value);
   recordChange(state.activeEl, prev, updateAndDispatch);
 }
@@ -61,6 +67,7 @@ export function toggleStyle(prop, value) {
 export function applyFont(font) {
   if (!state.activeEl) return;
   const prev = state.activeEl.outerHTML;
+  DBG('applyFont', { font, activeId: state.activeEl?.id });
   applyFontInternal(font);
   recordChange(state.activeEl, prev, updateAndDispatch);
 }
@@ -68,6 +75,7 @@ export function applyFont(font) {
 export function applySize(size) {
   if (!state.activeEl) return;
   const prev = state.activeEl.outerHTML;
+  DBG('applySize', { size, activeId: state.activeEl?.id });
   applySizeInternal(size);
   recordChange(state.activeEl, prev, updateAndDispatch);
 }
@@ -75,6 +83,7 @@ export function applySize(size) {
 export function applyColor(color) {
   if (!state.activeEl) return;
   const prev = state.activeEl.outerHTML;
+  DBG('applyColor', { color, activeId: state.activeEl?.id });
   applyColorInternal(color);
   recordChange(state.activeEl, prev, updateAndDispatch);
 }
@@ -246,11 +255,14 @@ export function registerElement(editable, onSave) {
   const widget = findWidget(editable);
   if (widget) {
     editableMap.set(widget, editable);
+    DBG('registerElement', { widgetId: widget.id, editableId: editable.id, class: editable.className });
   }
 }
 
 export function getRegisteredEditable(widget) {
-  return editableMap.get(widget) || null;
+  const el = editableMap.get(widget) || null;
+  DBG('getRegisteredEditable', { widgetId: widget?.id, editableId: el?.id });
+  return el;
 }
 
 export function enableAutoEdit() {
@@ -282,11 +294,13 @@ export async function initTextEditor() {
 
 export function setActiveElement(el) {
   state.activeEl = el;
+  DBG('setActiveElement', { id: el?.id, cls: el?.className, ce: el?.getAttribute?.('contenteditable') });
 }
 
 export function applyToolbarChange(el, styleProp, value) {
   if (!el) return;
   el.style[styleProp] = value;
+  DBG('applyToolbarChange', { id: el?.id, prop: styleProp, value });
   updateAndDispatch(el);
 }
 

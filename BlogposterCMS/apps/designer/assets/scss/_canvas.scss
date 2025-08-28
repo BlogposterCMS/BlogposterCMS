@@ -61,16 +61,25 @@
 
 // Main content area styling
 body.builder-mode #content {
-  margin-left: 72px; // Updated for new sidebar width
+  // Use a variable for the left offset so we can recompute
+  // the available canvas width whenever the sidebar/panel width
+  // changes. This keeps grid math correct on resize.
+  --content-offset: 72px; // sidebar width
+  margin-left: var(--content-offset);
+  width: calc(100% - var(--content-offset));
   height: calc(100vh - 64px); // Updated for new header height
   overflow: hidden; // Prevent scrollbars on main container
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
 
   // Canvas container
   #builderGrid {
     height: 100%;
     width: 100%;
+    max-width: 1400px; // center canvas with a max width
     overflow: auto;
     background: white;
     border-radius: 12px 0 0 0;
@@ -97,7 +106,10 @@ body.builder-mode #content {
 // Panel open state
 body.builder-mode.panel-open {
   #content {
-    margin-left: 364px; // sidebar + panel width
+    // sidebar (72px) + panel (292px) = 364px
+    --content-offset: 364px;
+    margin-left: var(--content-offset);
+    width: calc(100% - var(--content-offset));
     transform: scale(0.95);
     transform-origin: top left;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

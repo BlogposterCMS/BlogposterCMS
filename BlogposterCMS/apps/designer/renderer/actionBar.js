@@ -43,10 +43,29 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     const locked = el.getAttribute('gs-locked') === 'true';
     setLockIcon(locked);
     actionBar.style.display = 'flex';
+    // Make measurable without flashing in wrong position
     actionBar.style.visibility = 'hidden';
     const rect = el.getBoundingClientRect();
-    actionBar.style.top = `${rect.top - 28 + window.scrollY}px`;
-    actionBar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
+    // Measure bar size to center horizontally and position above the box
+    const barWidth = actionBar.offsetWidth || 0;
+    const barHeight = actionBar.offsetHeight || 0;
+    const gap = 8; // small visual gap to the bounding box
+    // Preferred position: centered horizontally, above the widget
+    let left = rect.left + rect.width / 2 + window.scrollX - barWidth / 2;
+    let top = rect.top + window.scrollY - barHeight - gap;
+    // If there isn't enough space above, place below the widget
+    const minTop = window.scrollY + gap;
+    if (top < minTop) {
+      top = rect.bottom + window.scrollY + gap;
+    }
+    // Clamp horizontally to stay within viewport
+    const viewportLeft = window.scrollX + gap;
+    const viewportRight = window.scrollX + document.documentElement.clientWidth - gap;
+    if (barWidth > 0) {
+      left = Math.max(viewportLeft, Math.min(left, viewportRight - barWidth));
+    }
+    actionBar.style.top = `${top}px`;
+    actionBar.style.left = `${left}px`;
     actionBar.style.visibility = '';
   }
 

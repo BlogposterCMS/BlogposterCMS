@@ -350,7 +350,10 @@ body.builder-mode.panel-open {
   }
 
   #content {
-    margin-left: 364px; // sidebar + panel width
+    // Keep width in sync with the visible canvas area
+    --content-offset: 364px; // sidebar + panel width
+    margin-left: var(--content-offset);
+    width: calc(100% - var(--content-offset));
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
@@ -373,7 +376,9 @@ body.builder-mode.panel-open {
   }
 
   body.builder-mode.panel-open #content {
-    margin-left: 312px;
+    --content-offset: 312px;
+    margin-left: var(--content-offset);
+    width: calc(100% - var(--content-offset));
   }
 }
 
@@ -431,12 +436,16 @@ body.builder-mode.panel-open {
   }
 
   body.builder-mode #content {
+    --content-offset: 0px;
     margin-left: 0;
+    width: 100%;
     margin-bottom: 60px;
   }
 
   body.builder-mode.panel-open #content {
+    --content-offset: 0px;
     margin-left: 0;
+    width: 100%;
     margin-bottom: calc(50vh + 60px);
   }
 }

@@ -123,6 +123,26 @@
     align-items: center;
     gap: 12px;
 
+    .builder-viewport-btn {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+      transition: background 0.2s ease;
+
+      svg, img {
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+    }
+
     .builder-save-btn,
     .builder-preview-btn,
     .builder-publish-btn {
@@ -261,6 +281,27 @@
   &.show {
     display: block;
     animation: menuSlideIn 0.2s ease;
+  }
+}
+
+.viewport-slider {
+  display: none;
+  padding: 8px 24px;
+  background: var(--color-white);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .viewport-range {
+    flex: 1;
+  }
+
+  .viewport-value {
+    font-size: 14px;
+    color: var(--color-text, #333);
+    min-width: 48px;
+    text-align: right;
   }
 }
 

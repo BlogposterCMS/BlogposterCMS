@@ -20,6 +20,7 @@ El Psy Kongroo
 - Builder grid column width recalculation is debounced via `requestAnimationFrame` and widget layouts persist percentage-based coordinates.
 
 ### Added
+- Header viewport control with slider to adjust builder canvas width.
 - Login screen now cycles through preset accent colors for its dotted background and form border.
 - Updated CanvasGrid documentation to cover responsive builder configuration.
 - `CanvasGrid.update` accepts an optional `{ silent: true }` flag to suppress `change` events during internal recalculations.

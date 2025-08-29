@@ -538,6 +538,45 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   topBar.appendChild(infoWrap);
 
+  const viewportBtn = document.createElement('button');
+  viewportBtn.id = 'viewportControlBtn';
+  viewportBtn.className = 'builder-viewport-btn';
+  viewportBtn.innerHTML = window.featherIcon
+    ? window.featherIcon('monitor')
+    : '<img src="/assets/icons/monitor.svg" alt="Viewport" />';
+  topBar.appendChild(viewportBtn);
+
+  const viewportPanel = document.createElement('div');
+  viewportPanel.className = 'viewport-slider';
+  viewportPanel.style.display = 'none';
+  const viewportRange = document.createElement('input');
+  viewportRange.type = 'range';
+  viewportRange.min = '320';
+  viewportRange.max = '1920';
+  viewportRange.step = '10';
+  const currentWidth = gridViewportEl?.clientWidth || 0;
+  viewportRange.value = String(currentWidth);
+  viewportRange.className = 'viewport-range';
+  const viewportValue = document.createElement('span');
+  viewportValue.className = 'viewport-value';
+  viewportValue.textContent = `${currentWidth}px`;
+  viewportPanel.appendChild(viewportRange);
+  viewportPanel.appendChild(viewportValue);
+
+  viewportBtn.addEventListener('click', () => {
+    viewportPanel.style.display =
+      viewportPanel.style.display === 'block' ? 'none' : 'block';
+  });
+
+  viewportRange.addEventListener('input', () => {
+    const val = parseInt(viewportRange.value, 10);
+    if (Number.isFinite(val)) {
+      gridViewportEl.style.width = `${val}px`;
+      gridViewportEl.style.margin = '0 auto';
+      viewportValue.textContent = `${val}px`;
+    }
+  });
+
   const saveBtn = document.createElement('button');
   saveBtn.id = 'saveLayoutBtn';
   saveBtn.className = 'builder-save-btn';
@@ -621,6 +660,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   } else {
     document.body.prepend(topBar);
   }
+  topBar.after(viewportPanel);
 
   // (no extra style injection)
 

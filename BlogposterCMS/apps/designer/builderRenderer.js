@@ -245,8 +245,23 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     showToolbar();
     DBG('selectWidget', { widgetId: el?.id, editableId: editable?.id });
   }
-  grid.on('change', el => {          // jedes Mal, wenn das Grid ein Widget anfasst …
-    if (el) selectWidget(el);        // … Action-Bar zeigen
+  // When the grid selection changes, either select a widget or show the
+  // background toolbar. Previously we only handled the widget case, so
+  // clicking on empty space would not reveal the background toolbar. This
+  // mirrors the behaviour of the text editor: when nothing is selected we
+  // hide the text toolbar and show the background toolbar. Record the
+  // opening timestamp so the global click handler does not immediately hide
+  // it again.
+  grid.on('change', el => {
+    if (el) {
+      // Selecting a widget hides the background toolbar and shows the text toolbar
+      selectWidget(el);
+    } else {
+      // Deselecting: hide text toolbar and show background toolbar
+      hideToolbar();
+      showBgToolbar();
+      bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
+    }
   });
   grid.on("dragstart", () => {
     grid.bboxManager?.hide?.();

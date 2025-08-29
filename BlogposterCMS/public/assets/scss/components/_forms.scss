@@ -19,14 +19,14 @@
   background-color: #f1f3f6;
   font-size: 15px;
   color: #333;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, --user-color 5s;
   box-shadow: inset 0 0 0 2px transparent;
 }
 
 .app-scope .field input:focus,
 .app-scope .field textarea:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px #008080;
+  box-shadow: inset 0 0 0 2px var(--user-color);
   background-color: #ffffff;
 }
 
@@ -49,10 +49,11 @@
   top: -7px;
   left: 14px;
   font-size: 12px;
-  color: #008080;
+  color: var(--user-color);
   background: #ffffff;
   padding: 0 4px;
   font-weight: 500;
+  transition: color 0.2s ease, --user-color 5s;
 }
 
 .app-scope form .button {

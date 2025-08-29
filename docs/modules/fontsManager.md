@@ -17,6 +17,20 @@ or disabling them via the admin settings.
   the fonts via `fontsLoader.js` so no external requests occur unless
   explicitly allowed.
 
+## Google Fonts Provider
+
+- Env requirements:
+  - `FONTS_MODULE_INTERNAL_SECRET` must be set.
+  - `GOOGLE_FONTS_API_KEY` must be set to fetch the full catalog.
+- Enabling the provider via `setFontProviderEnabled` triggers the provider's
+  initialization, which fetches the complete catalog using the Google Webfonts
+  API and registers each family in `global.fontsList`.
+- Client behavior:
+  - `fontsLoader.js` exposes `window.AVAILABLE_FONTS` (names only) and a
+    `window.loadFontCss(name)` helper to lazy-load the stylesheet for a
+    selected family.
+  - This avoids injecting thousands of `<link>` tags up front.
+
 ## Listened Events
 - `listFontProviders`
 - `setFontProviderEnabled`

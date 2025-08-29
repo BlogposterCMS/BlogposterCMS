@@ -752,6 +752,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   ffOptions.addEventListener('click', ev => {
     const opt = ev.target.closest('span[data-font]');
     if (!opt) return;
+    try { window.loadFontCss?.(opt.dataset.font); } catch (_) {}
     applyFont(opt.dataset.font);
     ffLabel.textContent = opt.dataset.font;
     closeFfDropdown();
@@ -765,6 +766,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     saveSelection();
     ev.preventDefault();
     ev.stopPropagation();
+    try { window.loadFontCss?.(opt.dataset.font); } catch (_) {}
     applyFont(opt.dataset.font);
     ffLabel.textContent = opt.dataset.font;
     closeFfDropdown();

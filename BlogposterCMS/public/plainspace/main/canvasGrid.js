@@ -28,6 +28,28 @@ export class CanvasGrid {
     }
     this.el = typeof el === 'string' ? document.querySelector(el) : el;
     this.el.classList.add('canvas-grid');
+    // The scroll container hosts the scrollbars. Default to the grid's
+    // parent element, but allow an explicit element via options.
+    this.scrollContainer = options.scrollContainer || this.el.parentElement || this.el;
+    // Create a sizing wrapper to expand with zoom so the scrollbars show
+    // inside the designer rather than on the page.
+    try {
+      if (this.scrollContainer && this.el.parentElement === this.scrollContainer) {
+        const sizer = document.createElement('div');
+        sizer.className = 'canvas-zoom-sizer';
+        sizer.style.position = 'relative';
+        sizer.style.width = '100%';
+        sizer.style.height = '100%';
+        this.scrollContainer.insertBefore(sizer, this.el);
+        sizer.appendChild(this.el);
+        this.sizer = sizer;
+        // Position the actual grid absolutely inside the sizer so we can
+        // scale it visually while the sizer controls the scroll area.
+        this.el.style.position = 'absolute';
+        this.el.style.left = '0';
+        this.el.style.top = '0';
+      }
+    } catch (_) { /* non-fatal if DOM structure unexpected */ }
     this.widgets = [];
     this.activeEl = null;
     this.useBoundingBox = this.options.useBoundingBox !== false;
@@ -75,24 +97,22 @@ export class CanvasGrid {
       });
     }
 
-    // Zoom state and handler (Ctrl + wheel). Keep the grid centered while
-    // scaling by anchoring to the element's midpoint instead of the cursor
-    // position.
+    // Zoom state and handler (Ctrl + wheel). Zoom towards the cursor
+    // position for intuitive focal-point zooming within the grid area.
     this.scale = 1;
     this.el.style.setProperty('--canvas-scale', '1');
-    this.el.style.transformOrigin = 'center center';
+    // Centered transform origin so the canvas scales around the middle
+    this.el.style.transformOrigin = '50% 50%';
     const wheelZoom = e => {
       if (!e.ctrlKey) return;
       e.preventDefault();
       const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      const rect = this.el.getBoundingClientRect();
-      const anchor = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
-      };
+      const anchor = { x: e.clientX, y: e.clientY };
       this.setScale(this.scale * factor, anchor);
     };
-    this.el.addEventListener('wheel', wheelZoom, { passive: false });
+    // Listen on the scroll container so Ctrl+wheel over the viewport works
+    const wheelTarget = this.scrollContainer || this.el;
+    wheelTarget.addEventListener('wheel', wheelZoom, { passive: false });
   }
 
   on(evt, cb) {
@@ -112,18 +132,10 @@ export class CanvasGrid {
     const prev = this.scale || this._currentScale();
     const clamped = Math.max(0.1, Math.min(5, next));
     this.scale = clamped;
-    if (anchor) {
-      const rect = this.el.getBoundingClientRect();
-      const dx = anchor.x - rect.left;
-      const dy = anchor.y - rect.top;
-      const L0 = this.el.scrollLeft;
-      const T0 = this.el.scrollTop;
-      const L1 = (dx / prev) + L0 - (dx / clamped);
-      const T1 = (dy / prev) + T0 - (dy / clamped);
-      requestAnimationFrame(() => {
-        this.el.scrollLeft = L1;
-        this.el.scrollTop = T1;
-      });
+    // Keep sizer at 100% so viewport width remains constant while zooming
+    if (this.sizer) {
+      this.sizer.style.width = '100%';
+      this.sizer.style.height = '100%';
     }
     this.el.style.transform = `scale(${clamped})`;
     this.el.style.setProperty('--canvas-scale', String(clamped));
@@ -137,7 +149,12 @@ export class CanvasGrid {
       const h = +w.getAttribute('gs-h') || 1;
       return Math.max(m, y + h);
     }, 0);
-    const min = parseFloat(getComputedStyle(this.el).minHeight) || 0;
+    // Use CSS min-height if present, otherwise fall back to the
+    // scroll container's current client height so an empty grid still
+    // has a visible size.
+    const cssMin = parseFloat(getComputedStyle(this.el).minHeight) || 0;
+    const containerMin = (this.scrollContainer && this.scrollContainer.clientHeight) || 0;
+    const min = Math.max(cssMin, containerMin);
     const height = Math.max(rows * cellHeight, min);
     this.el.style.height = `${height}px`;
   }

@@ -60,6 +60,12 @@
 }
 
 // Main content area styling
+// Hide page-level scrollbars while the designer is open so all
+// scrolling happens inside the viewport container.
+body.builder-mode {
+  overflow: hidden;
+}
+
 body.builder-mode #content {
   // Use a variable for the left offset so we can recompute
   // the available canvas width whenever the sidebar/panel width
@@ -69,22 +75,21 @@ body.builder-mode #content {
   width: calc(100% - var(--content-offset));
   height: calc(100vh - 64px); // Updated for new header height
   overflow: hidden; // Prevent scrollbars on main container
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
   position: relative;
   display: flex;
   justify-content: center;
   align-items: stretch;
 
-  // Canvas container
-  #builderGrid {
+  // Canvas viewport (scroll container)
+  #builderViewport {
     height: 100%;
     width: 100%;
     max-width: 1400px; // center canvas with a max width
     overflow: auto;
-    background: white;
-    border-radius: 12px 0 0 0;
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
     position: relative;
+    display: grid;
+    place-items: center;
 
     &::before {
       content: '';
@@ -93,10 +98,6 @@ body.builder-mode #content {
       left: 72px;
       right: 0;
       bottom: 0;
-      background: 
-        radial-gradient(circle at 20% 20%, rgba(0, 123, 255, 0.02) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.02) 0%, transparent 50%),
-        linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
       pointer-events: none;
       z-index: -1;
     }
@@ -119,19 +120,30 @@ body.builder-mode.panel-open {
     display: flex;
   }
 
-  #builderGrid {
-    border-radius: 12px;
-    overflow: hidden;
+  #builderViewport {
+    // Keep viewport unclipped so #builderGrid shadows are visible
   }
 }
 
 // Updated dimensions
-body.builder-mode #builderGrid {
+body.builder-mode #builderViewport {
   margin-top: 0; // Removed as we handle this with padding
   height: 100%;
   min-height: 100%;
   padding: 20px;
   box-sizing: border-box;
+}
+
+// Ensure the inner grid has a baseline size so _updateGridHeight()
+// never computes 0px on empty layouts.
+body.builder-mode #builderGrid {
+  min-height: 70vh;
+  min-width: 100%;
+  width: 100%;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
 // Ensure themed widget content matches its wrapper dimensions
@@ -157,18 +169,24 @@ body.preview-mode {
   .canvas-item .widget-remove,
   .canvas-item .widget-edit,
   .canvas-item .widget-menu,
-  .text-block-editor-toolbar {
+  .text-block-editor-toolbar,
+  .bg-editor-toolbar {
     display: none !important;
   }
 
-  #builderGrid {
-    pointer-events: none;
+  // In preview mode the viewport takes full height
+  #builderViewport {
     margin-top: 0;
     height: calc(100vh - 64px);
     min-height: calc(100vh - 64px);
     background: white;
     border-radius: 0;
     box-shadow: none;
+  }
+
+  // Disable interactions with the canvas in preview mode
+  #builderGrid {
+    pointer-events: none;
   }
 
   #content {

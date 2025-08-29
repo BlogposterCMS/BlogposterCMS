@@ -1,5 +1,5 @@
 // Canva-inspired Toolbar Styles
-.text-block-editor-toolbar {
+.text-block-editor-toolbar, .bg-editor-toolbar {
   position: fixed;
   top: 76px; // Below header
   left: 50%;
@@ -343,7 +343,7 @@
 
 // Responsive adjustments
 @media (max-width: 768px) {
-  .text-block-editor-toolbar {
+  .text-block-editor-toolbar, .bg-editor-toolbar {
     left: 8px;
     right: 8px;
     transform: none;

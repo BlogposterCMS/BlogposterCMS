@@ -3,13 +3,14 @@ export async function render(el) {
   const meltdownEmit = window.meltdownEmit;
 
   try {
-    const [title, desc, isMaint, pageId, faviconUrl, pagesRes] = await Promise.all([
+    const [title, desc, isMaint, pageId, faviconUrl, pagesRes, googleFontsKey] = await Promise.all([
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'SITE_TITLE' }),
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'SITE_DESC' }),
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'MAINTENANCE_MODE' }),
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'MAINTENANCE_PAGE_ID' }),
       meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'FAVICON_URL' }),
-      meltdownEmit('getAllPages', { jwt, moduleName: 'pagesManager', moduleType: 'core' })
+      meltdownEmit('getAllPages', { jwt, moduleName: 'pagesManager', moduleType: 'core' }),
+      meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'GOOGLE_FONTS_API_KEY' })
     ]);
 
     const pages = Array.isArray(pagesRes) ? pagesRes : (pagesRes?.data ?? []);
@@ -143,6 +144,30 @@ export async function render(el) {
     section.appendChild(maintDiv);
     section.appendChild(pageDiv);
     section.appendChild(favDiv);
+
+    // Google Fonts API key (optional)
+    const gKeyLabel = document.createElement('label');
+    gKeyLabel.textContent = 'Google Fonts API Key (optional)';
+    const gKeyInput = document.createElement('input');
+    gKeyInput.type = 'text';
+    gKeyInput.placeholder = 'AIza...';
+    gKeyInput.value = (googleFontsKey || '').trim();
+    const gKeyHelp = document.createElement('div');
+    gKeyHelp.className = 'settings-hint';
+    gKeyHelp.textContent = 'Used to fetch the full Google Fonts catalog. Leave empty to use defaults.';
+    gKeyInput.addEventListener('change', async () => {
+      try {
+        await meltdownEmit('setSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'GOOGLE_FONTS_API_KEY', value: gKeyInput.value.trim() });
+        alert('Saved. Re-enable Google Fonts provider to refresh the catalog.');
+      } catch (err) {
+        alert('Error saving API key: ' + err.message);
+      }
+    });
+    const gKeyDiv = document.createElement('div');
+    gKeyDiv.appendChild(gKeyLabel);
+    gKeyDiv.appendChild(gKeyInput);
+    gKeyDiv.appendChild(gKeyHelp);
+    section.appendChild(gKeyDiv);
 
     card.appendChild(section);
 

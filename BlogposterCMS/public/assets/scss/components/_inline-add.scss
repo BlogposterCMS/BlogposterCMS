@@ -37,7 +37,7 @@
 
 .inline-create-field input:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px #008080;
+  box-shadow: inset 0 0 0 2px var(--user-color);
   background-color: #fff;
 }
 

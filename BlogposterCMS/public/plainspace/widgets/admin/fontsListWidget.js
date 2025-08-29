@@ -10,6 +10,18 @@ export async function render(el) {
     });
     const providers = Array.isArray(res) ? res : (res?.data ?? []);
 
+    // Prefetch current Google Fonts API key from settings (if present)
+    let googleFontsKey = '';
+    try {
+      const keyRes = await meltdownEmit('getSetting', {
+        jwt,
+        moduleName: 'settingsManager',
+        moduleType: 'core',
+        key: 'GOOGLE_FONTS_API_KEY'
+      });
+      googleFontsKey = String(keyRes || '').trim();
+    } catch (_) {}
+
     const card = document.createElement('div');
     card.className = 'fonts-list-card page-list-card';
 
@@ -49,7 +61,8 @@ export async function render(el) {
         toggleIcon.className = 'icon font-toggle-icon';
         toggleIcon.innerHTML = window.featherIcon(p.isEnabled ? 'toggle-right' : 'toggle-left');
         toggleIcon.title = p.isEnabled ? 'Disable' : 'Enable';
-        toggleIcon.addEventListener('click', async () => {
+        toggleIcon.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
           try {
             await meltdownEmit('setFontProviderEnabled', {
               jwt,
@@ -76,6 +89,83 @@ export async function render(el) {
 
         li.appendChild(nameRow);
         li.appendChild(desc);
+
+        // Details panel for provider-specific settings
+        const details = document.createElement('div');
+        details.className = 'font-provider-details';
+        details.style.display = 'none';
+
+        // Show Google Fonts API key field within this widget (user-friendly)
+        if (p.name === 'googleFonts') {
+          const keyLabel = document.createElement('label');
+          keyLabel.textContent = 'Google Fonts API Key';
+          keyLabel.style.display = 'block';
+
+          const keyInput = document.createElement('input');
+          keyInput.type = 'text';
+          keyInput.placeholder = 'AIza...';
+          keyInput.value = googleFontsKey;
+          keyInput.style.minWidth = '320px';
+
+          const help = document.createElement('div');
+          help.className = 'settings-hint';
+          help.textContent = 'Paste your Webfonts API key to load the full catalog.';
+
+          const saveBtn = document.createElement('button');
+          saveBtn.type = 'button';
+          saveBtn.textContent = 'Save Key';
+          saveBtn.addEventListener('click', async (ev) => {
+            ev.stopPropagation();
+            try {
+              await meltdownEmit('setSetting', {
+                jwt,
+                moduleName: 'settingsManager',
+                moduleType: 'core',
+                key: 'GOOGLE_FONTS_API_KEY',
+                value: keyInput.value.trim()
+              });
+              googleFontsKey = keyInput.value.trim();
+              alert('Saved Google Fonts API key. Click “Refresh Catalog” to update the list.');
+            } catch (err) {
+              alert('Error saving key: ' + err.message);
+            }
+          });
+
+          const refreshBtn = document.createElement('button');
+          refreshBtn.type = 'button';
+          refreshBtn.textContent = 'Refresh Catalog';
+          refreshBtn.style.marginLeft = '8px';
+          refreshBtn.addEventListener('click', async (ev) => {
+            ev.stopPropagation();
+            try {
+              // Toggle provider to trigger init (catalog fetch)
+              const wasEnabled = !!p.isEnabled;
+              if (wasEnabled) {
+                await meltdownEmit('setFontProviderEnabled', { jwt, moduleName: 'fontsManager', moduleType: 'core', providerName: p.name, enabled: false });
+              }
+              await meltdownEmit('setFontProviderEnabled', { jwt, moduleName: 'fontsManager', moduleType: 'core', providerName: p.name, enabled: true });
+              p.isEnabled = true;
+              toggleIcon.innerHTML = window.featherIcon('toggle-right');
+              toggleIcon.title = 'Disable';
+              alert('Google Fonts catalog refresh triggered. Open the editor and try the font dropdown.');
+            } catch (err) {
+              alert('Error refreshing catalog: ' + err.message);
+            }
+          });
+
+          details.appendChild(keyLabel);
+          details.appendChild(keyInput);
+          details.appendChild(saveBtn);
+          details.appendChild(refreshBtn);
+          details.appendChild(help);
+        }
+
+        // Toggle details on name row click
+        nameRow.addEventListener('click', () => {
+          details.style.display = details.style.display === 'none' ? '' : 'none';
+        });
+
+        li.appendChild(details);
         list.appendChild(li);
       });
     }

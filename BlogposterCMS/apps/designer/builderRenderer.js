@@ -9,6 +9,7 @@ import {
   undoTextCommand,
   redoTextCommand
 } from './editor/editor.js';
+import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar, isBackgroundToolbar } from './editor/toolbar/backgroundToolbar.js';
 import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState } from './managers/gridManager.js';
 import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
@@ -46,6 +47,7 @@ async function loadToPng() {
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
   document.body.classList.add('builder-mode');
   initTextEditor();
+  initBackgroundToolbar();
   // Builder widgets load the active theme inside their shadow roots.
   // Inject the theme scoped to the builder grid so the preview matches
   // the active theme without altering the surrounding UI.
@@ -197,8 +199,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     // Use a plain builder grid container. CanvasGrid will add its own
   // `canvas-grid` class; avoid `pixel-grid` here so zoom scaling via
   // CSS variable works with the BoundingBoxManager.
-  contentEl.innerHTML = `<div id="builderGrid" class="builder-grid"></div>`;
+  //
+  // Wrap the grid in a scrollable viewport so scrollbars live "inside"
+  // the designer instead of the page. The inner #builderGrid hosts the
+  // actual canvas content.
+  contentEl.innerHTML = `
+    <div id="builderViewport" class="builder-viewport">
+      <div id="builderGrid" class="builder-grid"></div>
+    </div>
+  `;
   gridEl = document.getElementById('builderGrid');
+  const gridViewportEl = document.getElementById('builderViewport');
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
     updateAllWidgetContents,
@@ -211,7 +222,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   };
   await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
-  const grid = initGrid(gridEl, state, selectWidget);
+  const grid = initGrid(gridEl, state, selectWidget, { scrollContainer: gridViewportEl });
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
   function scheduleAutosave() {
     scheduleAutosaveFn(state, opts => saveLayout(opts, { ...saveLayoutCtx, ...state }));
@@ -219,6 +230,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function selectWidget(el) {
     baseSelectWidget(el);
     if (!el) return;
+    // Hide background toolbar when selecting a widget
+    hideBgToolbar();
     let editable = getRegisteredEditable(el);
     if (!editable) {
       // Fallback: resolve inner editable inside widget DOM
@@ -253,6 +266,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       e.target.closest('.canvas-item') === state.activeWidgetEl ||
       e.target.closest('.widget-action-bar') ||
       e.target.closest('.text-block-editor-toolbar') ||
+      e.target.closest('.bg-editor-toolbar') ||
       e.target.closest('.color-picker')
     ) {
       return;
@@ -263,6 +277,63 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     state.activeWidgetEl = null;
     hideToolbar();
   grid.clearSelection();
+  });
+
+  // Show background toolbar when clicking on background (content/grid), not on a widget/UI
+  const contentClickHandler = e => {
+    const isUi = e.target.closest('.canvas-item') ||
+                 e.target.closest('.widget-action-bar') ||
+                 e.target.closest('.text-block-editor-toolbar') ||
+                 e.target.closest('.bg-editor-toolbar') ||
+                 e.target.closest('.color-picker') ||
+                 e.target.closest('.builder-header') ||
+                 e.target.closest('.layout-bar') ||
+                 e.target.closest('.builder-sidebar');
+    if (isUi) return;
+    hideToolbar();
+    showBgToolbar();
+  };
+  gridEl.addEventListener('click', contentClickHandler);
+  const contentRoot = document.getElementById('content');
+  if (contentRoot && contentRoot !== gridEl) contentRoot.addEventListener('click', contentClickHandler);
+
+  // Capture-phase handler to catch clicks swallowed by other listeners
+  const captureBackgroundIntent = e => {
+    if (document.body.classList.contains('preview-mode')) return;
+    let inContent = e.target.closest('#content');
+    // If an overlay outside #content captures the event, fall back to hit-testing #builderGrid bounds
+    if (!inContent) {
+      const gridRect = gridEl?.getBoundingClientRect?.();
+      const cx = (e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? -1);
+      const cy = (e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? -1);
+      if (gridRect && cx >= gridRect.left && cx <= gridRect.right && cy >= gridRect.top && cy <= gridRect.bottom) {
+        inContent = true;
+      }
+    }
+    if (!inContent) return;
+    const isUi = e.target.closest('.canvas-item') ||
+                 e.target.closest('.widget-action-bar') ||
+                 e.target.closest('.text-block-editor-toolbar') ||
+                 e.target.closest('.bg-editor-toolbar') ||
+                 e.target.closest('.color-picker') ||
+                 e.target.closest('.builder-header') ||
+                 e.target.closest('.layout-bar') ||
+                 e.target.closest('.builder-sidebar');
+    if (isUi) return;
+    hideToolbar();
+    showBgToolbar();
+  };
+  document.addEventListener('pointerdown', captureBackgroundIntent, true);
+
+  // Hide background toolbar when clicking outside of canvas/toolbar
+  document.addEventListener('click', e => {
+    if (!document.getElementById('builderGrid')) return;
+    const insideBgToolbar = e.target.closest('.bg-editor-toolbar');
+    const insideGrid = e.target.closest('#builderGrid');
+    const insidePicker = e.target.closest('.color-picker');
+    const insideTextTb = e.target.closest('.text-block-editor-toolbar');
+    if (insideBgToolbar || insidePicker || insideTextTb) return;
+    if (!insideGrid) hideBgToolbar();
   });
 
   const undoStack = [];
@@ -527,6 +598,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.addEventListener('click', outsideHeaderHandler);
   });
 
+  // (no persistent viewport selector in header)
+
   headerMenu.querySelector('.menu-undo').addEventListener('click', () => { hideHeaderMenu(); undo(); });
   headerMenu.querySelector('.menu-redo').addEventListener('click', () => { hideHeaderMenu(); redo(); });
   const autosaveToggle = headerMenu.querySelector('.autosave-toggle');
@@ -548,6 +621,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   } else {
     document.body.prepend(topBar);
   }
+
+  // (no extra style injection)
 
   startAutosave();
   applyProMode();
@@ -845,7 +920,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       layoutBar.appendChild(btn);
     });
 
-    // Zoom controls (10% – 500%, default 100%)
+    // Zoom controls (10% ï¿½ 500%, default 100%)
     const zoomWrap = document.createElement('div');
     zoomWrap.className = 'zoom-controls';
     const zoomOut = document.createElement('button');
@@ -858,42 +933,46 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     zoomSlider.min = '10';
     zoomSlider.max = '500';
     zoomSlider.step = '1';
-    zoomSlider.value = '100';
+    zoomSlider.value = '60';
     zoomSlider.style.width = '180px';
     const zoomIn = document.createElement('button');
     zoomIn.title = 'Zoom in';
     zoomIn.innerHTML = window.featherIcon ? window.featherIcon('plus') : '<img src="/assets/icons/zoom-in.svg" alt="+" />';
 
-    let zoomPct = 100;
+    let zoomPct = 60;
     function applyZoom(pct) {
       zoomPct = Math.max(10, Math.min(500, Math.round(pct)));
       zoomSlider.value = String(zoomPct);
       zoomLevel.textContent = `${zoomPct}%`;
       const scale = zoomPct / 100;
-      if (gridEl) {
-        gridEl.style.transformOrigin = 'top left';
+      if (grid && typeof grid.setScale === 'function') {
+        // Let CanvasGrid manage transforms and CSS vars
+        grid.setScale(scale);
+      } else if (gridEl) {
+        // Fallback: apply transform directly
+        gridEl.style.transformOrigin = 'center center';
         gridEl.style.transform = `scale(${scale})`;
         gridEl.style.setProperty('--canvas-scale', String(scale));
-        // Notify overlays like the BoundingBoxManager
         gridEl.dispatchEvent(new Event('zoom', { bubbles: true }));
       }
     }
     // Initial zoom
-    applyZoom(100);
+    applyZoom(60);
 
     zoomOut.addEventListener('click', () => applyZoom(zoomPct - 10));
     zoomIn.addEventListener('click', () => applyZoom(zoomPct + 10));
     zoomSlider.addEventListener('input', () => applyZoom(parseInt(zoomSlider.value, 10) || 100));
 
-    // Shift + Wheel to control zoom
-    const wheelHandler = e => {
-      if (!e.shiftKey) return;
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -10 : 10;
-      applyZoom(zoomPct + delta);
-    };
-    // passive:false is required to be able to preventDefault on wheel
-    gridEl.addEventListener('wheel', wheelHandler, { passive: false });
+    // Sync UI when zoom changes via Ctrl+Wheel on the grid
+    gridEl.addEventListener('zoom', () => {
+      const sc = parseFloat(
+        getComputedStyle(gridEl).getPropertyValue('--canvas-scale') || '1'
+      );
+      const pct = Math.round(sc * 100);
+      zoomPct = pct;
+      zoomSlider.value = String(pct);
+      zoomLevel.textContent = `${pct}%`;
+    });
 
     zoomWrap.appendChild(zoomOut);
     zoomWrap.appendChild(zoomSlider);

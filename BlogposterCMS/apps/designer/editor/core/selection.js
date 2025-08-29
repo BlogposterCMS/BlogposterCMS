@@ -16,6 +16,7 @@ export function saveSelection() {
   const ae = document.activeElement;
   if (ae && (
         ae.closest('.text-block-editor-toolbar') ||
+        ae.closest('.bg-editor-toolbar') ||
         ae.closest('.text-color-picker')))
     return;
 

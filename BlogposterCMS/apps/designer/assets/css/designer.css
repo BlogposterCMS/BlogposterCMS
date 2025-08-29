@@ -1016,7 +1016,7 @@ body.builder-mode.panel-open #content {
     margin-bottom: calc(50vh + 60px);
   }
 }
-.text-block-editor-toolbar {
+.text-block-editor-toolbar, .bg-editor-toolbar {
   position: fixed;
   top: 76px;
   left: 50%;
@@ -1037,10 +1037,10 @@ body.builder-mode.panel-open #content {
   overflow: visible;
   overflow-x: auto;
 }
-.text-block-editor-toolbar::-webkit-scrollbar {
+.text-block-editor-toolbar::-webkit-scrollbar, .bg-editor-toolbar::-webkit-scrollbar {
   display: none;
 }
-.text-block-editor-toolbar .tb-btn {
+.text-block-editor-toolbar .tb-btn, .bg-editor-toolbar .tb-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1055,29 +1055,29 @@ body.builder-mode.panel-open #content {
   font-size: 14px;
   font-weight: 500;
 }
-.text-block-editor-toolbar .tb-btn:hover {
+.text-block-editor-toolbar .tb-btn:hover, .bg-editor-toolbar .tb-btn:hover {
   background: rgba(0, 0, 0, 0.05);
   transform: scale(1.05);
 }
-.text-block-editor-toolbar .tb-btn:active {
+.text-block-editor-toolbar .tb-btn:active, .bg-editor-toolbar .tb-btn:active {
   transform: scale(0.95);
 }
-.text-block-editor-toolbar .tb-btn.active {
+.text-block-editor-toolbar .tb-btn.active, .bg-editor-toolbar .tb-btn.active {
   background: var(--accent-color, #007bff);
   color: white;
   box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
-.text-block-editor-toolbar .tb-btn svg {
+.text-block-editor-toolbar .tb-btn svg, .bg-editor-toolbar .tb-btn svg {
   width: 18px;
   height: 18px;
 }
-.text-block-editor-toolbar .font-family-control {
+.text-block-editor-toolbar .font-family-control, .bg-editor-toolbar .font-family-control {
   position: relative;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown {
+.text-block-editor-toolbar .font-family-control .ff-dropdown, .bg-editor-toolbar .font-family-control .ff-dropdown {
   position: relative;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1090,15 +1090,15 @@ body.builder-mode.panel-open #content {
   font-size: 14px;
   min-width: 120px;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn:hover {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn:hover, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-btn:hover {
   background: rgba(0, 0, 0, 0.08);
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn .ff-label {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn .ff-label, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-btn .ff-label {
   flex: 1;
   text-align: left;
   color: var(--color-text, #333);
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn::after {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn::after, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-btn::after {
   content: "";
   width: 0;
   height: 0;
@@ -1107,7 +1107,7 @@ body.builder-mode.panel-open #content {
   border-top: 4px solid currentColor;
   margin-left: auto;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-options {
   position: absolute;
   top: 100%;
   left: 0;
@@ -1122,26 +1122,26 @@ body.builder-mode.panel-open #content {
   display: none;
   z-index: 200;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-options span {
   display: block;
   padding: 8px 12px;
   cursor: pointer;
   transition: background 0.2s ease;
   font-size: 14px;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span:hover {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span:hover, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-options span:hover {
   background: rgba(0, 0, 0, 0.04);
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span:first-child {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span:first-child, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-options span:first-child {
   border-radius: 8px 8px 0 0;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span:last-child {
+.text-block-editor-toolbar .font-family-control .ff-dropdown .ff-options span:last-child, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-options span:last-child {
   border-radius: 0 0 8px 8px;
 }
-.text-block-editor-toolbar .font-family-control .ff-dropdown.open .ff-options {
+.text-block-editor-toolbar .font-family-control .ff-dropdown.open .ff-options, .bg-editor-toolbar .font-family-control .ff-dropdown.open .ff-options {
   display: block;
 }
-.text-block-editor-toolbar .font-size-control {
+.text-block-editor-toolbar .font-size-control, .bg-editor-toolbar .font-size-control {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1151,7 +1151,8 @@ body.builder-mode.panel-open #content {
   overflow: visible;
 }
 .text-block-editor-toolbar .font-size-control .fs-dec,
-.text-block-editor-toolbar .font-size-control .fs-inc {
+.text-block-editor-toolbar .font-size-control .fs-inc, .bg-editor-toolbar .font-size-control .fs-dec,
+.bg-editor-toolbar .font-size-control .fs-inc {
   width: 28px;
   height: 28px;
   background: transparent;
@@ -1167,14 +1168,15 @@ body.builder-mode.panel-open #content {
   transition: all 0.2s ease;
 }
 .text-block-editor-toolbar .font-size-control .fs-dec:hover,
-.text-block-editor-toolbar .font-size-control .fs-inc:hover {
+.text-block-editor-toolbar .font-size-control .fs-inc:hover, .bg-editor-toolbar .font-size-control .fs-dec:hover,
+.bg-editor-toolbar .font-size-control .fs-inc:hover {
   background: rgba(0, 0, 0, 0.08);
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown {
+.text-block-editor-toolbar .font-size-control .fs-dropdown, .bg-editor-toolbar .font-size-control .fs-dropdown {
   position: relative;
   overflow: visible;
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-btn {
   display: flex;
   align-items: center;
   background: transparent;
@@ -1184,10 +1186,10 @@ body.builder-mode.panel-open #content {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn:hover {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn:hover, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-btn:hover {
   background: rgba(0, 0, 0, 0.08);
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input {
   width: 40px;
   background: transparent;
   border: none;
@@ -1196,14 +1198,14 @@ body.builder-mode.panel-open #content {
   font-size: 14px;
   color: var(--color-text, #333);
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input::-webkit-outer-spin-button, .text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input::-webkit-inner-spin-button {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input::-webkit-outer-spin-button, .text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input::-webkit-inner-spin-button, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input::-webkit-outer-spin-button, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input[type=number] {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input[type=number], .bg-editor-toolbar .font-size-control .fs-dropdown .fs-btn .fs-input[type=number] {
   -moz-appearance: textfield;
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-options {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-options, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-options {
   position: absolute;
   top: 100%;
   left: 50%;
@@ -1216,7 +1218,7 @@ body.builder-mode.panel-open #content {
   display: none;
   z-index: 200;
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-options span {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-options span, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-options span {
   display: block;
   padding: 6px 12px;
   cursor: pointer;
@@ -1225,16 +1227,16 @@ body.builder-mode.panel-open #content {
   font-size: 14px;
   transition: background 0.2s ease;
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-options span:hover {
+.text-block-editor-toolbar .font-size-control .fs-dropdown .fs-options span:hover, .bg-editor-toolbar .font-size-control .fs-dropdown .fs-options span:hover {
   background: rgba(0, 0, 0, 0.04);
 }
-.text-block-editor-toolbar .font-size-control .fs-dropdown.open .fs-options {
+.text-block-editor-toolbar .font-size-control .fs-dropdown.open .fs-options, .bg-editor-toolbar .font-size-control .fs-dropdown.open .fs-options {
   display: block;
 }
-.text-block-editor-toolbar .text-color-picker {
+.text-block-editor-toolbar .text-color-picker, .bg-editor-toolbar .text-color-picker {
   position: relative;
 }
-.text-block-editor-toolbar .text-color-picker .color-picker-toggle {
+.text-block-editor-toolbar .text-color-picker .color-picker-toggle, .bg-editor-toolbar .text-color-picker .color-picker-toggle {
   position: relative;
   width: 36px;
   height: 36px;
@@ -1245,11 +1247,11 @@ body.builder-mode.panel-open #content {
   transition: all 0.2s ease;
   overflow: hidden;
 }
-.text-block-editor-toolbar .text-color-picker .color-picker-toggle:hover {
+.text-block-editor-toolbar .text-color-picker .color-picker-toggle:hover, .bg-editor-toolbar .text-color-picker .color-picker-toggle:hover {
   background: rgba(0, 0, 0, 0.05);
   transform: scale(1.05);
 }
-.text-block-editor-toolbar .text-color-picker .color-picker-toggle .color-icon {
+.text-block-editor-toolbar .text-color-picker .color-picker-toggle .color-icon, .bg-editor-toolbar .text-color-picker .color-picker-toggle .color-icon {
   font-size: 18px;
   font-weight: bold;
   color: var(--color-text, #333);
@@ -1257,13 +1259,13 @@ body.builder-mode.panel-open #content {
   text-decoration-thickness: 3px;
   text-underline-offset: 2px;
 }
-.text-block-editor-toolbar .toolbar-separator {
+.text-block-editor-toolbar .toolbar-separator, .bg-editor-toolbar .toolbar-separator {
   width: 1px;
   height: 24px;
   background: rgba(0, 0, 0, 0.1);
   margin: 0 4px;
 }
-.text-block-editor-toolbar .heading-select {
+.text-block-editor-toolbar .heading-select, .bg-editor-toolbar .heading-select {
   padding: 6px 12px;
   background: rgba(0, 0, 0, 0.04);
   border: none;
@@ -1273,18 +1275,18 @@ body.builder-mode.panel-open #content {
   color: var(--color-text, #333);
   transition: all 0.2s ease;
 }
-.text-block-editor-toolbar .heading-select:hover {
+.text-block-editor-toolbar .heading-select:hover, .bg-editor-toolbar .heading-select:hover {
   background: rgba(0, 0, 0, 0.08);
 }
-.text-block-editor-toolbar .heading-select:focus {
+.text-block-editor-toolbar .heading-select:focus, .bg-editor-toolbar .heading-select:focus {
   outline: 2px solid var(--accent-color, #007bff);
   outline-offset: 2px;
 }
-.text-block-editor-toolbar.show {
+.text-block-editor-toolbar.show, .bg-editor-toolbar.show {
   display: flex;
   animation: toolbarSlideIn 0.3s ease;
 }
-.text-block-editor-toolbar.hide {
+.text-block-editor-toolbar.hide, .bg-editor-toolbar.hide {
   animation: toolbarSlideOut 0.3s ease;
 }
 
@@ -1309,13 +1311,13 @@ body.builder-mode.panel-open #content {
   }
 }
 @media (max-width: 768px) {
-  .text-block-editor-toolbar {
+  .text-block-editor-toolbar, .bg-editor-toolbar {
     left: 8px;
     right: 8px;
     transform: none;
     max-width: none;
   }
-  .text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn {
+  .text-block-editor-toolbar .font-family-control .ff-dropdown .ff-btn, .bg-editor-toolbar .font-family-control .ff-dropdown .ff-btn {
     min-width: 80px;
   }
 }
@@ -1969,36 +1971,38 @@ body.builder-mode .canvas-item:hover {
   display: none !important;
 }
 
+body.builder-mode {
+  overflow: hidden;
+}
+
 body.builder-mode #content {
   --content-offset: 72px;
   margin-left: var(--content-offset);
   width: calc(100% - var(--content-offset));
   height: calc(100vh - 64px);
   overflow: hidden;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
   position: relative;
   display: flex;
   justify-content: center;
   align-items: stretch;
 }
-body.builder-mode #content #builderGrid {
+body.builder-mode #content #builderViewport {
   height: 100%;
   width: 100%;
   max-width: 1400px;
   overflow: auto;
-  background: white;
-  border-radius: 12px 0 0 0;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
   position: relative;
+  display: grid;
+  place-items: center;
 }
-body.builder-mode #content #builderGrid::before {
+body.builder-mode #content #builderViewport::before {
   content: "";
   position: fixed;
   top: 64px;
   left: 72px;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(0, 123, 255, 0.02) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.02) 0%, transparent 50%), linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   pointer-events: none;
   z-index: -1;
 }
@@ -2014,17 +2018,22 @@ body.builder-mode.panel-open #content {
 body.builder-mode.panel-open .builder-panel {
   display: flex;
 }
-body.builder-mode.panel-open #builderGrid {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-body.builder-mode #builderGrid {
+body.builder-mode #builderViewport {
   margin-top: 0;
   height: 100%;
   min-height: 100%;
   padding: 20px;
   box-sizing: border-box;
+}
+
+body.builder-mode #builderGrid {
+  min-height: 70vh;
+  min-width: 100%;
+  width: 100%;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
 body.builder-mode .canvas-item-content.builder-themed {
@@ -2046,17 +2055,20 @@ body.preview-mode .builder-options-menu,
 body.preview-mode .canvas-item .widget-remove,
 body.preview-mode .canvas-item .widget-edit,
 body.preview-mode .canvas-item .widget-menu,
-body.preview-mode .text-block-editor-toolbar {
+body.preview-mode .text-block-editor-toolbar,
+body.preview-mode .bg-editor-toolbar {
   display: none !important;
 }
-body.preview-mode #builderGrid {
-  pointer-events: none;
+body.preview-mode #builderViewport {
   margin-top: 0;
   height: calc(100vh - 64px);
   min-height: calc(100vh - 64px);
   background: white;
   border-radius: 0;
   box-shadow: none;
+}
+body.preview-mode #builderGrid {
+  pointer-events: none;
 }
 body.preview-mode #content {
   margin-left: 0;

@@ -913,7 +913,7 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
   const adminSafe = escapeHtml(adminJwt);
   const appSafe = escapeHtml(appName);
 
-  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${csrfSafe}"><meta name="admin-token" content="${adminSafe}"><meta name="app-name" content="${appSafe}"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
+  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${csrfSafe}"><meta name="admin-token" content="${adminSafe}"><meta name="app-name" content="${appSafe}"><link rel="stylesheet" href="/assets/css/app.css"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
   html = injectDevBanner(html);
   return res.send(html);
 });

@@ -52,7 +52,18 @@ module.exports = {
       if (!providerName || !Object.prototype.hasOwnProperty.call(global.fontProviders, providerName)) {
         return cb(new Error('Provider not found.'));
       }
-      global.fontProviders[providerName].isEnabled = !!enabled;
+      const provider = global.fontProviders[providerName];
+      provider.isEnabled = !!enabled;
+      // If enabling and provider exposes an init function, run it to populate fonts.
+      try {
+        if (provider.isEnabled && typeof provider.initFunction === 'function') {
+          Promise.resolve(provider.initFunction()).catch(err => {
+            console.warn(`[FONTS MANAGER] Provider init failed => ${providerName}`, err?.message || err);
+          });
+        }
+      } catch (e) {
+        console.warn(`[FONTS MANAGER] Provider init threw => ${providerName}`, e?.message || e);
+      }
       cb(null, { success: true });
     });
 

@@ -1,7 +1,11 @@
 import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
-export function initGrid(gridEl, state, selectWidget) {
+export function initGrid(gridEl, state, selectWidget, opts = {}) {
   const columnCount = 12;
+  // Determine the scroll container: prefer explicit option, otherwise
+  // use the grid's parent element. This allows zoom to keep scrollbars
+  // inside the designer viewport instead of the page.
+  const scrollContainer = opts.scrollContainer || gridEl.parentElement || gridEl;
   const grid = initCanvasGrid(
     {
       columns: columnCount,
@@ -10,7 +14,8 @@ export function initGrid(gridEl, state, selectWidget) {
       liveSnap: false,
       liveSnapResize: false,
       percentageMode: true,
-      bboxHandles: true
+      bboxHandles: true,
+      scrollContainer
     },
     gridEl
   );
@@ -25,11 +30,12 @@ export function initGrid(gridEl, state, selectWidget) {
     if (cwRAF) return;
     cwRAF = requestAnimationFrame(() => {
       cwRAF = null;
-      const width = gridEl.clientWidth ||
+      const containerEl = scrollContainer || gridEl;
+      const width = containerEl.clientWidth ||
         // Fallback to computed style if clientWidth is 0 (detached?)
-        parseFloat(getComputedStyle(gridEl).width) ||
+        parseFloat(getComputedStyle(containerEl).width) ||
         // Last resort
-        (gridEl.getBoundingClientRect().width || 1);
+        (containerEl.getBoundingClientRect().width || 1);
       grid.options.columnWidth = width / grid.options.columns;
       // Trigger a silent update so widgets re-render to the new width
       grid.widgets.forEach(w => grid.update(w, {}, { silent: true }));
@@ -39,7 +45,7 @@ export function initGrid(gridEl, state, selectWidget) {
   window.addEventListener('resize', setColumnWidth);
   // Also observe direct size changes of the grid container (e.g. sidebar toggles).
   const __gridRO = new ResizeObserver(() => setColumnWidth());
-  __gridRO.observe(gridEl);
+  __gridRO.observe(scrollContainer);
   gridEl.__gridRO = __gridRO;
 
   grid.on('change', el => {

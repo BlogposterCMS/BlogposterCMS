@@ -2,12 +2,18 @@
 /* =============================================================================
    Login Page Styles
    ============================================================================= */
+@property --user-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #FF0000;
+}
 .app-scope.login-page {
   position: relative;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: --user-color 5s;
 }
 
 .app-scope.login-page::before {
@@ -18,6 +24,7 @@
   background-size: 20px 20px;
   pointer-events: none;
   z-index: -1;
+  transition: --user-color 5s;
 }
 
 .login-form {
@@ -30,6 +37,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* No border on the card itself; border moves to inner form */
+  transition: --user-color 5s;
 }
 
 .login-form .cms-title {
@@ -68,7 +77,7 @@
   background: var(--color-secondary-light);
   font-size: 14px;
   color: var(--color-text);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, --user-color 5s;
 }
 
 .password-field input {
@@ -77,8 +86,8 @@
 
 .field input:focus {
   outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 40%, transparent);
+  border-color: var(--user-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--user-color) 40%, transparent);
 }
 
 .field label {
@@ -227,14 +236,14 @@
   background-color: #f1f3f6;
   font-size: 15px;
   color: #333;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, --user-color 5s;
   box-shadow: inset 0 0 0 2px transparent;
 }
 
 .app-scope .field input:focus,
 .app-scope .field textarea:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px #008080;
+  box-shadow: inset 0 0 0 2px var(--user-color);
   background-color: #ffffff;
 }
 
@@ -254,10 +263,11 @@
   top: -7px;
   left: 14px;
   font-size: 12px;
-  color: #008080;
+  color: var(--user-color);
   background: #ffffff;
   padding: 0 4px;
   font-weight: 500;
+  transition: color 0.2s ease, --user-color 5s;
 }
 
 .app-scope .field input:not(:placeholder-shown) + label,
@@ -267,10 +277,11 @@
   top: -7px;
   left: 14px;
   font-size: 12px;
-  color: #008080;
+  color: var(--user-color);
   background: #ffffff;
   padding: 0 4px;
   font-weight: 500;
+  transition: color 0.2s ease, --user-color 5s;
 }
 
 .app-scope form .button {
@@ -1596,7 +1607,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
 
 .inline-create-field input:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px #008080;
+  box-shadow: inset 0 0 0 2px var(--user-color);
   background-color: #fff;
 }
 

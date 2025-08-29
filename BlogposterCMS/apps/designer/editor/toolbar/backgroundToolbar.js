@@ -3,6 +3,7 @@ import { createColorPicker } from '/assets/js/colorPicker.js';
 let bgToolbar = null;
 let bgColorPicker = null;
 let listenersAttached = false;
+const BGLOG = (...args) => { try { console.log('[BG/TB]', ...args); } catch (_) {} };
 
 function getGridEl() {
   return document.getElementById('builderGrid');
@@ -50,6 +51,7 @@ export function initBackgroundToolbar() {
   bgToolbar = document.createElement('div');
   bgToolbar.className = 'bg-editor-toolbar';
   bgToolbar.style.display = 'none';
+  BGLOG('init toolbar');
 
   // Color button
   const colorBtn = document.createElement('button');
@@ -220,7 +222,8 @@ export function initBackgroundToolbar() {
   bgToolbar.appendChild(clearBtn);
 
   const content = document.getElementById('content');
-  if (content) content.prepend(bgToolbar); else document.body.appendChild(bgToolbar);
+  if (content) { content.prepend(bgToolbar); BGLOG('toolbar appended to #content'); }
+  else { document.body.appendChild(bgToolbar); BGLOG('toolbar appended to body'); }
 }
 
 export function showBackgroundToolbar() {
@@ -228,6 +231,7 @@ export function showBackgroundToolbar() {
   updateToolbarPosition();
   ensureListeners();
   bgToolbar.style.display = 'flex';
+  BGLOG('show toolbar');
 }
 
 export function hideBackgroundToolbar() {
@@ -235,9 +239,9 @@ export function hideBackgroundToolbar() {
   bgToolbar.style.display = 'none';
   removeListeners();
   try { bgColorPicker?.hide?.(); } catch (_) {}
+  BGLOG('hide toolbar');
 }
 
 export function isBackgroundToolbar(el) {
   return !!(el && (el === bgToolbar || el.closest?.('.bg-editor-toolbar')));
 }
-

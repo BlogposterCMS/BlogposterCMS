@@ -129,6 +129,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let proMode = true;
   let gridEl;
   let codeMap = {};
+  // Track when the BG toolbar was just opened to avoid immediate hide by global click
+  let bgToolbarOpenedTs = 0;
+  // Debug helper for background interactions
+  const BGLOG = (...args) => { try { console.log('[BG]', ...args); } catch (_) {} };
   function ensureCodeMap() {
     if (!codeMap || typeof codeMap !== 'object') codeMap = {};
     return codeMap;
@@ -281,6 +285,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   // Show background toolbar when clicking on background (content/grid), not on a widget/UI
   const contentClickHandler = e => {
+    const inPreview = document.body.classList.contains('preview-mode');
+    if (inPreview) { BGLOG('skip: preview-mode contentDown'); return; }
     const isUi = e.target.closest('.canvas-item') ||
                  e.target.closest('.widget-action-bar') ||
                  e.target.closest('.text-block-editor-toolbar') ||
@@ -289,17 +295,22 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                  e.target.closest('.builder-header') ||
                  e.target.closest('.layout-bar') ||
                  e.target.closest('.builder-sidebar');
+    BGLOG('contentDown', { target: e.target, isUi: !!isUi });
     if (isUi) return;
     hideToolbar();
     showBgToolbar();
+    bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
+    BGLOG('bgToolbar show via contentDown', { ts: bgToolbarOpenedTs });
   };
-  gridEl.addEventListener('click', contentClickHandler);
+  // Prefer pointerdown for consistency and to avoid race with global click hide
+  gridEl.addEventListener('pointerdown', contentClickHandler);
   const contentRoot = document.getElementById('content');
-  if (contentRoot && contentRoot !== gridEl) contentRoot.addEventListener('click', contentClickHandler);
+  if (contentRoot && contentRoot !== gridEl) contentRoot.addEventListener('pointerdown', contentClickHandler);
+  BGLOG('listeners attached: pointerdown on #builderGrid and #content');
 
   // Capture-phase handler to catch clicks swallowed by other listeners
   const captureBackgroundIntent = e => {
-    if (document.body.classList.contains('preview-mode')) return;
+    if (document.body.classList.contains('preview-mode')) { BGLOG('skip: preview-mode capture'); return; }
     let inContent = e.target.closest('#content');
     // If an overlay outside #content captures the event, fall back to hit-testing #builderGrid bounds
     if (!inContent) {
@@ -309,6 +320,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (gridRect && cx >= gridRect.left && cx <= gridRect.right && cy >= gridRect.top && cy <= gridRect.bottom) {
         inContent = true;
       }
+      BGLOG('capture hit-test', { cx, cy, gridRect, inContent: !!inContent });
     }
     if (!inContent) return;
     const isUi = e.target.closest('.canvas-item') ||
@@ -319,9 +331,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                  e.target.closest('.builder-header') ||
                  e.target.closest('.layout-bar') ||
                  e.target.closest('.builder-sidebar');
+    BGLOG('capture pointerdown', { target: e.target, isUi: !!isUi });
     if (isUi) return;
     hideToolbar();
     showBgToolbar();
+    bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
+    BGLOG('bgToolbar show via capture', { ts: bgToolbarOpenedTs });
   };
   document.addEventListener('pointerdown', captureBackgroundIntent, true);
 
@@ -332,8 +347,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const insideGrid = e.target.closest('#builderGrid');
     const insidePicker = e.target.closest('.color-picker');
     const insideTextTb = e.target.closest('.text-block-editor-toolbar');
-    if (insideBgToolbar || insidePicker || insideTextTb) return;
-    if (!insideGrid) hideBgToolbar();
+    if (insideBgToolbar || insidePicker || insideTextTb) { BGLOG('global click inside UI, ignore', { insideBgToolbar: !!insideBgToolbar, insidePicker: !!insidePicker, insideTextTb: !!insideTextTb }); return; }
+    // If we just opened the BG toolbar on this interaction, skip the immediate hide
+    const now = (window.performance?.now?.() || Date.now());
+    const delta = now - bgToolbarOpenedTs;
+    if (delta < 250) { BGLOG('global click within suppress window', { delta }); return; }
+    const insideViewport = e.target.closest('#builderViewport');
+    if (!insideViewport) { BGLOG('global click outside viewport -> hide bgToolbar'); hideBgToolbar(); }
+    else { BGLOG('global click inside viewport, keep bgToolbar', { insideGrid: !!insideGrid }); }
   });
 
   const undoStack = [];
@@ -563,9 +584,37 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   viewportPanel.appendChild(viewportRange);
   viewportPanel.appendChild(viewportValue);
 
-  viewportBtn.addEventListener('click', () => {
-    viewportPanel.style.display =
-      viewportPanel.style.display === 'block' ? 'none' : 'block';
+  // Popin handling for viewport slider (similar to header menu)
+  function hideViewportPanel() {
+    viewportPanel.style.display = 'none';
+    document.removeEventListener('click', outsideViewportHandler);
+  }
+
+  function outsideViewportHandler(e) {
+    if (!viewportPanel.contains(e.target) && e.target !== viewportBtn) hideViewportPanel();
+  }
+
+  viewportBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (viewportPanel.style.display === 'block') { hideViewportPanel(); return; }
+
+    // Show and position under the icon
+    viewportPanel.style.display = 'block';
+    viewportPanel.style.visibility = 'hidden';
+    const rect = viewportBtn.getBoundingClientRect();
+    const top = rect.bottom + 4 + (window.scrollY || document.documentElement.scrollTop || 0);
+    viewportPanel.style.top = `${top}px`;
+    // Temporarily set left to compute width, then adjust to keep inside viewport
+    const scrollX = (window.scrollX || document.documentElement.scrollLeft || 0);
+    let left = rect.left + scrollX;
+    // Ensure the panel is in the document so offsetWidth is measurable
+    // (panel gets appended later in this function's flow)
+    const panelWidth = viewportPanel.offsetWidth || 0;
+    const maxLeft = Math.max(8, window.innerWidth - panelWidth - 8);
+    if (left > maxLeft) left = maxLeft;
+    viewportPanel.style.left = `${left}px`;
+    viewportPanel.style.visibility = '';
+    document.addEventListener('click', outsideViewportHandler);
   });
 
   viewportRange.addEventListener('input', () => {
@@ -660,7 +709,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   } else {
     document.body.prepend(topBar);
   }
-  topBar.after(viewportPanel);
+  // Attach viewport slider popin to body so it can float above header
+  document.body.appendChild(viewportPanel);
 
   // (no extra style injection)
 

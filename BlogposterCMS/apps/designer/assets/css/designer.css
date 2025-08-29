@@ -423,6 +423,23 @@ body.grid-mode .bounding-box.disabled {
   align-items: center;
   gap: 12px;
 }
+.builder-header .header-right .builder-viewport-btn {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.builder-header .header-right .builder-viewport-btn svg, .builder-header .header-right .builder-viewport-btn img {
+  width: 18px;
+  height: 18px;
+}
+.builder-header .header-right .builder-viewport-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
 .builder-header .header-right .builder-save-btn,
 .builder-header .header-right .builder-preview-btn,
 .builder-header .header-right .builder-publish-btn {
@@ -547,6 +564,32 @@ body.grid-mode .bounding-box.disabled {
 .builder-options-menu.show {
   display: block;
   animation: menuSlideIn 0.2s ease;
+}
+
+.viewport-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  min-width: 260px;
+  padding: 10px 14px;
+  background: var(--color-white);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.viewport-slider .viewport-range {
+  flex: 1;
+}
+.viewport-slider .viewport-value {
+  font-size: 14px;
+  color: var(--color-text, #333);
+  min-width: 48px;
+  text-align: right;
 }
 
 @keyframes menuSlideIn {

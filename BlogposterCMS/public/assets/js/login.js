@@ -1,3 +1,5 @@
+import { presetColors } from './colorPicker.js';
+
 const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
 const togglePassword = document.getElementById('togglePassword');
@@ -62,3 +64,15 @@ if (devAutologin && allowWeak) {
   loginForm.password.value = '123';
   loginForm.dispatchEvent(new Event('submit'));
 }
+
+// Cycle through preset accent colors on the login screen
+const root = document.documentElement;
+let colorIndex = 0;
+function cycleAccentColor() {
+  const color = presetColors[colorIndex % presetColors.length];
+  root.style.setProperty('--user-color', color);
+  colorIndex += 1;
+}
+
+cycleAccentColor();
+setInterval(cycleAccentColor, 5000);

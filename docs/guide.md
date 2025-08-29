@@ -14,6 +14,8 @@ The dashboard allows you to manage pages, users and settings. Only authenticated
 
 ![Login screen](screenshots/Clean%20Login%20Interface.png)
 
+The login screen cycles through the preset accent colors, softly fading the dotted background and form border between each hue.
+
 Elements with `title`, `aria-label`, or `data-label` attributes automatically reveal an animated floating label on hover, mirroring the sidebar tooltip style.
 
 ## Button System

@@ -1,14 +1,16 @@
+export const presetColors = [
+  '#FF0000', '#FF4040', '#FFC0CB', '#FF00FF', '#800080', '#8A2BE2',
+  '#00CED1', '#00FFFF', '#40E0D0', '#ADD8E6', '#4169E1', '#0047AB',
+  '#008000', '#7CFC00', '#BFFF00', '#FFFF00', '#FFDAB9', '#FFA500',
+  '#000000', '#A9A9A9', '#808080'
+];
+
 export function createColorPicker(options = {}) {
   const {
-    presetColors = [
-      '#FF0000', '#FF4040', '#FFC0CB', '#FF00FF', '#800080', '#8A2BE2',
-      '#00CED1', '#00FFFF', '#40E0D0', '#ADD8E6', '#4169E1', '#0047AB',
-      '#008000', '#7CFC00', '#BFFF00', '#FFFF00', '#FFDAB9', '#FFA500',
-      '#000000', '#A9A9A9', '#808080'
-    ],
+    presetColors: customPresets = presetColors,
     userColors = [],
     themeColors = [],
-    initialColor = presetColors[0],
+    initialColor = customPresets[0],
     onSelect = () => {},
     onClose = () => {}
   } = options;
@@ -89,7 +91,7 @@ export function createColorPicker(options = {}) {
     container.appendChild(wrapper);
   }
 
-  createSection(presetColors, 'Presets');
+  createSection(customPresets, 'Presets');
   createSection(userColors, 'Your colors');
   createSection(themeColors, 'Theme');
 

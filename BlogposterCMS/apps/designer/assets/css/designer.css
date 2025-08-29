@@ -567,17 +567,10 @@ body.grid-mode .bounding-box.disabled {
 }
 
 .viewport-slider {
-  position: absolute;
-  top: 0;
-  left: 0;
   display: none;
-  min-width: 260px;
-  padding: 10px 14px;
+  padding: 8px 24px;
   background: var(--color-white);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  z-index: 200;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   gap: 12px;

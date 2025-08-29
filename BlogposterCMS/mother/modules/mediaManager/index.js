@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ensureMediaManagerDatabase, ensureMediaTables } = require('./mediaService');
-const csurf = require('csurf');
+const csrfProtection = require('../../utils/csrfProtection');
 const { requireAuthCookie } = require('../auth/authMiddleware');
 const createUpload = require('../../utils/streamUploadMiddleware');
 
@@ -305,8 +305,6 @@ function setupMediaManagerEvents(motherEmitter) {
 }
 
 function setupUploadRoute(app) {
-  const csrfProtection = csurf({ cookie: { httpOnly: true, sameSite: 'strict' } });
-
   app.post('/admin/api/upload', requireAuthCookie, csrfProtection, createUpload({
     fieldName: 'file',
     destResolver: (req, filename) => {

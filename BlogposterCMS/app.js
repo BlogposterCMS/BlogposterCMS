@@ -22,10 +22,10 @@ const express      = require('express');
 const helmet       = require('helmet');
 const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
-const csurf        = require('csurf');
+const csrfProtection = require('./mother/utils/csrfProtection');
 const { loginLimiter } = require('./mother/utils/rateLimiters');
 const crypto = require('crypto');
-const { sanitizeCookieName, sanitizeCookiePath, sanitizeCookieDomain } = require('./mother/utils/cookieUtils');
+const { sanitizeCookieName, sanitizeCookiePath } = require('./mother/utils/cookieUtils');
 const { isProduction, features } = require('./config/runtime');
 const renderMode = features?.renderMode || 'client';
 const { hasPermission } = require('./mother/modules/userManagement/permissionUtils');
@@ -380,11 +380,6 @@ function getModuleTokenForDbManager() {
   app.use(bodyParser.json({ limit: bodyLimit }));
   app.use(bodyParser.urlencoded({ extended: true, limit: bodyLimit }));
   app.use(cookieParser());
-
-  // CSRF protection
-  const csrfProtection = csurf({
-    cookie: { httpOnly: true, sameSite: 'strict' }
-  })
 
   // 1) Load core Auth module
   console.log('[SERVER INIT] Loading Auth module…');

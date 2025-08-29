@@ -17,6 +17,7 @@ El Psy Kongroo
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Changed
+- Replaced `csurf` with lightweight `csrf` middleware to reduce dependencies.
 - Default builder widget width increased to four columns for better initial sizing.
 - Builder grid column width recalculation is debounced via `requestAnimationFrame` and widget layouts persist percentage-based coordinates.
 

@@ -785,31 +785,44 @@ function setupPagesManagerEvents(motherEmitter) {
       }
 
       motherEmitter.emit(
-        'setAsDeleted',
+        'getPageById',
         { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId },
-        (err) => {
+        (err, page) => {
           if (err) return callback(err);
-
-          const to = setTimeout(() => {
-            callback(new Error('Timeout while deleting a page.'));
-          }, TIMEOUT_DURATION);
+          const slug = page?.slug || '';
+          const rootSlug = String(slug).split('/')[0];
+          if (['home', 'settings'].includes(rootSlug) && rootSlug === slug) {
+            return callback(new Error('Cannot delete essential workspace pages.'));
+          }
 
           motherEmitter.emit(
-            'dbDelete',
-            {
-              jwt,
-              moduleName : 'pagesManager',
-              moduleType : 'core',
-              table      : '__rawSQL__',
-              where      : {
-                rawSQL: 'DELETE_PAGE',
-                0     : pageId
-              }
-            },
-            (err2, result) => {
-              clearTimeout(to);
+            'setAsDeleted',
+            { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId },
+            (err2) => {
               if (err2) return callback(err2);
-              callback(null, result || null);
+
+              const to = setTimeout(() => {
+                callback(new Error('Timeout while deleting a page.'));
+              }, TIMEOUT_DURATION);
+
+              motherEmitter.emit(
+                'dbDelete',
+                {
+                  jwt,
+                  moduleName : 'pagesManager',
+                  moduleType : 'core',
+                  table      : '__rawSQL__',
+                  where      : {
+                    rawSQL: 'DELETE_PAGE',
+                    0     : pageId
+                  }
+                },
+                (err3, result) => {
+                  clearTimeout(to);
+                  if (err3) return callback(err3);
+                  callback(null, result || null);
+                }
+              );
             }
           );
         }

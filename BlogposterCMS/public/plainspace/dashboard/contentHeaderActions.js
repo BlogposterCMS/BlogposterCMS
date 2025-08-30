@@ -122,6 +122,12 @@ async function handleDeleteCurrentAdminPage() {
       return;
     }
 
+    const baseSlug = String(page.slug || '').split('/')[0];
+    if (['home', 'settings'].includes(baseSlug) && baseSlug === page.slug) {
+      await bpDialog.alert('This workspace cannot be deleted.');
+      return;
+    }
+
     if (!(await bpDialog.confirm(`Delete admin page "${page.title}" (${page.slug})?`))) return;
 
     await window.meltdownEmit('deletePage', {

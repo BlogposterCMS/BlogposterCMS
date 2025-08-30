@@ -5,6 +5,9 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- User color now applies correctly on the Home workspace and updates after header load.
+- Home and Settings workspaces are protected from deletion in UI and backend.
+- Creating new pages within the Settings workspace is now supported via the UI.
 - Designer text widget loads editor bundle from build output and falls back to default export to avoid missing module errors.
 - Widget options menu ignores buttons without registered handlers, preventing random `data-action` keys from causing crashes.
 - Text widget now loads editor module without destructuring, preventing `registerElement` errors in builder mode.

@@ -91,6 +91,19 @@ body.builder-mode #content {
     display: grid;
     place-items: center;
 
+    .viewport-size-display {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
     &::before {
       content: '';
       position: fixed;

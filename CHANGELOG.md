@@ -29,6 +29,7 @@ El Psy Kongroo
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Changed
+- Publish popup now opens as a right-side panel instead of a bottom bar.
 - Builder publish slug picker now uses the shared `pageService` for page creation and updates, matching page editor logic.
 - Builder grid now starts at 100% zoom, centers within the viewport, and exposes horizontal scrolling for wide layouts.
 - Builder viewport slider now defaults to 1920px and supports widths up to 3840px for large-screen previews.

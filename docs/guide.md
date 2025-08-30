@@ -102,7 +102,7 @@ The canvas opens centered in the viewport at a 100% zoom level and can expand up
 
 ### Publishing layouts
 
-Clicking **Publish** in the builder opens a popup at the bottom where you can search existing pages by slug or enter a new path. Selecting a draft page shows a warning with an option to publish it alongside the design, and entering a new slug reveals checkboxes to create and immediately publish the page or save it as a draft.
+Clicking **Publish** in the builder opens a side panel on the right where you can search existing pages by slug or enter a new path. Selecting a draft page shows a warning with an option to publish it alongside the design, and entering a new slug reveals checkboxes to create and immediately publish the page or save it as a draft.
 
 ### Widget CSS Layers
 

@@ -110,7 +110,7 @@ This layering keeps widgets secure from style collisions while allowing themes t
 
 ### Color Picker
 
-The builder's color picker remembers your recently used colours at the top with a quick "plus" button to add new swatches. Colours already present in the document appear in a separate section so you can reuse them easily. A search field accepts hex or common colour names to jump straight to a specific value.
+The builder's colour picker now scans only the active builder grid, listing colours actually used in your layout instead of the whole page. Your most recent selection always appears first in the **Custom colours** row and is pre‑selected when reopening the picker. Clicking the “plus” button opens a pop‑in hue editor directly beneath the chosen swatch, where you can fine‑tune the hex value or pick a new shade. A search field still accepts hex or common colour names to jump straight to a specific value.
 
 ## New Features in v0.5.0
 

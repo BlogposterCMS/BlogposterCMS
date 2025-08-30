@@ -13,6 +13,7 @@
   z-index: 10000;
   backdrop-filter: blur(8px);
   animation: colorPickerFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 
   &.hidden {
     display: none;
@@ -115,6 +116,15 @@
     flex-direction: column;
     gap: 12px;
     align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 8px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
     &.hidden { display: none; }
     &:not(.hidden) { display: flex; }
   }

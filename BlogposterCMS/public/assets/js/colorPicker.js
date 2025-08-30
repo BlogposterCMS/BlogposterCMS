@@ -30,6 +30,13 @@ export function createColorPicker(options = {}) {
     container.classList.remove('hidden');
   }
 
+  function positionHueWrapper(target) {
+    const rect = target.getBoundingClientRect();
+    const contRect = container.getBoundingClientRect();
+    hueWrapper.style.left = rect.left - contRect.left + 'px';
+    hueWrapper.style.top = rect.bottom - contRect.top + 4 + 'px';
+  }
+
   function createCircle(c, editable = false) {
     if (!c) return null;
     const circle = document.createElement('button');
@@ -47,6 +54,7 @@ export function createColorPicker(options = {}) {
         editingCircle = circle;
         hexInput.value = selectedColor;
         hueWheel.style.borderColor = selectedColor;
+        positionHueWrapper(circle);
         hueWrapper.classList.remove('hidden');
       } else {
         hueWrapper.classList.add('hidden');
@@ -192,12 +200,19 @@ export function createColorPicker(options = {}) {
   let recentHidden = [];
   let recentMoreBtn = null;
   function addRecentColor(color) {
-    if (!color || recentColors.includes(color)) return;
+    if (!color) return;
+    const idx = recentColors.indexOf(color);
+    if (idx !== -1) {
+      recentColors.splice(idx, 1);
+      const existing = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
+      existing?.remove();
+    }
     recentColors.unshift(color);
     const circle = createCircle(color, true);
     if (!circle) return;
+    const addBtn = recentSection.querySelector('.add-custom');
     if (recentSection.querySelectorAll('.color-circle').length <= 18) {
-      recentSection.appendChild(circle);
+      recentSection.insertBefore(circle, addBtn.nextSibling);
     } else {
       recentHidden.push(circle);
       if (!recentMoreBtn) {
@@ -232,6 +247,7 @@ export function createColorPicker(options = {}) {
       editingCircle = null;
       hexInput.value = selectedColor;
       hueWheel.style.borderColor = selectedColor;
+      positionHueWrapper(addBtn);
       hueWrapper.classList.remove('hidden');
     });
     section.appendChild(addBtn);
@@ -267,6 +283,7 @@ export function createColorPicker(options = {}) {
     if (newOpts.onClose) onClose = newOpts.onClose;
     if (newOpts.initialColor) {
       selectedColor = newOpts.initialColor;
+      addRecentColor(selectedColor);
       const circles = Array.from(container.querySelectorAll('.color-circle'));
       let found = false;
       circles.forEach(btn => {

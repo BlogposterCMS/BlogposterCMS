@@ -110,23 +110,34 @@
     }
   }
 
-  .color-input {
-    width: 80px;
+  .hue-wrapper {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    &.hidden { display: none; }
+    &:not(.hidden) { display: flex; }
+  }
+
+  .hue-wheel {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+    border: 6px solid transparent;
+    cursor: pointer;
+  }
+
+  .hue-hex {
+    width: 100px;
     padding: 8px 12px;
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     font-size: 12px;
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
     outline: none;
-    transition: all 0.2s ease;
     background: white;
-    color: var(--color-text, #333);
-
-    &:focus {
-      border-color: var(--accent-color, #007bff);
-      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-      background: white;
-    }
+    text-align: center;
   }
 
   .color-section-label {
@@ -140,28 +151,7 @@
   }
 
   .color-picker-close {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 24px;
-    height: 24px;
-    background: transparent;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    color: var(--color-text, #64748b);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    z-index: 1;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.05);
-      color: var(--color-text, #333);
-      transform: scale(1.1);
-    }
+    display: none;
   }
 
   // Color Picker Section Wrapper
@@ -173,6 +163,29 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     }
   }
+}
+
+.color-panel .color-picker {
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: auto;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+}
+
+.color-panel .color-picker .color-circle:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: transparent;
+}
+
+.color-panel .color-picker > div:not(:last-child) {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 @keyframes colorPickerFadeIn {

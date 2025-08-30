@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Prevent HTML editor crash when `codeMap` is undefined by guarding widget code access.
 - Color picker converts non-hex initial colours to hex before applying HSV state, preventing NaN previews.
 - User color now applies correctly on the Home workspace and updates after header load.
 - Home and Settings workspaces are protected from deletion in UI and backend.

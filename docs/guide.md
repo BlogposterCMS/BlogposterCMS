@@ -108,6 +108,10 @@ Each widget is rendered inside a Shadow DOM to isolate its styles. The builder i
 
 This layering keeps widgets secure from style collisions while allowing themes to customize their appearance. When using the page builder, the active theme is scoped to the preview grid so you can see changes live without the builder interface inheriting those styles.
 
+### Color Picker
+
+The builder's color picker remembers your recently used colours at the top with a quick "plus" button to add new swatches. Colours already present in the document appear in a separate section so you can reuse them easily. A search field accepts hex or common colour names to jump straight to a specific value.
+
 ## New Features in v0.5.0
 
 - **Permission Groups** – manage permissions using reusable groups in the Users settings. The old Permissions page has been removed.

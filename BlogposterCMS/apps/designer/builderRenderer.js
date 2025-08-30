@@ -854,7 +854,9 @@ publishPopup.innerHTML = `
   <label class="publish-publish hidden"><input type="checkbox" class="publish-publish-checkbox" /> Publish page</label>
   <div class="publish-actions"><button class="publish-confirm">Publish</button></div>
 `;
-document.body.appendChild(publishPopup);
+const publishBackdrop = document.createElement('div');
+publishBackdrop.className = 'publish-backdrop hidden';
+document.body.append(publishBackdrop, publishPopup);
 loadPageService();
 
 const slugInput = publishPopup.querySelector('.publish-slug-input');
@@ -866,6 +868,17 @@ const createCb = publishPopup.querySelector('.publish-create-checkbox');
 const publishCb = publishPopup.querySelector('.publish-publish-checkbox');
 const confirmBtn = publishPopup.querySelector('.publish-confirm');
 let selectedPage = null;
+
+function showPublishPopup() {
+  publishBackdrop.classList.remove('hidden');
+  publishPopup.classList.remove('hidden');
+  slugInput.focus();
+}
+
+function hidePublishPopup() {
+  publishPopup.classList.add('hidden');
+  publishBackdrop.classList.add('hidden');
+}
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -936,10 +949,15 @@ suggestionsEl.addEventListener('click', async e => {
   }
 });
 
-publishBtn.addEventListener('click', () => {
-  publishPopup.classList.remove('hidden');
-  slugInput.focus();
-});
+  publishBtn.addEventListener('click', () => {
+    showPublishPopup();
+  });
+  publishBackdrop.addEventListener('click', hidePublishPopup);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !publishPopup.classList.contains('hidden')) {
+      hidePublishPopup();
+    }
+  });
 
 async function runPublish(subSlug) {
   const name = nameInput.value.trim();
@@ -1078,7 +1096,7 @@ confirmBtn.addEventListener('click', async () => {
       await pageService.update(selectedPage, patch);
     }
     await runPublish(slug);
-    publishPopup.classList.add('hidden');
+    hidePublishPopup();
   } catch (err) {
     console.error('[Designer] publish flow error', err);
     alert('Publish failed: ' + err.message);

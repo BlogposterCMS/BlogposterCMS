@@ -25,6 +25,7 @@ El Psy Kongroo
 - Color picker panel integrates the picker without a close button and fills the panel.
 
 ### Added
+- Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
 - Simple hue wheel with hex input accessible from preset colors.
 - Header viewport control with slider to adjust builder canvas width.
 - Login screen now cycles through preset accent colors for its dotted background and form border.

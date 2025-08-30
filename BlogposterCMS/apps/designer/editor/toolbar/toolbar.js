@@ -348,6 +348,30 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     color: color => applyStyleInternal('color', color)
   });
 
+  function rgbToHex(rgb) {
+    const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!m) return null;
+    const r = parseInt(m[1], 10).toString(16).padStart(2, '0');
+    const g = parseInt(m[2], 10).toString(16).padStart(2, '0');
+    const b = parseInt(m[3], 10).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`.toUpperCase();
+  }
+
+  function collectDocumentColors() {
+    const colors = new Set();
+    document.querySelectorAll('*').forEach(el => {
+      const style = getComputedStyle(el);
+      ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
+        const val = style[prop];
+        if (val && val.startsWith('rgb')) {
+          const hex = rgbToHex(val);
+          if (hex) colors.add(hex);
+        }
+      });
+    });
+    return Array.from(colors);
+  }
+
   state.toolbar.addEventListener('click', ev => {
     const btn = ev.target.closest('button[data-cmd]');
     if (!btn) return;
@@ -392,6 +416,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       '#008000', '#7CFC00', '#BFFF00', '#FFFF00', '#FFDAB9', '#FFA500',
       '#000000', '#A9A9A9', '#808080'
     ],
+    documentColors: collectDocumentColors(),
     themeColors: themeColor ? [themeColor] : []
   });
   // Prepare color picker for panel usage; keep hidden until panel opens.
@@ -408,6 +433,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   }, true);
   async function openColorSidebar() {
     const sidebar = document.getElementById('sidebar');
+    state.colorPicker.updateOptions({ documentColors: collectDocumentColors() });
     const panelContainer = sidebar?.querySelector('#builderPanel');
     if (!panelContainer) return false;
 

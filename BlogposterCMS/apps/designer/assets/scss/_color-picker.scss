@@ -140,6 +140,26 @@
     text-align: center;
   }
 
+  .color-search {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    font-size: 12px;
+    outline: none;
+    background: white;
+  }
+
+  .show-more {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--accent-color, #007bff);
+    cursor: pointer;
+    font-size: 12px;
+    text-align: left;
+  }
+
   .color-section-label {
     margin-bottom: 8px;
     font-size: 12px;

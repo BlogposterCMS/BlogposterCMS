@@ -869,7 +869,14 @@ const publishCb = publishPopup.querySelector('.publish-publish-checkbox');
 const confirmBtn = publishPopup.querySelector('.publish-confirm');
 let selectedPage = null;
 
+function positionPublishPopup() {
+  const rect = publishBtn.getBoundingClientRect();
+  publishPopup.style.top = `${rect.bottom}px`;
+  publishPopup.style.height = `calc(100% - ${rect.bottom}px)`;
+}
+
 function showPublishPopup() {
+  positionPublishPopup();
   publishBackdrop.classList.remove('hidden');
   publishPopup.classList.remove('hidden');
   slugInput.focus();
@@ -879,6 +886,10 @@ function hidePublishPopup() {
   publishPopup.classList.add('hidden');
   publishBackdrop.classList.add('hidden');
 }
+
+window.addEventListener('resize', () => {
+  if (!publishPopup.classList.contains('hidden')) positionPublishPopup();
+});
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));

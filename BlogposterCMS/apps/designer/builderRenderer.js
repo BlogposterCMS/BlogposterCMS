@@ -605,6 +605,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     gridEl.style.margin = '0 auto';
     viewportValue.textContent = `${val}px`;
     viewportSizeEl.textContent = `${val}px`;
+    if (grid && typeof grid.setScale === 'function') {
+      const current = grid.scale || parseFloat(
+        getComputedStyle(gridEl).getPropertyValue('--canvas-scale') || '1'
+      );
+      grid.setScale(current);
+    }
   }
 
   viewportRange.value = String(DEFAULT_VIEWPORT);
@@ -1056,13 +1062,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     zoomSlider.min = '10';
     zoomSlider.max = '500';
     zoomSlider.step = '1';
-    zoomSlider.value = '60';
+    zoomSlider.value = '100';
     zoomSlider.style.width = '180px';
     const zoomIn = document.createElement('button');
     zoomIn.title = 'Zoom in';
     zoomIn.innerHTML = window.featherIcon ? window.featherIcon('plus') : '<img src="/assets/icons/zoom-in.svg" alt="+" />';
 
-    let zoomPct = 60;
+    let zoomPct = 100;
     function applyZoom(pct) {
       zoomPct = Math.max(10, Math.min(500, Math.round(pct)));
       zoomSlider.value = String(zoomPct);
@@ -1080,7 +1086,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       }
     }
     // Initial zoom
-    applyZoom(60);
+    applyZoom(100);
 
     zoomOut.addEventListener('click', () => applyZoom(zoomPct - 10));
     zoomIn.addEventListener('click', () => applyZoom(zoomPct + 10));

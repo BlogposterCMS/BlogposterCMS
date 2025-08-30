@@ -5,6 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Canvas wrapper now refreshes its height when grid rows are added after zooming so newly added content remains scrollable.
+- Canvas wrapper now expands with zoom and viewport width so wide layouts remain horizontally scrollable at 100% zoom.
 - Prevent HTML editor crash when `codeMap` is undefined by guarding widget code access.
 - Color picker converts non-hex initial colours to hex before applying HSV state, preventing NaN previews.
 - User color now applies correctly on the Home workspace and updates after header load.
@@ -26,6 +28,7 @@ El Psy Kongroo
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Changed
+- Builder grid now starts at 100% zoom, centers within the viewport, and exposes horizontal scrolling for wide layouts.
 - Builder viewport slider now defaults to 1920px and supports widths up to 3840px for large-screen previews.
 - Color picker hue editor now uses a square selector with hue and transparency sliders and a close icon.
 - Color picker limits document colours to the builder grid, preselects the widget's current colour and opens its hue editor beneath the chosen swatch.

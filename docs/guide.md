@@ -98,6 +98,8 @@ BlogposterCMS does not use a traditional `post.type` column. Instead content is 
 
 The admin lane provides a drag‑and‑drop page builder at `/admin/builder`. The builder retrieves the widget registry via `widget.registry.request.v1` and loads widgets dynamically. Because it relies on minimal JavaScript and CSS, the interface remains lightweight and quick to load even on modest devices.
 
+The canvas opens centered in the viewport at a 100% zoom level and can expand up to 4K widths, with the scroll container resizing as the canvas grows so horizontal and vertical scrollbars appear when layouts overflow.
+
 ### Widget CSS Layers
 
 Each widget is rendered inside a Shadow DOM to isolate its styles. The builder injects three CSS layers in this order:

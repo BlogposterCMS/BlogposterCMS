@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Color picker converts non-hex initial colours to hex before applying HSV state, preventing NaN previews.
 - Designer text widget loads editor bundle from build output and falls back to default export to avoid missing module errors.
 - Widget options menu ignores buttons without registered handlers, preventing random `data-action` keys from causing crashes.
 - Text widget now loads editor module without destructuring, preventing `registerElement` errors in builder mode.

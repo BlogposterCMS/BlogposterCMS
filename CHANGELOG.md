@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Canvas wrapper now refreshes its height when grid rows are added after zooming so newly added content remains scrollable.
 - Canvas wrapper now expands with zoom and viewport width so wide layouts remain horizontally scrollable at 100% zoom.
 - Color picker converts non-hex initial colours to hex before applying HSV state, preventing NaN previews.
 - User color now applies correctly on the Home workspace and updates after header load.

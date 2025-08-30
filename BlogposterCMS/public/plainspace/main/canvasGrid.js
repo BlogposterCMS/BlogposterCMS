@@ -132,10 +132,13 @@ export class CanvasGrid {
     const prev = this.scale || this._currentScale();
     const clamped = Math.max(0.1, Math.min(5, next));
     this.scale = clamped;
-    // Keep sizer at 100% so viewport width remains constant while zooming
+    // Expand the scrollable area to match the scaled grid dimensions so
+    // overflow remains reachable via the scrollbars.
     if (this.sizer) {
-      this.sizer.style.width = '100%';
-      this.sizer.style.height = '100%';
+      const w = (this.el.offsetWidth || 0) * clamped;
+      const h = (this.el.offsetHeight || 0) * clamped;
+      this.sizer.style.width = `${w}px`;
+      this.sizer.style.height = `${h}px`;
     }
     this.el.style.transform = `scale(${clamped})`;
     this.el.style.setProperty('--canvas-scale', String(clamped));

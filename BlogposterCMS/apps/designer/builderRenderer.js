@@ -605,6 +605,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     gridEl.style.margin = '0 auto';
     viewportValue.textContent = `${val}px`;
     viewportSizeEl.textContent = `${val}px`;
+    if (grid && typeof grid.setScale === 'function') {
+      const current = grid.scale || parseFloat(
+        getComputedStyle(gridEl).getPropertyValue('--canvas-scale') || '1'
+      );
+      grid.setScale(current);
+    }
   }
 
   viewportRange.value = String(DEFAULT_VIEWPORT);

@@ -37,7 +37,7 @@ export async function render(el, ctx = {}) {
 
   if (document.body.classList.contains('builder-mode')) {
     const mod = await import(
-        /* webpackIgnore: true */ '/apps/designer/editor/editor.js'
+      /* webpackIgnore: true */ '/build/designerEditor.js'
     );
     const registerElement = mod.registerElement || mod.default?.registerElement;
     registerElement?.(editable);

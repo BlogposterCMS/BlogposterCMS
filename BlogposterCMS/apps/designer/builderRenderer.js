@@ -913,14 +913,15 @@ suggestionsEl.addEventListener('click', async e => {
   slugInput.value = el.dataset.slug;
   suggestionsEl.innerHTML = '';
   try {
-    const { data: page } = await meltdownEmit('getPageById', {
+    const res = await meltdownEmit('getPageById', {
       jwt: window.ADMIN_TOKEN,
       moduleName: 'pagesManager',
       moduleType: 'core',
       pageId: Number(el.dataset.id)
     });
-    selectedPage = page;
-    if (page.status !== 'published') {
+    const page = res?.data ?? res;
+    selectedPage = page || null;
+    if (page && page.status !== 'published') {
       warningEl.textContent = 'Selected page is a draft';
       warningEl.classList.remove('hidden');
       publishWrap.classList.remove('hidden');

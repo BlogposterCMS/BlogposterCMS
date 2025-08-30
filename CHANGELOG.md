@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Text widget now loads editor module without destructuring, preventing `registerElement` errors in builder mode.
 - Unified text and background color pickers into a single instance, removing duplicate close buttons.
 - Background toolbar now appears when no widget is selected, matching text-toolbar behaviour.
 - CanvasGrid zoom now anchors to its center, keeping the grid positioned while scaling.

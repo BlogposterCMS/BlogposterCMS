@@ -9,13 +9,13 @@ export function createColorPicker(options = {}) {
   const {
     presetColors: customPresets = presetColors,
     userColors = [],
-    themeColors = [],
-    initialColor = customPresets[0],
-    onSelect = () => {},
-    onClose = () => {}
+    themeColors = []
   } = options;
 
-  let selectedColor = initialColor;
+  let selectedColor = options.initialColor || customPresets[0];
+  let onSelect = options.onSelect || (() => {});
+  let onClose = options.onClose || (() => {});
+  const showCloseButton = options.hideCloseButton !== true;
   const container = document.createElement('div');
   container.className = 'color-picker';
 
@@ -29,15 +29,23 @@ export function createColorPicker(options = {}) {
     container.classList.remove('hidden');
   }
 
-  const closeBtn = document.createElement('button');
-  closeBtn.type = 'button';
-  closeBtn.className = 'color-picker-close';
-  closeBtn.innerHTML = '&times;';
-  closeBtn.addEventListener('click', () => {
-    hide();
-    onClose();
-  });
-  container.appendChild(closeBtn);
+  let closeBtn = null;
+  function ensureCloseBtn() {
+    if (closeBtn) {
+      if (!closeBtn.isConnected) container.appendChild(closeBtn);
+      return;
+    }
+    closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'color-picker-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.addEventListener('click', () => {
+      hide();
+      onClose();
+    });
+    container.appendChild(closeBtn);
+  }
+  if (showCloseButton) ensureCloseBtn();
 
   function createSection(colors, label) {
     if (!colors || !colors.length) return;
@@ -55,6 +63,7 @@ export function createColorPicker(options = {}) {
       const circle = document.createElement('button');
       circle.type = 'button';
       circle.className = 'color-circle';
+      circle.dataset.color = c;
       circle.style.backgroundColor = c;
       if (c === selectedColor) circle.classList.add('active');
       circle.addEventListener('click', () => {
@@ -95,12 +104,45 @@ export function createColorPicker(options = {}) {
   createSection(userColors, 'Your colors');
   createSection(themeColors, 'Theme');
 
+  function updateOptions(newOpts = {}) {
+    if (newOpts.onSelect) onSelect = newOpts.onSelect;
+    if (newOpts.onClose) onClose = newOpts.onClose;
+    if (newOpts.initialColor) {
+      selectedColor = newOpts.initialColor;
+      const circles = Array.from(container.querySelectorAll('.color-circle'));
+      let found = false;
+      circles.forEach(btn => {
+        const match = btn.dataset.color === selectedColor;
+        btn.classList.toggle('active', match);
+        if (match) found = true;
+      });
+      const input = container.querySelector('.color-input');
+      const addCustom = container.querySelector('.color-circle.add-custom');
+      if (input) input.textContent = selectedColor;
+      if (addCustom) {
+        addCustom.style.backgroundColor = selectedColor;
+        if (!found) {
+          circles.forEach(btn => btn.classList.remove('active'));
+          addCustom.classList.add('active');
+        }
+      }
+    }
+    if ('hideCloseButton' in newOpts) {
+      if (newOpts.hideCloseButton) {
+        closeBtn?.remove();
+      } else {
+        ensureCloseBtn();
+      }
+    }
+  }
+
   return {
     el: container,
     getColor() {
       return selectedColor;
     },
     showAt,
-    hide
+    hide,
+    updateOptions
   };
 }

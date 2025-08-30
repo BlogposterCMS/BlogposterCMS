@@ -40,32 +40,111 @@
     display: none;
     flex-direction: column;
     gap: 8px;
-    align-items: center;
-    &.hidden {
-      display: none;
+    align-items: stretch;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: var(--shadow-default);
+    position: absolute;
+    &.hidden { display: none; }
+    &:not(.hidden) { display: flex; }
+
+    .color-picker-close {
+      align-self: flex-end;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
     }
-    &:not(.hidden) {
+
+    .cp-color-area {
+      position: relative;
+      width: 200px;
+      height: 150px;
+      border-radius: 4px;
+      cursor: crosshair;
+      background: hsl(0, 100%, 50%);
+      overflow: hidden;
+      &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to right, #fff, rgba(255,255,255,0));
+      }
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, #000, rgba(0,0,0,0));
+      }
+      .cp-cursor {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 2px rgba(0,0,0,0.5);
+        transform: translate(-6px, -6px);
+        pointer-events: none;
+      }
+    }
+
+    .cp-hue,
+    .cp-alpha {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .cp-hue {
+      background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+    }
+
+    .cp-alpha {
+      background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%);
+      background-size: 8px 8px;
+    }
+
+    .cp-input-row {
       display: flex;
+      gap: 8px;
+      align-items: center;
     }
-  }
 
-  .hue-wheel {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
-    border: 4px solid transparent;
-    cursor: pointer;
-  }
+    .cp-preview {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%);
+      background-size: 8px 8px;
+      .cp-preview-color {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+      }
+    }
 
-  .hue-hex {
-    width: 80px;
-    padding: 2px 4px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 12px;
-    outline: none;
-    text-align: center;
+    .cp-hex {
+      flex: 1;
+      padding: 2px 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 12px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .cp-dropper {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
   }
 
   .color-section-label {

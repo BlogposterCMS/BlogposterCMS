@@ -52,8 +52,7 @@ export function createColorPicker(options = {}) {
       onSelect(selectedColor);
       if (editable) {
         editingCircle = circle;
-        hexInput.value = selectedColor;
-        hueWheel.style.borderColor = selectedColor;
+        setFromHex(selectedColor, false);
         positionHueWrapper(circle);
         hueWrapper.classList.remove('hidden');
       } else {
@@ -105,37 +104,132 @@ export function createColorPicker(options = {}) {
     return section;
   }
 
-  function hslToHex(h, s, l) {
-    s /= 100;
-    l /= 100;
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
+  function hsvToRgb(h, s, v) {
+    const c = v * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = v - c;
     let r = 0, g = 0, b = 0;
-    if (0 <= h && h < 60) { r = c; g = x; }
-    else if (60 <= h && h < 120) { r = x; g = c; }
-    else if (120 <= h && h < 180) { g = c; b = x; }
-    else if (180 <= h && h < 240) { g = x; b = c; }
-    else if (240 <= h && h < 300) { r = x; b = c; }
+    if (h < 60) { r = c; g = x; }
+    else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; }
     else { r = c; b = x; }
-    const toHex = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    return {
+      r: Math.round((r + m) * 255),
+      g: Math.round((g + m) * 255),
+      b: Math.round((b + m) * 255)
+    };
+  }
+
+  function rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const d = max - min;
+    let h = 0;
+    if (d !== 0) {
+      switch (max) {
+        case r: h = ((g - b) / d) % 6; break;
+        case g: h = (b - r) / d + 2; break;
+        default: h = (r - g) / d + 4; break;
+      }
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    const s = max === 0 ? 0 : d / max;
+    const v = max;
+    return { h, s, v };
+  }
+
+  function hexToRgba(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(h => h + h).join('');
+    let a = 1;
+    if (hex.length === 8) {
+      a = parseInt(hex.slice(6, 8), 16) / 255;
+      hex = hex.slice(0, 6);
+    }
+    const num = parseInt(hex, 16);
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return { r, g, b, a };
+  }
+
+  function hsvToHex(h, s, v, a = 1) {
+    const { r, g, b } = hsvToRgb(h, s, v);
+    const toHex = x => x.toString(16).padStart(2, '0');
+    const alpha = a < 1 ? toHex(Math.round(a * 255)) : '';
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}${alpha}`.toUpperCase();
   }
 
   const hueWrapper = document.createElement('div');
   hueWrapper.className = 'hue-wrapper hidden';
-  const hueWheel = document.createElement('div');
-  hueWheel.className = 'hue-wheel';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'color-picker-close';
+  closeBtn.innerHTML = '<img src="/assets/icons/x.svg" alt="close">';
+  closeBtn.addEventListener('click', () => {
+    hueWrapper.classList.add('hidden');
+    editingCircle = null;
+  });
+  hueWrapper.appendChild(closeBtn);
+
+  const colorArea = document.createElement('div');
+  colorArea.className = 'cp-color-area';
+  const colorCursor = document.createElement('div');
+  colorCursor.className = 'cp-cursor';
+  colorArea.appendChild(colorCursor);
+  hueWrapper.appendChild(colorArea);
+
+  const hueSlider = document.createElement('input');
+  hueSlider.type = 'range';
+  hueSlider.min = 0; hueSlider.max = 360; hueSlider.value = 0;
+  hueSlider.className = 'cp-hue';
+  hueWrapper.appendChild(hueSlider);
+
+  const alphaSlider = document.createElement('input');
+  alphaSlider.type = 'range';
+  alphaSlider.min = 0; alphaSlider.max = 100; alphaSlider.value = 100;
+  alphaSlider.className = 'cp-alpha';
+  hueWrapper.appendChild(alphaSlider);
+
+  const inputRow = document.createElement('div');
+  inputRow.className = 'cp-input-row';
+  const preview = document.createElement('div');
+  preview.className = 'cp-preview';
+  const previewColor = document.createElement('div');
+  previewColor.className = 'cp-preview-color';
+  preview.appendChild(previewColor);
+  inputRow.appendChild(preview);
   const hexInput = document.createElement('input');
   hexInput.type = 'text';
-  hexInput.className = 'hue-hex';
-  hexInput.value = selectedColor;
-  const sanitize = val => (/^#[0-9a-fA-F]{3,8}$/.test(val) ? val : selectedColor);
+  hexInput.className = 'cp-hex';
+  inputRow.appendChild(hexInput);
+  const dropper = document.createElement('button');
+  dropper.type = 'button';
+  dropper.className = 'cp-dropper';
+  dropper.innerHTML = '<img src="/assets/icons/pipette.svg" alt="pick">';
+  dropper.addEventListener('click', async () => {
+    if (!window.EyeDropper) return;
+    try {
+      const res = await new EyeDropper().open();
+      setFromHex(res.sRGBHex, true);
+    } catch (_) {}
+  });
+  inputRow.appendChild(dropper);
+  hueWrapper.appendChild(inputRow);
+
+  const sanitize = val => (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(val) ? val : null);
   let editingCircle = null;
+
+  let hue = 0, sat = 1, val = 1, alpha = 1;
+
   const handleColorChange = color => {
     selectedColor = color;
     hexInput.value = color;
-    hueWheel.style.borderColor = color;
+    previewColor.style.backgroundColor = color;
     container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
     if (editingCircle) {
       editingCircle.dataset.color = color;
@@ -148,9 +242,65 @@ export function createColorPicker(options = {}) {
     }
     onSelect(selectedColor);
   };
+
+  function updateFromState(trigger = true) {
+    const color = hsvToHex(hue, sat, val, alpha);
+    colorArea.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
+    colorCursor.style.left = sat * 100 + '%';
+    colorCursor.style.top = (1 - val) * 100 + '%';
+    alphaSlider.style.background = `linear-gradient(to right, rgba(255,255,255,0), ${hsvToHex(hue, sat, val)})`;
+    alphaSlider.style.backgroundSize = '100% 100%';
+    previewColor.style.backgroundColor = color;
+    hexInput.value = color;
+    if (trigger) handleColorChange(color);
+  }
+
+  function setFromHex(hex, trigger = false) {
+    const { r, g, b, a } = hexToRgba(hex);
+    const hsv = rgbToHsv(r, g, b);
+    hue = hsv.h; sat = hsv.s; val = hsv.v; alpha = a;
+    hueSlider.value = hue;
+    alphaSlider.value = Math.round(alpha * 100);
+    updateFromState(trigger);
+  }
+
+  setFromHex(selectedColor, false);
+
+  hueSlider.addEventListener('input', () => {
+    hue = Number(hueSlider.value);
+    updateFromState();
+  });
+  alphaSlider.addEventListener('input', () => {
+    alpha = Number(alphaSlider.value) / 100;
+    updateFromState();
+  });
+  let dragging = false;
+  const handleSV = e => {
+    const rect = colorArea.getBoundingClientRect();
+    let x = (e.clientX - rect.left) / rect.width;
+    let y = (e.clientY - rect.top) / rect.height;
+    x = Math.max(0, Math.min(1, x));
+    y = Math.max(0, Math.min(1, y));
+    sat = x;
+    val = 1 - y;
+    updateFromState();
+  };
+  colorArea.addEventListener('pointerdown', e => {
+    dragging = true;
+    colorArea.setPointerCapture(e.pointerId);
+    handleSV(e);
+  });
+  colorArea.addEventListener('pointermove', e => {
+    if (dragging) handleSV(e);
+  });
+  colorArea.addEventListener('pointerup', e => {
+    dragging = false;
+    colorArea.releasePointerCapture(e.pointerId);
+  });
+
   hexInput.addEventListener('input', () => {
-    const val = sanitize(hexInput.value.trim());
-    if (val.length === 7) handleColorChange(val);
+    const valInput = sanitize(hexInput.value.trim());
+    if (valInput) setFromHex(valInput, true);
   });
   hexInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
@@ -158,19 +308,7 @@ export function createColorPicker(options = {}) {
       editingCircle = null;
     }
   });
-  hueWheel.addEventListener('click', e => {
-    const rect = hueWheel.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    const angle = Math.atan2(y, x) * (180 / Math.PI);
-    const hue = (angle + 360) % 360;
-    const color = hslToHex(hue, 100, 50);
-    handleColorChange(color);
-    hueWrapper.classList.add('hidden');
-    editingCircle = null;
-  });
-  hueWrapper.appendChild(hueWheel);
-  hueWrapper.appendChild(hexInput);
+
   container.appendChild(hueWrapper);
 
   const search = document.createElement('input');
@@ -245,8 +383,7 @@ export function createColorPicker(options = {}) {
     addBtn.textContent = '+';
     addBtn.addEventListener('click', () => {
       editingCircle = null;
-      hexInput.value = selectedColor;
-      hueWheel.style.borderColor = selectedColor;
+      setFromHex(selectedColor, false);
       positionHueWrapper(addBtn);
       hueWrapper.classList.remove('hidden');
     });
@@ -294,8 +431,7 @@ export function createColorPicker(options = {}) {
       if (!found) {
         circles.forEach(btn => btn.classList.remove('active'));
       }
-      hexInput.value = selectedColor;
-      hueWheel.style.borderColor = selectedColor;
+      setFromHex(selectedColor, false);
     }
     if (newOpts.documentColors) {
       documentColors.splice(0, documentColors.length, ...newOpts.documentColors);

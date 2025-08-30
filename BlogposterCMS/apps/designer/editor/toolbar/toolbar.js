@@ -393,12 +393,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       '#000000', '#A9A9A9', '#808080'
     ],
     themeColors: themeColor ? [themeColor] : [],
-    initialColor: state.currentColor,
-    onSelect: c => {
-      applyColor(c);
-      colorIcon.style.textDecorationColor = c;
-    },
-    onClose: () => colorBtn.focus()
+    hideCloseButton: true
   });
   // Prepare color picker for panel usage; keep hidden until panel opens.
   state.colorPicker.el.classList.add('hidden');
@@ -481,11 +476,25 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   colorBtn.addEventListener('click', async () => {
     saveSelection();
+    state.colorPicker.updateOptions({
+      initialColor: state.currentColor,
+      onSelect: c => {
+        applyColor(c);
+        colorIcon.style.textDecorationColor = c;
+      },
+      onClose: () => colorBtn.focus(),
+      hideCloseButton: true
+    });
     // If color sidebar already open -> close it (toggle)
     const sidebar = document.getElementById('sidebar');
     const panelContainer = sidebar?.querySelector('#builderPanel');
     const colorPanel = panelContainer?.querySelector('.color-panel');
-    const colorPanelVisible = !!(colorPanel && colorPanel.style.display !== 'none' && document.body.classList.contains('panel-open') && !state.colorPicker.el.classList.contains('hidden'));
+    const colorPanelVisible = !!(
+      colorPanel &&
+      colorPanel.style.display !== 'none' &&
+      document.body.classList.contains('panel-open') &&
+      !state.colorPicker.el.classList.contains('hidden')
+    );
     if (colorPanelVisible) { closeColorSidebar(); return; }
     // Prefer sidebar panel if available; otherwise fall back to floating picker
     if (!(await openColorSidebar())) {

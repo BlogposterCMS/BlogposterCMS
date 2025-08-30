@@ -1,26 +1,11 @@
-import { createColorPicker } from '/assets/js/colorPicker.js';
+import { state } from '../core/editor.js';
 
 let bgToolbar = null;
-let bgColorPicker = null;
 let listenersAttached = false;
 const BGLOG = (...args) => { try { console.log('[BG/TB]', ...args); } catch (_) {} };
 
 function getGridEl() {
   return document.getElementById('builderGrid');
-}
-
-function parseColor(val) {
-  val = String(val || '').trim();
-  if (val.startsWith('#')) {
-    if (val.length === 4) {
-      val = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
-    }
-    const int = parseInt(val.slice(1), 16);
-    return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
-  }
-  const m = val.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-  if (m) return { r: +m[1], g: +m[2], b: +m[3] };
-  return null;
 }
 
 function updateToolbarPosition() {
@@ -91,21 +76,8 @@ export function initBackgroundToolbar() {
     clearBtn.textContent = 'Clear';
   }
 
-  // Build color picker (reused panel if available, otherwise floating)
-  const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
-  bgColorPicker = createColorPicker({
-    themeColors: themeColor ? [themeColor] : [],
-    initialColor: currentBg || '#ffffff',
-    onSelect: c => {
-      const grid = getGridEl();
-      if (!grid) return;
-      grid.style.backgroundImage = '';
-      grid.style.backgroundColor = c;
-      colorIcon.style.textDecorationColor = c;
-    },
-    onClose: () => colorBtn.focus()
-  });
-  bgColorPicker.el.classList.add('hidden');
+  // Ensure global color picker starts hidden for background use
+  state.colorPicker?.el?.classList.add('hidden');
 
   async function openColorPanel() {
     const sidebar = document.getElementById('sidebar');
@@ -132,12 +104,12 @@ export function initBackgroundToolbar() {
       p.style.display = p.classList.contains('color-panel') ? '' : 'none';
     });
     const host = colorPanel.querySelector('.color-panel-content') || colorPanel;
-    if (bgColorPicker.el.parentElement !== host) host.appendChild(bgColorPicker.el);
-    bgColorPicker.el.classList.remove('hidden');
-    bgColorPicker.el.classList.remove('floating');
-    bgColorPicker.el.style.position = '';
-    bgColorPicker.el.style.left = '';
-    bgColorPicker.el.style.top = '';
+    if (state.colorPicker.el.parentElement !== host) host.appendChild(state.colorPicker.el);
+    state.colorPicker.el.classList.remove('hidden');
+    state.colorPicker.el.classList.remove('floating');
+    state.colorPicker.el.style.position = '';
+    state.colorPicker.el.style.left = '';
+    state.colorPicker.el.style.top = '';
     const collapseBtn = colorPanel.querySelector('.collapse-btn');
     if (collapseBtn && !collapseBtn.__bgBound) {
       collapseBtn.__bgBound = true;
@@ -158,7 +130,7 @@ export function initBackgroundToolbar() {
         p.style.display = '';
       }
     });
-    bgColorPicker.hide();
+    state.colorPicker.hide();
     document.body.classList.add('panel-closing');
     document.body.classList.remove('panel-open');
     setTimeout(() => document.body.classList.remove('panel-closing'), 200);
@@ -167,21 +139,40 @@ export function initBackgroundToolbar() {
 
   colorBtn.addEventListener('click', async ev => {
     ev.stopPropagation();
+    const grid = getGridEl();
+    const currentBg = getComputedStyle(grid || document.body).backgroundColor;
+    state.colorPicker.updateOptions({
+      initialColor: currentBg || '#ffffff',
+      onSelect: c => {
+        const g = getGridEl();
+        if (!g) return;
+        g.style.backgroundImage = '';
+        g.style.backgroundColor = c;
+        colorIcon.style.textDecorationColor = c;
+      },
+      onClose: () => colorBtn.focus(),
+      hideCloseButton: true
+    });
     const sidebar = document.getElementById('sidebar');
     const panelContainer = sidebar?.querySelector('#builderPanel');
     const colorPanel = panelContainer?.querySelector('.color-panel');
-    const colorPanelVisible = !!(colorPanel && colorPanel.style.display !== 'none' && document.body.classList.contains('panel-open') && !bgColorPicker.el.classList.contains('hidden'));
+    const colorPanelVisible = !!(
+      colorPanel &&
+      colorPanel.style.display !== 'none' &&
+      document.body.classList.contains('panel-open') &&
+      !state.colorPicker.el.classList.contains('hidden')
+    );
     if (colorPanelVisible) { closeColorPanel(); return; }
     if (!(await openColorPanel())) {
-      if (!document.body.contains(bgColorPicker.el)) {
-        bgColorPicker.el.classList.add('floating');
-        document.body.appendChild(bgColorPicker.el);
+      if (!document.body.contains(state.colorPicker.el)) {
+        state.colorPicker.el.classList.add('floating');
+        document.body.appendChild(state.colorPicker.el);
       }
-      if (bgColorPicker.el.classList.contains('hidden')) {
+      if (state.colorPicker.el.classList.contains('hidden')) {
         const rect = colorBtn.getBoundingClientRect();
-        bgColorPicker.showAt(rect.left + window.scrollX, rect.bottom + window.scrollY);
+        state.colorPicker.showAt(rect.left + window.scrollX, rect.bottom + window.scrollY);
       } else {
-        bgColorPicker.hide();
+        state.colorPicker.hide();
       }
     }
   });
@@ -237,7 +228,7 @@ export function hideBackgroundToolbar() {
   if (!bgToolbar) return;
   bgToolbar.style.display = 'none';
   removeListeners();
-  try { bgColorPicker?.hide?.(); } catch (_) {}
+  try { state.colorPicker?.hide?.(); } catch (_) {}
   BGLOG('hide toolbar');
 }
 

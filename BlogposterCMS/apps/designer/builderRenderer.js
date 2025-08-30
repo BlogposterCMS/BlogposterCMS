@@ -214,6 +214,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   `;
   gridEl = document.getElementById('builderGrid');
   const gridViewportEl = document.getElementById('builderViewport');
+  const viewportSizeEl = document.createElement('div');
+  viewportSizeEl.className = 'viewport-size-display';
+  viewportSizeEl.textContent = `${gridViewportEl.clientWidth}px`;
+  gridViewportEl.appendChild(viewportSizeEl);
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
     updateAllWidgetContents,
@@ -598,6 +602,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   viewportValue.textContent = `${currentWidth}px`;
   viewportPanel.appendChild(viewportRange);
   viewportPanel.appendChild(viewportValue);
+  function setViewportWidth(val) {
+    gridViewportEl.style.width = `${val}px`;
+    gridViewportEl.style.margin = '0 auto';
+    viewportValue.textContent = `${val}px`;
+    viewportSizeEl.textContent = `${val}px`;
+  }
 
   // Popin handling for viewport slider (similar to header menu)
   function hideViewportPanel() {
@@ -634,12 +644,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   viewportRange.addEventListener('input', () => {
     const val = parseInt(viewportRange.value, 10);
-    if (Number.isFinite(val)) {
-      gridViewportEl.style.width = `${val}px`;
-      gridViewportEl.style.margin = '0 auto';
-      viewportValue.textContent = `${val}px`;
-    }
+    if (Number.isFinite(val)) setViewportWidth(val);
   });
+
+  if (window.ResizeObserver) {
+    const resizeObserver = new ResizeObserver(entries => {
+      const entry = entries[0];
+      const width = Math.round(entry.contentRect.width);
+      viewportRange.value = String(width);
+      viewportValue.textContent = `${width}px`;
+      viewportSizeEl.textContent = `${width}px`;
+    });
+    resizeObserver.observe(gridViewportEl);
+  }
 
   const saveBtn = document.createElement('button');
   saveBtn.id = 'saveLayoutBtn';

@@ -14,6 +14,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 - Widgets receive a `dragging` class while moved so interfaces can reveal context‑sensitive controls and temporarily drop transitions, shadows and filters for maximum performance.
 - Ctrl+wheel zoom scales the grid around its center, keeping layouts anchored in view.
 - Header viewport control lets you adjust the canvas width via a slider for responsive previews.
+- Workspace displays the current viewport width in the top-right corner for quick reference.
 
 ## Usage
 

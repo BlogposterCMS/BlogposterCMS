@@ -103,7 +103,7 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
       };
     }
     const instId = el.dataset.instanceId;
-    const codeData = codeMap[instId] ? { ...codeMap[instId] } : {};
+    const codeData = codeMap && codeMap[instId] ? { ...codeMap[instId] } : {};
 
     if (!codeData.sourceJs) {
       try {
@@ -162,12 +162,14 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
     overlay.updateRender && overlay.updateRender();
     overlay.querySelector('.save-btn').onclick = () => {
       const instId = el.dataset.instanceId;
-      codeMap[instId] = {
-        html: htmlEl.value,
-        css: wrapCss(cssEl.value, overlay.currentSelector),
-        js: jsEl.value,
-        selector: overlay.currentSelector
-      };
+      if (codeMap) {
+        codeMap[instId] = {
+          html: htmlEl.value,
+          css: wrapCss(cssEl.value, overlay.currentSelector),
+          js: jsEl.value,
+          selector: overlay.currentSelector
+        };
+      }
       overlay.style.display = 'none';
       renderWidget(el, widgetDef, codeMap);
       if (pageId) scheduleAutosave();
@@ -175,7 +177,7 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
     overlay.querySelector('.reset-btn').onclick = () => {
       if (!confirm('Willst du wirklich alle Anpassungen zurücksetzen?')) return;
       const instId = el.dataset.instanceId;
-      delete codeMap[instId];
+      if (codeMap) delete codeMap[instId];
       htmlEl.value = '';
       overlay.querySelector('.editor-css').value = '';
       overlay.querySelector('.editor-js').value = overlay.defaultJs || '';

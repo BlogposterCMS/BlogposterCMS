@@ -323,7 +323,8 @@ function showSubpageField(workspace) {
             slug: workspace,
             lane: 'admin'
           });
-          const parent = parentRes?.data ?? parentRes ?? null;
+          const parentRaw = parentRes?.data ?? parentRes;
+          const parent = Array.isArray(parentRaw) ? parentRaw[0] : parentRaw;
           parentId = parent?.id || null;
         } catch (err) {
           console.error('Failed to fetch parent page', err);

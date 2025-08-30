@@ -110,22 +110,28 @@ export async function applyUserColor(force = false) {
     return;
   }
   const jwt = window.ADMIN_TOKEN;
-  if (!jwt || !window.meltdownEmit) return;
+  if (!window.meltdownEmit) return;
   try {
-    const decoded = await window.meltdownEmit('validateToken', {
-      jwt,
+    const authPayload = {
       moduleName: 'auth',
-      moduleType: 'core',
-      tokenToValidate: jwt
-    });
+      moduleType: 'core'
+    };
+    if (jwt) {
+      authPayload.jwt = jwt;
+      authPayload.tokenToValidate = jwt;
+    }
+    const decoded = await window.meltdownEmit('validateToken', authPayload);
     const userId = decoded?.userId;
     if (!userId) return;
-    const res = await window.meltdownEmit('getUserDetailsById', {
-      jwt,
+    const userPayload = {
       moduleName: 'userManagement',
       moduleType: 'core',
       userId
-    });
+    };
+    if (jwt) {
+      userPayload.jwt = jwt;
+    }
+    const res = await window.meltdownEmit('getUserDetailsById', userPayload);
     const user = res?.data ?? res;
     if (user && isValidHex(user.ui_color)) {
       setAccentVariables(user.ui_color);
@@ -136,3 +142,4 @@ export async function applyUserColor(force = false) {
 }
 
 document.addEventListener('DOMContentLoaded', applyUserColor);
+document.addEventListener('main-header-loaded', () => applyUserColor(true));

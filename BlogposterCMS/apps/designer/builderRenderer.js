@@ -216,7 +216,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const gridViewportEl = document.getElementById('builderViewport');
   const viewportSizeEl = document.createElement('div');
   viewportSizeEl.className = 'viewport-size-display';
-  viewportSizeEl.textContent = `${gridViewportEl.clientWidth}px`;
   gridViewportEl.appendChild(viewportSizeEl);
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
@@ -592,22 +591,24 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const viewportRange = document.createElement('input');
   viewportRange.type = 'range';
   viewportRange.min = '320';
-  viewportRange.max = '1920';
+  viewportRange.max = '3840';
   viewportRange.step = '10';
-  const currentWidth = gridViewportEl?.clientWidth || 0;
-  viewportRange.value = String(currentWidth);
   viewportRange.className = 'viewport-range';
   const viewportValue = document.createElement('span');
   viewportValue.className = 'viewport-value';
-  viewportValue.textContent = `${currentWidth}px`;
   viewportPanel.appendChild(viewportRange);
   viewportPanel.appendChild(viewportValue);
+
+  const DEFAULT_VIEWPORT = 1920;
   function setViewportWidth(val) {
-    gridViewportEl.style.width = `${val}px`;
-    gridViewportEl.style.margin = '0 auto';
+    gridEl.style.width = `${val}px`;
+    gridEl.style.margin = '0 auto';
     viewportValue.textContent = `${val}px`;
     viewportSizeEl.textContent = `${val}px`;
   }
+
+  viewportRange.value = String(DEFAULT_VIEWPORT);
+  setViewportWidth(DEFAULT_VIEWPORT);
 
   // Popin handling for viewport slider (similar to header menu)
   function hideViewportPanel() {
@@ -655,7 +656,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       viewportValue.textContent = `${width}px`;
       viewportSizeEl.textContent = `${width}px`;
     });
-    resizeObserver.observe(gridViewportEl);
+    resizeObserver.observe(gridEl);
   }
 
   const saveBtn = document.createElement('button');

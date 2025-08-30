@@ -85,7 +85,7 @@ body.builder-mode #content {
   #builderViewport {
     height: 100%;
     width: 100%;
-    max-width: 1400px; // center canvas with a max width
+    // Removed max-width to allow working with larger viewports
     overflow: auto;
     position: relative;
     display: grid;
@@ -151,7 +151,7 @@ body.builder-mode #builderViewport {
 // never computes 0px on empty layouts.
 body.builder-mode #builderGrid {
   min-height: 70vh;
-  min-width: 100%;
+  min-width: 320px;
   width: 100%;
   background: white;
   border-radius: 12px;

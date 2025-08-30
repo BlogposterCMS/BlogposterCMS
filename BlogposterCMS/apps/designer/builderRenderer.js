@@ -44,6 +44,22 @@ async function loadToPng() {
   return _toPng;
 }
 
+let pageService;
+let sanitizeSlug;
+async function loadPageService() {
+  if (pageService && sanitizeSlug) return;
+  try {
+    const mod = await import(
+      /* webpackIgnore: true */ '/plainspace/widgets/admin/defaultwidgets/pageList/pageService.js'
+    );
+    pageService = mod.pageService;
+    sanitizeSlug = mod.sanitizeSlug;
+  } catch (err) {
+    console.warn('[Designer] pageService not available', err);
+    sanitizeSlug = str => String(str).toLowerCase().replace(/[^a-z0-9\/-]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+}
+
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
   document.body.classList.add('builder-mode');
   initTextEditor();
@@ -839,6 +855,7 @@ publishPopup.innerHTML = `
   <div class="publish-actions"><button class="publish-confirm">Publish</button></div>
 `;
 document.body.appendChild(publishPopup);
+loadPageService();
 
 const slugInput = publishPopup.querySelector('.publish-slug-input');
 const suggestionsEl = publishPopup.querySelector('.publish-suggestions');
@@ -850,9 +867,6 @@ const publishCb = publishPopup.querySelector('.publish-publish-checkbox');
 const confirmBtn = publishPopup.querySelector('.publish-confirm');
 let selectedPage = null;
 
-function sanitizeSlug(str) {
-  return String(str).toLowerCase().replace(/[^a-z0-9\/-]+/g, '-').replace(/^-+|-+$/g, '');
-}
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 }
@@ -1045,31 +1059,22 @@ async function runPublish(subSlug) {
 }
 
 confirmBtn.addEventListener('click', async () => {
+  await loadPageService();
   const slug = sanitizeSlug(slugInput.value.trim());
   if (!slug) { alert('Enter a subpath'); return; }
   try {
     const name = nameInput.value.trim();
     if (!selectedPage && createCb.checked) {
-      await meltdownEmit('createPage', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
+      await pageService.create({
         title: name || slug,
         slug,
-        lane: 'public',
         status: publishCb.checked ? 'published' : 'draft',
         meta: { layoutTemplate: name }
       });
     } else if (selectedPage) {
-      const payload = {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        pageId: selectedPage.id,
-        meta: { ...(selectedPage.meta || {}), layoutTemplate: name }
-      };
-      if (publishCb.checked) payload.status = 'published';
-      await meltdownEmit('updatePage', payload);
+      const patch = { meta: { ...(selectedPage.meta || {}), layoutTemplate: name } };
+      if (publishCb.checked) patch.status = 'published';
+      await pageService.update(selectedPage, patch);
     }
     await runPublish(slug);
     publishPopup.classList.add('hidden');

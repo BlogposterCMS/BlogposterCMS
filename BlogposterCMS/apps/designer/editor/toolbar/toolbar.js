@@ -392,8 +392,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       '#008000', '#7CFC00', '#BFFF00', '#FFFF00', '#FFDAB9', '#FFA500',
       '#000000', '#A9A9A9', '#808080'
     ],
-    themeColors: themeColor ? [themeColor] : [],
-    hideCloseButton: true
+    themeColors: themeColor ? [themeColor] : []
   });
   // Prepare color picker for panel usage; keep hidden until panel opens.
   state.colorPicker.el.classList.add('hidden');
@@ -467,7 +466,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       }
     });
     // Hide picker content
-    state.colorPicker.hide();
+    state.colorPicker.el.classList.add('hidden');
     document.body.classList.add('panel-closing');
     document.body.classList.remove('panel-open');
     setTimeout(() => document.body.classList.remove('panel-closing'), 200);
@@ -482,8 +481,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
         applyColor(c);
         colorIcon.style.textDecorationColor = c;
       },
-      onClose: () => colorBtn.focus(),
-      hideCloseButton: true
+      onClose: () => closeColorSidebar()
     });
     // If color sidebar already open -> close it (toggle)
     const sidebar = document.getElementById('sidebar');
@@ -518,7 +516,6 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   // When selection changes to a new widget, close/hide picker and panel
   document.addEventListener('selected', () => {
     state.colorPicker.hide();
-    // Do not auto-close the panel here; only hide picker to avoid flicker.
   });
   colorWrapper.appendChild(colorBtn);
   state.toolbar.appendChild(colorWrapper);

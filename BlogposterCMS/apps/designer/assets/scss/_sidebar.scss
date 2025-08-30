@@ -321,6 +321,31 @@
   }
 }
 
+.builder-panel.color-panel {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  gap: 0;
+}
+
+.color-panel .collapse-btn {
+  background: none;
+  border: none;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.color-panel h4 {
+  margin: 0;
+  padding: 16px;
+}
+
+.color-panel .color-panel-content {
+  flex: 1;
+}
+
 @keyframes panelSlideIn {
   from {
     opacity: 0;

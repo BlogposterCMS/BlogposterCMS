@@ -130,7 +130,7 @@ export function initBackgroundToolbar() {
         p.style.display = '';
       }
     });
-    state.colorPicker.hide();
+    state.colorPicker.el.classList.add('hidden');
     document.body.classList.add('panel-closing');
     document.body.classList.remove('panel-open');
     setTimeout(() => document.body.classList.remove('panel-closing'), 200);
@@ -150,8 +150,7 @@ export function initBackgroundToolbar() {
         g.style.backgroundColor = c;
         colorIcon.style.textDecorationColor = c;
       },
-      onClose: () => colorBtn.focus(),
-      hideCloseButton: true
+      onClose: () => closeColorPanel()
     });
     const sidebar = document.getElementById('sidebar');
     const panelContainer = sidebar?.querySelector('#builderPanel');

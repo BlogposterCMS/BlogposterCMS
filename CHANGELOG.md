@@ -21,8 +21,10 @@ El Psy Kongroo
 - Replaced `csurf` with lightweight `csrf` middleware to reduce dependencies.
 - Default builder widget width increased to four columns for better initial sizing.
 - Builder grid column width recalculation is debounced via `requestAnimationFrame` and widget layouts persist percentage-based coordinates.
+- Color picker panel integrates the picker without a close button and fills the panel.
 
 ### Added
+- Simple hue wheel with hex input accessible from preset colors.
 - Header viewport control with slider to adjust builder canvas width.
 - Login screen now cycles through preset accent colors for its dotted background and form border.
 - Updated CanvasGrid documentation to cover responsive builder configuration.

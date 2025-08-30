@@ -15,12 +15,12 @@ export function createColorPicker(options = {}) {
   let selectedColor = options.initialColor || customPresets[0];
   let onSelect = options.onSelect || (() => {});
   let onClose = options.onClose || (() => {});
-  const showCloseButton = options.hideCloseButton !== true;
   const container = document.createElement('div');
   container.className = 'color-picker';
 
   function hide() {
     container.classList.add('hidden');
+    onClose();
   }
 
   function showAt(x, y) {
@@ -29,25 +29,7 @@ export function createColorPicker(options = {}) {
     container.classList.remove('hidden');
   }
 
-  let closeBtn = null;
-  function ensureCloseBtn() {
-    if (closeBtn) {
-      if (!closeBtn.isConnected) container.appendChild(closeBtn);
-      return;
-    }
-    closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.className = 'color-picker-close';
-    closeBtn.innerHTML = '&times;';
-    closeBtn.addEventListener('click', () => {
-      hide();
-      onClose();
-    });
-    container.appendChild(closeBtn);
-  }
-  if (showCloseButton) ensureCloseBtn();
-
-  function createSection(colors, label) {
+  function createSection(colors, label, allowCustom = false) {
     if (!colors || !colors.length) return;
     const wrapper = document.createElement('div');
     const section = document.createElement('div');
@@ -74,33 +56,71 @@ export function createColorPicker(options = {}) {
       });
       section.appendChild(circle);
     });
-    const addCustom = document.createElement('button');
-    addCustom.type = 'button';
-    addCustom.className = 'color-circle add-custom';
-    addCustom.textContent = '+';
-    const input = document.createElement('div');
-    input.className = 'color-input';
-    input.contentEditable = 'true';
-    input.textContent = selectedColor;
-    const sanitize = val => (/^#[0-9a-fA-F]{3,8}$/.test(val) ? val : selectedColor);
-    input.addEventListener('input', () => {
-      const val = sanitize(input.textContent.trim());
-      selectedColor = val;
-      container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
-      addCustom.style.backgroundColor = selectedColor;
-      addCustom.classList.add('active');
-      onSelect(selectedColor);
-    });
-    addCustom.addEventListener('click', () => {
-      input.focus();
-    });
-    section.appendChild(addCustom);
-    section.appendChild(input);
+    if (allowCustom) {
+      const addCustom = document.createElement('button');
+      addCustom.type = 'button';
+      addCustom.className = 'color-circle add-custom';
+      addCustom.textContent = '+';
+      addCustom.addEventListener('click', () => {
+        hueWrapper.classList.remove('hidden');
+      });
+      section.appendChild(addCustom);
+    }
     wrapper.appendChild(section);
     container.appendChild(wrapper);
   }
 
-  createSection(customPresets, 'Presets');
+  function hslToHex(h, s, l) {
+    s /= 100;
+    l /= 100;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (0 <= h && h < 60) { r = c; g = x; }
+    else if (60 <= h && h < 120) { r = x; g = c; }
+    else if (120 <= h && h < 180) { g = c; b = x; }
+    else if (180 <= h && h < 240) { g = x; b = c; }
+    else if (240 <= h && h < 300) { r = x; b = c; }
+    else { r = c; b = x; }
+    const toHex = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
+  const hueWrapper = document.createElement('div');
+  hueWrapper.className = 'hue-wrapper hidden';
+  const hueWheel = document.createElement('div');
+  hueWheel.className = 'hue-wheel';
+  const hexInput = document.createElement('input');
+  hexInput.type = 'text';
+  hexInput.className = 'hue-hex';
+  hexInput.value = selectedColor;
+  const sanitize = val => (/^#[0-9a-fA-F]{3,8}$/.test(val) ? val : selectedColor);
+  hexInput.addEventListener('input', () => {
+    const val = sanitize(hexInput.value.trim());
+    selectedColor = val;
+    hueWheel.style.borderColor = val;
+    container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
+    onSelect(selectedColor);
+  });
+  hueWheel.addEventListener('click', e => {
+    const rect = hueWheel.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const angle = Math.atan2(y, x) * (180 / Math.PI);
+    const hue = (angle + 360) % 360;
+    const color = hslToHex(hue, 100, 50);
+    selectedColor = color;
+    hexInput.value = color;
+    hueWheel.style.borderColor = color;
+    container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
+    onSelect(selectedColor);
+  });
+  hueWrapper.appendChild(hueWheel);
+  hueWrapper.appendChild(hexInput);
+  container.appendChild(hueWrapper);
+
+  createSection(customPresets, 'Presets', true);
   createSection(userColors, 'Your colors');
   createSection(themeColors, 'Theme');
 
@@ -116,23 +136,11 @@ export function createColorPicker(options = {}) {
         btn.classList.toggle('active', match);
         if (match) found = true;
       });
-      const input = container.querySelector('.color-input');
-      const addCustom = container.querySelector('.color-circle.add-custom');
-      if (input) input.textContent = selectedColor;
-      if (addCustom) {
-        addCustom.style.backgroundColor = selectedColor;
-        if (!found) {
-          circles.forEach(btn => btn.classList.remove('active'));
-          addCustom.classList.add('active');
-        }
+      if (!found) {
+        circles.forEach(btn => btn.classList.remove('active'));
       }
-    }
-    if ('hideCloseButton' in newOpts) {
-      if (newOpts.hideCloseButton) {
-        closeBtn?.remove();
-      } else {
-        ensureCloseBtn();
-      }
+      hexInput.value = selectedColor;
+      hueWheel.style.borderColor = selectedColor;
     }
   }
 

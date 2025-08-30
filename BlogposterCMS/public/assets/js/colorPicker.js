@@ -320,7 +320,16 @@ export function createColorPicker(options = {}) {
     ctx.fillStyle = '#000';
     ctx.fillStyle = val;
     const computed = ctx.fillStyle;
-    return /^#[0-9a-fA-F]{6}$/.test(computed) ? computed.toUpperCase() : null;
+    if (/^#[0-9a-fA-F]{6}$/.test(computed)) return computed.toUpperCase();
+    const match = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d*(?:\.\d+)?))?\)$/);
+    if (match) {
+      const r = Number(match[1]), g = Number(match[2]), b = Number(match[3]);
+      const a = match[4] !== undefined ? parseFloat(match[4]) : 1;
+      const toHex = x => x.toString(16).padStart(2, '0');
+      const alpha = a < 1 ? toHex(Math.round(a * 255)) : '';
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}${alpha}`.toUpperCase();
+    }
+    return null;
   };
   search.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
@@ -419,7 +428,8 @@ export function createColorPicker(options = {}) {
     if (newOpts.onSelect) onSelect = newOpts.onSelect;
     if (newOpts.onClose) onClose = newOpts.onClose;
     if (newOpts.initialColor) {
-      selectedColor = newOpts.initialColor;
+      const hex = sanitize(newOpts.initialColor) || normalizeColor(newOpts.initialColor);
+      selectedColor = hex || newOpts.initialColor;
       addRecentColor(selectedColor);
       const circles = Array.from(container.querySelectorAll('.color-circle'));
       let found = false;
@@ -431,7 +441,12 @@ export function createColorPicker(options = {}) {
       if (!found) {
         circles.forEach(btn => btn.classList.remove('active'));
       }
-      setFromHex(selectedColor, false);
+      if (hex) {
+        setFromHex(selectedColor, false);
+      } else {
+        previewColor.style.backgroundColor = selectedColor;
+        hexInput.value = selectedColor;
+      }
     }
     if (newOpts.documentColors) {
       documentColors.splice(0, documentColors.length, ...newOpts.documentColors);

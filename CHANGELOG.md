@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Color picker converts non-hex initial colours to hex before applying HSV state, preventing NaN previews.
 - User color now applies correctly on the Home workspace and updates after header load.
 - Home and Settings workspaces are protected from deletion in UI and backend.
 - Creating new pages within the Settings workspace is now supported via the UI.
@@ -25,7 +26,6 @@ El Psy Kongroo
 
 ### Changed
 - Builder viewport slider now defaults to 1920px and supports widths up to 3840px for large-screen previews.
-
 - Color picker hue editor now uses a square selector with hue and transparency sliders and a close icon.
 - Color picker limits document colours to the builder grid, preselects the widget's current colour and opens its hue editor beneath the chosen swatch.
 - Replaced `csurf` with lightweight `csrf` middleware to reduce dependencies.

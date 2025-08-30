@@ -221,9 +221,8 @@ export function initBackgroundToolbar() {
   bgToolbar.appendChild(imageBtn);
   bgToolbar.appendChild(clearBtn);
 
-  const content = document.getElementById('content');
-  if (content) { content.prepend(bgToolbar); BGLOG('toolbar appended to #content'); }
-  else { document.body.appendChild(bgToolbar); BGLOG('toolbar appended to body'); }
+  document.body.prepend(bgToolbar);
+  BGLOG('toolbar appended to body');
 }
 
 export function showBackgroundToolbar() {

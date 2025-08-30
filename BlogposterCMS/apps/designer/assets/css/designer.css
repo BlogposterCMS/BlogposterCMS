@@ -321,7 +321,6 @@ body.grid-mode .bounding-box.disabled {
   padding: 12px 24px;
   background: var(--color-white);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  min-height: 64px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   gap: 16px;
   position: sticky;
@@ -567,10 +566,17 @@ body.grid-mode .bounding-box.disabled {
 }
 
 .viewport-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: none;
-  padding: 8px 24px;
+  min-width: 260px;
+  padding: 10px 14px;
   background: var(--color-white);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
   display: flex;
   align-items: center;
   gap: 12px;

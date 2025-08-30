@@ -17,7 +17,8 @@ const entry = {
   openExplorer: './public/assets/js/openExplorer.js',
   pageActions: './public/plainspace/dashboard/pageActions.js',
   fontsLoader: './public/assets/js/fontsLoader.js',
-  customSelect: './public/assets/js/customSelect.js'
+  customSelect: './public/assets/js/customSelect.js',
+  designerEditor: './apps/designer/editor/editor.js'
 };
 
 const appsDir = path.join(__dirname, 'apps');

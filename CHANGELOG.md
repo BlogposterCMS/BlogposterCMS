@@ -21,6 +21,8 @@ El Psy Kongroo
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Changed
+- Builder viewport slider now defaults to 1920px and supports widths up to 3840px for large-screen previews.
+
 - Color picker hue editor now uses a square selector with hue and transparency sliders and a close icon.
 - Color picker limits document colours to the builder grid, preselects the widget's current colour and opens its hue editor beneath the chosen swatch.
 - Replaced `csurf` with lightweight `csrf` middleware to reduce dependencies.

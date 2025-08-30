@@ -38,6 +38,7 @@ El Psy Kongroo
 - Color picker panel integrates the picker without a close button and fills the panel.
 
 ### Added
+- Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.
 - Builder workspace now displays the current viewport width in the top-right corner.
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
 - Simple hue wheel with hex input accessible from preset colors.

@@ -100,6 +100,10 @@ The admin lane provides a drag‑and‑drop page builder at `/admin/builder`. Th
 
 The canvas opens centered in the viewport at a 100% zoom level and can expand up to 4K widths, with the scroll container resizing as the canvas grows so horizontal and vertical scrollbars appear when layouts overflow.
 
+### Publishing layouts
+
+Clicking **Publish** in the builder opens a popup at the bottom where you can search existing pages by slug or enter a new path. Selecting a draft page shows a warning with an option to publish it alongside the design, and entering a new slug reveals checkboxes to create and immediately publish the page or save it as a draft.
+
 ### Widget CSS Layers
 
 Each widget is rendered inside a Shadow DOM to isolate its styles. The builder injects three CSS layers in this order:

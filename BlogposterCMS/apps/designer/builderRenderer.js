@@ -824,130 +824,260 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   });
 
-  publishBtn.addEventListener('click', async () => {
-    const name = nameInput.value.trim();
-    if (!name) { alert('Enter a name'); return; }
-    updateAllWidgetContents();
-    const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
-    const previewPath = await capturePreview();
-    const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
-    const subPath = `builder/${safeName}`;
+    // publish flow handled by popup defined below
 
-    const gridClone = gridEl ? gridEl.cloneNode(true) : null;
-    const externalStyles = [];
-    const externalScripts = [];
-    let jsContent = '';
-    let cssContent = '';
-    let bodyHtml = '';
-    if (gridClone) {
-      gridClone.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
-        if (l.href) externalStyles.push(l.href);
-        l.remove();
-      });
-      gridClone.querySelectorAll('script').forEach(s => {
-        if (s.src) {
-          externalScripts.push(s.src);
-        } else {
-          jsContent += s.textContent + '\n';
-        }
-        s.remove();
-      });
-      gridClone.querySelectorAll('style').forEach(st => {
-        cssContent += st.textContent + '\n';
-        st.remove();
-      });
-      bodyHtml = gridClone.innerHTML;
+const publishPopup = document.createElement('div');
+publishPopup.className = 'publish-popup hidden';
+publishPopup.innerHTML = `
+  <label class="publish-slug-label">Subpath
+    <input type="text" class="publish-slug-input" />
+  </label>
+  <div class="publish-suggestions"></div>
+  <div class="publish-warning hidden"></div>
+  <label class="publish-create hidden"><input type="checkbox" class="publish-create-checkbox" checked /> Create page</label>
+  <label class="publish-publish hidden"><input type="checkbox" class="publish-publish-checkbox" /> Publish page</label>
+  <div class="publish-actions"><button class="publish-confirm">Publish</button></div>
+`;
+document.body.appendChild(publishPopup);
+
+const slugInput = publishPopup.querySelector('.publish-slug-input');
+const suggestionsEl = publishPopup.querySelector('.publish-suggestions');
+const warningEl = publishPopup.querySelector('.publish-warning');
+const createWrap = publishPopup.querySelector('.publish-create');
+const publishWrap = publishPopup.querySelector('.publish-publish');
+const createCb = publishPopup.querySelector('.publish-create-checkbox');
+const publishCb = publishPopup.querySelector('.publish-publish-checkbox');
+const confirmBtn = publishPopup.querySelector('.publish-confirm');
+let selectedPage = null;
+
+function sanitizeSlug(str) {
+  return String(str).toLowerCase().replace(/[^a-z0-9\/-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+}
+
+async function lookupPages(q) {
+  try {
+    const res = await meltdownEmit('searchPages', {
+      jwt: window.ADMIN_TOKEN,
+      moduleName: 'pagesManager',
+      moduleType: 'core',
+      query: q,
+      lane: 'all',
+      limit: 10
+    });
+    const pages = Array.isArray(res) ? res : (res.pages || res.rows || []);
+    suggestionsEl.innerHTML = pages.map(p =>
+      `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">${escapeHtml(p.title || p.slug)}</div>`
+    ).join('');
+  } catch (err) {
+    console.warn('searchPages failed', err);
+  }
+}
+
+slugInput.addEventListener('input', () => {
+  const q = slugInput.value.trim();
+  selectedPage = null;
+  suggestionsEl.innerHTML = '';
+  warningEl.classList.add('hidden');
+  if (!q) {
+    createWrap.classList.add('hidden');
+    publishWrap.classList.add('hidden');
+    return;
+  }
+  lookupPages(q);
+  createWrap.classList.remove('hidden');
+  publishWrap.classList.remove('hidden');
+  publishCb.checked = false;
+  createCb.checked = true;
+});
+
+suggestionsEl.addEventListener('click', async e => {
+  const el = e.target.closest('.publish-suggestion');
+  if (!el) return;
+  slugInput.value = el.dataset.slug;
+  suggestionsEl.innerHTML = '';
+  try {
+    const { data: page } = await meltdownEmit('getPageById', {
+      jwt: window.ADMIN_TOKEN,
+      moduleName: 'pagesManager',
+      moduleType: 'core',
+      pageId: Number(el.dataset.id)
+    });
+    selectedPage = page;
+    if (page.status !== 'published') {
+      warningEl.textContent = 'Selected page is a draft';
+      warningEl.classList.remove('hidden');
+      publishWrap.classList.remove('hidden');
+      publishCb.checked = true;
+    } else {
+      warningEl.classList.add('hidden');
+      publishWrap.classList.add('hidden');
     }
+    createWrap.classList.add('hidden');
+  } catch (err) {
+    console.warn('getPageById failed', err);
+  }
+});
 
-    const theme = window.ACTIVE_THEME || 'default';
-    const headLinks = [
-      `<link rel="canonical" href="/p/${safeName}">`,
-      `<link rel="stylesheet" href="/themes/${theme}/theme.css">`,
-      ...externalStyles.map(href => `<link rel="stylesheet" href="${href}">`)
-    ];
-    if (cssContent.trim()) headLinks.push('<link rel="stylesheet" href="style.css">');
+publishBtn.addEventListener('click', () => {
+  publishPopup.classList.remove('hidden');
+  slugInput.focus();
+});
 
-    const tailScripts = [
-      `<script src="/themes/${theme}/theme.js"></script>`,
-      '<script src="/build/meltdownEmitter.js"></script>',
-      '<script type="module" src="/assets/js/faviconLoader.js"></script>',
-      '<script type="module" src="/assets/js/fontsLoader.js"></script>',
-      '<script type="module" src="/assets/js/customSelect.js"></script>',
-      '<script src="/assets/js/openExplorer.js"></script>',
-      ...externalScripts.map(src => `<script src="${src}"></script>`),
-      '<script type="module" src="/plainspace/main/pageRenderer.js"></script>'
-    ];
-    if (jsContent.trim()) tailScripts.splice(-1, 0, '<script src="script.js"></script>');
+async function runPublish(subSlug) {
+  const name = nameInput.value.trim();
+  if (!name) { alert('Enter a name'); return; }
+  updateAllWidgetContents();
+  const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
+  const previewPath = await capturePreview();
+  const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
+  const subPath = subSlug || `builder/${safeName}`;
 
-    const safeTitle = name.replace(/[<>"]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    const indexHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${safeTitle}</title>${headLinks.join('')}</head><body><div class="app-scope"><div id="content">${bodyHtml}</div></div>${tailScripts.join('')}</body></html>`;
-
-    const files = [{ fileName: 'index.html', data: indexHtml }];
-    if (jsContent.trim()) files.push({ fileName: 'script.js', data: jsContent });
-    if (cssContent.trim()) files.push({ fileName: 'style.css', data: cssContent });
-    let existingMeta = null;
-    try {
-      existingMeta = await meltdownEmit('getPublishedDesignMeta', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        name
-      });
-    } catch (err) {
-      console.warn('[Designer] getPublishedDesignMeta', err);
-    }
-    try {
-      await meltdownEmit('deleteLocalItem', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'mediaManager',
-        moduleType: 'core',
-        currentPath: existingMeta?.path ? existingMeta.path.split('/').slice(0, -1).join('/') : 'builder',
-        itemName: existingMeta?.path ? existingMeta.path.split('/').pop() : safeName
-      });
-    } catch (err) {
-      console.warn('[Designer] deleteLocalItem', err);
-    }
-    try {
-      await meltdownEmit('saveLayoutTemplate', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        name,
-        lane: 'public',
-        viewport: 'desktop',
-        layout,
-        previewPath
-      });
-      for (const f of files) {
-        await meltdownEmit('uploadFileToFolder', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'mediaManager',
-          moduleType: 'core',
-          subPath,
-          fileName: f.fileName,
-          fileData: btoa(unescape(encodeURIComponent(f.data)))
-        });
+  const gridClone = gridEl ? gridEl.cloneNode(true) : null;
+  const externalStyles = [];
+  const externalScripts = [];
+  let jsContent = '';
+  let cssContent = '';
+  let bodyHtml = '';
+  if (gridClone) {
+    gridClone.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
+      if (l.href) externalStyles.push(l.href);
+      l.remove();
+    });
+    gridClone.querySelectorAll('script').forEach(s => {
+      if (s.src) {
+        externalScripts.push(s.src);
+      } else {
+        jsContent += s.textContent + '\n';
       }
-      await meltdownEmit('makeFilePublic', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'mediaManager',
-        moduleType: 'core',
-        filePath: subPath
-      });
-      await meltdownEmit('savePublishedDesignMeta', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        name,
-        path: subPath,
-        files: files.map(f => f.fileName)
-      });
-      alert('Layout published');
-    } catch (err) {
-      console.error('[Designer] publish error', err);
-      alert('Publish failed: ' + err.message);
-    }
-  });
+      s.remove();
+    });
+    gridClone.querySelectorAll('style').forEach(st => {
+      cssContent += st.textContent + '\n';
+      st.remove();
+    });
+    bodyHtml = gridClone.innerHTML;
+  }
 
+  const theme = window.ACTIVE_THEME || 'default';
+  const headLinks = [
+    `<link rel="canonical" href="/${subSlug || `p/${safeName}`}">`,
+    `<link rel="stylesheet" href="/themes/${theme}/theme.css">`,
+    ...externalStyles.map(href => `<link rel="stylesheet" href="${href}">`)
+  ];
+  if (cssContent.trim()) headLinks.push('<link rel="stylesheet" href="style.css">');
+
+  const tailScripts = [
+    `<script src="/themes/${theme}/theme.js"></script>`,
+    '<script src="/build/meltdownEmitter.js"></script>',
+    '<script type="module" src="/assets/js/faviconLoader.js"></script>',
+    '<script type="module" src="/assets/js/fontsLoader.js"></script>',
+    '<script type="module" src="/assets/js/customSelect.js"></script>',
+    '<script src="/assets/js/openExplorer.js"></script>',
+    ...externalScripts.map(src => `<script src="${src}"></script>`),
+    '<script type="module" src="/plainspace/main/pageRenderer.js"></script>'
+  ];
+  if (jsContent.trim()) tailScripts.splice(-1, 0, '<script src="script.js"></script>');
+
+  const safeTitle = name.replace(/[<>\"]/g, c => ({'<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+  const indexHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${safeTitle}</title>${headLinks.join('')}</head><body><div class="app-scope"><div id="content">${bodyHtml}</div></div>${tailScripts.join('')}</body></html>`;
+
+  const files = [{ fileName: 'index.html', data: indexHtml }];
+  if (jsContent.trim()) files.push({ fileName: 'script.js', data: jsContent });
+  if (cssContent.trim()) files.push({ fileName: 'style.css', data: cssContent });
+  let existingMeta = null;
+  try {
+    existingMeta = await meltdownEmit('getPublishedDesignMeta', {
+      jwt: window.ADMIN_TOKEN,
+      moduleName: 'plainspace',
+      moduleType: 'core',
+      name
+    });
+  } catch (err) {
+    console.warn('[Designer] getPublishedDesignMeta', err);
+  }
+  try {
+    await meltdownEmit('deleteLocalItem', {
+      jwt: window.ADMIN_TOKEN,
+      moduleName: 'mediaManager',
+      moduleType: 'core',
+      currentPath: existingMeta?.path ? existingMeta.path.split('/').slice(0, -1).join('/') : 'builder',
+      itemName: existingMeta?.path ? existingMeta.path.split('/').pop() : safeName
+    });
+  } catch (err) {
+    console.warn('[Designer] deleteLocalItem', err);
+  }
+  await meltdownEmit('saveLayoutTemplate', {
+    jwt: window.ADMIN_TOKEN,
+    moduleName: 'plainspace',
+    name,
+    lane: 'public',
+    viewport: 'desktop',
+    layout,
+    previewPath
+  });
+  for (const f of files) {
+    await meltdownEmit('uploadFileToFolder', {
+      jwt: window.ADMIN_TOKEN,
+      moduleName: 'mediaManager',
+      moduleType: 'core',
+      subPath,
+      fileName: f.fileName,
+      fileData: btoa(unescape(encodeURIComponent(f.data)))
+    });
+  }
+  await meltdownEmit('makeFilePublic', {
+    jwt: window.ADMIN_TOKEN,
+    moduleName: 'mediaManager',
+    moduleType: 'core',
+    filePath: subPath
+  });
+  await meltdownEmit('savePublishedDesignMeta', {
+    jwt: window.ADMIN_TOKEN,
+    moduleName: 'plainspace',
+    moduleType: 'core',
+    name,
+    path: subPath,
+    files: files.map(f => f.fileName)
+  });
+}
+
+confirmBtn.addEventListener('click', async () => {
+  const slug = sanitizeSlug(slugInput.value.trim());
+  if (!slug) { alert('Enter a subpath'); return; }
+  try {
+    const name = nameInput.value.trim();
+    if (!selectedPage && createCb.checked) {
+      await meltdownEmit('createPage', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        title: name || slug,
+        slug,
+        lane: 'public',
+        status: publishCb.checked ? 'published' : 'draft',
+        meta: { layoutTemplate: name }
+      });
+    } else if (selectedPage) {
+      const payload = {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        pageId: selectedPage.id,
+        meta: { ...(selectedPage.meta || {}), layoutTemplate: name }
+      };
+      if (publishCb.checked) payload.status = 'published';
+      await meltdownEmit('updatePage', payload);
+    }
+    await runPublish(slug);
+    publishPopup.classList.add('hidden');
+  } catch (err) {
+    console.error('[Designer] publish flow error', err);
+    alert('Publish failed: ' + err.message);
+  }
+});
   let versionEl = document.getElementById('builderVersion');
   if (!versionEl) {
     versionEl = document.createElement('div');

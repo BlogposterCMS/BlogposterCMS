@@ -1,6 +1,6 @@
 import { getDesignerAppName } from '../../../../utils.js';
 import { bpDialog } from '/assets/js/bpDialog.js';
-import { pageService } from './pageService.js';
+import { pageService, sanitizeSlug } from './pageService.js';
 
 const escapeHtml = str => {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
@@ -18,16 +18,6 @@ const debounce = (fn, delay = 400) => {
   wrapper.cancel = () => clearTimeout(timer);
   return wrapper;
 };
-
-const sanitizeSlug = raw =>
-  raw
-    .trim()
-    .replace(/^\/+/g, '')
-    .replace(/[^a-z0-9/-]/gi, '')
-    .replace(/\/+/g, '/')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '')
-    .replace(/\/+$/, '');
 
 export async function fetchPages() {
   return pageService.getAll();

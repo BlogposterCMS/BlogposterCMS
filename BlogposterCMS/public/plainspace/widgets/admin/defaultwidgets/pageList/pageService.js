@@ -2,13 +2,31 @@ const meltdownEmit = window.meltdownEmit;
 const jwt = window.ADMIN_TOKEN;
 const baseOptions = { moduleName: 'pagesManager', moduleType: 'core' };
 
+export const sanitizeSlug = raw =>
+  raw
+    .trim()
+    .replace(/^\/+/g, '')
+    .replace(/[^a-z0-9/-]/gi, '')
+    .replace(/\/+/g, '/')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
+    .replace(/\/+$/, '');
+
 export const pageService = {
   async getAll() {
     const res = await meltdownEmit('getPagesByLane', { ...baseOptions, jwt, lane: 'public' });
     return Array.isArray(res) ? res : (res?.data ?? []);
   },
-  async create({ title, slug }) {
-    return meltdownEmit('createPage', { ...baseOptions, jwt, title, slug, lane: 'public', status: 'published' });
+  async create({ title, slug, status = 'published', meta }) {
+    return meltdownEmit('createPage', {
+      ...baseOptions,
+      jwt,
+      title,
+      slug,
+      lane: 'public',
+      status,
+      ...(meta ? { meta } : {})
+    });
   },
   async update(page, patch) {
     return meltdownEmit('updatePage', {

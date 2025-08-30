@@ -1,6 +1,7 @@
 import { makeSelector, extractCssProps } from '../renderer/renderUtils.js';
 import { wrapCss } from '../utils.js';
 import { renderWidget } from './widgetRenderer.js';
+import * as widgetActions from '../renderer/widgetActions.js';
 
 export function attachOptionsMenu(el, widgetDef, editBtn, {
   grid,
@@ -149,6 +150,16 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
     menu.style.display = 'none';
     if (pageId) scheduleAutosave();
   };
+
+  // attach custom actions only if a matching handler exists
+  menu.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      const actionKey = btn.dataset.action;
+      const fn = widgetActions[actionKey];
+      if (typeof fn === 'function') fn(el);
+    };
+  });
 
   el.appendChild(menuBtn);
   el.__optionsMenu = menu;

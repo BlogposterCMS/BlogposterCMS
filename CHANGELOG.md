@@ -5,6 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Designer text widget loads editor bundle from build output and falls back to default export to avoid missing module errors.
+- Widget options menu ignores buttons without registered handlers, preventing random `data-action` keys from causing crashes.
 - Text widget now loads editor module without destructuring, preventing `registerElement` errors in builder mode.
 - Unified text and background color pickers into a single instance, removing duplicate close buttons.
 - Background toolbar now appears when no widget is selected, matching text-toolbar behaviour.
@@ -26,6 +28,7 @@ El Psy Kongroo
 
 ### Added
 - Builder workspace now displays the current viewport width in the top-right corner.
+- Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
 - Simple hue wheel with hex input accessible from preset colors.
 - Header viewport control with slider to adjust builder canvas width.
 - Login screen now cycles through preset accent colors for its dotted background and form border.

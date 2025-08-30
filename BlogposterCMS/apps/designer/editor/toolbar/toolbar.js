@@ -359,7 +359,9 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   function collectDocumentColors() {
     const colors = new Set();
-    document.querySelectorAll('*').forEach(el => {
+    const grid = document.getElementById('builderGrid');
+    if (!grid) return [];
+    grid.querySelectorAll('*').forEach(el => {
       const style = getComputedStyle(el);
       ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
         const val = style[prop];

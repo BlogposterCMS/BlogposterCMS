@@ -21,6 +21,7 @@ El Psy Kongroo
 - Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 
 ### Changed
+- Color picker limits document colours to the builder grid, preselects the widget's current colour and opens its hue editor beneath the chosen swatch.
 - Replaced `csurf` with lightweight `csrf` middleware to reduce dependencies.
 - Default builder widget width increased to four columns for better initial sizing.
 - Builder grid column width recalculation is debounced via `requestAnimationFrame` and widget layouts persist percentage-based coordinates.

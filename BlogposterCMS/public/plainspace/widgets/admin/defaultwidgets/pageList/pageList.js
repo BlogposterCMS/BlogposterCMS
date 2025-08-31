@@ -216,7 +216,7 @@ export function renderPageList(el, pages) {
       });
 
       li.querySelector('.edit-page').addEventListener('click', () => editPage(page.id));
-      li.querySelector('.edit-layout').addEventListener('click', () => editLayout(page.id));
+      li.querySelector('.edit-layout').addEventListener('click', () => editLayout(page));
       li.querySelector('.toggle-draft').addEventListener('click', async () => {
         const newStatus = page.status === 'draft' ? 'published' : 'draft';
         const prevStatus = page.status;
@@ -255,10 +255,12 @@ async function editPage(id) {
   window.location.href = `/admin/pages/edit/${id}`;
 }
 
-async function editLayout(id) {
+async function editLayout(page) {
   const designer = await getDesignerAppName();
   if (designer) {
-    window.location.href = `/admin/app/${encodeURIComponent(designer)}/${id}?layer=1`;
+    const layout = page.meta?.layoutTemplate;
+    const layoutParam = layout ? `&layout=${encodeURIComponent(layout)}` : '';
+    window.location.href = `/admin/app/${encodeURIComponent(designer)}/${page.id}?layer=1${layoutParam}`;
   }
 }
 

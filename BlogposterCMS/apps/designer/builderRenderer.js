@@ -591,7 +591,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   backBtn.addEventListener('click', () => history.back());
   topBar.appendChild(backBtn);
 
-  const layoutName = layoutNameParam || pageData?.meta?.layoutTemplate || 'default';
+  const layoutName =
+    layoutNameParam ||
+    pageData?.meta?.layoutTemplate ||
+    pageData?.title ||
+    'default';
 
   const infoWrap = document.createElement('div');
   infoWrap.className = 'layout-info';
@@ -1148,12 +1152,16 @@ confirmBtn.addEventListener('click', async () => {
   try {
     const name = nameInput.value.trim();
     if (!selectedPage && createCb.checked) {
-      await pageService.create({
+      const newPage = await pageService.create({
         title: name || slug,
         slug,
-        status: publishCb.checked ? 'published' : 'draft',
-        meta: { layoutTemplate: name }
+        status: publishCb.checked ? 'published' : 'draft'
       });
+      if (newPage?.id) {
+        await pageService.update(newPage, {
+          meta: { ...(newPage.meta || {}), layoutTemplate: name }
+        });
+      }
     } else if (selectedPage) {
       const patch = { meta: { ...(selectedPage.meta || {}), layoutTemplate: name } };
       if (publishCb.checked) patch.status = 'published';

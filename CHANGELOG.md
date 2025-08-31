@@ -152,6 +152,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Builder now forwards the current layout template to the designer and saves the chosen layout name when publishing new pages.
 - Removed inline `min-width`/`min-height` from dashboard widgets to prevent
   unintended resizing jumps when layouts change.
 - `makeFilePublic` now handles Windows path separators, allowing legitimate `builder/` paths on Windows.

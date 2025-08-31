@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Publish popup now anchors beneath the Publish button instead of appearing at the edge of the screen.
 - Builder slug picker now normalizes page responses to avoid draft warning crashes when selecting existing pages.
 - Canvas wrapper now refreshes its height when grid rows are added after zooming so newly added content remains scrollable.
 - Canvas wrapper now expands with zoom and viewport width so wide layouts remain horizontally scrollable at 100% zoom.

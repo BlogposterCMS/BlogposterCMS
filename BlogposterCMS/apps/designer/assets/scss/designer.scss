@@ -1,5 +1,6 @@
 @use '../../../../public/assets/scss/variables' as *;
 @use '../../../../public/assets/scss/components/grid-mode';
+@use '../../../../public/assets/scss/components/publish-popup';
 @use 'variables';
 @use 'header';
 @use 'sidebar';
@@ -10,3 +11,11 @@
 @use 'widget-code-editor';
 @use 'color-picker';
 @use 'canvas';
+
+body.builder-mode {
+  .publish-popup,
+  .publish-backdrop {
+    top: var(--header-height, 64px);
+    height: calc(100% - var(--header-height, 64px));
+  }
+}

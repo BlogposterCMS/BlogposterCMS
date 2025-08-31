@@ -871,8 +871,12 @@ let selectedPage = null;
 
 function positionPublishPopup() {
   const rect = publishBtn.getBoundingClientRect();
-  publishPopup.style.top = `${rect.bottom}px`;
-  publishPopup.style.height = `calc(100% - ${rect.bottom}px)`;
+  const top = `${rect.bottom}px`;
+  const height = `calc(100% - ${rect.bottom}px)`;
+  publishPopup.style.top = top;
+  publishPopup.style.height = height;
+  publishBackdrop.style.top = top;
+  publishBackdrop.style.height = height;
 }
 
 function showPublishPopup() {

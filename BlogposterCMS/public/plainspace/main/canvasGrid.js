@@ -113,6 +113,7 @@ export class CanvasGrid {
     // Listen on the scroll container so Ctrl+wheel over the viewport works
     const wheelTarget = this.scrollContainer || this.el;
     wheelTarget.addEventListener('wheel', wheelZoom, { passive: false });
+    this._centerViewport();
   }
 
   on(evt, cb) {
@@ -137,6 +138,17 @@ export class CanvasGrid {
     this.sizer.style.height = `${h}px`;
   }
 
+  _centerViewport() {
+    if (!this.scrollContainer) return;
+    const sc = this.scrollContainer;
+    const sw = (this.sizer?.clientWidth || this.el.offsetWidth || 0);
+    const sh = (this.sizer?.clientHeight || this.el.offsetHeight || 0);
+    const targetX = Math.max(0, (sw - sc.clientWidth) / 2);
+    const targetY = Math.max(0, (sh - sc.clientHeight) / 2);
+    sc.scrollLeft = targetX;
+    sc.scrollTop = targetY;
+  }
+
   setScale(next, anchor = null) {
     const prev = this.scale || this._currentScale();
     const clamped = Math.max(0.1, Math.min(5, next));
@@ -144,6 +156,17 @@ export class CanvasGrid {
     // Expand the scrollable area to match the scaled grid dimensions so
     // overflow remains reachable via the scrollbars.
     this._syncSizer();
+    if (anchor && this.scrollContainer) {
+      const sc = this.scrollContainer;
+      const rect = sc.getBoundingClientRect();
+      const offsetX = anchor.x - rect.left + sc.scrollLeft;
+      const offsetY = anchor.y - rect.top + sc.scrollTop;
+      const ratio = clamped / prev;
+      sc.scrollLeft = offsetX * ratio - (anchor.x - rect.left);
+      sc.scrollTop = offsetY * ratio - (anchor.y - rect.top);
+    } else {
+      this._centerViewport();
+    }
     this.el.style.transform = `scale(${clamped})`;
     this.el.style.setProperty('--canvas-scale', String(clamped));
     this.el.dispatchEvent(new Event('zoom', { bubbles: true }));

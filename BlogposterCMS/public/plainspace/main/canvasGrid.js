@@ -17,7 +17,8 @@ export class CanvasGrid {
         percentageMode: false,
         liveSnap: false,
         liveSnapResize: false,
-        bboxHandles: true
+        bboxHandles: true,
+        enableZoom: true
       },
       options
     );
@@ -26,6 +27,7 @@ export class CanvasGrid {
     if (Number.isFinite(this.options.column)) {
       this.options.columns = this.options.column;
     }
+    this.enableZoom = this.options.enableZoom !== false;
     this.el = typeof el === 'string' ? document.querySelector(el) : el;
     this.el.classList.add('canvas-grid');
     // The scroll container hosts the scrollbars. Default to the grid's
@@ -34,7 +36,11 @@ export class CanvasGrid {
     // Create a sizing wrapper to expand with zoom so the scrollbars show
     // inside the designer rather than on the page.
     try {
-      if (this.scrollContainer && this.el.parentElement === this.scrollContainer) {
+      if (
+        this.enableZoom &&
+        this.scrollContainer &&
+        this.el.parentElement === this.scrollContainer
+      ) {
         const sizer = document.createElement('div');
         sizer.className = 'canvas-zoom-sizer';
         sizer.style.position = 'relative';
@@ -102,20 +108,22 @@ export class CanvasGrid {
     // Zoom state and handler (Ctrl + wheel). Zoom towards the cursor
     // position for intuitive focal-point zooming within the grid area.
     this.scale = 1;
-    this.el.style.setProperty('--canvas-scale', '1');
-    // Centered transform origin so the canvas scales around the middle
-    this.el.style.transformOrigin = '50% 50%';
-    const wheelZoom = e => {
-      if (!e.ctrlKey) return;
-      e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      const anchor = { x: e.clientX, y: e.clientY };
-      this.setScale(this.scale * factor, anchor);
-    };
-    // Listen on the scroll container so Ctrl+wheel over the viewport works
-    const wheelTarget = this.scrollContainer || this.el;
-    wheelTarget.addEventListener('wheel', wheelZoom, { passive: false });
-    this._centerViewport();
+    if (this.enableZoom) {
+      this.el.style.setProperty('--canvas-scale', '1');
+      // Centered transform origin so the canvas scales around the middle
+      this.el.style.transformOrigin = '50% 50%';
+      const wheelZoom = e => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        const factor = e.deltaY > 0 ? 0.9 : 1.1;
+        const anchor = { x: e.clientX, y: e.clientY };
+        this.setScale(this.scale * factor, anchor);
+      };
+      // Listen on the scroll container so Ctrl+wheel over the viewport works
+      const wheelTarget = this.scrollContainer || this.el;
+      wheelTarget.addEventListener('wheel', wheelZoom, { passive: false });
+      this._centerViewport();
+    }
   }
 
   on(evt, cb) {
@@ -162,6 +170,7 @@ export class CanvasGrid {
   }
 
   setScale(next, anchor = null) {
+    if (!this.enableZoom) return;
     const prev = this.scale || this._currentScale();
     const clamped = Math.max(0.1, Math.min(5, next));
     this.scale = clamped;

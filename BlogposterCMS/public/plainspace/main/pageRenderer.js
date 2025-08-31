@@ -36,6 +36,25 @@ async function fetchPartialSafe(name, type) {
   }
 }
 
+function deriveGridSize(gridEl, grid, items = []) {
+  const colWidth = grid?.options?.columnWidth || 1;
+  let cols = Number.isFinite(grid?.options?.columns)
+    ? grid.options.columns
+    : Math.round((gridEl.getBoundingClientRect().width || 0) / colWidth);
+  if (!cols || !Number.isFinite(cols)) cols = 12;
+
+  const cellH = grid?.options?.cellHeight || 1;
+  let rows = Math.round((gridEl.getBoundingClientRect().height || 0) / cellH);
+  if (!rows || !Number.isFinite(rows)) {
+    const maxPercent = items.reduce(
+      (m, it) => Math.max(m, (it.yPercent ?? 0) + (it.hPercent ?? 0)),
+      100
+    );
+    rows = Math.max(1, Math.round((maxPercent / 100) * cols));
+  }
+  return { cols, rows };
+}
+
 function createDebouncedEmitter(delay = 150) {
   let queue = [];
   let timer = null;
@@ -255,10 +274,26 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth, columns }, gridEl);
   }
   const pending = [];
+  const { cols, rows } = deriveGridSize(gridEl, grid, layout);
   for (const item of layout) {
     const def = allWidgets.find(w => w.id === item.widgetId);
     if (!def) continue;
-    const [x, y, w, h] = [item.x ?? 0, item.y ?? 0, item.w ?? 8, item.h ?? 4];
+    const x =
+      item.xPercent !== undefined
+        ? Math.round((item.xPercent / 100) * cols)
+        : item.x ?? 0;
+    const y =
+      item.yPercent !== undefined
+        ? Math.round((item.yPercent / 100) * rows)
+        : item.y ?? 0;
+    const w =
+      item.wPercent !== undefined
+        ? Math.max(1, Math.round((item.wPercent / 100) * cols))
+        : item.w ?? 8;
+    const h =
+      item.hPercent !== undefined
+        ? Math.max(1, Math.round((item.hPercent / 100) * rows))
+        : item.h ?? 4;
     const wrapper = document.createElement('div');
     wrapper.classList.add('canvas-item', 'loading');
     wrapper.dataset.x = x;
@@ -536,12 +571,28 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth: 1 }, gridEl);
 
       const pending = [];
+      const { cols, rows } = deriveGridSize(gridEl, grid, combined);
       for (const item of combined) {
         const def = allWidgets.find(w => w.id === item.widgetId);
         if (!def) continue;
         if (DEBUG) console.debug('[Renderer] render widget placeholder', def.id, item.id);
 
-        const [x, y, w, h] = [item.x ?? 0, item.y ?? 0, item.w ?? 8, item.h ?? 4];
+        const x =
+          item.xPercent !== undefined
+            ? Math.round((item.xPercent / 100) * cols)
+            : item.x ?? 0;
+        const y =
+          item.yPercent !== undefined
+            ? Math.round((item.yPercent / 100) * rows)
+            : item.y ?? 0;
+        const w =
+          item.wPercent !== undefined
+            ? Math.max(1, Math.round((item.wPercent / 100) * cols))
+            : item.w ?? 8;
+        const h =
+          item.hPercent !== undefined
+            ? Math.max(1, Math.round((item.hPercent / 100) * rows))
+            : item.h ?? 4;
 
         const wrapper = document.createElement('div');
         wrapper.classList.add('canvas-item', 'loading');
@@ -660,10 +711,26 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
 
     const pendingAdmin = [];
+    const { cols, rows } = deriveGridSize(gridEl, grid, combinedAdmin);
     for (const def of matchedWidgets) {
       if (DEBUG) console.debug('[Renderer] admin render widget placeholder', def.id);
       const meta = combinedAdmin.find(l => l.widgetId === def.id) || {};
-      const [x, y, w, h] = [meta.x ?? 0, meta.y ?? 0, meta.w ?? 8, meta.h ?? DEFAULT_ADMIN_ROWS];
+      const x =
+        meta.xPercent !== undefined
+          ? Math.round((meta.xPercent / 100) * cols)
+          : meta.x ?? 0;
+      const y =
+        meta.yPercent !== undefined
+          ? Math.round((meta.yPercent / 100) * rows)
+          : meta.y ?? 0;
+      const w =
+        meta.wPercent !== undefined
+          ? Math.max(1, Math.round((meta.wPercent / 100) * cols))
+          : meta.w ?? 8;
+      const h =
+        meta.hPercent !== undefined
+          ? Math.max(1, Math.round((meta.hPercent / 100) * rows))
+          : meta.h ?? DEFAULT_ADMIN_ROWS;
 
       const wrapper = document.createElement('div');
       wrapper.classList.add('canvas-item', 'loading');

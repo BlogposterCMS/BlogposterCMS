@@ -655,8 +655,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       window.addDashboardWidget(def, { x, y });
     });
 
-    const CELL_W = grid.options.columnWidth;
-    const CELL_H = grid.options.cellHeight;
     const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));
     for (const id of (config.widgets || [])) widgetIdSet.add(id);
     const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
@@ -677,8 +675,6 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       const minH = DEFAULT_ADMIN_ROWS;
       wrapper.setAttribute('gs-min-w', minW);
       wrapper.setAttribute('gs-min-h', minH);
-      wrapper.style.minWidth = `${minW * CELL_W}px`;
-      wrapper.style.minHeight = `${minH * CELL_H}px`;
       wrapper.dataset.widgetId = def.id;
       wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2,8)}`;
 

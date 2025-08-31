@@ -151,6 +151,8 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Removed inline `min-width`/`min-height` from dashboard widgets to prevent
+  unintended resizing jumps when layouts change.
 - `makeFilePublic` now handles Windows path separators, allowing legitimate `builder/` paths on Windows.
 - Builder publish now normalizes asset paths under `builder/` before moving files public, keeping slugs clean and restricting file locations.
 - `makeFilePublic` now accepts user IDs from multiple JWT fields and builder emits the user ID, preventing missing-user errors during publish.

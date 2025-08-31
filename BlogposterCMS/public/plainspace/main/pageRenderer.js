@@ -258,7 +258,25 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
   for (const item of layout) {
     const def = allWidgets.find(w => w.id === item.widgetId);
     if (!def) continue;
-    const [x, y, w, h] = [item.x ?? 0, item.y ?? 0, item.w ?? 8, item.h ?? 4];
+    const cols = grid?.options?.columns || 12;
+    const rows =
+      (gridEl.getBoundingClientRect().height / grid.options.cellHeight) || 1;
+    const x =
+      item.xPercent !== undefined
+        ? Math.round((item.xPercent / 100) * cols)
+        : item.x ?? 0;
+    const y =
+      item.yPercent !== undefined
+        ? Math.round((item.yPercent / 100) * rows)
+        : item.y ?? 0;
+    const w =
+      item.wPercent !== undefined
+        ? Math.max(1, Math.round((item.wPercent / 100) * cols))
+        : item.w ?? 8;
+    const h =
+      item.hPercent !== undefined
+        ? Math.max(1, Math.round((item.hPercent / 100) * rows))
+        : item.h ?? 4;
     const wrapper = document.createElement('div');
     wrapper.classList.add('canvas-item', 'loading');
     wrapper.dataset.x = x;
@@ -541,7 +559,25 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         if (!def) continue;
         if (DEBUG) console.debug('[Renderer] render widget placeholder', def.id, item.id);
 
-        const [x, y, w, h] = [item.x ?? 0, item.y ?? 0, item.w ?? 8, item.h ?? 4];
+        const cols = grid?.options?.columns || 12;
+        const rows =
+          (gridEl.getBoundingClientRect().height / grid.options.cellHeight) || 1;
+        const x =
+          item.xPercent !== undefined
+            ? Math.round((item.xPercent / 100) * cols)
+            : item.x ?? 0;
+        const y =
+          item.yPercent !== undefined
+            ? Math.round((item.yPercent / 100) * rows)
+            : item.y ?? 0;
+        const w =
+          item.wPercent !== undefined
+            ? Math.max(1, Math.round((item.wPercent / 100) * cols))
+            : item.w ?? 8;
+        const h =
+          item.hPercent !== undefined
+            ? Math.max(1, Math.round((item.hPercent / 100) * rows))
+            : item.h ?? 4;
 
         const wrapper = document.createElement('div');
         wrapper.classList.add('canvas-item', 'loading');
@@ -663,7 +699,25 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     for (const def of matchedWidgets) {
       if (DEBUG) console.debug('[Renderer] admin render widget placeholder', def.id);
       const meta = combinedAdmin.find(l => l.widgetId === def.id) || {};
-      const [x, y, w, h] = [meta.x ?? 0, meta.y ?? 0, meta.w ?? 8, meta.h ?? DEFAULT_ADMIN_ROWS];
+      const cols = grid?.options?.columns || 12;
+      const rows =
+        (gridEl.getBoundingClientRect().height / grid.options.cellHeight) || 1;
+      const x =
+        meta.xPercent !== undefined
+          ? Math.round((meta.xPercent / 100) * cols)
+          : meta.x ?? 0;
+      const y =
+        meta.yPercent !== undefined
+          ? Math.round((meta.yPercent / 100) * rows)
+          : meta.y ?? 0;
+      const w =
+        meta.wPercent !== undefined
+          ? Math.max(1, Math.round((meta.wPercent / 100) * cols))
+          : meta.w ?? 8;
+      const h =
+        meta.hPercent !== undefined
+          ? Math.max(1, Math.round((meta.hPercent / 100) * rows))
+          : meta.h ?? DEFAULT_ADMIN_ROWS;
 
       const wrapper = document.createElement('div');
       wrapper.classList.add('canvas-item', 'loading');

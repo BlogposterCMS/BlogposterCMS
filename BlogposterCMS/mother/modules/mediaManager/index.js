@@ -298,13 +298,14 @@ function setupMediaManagerEvents(motherEmitter) {
     }
 
     // 3) Restrict non-admins to builder paths
-    const normalized = path.normalize(filePath).replace(/^([\.\/]+)+/, '');
-    if (!isAdmin && !normalized.startsWith('builder/')) {
+    const normalized = path.normalize(filePath).replace(/^([\.\\\/]+)+/, '');
+    const posixPath = normalized.split(path.sep).join('/');
+    if (!isAdmin && !posixPath.startsWith('builder/')) {
       return callback(new Error('[MEDIA MANAGER] makeFilePublic => path must reside under "builder/"'));
     }
 
     // proceed
-    actuallyMoveFileToPublic(motherEmitter, { jwt, userId: resolvedUserId, filePath: normalized }, callback);
+    actuallyMoveFileToPublic(motherEmitter, { jwt, userId: resolvedUserId, filePath: posixPath }, callback);
   });
 }
 
@@ -331,7 +332,7 @@ function setupUploadRoute(app) {
  */
 function actuallyMoveFileToPublic(motherEmitter, { jwt, userId, filePath }, callback) {
   try {
-    const normalized = path.normalize(filePath).replace(/^([\.\/]+)+/, '');
+    const normalized = path.normalize(filePath).replace(/^([\.\\\/]+)+/, '');
     const sourceAbs = path.join(libraryRoot, normalized);
     const publicRoot = path.join(libraryRoot, 'public');
     if (!sourceAbs.startsWith(libraryRoot) || !fs.existsSync(sourceAbs)) {

@@ -5,10 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-
-
-
 ### Added
+- Autosave toggle lives in a dropdown attached to the Save button for quicker access.
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.
 - Builder workspace now displays the current viewport width in the top-right corner.
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
@@ -65,8 +63,8 @@ El Psy Kongroo
 - Support for dynamic action buttons in the content header.
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
-
 ### Changed
+- Builder header buttons now use borderless styling to match the Plainspace dashboard.
 - Publish popup now opens as a right-side panel instead of a bottom bar.
 - Builder publish slug picker now uses the shared `pageService` for page creation and updates, matching page editor logic.
 - Builder grid now starts at 100% zoom, centers within the viewport, and exposes horizontal scrolling for wide layouts.
@@ -141,6 +139,29 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Publish popup now anchors beneath the Publish button instead of appearing at the edge of the screen.
+- Builder slug picker now normalizes page responses to avoid draft warning crashes when selecting existing pages.
+- Canvas wrapper now refreshes its height when grid rows are added after zooming so newly added content remains scrollable.
+- Canvas wrapper now expands with zoom and viewport width so wide layouts remain horizontally scrollable at 100% zoom.
+- Prevent HTML editor crash when `codeMap` is undefined by guarding widget code access.
+- Color picker converts non-hex initial colours to hex before applying HSV state, preventing NaN previews.
+- User color now applies correctly on the Home workspace and updates after header load.
+- Home and Settings workspaces are protected from deletion in UI and backend.
+- Creating new pages within the Settings workspace is now supported via the UI.
+- Designer text widget loads editor bundle from build output and falls back to default export to avoid missing module errors.
+- Widget options menu ignores buttons without registered handlers, preventing random `data-action` keys from causing crashes.
+- Text widget now loads editor module without destructuring, preventing `registerElement` errors in builder mode.
+- Unified text and background color pickers into a single instance, removing duplicate close buttons.
+- Background toolbar now appears when no widget is selected, matching text-toolbar behaviour.
+- CanvasGrid zoom now anchors to its center, keeping the grid positioned while scaling.
+- Text widget no longer sets `contenteditable` by default, allowing toolbar actions to apply to entire widget when only selected.
+- Bounding box is hidden during drags and grid commits deferred to drag end for smoother interactions.
+- Restored `setDisabled` method on grid-core `BoundingBoxManager` for builder compatibility.
+- Pixel-grid bounding box size now derives from DOM geometry, fixing offsets with rotated or padded widgets.
+- Pixel-grid bounding box now matches widget dimensions exactly and stays in sync through live snapping.
+- Restored generated builder stylesheet and removed manual CSS edits that would be overwritten on rebuild.
+- Designer now bundles grid-mode styles locally instead of loading global `site.css`, keeping builder UI isolated.
+- Bounding box handles restore resize functionality by enabling pointer events and binding resize listeners.
 - Builder grid recenters within the viewport after zoom changes, keeping the workspace aligned.
 - Publish popup styles now load in the designer and backdrop aligns below the header.
 - Publish popup now anchors beneath the Publish button instead of appearing at the edge of the screen.

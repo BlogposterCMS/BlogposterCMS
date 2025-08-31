@@ -122,15 +122,17 @@
     align-items: center;
     gap: 12px;
 
-    .builder-viewport-btn {
+    button {
       display: flex;
       align-items: center;
-      padding: 10px;
+      justify-content: center;
+      padding: 8px;
+      background: transparent;
       border: none;
-      border-radius: 8px;
-      background: rgba(0, 0, 0, 0.05);
+      border-radius: 0;
       cursor: pointer;
       transition: background 0.2s ease;
+      color: var(--color-text, #333);
 
       svg, img {
         width: 18px;
@@ -138,33 +140,7 @@
       }
 
       &:hover {
-        background: rgba(0, 0, 0, 0.1);
-      }
-    }
-
-    .builder-save-btn,
-    .builder-preview-btn,
-    .builder-publish-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s ease;
-      text-decoration: none;
-
-      svg, img {
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        background: rgba(0, 0, 0, 0.05);
       }
 
       &:active {
@@ -172,59 +148,36 @@
       }
     }
 
-    .builder-save-btn {
-      background: rgba(0, 0, 0, 0.05);
-      color: var(--color-text, #333);
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.1);
-      }
-
-      &.saved {
-        background: #22c55e;
-        color: white;
-      }
-    }
-
-    .builder-preview-btn {
-      background: #6366f1;
-      color: white;
-
-      &:hover {
-        background: #5856eb;
-      }
-    }
-
-    .builder-publish-btn {
-      background: var(--accent-color, #007bff);
-      color: white;
-
-      &:hover {
-        background: #0056b3;
-      }
-    }
-
-    .builder-menu-btn {
+    .builder-save-wrapper {
+      position: relative;
       display: flex;
       align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      background: transparent;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: var(--color-text, #333);
 
-      &:hover {
-        background: rgba(0, 0, 0, 0.05);
-      }
+      .builder-save-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        padding: 8px;
+        display: none;
 
-      svg, img {
-        width: 20px;
-        height: 20px;
+        label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          color: var(--color-text, #333);
+        }
       }
+    }
+
+    .builder-save-btn.saved {
+      background: #22c55e;
+      color: white;
     }
   }
 

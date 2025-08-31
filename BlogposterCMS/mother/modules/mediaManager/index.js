@@ -281,7 +281,11 @@ function setupMediaManagerEvents(motherEmitter) {
     }
 
     const { decodedJWT } = payload;
-    const resolvedUserId = userId || decodedJWT?.user?.id;
+    const resolvedUserId = userId
+      || decodedJWT?.user?.id
+      || decodedJWT?.userId
+      || decodedJWT?.id
+      || decodedJWT?.sub;
 
     if (!resolvedUserId || !filePath) {
       return callback(new Error('Missing userId or filePath in makeFilePublic.'));

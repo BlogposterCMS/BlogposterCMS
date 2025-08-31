@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- `makeFilePublic` now accepts user IDs from multiple JWT fields and builder emits the user ID, preventing missing-user errors during publish.
 - Publish popup styles now load in the designer and backdrop aligns below the header.
 - Publish popup now anchors beneath the Publish button instead of appearing at the edge of the screen.
 - Builder slug picker now normalizes page responses to avoid draft warning crashes when selecting existing pages.

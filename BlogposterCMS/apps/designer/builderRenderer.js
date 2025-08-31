@@ -26,6 +26,18 @@ import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveF
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 
+function getAdminUserId() {
+  try {
+    if (!window.ADMIN_TOKEN) return null;
+    const [, payload] = window.ADMIN_TOKEN.split('.');
+    const decoded = JSON.parse(atob(payload));
+    return decoded.userId || decoded.sub || decoded.id || decoded.user?.id || null;
+  } catch (err) {
+    console.error('[Designer] token parse failed', err);
+    return null;
+  }
+}
+
 let _toPng;
 async function loadToPng() {
   if (_toPng) return _toPng;
@@ -1076,11 +1088,13 @@ async function runPublish(subSlug) {
       fileData: btoa(unescape(encodeURIComponent(f.data)))
     });
   }
+  const currentUserId = getAdminUserId();
   await meltdownEmit('makeFilePublic', {
     jwt: window.ADMIN_TOKEN,
     moduleName: 'mediaManager',
     moduleType: 'core',
-    filePath: subPath
+    filePath: subPath,
+    ...(currentUserId ? { userId: currentUserId } : {})
   });
   await meltdownEmit('savePublishedDesignMeta', {
     jwt: window.ADMIN_TOKEN,

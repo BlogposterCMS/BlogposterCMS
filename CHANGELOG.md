@@ -152,7 +152,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
-- pageRenderer now translates stored percentage coordinates into grid positions so widgets render at their saved locations.
+- pageRenderer now derives finite grid dimensions before translating stored percentage coordinates so widgets render at their saved locations.
 - Removed inline `min-width`/`min-height` from dashboard widgets to prevent
   unintended resizing jumps when layouts change.
 - `makeFilePublic` now handles Windows path separators, allowing legitimate `builder/` paths on Windows.

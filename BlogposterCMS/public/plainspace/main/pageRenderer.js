@@ -36,6 +36,25 @@ async function fetchPartialSafe(name, type) {
   }
 }
 
+function deriveGridSize(gridEl, grid, items = []) {
+  const colWidth = grid?.options?.columnWidth || 1;
+  let cols = Number.isFinite(grid?.options?.columns)
+    ? grid.options.columns
+    : Math.round((gridEl.getBoundingClientRect().width || 0) / colWidth);
+  if (!cols || !Number.isFinite(cols)) cols = 12;
+
+  const cellH = grid?.options?.cellHeight || 1;
+  let rows = Math.round((gridEl.getBoundingClientRect().height || 0) / cellH);
+  if (!rows || !Number.isFinite(rows)) {
+    const maxPercent = items.reduce(
+      (m, it) => Math.max(m, (it.yPercent ?? 0) + (it.hPercent ?? 0)),
+      100
+    );
+    rows = Math.max(1, Math.round((maxPercent / 100) * cols));
+  }
+  return { cols, rows };
+}
+
 function createDebouncedEmitter(delay = 150) {
   let queue = [];
   let timer = null;
@@ -255,12 +274,10 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth, columns }, gridEl);
   }
   const pending = [];
+  const { cols, rows } = deriveGridSize(gridEl, grid, layout);
   for (const item of layout) {
     const def = allWidgets.find(w => w.id === item.widgetId);
     if (!def) continue;
-    const cols = grid?.options?.columns || 12;
-    const rows =
-      (gridEl.getBoundingClientRect().height / grid.options.cellHeight) || 1;
     const x =
       item.xPercent !== undefined
         ? Math.round((item.xPercent / 100) * cols)
@@ -554,14 +571,12 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth: 1 }, gridEl);
 
       const pending = [];
+      const { cols, rows } = deriveGridSize(gridEl, grid, combined);
       for (const item of combined) {
         const def = allWidgets.find(w => w.id === item.widgetId);
         if (!def) continue;
         if (DEBUG) console.debug('[Renderer] render widget placeholder', def.id, item.id);
 
-        const cols = grid?.options?.columns || 12;
-        const rows =
-          (gridEl.getBoundingClientRect().height / grid.options.cellHeight) || 1;
         const x =
           item.xPercent !== undefined
             ? Math.round((item.xPercent / 100) * cols)
@@ -696,12 +711,10 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
     const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
 
     const pendingAdmin = [];
+    const { cols, rows } = deriveGridSize(gridEl, grid, combinedAdmin);
     for (const def of matchedWidgets) {
       if (DEBUG) console.debug('[Renderer] admin render widget placeholder', def.id);
       const meta = combinedAdmin.find(l => l.widgetId === def.id) || {};
-      const cols = grid?.options?.columns || 12;
-      const rows =
-        (gridEl.getBoundingClientRect().height / grid.options.cellHeight) || 1;
       const x =
         meta.xPercent !== undefined
           ? Math.round((meta.xPercent / 100) * cols)

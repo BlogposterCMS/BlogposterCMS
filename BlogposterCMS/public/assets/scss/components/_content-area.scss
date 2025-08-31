@@ -109,6 +109,8 @@
 // Dashboard editing styles
 body.dashboard-edit-mode .canvas-item {
   border: 2px solid transparent;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
 }
 
 body.dashboard-edit-mode .canvas-item .widget-remove,
@@ -166,22 +168,23 @@ body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-drag
 }
 
 body.dashboard-edit-mode .canvas-item.selected {
-  border-color: var(--user-color);
+  outline-color: var(--user-color);
 }
 
 body.dashboard-edit-mode .canvas-item[data-global="true"].dragging,
 body.dashboard-edit-mode .canvas-item[data-global="true"].selected {
-  border-color: var(--shared-widget-color, #d4af37);
+  outline-color: var(--shared-widget-color, #d4af37);
 }
 
 body.dashboard-edit-mode .canvas-item.dragging,
 body.dashboard-edit-mode .canvas-item.is-dragging {
-  border-color: var(--user-color);
+  outline-color: var(--user-color);
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
 }
 
 body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover {
   border-color: transparent;
+  outline-color: var(--user-color);
   box-shadow: 0 2px 10px rgba(0,0,0,.08);
 }
 

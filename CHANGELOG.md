@@ -151,6 +151,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Builder publish now normalizes asset paths under `builder/` before moving files public, keeping slugs clean and restricting file locations.
 - `makeFilePublic` now accepts user IDs from multiple JWT fields and builder emits the user ID, preventing missing-user errors during publish.
 - Publish popup styles now load in the designer and backdrop aligns below the header.
 - Publish popup now anchors beneath the Publish button instead of appearing at the edge of the screen.

@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Builder grid recenters within the viewport after zoom changes, keeping the workspace aligned.
 - Publish popup now anchors beneath the Publish button instead of appearing at the edge of the screen.
 - Builder slug picker now normalizes page responses to avoid draft warning crashes when selecting existing pages.
 - Canvas wrapper now refreshes its height when grid rows are added after zooming so newly added content remains scrollable.

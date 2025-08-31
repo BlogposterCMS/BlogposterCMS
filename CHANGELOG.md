@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- CanvasGrid now accepts an `enableZoom` option; dashboard grids disable zoom by default to avoid the builder's zoom sizer.
 - Admin home workspace now seeds roadmap intro, upcoming features, and drag demo widgets, replacing previous defaults.
 - Autosave toggle lives in a dropdown attached to the Save button for quicker access.
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.

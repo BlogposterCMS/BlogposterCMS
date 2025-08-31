@@ -252,7 +252,7 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     target.appendChild(gridEl);
     const columnWidth = 1;
     const columns = Infinity;
-    grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth, columns }, gridEl);
+    grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth, columns, enableZoom: false }, gridEl);
   }
   const pending = [];
   for (const item of layout) {
@@ -533,7 +533,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       gridEl.className = 'canvas-grid';
       contentEl.appendChild(gridEl);
       // Static mode: public pages should not be directly editable
-      const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth: 1 }, gridEl);
+      const grid = initCanvasGrid({ staticGrid: true, float: true, cellHeight: 1, columnWidth: 1, enableZoom: false }, gridEl);
 
       const pending = [];
       for (const item of combined) {
@@ -615,7 +615,8 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       percentageMode: true,
       pushOnOverlap: true,
       useBoundingBox: true,
-      bboxHandles: false
+      bboxHandles: false,
+      enableZoom: false
     }, gridEl);
     function setColumnWidth() {
       const gridWidth = gridEl.getBoundingClientRect().width;

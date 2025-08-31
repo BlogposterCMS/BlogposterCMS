@@ -151,6 +151,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Guarded zoom sizer resize observer to prevent runaway width expansion on zoom.
 - Zoom sizer now updates on container resize and grid overflow allows scrollbars, keeping the canvas and grid aligned.
 - `makeFilePublic` now handles Windows path separators, allowing legitimate `builder/` paths on Windows.
 - Builder publish now normalizes asset paths under `builder/` before moving files public, keeping slugs clean and restricting file locations.

@@ -153,6 +153,8 @@ El Psy Kongroo
 
 ### Fixed
 - Builder now forwards the current layout template to the designer and saves the chosen layout name when publishing new pages.
+- Guarded zoom sizer resize observer to prevent runaway width expansion on zoom.
+- Zoom sizer now updates on container resize and grid overflow allows scrollbars, keeping the canvas and grid aligned.
 - Removed inline `min-width`/`min-height` from dashboard widgets to prevent
   unintended resizing jumps when layouts change.
 - `makeFilePublic` now handles Windows path separators, allowing legitimate `builder/` paths on Windows.

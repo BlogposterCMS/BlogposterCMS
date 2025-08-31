@@ -3083,4 +3083,15 @@ body.grid-mode .bounding-box .bbox-edge.nw {
 }
 body.grid-mode .bounding-box.disabled {
   display: none;
+}
+
+.home-update-widget,
+.home-roadmap-widget,
+.home-drag-widget {
+  padding: 1rem;
+}
+
+.home-drag-widget {
+  text-transform: uppercase;
+  font-weight: bold;
 }/*# sourceMappingURL=site.css.map */

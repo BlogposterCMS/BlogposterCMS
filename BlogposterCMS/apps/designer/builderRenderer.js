@@ -693,12 +693,29 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     resizeObserver.observe(gridEl);
   }
 
+  const saveWrapper = document.createElement('div');
+  saveWrapper.className = 'builder-save-wrapper';
+
   const saveBtn = document.createElement('button');
   saveBtn.id = 'saveLayoutBtn';
   saveBtn.className = 'builder-save-btn';
   saveBtn.innerHTML = window.featherIcon ? window.featherIcon('save') :
     '<img src="/assets/icons/save.svg" alt="Save" />';
-  topBar.appendChild(saveBtn);
+  saveWrapper.appendChild(saveBtn);
+
+  const saveMenuBtn = document.createElement('button');
+  saveMenuBtn.className = 'builder-save-dropdown-toggle';
+  saveMenuBtn.innerHTML = window.featherIcon
+    ? window.featherIcon('chevron-down')
+    : '<img src="/assets/icons/chevron-down.svg" alt="more" />';
+  saveWrapper.appendChild(saveMenuBtn);
+
+  const saveDropdown = document.createElement('div');
+  saveDropdown.className = 'builder-save-dropdown';
+  saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
+  saveWrapper.appendChild(saveDropdown);
+
+  topBar.appendChild(saveWrapper);
 
   const previewBtn = document.createElement('button');
   previewBtn.id = 'previewLayoutBtn';
@@ -726,7 +743,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   headerMenu.innerHTML = `
     <button class="menu-undo"><img src="/assets/icons/rotate-ccw.svg" class="icon" alt="undo" /> Undo</button>
     <button class="menu-redo"><img src="/assets/icons/rotate-cw.svg" class="icon" alt="redo" /> Redo</button>
-    <label class="menu-autosave"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>
     <label class="menu-pro"><input type="checkbox" class="pro-toggle" checked /> Pro Mode</label>
   `;
   headerMenu.style.display = 'none';
@@ -757,17 +773,34 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   headerMenu.querySelector('.menu-undo').addEventListener('click', () => { hideHeaderMenu(); undo(); });
   headerMenu.querySelector('.menu-redo').addEventListener('click', () => { hideHeaderMenu(); redo(); });
-  const autosaveToggle = headerMenu.querySelector('.autosave-toggle');
-  autosaveToggle.checked = state.autosaveEnabled;
-  autosaveToggle.addEventListener('change', () => {
-    state.autosaveEnabled = autosaveToggle.checked;
-    startAutosaveFn(state, saveLayoutCtx);
-  });
   const proToggle = headerMenu.querySelector('.pro-toggle');
   proToggle.checked = proMode;
   proToggle.addEventListener('change', () => {
     proMode = proToggle.checked;
     applyProMode();
+  });
+
+  saveMenuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (saveDropdown.style.display === 'block') { hideSaveDropdown(); return; }
+    saveDropdown.style.display = 'block';
+    document.addEventListener('click', outsideSaveHandler);
+  });
+
+  function hideSaveDropdown() {
+    saveDropdown.style.display = 'none';
+    document.removeEventListener('click', outsideSaveHandler);
+  }
+
+  function outsideSaveHandler(e) {
+    if (!saveWrapper.contains(e.target)) hideSaveDropdown();
+  }
+
+  const autosaveToggle = saveDropdown.querySelector('.autosave-toggle');
+  autosaveToggle.checked = state.autosaveEnabled;
+  autosaveToggle.addEventListener('change', () => {
+    state.autosaveEnabled = autosaveToggle.checked;
+    startAutosaveFn(state, saveLayoutCtx);
   });
 
   const appScope = document.querySelector('.app-scope');

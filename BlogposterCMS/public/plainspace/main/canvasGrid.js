@@ -86,6 +86,8 @@ export class CanvasGrid {
         this.widgets.forEach(wi => this._applyPosition(wi, false));
         // If something is selected, ensure the bbox follows
         this._updateBBox();
+        // Keep the zoom sizer in sync with container width changes
+        this._syncSizer();
       });
       _ro.observe(this.el);
       this._containerRO = _ro;

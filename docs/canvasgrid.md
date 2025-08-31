@@ -15,6 +15,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 - Ctrl+wheel zoom scales the grid around its center, keeping layouts anchored in view.
 - Header viewport control lets you adjust the canvas width via a slider (default 1920px, up to 3840px) for responsive previews.
 - Workspace displays the current viewport width in the top-right corner for quick reference.
+- Zoom sizer follows container resize so scaled canvases remain fully scrollable.
 
 ## Usage
 

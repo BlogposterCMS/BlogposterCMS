@@ -265,6 +265,33 @@ module.exports.DEFAULT_WIDGETS = [
     metadata: { apiEvents: ['getLayoutTemplateNames', 'updatePage'] }
   },
   {
+    widgetId: 'roadmapIntro',
+    widgetType: ADMIN_LANE,
+    label: 'Roadmap Intro',
+    content: '/plainspace/widgets/admin/roadmapIntroWidget.js',
+    category: 'core',
+    options: { maxWidth: true },
+    metadata: { apiEvents: [] }
+  },
+  {
+    widgetId: 'roadmapUpcoming',
+    widgetType: ADMIN_LANE,
+    label: 'Roadmap',
+    content: '/plainspace/widgets/admin/roadmapWidget.js',
+    category: 'core',
+    options: { halfWidth: true },
+    metadata: { apiEvents: [] }
+  },
+  {
+    widgetId: 'dragbarDemo',
+    widgetType: ADMIN_LANE,
+    label: 'Drag Demo',
+    content: '/plainspace/widgets/admin/dragInfoWidget.js',
+    category: 'core',
+    options: { thirdWidth: true },
+    metadata: { apiEvents: [] }
+  },
+  {
     widgetId: "htmlBlock",
     widgetType: PUBLIC_LANE,
     label: "HTML Block",

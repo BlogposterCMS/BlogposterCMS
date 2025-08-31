@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Admin home workspace now seeds roadmap intro, upcoming features, and drag demo widgets, replacing previous defaults.
 - Autosave toggle lives in a dropdown attached to the Save button for quicker access.
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.
 - Builder workspace now displays the current viewport width in the top-right corner.
@@ -151,6 +152,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- `makeFilePublic` now handles Windows path separators, allowing legitimate `builder/` paths on Windows.
 - Builder publish now normalizes asset paths under `builder/` before moving files public, keeping slugs clean and restricting file locations.
 - `makeFilePublic` now accepts user IDs from multiple JWT fields and builder emits the user ID, preventing missing-user errors during publish.
 - Publish popup styles now load in the designer and backdrop aligns below the header.

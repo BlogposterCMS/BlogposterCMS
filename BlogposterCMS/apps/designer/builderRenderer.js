@@ -1026,7 +1026,9 @@ async function runPublish(subSlug) {
   const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
   const previewPath = await capturePreview();
   const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
-  const subPath = subSlug || `builder/${safeName}`;
+  const normalizedSubPath = subSlug
+    ? (subSlug.startsWith('builder/') ? subSlug : `builder/${subSlug}`)
+    : `builder/${safeName}`;
 
   const gridClone = gridEl ? gridEl.cloneNode(true) : null;
   const externalStyles = [];
@@ -1116,7 +1118,7 @@ async function runPublish(subSlug) {
       jwt: window.ADMIN_TOKEN,
       moduleName: 'mediaManager',
       moduleType: 'core',
-      subPath,
+      subPath: normalizedSubPath,
       fileName: f.fileName,
       fileData: btoa(unescape(encodeURIComponent(f.data)))
     });
@@ -1126,7 +1128,7 @@ async function runPublish(subSlug) {
     jwt: window.ADMIN_TOKEN,
     moduleName: 'mediaManager',
     moduleType: 'core',
-    filePath: subPath,
+    filePath: normalizedSubPath,
     ...(currentUserId ? { userId: currentUserId } : {})
   });
   await meltdownEmit('savePublishedDesignMeta', {
@@ -1134,7 +1136,7 @@ async function runPublish(subSlug) {
     moduleName: 'plainspace',
     moduleType: 'core',
     name,
-    path: subPath,
+    path: normalizedSubPath,
     files: files.map(f => f.fileName)
   });
 }

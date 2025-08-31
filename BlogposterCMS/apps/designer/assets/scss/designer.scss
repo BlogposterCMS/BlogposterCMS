@@ -1,6 +1,6 @@
 @use '../../../../public/assets/scss/variables' as *;
 @use '../../../../public/assets/scss/components/grid-mode';
-@use '../../../../public/assets/scss/components/publish-popup';
+@use 'publish-popup';
 @use 'variables';
 @use 'header';
 @use 'sidebar';

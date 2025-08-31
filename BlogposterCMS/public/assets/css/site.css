@@ -994,6 +994,8 @@ body:not(.dashboard-edit-mode) canvas-item::before {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  height: 100%;
 }
 .color-picker .color-section {
   display: grid;
@@ -1022,24 +1024,113 @@ body:not(.dashboard-edit-mode) canvas-item::before {
   border: 1px dashed #ccc;
   color: #555;
 }
-.color-picker .color-input {
-  width: 60px;
-  padding: 2px 4px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 12px;
-  outline: none;
+.color-picker .hue-wrapper {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: var(--shadow-default);
+  position: absolute;
 }
-.color-picker .color-section-label {
-  margin-right: 4px;
-  font-size: 12px;
-  color: var(--color-text);
+.color-picker .hue-wrapper.hidden {
+  display: none;
 }
-.color-picker .color-picker-close {
+.color-picker .hue-wrapper:not(.hidden) {
+  display: flex;
+}
+.color-picker .hue-wrapper .color-picker-close {
   align-self: flex-end;
   background: none;
   border: none;
   cursor: pointer;
+  padding: 0;
+}
+.color-picker .hue-wrapper .cp-color-area {
+  position: relative;
+  width: 200px;
+  height: 150px;
+  border-radius: 4px;
+  cursor: crosshair;
+  background: hsl(0, 100%, 50%);
+  overflow: hidden;
+}
+.color-picker .hue-wrapper .cp-color-area::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0));
+}
+.color-picker .hue-wrapper .cp-color-area::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #000, rgba(0, 0, 0, 0));
+}
+.color-picker .hue-wrapper .cp-color-area .cp-cursor {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+  transform: translate(-6px, -6px);
+  pointer-events: none;
+}
+.color-picker .hue-wrapper .cp-hue,
+.color-picker .hue-wrapper .cp-alpha {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.color-picker .hue-wrapper .cp-hue {
+  background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+}
+.color-picker .hue-wrapper .cp-alpha {
+  background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%);
+  background-size: 8px 8px;
+}
+.color-picker .hue-wrapper .cp-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.color-picker .hue-wrapper .cp-preview {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%);
+  background-size: 8px 8px;
+}
+.color-picker .hue-wrapper .cp-preview .cp-preview-color {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.color-picker .hue-wrapper .cp-hex {
+  flex: 1;
+  padding: 2px 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.color-picker .hue-wrapper .cp-dropper {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.color-picker .color-section-label {
+  margin-right: 4px;
   font-size: 12px;
   color: var(--color-text);
 }
@@ -2992,4 +3083,15 @@ body.grid-mode .bounding-box .bbox-edge.nw {
 }
 body.grid-mode .bounding-box.disabled {
   display: none;
+}
+
+.home-update-widget,
+.home-roadmap-widget,
+.home-drag-widget {
+  padding: 1rem;
+}
+
+.home-drag-widget {
+  text-transform: uppercase;
+  font-weight: bold;
 }/*# sourceMappingURL=site.css.map */

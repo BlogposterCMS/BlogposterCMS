@@ -14,7 +14,7 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/house.svg',
-      widgets: ['contentSummary', 'modulesList', 'pageStats'],
+      widgets: ['roadmapIntro', 'roadmapUpcoming', 'dragbarDemo'],
       workspace: 'home'
     }
   },

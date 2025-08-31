@@ -86,6 +86,8 @@ export class CanvasGrid {
         this.widgets.forEach(wi => this._applyPosition(wi, false));
         // If something is selected, ensure the bbox follows
         this._updateBBox();
+        // Keep the zoom sizer in sync with container width changes
+        this._syncSizer();
       });
       _ro.observe(this.el);
       this._containerRO = _ro;
@@ -132,10 +134,20 @@ export class CanvasGrid {
   _syncSizer() {
     if (!this.sizer) return;
     const scale = this.scale || this._currentScale();
-    const w = (this.el.offsetWidth || 0) * scale;
-    const h = (this.el.offsetHeight || 0) * scale;
-    this.sizer.style.width = `${w}px`;
-    this.sizer.style.height = `${h}px`;
+    // Base the width on the unscaled scroll container so ResizeObserver
+    // callbacks don't repeatedly multiply the already scaled grid size.
+    const baseW = (this.scrollContainer && this.scrollContainer.clientWidth) || this.el.offsetWidth || 0;
+    const baseH = this.el.offsetHeight || 0;
+    const targetW = baseW * scale;
+    const targetH = baseH * scale;
+    if (
+      Math.round(this.sizer.offsetWidth) === Math.round(targetW) &&
+      Math.round(this.sizer.offsetHeight) === Math.round(targetH)
+    ) {
+      return;
+    }
+    this.sizer.style.width = `${targetW}px`;
+    this.sizer.style.height = `${targetH}px`;
   }
 
   _centerViewport() {

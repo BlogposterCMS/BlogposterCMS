@@ -152,6 +152,8 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Guarded zoom sizer resize observer to prevent runaway width expansion on zoom.
+- Zoom sizer now updates on container resize and grid overflow allows scrollbars, keeping the canvas and grid aligned.
 - Removed inline `min-width`/`min-height` from dashboard widgets to prevent
   unintended resizing jumps when layouts change.
 - `makeFilePublic` now handles Windows path separators, allowing legitimate `builder/` paths on Windows.

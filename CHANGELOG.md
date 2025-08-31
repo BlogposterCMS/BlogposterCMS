@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
+### Changed
+- Builder header buttons now use borderless styling to match the Plainspace dashboard.
+### Added
+- Autosave toggle lives in a dropdown attached to the Save button for quicker access.
 ### Fixed
 - Publish popup now anchors beneath the Publish button instead of appearing at the edge of the screen.
 - Builder slug picker now normalizes page responses to avoid draft warning crashes when selecting existing pages.

@@ -37,9 +37,9 @@ The helper `seedAdminWidget(motherEmitter, jwt, widgetData, options)` creates an
 admin lane widget if it does not already exist and stores layout options in the
 `widget_instances` table. The `options` object supports the following keys:
 
-- `max` – applies both `max-width` and `max-height` using percentage values.
-- `maxWidth` – percentage value for the maximum width.
-- `maxHeight` – percentage value for the maximum height.
+- `max` – applies both `max-width` and `max-height` using a percentage value (number or string).
+- `maxWidth` – percentage value for the maximum width (number or string).
+- `maxHeight` – percentage value for the maximum height (number or string).
 - `halfWidth` – if `true` the widget should use at least half of the desktop width.
 - `thirdWidth` – if `true` the widget should use at least one third of the width.
 - `width` – custom width percentage.

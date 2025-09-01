@@ -1,21 +1,20 @@
-@use './base' as p;
-
 .layout-list-card {
-  @include p.page-list-card;
+  @extend .page-list-card;
 }
 
 .layout-title-bar {
-  @include p.page-title-bar;
+  @extend .page-title-bar;
 }
 
 .layout-title {
-  @include p.page-title;
+  @extend .page-title;
 }
 
 .layout-filters {
-  @include p.page-filters;
+  @extend .page-filters;
   margin-bottom: 0;
 }
+
 
 .layout-tabs-wrap {
   display: flex;
@@ -30,19 +29,19 @@
 }
 
 .add-layout-btn {
-  @include p.add-page-btn;
+  @extend .add-page-btn;
 }
 
 .layout-list {
-  @include p.page-list;
+  @extend .page-list;
 }
 
 .layout-list .empty-state {
-  @include p.page-list-empty-state;
+  @extend %page-list-empty-state;
 }
 
 .layout-list li {
-  @include p.page-list-item;
+  @extend %page-list-item;
 }
 
 .layout-item {
@@ -116,11 +115,11 @@
 
 // Layout Gallery Widget styles
 .layout-gallery-card {
-  @include p.page-list-card;
+  @extend .page-list-card;
 }
 
 .layout-gallery-title-bar {
-  @include p.page-title-bar;
+  @extend .page-title-bar;
 }
 
 .layout-title-actions {
@@ -130,7 +129,7 @@
 }
 
 .layout-gallery-title {
-  @include p.page-title;
+  @extend .page-title;
 }
 
 .layout-gallery {

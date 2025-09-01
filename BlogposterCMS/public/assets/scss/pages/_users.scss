@@ -1,57 +1,55 @@
-// Styles for Users List and Role Management widgets
+@use './base' as p;
 
 .user-list-card {
-  @extend .page-list-card;
+  @include p.page-list-card;
 }
 
 .user-title-bar {
-  @extend .page-title-bar;
+  @include p.page-title-bar;
 }
 
 .user-title {
-  @extend .page-title;
+  @include p.page-title;
 }
 
 .add-user-btn {
-  @extend .add-page-btn;
+  @include p.add-page-btn;
 }
 
 .add-group-btn {
-  @extend .add-page-btn;
+  @include p.add-page-btn;
 }
 
 .users-list {
-  @extend .page-list;
+  @include p.page-list;
 }
-
 
 .users-list .empty-state {
-  @extend %page-list-empty-state;
+  @include p.page-list-empty-state;
 }
 
-
 .users-list li {
-  @extend %page-list-item;
+  @include p.page-list-item;
 }
 
 .roles-list {
-  @extend .page-list;
+  @include p.page-list;
 }
 
 .roles-list .empty-state {
-  @extend %page-list-empty-state;
+  @include p.page-list-empty-state;
 }
 
 .roles-list li {
-  @extend %page-list-item;
+  @include p.page-list-item;
 }
 
 .roles-list .page-name-row {
-  @extend .page-name-row;
+  @include p.page-name-row;
 }
 
 .roles-list .page-actions {
-  @extend .page-actions;
+  @include p.page-actions;
 }
 
 .users-tabs {

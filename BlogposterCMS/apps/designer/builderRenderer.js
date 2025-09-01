@@ -257,7 +257,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   };
   await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
-  const grid = initGrid(gridEl, state, selectWidget, { scrollContainer: gridViewportEl });
+  const grid = initGrid(gridEl, state, selectWidget, {
+    scrollContainer: gridViewportEl,
+    enableZoom: true
+  });
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
   function scheduleAutosave() {
     scheduleAutosaveFn(state, opts => saveLayout(opts, { ...saveLayoutCtx, ...state }));

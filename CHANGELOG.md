@@ -59,11 +59,7 @@ El Psy Kongroo
 - `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
 
- 
-### Fixed
-- Dashboard widget selection no longer shifts items vertically by disabling the highlighting pseudo-element.
-- CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
-- `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
+
 
 ### Removed
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
@@ -158,6 +154,10 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Dashboard page renderer now sets `enableZoom: false` when initializing CanvasGrid to avoid creating an unnecessary zoom sizer.
+- Dashboard widget selection no longer shifts items vertically by disabling the highlighting pseudo-element.
+- CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
+- `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
 - Dashboard widget highlight no longer alters element dimensions, preventing ResizeObserver from miscalculating grid cell sizes.
 - pageRenderer now derives finite grid dimensions before translating stored percentage coordinates so widgets render at their saved locations.
 - Builder now forwards the current layout template to the designer and saves the chosen layout name when publishing new pages.

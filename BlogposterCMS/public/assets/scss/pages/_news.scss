@@ -1,13 +1,15 @@
+@use './base' as p;
+
 .news-list-card {
-  @extend .page-list-card;
+  @include p.page-list-card;
 }
 
 .news-title-bar {
-  @extend .page-title-bar;
+  @include p.page-title-bar;
 }
 
 .news-title {
-  @extend .page-title;
+  @include p.page-title;
 }
 
 .news-controls {
@@ -17,15 +19,15 @@
 }
 
 .news-list {
-  @extend .page-list;
+  @include p.page-list;
 }
 
 .news-list .empty-state {
-  @extend %page-list-empty-state;
+  @include p.page-list-empty-state;
 }
 
 .news-list li {
-  @extend %page-list-item;
+  @include p.page-list-item;
 }
 
 .news-list li a {

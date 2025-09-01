@@ -1,9 +1,11 @@
+@use './base' as p;
+
 .news-detail-card {
-  @extend .page-list-card;
+  @include p.page-list-card;
 }
 
 .news-detail-title {
-  @extend .page-title;
+  @include p.page-title;
   margin-bottom: 1rem;
 }
 

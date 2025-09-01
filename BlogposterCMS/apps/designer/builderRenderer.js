@@ -120,6 +120,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     ? Math.max(0, Math.min(layoutLayers.length - 1, startLayerNum))
     : 1;
   document.body.dataset.activeLayer = String(activeLayer);
+  const footer = document.getElementById('builderFooter');
   let layoutBar;
   let globalLayoutName = null;
 
@@ -1338,7 +1339,7 @@ confirmBtn.addEventListener('click', async () => {
     zoomWrap.appendChild(zoomIn);
     layoutBar.appendChild(zoomWrap);
 
-    document.body.appendChild(layoutBar);
+    (footer || document.body).appendChild(layoutBar);
   }
 
 }

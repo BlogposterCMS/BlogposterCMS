@@ -71,6 +71,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Builder sidebar now uses a semantic `<aside>` element for improved accessibility.
+- Layout bar now resides within the builder footer for clearer structure.
 - Sanitizer now preserves `<style>` tags and strips unsafe CSS so public pages display full designs.
 - Publish popup now opens as a right-side panel instead of a bottom bar.
 - Builder publish slug picker now uses the shared `pageService` for page creation and updates, matching page editor logic.

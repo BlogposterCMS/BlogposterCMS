@@ -81,6 +81,7 @@ export class CanvasGrid {
     // Observe container size changes (e.g., sidebar open/close) and
     // recompute column width so percentage-based layout stays correct.
     try {
+      let prevWidth = this.el?.clientWidth || parseFloat(getComputedStyle(this.el).width) || 1;
       const _ro = new ResizeObserver(() => {
         // Use clientWidth to avoid counting CSS transforms applied to
         // the container (e.g. when the sidebar "plops" open we scale
@@ -94,8 +95,14 @@ export class CanvasGrid {
         this._updateBBox();
         // Keep the zoom sizer in sync with container width changes
         this._syncSizer();
-        // Re-center the viewport so smaller canvases stay anchored
-        this._centerViewport();
+        // Only re-center when width changes and the user is near the origin
+        const sc = this.scrollContainer;
+        const widthChanged = Math.round(w) !== Math.round(prevWidth);
+        const nearOrigin = sc && sc.scrollLeft < 50 && sc.scrollTop < 50;
+        if (widthChanged && nearOrigin) {
+          this._centerViewport();
+        }
+        prevWidth = w;
       });
       _ro.observe(this.el);
       this._containerRO = _ro;

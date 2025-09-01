@@ -16,6 +16,8 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
 - **Database privileges** – Create database users with only the permissions they need and restrict remote access where possible.
 - **Monitoring and logs** – Record login attempts and important actions. Reviewing logs helps detect suspicious behavior early.
 
+- **Content sanitization** – Public pages retain `<style>` tags while stripping scripts and unsafe CSS patterns (like `expression` or URLs using `javascript:` or `data:`) so designs render without enabling script injection.
+
 Always review your access logs and keep dependencies up to date. Security patches will continue to harden the platform over time.
 
 ## Troubleshooting Secure Login

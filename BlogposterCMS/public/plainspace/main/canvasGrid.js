@@ -161,12 +161,10 @@ export class CanvasGrid {
   _centerViewport() {
     if (!this.scrollContainer) return;
     const sc = this.scrollContainer;
-    const sw = (this.sizer?.clientWidth || this.el.offsetWidth || 0);
-    const sh = (this.sizer?.clientHeight || this.el.offsetHeight || 0);
-    const targetX = Math.max(0, (sw - sc.clientWidth) / 2);
-    const targetY = Math.max(0, (sh - sc.clientHeight) / 2);
-    sc.scrollLeft = targetX;
-    sc.scrollTop = targetY;
+    const sw = this.sizer?.clientWidth || this.el.offsetWidth || 0;
+    const sh = this.sizer?.clientHeight || this.el.offsetHeight || 0;
+    sc.scrollLeft = sw > sc.clientWidth ? (sw - sc.clientWidth) / 2 : 0;
+    sc.scrollTop = sh > sc.clientHeight ? (sh - sc.clientHeight) / 2 : 0;
   }
 
   setScale(next, anchor = null) {

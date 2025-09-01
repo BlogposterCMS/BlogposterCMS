@@ -63,6 +63,7 @@ El Psy Kongroo
 ### Fixed
 - CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
 - `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
+- CanvasGrid keeps the builder grid within its parent during zoom so the canvas stays centered and doesn't drift sideways.
 
 ### Removed
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.

@@ -1,55 +1,53 @@
-@use './base' as p;
-
 .permissions-card {
-  @include p.page-list-card;
+  @extend .page-list-card;
 }
 
 .permissions-title-bar {
-  @include p.page-title-bar;
+  @extend .page-title-bar;
 }
 
 .permissions-title {
-  @include p.page-title;
+  @extend .page-title;
 }
 
 .permissions-list {
-  @include p.page-list;
+  @extend .page-list;
 }
 
 .roles-list {
-  @include p.page-list;
+  @extend .page-list;
 }
 
 .permissions-list .empty-state {
-  @include p.page-list-empty-state;
+  @extend %page-list-empty-state;
 }
 
 .roles-list .empty-state {
-  @include p.page-list-empty-state;
+  @extend %page-list-empty-state;
 }
 
 .permissions-list li {
-  @include p.page-list-item;
+  @extend %page-list-item;
 }
 
 .roles-list li {
-  @include p.page-list-item;
+  @extend %page-list-item;
 }
 
 .roles-list .page-name-row {
-  @include p.page-name-row;
+  @extend .page-name-row;
 }
 
 .roles-list .page-actions {
-  @include p.page-actions;
+  @extend .page-actions;
 }
 
 .add-permission-btn {
-  @include p.add-page-btn;
+  @extend .add-page-btn;
 }
 
 .add-group-btn {
-  @include p.add-page-btn;
+  @extend .add-page-btn;
 }
 
 .permissions-sub-title {

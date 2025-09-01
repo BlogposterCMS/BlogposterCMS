@@ -1,40 +1,40 @@
 // Styles for Login Strategies widget
-@use './base' as p;
+
 
 .login-strategies-card {
-  @include p.page-list-card;
+  @extend .page-list-card;
 }
 
 .login-strategy-title-bar {
-  @include p.page-title-bar;
+  @extend .page-title-bar;
 }
 
 .login-strategy-title {
-  @include p.page-title;
+  @extend .page-title;
 }
 
 .login-strategies-list {
-  @include p.page-list;
+  @extend .page-list;
 }
 
 .login-strategies-list .empty-state {
-  @include p.page-list-empty-state;
+  @extend %page-list-empty-state;
 }
 
 .login-strategies-list li {
-  @include p.page-list-item;
+  @extend %page-list-item;
 }
 
 .login-strategy-name-row {
-  @include p.page-name-row;
+  @extend .page-name-row;
 }
 
 .login-strategy-name {
-  @include p.page-name;
+  @extend .page-name;
 }
 
 .login-strategy-actions {
-  @include p.page-actions;
+  @extend .page-actions;
 }
 
 .login-strategy-scope {
@@ -48,3 +48,4 @@
   font-size: 0.95rem;
   color: #555;
 }
+

@@ -61,6 +61,7 @@ El Psy Kongroo
 
  
 ### Fixed
+- Dashboard widget selection no longer shifts items vertically by disabling the highlighting pseudo-element.
 - CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
 - `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
 

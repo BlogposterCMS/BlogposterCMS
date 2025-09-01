@@ -114,12 +114,17 @@ body:not(.dashboard-edit-mode) canvas-item:hover {
   transform: none;
 }
 
-body.dashboard-edit-mode .widget-container.admin-widget::before,
-body.dashboard-edit-mode canvas-item::before {
+body.dashboard-edit-mode .widget-container.admin-widget::before {
   display: block;
 }
 
+body.dashboard-edit-mode canvas-item::before,
+body.dashboard-edit-mode .canvas-item::before {
+  display: none !important;
+}
+
 body:not(.dashboard-edit-mode) .widget-container.admin-widget::before,
-body:not(.dashboard-edit-mode) canvas-item::before {
+body:not(.dashboard-edit-mode) canvas-item::before,
+body:not(.dashboard-edit-mode) .canvas-item::before {
   display: none;
 }

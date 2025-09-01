@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Preserve scroll position by only recentering canvas on width changes near the origin.
 - Restored styles for admin page stats widget and page picker lost during Sass refactor.
 - Replaced deprecated Sass @import directives with @use and mixins to remove compilation warnings.
 ### Added

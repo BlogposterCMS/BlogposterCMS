@@ -100,7 +100,7 @@ The admin lane provides a drag‑and‑drop page builder at `/admin/builder`. Th
 
 A dropdown attached to the Save button lets you enable or disable autosave without leaving the toolbar.
 
-The canvas opens centered in the viewport at a 100% zoom level and can expand up to 4K widths, with the scroll container resizing as the canvas grows so horizontal and vertical scrollbars appear when layouts overflow.
+The canvas opens centered in the viewport at a 100% zoom level and can expand up to 4K widths, with the scroll container resizing as the canvas grows so horizontal and vertical scrollbars appear when layouts overflow. Even when zoomed out, the zoom sizer keeps the canvas centered so it no longer drifts to the side.
 
 ### Publishing layouts
 

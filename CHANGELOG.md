@@ -59,6 +59,8 @@ El Psy Kongroo
 - `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
 
+ 
+
 
 
 ### Removed
@@ -154,6 +156,9 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
+- `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
+- CanvasGrid keeps the builder grid within its parent during zoom so the canvas stays centered and doesn't drift sideways.
 - Dashboard page renderer now sets `enableZoom: false` when initializing CanvasGrid to avoid creating an unnecessary zoom sizer.
 - Dashboard widget selection no longer shifts items vertically by disabling the highlighting pseudo-element.
 - CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.

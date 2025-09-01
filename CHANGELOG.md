@@ -59,7 +59,9 @@ El Psy Kongroo
 - `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
 
-
+ 
+### Fixed
+- `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
 
 ### Removed
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.

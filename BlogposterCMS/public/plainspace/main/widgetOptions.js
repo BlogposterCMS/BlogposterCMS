@@ -1,8 +1,30 @@
 export function applyWidgetOptions(wrapper, opts = {}, grid) {
   if (!opts) return;
-  if (opts.max) wrapper.classList.add('max');
-  if (opts.maxWidth) wrapper.classList.add('max-width');
-  if (opts.maxHeight) wrapper.classList.add('max-height');
+  if (opts.max) {
+    wrapper.classList.add('max');
+    const m = opts.max;
+    if (typeof m === 'number' || (typeof m === 'string' && !isNaN(parseFloat(m)))) {
+      const p = parseFloat(m);
+      wrapper.style.maxWidth = `${p}%`;
+      wrapper.style.maxHeight = `${p}%`;
+    }
+  }
+  if (opts.maxWidth) {
+    wrapper.classList.add('max-width');
+    const mw = opts.maxWidth;
+    if (typeof mw === 'number' || (typeof mw === 'string' && !isNaN(parseFloat(mw)))) {
+      const p = parseFloat(mw);
+      wrapper.style.maxWidth = `${p}%`;
+    }
+  }
+  if (opts.maxHeight) {
+    wrapper.classList.add('max-height');
+    const mh = opts.maxHeight;
+    if (typeof mh === 'number' || (typeof mh === 'string' && !isNaN(parseFloat(mh)))) {
+      const p = parseFloat(mh);
+      wrapper.style.maxHeight = `${p}%`;
+    }
+  }
 
   let wPercent = null;
   let hPercent = null;

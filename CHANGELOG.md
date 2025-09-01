@@ -61,6 +61,7 @@ El Psy Kongroo
 
  
 ### Fixed
+- Dashboard page renderer now sets `enableZoom: false` when initializing CanvasGrid to avoid creating an unnecessary zoom sizer.
 - CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
 - `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
 

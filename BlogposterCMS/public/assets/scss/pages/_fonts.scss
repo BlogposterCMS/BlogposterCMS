@@ -1,39 +1,40 @@
 // Styles for Font Providers widget
+@use './base' as p;
 
 .fonts-list-card {
-  @extend .page-list-card;
+  @include p.page-list-card;
 }
 
 .fonts-title-bar {
-  @extend .page-title-bar;
+  @include p.page-title-bar;
 }
 
 .fonts-title {
-  @extend .page-title;
+  @include p.page-title;
 }
 
 .fonts-list {
-  @extend .page-list;
+  @include p.page-list;
 }
 
 .fonts-list .empty-state {
-  @extend %page-list-empty-state;
+  @include p.page-list-empty-state;
 }
 
 .fonts-list li {
-  @extend %page-list-item;
+  @include p.page-list-item;
 }
 
 .font-name-row {
-  @extend .page-name-row;
+  @include p.page-name-row;
 }
 
 .font-name {
-  @extend .page-name;
+  @include p.page-name;
 }
 
 .font-actions {
-  @extend .page-actions;
+  @include p.page-actions;
 }
 
 .font-desc {

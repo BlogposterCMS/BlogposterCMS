@@ -1,27 +1,28 @@
 // Styles for Modules List widget
+@use './base' as p;
 
 .modules-list-card {
-  @extend .page-list-card;
+  @include p.page-list-card;
 }
 
 .modules-title-bar {
-  @extend .page-title-bar;
+  @include p.page-title-bar;
 }
 
 .modules-title {
-  @extend .page-title;
+  @include p.page-title;
 }
 
 .modules-list {
-  @extend .page-list;
+  @include p.page-list;
 }
 
 .modules-list .empty-state {
-  @extend %page-list-empty-state;
+  @include p.page-list-empty-state;
 }
 
 .modules-list li {
-  @extend %page-list-item;
+  @include p.page-list-item;
 }
 
 .modules-tabs {
@@ -66,19 +67,19 @@
 }
 
 .module-details {
-  @extend .page-details;
+  @include p.page-details;
 }
 
 .module-name-row {
-  @extend .page-name-row;
+  @include p.page-name-row;
 }
 
 .module-name {
-  @extend .page-name;
+  @include p.page-name;
 }
 
 .module-actions {
-  @extend .page-actions;
+  @include p.page-actions;
 }
 
 .module-meta {
@@ -95,7 +96,6 @@
   cursor: pointer;
   font-size: 0.85rem;
 }
-
 
 .module-upload-overlay {
   position: fixed;

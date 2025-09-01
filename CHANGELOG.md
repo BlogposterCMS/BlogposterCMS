@@ -156,6 +156,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Builder grid no longer drifts at low zoom; CanvasGrid now recenters on resize and uses a top-left transform origin.
 - CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
 - `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.
 - CanvasGrid keeps the builder grid within its parent during zoom so the canvas stays centered and doesn't drift sideways.

@@ -24,14 +24,28 @@ export function sanitizeHtml(html) {
 }
 
 function sanitizeCss(css, inline = false) {
-  const banned = /(expression|url\([^)]*javascript)/i;
+  const expr = /expression/i;
+  const urlPattern = /url\(([^)]*)\)/gi;
+  const isUnsafeUrl = url => {
+    const val = url.trim().replace(/^['"]|['"]$/g, '').toLowerCase();
+    return /^(?:javascript|data|vbscript|file|ftp|chrome|chrome-extension|resource|about|blob):/.test(val);
+  };
   if (inline) {
     return css
       .split(';')
       .map(s => s.trim())
       .filter(Boolean)
-      .filter(rule => !banned.test(rule))
+      .filter(rule => {
+        if (expr.test(rule)) return false;
+        const matches = rule.matchAll(urlPattern);
+        for (const [, url] of matches) {
+          if (isUnsafeUrl(url)) return false;
+        }
+        return true;
+      })
       .join('; ');
   }
-  return css.replace(/expression\([^)]*\)/gi, '').replace(/url\(([^)]*javascript[^)]*)\)/gi, '');
+  return css
+    .replace(/expression\([^)]*\)/gi, '')
+    .replace(urlPattern, (match, url) => (isUnsafeUrl(url) ? '' : match));
 }

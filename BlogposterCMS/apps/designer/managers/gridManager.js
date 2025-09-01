@@ -6,6 +6,7 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
   // use the grid's parent element. This allows zoom to keep scrollbars
   // inside the designer viewport instead of the page.
   const scrollContainer = opts.scrollContainer || gridEl.parentElement || gridEl;
+  const enableZoom = opts.enableZoom === true;
   const grid = initCanvasGrid(
     {
       columns: columnCount,
@@ -15,7 +16,8 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
       liveSnapResize: false,
       percentageMode: true,
       bboxHandles: true,
-      scrollContainer
+      scrollContainer,
+      enableZoom
     },
     gridEl
   );

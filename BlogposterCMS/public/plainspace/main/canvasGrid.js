@@ -94,6 +94,8 @@ export class CanvasGrid {
         this._updateBBox();
         // Keep the zoom sizer in sync with container width changes
         this._syncSizer();
+        // Re-center the viewport so smaller canvases stay anchored
+        this._centerViewport();
       });
       _ro.observe(this.el);
       this._containerRO = _ro;
@@ -110,8 +112,8 @@ export class CanvasGrid {
     this.scale = 1;
     if (this.enableZoom) {
       this.el.style.setProperty('--canvas-scale', '1');
-      // Centered transform origin so the canvas scales around the middle
-      this.el.style.transformOrigin = '50% 50%';
+      // Top-left transform origin keeps the canvas from drifting when zoomed out
+      this.el.style.transformOrigin = '0 0';
       const wheelZoom = e => {
         if (!e.ctrlKey) return;
         e.preventDefault();

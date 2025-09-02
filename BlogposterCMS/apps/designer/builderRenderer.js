@@ -661,37 +661,41 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   });
 
-  previewBtn.addEventListener('click', () => {
-    const active = document.body.classList.toggle('preview-mode');
-    if (window.featherIcon) {
-      previewBtn.innerHTML = window.featherIcon(active ? 'eye-off' : 'eye');
-    } else {
-      const icon = active ? 'eye-off' : 'eye';
-      previewBtn.innerHTML = `<img src="/assets/icons/${icon}.svg" alt="Preview" />`;
-    }
-    if (active) {
-      showPreviewHeader();
-    } else {
-      hidePreviewHeader();
-    }
-  });
+  if (previewBtn) {
+    previewBtn.addEventListener('click', () => {
+      const active = document.body.classList.toggle('preview-mode');
+      if (window.featherIcon) {
+        previewBtn.innerHTML = window.featherIcon(active ? 'eye-off' : 'eye');
+      } else {
+        const icon = active ? 'eye-off' : 'eye';
+        previewBtn.innerHTML = `<img src="/assets/icons/${icon}.svg" alt="Preview" />`;
+      }
+      if (active) {
+        showPreviewHeader();
+      } else {
+        hidePreviewHeader();
+      }
+    });
+  }
 
-  initPublishPanel({
-    publishBtn,
-    nameInput,
-    gridEl,
-    updateAllWidgetContents,
-    getAdminUserId,
-    saveDesign: () => saveDesign({
-      name: nameInput.value.trim(),
+  if (publishBtn) {
+    initPublishPanel({
+      publishBtn,
+      nameInput,
       gridEl,
-      getCurrentLayoutForLayer,
-      getActiveLayer: () => activeLayer,
-      ensureCodeMap,
       updateAllWidgetContents,
-      pageId
-    })
-  });
+      getAdminUserId,
+      saveDesign: () => saveDesign({
+        name: nameInput.value.trim(),
+        gridEl,
+        getCurrentLayoutForLayer,
+        getActiveLayer: () => activeLayer,
+        ensureCodeMap,
+        updateAllWidgetContents,
+        pageId
+      })
+    });
+  }
 
     let versionEl = document.getElementById('builderVersion');
   if (!versionEl) {

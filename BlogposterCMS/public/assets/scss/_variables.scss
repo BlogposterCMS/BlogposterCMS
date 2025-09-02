@@ -30,8 +30,8 @@
   --shadow-default: 0px 0px 0px 1px rgba(64, 87, 109, .04), 0px 6px 20px -4px rgba(64, 87, 109, .3);
 
   // Typography
-  --font-body: 'Manrope', sans-serif;
-  --font-heading: 'Oswald', sans-serif;
+  --font-body: 'Noto Sans Variable', sans-serif;
+  --font-heading: var(--font-body);
   --font-mono: monospace;
 }
 

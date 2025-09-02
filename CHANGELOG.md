@@ -30,6 +30,7 @@ El Psy Kongroo
 
 ### Changed
 - Builder publish and builder panels now inherit global fonts, use side shadows instead of borders, and the publish button spans the panel width.
+- Builder publish suggestions now only list pages from the public lane to avoid exposing admin pages.
 - Extracted builder header button logic into a dedicated module for clearer separation of concerns.
 - Moved viewport and menu buttons into the builder header partial for easier customization.
 - Builder header Save and Publish buttons now match Preview styling and only show color when active.

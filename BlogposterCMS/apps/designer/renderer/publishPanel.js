@@ -134,11 +134,11 @@ export function initPublishPanel({
         moduleName: 'pagesManager',
         moduleType: 'core',
         query: q,
-        lane: 'all',
+        lane: 'public',
         limit: 10
       });
-      const pages = Array.isArray(res) ? res : (res.pages || res.rows || []);
-      return pages;
+      const pagesRaw = Array.isArray(res) ? res : (res.pages || res.rows || []);
+      return pagesRaw.filter(p => p.lane === 'public');
     } catch (err) {
       console.warn('searchPages failed', err);
       return [];
@@ -183,7 +183,10 @@ export function initPublishPanel({
         pageId: Number(el.dataset.id)
       });
       const page = res?.data ?? res;
-      selectedPage = page || null;
+      if (!page || page.lane !== 'public') {
+        return;
+      }
+      selectedPage = page;
       creatingPage = false;
       infoEl.classList.add('hidden');
       draftWrap.classList.add('hidden');

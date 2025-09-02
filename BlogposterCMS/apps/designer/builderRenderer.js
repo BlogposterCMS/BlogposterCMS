@@ -22,7 +22,7 @@ function DBG(...args) {
   try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/builder]', ...args); } catch (e) {}
 }
 import { createActionBar } from './renderer/actionBar.js';
-import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
+import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 import { initPublishPanel } from './renderer/publishPanel.js';
@@ -264,6 +264,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     codeMap: ensureCodeMap(),
     getLayer: () => activeLayer
   };
+  const { scheduleAutosave, startAutosave, saveDesign } = createSaveManager(state, saveLayoutCtx);
   await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
   const grid = initGrid(gridEl, state, selectWidget, {
@@ -271,9 +272,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     enableZoom: true
   });
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
-  function scheduleAutosave() {
-    scheduleAutosaveFn(state, opts => saveLayout(opts, { ...saveLayoutCtx, ...state }));
-  }
   function selectWidget(el) {
     baseSelectWidget(el);
     if (!el) return;
@@ -440,13 +438,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
-  function startAutosave() {
-    startAutosaveFn(state, opts => saveLayout(opts, saveLayoutCtx));
-  }
-
-  async function saveCurrentLayout(opts = {}) {
-    await saveLayout(opts, { ...saveLayoutCtx, ...state });
-  }
 
   let initialLayout = [];
   let pageData = null;
@@ -792,7 +783,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   autosaveToggle.checked = state.autosaveEnabled;
   autosaveToggle.addEventListener('change', () => {
     state.autosaveEnabled = autosaveToggle.checked;
-    startAutosaveFn(state, saveLayoutCtx);
+    startAutosave();
   });
 
   // Header already injected by loadHeaderPartial();
@@ -817,42 +808,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   saveBtn.addEventListener('click', async () => {
-    const name = nameInput.value.trim();
-    if (!name) { alert('Enter a name'); return; }
-    updateAllWidgetContents();
-    const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
-    const previewPath = await capturePreview();
     try {
-      await meltdownEmit('saveLayoutTemplate', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        name,
-        lane: 'public',
-        viewport: 'desktop',
-        layout,
-        previewPath
+      await saveDesign({
+        name: nameInput.value.trim(),
+        gridEl,
+        getCurrentLayoutForLayer,
+        getActiveLayer: () => activeLayer,
+        ensureCodeMap,
+        capturePreview,
+        updateAllWidgetContents,
+        pageId
       });
-
-      const targetIds = pageId ? [pageId] : [];
-
-      const events = targetIds.map(id => ({
-        eventName: 'saveLayoutForViewport',
-        payload: {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core',
-          pageId: id,
-          lane: 'public',
-          viewport: 'desktop',
-          layout
-        }
-      }));
-
-      await meltdownEmitBatch(events);
-
       alert('Layout template saved');
     } catch (err) {
-      console.error('[Designer] saveLayoutTemplate error', err);
       alert('Save failed: ' + err.message);
     }
   });
@@ -876,12 +844,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     publishBtn,
     nameInput,
     gridEl,
-    getActiveLayer: () => activeLayer,
-    ensureCodeMap,
-    getCurrentLayoutForLayer,
-    capturePreview,
     updateAllWidgetContents,
-    getAdminUserId
+    getAdminUserId,
+    saveDesign: () => saveDesign({
+      name: nameInput.value.trim(),
+      gridEl,
+      getCurrentLayoutForLayer,
+      getActiveLayer: () => activeLayer,
+      ensureCodeMap,
+      updateAllWidgetContents,
+      pageId
+    })
   });
 
     let versionEl = document.getElementById('builderVersion');

@@ -22,12 +22,9 @@ export function initPublishPanel({
   publishBtn,
   nameInput,
   gridEl,
-  getActiveLayer,
-  ensureCodeMap,
-  getCurrentLayoutForLayer,
-  capturePreview,
   updateAllWidgetContents,
-  getAdminUserId
+  getAdminUserId,
+  saveDesign
 }) {
   const publishPopup = document.getElementById('publishPanel');
   publishPopup.classList.add('hidden');
@@ -83,6 +80,7 @@ export function initPublishPanel({
       const slug = sanitizeSlug(slugInput.value.trim());
       if (!slug) { alert('Enter a subpath'); return; }
       try {
+        await saveDesign();
         const name = nameInput.value.trim();
         if (creatingPage) {
           const newPage = await pageService.create({
@@ -225,8 +223,6 @@ export function initPublishPanel({
     const name = nameInput.value.trim();
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
-    const layout = getCurrentLayoutForLayer(gridEl, getActiveLayer(), ensureCodeMap());
-    const previewPath = await capturePreview();
     const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
     const normalizedSubPath = subSlug
       ? (subSlug.startsWith('builder/') ? subSlug : `builder/${subSlug}`)
@@ -292,15 +288,6 @@ export function initPublishPanel({
     } catch (err) {
       console.warn('[Designer] deleteLocalItem', err);
     }
-    await meltdownEmit('saveLayoutTemplate', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'plainspace',
-      name,
-      lane: 'public',
-      viewport: 'desktop',
-      layout,
-      previewPath
-    });
     for (const f of files) {
       await meltdownEmit('uploadFileToFolder', {
         jwt: window.ADMIN_TOKEN,

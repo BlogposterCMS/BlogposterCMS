@@ -12,6 +12,8 @@ El Psy Kongroo
 - Restored styles for admin page stats widget and page picker lost during Sass refactor.
 - Replaced deprecated Sass @import directives with @use and mixins to remove compilation warnings.
 ### Added
+- Centralized save and autosave logic into a new `saveManager` module for reuse across the builder.
+- Publishing now saves the current layout before creating or updating pages and attaching designs.
 - CanvasGrid now accepts an `enableZoom` option; dashboard grids disable zoom by default to avoid the builder's zoom sizer.
 - Admin home workspace now seeds roadmap intro, upcoming features, and drag demo widgets, replacing previous defaults.
 - Autosave toggle lives in a dropdown attached to the Save button for quicker access.

@@ -26,19 +26,19 @@ export function initPublishPanel({
   getAdminUserId,
   saveDesign
 }) {
-  const publishPopup = document.getElementById('publishPanel');
-  publishPopup.classList.add('hidden');
+  const publishPanel = document.getElementById('publishPanel');
+  publishPanel.classList.add('hidden');
   let slugInput, suggestionsEl, warningEl, draftWrap, draftCb, infoEl, draftNote, confirmBtn, closeBtn;
   let selectedPage = null;
   let creatingPage = false;
   fetchPartial('publish-panel', 'builder')
     .then(html => {
-      publishPopup.innerHTML = sanitizeHtml(html);
+      publishPanel.innerHTML = sanitizeHtml(html);
       setupElements();
     })
     .catch(err => {
       console.warn('[Designer] Failed to load publish panel:', err);
-      publishPopup.innerHTML = `
+      publishPanel.innerHTML = `
   <button class="publish-close" type="button" aria-label="Close">&times;</button>
   <label class="publish-slug-label">Subpath
     <input type="text" class="publish-slug-input" />
@@ -54,24 +54,24 @@ export function initPublishPanel({
   loadPageService();
 
   function setupElements() {
-    slugInput = publishPopup.querySelector('.publish-slug-input');
-    suggestionsEl = publishPopup.querySelector('.publish-suggestions');
-    warningEl = publishPopup.querySelector('.publish-warning');
-    draftWrap = publishPopup.querySelector('.publish-draft');
-    draftCb = publishPopup.querySelector('.publish-draft-checkbox');
-    infoEl = publishPopup.querySelector('.publish-info');
-    draftNote = publishPopup.querySelector('.publish-draft-note');
-    confirmBtn = publishPopup.querySelector('.publish-confirm');
-    closeBtn = publishPopup.querySelector('.publish-close');
+    slugInput = publishPanel.querySelector('.publish-slug-input');
+    suggestionsEl = publishPanel.querySelector('.publish-suggestions');
+    warningEl = publishPanel.querySelector('.publish-warning');
+    draftWrap = publishPanel.querySelector('.publish-draft');
+    draftCb = publishPanel.querySelector('.publish-draft-checkbox');
+    infoEl = publishPanel.querySelector('.publish-info');
+    draftNote = publishPanel.querySelector('.publish-draft-note');
+    confirmBtn = publishPanel.querySelector('.publish-confirm');
+    closeBtn = publishPanel.querySelector('.publish-close');
 
     slugInput.addEventListener('input', onSlugInput);
     suggestionsEl.addEventListener('click', onSuggestionClick);
     draftCb.addEventListener('change', onDraftToggle);
-    publishBtn.addEventListener('click', togglePopup);
-    closeBtn.addEventListener('click', hidePublishPopup);
+    publishBtn.addEventListener('click', togglePanel);
+    closeBtn.addEventListener('click', hidePublishPanel);
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !publishPopup.classList.contains('hidden')) {
-        hidePublishPopup();
+      if (e.key === 'Escape' && !publishPanel.classList.contains('hidden')) {
+        hidePublishPanel();
       }
     });
 
@@ -98,7 +98,7 @@ export function initPublishPanel({
           await pageService.update(selectedPage, patch);
         }
         await runPublish(slug);
-        hidePublishPopup();
+        hidePublishPanel();
       } catch (err) {
         console.error('[Designer] publish flow error', err);
         alert('Publish failed: ' + err.message);
@@ -106,33 +106,22 @@ export function initPublishPanel({
     });
   }
 
-  function positionPublishPopup() {
-    const rect = publishBtn.getBoundingClientRect();
-    publishPopup.style.top = `${rect.bottom}px`;
-    publishPopup.style.height = `calc(100% - ${rect.bottom}px)`;
-  }
-
-  function showPublishPopup() {
-    positionPublishPopup();
-    publishPopup.classList.remove('hidden');
+  function showPublishPanel() {
+    publishPanel.classList.remove('hidden');
     slugInput.focus();
   }
 
-  function hidePublishPopup() {
-    publishPopup.classList.add('hidden');
+  function hidePublishPanel() {
+    publishPanel.classList.add('hidden');
   }
 
-  function togglePopup() {
-    if (publishPopup.classList.contains('hidden')) {
-      showPublishPopup();
+  function togglePanel() {
+    if (publishPanel.classList.contains('hidden')) {
+      showPublishPanel();
     } else {
-      hidePublishPopup();
+      hidePublishPanel();
     }
   }
-
-  window.addEventListener('resize', () => {
-    if (!publishPopup.classList.contains('hidden')) positionPublishPopup();
-  });
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));

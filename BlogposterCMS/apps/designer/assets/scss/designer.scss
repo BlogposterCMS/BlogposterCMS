@@ -1,6 +1,6 @@
 @use '../../../../public/assets/scss/variables' as *;
 @use '../../../../public/assets/scss/components/grid-mode';
-@use 'publish-popup';
+@use 'publish-panel';
 @use 'variables';
 @use 'header';
 @use 'sidebar';
@@ -11,13 +11,6 @@
 @use 'widget-code-editor';
 @use 'color-picker';
 @use 'canvas';
-
-body.builder-mode {
-  .publish-popup {
-    top: var(--header-height, 64px);
-    height: calc(100% - var(--header-height, 64px));
-  }
-}
 
 // Flex row wrapper for sidebar, content, and publish panel
   .builder-row {

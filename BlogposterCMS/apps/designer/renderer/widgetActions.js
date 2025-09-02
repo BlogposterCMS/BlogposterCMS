@@ -175,7 +175,7 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
       if (pageId) scheduleAutosave();
     };
     overlay.querySelector('.reset-btn').onclick = () => {
-      if (!confirm('Willst du wirklich alle Anpassungen zurücksetzen?')) return;
+      if (!confirm('Do you really want to reset all customizations?')) return;
       const instId = el.dataset.instanceId;
       if (codeMap) delete codeMap[instId];
       htmlEl.value = '';

@@ -43,7 +43,7 @@ export function initBackgroundToolbar() {
   const colorBtn = document.createElement('button');
   colorBtn.type = 'button';
   colorBtn.className = 'tb-btn';
-  colorBtn.title = 'Hintergrundfarbe';
+  colorBtn.title = 'Background color';
   // Use same visual language: underlined A with current color
   const colorIcon = document.createElement('span');
   colorIcon.className = 'color-icon';
@@ -59,18 +59,18 @@ export function initBackgroundToolbar() {
   const imageBtn = document.createElement('button');
   imageBtn.type = 'button';
   imageBtn.className = 'tb-btn';
-  imageBtn.title = 'Hintergrundbild';
+  imageBtn.title = 'Background image';
   try {
-    imageBtn.innerHTML = window.featherIcon ? window.featherIcon('image') : '<img src="/assets/icons/image.svg" alt="Bild" />';
+    imageBtn.innerHTML = window.featherIcon ? window.featherIcon('image') : '<img src="/assets/icons/image.svg" alt="Image" />';
   } catch (e) {
-    imageBtn.textContent = 'Bild';
+    imageBtn.textContent = 'Image';
   }
 
   // Optional: clear button
   const clearBtn = document.createElement('button');
   clearBtn.type = 'button';
   clearBtn.className = 'tb-btn';
-  clearBtn.title = 'Hintergrund zurücksetzen';
+  clearBtn.title = 'Reset background';
   try {
     clearBtn.innerHTML = window.featherIcon ? window.featherIcon('x') : '<img src="/assets/icons/x.svg" alt="Clear" />';
   } catch (e) {
@@ -98,7 +98,7 @@ export function initBackgroundToolbar() {
     }
     // Update title to reflect background context (non-destructive for text flow)
     const h4 = colorPanel.querySelector('h4');
-    if (h4) h4.textContent = 'Hintergrundfarbe';
+    if (h4) h4.textContent = 'Background color';
 
     showBuilderPanel('color-panel');
     const host = colorPanel.querySelector('.color-panel-content') || colorPanel;

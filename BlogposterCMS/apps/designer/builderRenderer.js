@@ -552,8 +552,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
 
-    /* --------  Neu: automatisch auswählen  --------------------------- */
-    selectWidget(wrapper);          // ruft Action-Bar & widgetSelected
+    /* --------  New: auto-select  --------------------------- */
+    selectWidget(wrapper);          // triggers action bar & widgetSelected
 
     renderWidget(wrapper, widgetDef, localCodeMap);
     markInactiveWidgets();

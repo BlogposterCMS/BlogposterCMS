@@ -26,6 +26,7 @@ import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 import { initPublishPanel } from './renderer/publishPanel.js';
+import { initHeaderControls } from './renderer/headerControls.js';
 
 function getAdminUserId() {
   try {
@@ -163,7 +164,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
 
-  let proMode = true;
   let gridEl;
   let codeMap = {};
   // Track when the BG toolbar was just opened to avoid immediate hide by global click
@@ -184,17 +184,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     activeWidgetEl: null
   };
 
-  function applyProMode() {
-    document.body.classList.toggle('pro-mode', proMode);
-    document.querySelectorAll('.widget-edit').forEach(btn => {
-      btn.style.display = proMode ? '' : 'none';
-    });
-    if (!proMode) {
-      document.querySelectorAll('.widget-code-editor').forEach(ed => {
-        ed.style.display = 'none';
-      });
-    }
-  }
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
 
 
@@ -585,96 +574,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   if (nameInput) {
     try { nameInput.value = layoutName; } catch (_) {}
   }
-
-  const viewportBtn = document.createElement('button');
-  viewportBtn.id = 'viewportControlBtn';
-  viewportBtn.className = 'builder-viewport-btn';
-  viewportBtn.innerHTML = window.featherIcon
-    ? window.featherIcon('monitor')
-    : '<img src="/assets/icons/monitor.svg" alt="Viewport" />';
-  topBar.appendChild(viewportBtn);
-
-  const viewportPanel = document.createElement('div');
-  viewportPanel.className = 'viewport-slider';
-  viewportPanel.style.display = 'none';
-  const viewportRange = document.createElement('input');
-  viewportRange.type = 'range';
-  viewportRange.min = '320';
-  viewportRange.max = '3840';
-  viewportRange.step = '10';
-  viewportRange.className = 'viewport-range';
-  const viewportValue = document.createElement('span');
-  viewportValue.className = 'viewport-value';
-  viewportPanel.appendChild(viewportRange);
-  viewportPanel.appendChild(viewportValue);
-
-  const DEFAULT_VIEWPORT = 1920;
-  function setViewportWidth(val) {
-    gridEl.style.width = `${val}px`;
-    gridEl.style.margin = '0 auto';
-    viewportValue.textContent = `${val}px`;
-    viewportSizeEl.textContent = `${val}px`;
-    if (grid && typeof grid.setScale === 'function') {
-      const current = grid.scale || parseFloat(
-        getComputedStyle(gridEl).getPropertyValue('--canvas-scale') || '1'
-      );
-      grid.setScale(current);
-    }
-  }
-
-  viewportRange.value = String(DEFAULT_VIEWPORT);
-  setViewportWidth(DEFAULT_VIEWPORT);
-
-  // Popin handling for viewport slider (similar to header menu)
-  function hideViewportPanel() {
-    viewportPanel.style.display = 'none';
-    document.removeEventListener('click', outsideViewportHandler);
-  }
-
-  function outsideViewportHandler(e) {
-    if (!viewportPanel.contains(e.target) && e.target !== viewportBtn) hideViewportPanel();
-  }
-
-  viewportBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (viewportPanel.style.display === 'block') { hideViewportPanel(); return; }
-
-    // Show and position under the icon
-    viewportPanel.style.display = 'block';
-    viewportPanel.style.visibility = 'hidden';
-    const rect = viewportBtn.getBoundingClientRect();
-    const top = rect.bottom + 4 + (window.scrollY || document.documentElement.scrollTop || 0);
-    viewportPanel.style.top = `${top}px`;
-    // Temporarily set left to compute width, then adjust to keep inside viewport
-    const scrollX = (window.scrollX || document.documentElement.scrollLeft || 0);
-    let left = rect.left + scrollX;
-    // Ensure the panel is in the document so offsetWidth is measurable
-    // (panel gets appended later in this function's flow)
-    const panelWidth = viewportPanel.offsetWidth || 0;
-    const maxLeft = Math.max(8, window.innerWidth - panelWidth - 8);
-    if (left > maxLeft) left = maxLeft;
-    viewportPanel.style.left = `${left}px`;
-    viewportPanel.style.visibility = '';
-    document.addEventListener('click', outsideViewportHandler);
-  });
-
-  viewportRange.addEventListener('input', () => {
-    const val = parseInt(viewportRange.value, 10);
-    if (Number.isFinite(val)) setViewportWidth(val);
-  });
-
-  if (window.ResizeObserver) {
-    const resizeObserver = new ResizeObserver(entries => {
-      const entry = entries[0];
-      const width = Math.round(entry.contentRect.width);
-      viewportRange.value = String(width);
-      viewportValue.textContent = `${width}px`;
-      viewportSizeEl.textContent = `${width}px`;
-    });
-    resizeObserver.observe(gridEl);
-  }
-
-  // Reuse buttons from the loaded partial
   const headerActions = topBar.querySelector('.header-actions') || topBar;
   const saveBtn = topBar.querySelector('#saveLayoutBtn');
   const previewBtn = topBar.querySelector('#previewLayoutBtn');
@@ -702,54 +601,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
   saveWrapper.appendChild(saveDropdown);
 
-  const headerMenuBtn = document.createElement('button');
-  headerMenuBtn.className = 'builder-menu-btn';
-  headerMenuBtn.innerHTML = window.featherIcon
-    ? window.featherIcon('more-vertical')
-    : '<img src="/assets/icons/ellipsis-vertical.svg" alt="menu" />';
-  topBar.appendChild(headerMenuBtn);
-
-  const headerMenu = document.createElement('div');
-  headerMenu.className = 'builder-options-menu';
-  headerMenu.innerHTML = `
-    <button class="menu-undo"><img src="/assets/icons/rotate-ccw.svg" class="icon" alt="undo" /> Undo</button>
-    <button class="menu-redo"><img src="/assets/icons/rotate-cw.svg" class="icon" alt="redo" /> Redo</button>
-    <label class="menu-pro"><input type="checkbox" class="pro-toggle" checked /> Pro Mode</label>
-  `;
-  headerMenu.style.display = 'none';
-  document.body.appendChild(headerMenu);
-
-  function hideHeaderMenu() {
-    headerMenu.style.display = 'none';
-    document.removeEventListener('click', outsideHeaderHandler);
-  }
-
-  function outsideHeaderHandler(e) {
-    if (!headerMenu.contains(e.target) && e.target !== headerMenuBtn) hideHeaderMenu();
-  }
-
-  headerMenuBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (headerMenu.style.display === 'block') { hideHeaderMenu(); return; }
-    headerMenu.style.display = 'block';
-    headerMenu.style.visibility = 'hidden';
-    const rect = headerMenuBtn.getBoundingClientRect();
-    headerMenu.style.top = `${rect.bottom + 4}px`;
-    headerMenu.style.left = `${rect.right - headerMenu.offsetWidth}px`;
-    headerMenu.style.visibility = '';
-    document.addEventListener('click', outsideHeaderHandler);
-  });
-
-  // (no persistent viewport selector in header)
-
-  headerMenu.querySelector('.menu-undo').addEventListener('click', () => { hideHeaderMenu(); undo(); });
-  headerMenu.querySelector('.menu-redo').addEventListener('click', () => { hideHeaderMenu(); redo(); });
-  const proToggle = headerMenu.querySelector('.pro-toggle');
-  proToggle.checked = proMode;
-  proToggle.addEventListener('change', () => {
-    proMode = proToggle.checked;
-    applyProMode();
-  });
+  initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo, redo });
 
   saveMenuBtn.addEventListener('click', e => {
     e.stopPropagation();
@@ -775,13 +627,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   });
 
   // Header already injected by loadHeaderPartial();
-  // Attach viewport slider popin to body so it can float above header
-  document.body.appendChild(viewportPanel);
-
   // (no extra style injection)
 
   startAutosave();
-  applyProMode();
   buildLayoutBar();
 
   async function capturePreview() {

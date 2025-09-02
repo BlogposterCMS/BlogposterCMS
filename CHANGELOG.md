@@ -29,6 +29,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Extracted builder header button logic into a dedicated module for clearer separation of concerns.
+- Moved viewport and menu buttons into the builder header partial for easier customization.
 - Builder header Save and Publish buttons now match Preview styling and only show color when active.
 - Publish panel now behaves like the builder panel and shifts `#content` aside instead of overlaying it.
 - Extracted builder publish panel logic into a dedicated module for easier maintenance.

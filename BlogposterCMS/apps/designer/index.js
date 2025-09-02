@@ -12,7 +12,7 @@ async function bootstrap() {
   const contentEl = document.getElementById('builderMain');
   try {
     sidebarEl.innerHTML = sanitizeHtml(await fetchPartial('sidebar-builder'));
-    const panelContainer = sidebarEl.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     if (panelContainer) {
       const textHtml = await fetchPartial('text-panel', 'builder');
       panelContainer.innerHTML = sanitizeHtml(textHtml);

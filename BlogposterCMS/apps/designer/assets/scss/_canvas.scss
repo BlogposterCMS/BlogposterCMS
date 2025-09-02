@@ -132,20 +132,6 @@ body.builder-mode #content {
   }
 }
 
-// Panel open state
-body.builder-mode.panel-open {
-  #content {
-  /* No offset in flex layout; keep visual transform only */
-    transform: scale(0.95);
-    transform-origin: top left;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .builder-panel {
-    display: flex;
-  }
-  /* viewport remains unclipped so #builderGrid shadows are visible */
-}
 
 // Updated dimensions
 body.builder-mode #builderViewport {
@@ -607,9 +593,4 @@ body.builder-mode .canvas-item.inactive-layer {
     bottom: 60px;
   }
 
-  body.builder-mode.panel-open #content {
-    margin-left: 0;
-    margin-bottom: calc(50vh + 60px);
-    transform: none;
-  }
 }

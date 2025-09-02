@@ -80,8 +80,7 @@ export function initBackgroundToolbar() {
   state.colorPicker?.el?.classList.add('hidden');
 
   async function openColorPanel() {
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     if (!panelContainer) return false;
     let colorPanel = panelContainer.querySelector('.color-panel');
     if (!colorPanel) {
@@ -115,14 +114,12 @@ export function initBackgroundToolbar() {
       collapseBtn.__bgBound = true;
       collapseBtn.addEventListener('click', () => closeColorPanel());
     }
-    document.body.classList.add('panel-open', 'panel-opening');
-    setTimeout(() => document.body.classList.remove('panel-opening'), 200);
+    panelContainer.classList.remove('hidden');
     return true;
   }
 
   function closeColorPanel() {
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     panelContainer?.querySelectorAll('.builder-panel').forEach(p => {
       if (p.classList.contains('color-panel')) {
         p.style.display = 'none';
@@ -131,9 +128,7 @@ export function initBackgroundToolbar() {
       }
     });
     state.colorPicker.el.classList.add('hidden');
-    document.body.classList.add('panel-closing');
-    document.body.classList.remove('panel-open');
-    setTimeout(() => document.body.classList.remove('panel-closing'), 200);
+    panelContainer?.classList.add('hidden');
     try { colorBtn.focus(); } catch (e) {}
   }
 
@@ -152,13 +147,12 @@ export function initBackgroundToolbar() {
       },
       onClose: () => closeColorPanel()
     });
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     const colorPanel = panelContainer?.querySelector('.color-panel');
     const colorPanelVisible = !!(
       colorPanel &&
       colorPanel.style.display !== 'none' &&
-      document.body.classList.contains('panel-open') &&
+      panelContainer && !panelContainer.classList.contains('hidden') &&
       !state.colorPicker.el.classList.contains('hidden')
     );
     if (colorPanelVisible) { closeColorPanel(); return; }

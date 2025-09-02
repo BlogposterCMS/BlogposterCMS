@@ -241,14 +241,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   });
 
   const textIcon = sidebarEl.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
-  const builderPanel = sidebarEl.querySelector('#builderPanel');
+  const builderPanel = document.getElementById('builderPanel');
   const collapseBtn = builderPanel?.querySelector('.collapse-btn');
   if (textIcon && builderPanel && collapseBtn) {
     textIcon.addEventListener('click', () => {
-      document.body.classList.toggle('panel-open');
+      builderPanel.classList.toggle('hidden');
+      if (!builderPanel.classList.contains('hidden')) {
+        builderPanel.querySelectorAll('.builder-panel').forEach(p => {
+          p.style.display = p.classList.contains('text-panel') ? '' : 'none';
+        });
+      }
     });
     collapseBtn.addEventListener('click', () => {
-      document.body.classList.remove('panel-open');
+      builderPanel.classList.add('hidden');
     });
   }
 

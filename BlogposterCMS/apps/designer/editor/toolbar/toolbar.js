@@ -434,9 +434,8 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     }
   }, true);
   async function openColorSidebar() {
-    const sidebar = document.getElementById('sidebar');
     state.colorPicker.updateOptions({ documentColors: collectDocumentColors() });
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     if (!panelContainer) return false;
 
     // Ensure the color panel markup exists; preload by index.js, else fetch lazily
@@ -477,14 +476,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       collapseBtn.addEventListener('click', () => closeColorSidebar());
     }
 
-    document.body.classList.add('panel-open', 'panel-opening');
-    setTimeout(() => document.body.classList.remove('panel-opening'), 200);
+    panelContainer.classList.remove('hidden');
     return true;
   }
 
   function closeColorSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     // Hide color panel and show other panels back (e.g., text-panel)
     panelContainer?.querySelectorAll('.builder-panel').forEach(p => {
       if (p.classList.contains('color-panel')) {
@@ -495,9 +492,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     });
     // Hide picker content
     state.colorPicker.el.classList.add('hidden');
-    document.body.classList.add('panel-closing');
-    document.body.classList.remove('panel-open');
-    setTimeout(() => document.body.classList.remove('panel-closing'), 200);
+    panelContainer?.classList.add('hidden');
     try { colorBtn.focus(); } catch (e) {}
   }
 
@@ -512,13 +507,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       onClose: () => closeColorSidebar()
     });
     // If color sidebar already open -> close it (toggle)
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     const colorPanel = panelContainer?.querySelector('.color-panel');
     const colorPanelVisible = !!(
       colorPanel &&
       colorPanel.style.display !== 'none' &&
-      document.body.classList.contains('panel-open') &&
+      panelContainer && !panelContainer.classList.contains('hidden') &&
       !state.colorPicker.el.classList.contains('hidden')
     );
     if (colorPanelVisible) { closeColorSidebar(); return; }

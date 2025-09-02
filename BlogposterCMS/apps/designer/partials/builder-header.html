@@ -1,30 +1,31 @@
 <header id="builder-header" class="builder-header">
-  <input id="layoutNameInput" type="text" class="layout-name-input" placeholder="Layout name" required />
-  <button id="saveLayoutBtn" class="button">
-    <img src="/assets/icons/save.svg" class="icon" alt="Save" />
-    Save Layout
+  <!-- Back Button separat -->
+  <button class="builder-back-btn">
+    <img src="/assets/icons/arrow-left.svg" alt="Back" class="icon" />
   </button>
-  <button id="publishLayoutBtn" class="button builder-publish-btn">
-    <img src="/assets/icons/upload.svg" class="icon" alt="Publish" />
-    Publish
-  </button>
-  <button id="previewLayoutBtn" class="button builder-preview-btn">
-    <img src="/assets/icons/eye.svg" class="icon" alt="Preview" />
-    Preview
-  </button>
-</header>
-<header id="builder-header" class="builder-header">
-  <input id="layoutNameInput" type="text" class="layout-name-input" placeholder="Layout name" required />
-  <button id="saveLayoutBtn" class="button">
-    <img src="/assets/icons/save.svg" class="icon" alt="Save" />
-    Save Layout
-  </button>
-  <button id="publishLayoutBtn" class="button builder-publish-btn">
-    <img src="/assets/icons/upload.svg" class="icon" alt="Publish" />
-    Publish
-  </button>
-  <button id="previewLayoutBtn" class="button builder-preview-btn">
-    <img src="/assets/icons/eye.svg" class="icon" alt="Preview" />
-    Preview
-  </button>
+
+  <!-- Layout Name -->
+  <input
+    id="layoutNameInput"
+    type="text"
+    class="layout-name-input"
+    placeholder="Layout name"
+    required
+  />
+
+  <!-- Actions zusammengefasst -->
+  <div class="header-actions">
+    <button id="saveLayoutBtn" class="button builder-save-btn">
+      <img src="/assets/icons/save.svg" class="icon" alt="Save" />
+      Save Layout
+    </button>
+    <button id="publishLayoutBtn" class="button builder-publish-btn">
+      <img src="/assets/icons/upload.svg" class="icon" alt="Publish" />
+      Publish
+    </button>
+    <button id="previewLayoutBtn" class="button builder-preview-btn">
+      <img src="/assets/icons/eye.svg" class="icon" alt="Preview" />
+      Preview
+    </button>
+  </div>
 </header>

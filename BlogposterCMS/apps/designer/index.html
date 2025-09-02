@@ -6,12 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/apps/designer/assets/css/designer.css">
 <body>
-  <aside id="sidebar" class="sidebar builder-sidebar" aria-label="Builder sidebar"></aside>
-  <div id="content">
-    <main id="builderMain"></main>
-    <footer id="builderFooter" class="builder-footer"></footer>
+  <div id="builderRow" class="builder-row">
+    <aside id="sidebar" class="sidebar builder-sidebar" aria-label="Builder sidebar"></aside>
+    <div id="content">
+      <main id="builderMain"></main>
+      <footer id="builderFooter" class="builder-footer"></footer>
+    </div>
+    <aside id="publishPanel" class="publish-popup hidden" aria-label="Publish popup"></aside>
   </div>
-  <aside id="publishPanel" class="publish-popup hidden" aria-label="Publish popup"></aside>
   <script src="/build/meltdownEmitter.js"></script>
   <script type="module" src="/assets/js/fontsLoader.js"></script>
   <script src="/build/icons.js"></script>

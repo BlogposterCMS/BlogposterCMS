@@ -18,3 +18,19 @@ body.builder-mode {
     height: calc(100% - var(--header-height, 64px));
   }
 }
+
+// Flex row wrapper for sidebar, content, and publish panel
+  .builder-row {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    min-height: 100vh;
+  min-width: 0; /* allow children to shrink and not overflow */
+  align-items: stretch;
+    
+  /* Make sure the fixed-width sidebar doesn't shrink */
+  #sidebar { flex-shrink: 0; width: var(--sidebar-width, 72px); }
+    
+  /* Content should take the remaining space */
+  #content { flex: 1; min-width: 0; }
+  }

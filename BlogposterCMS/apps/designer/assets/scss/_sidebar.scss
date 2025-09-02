@@ -1,10 +1,11 @@
 // Canva-inspired Sidebar Design
 .builder-sidebar {
-  position: fixed;
-  top: 64px; // Updated for new header height
-  bottom: 0;
+  position: sticky;
+  top: 64px; // stick under the header
+  align-self: flex-start;
+  height: calc(100vh - 64px);
   left: 0;
-  width: 72px; // Slightly wider for better touch targets
+  width: var(--sidebar-width, 72px); // control via CSS var
   padding: 16px 12px;
   background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
   border-right: 1px solid rgba(0, 0, 0, 0.08);
@@ -136,7 +137,7 @@
   .builder-panel {
     position: fixed;
     top: 64px;
-    left: 84px; // Updated for new sidebar width
+    left: calc(var(--sidebar-width, 72px) + 12px); // 12px gutter
     width: 280px; // Slightly wider
     height: calc(100% - 64px);
     background: white;
@@ -375,18 +376,15 @@ body.builder-mode.panel-open {
   }
 
   #content {
-    // Keep width in sync with the visible canvas area
-    --content-offset: 364px; // sidebar + panel width
-    margin-left: var(--content-offset);
-    width: calc(100% - var(--content-offset));
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* No margin-left in flex layout; visual adjustments handled in _canvas */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
 // Responsive adjustments
 @media (max-width: 1024px) {
   .builder-sidebar {
-    width: 60px;
+  width: var(--sidebar-width, 60px);
     padding: 12px 8px;
 
     .drag-widget-icon {
@@ -395,21 +393,17 @@ body.builder-mode.panel-open {
     }
 
     .builder-panel {
-      left: 72px;
+      left: calc(var(--sidebar-width, 60px) + 12px);
       width: 240px;
     }
   }
 
-  body.builder-mode.panel-open #content {
-    --content-offset: 312px;
-    margin-left: var(--content-offset);
-    width: calc(100% - var(--content-offset));
-  }
+  /* No content offset in flex layout */
 }
 
 @media (max-width: 768px) {
   .builder-sidebar {
-    width: 100%;
+  width: 100%;
     height: auto;
     top: auto;
     bottom: 0;
@@ -460,17 +454,7 @@ body.builder-mode.panel-open {
     }
   }
 
-  body.builder-mode #content {
-    --content-offset: 0px;
-    margin-left: 0;
-    width: 100%;
-    margin-bottom: 60px;
-  }
+  body.builder-mode #content { margin-left: 0; width: 100%; margin-bottom: 60px; }
 
-  body.builder-mode.panel-open #content {
-    --content-offset: 0px;
-    margin-left: 0;
-    width: 100%;
-    margin-bottom: calc(50vh + 60px);
-  }
+  body.builder-mode.panel-open #content { margin-left: 0; width: 100%; margin-bottom: calc(50vh + 60px); }
 }

@@ -67,24 +67,37 @@ body.builder-mode {
 }
 
 body.builder-mode #content {
-  // Use a variable for the left offset so we can recompute
-  // the available canvas width whenever the sidebar/panel width
-  // changes. This keeps grid math correct on resize.
-  --content-offset: 72px; // sidebar width
-  margin-left: var(--content-offset);
-  width: calc(100% - var(--content-offset));
+  /* Let flexbox handle sizing next to the sidebar */
+  flex: 1;                /* fill remaining space in #builderRow */
+  margin-left: 0;         /* no manual offset */
+  width: auto;            /* full width inside flex container */
+  min-width: 0;           /* allow flex item to shrink; prevent overflow */
   height: calc(100vh - 64px); // Updated for new header height
   overflow: hidden; // Prevent scrollbars on main container
   background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
   position: relative;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  /* Keep footer pinned; main will manage its own overflow */
+  justify-content: flex-start;
   align-items: stretch;
+
+  // Primary content area (between header/footer)
+  #builderMain {
+    flex: 1 1 auto;
+    /* Allow this flex child to actually shrink and scroll inside */
+    min-height: 0;
+    overflow: hidden;
+    min-width: 0;      // prevent horizontal overflow from children
+    max-width: 100%;
+    display: block;
+  }
 
   // Canvas viewport (scroll container)
   #builderViewport {
     height: 100%;
     width: 100%;
+  min-width: 0; // prevent child intrinsic size from overflowing parent
     // Removed max-width to allow working with larger viewports
     overflow-x: auto;
     overflow-y: auto;
@@ -110,7 +123,7 @@ body.builder-mode #content {
       content: '';
       position: fixed;
       top: 64px;
-      left: 72px;
+      left: var(--sidebar-width);
       right: 0;
       bottom: 0;
       pointer-events: none;
@@ -122,10 +135,7 @@ body.builder-mode #content {
 // Panel open state
 body.builder-mode.panel-open {
   #content {
-    // sidebar (72px) + panel (292px) = 364px
-    --content-offset: 364px;
-    margin-left: var(--content-offset);
-    width: calc(100% - var(--content-offset));
+  /* No offset in flex layout; keep visual transform only */
     transform: scale(0.95);
     transform-origin: top left;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -134,10 +144,7 @@ body.builder-mode.panel-open {
   .builder-panel {
     display: flex;
   }
-
-  #builderViewport {
-    // Keep viewport unclipped so #builderGrid shadows are visible
-  }
+  /* viewport remains unclipped so #builderGrid shadows are visible */
 }
 
 // Updated dimensions
@@ -145,7 +152,8 @@ body.builder-mode #builderViewport {
   margin-top: 0; // Removed as we handle this with padding
   height: 100%;
   min-height: 100%;
-  padding: 20px 20px 0;
+  /* Leave room for fixed builder footer */
+  padding: 20px 20px 60px;
   box-sizing: border-box;
 }
 
@@ -155,12 +163,14 @@ body.builder-mode #builderGrid {
   min-height: 70vh;
   min-width: 320px;
   width: 100%;
+  max-width: 100%;
   max-width: 3840px;
   margin: 0 auto;
   background: white;
   border-radius: 12px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 // Ensure themed widget content matches its wrapper dimensions
@@ -169,6 +179,17 @@ body.builder-mode .canvas-item-content.builder-themed {
   height: 100%;
   border-radius: 6px;
   overflow: hidden;
+}
+
+// Media inside widgets should never overflow their parent
+.canvas-item-content img,
+.canvas-item-content video,
+.canvas-item-content canvas,
+.canvas-item-content svg {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  display: block;
 }
 
 // Hide headers in builder mode
@@ -449,11 +470,10 @@ body.builder-mode .canvas-item.inactive-layer {
 
 // Layout bar (bottom controls)
 .builder-footer {
-  position: fixed;
   bottom: 0;
-  left: 72px;
+  left: var(--sidebar-width);
   right: 0;
-  z-index: 60;
+  z-index: 1000;
 
   .layout-bar {
     display: flex;
@@ -572,13 +592,8 @@ body.builder-mode .canvas-item.inactive-layer {
 
 // Responsive adjustments
 @media (max-width: 1024px) {
-  body.builder-mode #content {
-    margin-left: 60px;
-  }
-
-  .builder-footer {
-    left: 60px;
-  }
+  /* Use variable-driven sidebar width; #content remains flexed */
+  .builder-footer { left: var(--sidebar-width); }
 }
 
 @media (max-width: 768px) {

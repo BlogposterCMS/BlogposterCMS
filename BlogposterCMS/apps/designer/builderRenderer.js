@@ -155,6 +155,29 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.classList.remove('preview-mobile', 'preview-tablet', 'preview-desktop');
   }
 
+  // Load the builder header from HTML partial and inject it at the top
+  async function loadHeaderPartial() {
+    try {
+      const res = await fetch('/apps/designer/partials/builder-header.html', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
+      const tpl = document.createElement('template');
+      tpl.innerHTML = html.trim();
+      const headerEl = tpl.content.firstElementChild;
+      const appScope = document.querySelector('.app-scope');
+      if (appScope) appScope.prepend(headerEl); else document.body.prepend(headerEl);
+      return headerEl;
+    } catch (err) {
+      console.warn('[Designer] Failed to load builder-header.html, falling back to JS header shell', err);
+      const fallback = document.createElement('header');
+      fallback.id = 'builder-header';
+      fallback.className = 'builder-header';
+      const appScope = document.querySelector('.app-scope');
+      if (appScope) appScope.prepend(fallback); else document.body.prepend(fallback);
+      return fallback;
+    }
+  }
+
   let proMode = true;
   let gridEl;
   let codeMap = {};
@@ -584,16 +607,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (pageId) scheduleAutosave();
   });
 
-  const topBar = document.createElement('header');
-  topBar.id = 'builder-header';
-  topBar.className = 'builder-header';
-
-  const backBtn = document.createElement('button');
-  backBtn.className = 'builder-back-btn';
-  backBtn.innerHTML = window.featherIcon ? window.featherIcon('arrow-left') :
-    '<img src="/assets/icons/arrow-left.svg" alt="Back" />';
-  backBtn.addEventListener('click', () => history.back());
-  topBar.appendChild(backBtn);
+  const topBar = await loadHeaderPartial();
+  const backBtn = topBar.querySelector('.builder-back-btn');
+  if (backBtn) backBtn.addEventListener('click', () => history.back());
 
   const layoutName =
     layoutNameParam ||
@@ -601,17 +617,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     pageData?.title ||
     'default';
 
-  const infoWrap = document.createElement('div');
-  infoWrap.className = 'layout-info';
-
-  const nameInput = document.createElement('input');
-  nameInput.id = 'layoutNameInput';
-  nameInput.className = 'layout-name-input';
-  nameInput.placeholder = 'Layout name…';
-  nameInput.value = layoutName;
-  infoWrap.appendChild(nameInput);
-
-  topBar.appendChild(infoWrap);
+  const nameInput = topBar.querySelector('#layoutNameInput');
+  if (nameInput) {
+    try { nameInput.value = layoutName; } catch (_) {}
+  }
 
   const viewportBtn = document.createElement('button');
   viewportBtn.id = 'viewportControlBtn';
@@ -701,15 +710,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     resizeObserver.observe(gridEl);
   }
 
+  // Reuse buttons from the loaded partial
+  const headerActions = topBar.querySelector('.header-actions') || topBar;
+  const saveBtn = topBar.querySelector('#saveLayoutBtn');
+  const previewBtn = topBar.querySelector('#previewLayoutBtn');
+  const publishBtn = topBar.querySelector('#publishLayoutBtn');
+
+  // Wrap save button to attach autosave dropdown like before
   const saveWrapper = document.createElement('div');
   saveWrapper.className = 'builder-save-wrapper';
-
-  const saveBtn = document.createElement('button');
-  saveBtn.id = 'saveLayoutBtn';
-  saveBtn.className = 'builder-save-btn';
-  saveBtn.innerHTML = window.featherIcon ? window.featherIcon('save') :
-    '<img src="/assets/icons/save.svg" alt="Save" />';
-  saveWrapper.appendChild(saveBtn);
+  if (saveBtn) {
+    headerActions.insertBefore(saveWrapper, saveBtn);
+    saveWrapper.appendChild(saveBtn);
+  } else {
+    headerActions.appendChild(saveWrapper);
+  }
 
   const saveMenuBtn = document.createElement('button');
   saveMenuBtn.className = 'builder-save-dropdown-toggle';
@@ -722,22 +737,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   saveDropdown.className = 'builder-save-dropdown';
   saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
   saveWrapper.appendChild(saveDropdown);
-
-  topBar.appendChild(saveWrapper);
-
-  const previewBtn = document.createElement('button');
-  previewBtn.id = 'previewLayoutBtn';
-  previewBtn.className = 'builder-preview-btn';
-  previewBtn.innerHTML = window.featherIcon ? window.featherIcon('eye') :
-    '<img src="/assets/icons/eye.svg" alt="Preview" />';
-  topBar.appendChild(previewBtn);
-
-  const publishBtn = document.createElement('button');
-  publishBtn.id = 'publishLayoutBtn';
-  publishBtn.className = 'builder-publish-btn';
-  publishBtn.innerHTML = window.featherIcon ? window.featherIcon('upload') :
-    '<img src="/assets/icons/upload.svg" alt="Publish" />';
-  topBar.appendChild(publishBtn);
 
   const headerMenuBtn = document.createElement('button');
   headerMenuBtn.className = 'builder-menu-btn';
@@ -811,12 +810,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     startAutosaveFn(state, saveLayoutCtx);
   });
 
-  const appScope = document.querySelector('.app-scope');
-  if (appScope) {
-    appScope.prepend(topBar);
-  } else {
-    document.body.prepend(topBar);
-  }
+  // Header already injected by loadHeaderPartial();
   // Attach viewport slider popin to body so it can float above header
   document.body.appendChild(viewportPanel);
 

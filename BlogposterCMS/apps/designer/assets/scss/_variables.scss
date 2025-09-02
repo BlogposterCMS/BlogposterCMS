@@ -2,10 +2,10 @@
 
 // Colors
 :root {
-  // Primary colors
-  --accent-color: #007bff;
-  --accent-color-hover: #0056b3;
-  --accent-color-light: rgba(0, 123, 255, 0.1);
+  // Primary colors (inherit global user accent)
+  --accent-color: var(--user-color);
+  --accent-color-hover: color-mix(in srgb, var(--user-color), black 15%);
+  --accent-color-light: color-mix(in srgb, var(--user-color), transparent 85%);
   
   // Semantic colors
   --success-color: #22c55e;
@@ -128,7 +128,7 @@
   --duration-slow: 300ms;
   
   // Widget-specific colors
-  --user-color: var(--accent-color);
+  /* Keep --user-color from global variables to reflect user theme */
   --shared-widget-color: var(--warning-color);
 }
 

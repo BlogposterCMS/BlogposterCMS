@@ -30,6 +30,7 @@ El Psy Kongroo
 
 ### Changed
 - Builder publish and builder panels now inherit global fonts, use side shadows instead of borders, and the publish button spans the panel width.
+- Builder sidebar adopts the dashboard's bubble style for consistent navigation.
 - Builder publish suggestions now only list pages from the public lane to avoid exposing admin pages.
 - Extracted builder header button logic into a dedicated module for clearer separation of concerns.
 - Moved viewport and menu buttons into the builder header partial for easier customization.
@@ -177,6 +178,7 @@ El Psy Kongroo
 
 ### Fixed
 - Remaining German builder strings translated to English.
+- Text widget icon in the builder sidebar now opens its panel via delegated clicks.
 - Publish panel no longer extends below the viewport in the designer.
 - Restored publish panel styling in the designer to match the overall Canva-inspired look.
 - Hide autosave dropdown until toggled so the save menu stays hidden and positioned.

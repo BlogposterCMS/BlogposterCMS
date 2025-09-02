@@ -29,6 +29,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Builder publish and builder panels now inherit global fonts, use side shadows instead of borders, and the publish button spans the panel width.
 - Extracted builder header button logic into a dedicated module for clearer separation of concerns.
 - Moved viewport and menu buttons into the builder header partial for easier customization.
 - Builder header Save and Publish buttons now match Preview styling and only show color when active.
@@ -172,6 +173,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Remaining German builder strings translated to English.
 - Publish panel no longer extends below the viewport in the designer.
 - Restored publish panel styling in the designer to match the overall Canva-inspired look.
 - Hide autosave dropdown until toggled so the save menu stays hidden and positioned.

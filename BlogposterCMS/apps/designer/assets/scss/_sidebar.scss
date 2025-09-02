@@ -319,12 +319,13 @@
   flex-shrink: 0;
   width: 280px;
   background: white;
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  box-shadow: 4px 0 6px rgba(0, 0, 0, 0.05);
+  font-family: var(--font-body);
 
   &.hidden {
     display: none;

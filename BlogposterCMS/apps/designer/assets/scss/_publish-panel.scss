@@ -3,14 +3,14 @@
   flex-shrink: 0;
   width: var(--panel-width, 320px);
   background: var(--bg-primary);
-  border-left: 1px solid var(--border-color);
   padding: var(--space-6);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
   position: relative;
-  box-shadow: var(--shadow-lg);
+  box-shadow: -4px 0 6px rgba(0, 0, 0, 0.05);
+  font-family: var(--font-body);
 
   &.hidden {
     display: none;
@@ -45,6 +45,7 @@
     gap: var(--space-2);
     font-size: var(--text-sm);
     color: var(--color-text);
+    font-family: var(--font-body);
 
     .publish-slug-input {
       padding: var(--space-2) var(--space-3);
@@ -108,9 +109,9 @@
 
   .publish-actions {
     margin-top: auto;
-    text-align: right;
 
     .publish-confirm {
+      width: 100%;
       padding: var(--space-3) var(--space-6);
       background: var(--accent-color);
       color: var(--color-white);
@@ -119,6 +120,7 @@
       font-weight: var(--font-medium);
       cursor: pointer;
       transition: background var(--transition-base), box-shadow var(--transition-base);
+      text-align: center;
 
       &:hover {
         background: var(--accent-color-hover);

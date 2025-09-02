@@ -140,59 +140,115 @@ body.grid-mode .bounding-box.disabled {
 /* Publish panel displayed as a right-side aside that pushes content */
 #publishPanel {
   flex-shrink: 0;
-  width: 320px;
-  background: #fff;
-  border-left: 1px solid #ccc;
-  padding: 1rem;
+  width: var(--panel-width, 320px);
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  padding: var(--space-6);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-5);
   position: relative;
+  box-shadow: var(--shadow-lg);
 }
 #publishPanel.hidden {
   display: none;
 }
 #publishPanel .publish-close {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  background: transparent;
-  border: none;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 32px;
+  height: 32px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
   cursor: pointer;
-  font-size: 1.25rem;
+  color: var(--color-text);
+  font-size: var(--text-lg);
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-base);
+}
+#publishPanel .publish-close:hover {
+  background: var(--bg-secondary);
+}
+#publishPanel .publish-slug-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+#publishPanel .publish-slug-label .publish-slug-input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+}
+#publishPanel .publish-slug-label .publish-slug-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-color-light);
+  outline: none;
 }
 #publishPanel .publish-suggestions {
   max-height: 150px;
   overflow-y: auto;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
 }
 #publishPanel .publish-suggestion {
-  padding: 0.25rem 0;
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
+  transition: background var(--transition-base);
 }
 #publishPanel .publish-suggestion:hover {
-  text-decoration: underline;
+  background: var(--bg-secondary);
+  text-decoration: none;
 }
 #publishPanel .publish-warning {
-  color: #b00;
-  margin-top: 0.5rem;
+  color: var(--error-color);
+  background: color-mix(in srgb, var(--error-color), transparent 90%);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
 }
 #publishPanel .publish-draft {
-  display: block;
-  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
 }
 #publishPanel .publish-info {
-  margin-top: 0.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 #publishPanel .publish-draft-note {
-  color: #b00;
-  margin-top: 0.5rem;
+  color: var(--error-color);
+  font-size: var(--text-sm);
 }
 #publishPanel .publish-actions {
-  margin-top: 0.5rem;
+  margin-top: auto;
   text-align: right;
+}
+#publishPanel .publish-actions .publish-confirm {
+  padding: var(--space-3) var(--space-6);
+  background: var(--accent-color);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: background var(--transition-base), box-shadow var(--transition-base);
+}
+#publishPanel .publish-actions .publish-confirm:hover {
+  background: var(--accent-color-hover);
+  box-shadow: var(--shadow-card);
 }
 
 :root {
@@ -451,8 +507,6 @@ body.grid-mode .bounding-box.disabled {
   gap: 12px;
   flex-wrap: wrap;
   /* Basisstil einheitlich */
-  /* Primär: Save + Publish */
-  /* Sekundär: Preview */
   /* Optional: Save-Dropdown */
 }
 .builder-header .header-actions .button,
@@ -504,38 +558,16 @@ body.grid-mode .bounding-box.disabled {
   outline: none;
   box-shadow: 0 0 0 2px var(--accent);
 }
-.builder-header .header-actions .builder-save-btn,
-.builder-header .header-actions #saveLayoutBtn,
-.builder-header .header-actions .builder-publish-btn {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-.builder-header .header-actions .builder-save-btn:hover,
-.builder-header .header-actions #saveLayoutBtn:hover,
-.builder-header .header-actions .builder-publish-btn:hover {
-  background: var(--accent-dark);
-  border-color: var(--accent-dark);
-}
 .builder-header .header-actions .builder-save-btn.saved,
-.builder-header .header-actions #saveLayoutBtn.saved,
-.builder-header .header-actions .builder-publish-btn.saved {
+.builder-header .header-actions #saveLayoutBtn.saved {
   background: #22c55e;
   border-color: #22c55e;
+  color: #fff;
 }
 .builder-header .header-actions .builder-save-btn.saved:hover,
-.builder-header .header-actions #saveLayoutBtn.saved:hover,
-.builder-header .header-actions .builder-publish-btn.saved:hover {
+.builder-header .header-actions #saveLayoutBtn.saved:hover {
   background: #16a34a;
   border-color: #16a34a;
-}
-.builder-header .header-actions .builder-preview-btn {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.12);
-}
-.builder-header .header-actions .builder-preview-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
-  border-color: rgba(0, 0, 0, 0.2);
 }
 .builder-header .header-actions .builder-save-wrapper {
   position: relative;
@@ -2726,11 +2758,22 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
     bottom: 60px;
   }
 }
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .builder-row {
+  flex: 1;
   display: flex;
   flex-direction: row;
   width: 100%;
-  min-height: 100vh;
+  min-height: 0;
   min-width: 0; /* allow children to shrink and not overflow */
   align-items: stretch;
   /* Make sure the fixed-width sidebar doesn't shrink */

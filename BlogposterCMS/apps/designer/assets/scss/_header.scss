@@ -95,6 +95,33 @@
       border-color: rgba(0, 0, 0, 0.2);
     }
   }
+
+  .builder-save-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .builder-save-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: white;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      padding: 8px;
+      display: none;
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--color-text, #333);
+      }
+    }
+  }
 }
 
 // Builder options menu styling

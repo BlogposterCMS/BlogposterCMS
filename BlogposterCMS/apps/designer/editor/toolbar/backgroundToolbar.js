@@ -1,4 +1,5 @@
 import { state } from '../core/editor.js';
+import { showBuilderPanel, hideBuilderPanel } from '../../managers/panelManager.js';
 
 let bgToolbar = null;
 let listenersAttached = false;
@@ -80,8 +81,7 @@ export function initBackgroundToolbar() {
   state.colorPicker?.el?.classList.add('hidden');
 
   async function openColorPanel() {
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     if (!panelContainer) return false;
     let colorPanel = panelContainer.querySelector('.color-panel');
     if (!colorPanel) {
@@ -100,9 +100,7 @@ export function initBackgroundToolbar() {
     const h4 = colorPanel.querySelector('h4');
     if (h4) h4.textContent = 'Hintergrundfarbe';
 
-    panelContainer.querySelectorAll('.builder-panel').forEach(p => {
-      p.style.display = p.classList.contains('color-panel') ? '' : 'none';
-    });
+    showBuilderPanel('color-panel');
     const host = colorPanel.querySelector('.color-panel-content') || colorPanel;
     if (state.colorPicker.el.parentElement !== host) host.appendChild(state.colorPicker.el);
     state.colorPicker.el.classList.remove('hidden');
@@ -115,25 +113,12 @@ export function initBackgroundToolbar() {
       collapseBtn.__bgBound = true;
       collapseBtn.addEventListener('click', () => closeColorPanel());
     }
-    document.body.classList.add('panel-open', 'panel-opening');
-    setTimeout(() => document.body.classList.remove('panel-opening'), 200);
     return true;
   }
 
   function closeColorPanel() {
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
-    panelContainer?.querySelectorAll('.builder-panel').forEach(p => {
-      if (p.classList.contains('color-panel')) {
-        p.style.display = 'none';
-      } else {
-        p.style.display = '';
-      }
-    });
+    hideBuilderPanel();
     state.colorPicker.el.classList.add('hidden');
-    document.body.classList.add('panel-closing');
-    document.body.classList.remove('panel-open');
-    setTimeout(() => document.body.classList.remove('panel-closing'), 200);
     try { colorBtn.focus(); } catch (e) {}
   }
 
@@ -152,13 +137,12 @@ export function initBackgroundToolbar() {
       },
       onClose: () => closeColorPanel()
     });
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     const colorPanel = panelContainer?.querySelector('.color-panel');
     const colorPanelVisible = !!(
       colorPanel &&
       colorPanel.style.display !== 'none' &&
-      document.body.classList.contains('panel-open') &&
+      panelContainer && !panelContainer.classList.contains('hidden') &&
       !state.colorPicker.el.classList.contains('hidden')
     );
     if (colorPanelVisible) { closeColorPanel(); return; }

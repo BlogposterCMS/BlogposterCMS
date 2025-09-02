@@ -225,18 +225,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   });
 
-  const textIcon = sidebarEl.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
-  const builderPanel = sidebarEl.querySelector('#builderPanel');
-  const collapseBtn = builderPanel?.querySelector('.collapse-btn');
-  if (textIcon && builderPanel && collapseBtn) {
-    textIcon.addEventListener('click', () => {
-      document.body.classList.toggle('panel-open');
-    });
-    collapseBtn.addEventListener('click', () => {
-      document.body.classList.remove('panel-open');
-    });
-  }
-
     // Use a plain builder grid container. CanvasGrid will add its own
   // `canvas-grid` class; avoid `pixel-grid` here so zoom scaling via
   // CSS variable works with the BoundingBoxManager.

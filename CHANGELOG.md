@@ -4,13 +4,9 @@ All notable changes to this project will be documented in this file.
 El Psy Kongroo
 
 ## [Unreleased]
-### Fixed
-- Hide autosave dropdown until toggled so the save menu stays hidden and positioned.
-- Builder header buttons now use matching selectors so their styling applies correctly.
-- Zoom sizer now expands to the grid width when the canvas exceeds the viewport, keeping the builder grid within its parent.
-- Preserve scroll position by only recentering canvas on width changes near the origin.
-- Restored styles for admin page stats widget and page picker lost during Sass refactor.
-- Replaced deprecated Sass @import directives with @use and mixins to remove compilation warnings.
+
+
+
 ### Added
 - Centralized save and autosave logic into a new `saveManager` module for reuse across the builder.
 - Publishing now saves the current layout before creating or updating pages and attaching designs.
@@ -20,6 +16,18 @@ El Psy Kongroo
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.
 - Builder workspace now displays the current viewport width in the top-right corner.
  - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
+
+
+ 
+
+
+
+### Removed
+- Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
+- Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
+- Support for dynamic action buttons in the content header.
+- Removed the right-side admin pages menu from the dashboard to streamline navigation.
+
 ### Changed
 - Extracted builder publish panel logic into a dedicated module for easier maintenance.
 - Publish panel markup extracted into a standalone partial for easier maintenance.
@@ -31,7 +39,8 @@ El Psy Kongroo
 - `PixelGrid.update` accepts an optional `{ silent: true }` flag to avoid spamming `change` events during live interactions.
 - Designer app uses standalone `PixelGrid` built on grid-core modules.
 - Moved `globalEvents` helper into grid-core for shared consumption.
-### Changed
+- Extracted builder panel into dedicated module and HTML partial for cleaner builder initialization.
+- Builder panels now appear inline between the sidebar and canvas instead of overlaying content.
 - Builder publish slug suggestions now list only existing pages and show a draft option when creating new ones.
 - Publish button now toggles the publish panel and the panel includes a close button for easy dismissal.
 - Builder layout wraps the viewport in a `<main>` element, nests the footer inside `#content`, and places the publish popup in a right-side `<aside>` without a backdrop.
@@ -71,18 +80,6 @@ El Psy Kongroo
 - `/p/{slug}` route rewrites to builder HTML files without exposing library paths.
 - `makeFilePublic` now preserves subdirectories and infers user IDs from JWTs for safer publishing.
 - Uploaded HTML in Page Content widget is stored in a dedicated media folder and remains available as a design.
-
- 
-
-
-
-### Removed
-- Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
-- Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
-- Support for dynamic action buttons in the content header.
-- Removed the right-side admin pages menu from the dashboard to streamline navigation.
-
-### Changed
 - Builder sidebar now uses a semantic `<aside>` element for improved accessibility.
 - Layout bar now resides within the builder footer for clearer structure.
 - Sanitizer now preserves `<style>` tags and strips unsafe CSS so public pages display full designs.
@@ -171,6 +168,12 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Hide autosave dropdown until toggled so the save menu stays hidden and positioned.
+- Builder header buttons now use matching selectors so their styling applies correctly.
+- Zoom sizer now expands to the grid width when the canvas exceeds the viewport, keeping the builder grid within its parent.
+- Preserve scroll position by only recentering canvas on width changes near the origin.
+- Restored styles for admin page stats widget and page picker lost during Sass refactor.
+- Replaced deprecated Sass @import directives with @use and mixins to remove compilation warnings.
 - Builder grid no longer drifts at low zoom; CanvasGrid now recenters on resize and uses a top-left transform origin.
 - CSS sanitizer blocks non-http(s) `url()` protocols (like `data:`) to prevent style-based XSS.
 - `applyWidgetOptions` now applies numeric `max`, `maxWidth`, and `maxHeight` percentages when seeding widgets.

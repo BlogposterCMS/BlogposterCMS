@@ -2,6 +2,7 @@ import { fetchPartial } from './fetchPartial.js';
 import { initBuilder } from './builderRenderer.js';
 import { enableAutoEdit } from './editor/editor.js';
 import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
+import { initBuilderPanel } from './managers/panelManager.js';
 
 let bootstrapped = false;
 
@@ -10,22 +11,32 @@ async function bootstrap() {
   bootstrapped = true;
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('builderMain');
+  const rowEl = document.getElementById('builderRow');
   try {
     sidebarEl.innerHTML = sanitizeHtml(await fetchPartial('sidebar-builder'));
-    const panelContainer = sidebarEl.querySelector('#builderPanel');
-    if (panelContainer) {
-      const textHtml = await fetchPartial('text-panel', 'builder');
-      panelContainer.innerHTML = sanitizeHtml(textHtml);
-      // Preload color panel (kept hidden until opened from toolbar)
-      try {
-        const colorHtml = await fetchPartial('color-panel', 'builder');
-        panelContainer.insertAdjacentHTML('beforeend', sanitizeHtml(colorHtml));
-        const colorPanel = panelContainer.querySelector('.color-panel');
-        if (colorPanel) colorPanel.style.display = 'none';
-      } catch (e) {
-        console.warn('[Designer App] Failed to load color panel:', e);
+    let panelContainer = null;
+    try {
+      const panelHtml = await fetchPartial('builder-panel');
+      const tpl = document.createElement('template');
+      tpl.innerHTML = sanitizeHtml(panelHtml);
+      panelContainer = tpl.content.firstElementChild;
+      if (panelContainer && rowEl) {
+        rowEl.insertBefore(panelContainer, document.getElementById('content'));
+        const textHtml = await fetchPartial('text-panel', 'builder');
+        panelContainer.innerHTML = sanitizeHtml(textHtml);
+        try {
+          const colorHtml = await fetchPartial('color-panel', 'builder');
+          panelContainer.insertAdjacentHTML('beforeend', sanitizeHtml(colorHtml));
+          const colorPanel = panelContainer.querySelector('.color-panel');
+          if (colorPanel) colorPanel.style.display = 'none';
+        } catch (e) {
+          console.warn('[Designer App] Failed to load color panel:', e);
+        }
       }
+    } catch (e) {
+      console.error('[Designer App] Failed to load builder panel:', e);
     }
+    initBuilderPanel();
   } catch (err) {
     console.error('[Designer App] Failed to load sidebar:', err);
   }

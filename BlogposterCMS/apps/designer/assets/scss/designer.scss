@@ -30,7 +30,10 @@ body.builder-mode {
     
   /* Make sure the fixed-width sidebar doesn't shrink */
   #sidebar { flex-shrink: 0; width: var(--sidebar-width, 72px); }
-    
+
+  /* Builder panel column */
+  #builderPanel { flex-shrink: 0; }
+
   /* Content should take the remaining space */
   #content { flex: 1; min-width: 0; }
   }

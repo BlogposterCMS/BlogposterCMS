@@ -12,6 +12,7 @@ import {
 import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from '../core/selection.js';
 import { fetchPartial } from '../../fetchPartial.js';
 import { sanitizeHtml } from '../../../../public/plainspace/sanitizer.js';
+import { showBuilderPanel, hideBuilderPanel } from '../../managers/panelManager.js';
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
@@ -434,9 +435,8 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     }
   }, true);
   async function openColorSidebar() {
-    const sidebar = document.getElementById('sidebar');
     state.colorPicker.updateOptions({ documentColors: collectDocumentColors() });
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     if (!panelContainer) return false;
 
     // Ensure the color panel markup exists; preload by index.js, else fetch lazily
@@ -453,10 +453,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       }
     }
 
-    // Hide other builder panels (e.g., text-panel) and show color panel only
-    panelContainer.querySelectorAll('.builder-panel').forEach(p => {
-      p.style.display = p.classList.contains('color-panel') ? '' : 'none';
-    });
+    showBuilderPanel('color-panel');
 
     // Mount the color picker inside the panel content container
     const host = colorPanel.querySelector('.color-panel-content') || colorPanel;
@@ -477,27 +474,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       collapseBtn.addEventListener('click', () => closeColorSidebar());
     }
 
-    document.body.classList.add('panel-open', 'panel-opening');
-    setTimeout(() => document.body.classList.remove('panel-opening'), 200);
     return true;
   }
 
   function closeColorSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
-    // Hide color panel and show other panels back (e.g., text-panel)
-    panelContainer?.querySelectorAll('.builder-panel').forEach(p => {
-      if (p.classList.contains('color-panel')) {
-        p.style.display = 'none';
-      } else {
-        p.style.display = '';
-      }
-    });
-    // Hide picker content
+    hideBuilderPanel();
     state.colorPicker.el.classList.add('hidden');
-    document.body.classList.add('panel-closing');
-    document.body.classList.remove('panel-open');
-    setTimeout(() => document.body.classList.remove('panel-closing'), 200);
     try { colorBtn.focus(); } catch (e) {}
   }
 
@@ -512,13 +494,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       onClose: () => closeColorSidebar()
     });
     // If color sidebar already open -> close it (toggle)
-    const sidebar = document.getElementById('sidebar');
-    const panelContainer = sidebar?.querySelector('#builderPanel');
+    const panelContainer = document.getElementById('builderPanel');
     const colorPanel = panelContainer?.querySelector('.color-panel');
     const colorPanelVisible = !!(
       colorPanel &&
       colorPanel.style.display !== 'none' &&
-      document.body.classList.contains('panel-open') &&
+      panelContainer && !panelContainer.classList.contains('hidden') &&
       !state.colorPicker.el.classList.contains('hidden')
     );
     if (colorPanelVisible) { closeColorSidebar(); return; }

@@ -98,6 +98,8 @@ BlogposterCMS does not use a traditional `post.type` column. Instead content is 
 
 The admin lane provides a drag‑and‑drop page builder at `/admin/builder`. The builder retrieves the widget registry via `widget.registry.request.v1` and loads widgets dynamically. Because it relies on minimal JavaScript and CSS, the interface remains lightweight and quick to load even on modest devices.
 
+Text and colour tools open in a fixed column between the sidebar and canvas so the layout shifts naturally without overlaying the design. The panel markup is loaded from `apps/designer/partials/builder-panel.html` and controlled by `panelManager.js` to keep the renderer lean.
+
 A dropdown attached to the Save button lets you enable or disable autosave without leaving the toolbar.
 
 The canvas opens centered in the viewport at a 100% zoom level and can expand up to 4K widths, with the scroll container resizing as the canvas grows so horizontal and vertical scrollbars appear when layouts overflow. Even when zoomed out, the zoom sizer keeps the canvas centered so it no longer drifts to the side.

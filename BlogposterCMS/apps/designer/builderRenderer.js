@@ -893,11 +893,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   });
 
-    // publish flow handled by popup defined below
+// publish flow handled by popup defined below
 
-const publishPopup = document.createElement('div');
-publishPopup.className = 'publish-popup hidden';
+const publishPopup = document.getElementById('publishPanel');
+publishPopup.classList.add('hidden');
 publishPopup.innerHTML = `
+  <button class="publish-close" type="button" aria-label="Close">&times;</button>
   <label class="publish-slug-label">Subpath
     <input type="text" class="publish-slug-input" />
   </label>
@@ -907,9 +908,6 @@ publishPopup.innerHTML = `
   <label class="publish-publish hidden"><input type="checkbox" class="publish-publish-checkbox" /> Publish page</label>
   <div class="publish-actions"><button class="publish-confirm">Publish</button></div>
 `;
-const publishBackdrop = document.createElement('div');
-publishBackdrop.className = 'publish-backdrop hidden';
-document.body.append(publishBackdrop, publishPopup);
 loadPageService();
 
 const slugInput = publishPopup.querySelector('.publish-slug-input');
@@ -920,6 +918,7 @@ const publishWrap = publishPopup.querySelector('.publish-publish');
 const createCb = publishPopup.querySelector('.publish-create-checkbox');
 const publishCb = publishPopup.querySelector('.publish-publish-checkbox');
 const confirmBtn = publishPopup.querySelector('.publish-confirm');
+const closeBtn = publishPopup.querySelector('.publish-close');
 let selectedPage = null;
 
 function positionPublishPopup() {
@@ -928,20 +927,16 @@ function positionPublishPopup() {
   const height = `calc(100% - ${rect.bottom}px)`;
   publishPopup.style.top = top;
   publishPopup.style.height = height;
-  publishBackdrop.style.top = top;
-  publishBackdrop.style.height = height;
 }
 
 function showPublishPopup() {
   positionPublishPopup();
-  publishBackdrop.classList.remove('hidden');
   publishPopup.classList.remove('hidden');
   slugInput.focus();
 }
 
 function hidePublishPopup() {
   publishPopup.classList.add('hidden');
-  publishBackdrop.classList.add('hidden');
 }
 
 window.addEventListener('resize', () => {
@@ -1018,9 +1013,13 @@ suggestionsEl.addEventListener('click', async e => {
 });
 
   publishBtn.addEventListener('click', () => {
-    showPublishPopup();
+    if (publishPopup.classList.contains('hidden')) {
+      showPublishPopup();
+    } else {
+      hidePublishPopup();
+    }
   });
-  publishBackdrop.addEventListener('click', hidePublishPopup);
+  closeBtn.addEventListener('click', hidePublishPopup);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !publishPopup.classList.contains('hidden')) {
       hidePublishPopup();

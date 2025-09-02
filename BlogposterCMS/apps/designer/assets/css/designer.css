@@ -152,6 +152,16 @@ body.grid-mode .bounding-box.disabled {
 .publish-popup.hidden {
   display: none;
 }
+.publish-popup .publish-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
 .publish-popup .publish-suggestions {
   max-height: 150px;
   overflow-y: auto;
@@ -178,18 +188,6 @@ body.grid-mode .bounding-box.disabled {
   text-align: right;
 }
 
-.publish-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-}
-.publish-backdrop.hidden {
-  display: none;
-}
 
 :root {
   --accent-color: #007bff;
@@ -2727,8 +2725,8 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
     transform: none;
   }
 }
-body.builder-mode .publish-popup,
-body.builder-mode .publish-backdrop {
+body.builder-mode .publish-popup {
   top: var(--header-height, 64px);
   height: calc(100% - var(--header-height, 64px));
-}/*# sourceMappingURL=designer.css.map */
+}
+/*# sourceMappingURL=designer.css.map */

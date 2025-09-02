@@ -1,4 +1,4 @@
-/* Publish popup slides in from the right with a backdrop */
+/* Publish popup slides in from the right without a backdrop */
 .publish-popup {
   position: fixed;
   right: 0;
@@ -12,6 +12,17 @@
 
   &.hidden {
     display: none;
+  }
+
+  .publish-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
   }
 
   .publish-suggestions {
@@ -43,19 +54,5 @@
   .publish-actions {
     margin-top: 0.5rem;
     text-align: right;
-  }
-}
-
-.publish-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.3);
-  z-index: 1000;
-
-  &.hidden {
-    display: none;
   }
 }

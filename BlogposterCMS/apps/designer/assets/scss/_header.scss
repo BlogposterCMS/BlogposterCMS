@@ -95,22 +95,12 @@
       &:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
     }
 
-    /* Primär: Save + Publish */
-    .builder-save-btn,
-    #saveLayoutBtn,
-    .builder-publish-btn {
-      background: var(--accent);
+    .builder-save-btn.saved,
+    #saveLayoutBtn.saved {
+      background: #22c55e;
+      border-color: #22c55e;
       color: #fff;
-      border-color: var(--accent);
-      &:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
-      &.saved { background: #22c55e; border-color: #22c55e; &:hover { background:#16a34a; border-color:#16a34a; } }
-    }
-
-    /* Sekundär: Preview */
-    .builder-preview-btn {
-      background: rgba(0,0,0,0.02);
-      border-color: rgba(0,0,0,0.12);
-      &:hover { background: rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.2); }
+      &:hover { background: #16a34a; border-color: #16a34a; }
     }
 
     /* Optional: Save-Dropdown */

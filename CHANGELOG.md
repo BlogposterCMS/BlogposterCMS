@@ -29,6 +29,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Builder header Save and Publish buttons now match Preview styling and only show color when active.
 - Extracted builder publish panel logic into a dedicated module for easier maintenance.
 - Publish panel markup extracted into a standalone partial for easier maintenance.
 - Simple hue wheel with hex input accessible from preset colors.

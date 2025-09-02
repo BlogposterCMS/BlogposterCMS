@@ -12,12 +12,23 @@
 @use 'color-picker';
 @use 'canvas';
 
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 // Flex row wrapper for sidebar, content, and publish panel
   .builder-row {
+    flex: 1;
     display: flex;
     flex-direction: row;
     width: 100%;
-    min-height: 100vh;
+    min-height: 0;
   min-width: 0; /* allow children to shrink and not overflow */
   align-items: stretch;
     

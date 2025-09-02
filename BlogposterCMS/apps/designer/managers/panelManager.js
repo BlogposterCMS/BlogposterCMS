@@ -14,9 +14,13 @@ export function hideBuilderPanel() {
 }
 
 export function initBuilderPanel() {
-  const textIcon = document.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
-  if (textIcon) {
-    textIcon.addEventListener('click', () => showBuilderPanel('text-panel'));
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.addEventListener('click', e => {
+      if (e.target.closest('.drag-widget-icon[data-widget-id="textBox"]')) {
+        showBuilderPanel('text-panel');
+      }
+    });
   }
   const container = document.getElementById('builderPanel');
   if (container) {

@@ -9,7 +9,7 @@ async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
   const sidebarEl = document.getElementById('sidebar');
-  const contentEl = document.getElementById('content');
+  const contentEl = document.getElementById('builderMain');
   try {
     sidebarEl.innerHTML = sanitizeHtml(await fetchPartial('sidebar-builder'));
     const panelContainer = sidebarEl.querySelector('#builderPanel');

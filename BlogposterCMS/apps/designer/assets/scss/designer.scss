@@ -13,8 +13,7 @@
 @use 'canvas';
 
 body.builder-mode {
-  .publish-popup,
-  .publish-backdrop {
+  .publish-popup {
     top: var(--header-height, 64px);
     height: calc(100% - var(--header-height, 64px));
   }

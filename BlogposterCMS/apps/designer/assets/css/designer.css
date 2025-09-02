@@ -178,18 +178,6 @@ body.grid-mode .bounding-box.disabled {
   text-align: right;
 }
 
-.publish-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-}
-.publish-backdrop.hidden {
-  display: none;
-}
 
 :root {
   --accent-color: #007bff;
@@ -2727,8 +2715,8 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
     transform: none;
   }
 }
-body.builder-mode .publish-popup,
-body.builder-mode .publish-backdrop {
+body.builder-mode .publish-popup {
   top: var(--header-height, 64px);
   height: calc(100% - var(--header-height, 64px));
-}/*# sourceMappingURL=designer.css.map */
+}
+/*# sourceMappingURL=designer.css.map */

@@ -23,6 +23,8 @@ El Psy Kongroo
 - `PixelGrid.update` accepts an optional `{ silent: true }` flag to avoid spamming `change` events during live interactions.
 - Designer app uses standalone `PixelGrid` built on grid-core modules.
 - Moved `globalEvents` helper into grid-core for shared consumption.
+### Changed
+- Builder layout wraps the viewport in a `<main>` element, nests the footer inside `#content`, and places the publish popup in a right-side `<aside>` without a backdrop.
 - Initial `grid-core` module with geometry helpers, bounding box manager and lightweight event emitter for upcoming grid refactor.
 - Optional `liveSnapResize` flag to enable per-frame snapping during resizes.
 - CanvasGrid exposes an optional `liveSnap` flag to enable per-frame snapping during drags.

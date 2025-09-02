@@ -172,7 +172,6 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
-- Publish panel no longer extends below the viewport in the designer.
 - Restored publish panel styling in the designer to match the overall Canva-inspired look.
 - Hide autosave dropdown until toggled so the save menu stays hidden and positioned.
 - Builder header buttons now use matching selectors so their styling applies correctly.

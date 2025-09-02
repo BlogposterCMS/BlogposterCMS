@@ -2,246 +2,126 @@
 .builder-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
   padding: 12px 24px;
   background: var(--color-white);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  gap: 16px;
   position: sticky;
   top: 0;
   z-index: 120;
   backdrop-filter: blur(10px);
 
-  // Left section - Logo and navigation
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-
-    .logo {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--accent-color, #007bff);
-      text-decoration: none;
-    }
-
-    .builder-back-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: transparent;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: var(--color-text, #333);
-      font-size: 14px;
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.05);
-      }
-
-      svg, img {
-        width: 18px;
-        height: 18px;
-      }
-    }
-  }
-
-  // Center section - Project info
-  .layout-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .layout-name-input {
     flex: 1;
-    max-width: 400px;
-    margin: 0 auto;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text, #333);
+    text-align: center;
+    transition: all 0.2s ease;
 
-    .layout-name {
-      font-size: 1.25rem;
-      font-weight: 600;
-      outline: none;
-      background: transparent;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-      flex: 1;
-      text-align: center;
-      color: var(--color-text, #333);
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.05);
-      }
-
-      &:focus {
-        background: white;
-        box-shadow: 0 0 0 2px var(--accent-color, #007bff);
-      }
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
     }
 
-    .layout-name-input {
-      font-size: 1.25rem;
-      font-weight: 600;
-      padding: 8px 12px;
-      border: 2px solid var(--accent-color, #007bff);
-      border-radius: 8px;
+    &:focus {
       outline: none;
-      flex: 1;
-      text-align: center;
-      background: white;
-      color: var(--color-text, #333);
-    }
-
-    .edit-name-icon {
-      padding: 6px;
-      background: transparent;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: var(--color-text, #666);
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.05);
-        color: var(--color-text, #333);
-      }
-
-      svg, img {
-        width: 16px;
-        height: 16px;
-      }
+      background: #fff;
+      border-color: var(--accent-color, #007bff);
     }
   }
 
-  // Right section - Actions
-  .header-right {
+  .button {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--color-text, #333);
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 36px;
 
-    // Base button styling for all header buttons
-    .builder-btn,
-    .builder-save-btn,
-    .builder-preview-btn,
-    .builder-publish-btn,
-    .builder-options-btn,
-    .builder-export-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 8px 12px;
-      background: transparent;
+    .icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.12);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--accent-color, #007bff);
+    }
+  }
+
+  #saveLayoutBtn,
+  .builder-publish-btn {
+    background: var(--accent-color, #007bff);
+    color: #fff;
+    border-color: var(--accent-color, #007bff);
+
+    &:hover {
+      background: var(--accent-color-dark, #0056b3);
+      border-color: var(--accent-color-dark, #0056b3);
+    }
+  }
+
+  .builder-preview-btn {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  .builder-save-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .builder-save-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: white;
       border: 1px solid rgba(0, 0, 0, 0.08);
       border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: var(--color-text, #333);
-      font-size: 14px;
-      font-weight: 500;
-      min-height: 36px;
-
-      svg, img {
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
-      }
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.05);
-        border-color: rgba(0, 0, 0, 0.12);
-        transform: translateY(-1px);
-      }
-
-      &:active {
-        transform: translateY(0);
-        background: rgba(0, 0, 0, 0.08);
-      }
-
-      &:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px var(--accent-color, #007bff);
-      }
-    }
-
-    // Icon-only buttons
-    .builder-options-btn,
-    .builder-export-btn {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       padding: 8px;
-      min-width: 36px;
+      display: none;
 
-      span:not(.icon) {
-        display: none;
-      }
-    }
-
-    // Primary action buttons
-    .builder-save-btn,
-    .builder-publish-btn {
-      background: var(--accent-color, #007bff);
-      color: white;
-      border-color: var(--accent-color, #007bff);
-
-      &:hover {
-        background: var(--accent-color-dark, #0056b3);
-        border-color: var(--accent-color-dark, #0056b3);
-      }
-
-      &.saved {
-        background: #22c55e;
-        border-color: #22c55e;
-        color: white;
-
-        &:hover {
-          background: #16a34a;
-          border-color: #16a34a;
-        }
-      }
-    }
-
-    // Secondary action button
-    .builder-preview-btn {
-      background: rgba(0, 0, 0, 0.02);
-      border-color: rgba(0, 0, 0, 0.12);
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.08);
-        border-color: rgba(0, 0, 0, 0.2);
-      }
-    }
-
-    .builder-save-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-
-      .builder-save-dropdown {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        background: white;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 8px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        padding: 8px;
-        display: none;
-
-        label {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          color: var(--color-text, #333);
-        }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--color-text, #333);
       }
     }
   }
-
-  // (viewport selector removed)
 }
 
 // Builder options menu styling
@@ -337,12 +217,13 @@
 
 // Preview mode adjustments
 body.preview-mode .builder-header {
-  .builder-save-btn,
-  .layout-info {
+  #saveLayoutBtn,
+  .builder-publish-btn,
+  .layout-name-input {
     display: none;
   }
 
-  .header-right {
+  .button {
     margin-left: auto;
   }
 }
@@ -395,44 +276,22 @@ body.preview-mode .builder-header {
     padding: 8px 16px;
     gap: 8px;
 
-    .header-left .logo {
-      display: none;
+    .layout-name-input {
+      font-size: 1rem;
     }
 
-    .layout-info {
-      max-width: 200px;
+    .button {
+      padding: 6px 8px;
+      font-size: 13px;
+      min-height: 32px;
 
-      .layout-name,
-      .layout-name-input {
-        font-size: 1rem;
-      }
-    }
-
-    .header-right {
-      gap: 8px;
-
-      .builder-btn,
-      .builder-save-btn,
-      .builder-preview-btn,
-      .builder-publish-btn {
-        padding: 6px 8px;
-        font-size: 13px;
-        min-height: 32px;
-
-        span:not(.icon) {
-          display: none;
-        }
-
-        svg, img {
-          width: 16px;
-          height: 16px;
-        }
+      span:not(.icon) {
+        display: none;
       }
 
-      .builder-options-btn,
-      .builder-export-btn {
-        padding: 6px;
-        min-width: 32px;
+      .icon {
+        width: 16px;
+        height: 16px;
       }
     }
   }

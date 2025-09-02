@@ -25,6 +25,8 @@ import { createActionBar } from './renderer/actionBar.js';
 import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
+import { fetchPartial } from './fetchPartial.js';
+import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
 
 function getAdminUserId() {
   try {
@@ -891,29 +893,46 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
 const publishPopup = document.getElementById('publishPanel');
 publishPopup.classList.add('hidden');
-publishPopup.innerHTML = `
+let slugInput;
+let suggestionsEl;
+let warningEl;
+let draftWrap;
+let draftCb;
+let infoEl;
+let draftNote;
+let confirmBtn;
+let closeBtn;
+let selectedPage = null;
+let creatingPage = false;
+try {
+  const html = await fetchPartial('publish-panel', 'builder');
+  publishPopup.innerHTML = sanitizeHtml(html);
+} catch (err) {
+  console.warn('[Designer] Failed to load publish panel:', err);
+  publishPopup.innerHTML = `
   <button class="publish-close" type="button" aria-label="Close">&times;</button>
   <label class="publish-slug-label">Subpath
     <input type="text" class="publish-slug-input" />
   </label>
   <div class="publish-suggestions"></div>
   <div class="publish-warning hidden"></div>
-  <label class="publish-create hidden"><input type="checkbox" class="publish-create-checkbox" checked /> Create page</label>
-  <label class="publish-publish hidden"><input type="checkbox" class="publish-publish-checkbox" /> Publish page</label>
+  <label class="publish-draft hidden"><input type="checkbox" class="publish-draft-checkbox" /> Create and set page to draft</label>
+  <div class="publish-info hidden"></div>
   <div class="publish-actions"><button class="publish-confirm">Publish</button></div>
-`;
+  <div class="publish-draft-note hidden"></div>
+  `;
+}
 loadPageService();
 
-const slugInput = publishPopup.querySelector('.publish-slug-input');
-const suggestionsEl = publishPopup.querySelector('.publish-suggestions');
-const warningEl = publishPopup.querySelector('.publish-warning');
-const createWrap = publishPopup.querySelector('.publish-create');
-const publishWrap = publishPopup.querySelector('.publish-publish');
-const createCb = publishPopup.querySelector('.publish-create-checkbox');
-const publishCb = publishPopup.querySelector('.publish-publish-checkbox');
-const confirmBtn = publishPopup.querySelector('.publish-confirm');
-const closeBtn = publishPopup.querySelector('.publish-close');
-let selectedPage = null;
+slugInput = publishPopup.querySelector('.publish-slug-input');
+suggestionsEl = publishPopup.querySelector('.publish-suggestions');
+warningEl = publishPopup.querySelector('.publish-warning');
+draftWrap = publishPopup.querySelector('.publish-draft');
+draftCb = publishPopup.querySelector('.publish-draft-checkbox');
+infoEl = publishPopup.querySelector('.publish-info');
+draftNote = publishPopup.querySelector('.publish-draft-note');
+confirmBtn = publishPopup.querySelector('.publish-confirm');
+closeBtn = publishPopup.querySelector('.publish-close');
 
 function positionPublishPopup() {
   const rect = publishBtn.getBoundingClientRect();
@@ -952,29 +971,36 @@ async function lookupPages(q) {
       limit: 10
     });
     const pages = Array.isArray(res) ? res : (res.pages || res.rows || []);
-    suggestionsEl.innerHTML = pages.map(p =>
-      `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">${escapeHtml(p.title || p.slug)}</div>`
-    ).join('');
+    return pages;
   } catch (err) {
     console.warn('searchPages failed', err);
+    return [];
   }
 }
 
-slugInput.addEventListener('input', () => {
-  const q = slugInput.value.trim();
+slugInput.addEventListener('input', async () => {
+  const qRaw = slugInput.value.trim();
+  const q = sanitizeSlug(qRaw);
   selectedPage = null;
+  creatingPage = false;
   suggestionsEl.innerHTML = '';
   warningEl.classList.add('hidden');
-  if (!q) {
-    createWrap.classList.add('hidden');
-    publishWrap.classList.add('hidden');
-    return;
+  infoEl.classList.add('hidden');
+  draftWrap.classList.add('hidden');
+  draftNote.classList.add('hidden');
+  if (!q) return;
+  const pages = await lookupPages(q);
+  const suggestions = pages.map(p =>
+    `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">/${escapeHtml(p.slug)}</div>`
+  ).join('');
+  const exists = pages.some(p => p.slug === q);
+  suggestionsEl.innerHTML = suggestions + (exists ? '' : '<div class="publish-add">+ Add page</div>');
+  if (!exists) {
+    creatingPage = true;
+    infoEl.textContent = 'Page will be created and design attached.';
+    infoEl.classList.remove('hidden');
+    draftWrap.classList.remove('hidden');
   }
-  lookupPages(q);
-  createWrap.classList.remove('hidden');
-  publishWrap.classList.remove('hidden');
-  publishCb.checked = false;
-  createCb.checked = true;
 });
 
 suggestionsEl.addEventListener('click', async e => {
@@ -991,18 +1017,27 @@ suggestionsEl.addEventListener('click', async e => {
     });
     const page = res?.data ?? res;
     selectedPage = page || null;
+    creatingPage = false;
+    infoEl.classList.add('hidden');
+    draftWrap.classList.add('hidden');
+    draftNote.classList.add('hidden');
     if (page && page.status !== 'published') {
       warningEl.textContent = 'Selected page is a draft';
       warningEl.classList.remove('hidden');
-      publishWrap.classList.remove('hidden');
-      publishCb.checked = true;
     } else {
       warningEl.classList.add('hidden');
-      publishWrap.classList.add('hidden');
     }
-    createWrap.classList.add('hidden');
   } catch (err) {
     console.warn('getPageById failed', err);
+  }
+});
+
+draftCb.addEventListener('change', () => {
+  if (draftCb.checked) {
+    draftNote.textContent = 'Page will be created as draft and will not be publicly accessible.';
+    draftNote.classList.remove('hidden');
+  } else {
+    draftNote.classList.add('hidden');
   }
 });
 
@@ -1148,11 +1183,11 @@ confirmBtn.addEventListener('click', async () => {
   if (!slug) { alert('Enter a subpath'); return; }
   try {
     const name = nameInput.value.trim();
-    if (!selectedPage && createCb.checked) {
+    if (creatingPage) {
       const newPage = await pageService.create({
         title: name || slug,
         slug,
-        status: publishCb.checked ? 'published' : 'draft'
+        status: draftCb.checked ? 'draft' : 'published'
       });
       if (newPage?.id) {
         await pageService.update(newPage, {
@@ -1160,8 +1195,7 @@ confirmBtn.addEventListener('click', async () => {
         });
       }
     } else if (selectedPage) {
-      const patch = { meta: { ...(selectedPage.meta || {}), layoutTemplate: name } };
-      if (publishCb.checked) patch.status = 'published';
+      const patch = { meta: { ...(selectedPage.meta || {}), layoutTemplate: name }, status: 'published' };
       await pageService.update(selectedPage, patch);
     }
     await runPublish(slug);

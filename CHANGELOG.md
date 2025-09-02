@@ -18,6 +18,8 @@ El Psy Kongroo
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.
 - Builder workspace now displays the current viewport width in the top-right corner.
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
+### Changed
+- Publish panel markup extracted into a standalone partial for easier maintenance.
 - Simple hue wheel with hex input accessible from preset colors.
 - Header viewport control with slider to adjust builder canvas width.
 - Login screen now cycles through preset accent colors for its dotted background and form border.
@@ -27,6 +29,7 @@ El Psy Kongroo
 - Designer app uses standalone `PixelGrid` built on grid-core modules.
 - Moved `globalEvents` helper into grid-core for shared consumption.
 ### Changed
+- Builder publish slug suggestions now list only existing pages and show a draft option when creating new ones.
 - Publish button now toggles the publish panel and the panel includes a close button for easy dismissal.
 - Builder layout wraps the viewport in a `<main>` element, nests the footer inside `#content`, and places the publish popup in a right-side `<aside>` without a backdrop.
 - Initial `grid-core` module with geometry helpers, bounding box manager and lightweight event emitter for upcoming grid refactor.

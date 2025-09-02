@@ -15,16 +15,17 @@ import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 
-import { addHitLayer, applyDesignerTheme, wrapCss, executeJs } from './utils.js';
+import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
   try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/builder]', ...args); } catch (e) {}
 }
 import { createActionBar } from './renderer/actionBar.js';
-import { scheduleAutosave as scheduleAutosaveFn, startAutosave as startAutosaveFn, saveCurrentLayout as saveLayout } from './renderer/autosave.js';
+import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
+import { initPublishPanel } from './renderer/publishPanel.js';
 
 function getAdminUserId() {
   try {
@@ -54,22 +55,6 @@ async function loadToPng() {
     }
   }
   return _toPng;
-}
-
-let pageService;
-let sanitizeSlug;
-async function loadPageService() {
-  if (pageService && sanitizeSlug) return;
-  try {
-    const mod = await import(
-      /* webpackIgnore: true */ '/plainspace/widgets/admin/defaultwidgets/pageList/pageService.js'
-    );
-    pageService = mod.pageService;
-    sanitizeSlug = mod.sanitizeSlug;
-  } catch (err) {
-    console.warn('[Designer] pageService not available', err);
-    sanitizeSlug = str => String(str).toLowerCase().replace(/[^a-z0-9\/-]+/g, '-').replace(/^-+|-+$/g, '');
-  }
 }
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
@@ -279,6 +264,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     codeMap: ensureCodeMap(),
     getLayer: () => activeLayer
   };
+  const { scheduleAutosave, startAutosave, saveDesign } = createSaveManager(state, saveLayoutCtx);
   await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
   const grid = initGrid(gridEl, state, selectWidget, {
@@ -286,9 +272,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     enableZoom: true
   });
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
-  function scheduleAutosave() {
-    scheduleAutosaveFn(state, opts => saveLayout(opts, { ...saveLayoutCtx, ...state }));
-  }
   function selectWidget(el) {
     baseSelectWidget(el);
     if (!el) return;
@@ -455,13 +438,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (pageId && autosaveEnabled) scheduleAutosave();
   }
 
-  function startAutosave() {
-    startAutosaveFn(state, opts => saveLayout(opts, saveLayoutCtx));
-  }
-
-  async function saveCurrentLayout(opts = {}) {
-    await saveLayout(opts, { ...saveLayoutCtx, ...state });
-  }
 
   let initialLayout = [];
   let pageData = null;
@@ -807,7 +783,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   autosaveToggle.checked = state.autosaveEnabled;
   autosaveToggle.addEventListener('change', () => {
     state.autosaveEnabled = autosaveToggle.checked;
-    startAutosaveFn(state, saveLayoutCtx);
+    startAutosave();
   });
 
   // Header already injected by loadHeaderPartial();
@@ -832,42 +808,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   saveBtn.addEventListener('click', async () => {
-    const name = nameInput.value.trim();
-    if (!name) { alert('Enter a name'); return; }
-    updateAllWidgetContents();
-    const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
-    const previewPath = await capturePreview();
     try {
-      await meltdownEmit('saveLayoutTemplate', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        name,
-        lane: 'public',
-        viewport: 'desktop',
-        layout,
-        previewPath
+      await saveDesign({
+        name: nameInput.value.trim(),
+        gridEl,
+        getCurrentLayoutForLayer,
+        getActiveLayer: () => activeLayer,
+        ensureCodeMap,
+        capturePreview,
+        updateAllWidgetContents,
+        pageId
       });
-
-      const targetIds = pageId ? [pageId] : [];
-
-      const events = targetIds.map(id => ({
-        eventName: 'saveLayoutForViewport',
-        payload: {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core',
-          pageId: id,
-          lane: 'public',
-          viewport: 'desktop',
-          layout
-        }
-      }));
-
-      await meltdownEmitBatch(events);
-
       alert('Layout template saved');
     } catch (err) {
-      console.error('[Designer] saveLayoutTemplate error', err);
       alert('Save failed: ' + err.message);
     }
   });
@@ -887,291 +840,24 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   });
 
-// publish flow handled by popup defined below
-
-const publishPopup = document.getElementById('publishPanel');
-publishPopup.classList.add('hidden');
-publishPopup.innerHTML = `
-  <button class="publish-close" type="button" aria-label="Close">&times;</button>
-  <label class="publish-slug-label">Subpath
-    <input type="text" class="publish-slug-input" />
-  </label>
-  <div class="publish-suggestions"></div>
-  <div class="publish-warning hidden"></div>
-  <label class="publish-create hidden"><input type="checkbox" class="publish-create-checkbox" checked /> Create page</label>
-  <label class="publish-publish hidden"><input type="checkbox" class="publish-publish-checkbox" /> Publish page</label>
-  <div class="publish-actions"><button class="publish-confirm">Publish</button></div>
-`;
-loadPageService();
-
-const slugInput = publishPopup.querySelector('.publish-slug-input');
-const suggestionsEl = publishPopup.querySelector('.publish-suggestions');
-const warningEl = publishPopup.querySelector('.publish-warning');
-const createWrap = publishPopup.querySelector('.publish-create');
-const publishWrap = publishPopup.querySelector('.publish-publish');
-const createCb = publishPopup.querySelector('.publish-create-checkbox');
-const publishCb = publishPopup.querySelector('.publish-publish-checkbox');
-const confirmBtn = publishPopup.querySelector('.publish-confirm');
-const closeBtn = publishPopup.querySelector('.publish-close');
-let selectedPage = null;
-
-function positionPublishPopup() {
-  const rect = publishBtn.getBoundingClientRect();
-  const top = `${rect.bottom}px`;
-  const height = `calc(100% - ${rect.bottom}px)`;
-  publishPopup.style.top = top;
-  publishPopup.style.height = height;
-}
-
-function showPublishPopup() {
-  positionPublishPopup();
-  publishPopup.classList.remove('hidden');
-  slugInput.focus();
-}
-
-function hidePublishPopup() {
-  publishPopup.classList.add('hidden');
-}
-
-window.addEventListener('resize', () => {
-  if (!publishPopup.classList.contains('hidden')) positionPublishPopup();
-});
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-}
-
-async function lookupPages(q) {
-  try {
-    const res = await meltdownEmit('searchPages', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'pagesManager',
-      moduleType: 'core',
-      query: q,
-      lane: 'all',
-      limit: 10
-    });
-    const pages = Array.isArray(res) ? res : (res.pages || res.rows || []);
-    suggestionsEl.innerHTML = pages.map(p =>
-      `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">${escapeHtml(p.title || p.slug)}</div>`
-    ).join('');
-  } catch (err) {
-    console.warn('searchPages failed', err);
-  }
-}
-
-slugInput.addEventListener('input', () => {
-  const q = slugInput.value.trim();
-  selectedPage = null;
-  suggestionsEl.innerHTML = '';
-  warningEl.classList.add('hidden');
-  if (!q) {
-    createWrap.classList.add('hidden');
-    publishWrap.classList.add('hidden');
-    return;
-  }
-  lookupPages(q);
-  createWrap.classList.remove('hidden');
-  publishWrap.classList.remove('hidden');
-  publishCb.checked = false;
-  createCb.checked = true;
-});
-
-suggestionsEl.addEventListener('click', async e => {
-  const el = e.target.closest('.publish-suggestion');
-  if (!el) return;
-  slugInput.value = el.dataset.slug;
-  suggestionsEl.innerHTML = '';
-  try {
-    const res = await meltdownEmit('getPageById', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'pagesManager',
-      moduleType: 'core',
-      pageId: Number(el.dataset.id)
-    });
-    const page = res?.data ?? res;
-    selectedPage = page || null;
-    if (page && page.status !== 'published') {
-      warningEl.textContent = 'Selected page is a draft';
-      warningEl.classList.remove('hidden');
-      publishWrap.classList.remove('hidden');
-      publishCb.checked = true;
-    } else {
-      warningEl.classList.add('hidden');
-      publishWrap.classList.add('hidden');
-    }
-    createWrap.classList.add('hidden');
-  } catch (err) {
-    console.warn('getPageById failed', err);
-  }
-});
-
-  publishBtn.addEventListener('click', () => {
-    if (publishPopup.classList.contains('hidden')) {
-      showPublishPopup();
-    } else {
-      hidePublishPopup();
-    }
-  });
-  closeBtn.addEventListener('click', hidePublishPopup);
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !publishPopup.classList.contains('hidden')) {
-      hidePublishPopup();
-    }
+  initPublishPanel({
+    publishBtn,
+    nameInput,
+    gridEl,
+    updateAllWidgetContents,
+    getAdminUserId,
+    saveDesign: () => saveDesign({
+      name: nameInput.value.trim(),
+      gridEl,
+      getCurrentLayoutForLayer,
+      getActiveLayer: () => activeLayer,
+      ensureCodeMap,
+      updateAllWidgetContents,
+      pageId
+    })
   });
 
-async function runPublish(subSlug) {
-  const name = nameInput.value.trim();
-  if (!name) { alert('Enter a name'); return; }
-  updateAllWidgetContents();
-  const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
-  const previewPath = await capturePreview();
-  const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
-  const normalizedSubPath = subSlug
-    ? (subSlug.startsWith('builder/') ? subSlug : `builder/${subSlug}`)
-    : `builder/${safeName}`;
-
-  const gridClone = gridEl ? gridEl.cloneNode(true) : null;
-  const externalStyles = [];
-  const externalScripts = [];
-  let jsContent = '';
-  let cssContent = '';
-  let bodyHtml = '';
-  if (gridClone) {
-    gridClone.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
-      if (l.href) externalStyles.push(l.href);
-      l.remove();
-    });
-    gridClone.querySelectorAll('script').forEach(s => {
-      if (s.src) {
-        externalScripts.push(s.src);
-      } else {
-        jsContent += s.textContent + '\n';
-      }
-      s.remove();
-    });
-    gridClone.querySelectorAll('style').forEach(st => {
-      cssContent += st.textContent + '\n';
-      st.remove();
-    });
-    bodyHtml = gridClone.innerHTML;
-  }
-
-  const theme = window.ACTIVE_THEME || 'default';
-  const headLinks = [
-    `<link rel="canonical" href="/${subSlug || `p/${safeName}`}">`,
-    `<link rel="stylesheet" href="/themes/${theme}/theme.css">`,
-    ...externalStyles.map(href => `<link rel="stylesheet" href="${href}">`)
-  ];
-  if (cssContent.trim()) headLinks.push('<link rel="stylesheet" href="style.css">');
-
-  const tailScripts = [
-    `<script src="/themes/${theme}/theme.js"></script>`,
-    '<script src="/build/meltdownEmitter.js"></script>',
-    '<script type="module" src="/assets/js/faviconLoader.js"></script>',
-    '<script type="module" src="/assets/js/fontsLoader.js"></script>',
-    '<script type="module" src="/assets/js/customSelect.js"></script>',
-    '<script src="/assets/js/openExplorer.js"></script>',
-    ...externalScripts.map(src => `<script src="${src}"></script>`),
-    '<script type="module" src="/plainspace/main/pageRenderer.js"></script>'
-  ];
-  if (jsContent.trim()) tailScripts.splice(-1, 0, '<script src="script.js"></script>');
-
-  const safeTitle = name.replace(/[<>\"]/g, c => ({'<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-  const indexHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${safeTitle}</title>${headLinks.join('')}</head><body><div class="app-scope"><div id="content">${bodyHtml}</div></div>${tailScripts.join('')}</body></html>`;
-
-  const files = [{ fileName: 'index.html', data: indexHtml }];
-  if (jsContent.trim()) files.push({ fileName: 'script.js', data: jsContent });
-  if (cssContent.trim()) files.push({ fileName: 'style.css', data: cssContent });
-  let existingMeta = null;
-  try {
-    existingMeta = await meltdownEmit('getPublishedDesignMeta', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      name
-    });
-  } catch (err) {
-    console.warn('[Designer] getPublishedDesignMeta', err);
-  }
-  try {
-    await meltdownEmit('deleteLocalItem', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'mediaManager',
-      moduleType: 'core',
-      currentPath: existingMeta?.path ? existingMeta.path.split('/').slice(0, -1).join('/') : 'builder',
-      itemName: existingMeta?.path ? existingMeta.path.split('/').pop() : safeName
-    });
-  } catch (err) {
-    console.warn('[Designer] deleteLocalItem', err);
-  }
-  await meltdownEmit('saveLayoutTemplate', {
-    jwt: window.ADMIN_TOKEN,
-    moduleName: 'plainspace',
-    name,
-    lane: 'public',
-    viewport: 'desktop',
-    layout,
-    previewPath
-  });
-  for (const f of files) {
-    await meltdownEmit('uploadFileToFolder', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'mediaManager',
-      moduleType: 'core',
-      subPath: normalizedSubPath,
-      fileName: f.fileName,
-      fileData: btoa(unescape(encodeURIComponent(f.data)))
-    });
-  }
-  const currentUserId = getAdminUserId();
-  await meltdownEmit('makeFilePublic', {
-    jwt: window.ADMIN_TOKEN,
-    moduleName: 'mediaManager',
-    moduleType: 'core',
-    filePath: normalizedSubPath,
-    ...(currentUserId ? { userId: currentUserId } : {})
-  });
-  await meltdownEmit('savePublishedDesignMeta', {
-    jwt: window.ADMIN_TOKEN,
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    name,
-    path: normalizedSubPath,
-    files: files.map(f => f.fileName)
-  });
-}
-
-confirmBtn.addEventListener('click', async () => {
-  await loadPageService();
-  const slug = sanitizeSlug(slugInput.value.trim());
-  if (!slug) { alert('Enter a subpath'); return; }
-  try {
-    const name = nameInput.value.trim();
-    if (!selectedPage && createCb.checked) {
-      const newPage = await pageService.create({
-        title: name || slug,
-        slug,
-        status: publishCb.checked ? 'published' : 'draft'
-      });
-      if (newPage?.id) {
-        await pageService.update(newPage, {
-          meta: { ...(newPage.meta || {}), layoutTemplate: name }
-        });
-      }
-    } else if (selectedPage) {
-      const patch = { meta: { ...(selectedPage.meta || {}), layoutTemplate: name } };
-      if (publishCb.checked) patch.status = 'published';
-      await pageService.update(selectedPage, patch);
-    }
-    await runPublish(slug);
-    hidePublishPopup();
-  } catch (err) {
-    console.error('[Designer] publish flow error', err);
-    alert('Publish failed: ' + err.message);
-  }
-});
-  let versionEl = document.getElementById('builderVersion');
+    let versionEl = document.getElementById('builderVersion');
   if (!versionEl) {
     versionEl = document.createElement('div');
     versionEl.id = 'builderVersion';

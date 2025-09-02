@@ -1,15 +1,16 @@
 /* Publish panel displayed as a right-side aside that pushes content */
 #publishPanel {
   flex-shrink: 0;
-  width: 320px;
-  background: #fff;
-  border-left: 1px solid #ccc;
-  padding: 1rem;
+  width: var(--panel-width, 320px);
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  padding: var(--space-6);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-5);
   position: relative;
+  box-shadow: var(--shadow-lg);
 
   &.hidden {
     display: none;
@@ -17,51 +18,112 @@
 
   .publish-close {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: transparent;
-    border: none;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 32px;
+    height: 32px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
     cursor: pointer;
-    font-size: 1.25rem;
+    color: var(--color-text);
+    font-size: var(--text-lg);
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-base);
+
+    &:hover {
+      background: var(--bg-secondary);
+    }
+  }
+
+  .publish-slug-label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+
+    .publish-slug-input {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: var(--text-base);
+
+      &:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px var(--accent-color-light);
+        outline: none;
+      }
+    }
   }
 
   .publish-suggestions {
     max-height: 150px;
     overflow-y: auto;
-    margin-top: 0.5rem;
+    margin-top: var(--space-2);
+    border: 1px solid var(--border-color-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
   }
 
   .publish-suggestion {
-    padding: 0.25rem 0;
+    padding: var(--space-2) var(--space-3);
     cursor: pointer;
+    transition: background var(--transition-base);
 
     &:hover {
-      text-decoration: underline;
+      background: var(--bg-secondary);
+      text-decoration: none;
     }
   }
 
   .publish-warning {
-    color: #b00;
-    margin-top: 0.5rem;
+    color: var(--error-color);
+    background: color-mix(in srgb, var(--error-color), transparent 90%);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
   }
 
   .publish-draft {
-    display: block;
-    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    margin-top: var(--space-2);
   }
 
   .publish-info {
-    margin-top: 0.5rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
   }
 
   .publish-draft-note {
-    color: #b00;
-    margin-top: 0.5rem;
+    color: var(--error-color);
+    font-size: var(--text-sm);
   }
 
   .publish-actions {
-    margin-top: 0.5rem;
+    margin-top: auto;
     text-align: right;
+
+    .publish-confirm {
+      padding: var(--space-3) var(--space-6);
+      background: var(--accent-color);
+      color: var(--color-white);
+      border: none;
+      border-radius: var(--radius-lg);
+      font-weight: var(--font-medium);
+      cursor: pointer;
+      transition: background var(--transition-base), box-shadow var(--transition-base);
+
+      &:hover {
+        background: var(--accent-color-hover);
+        box-shadow: var(--shadow-card);
+      }
+    }
   }
 }

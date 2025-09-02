@@ -38,6 +38,8 @@ El Psy Kongroo
 - Extracted builder publish panel logic into a dedicated module for easier maintenance.
 - Publish panel markup extracted into a standalone partial for easier maintenance.
 - Simple hue wheel with hex input accessible from preset colors.
+- Publish panel replaces “+ Add page” with “+ Create page,” immediately creating a public page and offering a “Set page to draft” option for any selected page.
+- Builder and admin panels now use the variable body font for consistent typography.
 - Header viewport control with slider to adjust builder canvas width.
 - Login screen now cycles through preset accent colors for its dotted background and form border.
 - Updated CanvasGrid documentation to cover responsive builder configuration.

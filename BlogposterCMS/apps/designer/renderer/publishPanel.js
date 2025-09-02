@@ -30,7 +30,6 @@ export function initPublishPanel({
   publishPanel.classList.add('hidden');
   let slugInput, suggestionsEl, warningEl, draftWrap, draftCb, infoEl, draftNote, confirmBtn, closeBtn;
   let selectedPage = null;
-  let creatingPage = false;
   fetchPartial('publish-panel', 'builder')
     .then(html => {
       publishPanel.innerHTML = sanitizeHtml(html);
@@ -65,7 +64,7 @@ export function initPublishPanel({
     closeBtn = publishPanel.querySelector('.publish-close');
 
     slugInput.addEventListener('input', onSlugInput);
-    suggestionsEl.addEventListener('click', onSuggestionClick);
+    suggestionsEl.addEventListener('click', onSuggestionsClick);
     draftCb.addEventListener('change', onDraftToggle);
     publishBtn.addEventListener('click', togglePanel);
     closeBtn.addEventListener('click', hidePublishPanel);
@@ -78,25 +77,15 @@ export function initPublishPanel({
     confirmBtn.addEventListener('click', async () => {
       await loadPageService();
       const slug = sanitizeSlug(slugInput.value.trim());
-      if (!slug) { alert('Enter a subpath'); return; }
+      if (!slug || !selectedPage) { alert('Select a page'); return; }
       try {
         await saveDesign();
         const name = nameInput.value.trim();
-        if (creatingPage) {
-          const newPage = await pageService.create({
-            title: name || slug,
-            slug,
-            status: draftCb.checked ? 'draft' : 'published'
-          });
-          if (newPage?.id) {
-            await pageService.update(newPage, {
-              meta: { ...(newPage.meta || {}), layoutTemplate: name }
-            });
-          }
-        } else if (selectedPage) {
-          const patch = { meta: { ...(selectedPage.meta || {}), layoutTemplate: name }, status: 'published' };
-          await pageService.update(selectedPage, patch);
-        }
+        const patch = {
+          meta: { ...(selectedPage.meta || {}), layoutTemplate: name },
+          status: draftCb.checked ? 'draft' : 'published'
+        };
+        await pageService.update(selectedPage, patch);
         await runPublish(slug);
         hidePublishPanel();
       } catch (err) {
@@ -149,7 +138,6 @@ export function initPublishPanel({
     const qRaw = slugInput.value.trim();
     const q = sanitizeSlug(qRaw);
     selectedPage = null;
-    creatingPage = false;
     suggestionsEl.innerHTML = '';
     warningEl.classList.add('hidden');
     infoEl.classList.add('hidden');
@@ -161,16 +149,35 @@ export function initPublishPanel({
       `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">/${escapeHtml(p.slug)}</div>`
     ).join('');
     const exists = pages.some(p => p.slug === q);
-    suggestionsEl.innerHTML = suggestions + (exists ? '' : '<div class="publish-add">+ Add page</div>');
+    suggestionsEl.innerHTML = suggestions + (exists ? '' : '<div class="publish-add">+ Create page</div>');
     if (!exists) {
-      creatingPage = true;
-      infoEl.textContent = 'Page will be created and design attached.';
+      infoEl.textContent = 'Click "Create page" to add a new page with this slug.';
       infoEl.classList.remove('hidden');
-      draftWrap.classList.remove('hidden');
     }
   }
 
-  async function onSuggestionClick(e) {
+  async function onSuggestionsClick(e) {
+    const addEl = e.target.closest('.publish-add');
+    if (addEl) {
+      await loadPageService();
+      const slug = sanitizeSlug(slugInput.value.trim());
+      if (!slug) return;
+      try {
+        const title = nameInput.value.trim() || slug;
+        const newPage = await pageService.create({ title, slug, status: 'published' });
+        selectedPage = newPage;
+        slugInput.value = slug;
+        suggestionsEl.innerHTML = '';
+        infoEl.textContent = 'Page created. You can set it to draft before publishing.';
+        infoEl.classList.remove('hidden');
+        draftWrap.classList.remove('hidden');
+        draftCb.checked = false;
+      } catch (err) {
+        console.error('create page failed', err);
+        alert('Page creation failed: ' + err.message);
+      }
+      return;
+    }
     const el = e.target.closest('.publish-suggestion');
     if (!el) return;
     slugInput.value = el.dataset.slug;
@@ -187,10 +194,10 @@ export function initPublishPanel({
         return;
       }
       selectedPage = page;
-      creatingPage = false;
       infoEl.classList.add('hidden');
-      draftWrap.classList.add('hidden');
+      draftWrap.classList.remove('hidden');
       draftNote.classList.add('hidden');
+      draftCb.checked = page.status !== 'published';
       if (page && page.status !== 'published') {
         warningEl.textContent = 'Selected page is a draft';
         warningEl.classList.remove('hidden');

@@ -106,7 +106,8 @@ The canvas opens centered in the viewport at a 100% zoom level and can expand up
 
 ### Publishing layouts
 
-Clicking **Publish** in the builder opens a side panel beneath the Publish button on the right where you can search existing pages by slug or enter a new path. Selecting a draft page shows a warning with an option to publish it alongside the design, and entering a new slug reveals checkboxes to create and immediately publish the page or save it as a draft.
+Clicking **Publish** in the builder opens a side panel beneath the Publish button on the right where you can search existing pages by slug. If the entered path doesn't match an existing page, the suggestions list displays “+ Add page” and the panel notes that a page will be created with the design applied. You may choose to create the page as a draft, and a red notice reminds you that draft pages aren't publicly accessible.
+Publishing first saves your current layout template, then creates the page if necessary and attaches the design using the same logic as the Page Content widget so changes show up immediately.
 Click **Publish** again or use the panel's close button to dismiss it.
 
 ### Widget CSS Layers

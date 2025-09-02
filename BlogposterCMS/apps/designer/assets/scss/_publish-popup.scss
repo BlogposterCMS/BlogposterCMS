@@ -45,9 +45,17 @@
     margin-top: 0.5rem;
   }
 
-  .publish-create,
-  .publish-publish {
+  .publish-draft {
     display: block;
+    margin-top: 0.5rem;
+  }
+
+  .publish-info {
+    margin-top: 0.5rem;
+  }
+
+  .publish-draft-note {
+    color: #b00;
     margin-top: 0.5rem;
   }
 

@@ -5,6 +5,7 @@ El Psy Kongroo
 
 ## [Unreleased]
 ### Fixed
+- Zoom sizer now expands to the grid width when the canvas exceeds the viewport, keeping the builder grid within its parent.
 - Preserve scroll position by only recentering canvas on width changes near the origin.
 - Restored styles for admin page stats widget and page picker lost during Sass refactor.
 - Replaced deprecated Sass @import directives with @use and mixins to remove compilation warnings.

@@ -151,9 +151,12 @@ export class CanvasGrid {
   _syncSizer() {
     if (!this.sizer) return;
     const scale = this.scale || this._currentScale();
-    // Base the width on the unscaled scroll container so ResizeObserver
-    // callbacks don't repeatedly multiply the already scaled grid size.
-    const baseW = (this.scrollContainer && this.scrollContainer.clientWidth) || this.el.offsetWidth || 0;
+    // Base the width on the larger of the unscaled scroll container and the
+    // grid itself so manual width changes don't clip the canvas when it
+    // exceeds the viewport while still avoiding runaway scaling during zoom.
+    const scW = (this.scrollContainer && this.scrollContainer.clientWidth) || 0;
+    const gridW = this.el.offsetWidth || 0;
+    const baseW = Math.max(scW, gridW);
     const baseH = this.el.offsetHeight || 0;
     const targetW = baseW * scale;
     const targetH = baseH * scale;

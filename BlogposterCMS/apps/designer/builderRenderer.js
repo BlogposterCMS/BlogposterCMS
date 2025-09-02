@@ -240,23 +240,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   });
 
-  const textIcon = sidebarEl.querySelector('.drag-widget-icon[data-widget-id="textBox"]');
-  const builderPanel = document.getElementById('builderPanel');
-  const collapseBtn = builderPanel?.querySelector('.collapse-btn');
-  if (textIcon && builderPanel && collapseBtn) {
-    textIcon.addEventListener('click', () => {
-      builderPanel.classList.toggle('hidden');
-      if (!builderPanel.classList.contains('hidden')) {
-        builderPanel.querySelectorAll('.builder-panel').forEach(p => {
-          p.style.display = p.classList.contains('text-panel') ? '' : 'none';
-        });
-      }
-    });
-    collapseBtn.addEventListener('click', () => {
-      builderPanel.classList.add('hidden');
-    });
-  }
-
     // Use a plain builder grid container. CanvasGrid will add its own
   // `canvas-grid` class; avoid `pixel-grid` here so zoom scaling via
   // CSS variable works with the BoundingBoxManager.

@@ -1,4 +1,5 @@
 import { state } from '../core/editor.js';
+import { showBuilderPanel, hideBuilderPanel } from '../../managers/panelManager.js';
 
 let bgToolbar = null;
 let listenersAttached = false;
@@ -99,9 +100,7 @@ export function initBackgroundToolbar() {
     const h4 = colorPanel.querySelector('h4');
     if (h4) h4.textContent = 'Hintergrundfarbe';
 
-    panelContainer.querySelectorAll('.builder-panel').forEach(p => {
-      p.style.display = p.classList.contains('color-panel') ? '' : 'none';
-    });
+    showBuilderPanel('color-panel');
     const host = colorPanel.querySelector('.color-panel-content') || colorPanel;
     if (state.colorPicker.el.parentElement !== host) host.appendChild(state.colorPicker.el);
     state.colorPicker.el.classList.remove('hidden');
@@ -114,21 +113,12 @@ export function initBackgroundToolbar() {
       collapseBtn.__bgBound = true;
       collapseBtn.addEventListener('click', () => closeColorPanel());
     }
-    panelContainer.classList.remove('hidden');
     return true;
   }
 
   function closeColorPanel() {
-    const panelContainer = document.getElementById('builderPanel');
-    panelContainer?.querySelectorAll('.builder-panel').forEach(p => {
-      if (p.classList.contains('color-panel')) {
-        p.style.display = 'none';
-      } else {
-        p.style.display = '';
-      }
-    });
+    hideBuilderPanel();
     state.colorPicker.el.classList.add('hidden');
-    panelContainer?.classList.add('hidden');
     try { colorBtn.focus(); } catch (e) {}
   }
 

@@ -27,6 +27,7 @@ El Psy Kongroo
 - Designer app uses standalone `PixelGrid` built on grid-core modules.
 - Moved `globalEvents` helper into grid-core for shared consumption.
 ### Changed
+- Extracted builder panel into dedicated module and HTML partial for cleaner builder initialization.
 - Builder panels now appear inline between the sidebar and canvas instead of overlaying content.
 - Publish button now toggles the publish panel and the panel includes a close button for easy dismissal.
 - Builder layout wraps the viewport in a `<main>` element, nests the footer inside `#content`, and places the publish popup in a right-side `<aside>` without a backdrop.

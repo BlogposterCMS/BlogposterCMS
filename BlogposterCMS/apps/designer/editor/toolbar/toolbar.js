@@ -12,6 +12,7 @@ import {
 import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from '../core/selection.js';
 import { fetchPartial } from '../../fetchPartial.js';
 import { sanitizeHtml } from '../../../../public/plainspace/sanitizer.js';
+import { showBuilderPanel, hideBuilderPanel } from '../../managers/panelManager.js';
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
@@ -452,10 +453,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       }
     }
 
-    // Hide other builder panels (e.g., text-panel) and show color panel only
-    panelContainer.querySelectorAll('.builder-panel').forEach(p => {
-      p.style.display = p.classList.contains('color-panel') ? '' : 'none';
-    });
+    showBuilderPanel('color-panel');
 
     // Mount the color picker inside the panel content container
     const host = colorPanel.querySelector('.color-panel-content') || colorPanel;
@@ -476,23 +474,12 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       collapseBtn.addEventListener('click', () => closeColorSidebar());
     }
 
-    panelContainer.classList.remove('hidden');
     return true;
   }
 
   function closeColorSidebar() {
-    const panelContainer = document.getElementById('builderPanel');
-    // Hide color panel and show other panels back (e.g., text-panel)
-    panelContainer?.querySelectorAll('.builder-panel').forEach(p => {
-      if (p.classList.contains('color-panel')) {
-        p.style.display = 'none';
-      } else {
-        p.style.display = '';
-      }
-    });
-    // Hide picker content
+    hideBuilderPanel();
     state.colorPicker.el.classList.add('hidden');
-    panelContainer?.classList.add('hidden');
     try { colorBtn.focus(); } catch (e) {}
   }
 

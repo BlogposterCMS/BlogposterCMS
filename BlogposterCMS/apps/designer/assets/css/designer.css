@@ -152,6 +152,16 @@ body.grid-mode .bounding-box.disabled {
 .publish-popup.hidden {
   display: none;
 }
+.publish-popup .publish-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
 .publish-popup .publish-suggestions {
   max-height: 150px;
   overflow-y: auto;

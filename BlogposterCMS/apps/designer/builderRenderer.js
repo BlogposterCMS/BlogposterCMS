@@ -10,13 +10,22 @@ import {
   redoTextCommand
 } from './editor/editor.js';
 import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar, isBackgroundToolbar } from './editor/toolbar/backgroundToolbar.js';
-import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState } from './managers/gridManager.js';
+import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
 import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 import { designerState } from './managers/designerState.js';
 
 import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
+
+const historyByDesign = {};
+
+function getHistory(designId) {
+  if (!historyByDesign[designId]) {
+    historyByDesign[designId] = { undoStack: [], redoStack: [] };
+  }
+  return historyByDesign[designId];
+}
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
@@ -233,17 +242,46 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const viewportSizeEl = document.createElement('div');
   viewportSizeEl.className = 'viewport-size-display';
   gridViewportEl.appendChild(viewportSizeEl);
+  let currentDesignId = null;
+  function pushLayoutState(layout) {
+    if (!currentDesignId) return;
+    const { undoStack, redoStack } = getHistory(currentDesignId);
+    pushHistoryState(undoStack, redoStack, layout);
+  }
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
     updateAllWidgetContents,
     getCurrentLayout: () => getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap()),
-    pushState,
+    pushState: pushLayoutState,
     meltdownEmit,
     pageId,
     codeMap: ensureCodeMap(),
     getLayer: () => activeLayer
   };
   const { scheduleAutosave, startAutosave, saveDesign } = createSaveManager(state, saveLayoutCtx);
+
+  function undo(designId) {
+    const { undoStack, redoStack } = getHistory(designId);
+    if (undoTextCommand()) return;
+    if (undoStack.length < 2) return;
+    const current = undoStack.pop();
+    redoStack.push(current);
+    const prev = JSON.parse(undoStack[undoStack.length - 1]);
+    applyLayout(prev, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
+    if (pageId && state.autosaveEnabled) scheduleAutosave();
+  }
+
+  function redo(designId) {
+    const { undoStack, redoStack } = getHistory(designId);
+    if (redoTextCommand()) return;
+    if (!redoStack.length) return;
+    const next = redoStack.pop();
+    undoStack.push(next);
+    const layout = JSON.parse(next);
+    applyLayout(layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
+    if (pageId && state.autosaveEnabled) scheduleAutosave();
+  }
+
   await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
   const grid = initGrid(gridEl, state, selectWidget, {
@@ -282,6 +320,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       showBgToolbar();
       bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
     }
+    const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
+    pushLayoutState(layout);
+    if (pageId && state.autosaveEnabled) scheduleAutosave();
   });
   grid.on("dragstart", () => {
     grid.bboxManager?.hide?.();
@@ -392,32 +433,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     else { BGLOG('global click inside viewport, keep bgToolbar', { insideGrid: !!insideGrid }); }
   });
 
-  const undoStack = [];
-  const redoStack = [];
-  const MAX_HISTORY = 50;
-
-
-  function undo() {
-    if (undoTextCommand()) return;
-    if (undoStack.length < 2) return;
-    const current = undoStack.pop();
-    redoStack.push(current);
-    const prev = JSON.parse(undoStack[undoStack.length - 1]);
-    applyLayout(prev, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
-    if (pageId && autosaveEnabled) scheduleAutosave();
-  }
-
-  function redo() {
-    if (redoTextCommand()) return;
-    if (!redoStack.length) return;
-    const next = redoStack.pop();
-    undoStack.push(next);
-    const layout = JSON.parse(next);
-    applyLayout(layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
-    if (pageId && autosaveEnabled) scheduleAutosave();
-  }
-
-
   let initialLayout = [];
   let pageData = null;
   if (pageId) {
@@ -488,7 +503,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   layoutLayers[1].layout = initialLayout;
   applyCompositeLayout(activeLayer);
   markInactiveWidgets();
-  pushState(undoStack, redoStack, initialLayout);
 
   gridEl.addEventListener('dragover',  e => { e.preventDefault(); gridEl.classList.add('drag-over'); });
   gridEl.addEventListener('dragleave', () => gridEl.classList.remove('drag-over'));
@@ -572,6 +586,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     pageData?.title ||
     'default';
 
+  currentDesignId = layoutName;
+  historyByDesign[currentDesignId] = { undoStack: [], redoStack: [] };
+  pushLayoutState(initialLayout);
+
   const nameInput = topBar.querySelector('#layoutNameInput');
   if (nameInput) {
     try { nameInput.value = layoutName; } catch (_) {}
@@ -603,7 +621,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
   saveWrapper.appendChild(saveDropdown);
 
-  initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo, redo });
+  initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
+    undo: () => undo(currentDesignId),
+    redo: () => redo(currentDesignId)
+  });
 
   saveMenuBtn.addEventListener('click', e => {
     e.stopPropagation();

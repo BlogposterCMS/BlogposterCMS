@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Builder now keeps separate undo/redo history for each design in the page builder.
 - Global transparency slider in text editor toolbar controlling opacity for all widgets.
 - Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.
 - Publish panel now adds a title, leading-slash slug input with dropdown suggestions, draft/unpublish toggle, and placeholder Settings button.
@@ -21,13 +22,6 @@ El Psy Kongroo
 - Builder workspace now displays the current viewport width in the top-right corner.
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
 
-### Changed
-- Publish panel suggestions now open in a popup similar to the builder options menu.
-
-
- 
-
-
 
 ### Removed
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
@@ -36,6 +30,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Publish panel suggestions now open in a popup similar to the builder options menu.
 - Draft warning now hides when the draft checkbox is unchecked.
 - Dashboard checkboxes adopt the new UI styling and the publish panel draft checkbox matches.
 - Builder publish and builder panels now inherit global fonts, use side shadows instead of borders, and the publish button spans the panel width.

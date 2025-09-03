@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.
 - Builder now applies user-selected accent color within the builder via shared `userColor` module.
 - Centralized save and autosave logic into a new `saveManager` module for reuse across the builder.
 - Publishing now saves the current layout before creating or updating pages and attaching designs.

@@ -251,6 +251,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       '<button type="button" class="tb-btn" data-cmd="bold">' + window.featherIcon('bold') + '</button>',
       '<button type="button" class="tb-btn" data-cmd="italic">' + window.featherIcon('italic') + '</button>',
       '<button type="button" class="tb-btn" data-cmd="underline">' + window.featherIcon('underline') + '</button>',
+      '<button type="button" class="tb-btn" data-cmd="align" data-align="left">' + window.featherIcon('align-left') + '</button>',
       '<select class="heading-select" style="display:none">' +
         ['h1','h2','h3','h4','h5','h6'].map(h => `<option value="${h}">${h.toUpperCase()}</option>`).join('') +
       '</select>',
@@ -330,6 +331,16 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       const active = isSelectionStyled(prop, val);
       setActiveButtonAppearance(btn, active);
     }
+    const alignBtn = state.toolbar.querySelector('[data-cmd="align"]');
+    if (alignBtn) {
+      let align = 'left';
+      if (isSelectionStyled('textAlign', 'center')) align = 'center';
+      else if (isSelectionStyled('textAlign', 'right')) align = 'right';
+      else if (isSelectionStyled('textAlign', 'justify')) align = 'justify';
+      alignBtn.dataset.align = align;
+      const icon = align === 'justify' ? 'align-justify' : `align-${align}`;
+      alignBtn.innerHTML = window.featherIcon(icon);
+    }
     updateFontSizeInput();
     updateFontLabelFromSelection();
   };
@@ -397,6 +408,13 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     if (cmd === 'bold') toggleStyle('fontWeight', 'bold');
     if (cmd === 'italic') toggleStyle('fontStyle', 'italic');
     if (cmd === 'underline') toggleStyle('textDecoration', 'underline');
+    if (cmd === 'align') {
+      const states = ['left', 'center', 'right', 'justify'];
+      const current = btn.dataset.align || getComputedStyle(state.activeEl).textAlign || 'left';
+      const next = states[(states.indexOf(current) + 1) % states.length];
+      applyToolbarChange(state.activeEl, 'textAlign', next);
+      updateButtonStates();
+    }
   });
 
   const colorWrapper = document.createElement('div');

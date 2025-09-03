@@ -9,7 +9,7 @@ import {
   getRegisteredEditable,
   applyToolbarChange
 } from '../core/editor.js';
-import { designerState } from '../../managers/designerState.js';
+import { designerState, setDefaultOpacity } from '../../managers/designerState.js';
 import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from '../core/selection.js';
 import { fetchPartial } from '../../fetchPartial.js';
 import { sanitizeHtml } from '../../../../public/plainspace/sanitizer.js';
@@ -307,9 +307,8 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   }
 
   function setOpacity(val) {
-    designerState.defaultOpacity = val;
+    setDefaultOpacity(val);
     document.body.style.setProperty('--widget-opacity', String(val));
-    localStorage.setItem('builder.defaultOpacity', String(val));
     if (opacityValue) opacityValue.textContent = `${Math.round(val * 100)}%`;
   }
 

@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Builder now applies user-selected accent color within the builder via shared `userColor` module.
 - Centralized save and autosave logic into a new `saveManager` module for reuse across the builder.
 - Publishing now saves the current layout before creating or updating pages and attaching designs.
 - CanvasGrid now accepts an `enableZoom` option; dashboard grids disable zoom by default to avoid the builder's zoom sizer.

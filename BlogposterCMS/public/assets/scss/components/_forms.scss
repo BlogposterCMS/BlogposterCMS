@@ -59,3 +59,36 @@
 .app-scope form .button {
   margin-top: 14px;
 }
+
+// Dashboard checkbox styling
+.app-scope input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  position: relative;
+
+  &:checked {
+    background: var(--user-color, #007bff);
+    border-color: var(--user-color, #007bff);
+
+    &::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+    }
+  }
+
+  &:hover {
+    border-color: var(--user-color, #007bff);
+  }
+}

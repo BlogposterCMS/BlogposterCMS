@@ -31,6 +31,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Draft warning now hides when the draft checkbox is unchecked.
+- Dashboard checkboxes adopt the new UI styling and the publish panel draft checkbox matches.
 - Builder publish and builder panels now inherit global fonts, use side shadows instead of borders, and the publish button spans the panel width.
 - Builder sidebar adopts the dashboard's bubble style for consistent navigation.
 - Builder publish suggestions now only list pages from the public lane to avoid exposing admin pages.

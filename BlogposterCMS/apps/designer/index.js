@@ -3,12 +3,14 @@ import { initBuilder } from './builderRenderer.js';
 import { enableAutoEdit } from './editor/editor.js';
 import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
 import { initBuilderPanel } from './managers/panelManager.js';
+import { applyUserColor } from '../../public/assets/js/userColor.js';
 
 let bootstrapped = false;
 
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
+  await applyUserColor(true);
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('builderMain');
   const rowEl = document.getElementById('builderRow');

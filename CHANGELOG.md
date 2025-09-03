@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Builder now keeps separate undo/redo history for each design in the page builder.
 - Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.
 - Publish panel now adds a title, leading-slash slug input with dropdown suggestions, draft/unpublish toggle, and placeholder Settings button.
 - Builder now applies user-selected accent color within the builder via shared `userColor` module.

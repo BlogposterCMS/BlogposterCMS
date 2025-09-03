@@ -22,6 +22,7 @@ El Psy Kongroo
 
 ### Changed
 - Publish panel suggestions now open in a popup similar to the builder options menu.
+- Builder canvas zoom sizer now applies equal right spacing and doubles the top margin for balanced canvas layout.
 
 
  

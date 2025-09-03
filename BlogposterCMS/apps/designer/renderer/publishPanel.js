@@ -46,7 +46,7 @@ export function initPublishPanel({
       <input type="text" class="publish-slug-input" />
     </div>
   </label>
-  <div class="publish-suggestions dropdown"></div>
+  <div class="publish-suggestions builder-options-menu"></div>
   <div class="publish-warning hidden"></div>
   <label class="publish-draft hidden"><input type="checkbox" class="publish-draft-checkbox" /> Set page to draft</label>
   <div class="publish-info hidden"></div>
@@ -58,6 +58,34 @@ export function initPublishPanel({
       setupElements();
     });
   loadPageService();
+
+  function hideSuggestions() {
+    if (!suggestionsEl) return;
+    suggestionsEl.classList.remove('show');
+    document.removeEventListener('click', outsideSuggestionsHandler);
+    suggestionsEl.style.top = '';
+    suggestionsEl.style.left = '';
+    suggestionsEl.style.minWidth = '';
+    suggestionsEl.style.width = '';
+  }
+
+  function outsideSuggestionsHandler(e) {
+    if (!suggestionsEl || !slugInput) return;
+    if (!suggestionsEl.contains(e.target) && e.target !== slugInput) hideSuggestions();
+  }
+
+  function showSuggestions() {
+    if (!suggestionsEl || !slugInput) return;
+    const rect = slugInput.getBoundingClientRect();
+    suggestionsEl.classList.add('show');
+    suggestionsEl.style.visibility = 'hidden';
+    suggestionsEl.style.top = `${rect.bottom + 4}px`;
+    suggestionsEl.style.left = `${rect.left}px`;
+    suggestionsEl.style.minWidth = `${rect.width}px`;
+    suggestionsEl.style.width = `${rect.width}px`;
+    suggestionsEl.style.visibility = '';
+    document.addEventListener('click', outsideSuggestionsHandler);
+  }
 
   function setupElements() {
     slugInput = publishPanel.querySelector('.publish-slug-input');
@@ -109,6 +137,7 @@ export function initPublishPanel({
 
   function hidePublishPanel() {
     publishPanel.classList.add('hidden');
+    hideSuggestions();
   }
 
   function togglePanel() {
@@ -150,6 +179,7 @@ export function initPublishPanel({
     infoEl.classList.add('hidden');
     draftWrap.classList.add('hidden');
     draftNote.classList.add('hidden');
+    hideSuggestions();
     if (!q) return;
     const pages = await lookupPages(q);
     const suggestions = pages.map(p =>
@@ -157,6 +187,9 @@ export function initPublishPanel({
     ).join('');
     const exists = pages.some(p => p.slug === q);
     suggestionsEl.innerHTML = suggestions + (exists ? '' : '<div class="publish-add">+ Create page</div>');
+    if (suggestionsEl.innerHTML) {
+      showSuggestions();
+    }
     if (!exists) {
       infoEl.textContent = 'Click "Create page" to add a new page with this slug.';
       infoEl.classList.remove('hidden');
@@ -175,6 +208,7 @@ export function initPublishPanel({
         selectedPage = newPage;
         slugInput.value = slug;
         suggestionsEl.innerHTML = '';
+        hideSuggestions();
         infoEl.textContent = 'Page created. You can set it to draft before publishing.';
         infoEl.classList.remove('hidden');
         draftWrap.classList.remove('hidden');
@@ -189,6 +223,7 @@ export function initPublishPanel({
     if (!el) return;
     slugInput.value = el.dataset.slug;
     suggestionsEl.innerHTML = '';
+    hideSuggestions();
     try {
       const res = await meltdownEmit('getPageById', {
         jwt: window.ADMIN_TOKEN,

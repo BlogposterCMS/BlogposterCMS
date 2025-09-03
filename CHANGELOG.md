@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Publish panel now adds a title, leading-slash slug input with dropdown suggestions, draft/unpublish toggle, and placeholder Settings button.
 - Builder now applies user-selected accent color within the builder via shared `userColor` module.
 - Centralized save and autosave logic into a new `saveManager` module for reuse across the builder.
 - Publishing now saves the current layout before creating or updating pages and attaching designs.

@@ -39,14 +39,21 @@ export function initPublishPanel({
       console.warn('[Designer] Failed to load publish panel:', err);
       publishPanel.innerHTML = `
   <button class="publish-close" type="button" aria-label="Close">&times;</button>
-  <label class="publish-slug-label">Subpath
-    <input type="text" class="publish-slug-input" />
+  <h2 class="publish-title">Publish this design</h2>
+  <label class="publish-slug-label">Slug
+    <div class="publish-slug-wrap">
+      <span class="slug-prefix" aria-hidden="true">/</span>
+      <input type="text" class="publish-slug-input" />
+    </div>
   </label>
-  <div class="publish-suggestions"></div>
+  <div class="publish-suggestions dropdown"></div>
   <div class="publish-warning hidden"></div>
-  <label class="publish-draft hidden"><input type="checkbox" class="publish-draft-checkbox" /> Create and set page to draft</label>
+  <label class="publish-draft hidden"><input type="checkbox" class="publish-draft-checkbox" /> Set page to draft</label>
   <div class="publish-info hidden"></div>
-  <div class="publish-actions"><button class="publish-confirm">Publish</button></div>
+  <div class="publish-actions">
+    <button class="publish-settings" type="button">Settings</button>
+    <button class="publish-confirm">Publish</button>
+  </div>
   <div class="publish-draft-note hidden"></div>`;
       setupElements();
     });
@@ -211,7 +218,7 @@ export function initPublishPanel({
 
   function onDraftToggle() {
     if (draftCb.checked) {
-      draftNote.textContent = 'Page will be created as draft and will not be publicly accessible.';
+      draftNote.textContent = 'Page will be unpublished and will not be publicly accessible.';
       draftNote.classList.remove('hidden');
     } else {
       draftNote.classList.add('hidden');

@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Global transparency slider in text editor toolbar controlling opacity for all widgets.
 - Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.
 - Publish panel now adds a title, leading-slash slug input with dropdown suggestions, draft/unpublish toggle, and placeholder Settings button.
 - Builder now applies user-selected accent color within the builder via shared `userColor` module.
@@ -185,6 +186,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Guarded global opacity default when localStorage is unavailable to avoid ReferenceError outside browsers.
 - Builder initialization no longer fails when the preview button is absent, allowing the publish panel to open.
 - Remaining German builder strings translated to English.
 - Text widget icon in the builder sidebar now opens its panel via delegated clicks.

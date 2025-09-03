@@ -9,6 +9,7 @@ import {
   getRegisteredEditable,
   applyToolbarChange
 } from '../core/editor.js';
+import { designerState, setDefaultOpacity } from '../../managers/designerState.js';
 import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from '../core/selection.js';
 import { fetchPartial } from '../../fetchPartial.js';
 import { sanitizeHtml } from '../../../../public/plainspace/sanitizer.js';
@@ -266,6 +267,13 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
           '</div>' +
         '</div>' +
         '<button type="button" class="tb-btn fs-inc">+</button>' +
+      '</div>' +
+      '<div class="opacity-control">' +
+        '<button type="button" class="tb-btn opacity-btn">' + window.featherIcon('droplet') + '</button>' +
+        '<div class="opacity-slider">' +
+          '<input type="range" class="opacity-range" min="0" max="100" value="100" />' +
+          '<span class="opacity-value">100%</span>' +
+        '</div>' +
       '</div>'
     ].join('');
     const contentEl = document.getElementById('content');
@@ -286,6 +294,50 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     if (!allowDefault) ev.preventDefault();
     ev.stopPropagation();
   }, true);
+
+  const opacityBtn = state.toolbar.querySelector('.opacity-btn');
+  const opacitySlider = state.toolbar.querySelector('.opacity-slider');
+  const opacityRange = state.toolbar.querySelector('.opacity-range');
+  const opacityValue = state.toolbar.querySelector('.opacity-value');
+
+  if (opacityRange) {
+    const init = Math.round(designerState.defaultOpacity * 100);
+    opacityRange.value = String(init);
+    if (opacityValue) opacityValue.textContent = init + '%';
+  }
+
+  function setOpacity(val) {
+    setDefaultOpacity(val);
+    document.body.style.setProperty('--widget-opacity', String(val));
+    if (opacityValue) opacityValue.textContent = `${Math.round(val * 100)}%`;
+  }
+
+  opacityRange?.addEventListener('input', e => {
+    const v = parseInt(e.target.value, 10);
+    if (!Number.isNaN(v)) setOpacity(v / 100);
+  });
+
+  function hideOpacitySlider() {
+    if (!opacitySlider) return;
+    opacitySlider.classList.remove('open');
+    document.removeEventListener('click', outsideOpacityHandler);
+  }
+
+  function outsideOpacityHandler(e) {
+    if (!opacitySlider || !opacityBtn) return;
+    if (!opacitySlider.contains(e.target) && e.target !== opacityBtn) hideOpacitySlider();
+  }
+
+  opacityBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!opacitySlider) return;
+    if (opacitySlider.classList.contains('open')) {
+      hideOpacitySlider();
+    } else {
+      opacitySlider.classList.add('open');
+      document.addEventListener('click', outsideOpacityHandler);
+    }
+  });
 
   const fsInput = state.toolbar.querySelector('.fs-input');
 

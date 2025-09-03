@@ -257,6 +257,7 @@ export function initPublishPanel({
       draftNote.classList.remove('hidden');
     } else {
       draftNote.classList.add('hidden');
+      draftNote.textContent = '';
     }
   }
 

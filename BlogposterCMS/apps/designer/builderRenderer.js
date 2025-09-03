@@ -14,6 +14,7 @@ import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState as push
 import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
+import { designerState } from './managers/designerState.js';
 
 import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
 
@@ -69,6 +70,7 @@ async function loadToPng() {
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
   document.body.classList.add('builder-mode');
+  document.body.style.setProperty('--widget-opacity', String(designerState.defaultOpacity));
   initTextEditor();
   initBackgroundToolbar();
   // Builder widgets load the active theme inside their shadow roots.

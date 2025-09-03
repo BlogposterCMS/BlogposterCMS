@@ -248,6 +248,31 @@
     }
   }
 
+  .opacity-control {
+    position: relative;
+
+    .opacity-slider {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 260px;
+      padding: 10px 14px;
+      background: var(--color-white);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      z-index: 200;
+      gap: 12px;
+      display: none;
+      align-items: center;
+
+      &.open { display: flex; }
+      .opacity-range { flex: 1; }
+      .opacity-value { font-size: 14px; color: var(--color-text, #333); min-width: 48px; text-align: right; }
+    }
+  }
+
   // Color picker integration
   .text-color-picker {
     position: relative;

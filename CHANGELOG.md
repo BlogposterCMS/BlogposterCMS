@@ -18,7 +18,10 @@ El Psy Kongroo
 - Autosave toggle lives in a dropdown attached to the Save button for quicker access.
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.
 - Builder workspace now displays the current viewport width in the top-right corner.
- - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
+- Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
+
+### Changed
+- Publish panel suggestions now open in a popup similar to the builder options menu.
 
 
  

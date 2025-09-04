@@ -20,6 +20,9 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
   navigator falls back to `config.icon`.
 - Provides `widget.registry.request.v1` for the page builder.
 - `seedAdminWidget` can attach width and height options when creating admin widgets.
+- When seeding layout options without a `height`, a default of 40% is applied so
+  widgets occupy space without overlap. If no layout options are provided and an
+  instance already exists, its stored size is preserved.
 - Default admin widgets are seeded with options describing their suggested layout.
 - The Home workspace now seeds widgets that highlight what's coming next and a draggable demo.
 
@@ -43,7 +46,8 @@ admin lane widget if it does not already exist and stores layout options in the
 - `halfWidth` – if `true` the widget should use at least half of the desktop width.
 - `thirdWidth` – if `true` the widget should use at least one third of the width.
 - `width` – custom width percentage.
-- `height` – custom height percentage.
+- `height` – custom height percentage. If omitted, a default of 40% is used so
+  seeded widgets occupy space.
 - `overflow` – when `true` the widget height is fixed and may scroll; when
   `false` the widget expands to fit its content.
 

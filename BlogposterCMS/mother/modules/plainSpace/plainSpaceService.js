@@ -34,6 +34,8 @@ function meltdownEmit(emitter, event, payload) {
 const MODULE      = 'plainspace';
 const PUBLIC_LANE = 'public';
 const ADMIN_LANE  = 'admin';
+// Default height percentage for seeded widgets to avoid initial overlap
+const DEFAULT_WIDGET_HEIGHT = 40;
 
 /**
  * seedAdminPages:
@@ -406,9 +408,32 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
 async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) {
   await checkOrCreateWidget(motherEmitter, jwt, widgetData);
 
-  if (Object.keys(layoutOpts).length === 0) return;
-
   const instanceId = `default.${widgetData.widgetId}`;
+
+  // If no layout options are provided, only seed a default height when the
+  // widget instance does not already exist. This preserves any user‑saved
+  // custom height from being overwritten on startup.
+  if (!layoutOpts || Object.keys(layoutOpts).length === 0) {
+    try {
+      const existing = await meltdownEmit(motherEmitter, 'getWidgetInstance', {
+        jwt,
+        moduleName: MODULE,
+        instanceId
+      }).catch(() => null);
+
+      if (existing?.content) {
+        return; // Instance exists; respect saved settings.
+      }
+
+      layoutOpts = { height: DEFAULT_WIDGET_HEIGHT };
+    } catch (err) {
+      layoutOpts = { height: DEFAULT_WIDGET_HEIGHT };
+    }
+  } else if (layoutOpts.height == null) {
+    // Ensure widgets have a base height so they don't stack in the top-left corner
+    layoutOpts.height = DEFAULT_WIDGET_HEIGHT;
+  }
+
   try {
     await meltdownEmit(motherEmitter, 'saveWidgetInstance', {
       jwt,

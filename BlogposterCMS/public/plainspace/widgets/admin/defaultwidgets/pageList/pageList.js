@@ -187,7 +187,9 @@ export function renderPageList(el, pages) {
           <div class="page-name-row">
             <span class="page-name" contenteditable="true">${escapeHtml(page.title)}</span>
             <span class="page-actions">
-              ${page.is_start ? '<span class="home-indicator" title="Current home page">Home</span>' : ''}
+              ${page.is_start
+                ? '<span class="home-indicator" title="Current home page">Home</span>'
+                : window.featherIcon('home', 'set-home" title="Set as home')}
               ${window.featherIcon('pencil', 'edit-page" title="Edit page')}
               ${window.featherIcon('brush', 'edit-layout" title="Edit layout')}
               ${window.featherIcon('drafting-compass', 'toggle-draft" title="' + (page.status === 'draft' ? 'Mark as published' : 'Mark as draft') + '"')}
@@ -203,6 +205,17 @@ export function renderPageList(el, pages) {
         </div>`;
 
       setupInlineEdit(li, page);
+
+      const setHomeBtn = li.querySelector('.set-home');
+      if (setHomeBtn) setHomeBtn.addEventListener('click', async () => {
+        try {
+          await pageService.setAsStart(page.id);
+          pages.splice(0, pages.length, ...(await fetchPages()));
+          renderFilteredPages();
+        } catch (err) {
+          await bpDialog.alert('Failed to set start page: ' + err.message);
+        }
+      });
 
       li.querySelector('.edit-page').addEventListener('click', () => editPage(page.id));
       li.querySelector('.edit-layout').addEventListener('click', () => editLayout(page));

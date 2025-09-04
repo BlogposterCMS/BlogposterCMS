@@ -1047,7 +1047,7 @@ body:not(.dashboard-edit-mode) .canvas-item::before {
   height: 20px;
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid transparent;
+  border: 2px solid var(--color-border);
   padding: 0;
   background: none;
 }

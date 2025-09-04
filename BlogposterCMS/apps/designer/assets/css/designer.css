@@ -529,6 +529,7 @@ body.grid-mode .bounding-box.disabled {
   --z-popover: 160;
   --z-tooltip: 170;
   --z-toast: 180;
+  --z-toolbar: 190;
   --toolbar-height: 48px;
   --header-height: 64px;
   --sidebar-width: 72px;
@@ -1342,7 +1343,7 @@ body.preview-mode .builder-header .header-actions {
   display: none;
   align-items: center;
   gap: 8px;
-  z-index: 150;
+  z-index: var(--z-toolbar);
   border: 1px solid rgba(0, 0, 0, 0.06);
   -webkit-backdrop-filter: blur(10px);
           backdrop-filter: blur(10px);
@@ -2443,7 +2444,8 @@ body.builder-mode #content {
   width: auto; /* full width inside flex container */
   min-width: 0; /* allow flex item to shrink; prevent overflow */
   height: calc(100vh - 64px);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
   position: relative;
   display: flex;
@@ -2502,6 +2504,12 @@ body.builder-mode #builderViewport {
   /* Leave room for fixed builder footer */
   padding: 20px 20px 60px;
   box-sizing: border-box;
+}
+
+body.builder-mode #builderViewport .canvas-zoom-sizer {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 40px;
 }
 
 body.builder-mode #builderGrid {

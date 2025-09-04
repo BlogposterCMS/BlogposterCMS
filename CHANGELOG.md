@@ -31,6 +31,7 @@ El Psy Kongroo
 - Publish panel now auto-creates pages for new slugs and shows a full URL preview beneath the slug field.
  
 ### Fixed
+- Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.
 - Custom colour picker now updates the current swatch live instead of creating a new circle for each hue adjustment.
 
 ### Removed

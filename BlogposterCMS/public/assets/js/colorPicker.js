@@ -359,13 +359,15 @@ export function createColorPicker(options = {}) {
 
   let recentHidden = [];
   let recentMoreBtn = null;
-  function addRecentColor(color) {
+  function addRecentColor(color, { dedupe = true } = {}) {
     if (!color) return;
-    const idx = recentColors.indexOf(color);
-    if (idx !== -1) {
-      recentColors.splice(idx, 1);
-      const existing = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
-      existing?.remove();
+    if (dedupe) {
+      const idx = recentColors.indexOf(color);
+      if (idx !== -1) {
+        recentColors.splice(idx, 1);
+        const existing = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
+        existing?.remove();
+      }
     }
     recentColors.unshift(color);
     const circle = createCircle(color, true);
@@ -404,7 +406,7 @@ export function createColorPicker(options = {}) {
     addBtn.className = 'color-circle add-custom';
     addBtn.textContent = '+';
     addBtn.addEventListener('click', () => {
-      addRecentColor(selectedColor);
+      addRecentColor(selectedColor, { dedupe: false });
       editingCircle = recentSection.querySelector(`.color-circle[data-color="${selectedColor}"]`);
       editingIndex = recentColors.indexOf(selectedColor);
       container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));

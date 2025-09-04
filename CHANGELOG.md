@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- Background toolbar saves image selections via the media manager and stores color plus media object IDs in design metadata.
 - Designer now captures background styles and persists per-widget HTML/CSS/JS in a dedicated `designer_widget_meta` table.
 - Designer module now stores designs, widget coordinates and version history in dedicated tables, removing local layout storage.
 - Initial setup color picker now previews the chosen accent colour live and uses builder-style presets.

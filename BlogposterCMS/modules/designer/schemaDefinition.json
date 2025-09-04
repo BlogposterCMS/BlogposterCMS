@@ -7,7 +7,7 @@
         { "name": "title", "type": "string" },
         { "name": "description", "type": "text" },
         { "name": "thumbnail", "type": "string" },
-        { "name": "background", "type": "string" },
+        { "name": "background", "type": "text" },
         { "name": "created_at", "type": "timestamp" },
         { "name": "updated_at", "type": "timestamp" },
         { "name": "published_at", "type": "timestamp" },

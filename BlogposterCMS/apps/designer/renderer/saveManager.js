@@ -64,7 +64,14 @@ export function createSaveManager(state, ctx) {
       ? await capturePreview()
       : gridEl ? await defaultCapturePreview(gridEl) : '';
     try {
-      const bg = gridEl ? getComputedStyle(gridEl).background || '' : '';
+      const bgStyle = gridEl ? getComputedStyle(gridEl) : null;
+      const bg = gridEl ? {
+        color: bgStyle?.backgroundColor || '',
+        image: gridEl.dataset.bgImageId ? {
+          id: gridEl.dataset.bgImageId,
+          url: gridEl.dataset.bgImageUrl || ''
+        } : null
+      } : null;
       const res = await window.meltdownEmit('designer.saveDesign', {
         jwt: window.ADMIN_TOKEN,
         moduleName: 'designer',
@@ -75,7 +82,7 @@ export function createSaveManager(state, ctx) {
           description,
           thumbnail: previewPath,
           ownerId,
-          background: bg
+          background: bg ? JSON.stringify(bg) : ''
         },
         widgets: layout
       });

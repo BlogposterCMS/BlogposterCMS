@@ -15,7 +15,7 @@ server through `appLoader`'s `dispatchAppEvent` handler.
   - applies `schemaDefinition.json` through `applySchemaDefinition` to create required tables across supported databases.
 
 ## Purpose
-- Stores design metadata and background styles in `designer_designs`.
+- Stores design metadata and background styles (color plus media manager object IDs) in `designer_designs`.
 - Persists widget instances and coordinates in `designer_design_widgets`.
 - Saves per-widget HTML/CSS/JS and arbitrary metadata in `designer_widget_meta`.
 - Tracks change history via `designer_versions`.

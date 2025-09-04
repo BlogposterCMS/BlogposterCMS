@@ -82,6 +82,17 @@
         }
       }
     }
+
+    .publish-url {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      padding: 0 var(--space-3);
+      word-break: break-all;
+
+      &.hidden {
+        display: none;
+      }
+    }
   }
 
   .publish-suggestions {

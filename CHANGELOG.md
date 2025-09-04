@@ -23,6 +23,7 @@ El Psy Kongroo
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.
 - Builder workspace now displays the current viewport width in the top-right corner.
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
+- Publish panel now auto-creates pages for new slugs and shows a full URL preview beneath the slug field.
 
 
 
@@ -188,6 +189,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Builder publish panel now loads full page data before updating to preserve metadata and correct draft status.
 - Seeded admin widgets without layout options no longer overwrite saved heights on startup.
 - Seeded admin widgets now default to a base height to prevent initial overlap.
 - Editor toolbar tooltips no longer hide beneath other interface elements.

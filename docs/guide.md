@@ -110,7 +110,8 @@ The canvas opens centered in the viewport at a 100% zoom level and can expand up
 
 ### Publishing layouts
 
-Clicking **Publish** in the builder opens a side panel beneath the Publish button on the right where you can search existing public pages by slug. Suggestions are limited to the public lane; if the entered path doesn't match an existing public page, the list displays “+ Create page.” Clicking it immediately creates a new public page with that slug. After selecting or creating a page, a checkbox lets you set the page to draft, and a red notice reminds you that draft pages aren't publicly accessible.
+Clicking **Publish** in the builder opens a side panel beneath the Publish button on the right where you can search existing public pages by slug. Suggestions are limited to the public lane. If the entered path doesn't match an existing public page, the builder will automatically create the page when you publish. A preview below the slug field shows the full URL so you know where the page will live. A checkbox lets you set the page to draft, and a red notice reminds you that draft pages aren't publicly accessible.
+When publishing to an existing page, its current metadata is preserved and the draft toggle reflects the page's status.
 Publishing first saves your current layout template, then creates the page if necessary and attaches the design using the same logic as the Page Content widget so changes show up immediately. After publishing, the builder congratulates you and offers to open the page in a new tab.
 Click **Publish** again or use the panel's close button to dismiss it.
 

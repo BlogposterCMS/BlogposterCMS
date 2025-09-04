@@ -110,7 +110,7 @@ export async function applyUserColor(force = false) {
     return;
   }
   const jwt = window.ADMIN_TOKEN;
-  if (!window.meltdownEmit) return;
+  if (!window.meltdownEmit || !jwt) return;
   try {
     const authPayload = {
       moduleName: 'auth',

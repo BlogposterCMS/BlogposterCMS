@@ -1,3 +1,5 @@
+import { capturePreview as defaultCapturePreview } from './capturePreview.js';
+
 export function createSaveManager(state, ctx) {
   function scheduleAutosave() {
     if (!state.autosaveEnabled || !state.pageId) return;
@@ -56,7 +58,9 @@ export function createSaveManager(state, ctx) {
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
     const layout = getCurrentLayoutForLayer(gridEl, getActiveLayer(), ensureCodeMap());
-    const previewPath = await capturePreview();
+    const previewPath = typeof capturePreview === 'function'
+      ? await capturePreview()
+      : gridEl ? await defaultCapturePreview(gridEl) : '';
     try {
       await window.meltdownEmit('saveLayoutTemplate', {
         jwt: window.ADMIN_TOKEN,

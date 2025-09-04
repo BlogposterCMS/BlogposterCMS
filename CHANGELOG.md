@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- `saveDesign` now falls back to a shared `capturePreview` helper when no callback is provided, restoring automatic preview generation.
 - Builder now keeps separate undo/redo history for each design in the page builder.
 - Global transparency slider in text editor toolbar controlling opacity for all widgets.
 - Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.
@@ -186,6 +187,9 @@ El Psy Kongroo
 
 ### Fixed
 - Editor toolbar tooltips no longer hide beneath other interface elements.
+- User color module skips token validation when no admin token is present, preventing 500 errors during builder initialization.
+- Designer app now displays the correct layout name when opening an existing template instead of falling back to "default".
+- Publishing a design no longer fails with a missing `capturePreview` function and now offers to open the published page after publishing.
 - Guarded global opacity default when localStorage is unavailable to avoid ReferenceError outside browsers.
 - Builder initialization no longer fails when the preview button is absent, allowing the publish panel to open.
 - Remaining German builder strings translated to English.

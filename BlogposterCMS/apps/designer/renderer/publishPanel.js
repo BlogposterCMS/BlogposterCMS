@@ -123,6 +123,9 @@ export function initPublishPanel({
         await pageService.update(selectedPage, patch);
         await runPublish(slug);
         hidePublishPanel();
+        if (confirm('Design published successfully. Visit the page now?')) {
+          window.open(`/${slug}`, '_blank');
+        }
       } catch (err) {
         console.error('[Designer] publish flow error', err);
         alert('Publish failed: ' + err.message);

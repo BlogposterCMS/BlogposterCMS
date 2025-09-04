@@ -37,6 +37,7 @@ import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 import { initPublishPanel } from './renderer/publishPanel.js';
 import { initHeaderControls } from './renderer/headerControls.js';
+import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
 
 function getAdminUserId() {
   try {
@@ -48,24 +49,6 @@ function getAdminUserId() {
     console.error('[Designer] token parse failed', err);
     return null;
   }
-}
-
-let _toPng;
-async function loadToPng() {
-  if (_toPng) return _toPng;
-  try {
-    const mod = await import('html-to-image');
-    _toPng = mod.toPng;
-  } catch (err) {
-    try {
-      const mod = await import('/assets/js/html-to-img.js');
-      _toPng = mod.toPng;
-    } catch (err2) {
-      console.warn('[Designer] html-to-image unavailable', err2);
-      _toPng = async () => '';
-    }
-  }
-  return _toPng;
 }
 
 export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
@@ -480,6 +463,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           name: layoutNameParam
         });
         initialLayout = Array.isArray(tplRes?.layout) ? tplRes.layout : [];
+        layoutNameParam = String(tplRes?.name || layoutNameParam).replace(/[\n\r]/g, '');
       } catch (err) {
         console.warn('[Designer] failed to load layout template', err);
       }
@@ -655,17 +639,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   startAutosave();
   buildLayoutBar();
 
-  async function capturePreview() {
-    if (!gridEl) return '';
-    try {
-      const toPng = await loadToPng();
-      return await toPng(gridEl, { cacheBust: true });
-    } catch (err) {
-      console.error('[Designer] preview capture error', err);
-      return '';
-    }
-  }
-
   saveBtn.addEventListener('click', async () => {
     try {
       await saveDesign({
@@ -674,7 +647,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         getCurrentLayoutForLayer,
         getActiveLayer: () => activeLayer,
         ensureCodeMap,
-        capturePreview,
+        capturePreview: () => captureGridPreview(gridEl),
         updateAllWidgetContents,
         pageId
       });
@@ -714,6 +687,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         getCurrentLayoutForLayer,
         getActiveLayer: () => activeLayer,
         ensureCodeMap,
+        capturePreview: () => captureGridPreview(gridEl),
         updateAllWidgetContents,
         pageId
       })

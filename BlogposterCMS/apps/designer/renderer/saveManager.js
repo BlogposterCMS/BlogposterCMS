@@ -47,12 +47,14 @@ export function createSaveManager(state, ctx) {
 
   async function saveDesign({
     name,
+    description = '',
     gridEl,
     getCurrentLayoutForLayer,
     getActiveLayer,
     ensureCodeMap,
     capturePreview,
     updateAllWidgetContents,
+    ownerId,
     pageId
   }) {
     if (!name) { alert('Enter a name'); return; }
@@ -62,15 +64,31 @@ export function createSaveManager(state, ctx) {
       ? await capturePreview()
       : gridEl ? await defaultCapturePreview(gridEl) : '';
     try {
-      await window.meltdownEmit('saveLayoutTemplate', {
+      const bgStyle = gridEl ? getComputedStyle(gridEl) : null;
+      const bg = gridEl ? {
+        color: bgStyle?.backgroundColor || '',
+        image: gridEl.dataset.bgImageId ? {
+          id: gridEl.dataset.bgImageId,
+          url: gridEl.dataset.bgImageUrl || ''
+        } : null
+      } : null;
+      const res = await window.meltdownEmit('designer.saveDesign', {
         jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        name,
-        lane: 'public',
-        viewport: 'desktop',
-        layout,
-        previewPath
+        moduleName: 'designer',
+        moduleType: 'community',
+        design: {
+          id: state.designId,
+          title: name,
+          description,
+          thumbnail: previewPath,
+          ownerId,
+          background: bg ? JSON.stringify(bg) : ''
+        },
+        widgets: layout
       });
+      if (res && (typeof res.id === 'string' || typeof res.id === 'number')) {
+        state.designId = res.id;
+      }
       const targetIds = pageId ? [pageId] : [];
       const events = targetIds.map(id => ({
         eventName: 'saveLayoutForViewport',
@@ -86,7 +104,7 @@ export function createSaveManager(state, ctx) {
       }));
       if (events.length) await window.meltdownEmitBatch(events);
     } catch (err) {
-      console.error('[Designer] saveLayoutTemplate error', err);
+      console.error('[Designer] saveDesign error', err);
       throw err;
     }
   }

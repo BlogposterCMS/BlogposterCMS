@@ -1,8 +1,8 @@
 # designer
 
-The `designer` module persists layouts for the standalone Designer app using the event bus.
+The `designer` module persists full design definitions for the standalone Designer app using the event bus.
 It demonstrates how community modules provision their own schema and run CRUD operations
-without touching database drivers directly. The Designer UI now runs inside an iframe
+without touching database drivers directly. The Designer UI runs inside an iframe
 (`admin/app/designer`) so its styles and scripts remain isolated from the dashboard.
 It communicates with the dashboard via `window.postMessage`; events are forwarded to the
 server through `appLoader`'s `dispatchAppEvent` handler.
@@ -15,15 +15,18 @@ server through `appLoader`'s `dispatchAppEvent` handler.
   - applies `schemaDefinition.json` through `applySchemaDefinition` to create required tables across supported databases.
 
 ## Purpose
-- Stores and updates layout definitions for builder clients.
+- Stores design metadata and background styles (color plus media manager object IDs) in `designer_designs`.
+- Persists widget instances and coordinates in `designer_design_widgets`.
+- Saves per-widget HTML/CSS/JS and arbitrary metadata in `designer_widget_meta`.
+- Tracks change history via `designer_versions`.
 
 ## Listened Events
-- `designer.saveLayout`
+- `designer.saveDesign` – returns `{ success, id }`; clients should reuse the returned `id` when saving again to update the existing design.
 
 ## Security Notes
-- Sanitises layout names to avoid injection or log issues.
+- Sanitises design titles to avoid injection or log issues.
 - Every database call includes the loader issued `jwt` and module information.
-- Uses high level `dbSelect`, `dbInsert` and `dbUpdate` events to avoid raw SQL.
+- Uses high level `dbInsert`, `dbUpdate` and `dbDelete` events to avoid raw SQL.
 - CSRF and admin tokens are delivered via `postMessage` from the dashboard instead of inline scripts to satisfy strict CSP policies.
 
 ## Grid configuration

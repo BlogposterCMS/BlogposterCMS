@@ -181,6 +181,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Publishing a design no longer fails with a missing `capturePreview` function and now offers to open the published page after publishing.
 - Guarded global opacity default when localStorage is unavailable to avoid ReferenceError outside browsers.
 - Builder initialization no longer fails when the preview button is absent, allowing the publish panel to open.
 - Remaining German builder strings translated to English.

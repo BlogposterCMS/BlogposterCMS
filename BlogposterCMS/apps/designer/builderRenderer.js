@@ -714,6 +714,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         getCurrentLayoutForLayer,
         getActiveLayer: () => activeLayer,
         ensureCodeMap,
+        capturePreview,
         updateAllWidgetContents,
         pageId
       })

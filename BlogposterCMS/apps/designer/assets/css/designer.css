@@ -336,6 +336,15 @@ body.grid-mode .bounding-box.disabled {
 #publishPanel .publish-slug-label .publish-slug-wrap .publish-slug-input:focus {
   outline: none;
 }
+#publishPanel .publish-slug-label .publish-url {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  padding: 0 var(--space-3);
+  word-break: break-all;
+}
+#publishPanel .publish-slug-label .publish-url.hidden {
+  display: none;
+}
 #publishPanel .publish-suggestions {
   max-height: 150px;
   overflow-y: auto;

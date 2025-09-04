@@ -10,7 +10,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'System Info',
     content: '/plainspace/widgets/admin/systemInfoWidget.js',
     category: 'core',
-    options: { thirdWidth: true },
+    options: { height: 150, thirdWidth: true },
     metadata: { apiEvents: [] }
   },
   {
@@ -19,7 +19,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'System Settings',
     content: '/plainspace/widgets/admin/systemSettingsWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { height: 150, halfWidth: true },
     metadata: {
       apiEvents: [
         'getSetting',
@@ -35,7 +35,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Activity Log',
     content: '/plainspace/widgets/admin/activityLogWidget.js',
     category: 'core',
-    options: { height: 50, overflow: true, halfWidth: true },
+    options: { height: 150, overflow: true, halfWidth: true },
     metadata: { apiEvents: [] }
   },
 
@@ -45,7 +45,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Content Summary',
     content: '/plainspace/widgets/admin/defaultwidgets/contentSummaryWidget.js',
     category: 'core',
-    options: { maxWidth: true },
+    options: { height: 150, maxWidth: true },
     metadata: {
       apiEvents: [
         'getLayoutTemplateNames',
@@ -63,7 +63,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Page Editor',
     content: '/plainspace/widgets/admin/pageEditorWidgets/pageEditorWidget.js',
     category: 'core',
-    options: { thirdWidth: true },
+    options: { height: 150, thirdWidth: true },
     metadata: {
       apiEvents: ['getLayoutTemplateNames', 'updatePage']
     }
@@ -74,7 +74,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Page Content',
     content: '/plainspace/widgets/admin/pageEditorWidgets/pageContentWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { height: 150, halfWidth: true },
     metadata: {
       apiEvents: [
         'listBuilderApps',
@@ -92,7 +92,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Media Explorer',
     content: '/plainspace/widgets/admin/mediaExplorerWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 70, overflow: true },
+    options: { halfWidth: true, height: 170, overflow: true },
     metadata: {
       apiEvents: [
         'createLocalFolder',
@@ -107,7 +107,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Modules List',
     content: '/plainspace/widgets/admin/modulesListWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true },
+    options: { halfWidth: true, height: 160, overflow: true },
     metadata: {
       apiEvents: [
         'getModuleRegistry',
@@ -124,7 +124,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Users List',
     content: '/plainspace/widgets/admin/usersListWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true },
+    options: { halfWidth: true, height: 160, overflow: true },
     metadata: {
       apiEvents: [
         'getAllUsers',
@@ -142,7 +142,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'User Editor',
     content: '/plainspace/widgets/admin/userEditWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { height: 150, halfWidth: true },
     metadata: {
       apiEvents: [
         'getUserDetailsById',
@@ -157,7 +157,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Permissions List',
     content: '/plainspace/widgets/admin/permissionsWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true },
+    options: { halfWidth: true, height: 160, overflow: true },
     metadata: {
       apiEvents: [
         'getAllPermissions',
@@ -175,7 +175,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Layouts',
     content: '/plainspace/widgets/admin/layoutTemplatesWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { height: 150, halfWidth: true },
     metadata: {
       apiEvents: [
         'getLayoutTemplateNames',
@@ -190,7 +190,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Login Strategies',
     content: '/plainspace/widgets/admin/loginStrategiesWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { height: 150, halfWidth: true },
     metadata: {
       apiEvents: ['listLoginStrategies', 'setLoginStrategyEnabled']
     }
@@ -201,7 +201,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Font Providers',
     content: '/plainspace/widgets/admin/fontsListWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { height: 150, halfWidth: true },
     metadata: {
       apiEvents: ['listFontProviders', 'setFontProviderEnabled']
     }
@@ -212,7 +212,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Login Strategy Edit',
     content: '/plainspace/widgets/admin/loginStrategyEditWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { height: 150, halfWidth: true },
     metadata: {
       apiEvents: ['getSetting', 'setSetting']
     }
@@ -223,7 +223,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Widget List',
     content: '/plainspace/widgets/admin/widgetListWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 60, overflow: true },
+    options: { halfWidth: true, height: 160, overflow: true },
     metadata: {
       apiEvents: [
         'widget.registry.request.v1',
@@ -238,6 +238,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Page List',
     content: '/plainspace/widgets/admin/defaultwidgets/pageList/pageList.js',
     category: 'core',
+    options: { halfWidth: true, height: 160, overflow: true },
     metadata: {
       apiEvents: [
         'getPagesByLane',
@@ -253,6 +254,7 @@ module.exports.DEFAULT_WIDGETS = [
     widgetType: ADMIN_LANE,
     label: 'Page Stats',
     content: '/plainspace/widgets/admin/defaultwidgets/pageStats.js',
+     options: { halfWidth: true, height: 160, overflow: true },
     category: 'core',
     metadata: { apiEvents: ['getPagesByLane'] }
   },
@@ -270,6 +272,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Roadmap Intro',
     content: '/plainspace/widgets/admin/roadmapIntroWidget.js',
     category: 'core',
+    options: { halfWidth: true, height: 160, overflow: true },
     options: { maxWidth: true },
     metadata: { apiEvents: [] }
   },
@@ -279,7 +282,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Roadmap',
     content: '/plainspace/widgets/admin/roadmapWidget.js',
     category: 'core',
-    options: { halfWidth: true },
+    options: { halfWidth: true, height: 160, overflow: true  },
     metadata: { apiEvents: [] }
   },
   {
@@ -288,7 +291,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Drag Demo',
     content: '/plainspace/widgets/admin/dragInfoWidget.js',
     category: 'core',
-    options: { thirdWidth: true },
+    options: { thirdWidth: true, height: 160 },
     metadata: { apiEvents: [] }
   },
   {

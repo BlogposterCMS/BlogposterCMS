@@ -56,7 +56,7 @@ export function createSaveManager(state, ctx) {
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
     const layout = getCurrentLayoutForLayer(gridEl, getActiveLayer(), ensureCodeMap());
-    const previewPath = typeof capturePreview === 'function' ? await capturePreview() : '';
+    const previewPath = await capturePreview();
     try {
       await window.meltdownEmit('saveLayoutTemplate', {
         jwt: window.ADMIN_TOKEN,

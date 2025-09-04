@@ -18,6 +18,9 @@ El Psy Kongroo
 - Centralized save and autosave logic into a new `saveManager` module for reuse across the builder.
 - Publishing now saves the current layout before creating or updating pages and attaching designs.
 - CanvasGrid now accepts an `enableZoom` option; dashboard grids disable zoom by default to avoid the builder's zoom sizer.
+
+### Changed
+- Updated page list card action icons to use pencil, brush, drafting-compass, external-link, share-2 and trash-2 for clarity, while preserving the option to set a page as the home page.
 - Admin home workspace now seeds roadmap intro, upcoming features, and drag demo widgets, replacing previous defaults.
 - Autosave toggle lives in a dropdown attached to the Save button for quicker access.
 - Builder publish flow now offers a slug picker with draft warnings and optional auto-publish.

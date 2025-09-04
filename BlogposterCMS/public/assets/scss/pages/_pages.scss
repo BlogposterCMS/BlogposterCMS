@@ -78,15 +78,17 @@
   }
 }
 
-.edit-slug {
+.page-slug-row .home-indicator,
+.page-slug-row .set-home {
   width: 18px;
   height: 18px;
-  fill: #bbb;
+}
+
+.page-slug-row .set-home {
   cursor: pointer;
-  margin-left: 2px;
   opacity: 0.8;
+
   &:hover {
-    fill: var(--user-color);
     opacity: 1;
   }
 }

@@ -187,9 +187,6 @@ export function renderPageList(el, pages) {
           <div class="page-name-row">
             <span class="page-name" contenteditable="true">${escapeHtml(page.title)}</span>
             <span class="page-actions">
-              ${page.is_start
-                ? '<span class="home-indicator" title="Current home page">Home</span>'
-                : window.featherIcon('home', 'set-home" title="Set as home')}
               ${window.featherIcon('pencil', 'edit-page" title="Edit page')}
               ${window.featherIcon('brush', 'edit-layout" title="Edit layout')}
               ${window.featherIcon('drafting-compass', 'toggle-draft" title="' + (page.status === 'draft' ? 'Mark as published' : 'Mark as draft') + '"')}
@@ -199,8 +196,10 @@ export function renderPageList(el, pages) {
             </span>
           </div>
           <div class="page-slug-row">
+            ${page.is_start
+              ? window.featherIcon('house', 'home-indicator" title="Current home page')
+              : window.featherIcon('house-plus', 'set-home" title="Set as home page')}
             <span class="page-slug" contenteditable="true">/${escapeHtml(page.slug)}</span>
-            ${window.featherIcon('editSlug', 'edit-slug" title="Edit slug')}
           </div>
         </div>`;
 

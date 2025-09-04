@@ -28,7 +28,7 @@ export function initPublishPanel({
 }) {
   const publishPanel = document.getElementById('publishPanel');
   publishPanel.classList.add('hidden');
-  let slugInput, suggestionsEl, warningEl, draftWrap, draftCb, infoEl, draftNote, confirmBtn, closeBtn;
+  let slugInput, suggestionsEl, warningEl, draftWrap, draftCb, infoEl, draftNote, confirmBtn, closeBtn, urlEl;
   let selectedPage = null;
   fetchPartial('publish-panel', 'builder')
     .then(html => {
@@ -97,6 +97,7 @@ export function initPublishPanel({
     draftNote = publishPanel.querySelector('.publish-draft-note');
     confirmBtn = publishPanel.querySelector('.publish-confirm');
     closeBtn = publishPanel.querySelector('.publish-close');
+    urlEl = publishPanel.querySelector('.publish-url');
 
     slugInput.addEventListener('input', onSlugInput);
     suggestionsEl.addEventListener('click', onSuggestionsClick);
@@ -112,8 +113,32 @@ export function initPublishPanel({
     confirmBtn.addEventListener('click', async () => {
       await loadPageService();
       const slug = sanitizeSlug(slugInput.value.trim());
-      if (!slug || !selectedPage) { alert('Select a page'); return; }
+      if (!slug) { alert('Select a slug'); return; }
       try {
+        if (!selectedPage) {
+          const pages = await lookupPages(slug);
+          const existing = pages.find(p => p.slug === slug);
+          if (existing) {
+            const full = await getPageById(existing.id);
+            if (!full) { alert('Failed to load existing page data.'); return; }
+            selectedPage = full;
+            draftCb.checked = selectedPage.status !== 'published';
+          } else {
+            const title = nameInput.value.trim() || slug;
+            const status = draftCb.checked ? 'draft' : 'published';
+            const { pageId } = await pageService.create({ title, slug, status });
+            selectedPage = {
+              id: pageId,
+              slug,
+              status,
+              lane: 'public',
+              language: 'en',
+              title,
+              meta: {}
+            };
+          }
+        }
+
         await saveDesign();
         const name = nameInput.value.trim();
         const patch = {
@@ -173,6 +198,22 @@ export function initPublishPanel({
     }
   }
 
+  async function getPageById(id) {
+    try {
+      const res = await meltdownEmit('getPageById', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        pageId: id
+      });
+      const page = res?.data ?? res;
+      return page && page.lane === 'public' ? page : null;
+    } catch (err) {
+      console.warn('getPageById failed', err);
+      return null;
+    }
+  }
+
   async function onSlugInput() {
     const qRaw = slugInput.value.trim();
     const q = sanitizeSlug(qRaw);
@@ -183,74 +224,68 @@ export function initPublishPanel({
     draftWrap.classList.add('hidden');
     draftNote.classList.add('hidden');
     hideSuggestions();
+    if (urlEl) {
+      if (q) {
+        urlEl.textContent = `${window.location.origin}/${q}`;
+        urlEl.classList.remove('hidden');
+      } else {
+        urlEl.classList.add('hidden');
+        urlEl.textContent = '';
+      }
+    }
     if (!q) return;
     const pages = await lookupPages(q);
-    const suggestions = pages.map(p =>
-      `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">/${escapeHtml(p.slug)}</div>`
-    ).join('');
+    const suggestions = pages
+      .map(p => `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">/${escapeHtml(p.slug)}</div>`)
+      .join('');
     const exists = pages.some(p => p.slug === q);
-    suggestionsEl.innerHTML = suggestions + (exists ? '' : '<div class="publish-add">+ Create page</div>');
+    suggestionsEl.innerHTML = suggestions;
     if (suggestionsEl.innerHTML) {
       showSuggestions();
     }
-    if (!exists) {
-      infoEl.textContent = 'Click "Create page" to add a new page with this slug.';
-      infoEl.classList.remove('hidden');
-    }
-  }
-
-  async function onSuggestionsClick(e) {
-    const addEl = e.target.closest('.publish-add');
-    if (addEl) {
-      await loadPageService();
-      const slug = sanitizeSlug(slugInput.value.trim());
-      if (!slug) return;
-      try {
-        const title = nameInput.value.trim() || slug;
-        const newPage = await pageService.create({ title, slug, status: 'published' });
-        selectedPage = newPage;
-        slugInput.value = slug;
-        suggestionsEl.innerHTML = '';
-        hideSuggestions();
-        infoEl.textContent = 'Page created. You can set it to draft before publishing.';
-        infoEl.classList.remove('hidden');
-        draftWrap.classList.remove('hidden');
-        draftCb.checked = false;
-      } catch (err) {
-        console.error('create page failed', err);
-        alert('Page creation failed: ' + err.message);
-      }
-      return;
-    }
-    const el = e.target.closest('.publish-suggestion');
-    if (!el) return;
-    slugInput.value = el.dataset.slug;
-    suggestionsEl.innerHTML = '';
-    hideSuggestions();
-    try {
-      const res = await meltdownEmit('getPageById', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        pageId: Number(el.dataset.id)
-      });
-      const page = res?.data ?? res;
-      if (!page || page.lane !== 'public') {
+    if (exists) {
+      const page = pages.find(p => p.slug === q);
+      const full = await getPageById(page.id);
+      selectedPage = full || null;
+      if (!selectedPage) {
+        warningEl.textContent = 'Failed to load page data. Please try again.';
+        warningEl.classList.remove('hidden');
         return;
       }
-      selectedPage = page;
-      infoEl.classList.add('hidden');
       draftWrap.classList.remove('hidden');
-      draftNote.classList.add('hidden');
-      draftCb.checked = page.status !== 'published';
-      if (page && page.status !== 'published') {
+      const isDraft = selectedPage.status !== 'published';
+      draftCb.checked = isDraft;
+      if (isDraft) {
         warningEl.textContent = 'Selected page is a draft';
         warningEl.classList.remove('hidden');
       } else {
         warningEl.classList.add('hidden');
       }
-    } catch (err) {
-      console.warn('getPageById failed', err);
+    } else {
+      infoEl.textContent = 'Page will be created when published.';
+      infoEl.classList.remove('hidden');
+    }
+  }
+
+  async function onSuggestionsClick(e) {
+    const el = e.target.closest('.publish-suggestion');
+    if (!el) return;
+    slugInput.value = el.dataset.slug;
+    suggestionsEl.innerHTML = '';
+    hideSuggestions();
+    const page = await getPageById(Number(el.dataset.id));
+    if (!page) return;
+    selectedPage = page;
+    infoEl.classList.add('hidden');
+    draftWrap.classList.remove('hidden');
+    draftNote.classList.add('hidden');
+    const isDraft = page.status !== 'published';
+    draftCb.checked = isDraft;
+    if (isDraft) {
+      warningEl.textContent = 'Selected page is a draft';
+      warningEl.classList.remove('hidden');
+    } else {
+      warningEl.classList.add('hidden');
     }
   }
 

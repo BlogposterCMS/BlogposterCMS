@@ -12,7 +12,9 @@
   display: none;
   align-items: center;
   gap: 8px;
-  z-index: 150;
+  // Ensure the toolbar and its tooltips sit above surrounding UI elements
+  // such as the header and panels.
+  z-index: var(--z-toolbar);
   border: 1px solid rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(10px);
   max-width: 90vw;

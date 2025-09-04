@@ -8,6 +8,7 @@ El Psy Kongroo
 
 
 ### Added
+- `saveDesign` now falls back to a shared `capturePreview` helper when no callback is provided, restoring automatic preview generation.
 - Builder now keeps separate undo/redo history for each design in the page builder.
 - Global transparency slider in text editor toolbar controlling opacity for all widgets.
 - Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.

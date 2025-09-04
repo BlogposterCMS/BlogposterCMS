@@ -8,6 +8,8 @@ El Psy Kongroo
 
 
 ### Added
+- Builder now keeps separate undo/redo history for each design in the page builder.
+- Global transparency slider in text editor toolbar controlling opacity for all widgets.
 - Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.
 - Publish panel now adds a title, leading-slash slug input with dropdown suggestions, draft/unpublish toggle, and placeholder Settings button.
 - Builder now applies user-selected accent color within the builder via shared `userColor` module.
@@ -20,12 +22,6 @@ El Psy Kongroo
 - Builder workspace now displays the current viewport width in the top-right corner.
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
 
-### Changed
-- Publish panel suggestions now open in a popup similar to the builder options menu.
-- Builder canvas zoom sizer now applies equal right spacing and doubles the top margin for balanced canvas layout.
-
-
- 
 
 
 
@@ -36,6 +32,9 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Publish panel suggestions now open in a popup similar to the builder options menu.
+- Builder canvas zoom sizer now applies equal right spacing and doubles the top margin for balanced canvas layout.
+- Publish panel suggestions now open in a popup similar to the builder options menu.
 - Draft warning now hides when the draft checkbox is unchecked.
 - Dashboard checkboxes adopt the new UI styling and the publish panel draft checkbox matches.
 - Builder publish and builder panels now inherit global fonts, use side shadows instead of borders, and the publish button spans the panel width.
@@ -186,6 +185,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Guarded global opacity default when localStorage is unavailable to avoid ReferenceError outside browsers.
 - Builder initialization no longer fails when the preview button is absent, allowing the publish panel to open.
 - Remaining German builder strings translated to English.
 - Text widget icon in the builder sidebar now opens its panel via delegated clicks.

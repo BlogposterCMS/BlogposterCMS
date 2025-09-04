@@ -1,6 +1,12 @@
 // Canva-inspired Canvas Design
+// Global opacity variable for all widgets
+.builder-mode {
+  --widget-opacity: 1;
+}
+
 // Highlight widget wrapper on hover using the active user's color
 .builder-mode .canvas-item {
+  opacity: var(--widget-opacity);
   border: 2px solid transparent;
   border-radius: 8px;
   position: relative;

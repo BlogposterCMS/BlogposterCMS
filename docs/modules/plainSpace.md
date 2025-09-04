@@ -51,5 +51,37 @@ admin lane widget if it does not already exist and stores layout options in the
 - `overflow` – when `true` the widget height is fixed and may scroll; when
   `false` the widget expands to fit its content.
 
+Example seed entry specifying a 160% widget height:
+
+```json
+{
+  "adminWidgets": [
+    {
+      "widgetId": "designerDemo",
+      "widgetType": "admin",
+      "label": "Designer Demo",
+      "content": "/plainspace/widgets/admin/dragInfoWidget.js",
+      "category": "core",
+      "options": { "height": 160 }
+    }
+  ]
+}
+```
+
+Seed files run without validation; only load admin seeds from trusted modules.
+CanvasGrid recalculates widget hitboxes and bounding boxes on first render,
+so seeding the `height` option is sufficient – no extra size data is needed.
+
+Enable debug logging for option calculations by seeding `debug: true`:
+
+```json
+{
+  "options": { "height": 160, "debug": true }
+}
+```
+The front-end console will show grid dimensions and the resulting update
+payload, helping diagnose why a widget renders at a different size than
+expected.
+
 Saved options can be read later with `getWidgetInstance` to decide how the
 widget should render in the builder.

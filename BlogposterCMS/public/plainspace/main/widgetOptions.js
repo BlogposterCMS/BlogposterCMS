@@ -1,5 +1,7 @@
 export function applyWidgetOptions(wrapper, opts = {}, grid) {
   if (!opts) return;
+  const debug = opts.debug || (grid && grid.options && grid.options.debug);
+  if (debug) console.debug('[widgetOptions] opts', opts);
   if (opts.max) {
     wrapper.classList.add('max');
     const m = opts.max;
@@ -50,12 +52,16 @@ export function applyWidgetOptions(wrapper, opts = {}, grid) {
     const ch = grid.options.cellHeight;
     const gw = grid.el.clientWidth || 1;
     const gh = grid.el.clientHeight || 1;
+    if (debug) {
+      console.debug('[widgetOptions] grid', { gw, gh, cw, ch, wPercent, hPercent });
+    }
     if (wPercent != null) {
       update.w = Math.max(1, Math.round((wPercent / 100) * gw / cw));
     }
     if (hPercent != null) {
       update.h = Math.max(1, Math.round((hPercent / 100) * gh / ch));
     }
+    if (debug) console.debug('[widgetOptions] update', update);
     grid.update(wrapper, update);
   }
 

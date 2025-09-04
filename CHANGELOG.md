@@ -8,6 +8,8 @@ El Psy Kongroo
 
 
 ### Added
+- Optional widget option debugging to inspect grid measurements when seeding layouts.
+- Documented seeding admin widget height options and CanvasGrid sizing behaviour.
 - Initial setup color picker now previews the chosen accent colour live and uses builder-style presets.
 - `saveDesign` now falls back to a shared `capturePreview` helper when no callback is provided, restoring automatic preview generation.
 - Builder now keeps separate undo/redo history for each design in the page builder.
@@ -39,6 +41,7 @@ El Psy Kongroo
 - Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
 - Support for dynamic action buttons in the content header.
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
+- Sample designer `adminSeed.json` file.
 
 ### Changed
 - Initial setup color picker presets are now circular with a subtle gray border for clarity.

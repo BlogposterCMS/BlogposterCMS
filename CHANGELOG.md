@@ -185,6 +185,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- Editor toolbar tooltips no longer hide beneath other interface elements.
 - Guarded global opacity default when localStorage is unavailable to avoid ReferenceError outside browsers.
 - Builder initialization no longer fails when the preview button is absent, allowing the publish panel to open.
 - Remaining German builder strings translated to English.

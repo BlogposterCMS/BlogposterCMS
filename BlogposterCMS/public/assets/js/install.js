@@ -1,4 +1,5 @@
 import { createColorPicker } from './colorPicker.js';
+import { setAccentVariables } from './userColor.js';
 
 // redirect if already installed
 (async () => {
@@ -47,6 +48,7 @@ document.getElementById('startSetup').addEventListener('click', () => setStep(1)
 
 const allowWeak = document.querySelector('meta[name="allow-weak-creds"]')?.content === 'true';
 const data = { favoriteColor: '#008080' };
+setAccentVariables(data.favoriteColor);
 
 function passwordStrong(pw) {
   return pw.length >= 12 && /[a-z]/.test(pw) && /[A-Z]/.test(pw) && /\d/.test(pw);
@@ -89,6 +91,7 @@ const picker = createColorPicker({
     colorInput.value = c;
     colorToggle.style.backgroundColor = c;
     data.favoriteColor = c;
+    setAccentVariables(c);
   },
   onClose: () => {}
 });

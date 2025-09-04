@@ -8,6 +8,8 @@ El Psy Kongroo
 
 
 ### Added
+- Initial setup color picker now previews the chosen accent colour live and uses builder-style presets.
+- `saveDesign` now falls back to a shared `capturePreview` helper when no callback is provided, restoring automatic preview generation.
 - Builder now keeps separate undo/redo history for each design in the page builder.
 - Global transparency slider in text editor toolbar controlling opacity for all widgets.
 - Text editor toolbar now includes a single button to cycle text alignment between left, center, right and justify.
@@ -32,6 +34,7 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Initial setup color picker presets are now circular with a subtle gray border for clarity.
 - Publish panel suggestions now open in a popup similar to the builder options menu.
 - Builder canvas zoom sizer now applies equal right spacing and doubles the top margin for balanced canvas layout.
 - Publish panel suggestions now open in a popup similar to the builder options menu.
@@ -187,6 +190,7 @@ El Psy Kongroo
 ### Fixed
 - Seeded admin widgets without layout options no longer overwrite saved heights on startup.
 - Seeded admin widgets now default to a base height to prevent initial overlap.
+- Editor toolbar tooltips no longer hide beneath other interface elements.
 - User color module skips token validation when no admin token is present, preventing 500 errors during builder initialization.
 - Designer app now displays the correct layout name when opening an existing template instead of falling back to "default".
 - Publishing a design no longer fails with a missing `capturePreview` function and now offers to open the published page after publishing.

@@ -7,7 +7,7 @@
    left: 0;
    width: var(--sidebar-width, 72px); // control via CSS var
    padding: 20px 16px 0;
-   background: none;
+   background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
    border-right: none;
    z-index: 100;
    overflow: hidden;
@@ -211,7 +211,14 @@
   }
 
   // Animations for panel
-}
+  .panel-content {
+    transition: all 0.2s ease;
+
+    &.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
 
 #builderPanel {
   flex-shrink: 0;

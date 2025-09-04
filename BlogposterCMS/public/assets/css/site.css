@@ -288,6 +288,37 @@
   margin-top: 14px;
 }
 
+.app-scope input[type=checkbox] {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  position: relative;
+}
+.app-scope input[type=checkbox]:checked {
+  background: var(--user-color, #007bff);
+  border-color: var(--user-color, #007bff);
+}
+.app-scope input[type=checkbox]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+}
+.app-scope input[type=checkbox]:hover {
+  border-color: var(--user-color, #007bff);
+}
+
 .app-scope.install-page {
   position: relative;
   min-height: 100vh;
@@ -579,28 +610,28 @@ body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-drag
    ============================================================================= */
 @font-face {
   font-family: "Noto Sans Variable";
-  src: url("../fonts/NotoSans-VariableFont_wdth,wght.ttf") format("truetype");
+  src: url("/assets/fonts/NotoSans-VariableFont_wdth,wght.ttf") format("truetype");
   font-weight: 100 900;
   font-stretch: 75% 100%;
   font-style: normal;
 }
 @font-face {
   font-family: "Noto Sans Variable";
-  src: url("../fonts/NotoSans-Italic-VariableFont_wdth,wght.ttf") format("truetype");
+  src: url("/assets/fonts/NotoSans-Italic-VariableFont_wdth,wght.ttf") format("truetype");
   font-weight: 100 900;
   font-stretch: 75% 100%;
   font-style: italic;
 }
 @font-face {
   font-family: "Open Sans Variable";
-  src: url("../fonts/OpenSans-VariableFont_wdth,wght.ttf") format("truetype");
+  src: url("/assets/fonts/OpenSans-VariableFont_wdth,wght.ttf") format("truetype");
   font-weight: 100 900;
   font-stretch: 75% 100%;
   font-style: normal;
 }
 @font-face {
   font-family: "Open Sans Variable";
-  src: url("../fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf") format("truetype");
+  src: url("/assets/fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf") format("truetype");
   font-weight: 100 900;
   font-stretch: 75% 100%;
   font-style: italic;
@@ -637,8 +668,8 @@ body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-drag
   --shared-widget-color: #d4af37;
   --shadow-card: 0 1px 28px rgba(0,0,0,0.07);
   --shadow-default: 0px 0px 0px 1px rgba(64, 87, 109, .04), 0px 6px 20px -4px rgba(64, 87, 109, .3);
-  --font-body: "Manrope", sans-serif;
-  --font-heading: "Oswald", sans-serif;
+  --font-body: "Noto Sans Variable", sans-serif;
+  --font-heading: var(--font-body);
   --font-mono: monospace;
 }
 
@@ -3176,6 +3207,37 @@ body.dashboard-edit-mode #edit-toggle:hover {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.text-block-editor-toolbar .opacity-control {
+  position: relative;
+}
+.text-block-editor-toolbar .opacity-control .opacity-slider {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 260px;
+  padding: 10px 14px;
+  background: var(--color-white);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  gap: 12px;
+  display: none;
+  align-items: center;
+}
+.text-block-editor-toolbar .opacity-control .opacity-slider.open {
+  display: flex;
+}
+.text-block-editor-toolbar .opacity-control .opacity-slider .opacity-range {
+  flex: 1;
+}
+.text-block-editor-toolbar .opacity-control .opacity-slider .opacity-value {
+  font-size: 14px;
+  color: var(--color-text);
+  min-width: 48px;
+  text-align: right;
 }
 .text-block-editor-toolbar .ff-options,
 .text-block-editor-toolbar .fs-options {

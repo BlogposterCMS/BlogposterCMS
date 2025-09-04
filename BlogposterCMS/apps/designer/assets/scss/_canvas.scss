@@ -149,6 +149,13 @@ body.builder-mode #builderViewport {
   box-sizing: border-box;
 }
 
+// Balanced spacing around the zoomable canvas wrapper
+body.builder-mode #builderViewport .canvas-zoom-sizer {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 40px;
+}
+
 // Ensure the inner grid has a baseline size so _updateGridHeight()
 // never computes 0px on empty layouts.
 body.builder-mode #builderGrid {

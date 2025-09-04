@@ -187,13 +187,13 @@ export function renderPageList(el, pages) {
           <div class="page-name-row">
             <span class="page-name" contenteditable="true">${escapeHtml(page.title)}</span>
             <span class="page-actions">
-              ${page.is_start ? '<span class="home-indicator" title="Current home page">Home</span>' : window.featherIcon('setHome', 'set-home" title="Set as home')}
-              ${window.featherIcon('edit', 'edit-page" title="Edit page')}
-              ${window.featherIcon('pencil', 'edit-layout" title="Edit layout')}
-              ${window.featherIcon(page.status === 'draft' ? 'draft' : 'published', 'toggle-draft" title="' + (page.status === 'draft' ? 'Mark as published' : 'Mark as draft') + '"')}
+              ${page.is_start ? '<span class="home-indicator" title="Current home page">Home</span>' : ''}
+              ${window.featherIcon('pencil', 'edit-page" title="Edit page')}
+              ${window.featherIcon('brush', 'edit-layout" title="Edit layout')}
+              ${window.featherIcon('drafting-compass', 'toggle-draft" title="' + (page.status === 'draft' ? 'Mark as published' : 'Mark as draft') + '"')}
               ${window.featherIcon('external-link', 'view-page" title="Open page')}
-              ${window.featherIcon('share', 'share-page" title="Share page link')}
-              ${window.featherIcon('delete', 'delete-page" title="Delete page')}
+              ${window.featherIcon('share-2', 'share-page" title="Share page link')}
+              ${window.featherIcon('trash-2', 'delete-page" title="Delete page')}
             </span>
           </div>
           <div class="page-slug-row">
@@ -203,17 +203,6 @@ export function renderPageList(el, pages) {
         </div>`;
 
       setupInlineEdit(li, page);
-
-      const setHomeBtn = li.querySelector('.set-home');
-      if (setHomeBtn) setHomeBtn.addEventListener('click', async () => {
-        try {
-          await pageService.setAsStart(page.id);
-          pages.splice(0, pages.length, ...(await fetchPages()));
-          renderFilteredPages();
-        } catch (err) {
-          await bpDialog.alert('Failed to set start page: ' + err.message);
-        }
-      });
 
       li.querySelector('.edit-page').addEventListener('click', () => editPage(page.id));
       li.querySelector('.edit-layout').addEventListener('click', () => editLayout(page));

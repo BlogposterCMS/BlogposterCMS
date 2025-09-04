@@ -23,6 +23,8 @@ El Psy Kongroo
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
 
 
+
+
 ### Removed
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
 - Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
@@ -30,6 +32,8 @@ El Psy Kongroo
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 
 ### Changed
+- Publish panel suggestions now open in a popup similar to the builder options menu.
+- Builder canvas zoom sizer now applies equal right spacing and doubles the top margin for balanced canvas layout.
 - Publish panel suggestions now open in a popup similar to the builder options menu.
 - Draft warning now hides when the draft checkbox is unchecked.
 - Dashboard checkboxes adopt the new UI styling and the publish panel draft checkbox matches.

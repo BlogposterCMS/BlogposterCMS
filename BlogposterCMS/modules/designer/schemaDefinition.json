@@ -1,12 +1,51 @@
 {
   "tables": [
     {
-      "name": "designer_layouts",
+      "name": "designer_designs",
       "columns": [
         { "name": "id", "type": "id" },
-        { "name": "name", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "description", "type": "text" },
+        { "name": "thumbnail", "type": "string" },
+        { "name": "background", "type": "string" },
+        { "name": "created_at", "type": "timestamp" },
+        { "name": "updated_at", "type": "timestamp" },
+        { "name": "published_at", "type": "timestamp" },
+        { "name": "owner_id", "type": "string" }
+      ]
+    },
+    {
+      "name": "designer_design_widgets",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "design_id", "type": "id" },
+        { "name": "instance_id", "type": "string" },
+        { "name": "widget_id", "type": "string" },
+        { "name": "x_percent", "type": "float" },
+        { "name": "y_percent", "type": "float" },
+        { "name": "w_percent", "type": "float" },
+        { "name": "h_percent", "type": "float" }
+      ]
+    },
+    {
+      "name": "designer_versions",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "design_id", "type": "id" },
         { "name": "layout_json", "type": "text" },
-        { "name": "updated_at", "type": "timestamp" }
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "designer_widget_meta",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "design_id", "type": "id" },
+        { "name": "instance_id", "type": "string" },
+        { "name": "html", "type": "text" },
+        { "name": "css", "type": "text" },
+        { "name": "js", "type": "text" },
+        { "name": "metadata", "type": "text" }
       ]
     }
   ]

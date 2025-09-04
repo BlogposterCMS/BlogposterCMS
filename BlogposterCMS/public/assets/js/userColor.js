@@ -75,7 +75,7 @@ function clamp(num, min, max) {
   return Math.min(Math.max(num, min), max);
 }
 
-function setAccentVariables(hex) {
+export function setAccentVariables(hex) {
   if (!isValidHex(hex)) return;
   const { h, s, l } = hexToHsl(hex);
   const sNorm = clamp(s, 60, 75);

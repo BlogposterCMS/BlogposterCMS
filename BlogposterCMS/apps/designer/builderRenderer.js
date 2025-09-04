@@ -480,6 +480,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           name: layoutNameParam
         });
         initialLayout = Array.isArray(tplRes?.layout) ? tplRes.layout : [];
+        layoutNameParam = String(tplRes?.name || layoutNameParam).replace(/[\n\r]/g, '');
       } catch (err) {
         console.warn('[Designer] failed to load layout template', err);
       }
@@ -714,6 +715,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         getCurrentLayoutForLayer,
         getActiveLayer: () => activeLayer,
         ensureCodeMap,
+        capturePreview,
         updateAllWidgetContents,
         pageId
       })

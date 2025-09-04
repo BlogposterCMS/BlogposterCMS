@@ -79,7 +79,7 @@
 
       async function choose(fullPath) {
         try {
-          const { shareURL, shortToken } = await window.meltdownEmit('createShareLink', {
+          const { shareURL } = await window.meltdownEmit('createShareLink', {
             jwt,
             moduleName: 'shareManager',
             moduleType: 'core',
@@ -88,7 +88,7 @@
           dialog.close();
           if (!settled) {
             settled = true;
-            resolve({ shareURL, name: fullPath, objectId: shortToken });
+            resolve({ shareURL, name: fullPath });
           }
         } catch (err) {
           alert('Error: ' + err.message);

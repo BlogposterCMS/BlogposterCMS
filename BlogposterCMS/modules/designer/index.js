@@ -54,187 +54,68 @@ module.exports = {
       );
     });
 
-    // 3) Listen for design save events using high level CRUD operations
-    motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
-      try {
-        if (typeof payload !== "object") {
-          throw new Error("Invalid payload");
-        }
-        const { design = {}, widgets = [] } = payload;
-        const title = String(design.title || "").replace(/[\n\r]/g, "").trim();
-        if (!title) {
-          throw new Error("Missing design title");
-        }
-        const description = String(design.description || "");
-        const thumbnail = String(design.thumbnail || "");
-        const ownerId = String(design.ownerId || "");
-        const background = String(design.background || "");
-        const publishedAt = design.publishedAt
-          ? new Date(design.publishedAt).toISOString()
-          : null;
-        const now = new Date().toISOString();
-
-        let designId = design.id;
-        if (designId) {
-          await new Promise((resolve, reject) => {
-            motherEmitter.emit(
-              "dbUpdate",
-              {
-                jwt,
-                moduleName: "designer",
-                moduleType: "community",
-                table: "designer_designs",
-                data: {
-                  title,
-                  description,
-                  thumbnail,
-                  background,
-                  updated_at: now,
-                  published_at: publishedAt,
-                  owner_id: ownerId,
-                },
-                where: { id: designId },
-              },
-              (err) => (err ? reject(err) : resolve()),
-            );
-          });
-          await Promise.all([
-            new Promise((resolve, reject) => {
-              motherEmitter.emit(
-                "dbDelete",
-                {
-                  jwt,
-                  moduleName: "designer",
-                  moduleType: "community",
-                  table: "designer_design_widgets",
-                  where: { design_id: designId },
-                },
-                (err) => (err ? reject(err) : resolve()),
-              );
-            }),
-            new Promise((resolve, reject) => {
-              motherEmitter.emit(
-                "dbDelete",
-                {
-                  jwt,
-                  moduleName: "designer",
-                  moduleType: "community",
-                  table: "designer_widget_meta",
-                  where: { design_id: designId },
-                },
-                (err) => (err ? reject(err) : resolve()),
-              );
-            }),
-          ]);
-        } else {
-          const rows = await new Promise((resolve, reject) => {
-            motherEmitter.emit(
-              "dbInsert",
-              {
-                jwt,
-                moduleName: "designer",
-                moduleType: "community",
-                table: "designer_designs",
-                data: {
-                  title,
-                  description,
-                  thumbnail,
-                  background,
-                  created_at: now,
-                  updated_at: now,
-                  published_at: publishedAt,
-                  owner_id: ownerId,
-                },
-              },
-              (err, rows) => (err ? reject(err) : resolve(rows)),
-            );
-          });
-          designId = rows && rows[0] ? rows[0].id : null;
-          if (!designId) throw new Error("Failed to insert design");
-        }
-
-        for (const w of Array.isArray(widgets) ? widgets : []) {
-          const instanceId = String(w.id || "");
-          const widgetId = String(w.widgetId || "");
-          const x = Number(w.xPercent) || 0;
-          const y = Number(w.yPercent) || 0;
-          const wPerc = Number(w.wPercent) || 0;
-          const hPerc = Number(w.hPercent) || 0;
-          await new Promise((resolve, reject) => {
-            motherEmitter.emit(
-              "dbInsert",
-              {
-                jwt,
-                moduleName: "designer",
-                moduleType: "community",
-                table: "designer_design_widgets",
-                data: {
-                  design_id: designId,
-                  instance_id: instanceId,
-                  widget_id: widgetId,
-                  x_percent: x,
-                  y_percent: y,
-                  w_percent: wPerc,
-                  h_percent: hPerc,
-                },
-              },
-              (err) => (err ? reject(err) : resolve()),
-            );
-          });
-
-          const code = w.code && typeof w.code === "object" ? w.code : {};
-          const html = typeof code.html === "string" ? code.html : null;
-          const css = typeof code.css === "string" ? code.css : null;
-          const js = typeof code.js === "string" ? code.js : null;
-          const metadata = code.meta ? JSON.stringify(code.meta) : null;
-          if (html || css || js || metadata) {
-            await new Promise((resolve, reject) => {
-              motherEmitter.emit(
-                "dbInsert",
-                {
-                  jwt,
-                  moduleName: "designer",
-                  moduleType: "community",
-                  table: "designer_widget_meta",
-                  data: {
-                    design_id: designId,
-                    instance_id: instanceId,
-                    html,
-                    css,
-                    js,
-                    metadata,
-                  },
-                },
-                (err) => (err ? reject(err) : resolve()),
-              );
-            });
-          }
-        }
-
-        await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            "dbInsert",
-            {
-              jwt,
-              moduleName: "designer",
-              moduleType: "community",
-              table: "designer_versions",
-              data: {
-                design_id: designId,
-                layout_json: JSON.stringify(widgets),
-                created_at: now,
-              },
-            },
-            (err) => (err ? reject(err) : resolve()),
-          );
-        });
-
-        if (typeof callback === "function") {
-          callback(null, { success: true, id: designId });
-        }
-      } catch (err) {
-        if (typeof callback === "function") callback(err);
+    // 3) Listen for layout save events using high level CRUD operations
+    motherEmitter.on("designer.saveLayout", (payload = {}, callback) => {
+      if (typeof payload !== "object") {
+        if (typeof callback === "function")
+          callback(new Error("Invalid payload"));
+        return;
       }
+      const safeName = String(payload.name || "").replace(/[\n\r]/g, "");
+      if (!safeName) {
+        if (typeof callback === "function")
+          callback(new Error("Missing layout name"));
+        return;
+      }
+      const layoutJson = JSON.stringify(payload.layout || {});
+      const updatedAt = new Date().toISOString();
+
+      // First check if layout already exists
+      motherEmitter.emit(
+        "dbSelect",
+        {
+          jwt,
+          moduleName: "designer",
+          moduleType: "community",
+          table: "designer_layouts",
+          where: { name: safeName },
+        },
+        (selectErr, rows) => {
+          if (selectErr) {
+            if (typeof callback === "function") callback(selectErr);
+            return;
+          }
+
+          const exists = Array.isArray(rows) && rows.length > 0;
+          const eventName = exists ? "dbUpdate" : "dbInsert";
+          const payloadData = exists
+            ? {
+                jwt,
+                moduleName: "designer",
+                moduleType: "community",
+                table: "designer_layouts",
+                data: { layout_json: layoutJson, updated_at: updatedAt },
+                where: { name: safeName },
+              }
+            : {
+                jwt,
+                moduleName: "designer",
+                moduleType: "community",
+                table: "designer_layouts",
+                data: {
+                  name: safeName,
+                  layout_json: layoutJson,
+                  updated_at: updatedAt,
+                },
+              };
+
+          motherEmitter.emit(eventName, payloadData, (err) => {
+            if (typeof callback !== "function") return;
+            if (err) return callback(err);
+            callback(null, { success: true });
+          });
+        },
+      );
     });
 
     console.log("[DESIGNER MODULE] designer module initialized.");

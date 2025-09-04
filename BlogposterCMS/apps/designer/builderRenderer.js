@@ -175,8 +175,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     saveTimer: null,
     autosaveInterval: null,
     lastSavedLayoutStr: '' ,
-    activeWidgetEl: null,
-    designId: null
+    activeWidgetEl: null
   };
 
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
@@ -650,7 +649,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         ensureCodeMap,
         capturePreview: () => captureGridPreview(gridEl),
         updateAllWidgetContents,
-        ownerId: getAdminUserId(),
         pageId
       });
       alert('Layout template saved');
@@ -691,7 +689,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         ensureCodeMap,
         capturePreview: () => captureGridPreview(gridEl),
         updateAllWidgetContents,
-        ownerId: getAdminUserId(),
         pageId
       })
     });

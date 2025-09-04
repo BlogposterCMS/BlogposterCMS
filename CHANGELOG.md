@@ -185,6 +185,7 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
+- User color module skips token validation when no admin token is present, preventing 500 errors during builder initialization.
 - Designer app now displays the correct layout name when opening an existing template instead of falling back to "default".
 - Publishing a design no longer fails with a missing `capturePreview` function and now offers to open the published page after publishing.
 - Guarded global opacity default when localStorage is unavailable to avoid ReferenceError outside browsers.

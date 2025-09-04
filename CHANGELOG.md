@@ -29,9 +29,10 @@ El Psy Kongroo
 - Builder workspace now displays the current viewport width in the top-right corner.
 - Color picker now tracks recent selections, lists document colours and accepts direct hex/RGB input.
 - Publish panel now auto-creates pages for new slugs and shows a full URL preview beneath the slug field.
-
-
-
+ 
+### Fixed
+- Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.
+- Custom colour picker now updates the current swatch live instead of creating a new circle for each hue adjustment.
 
 ### Removed
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.

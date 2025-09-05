@@ -266,7 +266,9 @@ export class CanvasGrid {
       el.dataset.yPercent = yPercent;
       if (recalc) {
         const wPercent = Math.min((w * columnWidth / gridW) * 100, 100);
-        const hPercent = Math.min((h * cellHeight / gridH) * 100, 100);
+        // Allow widgets to grow taller than the grid viewport when desired.
+        // Width remains clamped to 100% to avoid horizontal overflow.
+        const hPercent = Math.max((h * cellHeight / gridH) * 100, 0);
         el.dataset.wPercent = wPercent;
         el.dataset.hPercent = hPercent;
       }

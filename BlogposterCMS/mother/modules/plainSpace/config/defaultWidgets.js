@@ -45,7 +45,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Content Summary',
     content: '/plainspace/widgets/admin/defaultwidgets/contentSummaryWidget.js',
     category: 'core',
-    options: { height: 150, maxWidth: true },
+    options: { height: 150, maxWidth: true, debug: true },
     metadata: {
       apiEvents: [
         'getLayoutTemplateNames',
@@ -272,8 +272,7 @@ module.exports.DEFAULT_WIDGETS = [
     label: 'Roadmap Intro',
     content: '/plainspace/widgets/admin/roadmapIntroWidget.js',
     category: 'core',
-    options: { halfWidth: true, height: 160, overflow: true },
-    options: { maxWidth: true },
+    options: { halfWidth: true, height: 160, overflow: true, maxWidth: true },
     metadata: { apiEvents: [] }
   },
   {

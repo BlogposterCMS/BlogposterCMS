@@ -29,6 +29,12 @@ const { sanitizeCookieName, sanitizeCookiePath } = require('./mother/utils/cooki
 const { isProduction, features } = require('./config/runtime');
 const renderMode = features?.renderMode || 'client';
 const { hasPermission } = require('./mother/modules/userManagement/permissionUtils');
+const {
+  seedAdminPages: psSeedAdminPages,
+  seedAdminWidget: psSeedAdminWidget
+} = require('./mother/modules/plainSpace/plainSpaceService');
+const { DEFAULT_WIDGETS } = require('./mother/modules/plainSpace/config/defaultWidgets');
+const { ADMIN_PAGES } = require('./mother/modules/plainSpace/config/adminPages');
 
 
 
@@ -762,6 +768,41 @@ app.delete('/admin/api/apps/:appName', csrfProtection, async (req, res) => {
   } catch (err) {
     console.warn('[APP UNINSTALL] failed', err);
     res.status(500).send('Uninstall failed');
+  }
+});
+
+// PlainSpace reseed endpoint
+// Re-applies default widget instances and admin page layouts using the same
+// logic as a user save. Requires admin_jwt with sufficient permissions.
+app.post('/admin/api/plainspace/reseed', csrfProtection, async (req, res) => {
+  const adminJwt = req.cookies?.admin_jwt;
+  if (!adminJwt) return res.status(401).send('Unauthorized');
+  let decoded;
+  try {
+    decoded = await validateAdminToken(adminJwt);
+  } catch (err) {
+    return res.status(401).send('Unauthorized');
+  }
+  const allowed = hasPermission(decoded, 'builder.manage') ||
+                  hasPermission(decoded, 'plainspace.saveLayout');
+  if (!allowed) return res.status(403).send('Forbidden');
+
+  try {
+    // 1) Ensure default widget instances exist/are updated
+    let widgetCount = 0;
+    for (const w of DEFAULT_WIDGETS) {
+      const { options = {}, ...data } = w;
+      await psSeedAdminWidget(motherEmitter, adminJwt, data, options);
+      widgetCount++;
+    }
+
+    // 2) Re-seed admin pages layouts using widget instance defaults
+    await psSeedAdminPages(motherEmitter, adminJwt, ADMIN_PAGES);
+
+    return res.json({ success: true, widgetsSeeded: widgetCount, pagesSeeded: ADMIN_PAGES.length });
+  } catch (err) {
+    console.error('[RESEED] Failed:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

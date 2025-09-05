@@ -151,25 +151,26 @@ module.exports = {
       const seededVal = await getSetting(motherEmitter, jwt, 'PLAINSPACE_SEEDED');
       if (seededVal === 'true') {
         console.log('[plainSpace] Already seeded (PLAINSPACE_SEEDED=true). Checking for missing admin pages and widgets...');
+        // Ensure widget instances exist first so page seeding can read their defaults
+        for (const widgetData of DEFAULT_WIDGETS) {
+          const { options = {}, ...data } = widgetData;
+          await seedAdminWidget(motherEmitter, jwt, data, options);
+        }
         if (isCore && jwt) {
           await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
-          for (const widgetData of DEFAULT_WIDGETS) {
-            const { options = {}, ...data } = widgetData;
-            await seedAdminWidget(motherEmitter, jwt, data, options);
-          }
         }
       } else {
         console.log('[plainSpace] Not seeded => running seed steps...');
 
-        // A) Seed admin pages, if they’re not found
-        if (isCore && jwt) {
-          await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
-        }
-
-        // B) Seed default widgets
+        // A) Seed default widgets first so instance defaults are available
         for (const widgetData of DEFAULT_WIDGETS) {
           const { options = {}, ...data } = widgetData;
           await seedAdminWidget(motherEmitter, jwt, data, options);
+        }
+
+        // B) Seed admin pages (now can derive layout from widget instances)
+        if (isCore && jwt) {
+          await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
         }
         console.log('[plainSpace] Admin pages & widgets have been seeded.');
 

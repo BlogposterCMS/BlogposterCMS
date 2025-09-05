@@ -621,21 +621,17 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       // 1) Update the main page
       const idObj = parseObjectId(pageId);
       if (!idObj) return { done: false };
-      const updateDoc = {
-        slug,
-        status,
-        seo_image,
-        parent_id : parseObjectId(parent_id),
-        is_content: !!is_content,
-        lane      : lane || 'public',
-        language  : (language || 'en').toLowerCase(),
-        title     : title || '',
-        meta      : meta || null,
-        updated_at: new Date()
-      };
-      if (Object.prototype.hasOwnProperty.call(p, 'weight')) {
-        updateDoc.weight = Number(weight) || 0;
-      }
+      const updateDoc = { updated_at: new Date() };
+      if (Object.prototype.hasOwnProperty.call(p, 'slug'))       updateDoc.slug = slug;
+      if (Object.prototype.hasOwnProperty.call(p, 'status'))     updateDoc.status = status;
+      if (Object.prototype.hasOwnProperty.call(p, 'seo_image'))  updateDoc.seo_image = seo_image;
+      if (Object.prototype.hasOwnProperty.call(p, 'parent_id'))  updateDoc.parent_id = parseObjectId(parent_id);
+      if (Object.prototype.hasOwnProperty.call(p, 'is_content')) updateDoc.is_content = !!is_content;
+      if (Object.prototype.hasOwnProperty.call(p, 'lane'))       updateDoc.lane = lane;
+      if (Object.prototype.hasOwnProperty.call(p, 'language'))   updateDoc.language = (language || 'en').toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(p, 'title'))      updateDoc.title = title;
+      if (Object.prototype.hasOwnProperty.call(p, 'meta'))       updateDoc.meta = meta;
+      if (Object.prototype.hasOwnProperty.call(p, 'weight'))     updateDoc.weight = Number(weight) || 0;
       await db.collection('pages').updateOne(
         { _id: idObj },
         { $set: updateDoc }

@@ -493,16 +493,16 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
 
       await db.run(`
         UPDATE pagesManager_pages
-           SET title      = ?,
-               meta       = ?,
+           SET title      = COALESCE(?, title),
+               meta       = COALESCE(?, meta),
                weight     = COALESCE(?, weight),
-               slug       = ?,
-               status     = ?,
-               seo_image  = ?,
-               parent_id  = ?,
-               is_content = ?,
-               lane       = ?,
-               language   = ?,
+               slug       = COALESCE(?, slug),
+               status     = COALESCE(?, status),
+               seo_image  = COALESCE(?, seo_image),
+               parent_id  = COALESCE(?, parent_id),
+               is_content = COALESCE(?, is_content),
+               lane       = COALESCE(?, lane),
+               language   = COALESCE(?, language),
                updated_at = CURRENT_TIMESTAMP
          WHERE id = ?;
       `, [title, metaVal, weightVal, slug, status, seo_image, parent_id, is_content, lane, language, pageId]);

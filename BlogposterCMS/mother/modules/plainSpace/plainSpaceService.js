@@ -228,7 +228,33 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           let y = layout.reduce((m, l) => Math.max(m, (l.y ?? 0) + (l.h ?? 4)), 0);
           for (const w of missingWidgets) {
             if (existingIds.includes(w)) continue;
-            layout.push({ id: `w${layout.length}`, widgetId: w, x: 0, y, w: 8, h: 4, code: null });
+            // Derive percent-based layout from widget instance options if available
+            let wPercent = null, hPercent = null;
+            try {
+              const inst = await meltdownEmit(motherEmitter, 'getWidgetInstance', {
+                jwt,
+                moduleName: MODULE,
+                instanceId: `default.${w}`
+              }).catch(() => null);
+              const content = inst?.content ? JSON.parse(inst.content) : null;
+              if (content) {
+                if (content.halfWidth) wPercent = 50;
+                if (content.thirdWidth) wPercent = 33.333;
+                if (typeof content.width === 'number') wPercent = content.width;
+                if (typeof content.height === 'number') hPercent = content.height;
+              }
+            } catch (_) {}
+            layout.push({
+              id: `w${layout.length}`,
+              widgetId: w,
+              x: 0,
+              y,
+              w: 8,
+              h: 4,
+              ...(wPercent != null ? { wPercent } : {}),
+              ...(hPercent != null ? { hPercent } : {}),
+              code: null
+            });
             y += 4;
           }
           await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
@@ -286,15 +312,45 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
     const pageId = createRes?.pageId;
     if (pageId && Array.isArray(page.config?.widgets) && page.config.widgets.length) {
-      const layout = page.config.widgets.map((wId, idx) => ({
-        id: `w${idx}`,
-        widgetId: wId,
-        x: 0,
-        y: idx * 4,
-        w: 8,
-        h: 4,
-        code: null
-      }));
+      // Build a layout that mirrors what a user save would produce, using
+      // percent-based width/height derived from widget instance defaults.
+      const layout = [];
+      let yPercentCursor = 0;
+      for (let idx = 0; idx < page.config.widgets.length; idx++) {
+        const wId = page.config.widgets[idx];
+        let wPercent = null, hPercent = null;
+        try {
+          const inst = await meltdownEmit(motherEmitter, 'getWidgetInstance', {
+            jwt,
+            moduleName: MODULE,
+            instanceId: `default.${wId}`
+          }).catch(() => null);
+          const content = inst?.content ? JSON.parse(inst.content) : null;
+          if (content) {
+            if (content.halfWidth) wPercent = 50;
+            if (content.thirdWidth) wPercent = 33.333;
+            if (typeof content.width === 'number') wPercent = content.width;
+            if (typeof content.height === 'number') hPercent = content.height;
+          }
+        } catch (_) {}
+        if (hPercent == null) hPercent = 40; // sensible default
+        const item = {
+          id: `w${idx}`,
+          widgetId: wId,
+          xPercent: 0,
+          yPercent: yPercentCursor,
+          ...(wPercent != null ? { wPercent } : {}),
+          ...(hPercent != null ? { hPercent } : {}),
+          // keep absolute fallbacks for robustness
+          x: 0,
+          y: Math.round((yPercentCursor / 100) * 12),
+          w: 8,
+          h: 4,
+          code: null
+        };
+        layout.push(item);
+        yPercentCursor += hPercent;
+      }
       try {
         await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
           jwt,

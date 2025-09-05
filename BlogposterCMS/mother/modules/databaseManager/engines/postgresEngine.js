@@ -8,7 +8,7 @@ const { Pool } = require('pg');
 const { adminPool } = require('../helpers/adminPool');
 const { generateUserAndPass } = require('../helpers/cryptoHelpers');
 const { pgHost, pgPort, pgMainDb, pgMainUser, pgMainPass } = require('../config/databaseConfig');
-const { handleBuiltInPlaceholderPostgres } = require('../placeholders/postgresPlaceholders');
+const { handlePlaceholder } = require('../placeholders/handlePlaceholder');
 
 // --- NEW: notificationEmitter for typed notifications! ---
 const notificationEmitter = require('../../../emitters/notificationEmitter');
@@ -166,7 +166,7 @@ async function performPostgresOperation(moduleName, operation, params, isOwnDb) 
         const pool = getGlobalMainDbPool();
         const client = await pool.connect();
         try {
-          const result = await handleBuiltInPlaceholderPostgres(client, operation, params);
+          const result = await handlePlaceholder(client, 'postgres', operation, params);
           return result;
         } finally {
           client.release();

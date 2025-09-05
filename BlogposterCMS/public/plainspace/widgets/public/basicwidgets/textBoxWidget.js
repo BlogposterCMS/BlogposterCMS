@@ -36,10 +36,14 @@ export async function render(el, ctx = {}) {
   el.appendChild(wrapper);
 
   if (document.body.classList.contains('builder-mode')) {
-    const mod = await import(
-      /* webpackIgnore: true */ '/build/designerEditor.js'
-    );
-    const registerElement = mod.registerElement || mod.default?.registerElement;
-    registerElement?.(editable);
+    try {
+      const mod = await import(
+        /* webpackIgnore: true */ '/build/designerEditor.js'
+      );
+      const registerElement = mod.registerElement || mod.default?.registerElement;
+      registerElement?.(editable);
+    } catch (err) {
+      console.warn('[textBoxWidget] editor load failed', err);
+    }
   }
 }

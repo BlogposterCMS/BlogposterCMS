@@ -1,12 +1,83 @@
 {
   "tables": [
     {
-      "name": "designer_layouts",
+      "name": "designer_designs",
+      "schema": "designer",
       "columns": [
         { "name": "id", "type": "id" },
-        { "name": "name", "type": "string" },
+        { "name": "title", "type": "string", "notNull": true },
+        { "name": "description", "type": "text" },
+        { "name": "thumbnail", "type": "text" },
+        { "name": "bg_color", "type": "string" },
+        { "name": "bg_media_id", "type": "string" },
+        { "name": "bg_media_url", "type": "string" },
+        { "name": "created_at", "type": "timestamp", "notNull": true },
+        { "name": "updated_at", "type": "timestamp", "notNull": true },
+        { "name": "published_at", "type": "timestamp" },
+        { "name": "owner_id", "type": "string" },
+        { "name": "version", "type": "int" },
+        { "name": "is_draft", "type": "boolean" },
+        { "name": "deleted_at", "type": "timestamp" }
+      ],
+      "indexes": [
+        { "name": "idx_designer_designs_owner", "columns": ["owner_id"] },
+        { "name": "idx_designer_designs_published", "columns": ["published_at"] }
+      ]
+    },
+    {
+      "name": "designer_design_widgets",
+      "schema": "designer",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "design_id", "type": "id" },
+        { "name": "instance_id", "type": "string" },
+        { "name": "widget_id", "type": "string" },
+        { "name": "x_percent", "type": "float" },
+        { "name": "y_percent", "type": "float" },
+        { "name": "w_percent", "type": "float" },
+        { "name": "h_percent", "type": "float" },
+        { "name": "z_index", "type": "int" },
+        { "name": "rotation_deg", "type": "float" },
+        { "name": "opacity", "type": "float" }
+      ],
+      "indexes": [
+        { "name": "idx_widgets_design", "columns": ["design_id"] },
+        { "name": "idx_widgets_design_widget", "columns": ["design_id", "widget_id"] }
+      ],
+      "uniques": [
+        { "name": "uniq_design_widget_instance", "columns": ["design_id", "instance_id"] }
+      ]
+    },
+    {
+      "name": "designer_versions",
+      "schema": "designer",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "design_id", "type": "id" },
         { "name": "layout_json", "type": "text" },
-        { "name": "updated_at", "type": "timestamp" }
+        { "name": "created_at", "type": "timestamp" }
+      ],
+      "indexes": [
+        { "name": "idx_versions_design_created", "columns": ["design_id", "created_at"] }
+      ]
+    },
+    {
+      "name": "designer_widget_meta",
+      "schema": "designer",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "design_id", "type": "id" },
+        { "name": "instance_id", "type": "string" },
+        { "name": "html", "type": "text" },
+        { "name": "css", "type": "text" },
+        { "name": "js", "type": "text" },
+        { "name": "metadata", "type": "text" }
+      ],
+      "indexes": [
+        { "name": "idx_meta_design", "columns": ["design_id"] }
+      ],
+      "uniques": [
+        { "name": "uniq_meta_design_instance", "columns": ["design_id", "instance_id"] }
       ]
     }
   ]

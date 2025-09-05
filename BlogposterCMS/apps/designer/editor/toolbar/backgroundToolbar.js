@@ -1,5 +1,6 @@
 import { state } from '../core/editor.js';
 import { showBuilderPanel, hideBuilderPanel } from '../../managers/panelManager.js';
+import { designerState } from '../../managers/designerState.js';
 
 let bgToolbar = null;
 let listenersAttached = false;
@@ -132,6 +133,10 @@ export function initBackgroundToolbar() {
         const g = getGridEl();
         if (!g) return;
         g.style.backgroundImage = '';
+        delete g.dataset.bgImageId;
+        delete g.dataset.bgImageUrl;
+        designerState.bgMediaId = '';
+        designerState.bgMediaUrl = '';
         g.style.backgroundColor = c;
         colorIcon.style.textDecorationColor = c;
       },
@@ -163,7 +168,7 @@ export function initBackgroundToolbar() {
   imageBtn.addEventListener('click', async ev => {
     ev.stopPropagation();
     try {
-      const { shareURL } = await window.meltdownEmit('openMediaExplorer', { jwt: window.ADMIN_TOKEN });
+      const { shareURL, objectId } = await window.meltdownEmit('openMediaExplorer', { jwt: window.ADMIN_TOKEN });
       if (shareURL) {
         const grid = getGridEl();
         if (!grid) return;
@@ -172,6 +177,10 @@ export function initBackgroundToolbar() {
         grid.style.backgroundSize = 'cover';
         grid.style.backgroundRepeat = 'no-repeat';
         grid.style.backgroundPosition = 'center';
+        if (objectId) grid.dataset.bgImageId = objectId;
+        grid.dataset.bgImageUrl = shareURL;
+        designerState.bgMediaId = objectId || '';
+        designerState.bgMediaUrl = shareURL || '';
       }
     } catch (err) {
       console.error('[BackgroundToolbar] openMediaExplorer error', err);
@@ -184,6 +193,10 @@ export function initBackgroundToolbar() {
     if (!grid) return;
     grid.style.backgroundImage = '';
     grid.style.backgroundColor = '';
+    delete grid.dataset.bgImageId;
+    delete grid.dataset.bgImageUrl;
+    designerState.bgMediaId = '';
+    designerState.bgMediaUrl = '';
   });
 
   // Prevent background clicks from deselecting while interacting with toolbar

@@ -1,5 +1,3 @@
-import { getDesignerAppName } from '../utils.js';
-
 export async function createNewPage() {
   const title = prompt('New page title:');
   if (!title) return;
@@ -15,10 +13,7 @@ export async function createNewPage() {
       status: 'published'
     }) || {};
 
-    const designer = await getDesignerAppName();
-    if (pageId && designer) {
-      window.location.href = `/admin/app/${encodeURIComponent(designer)}/${pageId}?layer=1`;
-    } else {
+    if (pageId) {
       window.location.reload();
     }
   } catch (err) {
@@ -40,10 +35,7 @@ export async function createNewLayout() {
       layout: [],
       previewPath: ''
     });
-    const designer = await getDesignerAppName();
-    if (designer) {
-      window.location.href = `/admin/app/${encodeURIComponent(designer)}?layout=${encodeURIComponent(layoutName.trim())}`;
-    }
+    window.location.reload();
   } catch (err) {
     alert('Error: ' + err.message);
   }

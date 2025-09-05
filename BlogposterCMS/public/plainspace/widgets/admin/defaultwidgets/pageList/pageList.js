@@ -1,4 +1,3 @@
-import { getDesignerAppName } from '../../../../utils.js';
 import { bpDialog } from '/assets/js/bpDialog.js';
 import { pageService, sanitizeSlug } from './pageService.js';
 
@@ -188,7 +187,6 @@ export function renderPageList(el, pages) {
             <span class="page-name" contenteditable="true">${escapeHtml(page.title)}</span>
             <span class="page-actions">
               ${window.featherIcon('pencil', 'edit-page" title="Edit page')}
-              ${window.featherIcon('brush', 'edit-layout" title="Edit layout')}
               ${window.featherIcon('drafting-compass', 'toggle-draft" title="' + (page.status === 'draft' ? 'Mark as published' : 'Mark as draft') + '"')}
               ${window.featherIcon('external-link', 'view-page" title="Open page')}
               ${window.featherIcon('share-2', 'share-page" title="Share page link')}
@@ -217,7 +215,6 @@ export function renderPageList(el, pages) {
       });
 
       li.querySelector('.edit-page').addEventListener('click', () => editPage(page.id));
-      li.querySelector('.edit-layout').addEventListener('click', () => editLayout(page));
       li.querySelector('.toggle-draft').addEventListener('click', async () => {
         const newStatus = page.status === 'draft' ? 'published' : 'draft';
         const prevStatus = page.status;
@@ -254,15 +251,6 @@ export function renderPageList(el, pages) {
 
 async function editPage(id) {
   window.location.href = `/admin/pages/edit/${id}`;
-}
-
-async function editLayout(page) {
-  const designer = await getDesignerAppName();
-  if (designer) {
-    const layout = page.meta?.layoutTemplate;
-    const layoutParam = layout ? `&layout=${encodeURIComponent(layout)}` : '';
-    window.location.href = `/admin/app/${encodeURIComponent(designer)}/${page.id}?layer=1${layoutParam}`;
-  }
 }
 
 function viewPage(page) {

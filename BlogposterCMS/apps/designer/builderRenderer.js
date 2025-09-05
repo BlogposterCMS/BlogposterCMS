@@ -175,8 +175,31 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     saveTimer: null,
     autosaveInterval: null,
     lastSavedLayoutStr: '' ,
-    activeWidgetEl: null
+    activeWidgetEl: null,
+    designId: null,
+    designVersion: 0
   };
+
+  // Pre-seed design identifier and version from data attributes or globals so
+  // existing designs update instead of inserting duplicates on first save.
+  try {
+    const dset = (contentEl && contentEl.dataset) || {};
+    const idAttr = dset.designId || document.body.dataset?.designId;
+    if (idAttr) state.designId = String(idAttr);
+    const verAttr = dset.designVersion || document.body.dataset?.designVersion;
+    if (verAttr !== undefined) {
+      const ver = parseInt(verAttr, 10);
+      if (!Number.isNaN(ver)) state.designVersion = ver;
+    }
+    const winDesign = window.DESIGN_DATA || window.INITIAL_DESIGN;
+    if (!state.designId && winDesign?.id) state.designId = String(winDesign.id);
+    if (state.designVersion === 0 && winDesign?.version !== undefined) {
+      const v = parseInt(winDesign.version, 10);
+      if (!Number.isNaN(v)) state.designVersion = v;
+    }
+  } catch (err) {
+    console.warn('[Designer] failed to preload design metadata', err);
+  }
 
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
 
@@ -221,6 +244,32 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     </div>
   `;
   gridEl = document.getElementById('builderGrid');
+
+  // Apply persisted background settings from the initial design payload so
+  // backgrounds survive reloads and future saves reuse the same media object.
+  try {
+    const initialDesign = window.DESIGN_DATA || window.INITIAL_DESIGN;
+    if (initialDesign && typeof initialDesign === 'object') {
+      if (initialDesign.bg_color) {
+        gridEl.style.backgroundColor = String(initialDesign.bg_color);
+      }
+      if (initialDesign.bg_media_url) {
+        const safeUrl = String(initialDesign.bg_media_url).replace(/"/g, '&quot;');
+        gridEl.style.backgroundImage = `url("${safeUrl}")`;
+        gridEl.style.backgroundSize = 'cover';
+        gridEl.style.backgroundRepeat = 'no-repeat';
+        gridEl.style.backgroundPosition = 'center';
+        gridEl.dataset.bgImageUrl = initialDesign.bg_media_url;
+        if (initialDesign.bg_media_id) {
+          gridEl.dataset.bgImageId = initialDesign.bg_media_id;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Designer] failed to apply initial background', err);
+  }
+  designerState.bgMediaId = gridEl.dataset.bgImageId || '';
+  designerState.bgMediaUrl = gridEl.dataset.bgImageUrl || '';
   const gridViewportEl = document.getElementById('builderViewport');
   const viewportSizeEl = document.createElement('div');
   viewportSizeEl.className = 'viewport-size-display';
@@ -649,6 +698,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         ensureCodeMap,
         capturePreview: () => captureGridPreview(gridEl),
         updateAllWidgetContents,
+        ownerId: getAdminUserId(),
         pageId
       });
       alert('Layout template saved');
@@ -681,16 +731,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       gridEl,
       updateAllWidgetContents,
       getAdminUserId,
-      saveDesign: () => saveDesign({
-        name: nameInput.value.trim(),
-        gridEl,
-        getCurrentLayoutForLayer,
-        getActiveLayer: () => activeLayer,
-        ensureCodeMap,
-        capturePreview: () => captureGridPreview(gridEl),
-        updateAllWidgetContents,
-        pageId
-      })
+      getCurrentLayoutForLayer,
+      getActiveLayer: () => activeLayer,
+      ensureCodeMap,
+      capturePreview: () => captureGridPreview(gridEl),
+      pageId,
+      saveDesign
     });
   }
 

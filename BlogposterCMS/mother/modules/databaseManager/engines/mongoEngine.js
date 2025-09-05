@@ -10,7 +10,7 @@ const {
   mongoUri
 } = require('../config/databaseConfig');
 const { generateUserAndPass } = require('../helpers/cryptoHelpers');
-const { handleBuiltInPlaceholderMongo } = require('../placeholders/mongoPlaceholders');
+const { handlePlaceholder } = require('../placeholders/handlePlaceholder');
 
 // NEW: For typed notifications
 const notificationEmitter = require('../../../emitters/notificationEmitter');
@@ -91,7 +91,7 @@ async function performMongoOperation(moduleName, operation, params = []) {
   try {
     if (await isPlaceholderOperation(operation)) {
       const db = await connectToModuleDb(moduleName);
-      return await handleBuiltInPlaceholderMongo(db, operation, params);
+      return await handlePlaceholder(db, 'mongodb', operation, params);
     } else {
       // Normal ops like insertOne, find, etc.
       const db = await connectToModuleDb(moduleName);

@@ -24,9 +24,7 @@
 
       const p = meltdownEmit(eventName, { jwt, ...payload })
     .then(res => {
-      console.log('[LOADER-DEBUG] API-RAW:', res);
       const sanitized = sanitize(res?.data ?? res ?? null, opts.fields);
-      console.log('[LOADER-DEBUG] Sanitized:', sanitized);
       return sanitized;
     })
   .catch(err => {

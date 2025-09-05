@@ -7,7 +7,6 @@ export function loadAuthTokens() {
   if (typeof window.PUBLIC_TOKEN === 'undefined') {
     window.PUBLIC_TOKEN = null;
   }
-  console.log('[tokenLoader] JWT managed securely via cookies or server injection.');
 }
 
 loadAuthTokens();

@@ -6,13 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 
-
 ### Added
-- Designer saves run inside a single database transaction with optimistic locking via `version`.
-- Split design background fields into `bg_color`, `bg_media_id`, and `bg_media_url` and clamp widget coordinates server side.
-- Background toolbar saves image selections via the media manager and stores color plus media object IDs in design metadata.
-- Designer now captures background styles and persists per-widget HTML/CSS/JS in a dedicated `designer_widget_meta` table.
-- Designer module now stores designs, widget coordinates and version history in dedicated tables, removing local layout storage.
 - Optional widget option debugging to inspect grid measurements when seeding layouts.
 - Documented seeding admin widget height options and CanvasGrid sizing behaviour.
 - Initial setup color picker now previews the chosen accent colour live and uses builder-style presets.
@@ -26,23 +20,20 @@ El Psy Kongroo
 - Publishing now saves the current layout before creating or updating pages and attaching designs.
 - CanvasGrid now accepts an `enableZoom` option; dashboard grids disable zoom by default to avoid the builder's zoom sizer.
 
-
-
+ 
+### Fixed
+- Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.
+- Custom colour picker now updates the current swatch live instead of creating a new circle for each hue adjustment.
 
 ### Removed
-- Hard-coded Designer app hooks from core widgets and utilities to keep the module optional.
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
+- Removed stray debug logs from `tokenLoader` and `pageDataLoader` to avoid leaking sensitive information.
 - Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
 - Support for dynamic action buttons in the content header.
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
 - Sample designer `adminSeed.json` file.
 
- 
-
-
 ### Changed
-- Designer server sanitization now uses `sanitize-html` and safer CSS filtering, and schema definition defaults escape backslashes and quotes to prevent SQL injection.
-- Designer database operations now register a custom placeholder, removing designer-specific hooks from the core database manager.
 - Initial setup color picker is now displayed inline beneath the project name for instant accent previews.
 - Page list card now shows a house icon before the slug to set or indicate the home page, removing the slug edit icon and right-side home action.
 - Updated page list card action icons to use pencil, brush, drafting-compass, external-link, share-2 and trash-2 for clarity, while preserving the option to set a page as the home page.
@@ -206,23 +197,6 @@ El Psy Kongroo
 - Page Content editor upload button now shows a dropdown with builder apps or direct HTML upload.
 
 ### Fixed
-- Builder applies saved background color and media when initializing a design so backgrounds persist across sessions.
-- Consolidated MongoDB engine detection to `mongodb` for consistent placeholder routing.
-- Publish panel passes full configuration to `saveDesign` before publishing to avoid TypeErrors and duplicate designs.
-- Built-in text widget registers its editable field with the designer editor so text remains editable in builder mode.
-- Design thumbnails now upload through the media manager and store share links; schema uses `text` type so long previews no longer fail.
-- Builder now preloads design ID and version from data attributes so existing designs update instead of creating duplicates.
-- `DESIGNER_SAVE_DESIGN` placeholder now supports MongoDB so designs can be saved on Mongo deployments.
-- Designer schema definition now creates tables in the `designer` schema so custom placeholders find them on PostgreSQL.
-- Normalized `rgb(a)` background colors to hex so designs with color-only backgrounds retain their color on save.
-- Designer saves preserve existing background images by reading grid styles when dataset attributes are missing.
-- Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.
-- Custom colour picker now updates the current swatch live instead of creating a new circle for each hue adjustment.
-- Module loader now registers modules in `global.loadedModules`, allowing custom placeholders like `DESIGNER_SAVE_DESIGN` to resolve without core hacks.
-- Server-side HTML sanitization now merges default allowed attributes with `style`, preserving `href`, `src`, `class` and other safe attributes on save.
-- Saving designs now casts the `is_draft` flag to boolean, preventing PostgreSQL type errors.
-- Database engine now routes custom placeholders through the generic handler so module-defined transactions execute.
-- Designer reuses the returned design ID to update existing records instead of creating duplicates.
 - Builder publish panel now loads full page data before updating to preserve metadata and correct draft status.
 - Seeded admin widgets without layout options no longer overwrite saved heights on startup.
 - Seeded admin widgets now default to a base height to prevent initial overlap.

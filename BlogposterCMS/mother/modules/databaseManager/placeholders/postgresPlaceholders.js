@@ -515,30 +515,30 @@ switch (operation) {
       // Update main page
       await client.query(`
         UPDATE pagesManager.pages
-          SET title     = $2,
-              meta      = $3,
+          SET title     = COALESCE($2, title),
+              meta      = COALESCE($3, meta),
               weight    = COALESCE($4, weight),
-              slug      = $5,
-              status    = $6,
-              seo_image = $7,
-              parent_id = $8,
-              is_content= $9,
-              lane      = $10,
-              language  = $11,
+              slug      = COALESCE($5, slug),
+              status    = COALESCE($6, status),
+              seo_image = COALESCE($7, seo_image),
+              parent_id = COALESCE($8, parent_id),
+              is_content= COALESCE($9, is_content),
+              lane      = COALESCE($10, lane),
+              language  = COALESCE($11, language),
               updated_at= NOW()
         WHERE id = $1;
       `, [
         /* $1 */ pageId,
-        /* $2 */ title       || '',
-        /* $3 */ meta        || null,
+        /* $2 */ title ?? null,
+        /* $3 */ meta ?? null,
         /* $4 */ weightVal,
-        /* $5 */ slug,
-        /* $6 */ status,
-        /* $7 */ seo_image,
-        /* $8 */ parent_id,
-        /* $9 */ is_content  || false,
-        /*$10*/ lane        || 'public',
-        /*$11*/ language     || 'en'
+        /* $5 */ slug ?? null,
+        /* $6 */ status ?? null,
+        /* $7 */ seo_image ?? null,
+        /* $8 */ parent_id ?? null,
+        /* $9 */ (typeof is_content === 'undefined' ? null : !!is_content),
+        /*$10*/ lane ?? null,
+        /*$11*/ language ?? null
       ]);
 
       // Upsert translations

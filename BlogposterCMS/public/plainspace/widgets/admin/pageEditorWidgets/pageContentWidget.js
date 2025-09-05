@@ -88,12 +88,12 @@ export async function render(el) {
 
     const img = document.createElement('img');
     img.className = 'design-preview';
-    img.alt = `${t.name} preview`;
-    img.src = t.previewPath || '/assets/icons/file.svg';
+    img.alt = `${t.title} preview`;
+    img.src = t.thumbnail || '/assets/icons/file.svg';
 
     const name = document.createElement('div');
     name.className = 'design-name';
-    name.textContent = t.name;
+    name.textContent = t.title;
 
     li.appendChild(img);
     li.appendChild(name);
@@ -108,6 +108,9 @@ export async function render(el) {
         e.stopPropagation();
         if (!confirm('Remove attached design?')) return;
         const newMeta = { ...(page.meta || {}) };
+        delete newMeta.designId;
+        delete newMeta.designTitle;
+        delete newMeta.designThumbnail;
         delete newMeta.layoutTemplate;
         delete newMeta.htmlFileName;
         try {
@@ -134,12 +137,13 @@ export async function render(el) {
       li.appendChild(remove);
     } else {
       li.addEventListener('click', async () => {
-        if (page.html || page.meta?.layoutTemplate) {
+        if (page.html || page.meta?.designId) {
           const ok = confirm('Replace existing attached content?');
           if (!ok) return;
         }
-        const newMeta = { ...(page.meta || {}), layoutTemplate: t.name };
+        const newMeta = { ...(page.meta || {}), designId: t.id, designTitle: t.title, designThumbnail: t.thumbnail };
         delete newMeta.htmlFileName;
+        delete newMeta.layoutTemplate;
         try {
           await meltdownEmit('updatePage', {
             ...common,
@@ -216,7 +220,7 @@ export async function render(el) {
       li.appendChild(remove);
     } else {
       li.addEventListener('click', async () => {
-        if (page.html || page.meta?.layoutTemplate) {
+        if (page.html || page.meta?.designId) {
           const ok = confirm('Replace existing attached content?');
           if (!ok) return;
         }
@@ -225,6 +229,9 @@ export async function render(el) {
           const fileHtml = sanitizeHtml(await res.text());
           const newMeta = { ...(page.meta || {}), htmlFileName: name };
           delete newMeta.layoutTemplate;
+          delete newMeta.designId;
+          delete newMeta.designTitle;
+          delete newMeta.designThumbnail;
           await meltdownEmit('updatePage', {
             ...common,
             translations: [{
@@ -253,13 +260,14 @@ export async function render(el) {
 
   async function renderSelected() {
     selectedWrap.innerHTML = '';
-    const hasLayout = !!page.meta?.layoutTemplate;
+    const hasLayout = !!page.meta?.designId;
     const hasHtml = !!page.html;
 
     if (hasLayout) {
       const card = createDesignCard({
-        name: page.meta.layoutTemplate,
-        previewPath: page.meta.layoutPreviewPath || ''
+        id: page.meta.designId,
+        title: page.meta.designTitle || 'Design',
+        thumbnail: page.meta.designThumbnail || ''
       }, true);
       selectedWrap.appendChild(card);
     } else if (hasHtml) {
@@ -275,17 +283,16 @@ export async function render(el) {
 
   async function loadDesigns() {
     try {
-      const res = await meltdownEmit('getLayoutTemplateNames', {
+      const res = await meltdownEmit('designer.listDesigns', {
         jwt,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        lane: page.lane
+        moduleName: 'designer',
+        moduleType: 'community'
       });
-      return Array.isArray(res?.templates)
-        ? res.templates.filter(t => !t.isGlobal)
+      return Array.isArray(res?.designs)
+        ? res.designs.filter(t => !t.is_draft)
         : [];
     } catch (err) {
-      console.warn('Failed to fetch layouts', err);
+      console.warn('Failed to fetch designs', err);
       return [];
     }
   }
@@ -321,7 +328,7 @@ export async function render(el) {
   async function renderGallery() {
     gallery.innerHTML = '';
     const templates = (await loadDesigns()).filter(
-      t => t.name !== page.meta?.layoutTemplate
+      t => t.id !== page.meta?.designId
     );
     const htmlFiles = (await loadHtmlFiles()).filter(
       f => f !== page.meta?.htmlFileName
@@ -353,7 +360,7 @@ export async function render(el) {
     const reader = new FileReader();
     reader.onload = async ev => {
       const html = sanitizeHtml(ev.target.result);
-      if (page.html || page.meta?.layoutTemplate) {
+      if (page.html || page.meta?.designId) {
         const ok = confirm('Replace existing attached content?');
         if (!ok) return;
       }
@@ -384,6 +391,9 @@ export async function render(el) {
       }
       const newMeta = { ...(page.meta || {}), htmlFileName: savedName };
       delete newMeta.layoutTemplate;
+      delete newMeta.designId;
+      delete newMeta.designTitle;
+      delete newMeta.designThumbnail;
       try {
         await meltdownEmit('updatePage', {
           ...common,

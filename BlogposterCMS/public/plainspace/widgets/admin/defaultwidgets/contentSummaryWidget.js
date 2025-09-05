@@ -4,15 +4,14 @@ export async function render(el) {
 
   let templates = [];
   try {
-    const res = await meltdownEmit('getLayoutTemplateNames', {
+    const res = await meltdownEmit('designer.listDesigns', {
       jwt,
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      lane: 'public'
+      moduleName: 'designer',
+      moduleType: 'community'
     });
-    templates = Array.isArray(res?.templates) ? res.templates : [];
+    templates = Array.isArray(res?.designs) ? res.designs : [];
   } catch (err) {
-    console.warn('[ContentSummaryWidget] failed to load templates', err);
+    console.warn('[ContentSummaryWidget] failed to load designs', err);
   }
 
   let uploads = [];
@@ -53,10 +52,12 @@ export async function render(el) {
 
   const addBtn = document.createElement('img');
   addBtn.src = '/assets/icons/plus.svg';
-  addBtn.alt = 'Add layout';
+  addBtn.alt = 'Add design';
   addBtn.title = 'Create new design';
   addBtn.className = 'icon add-layout-btn';
-  addBtn.addEventListener('click', handleAddLayout);
+  addBtn.addEventListener('click', () => {
+    window.location.href = '/admin/app/designer';
+  });
 
   const rightWrap = document.createElement('div');
   rightWrap.className = 'layout-title-actions';
@@ -76,136 +77,32 @@ export async function render(el) {
 
   function createItem(t) {
     const item = document.createElement('div');
-    item.className = 'layout-gallery-item' + (t.isGlobal ? ' global-layout' : '');
-
-    const menuBtn = document.createElement('button');
-    menuBtn.className = 'layout-menu-btn';
-    menuBtn.innerHTML = window.featherIcon
-      ? window.featherIcon('more-horizontal')
-      : '<img src="/assets/icons/ellipsis.svg" class="icon" alt="menu" />';
-
-    const menu = document.createElement('div');
-    menu.className = 'layout-card-menu';
-    menu.innerHTML = `
-      <div class="menu-item copy-layout">${window.featherIcon ? window.featherIcon('copy') : '<img class="icon" src="/assets/icons/copy.svg" alt="copy" />'} Copy layout</div>
-      <div class="menu-item set-global">${window.featherIcon ? window.featherIcon('star') : '<img class="icon" src="/assets/icons/star.svg" alt="global" />'} Set as global</div>
-      <div class="menu-item delete-layout">${window.featherIcon ? window.featherIcon('trash') : '<img class="icon" src="/assets/icons/trash.svg" alt="delete" />'} Delete</div>
-    `;
-      menuBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        menu.classList.toggle('open');
-      });
-      document.addEventListener('click', e => {
-        if (!menu.contains(e.target) && e.target !== menuBtn) menu.classList.remove('open');
-      });
-
-      menu.querySelector('.copy-layout').onclick = async ev => {
-        ev.stopPropagation();
-        try {
-          const res = await meltdownEmit('getLayoutTemplate', {
-            jwt,
-            moduleName: 'plainspace',
-            moduleType: 'core',
-            name: t.name
-          });
-          const layoutArr = res?.layout || [];
-          const newName = prompt('Copy name:', t.name + ' copy');
-          if (!newName) { menu.classList.remove('open'); return; }
-          await meltdownEmit('saveLayoutTemplate', {
-            jwt,
-            moduleName: 'plainspace',
-            moduleType: 'core',
-            name: newName,
-            lane: 'public',
-            viewport: 'desktop',
-            layout: layoutArr,
-            previewPath: t.previewPath || ''
-          });
-          alert('Layout copied');
-        } catch (err) {
-          alert('Failed to copy layout: ' + err.message);
-        }
-        menu.classList.remove('open');
-      };
-
-      menu.querySelector('.set-global').onclick = async ev => {
-        ev.stopPropagation();
-        try {
-          await meltdownEmit('setGlobalLayoutTemplate', {
-            jwt,
-            moduleName: 'plainspace',
-            moduleType: 'core',
-            name: t.name
-          });
-          alert('Global layout updated');
-        } catch (err) {
-          alert('Failed to set global: ' + err.message);
-        }
-        menu.classList.remove('open');
-      };
-
-      menu.querySelector('.delete-layout').onclick = async ev => {
-        ev.stopPropagation();
-        if (t.isGlobal) {
-          alert('Global layout cannot be deleted. Set another design as global first.');
-          menu.classList.remove('open');
-          return;
-        }
-        if (!confirm('Delete this layout?')) { menu.classList.remove('open'); return; }
-        try {
-          await meltdownEmit('deleteLayoutTemplate', {
-            jwt,
-            moduleName: 'plainspace',
-            moduleType: 'core',
-            name: t.name
-          });
-          item.remove();
-        } catch (err) {
-          alert('Failed to delete layout: ' + err.message);
-        }
-        menu.classList.remove('open');
-      };
+    item.className = 'layout-gallery-item';
+    item.addEventListener('click', () => {
+      window.open(`/admin/app/designer/${encodeURIComponent(t.id)}`, '_blank');
+    });
 
     const img = document.createElement('img');
     img.className = 'layout-gallery-preview';
-    img.alt = `${t.name} preview`;
-    img.src = t.previewPath || '/assets/icons/file.svg';
+    img.alt = `${t.title} preview`;
+    img.src = t.thumbnail || '/assets/icons/file.svg';
 
     const span = document.createElement('span');
     span.className = 'layout-gallery-name';
-    span.textContent = t.name;
+    span.textContent = t.title;
 
-    item.appendChild(menuBtn);
-    item.appendChild(menu);
     item.appendChild(img);
     item.appendChild(span);
     return item;
   }
 
   if (templates.length) {
-    const globalTemplate = templates.find(t => t.isGlobal);
-    const others = templates.filter(t => !t.isGlobal);
-    others.sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
-
-    if (globalTemplate) {
-      const section = document.createElement('div');
-      section.className = 'layout-section-title';
-      section.textContent = 'Global Layout';
-      designList.appendChild(section);
-      designList.appendChild(createItem(globalTemplate));
-    }
-
-    if (others.length) {
-      const section = document.createElement('div');
-      section.className = 'layout-section-title';
-      section.textContent = 'Recent Designs';
-      designList.appendChild(section);
-      others.forEach(t => designList.appendChild(createItem(t)));
-    }
+    templates.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    templates.forEach(t => designList.appendChild(createItem(t)));
   } else {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.textContent = 'No layouts found.';
+    empty.textContent = 'No designs found.';
     designList.appendChild(empty);
   }
 
@@ -231,26 +128,6 @@ export async function render(el) {
       empty.className = 'empty-state';
       empty.textContent = 'No uploads found.';
       uploadList.appendChild(empty);
-    }
-  }
-
-  async function handleAddLayout() {
-    const layoutName = prompt('New layout name:');
-    if (!layoutName) return;
-    try {
-      await meltdownEmit('saveLayoutTemplate', {
-        jwt,
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        name: layoutName.trim(),
-        lane: 'public',
-        viewport: 'desktop',
-        layout: [],
-        previewPath: ''
-      });
-      window.location.reload();
-    } catch (err) {
-      alert('Error: ' + err.message);
     }
   }
 

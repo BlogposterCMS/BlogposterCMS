@@ -36,6 +36,12 @@ async function fetchPartialSafe(name, type) {
   }
 }
 
+function sanitizeUrl(val) {
+  return typeof val === 'string' && /^(https?:\/\/|\/)[^\s]*$/.test(val)
+    ? val
+    : '';
+}
+
 function deriveGridSize(gridEl, grid, items = []) {
   const colWidth = grid?.options?.columnWidth || 1;
   let cols = Number.isFinite(grid?.options?.columns)
@@ -365,14 +371,52 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       if (!childPage) continue;
       const section = document.createElement('section');
       section.className = 'attached-content';
-      if (childPage.meta?.layoutTemplate) {
+      if (childPage.meta?.designId) {
+        try {
+          const res = await meltdownEmit('designer.getDesign', {
+            id: childPage.meta.designId,
+            moduleName: 'designer',
+            moduleType: 'community',
+            ...(lane === 'admin'
+              ? { jwt: window.ADMIN_TOKEN }
+              : { jwt: window.PUBLIC_TOKEN }),
+          });
+          const layout = Array.isArray(res?.widgets)
+            ? res.widgets.map(w => ({
+                id: w.instance_id || w.instanceId,
+                widgetId: w.widget_id || w.widgetId,
+                xPercent: w.x_percent ?? w.xPercent,
+                yPercent: w.y_percent ?? w.yPercent,
+                wPercent: w.w_percent ?? w.wPercent,
+                hPercent: w.h_percent ?? w.hPercent,
+                code: {
+                  html: w.html,
+                  css: w.css,
+                  js: w.js,
+                  metadata: w.metadata,
+                },
+              }))
+            : [];
+          if (res?.design?.bg_color)
+            section.style.backgroundColor = res.design.bg_color;
+          if (res?.design?.bg_media_url) {
+            const u = sanitizeUrl(res.design.bg_media_url);
+            if (u) section.style.backgroundImage = `url('${u}')`;
+          }
+          await renderStaticGrid(section, layout, allWidgets, lane);
+        } catch (err) {
+          console.warn('[Renderer] failed to load design', err);
+        }
+      } else if (childPage.meta?.layoutTemplate) {
         let layoutArr = [];
         try {
           const res = await meltdownEmit('getLayoutTemplate', {
             name: childPage.meta.layoutTemplate,
             moduleName: 'plainspace',
             moduleType: 'core',
-            ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
+            ...(lane === 'admin'
+              ? { jwt: window.ADMIN_TOKEN }
+              : { jwt: window.PUBLIC_TOKEN }),
           });
           layoutArr = Array.isArray(res?.layout) ? res.layout : [];
         } catch (err) {
@@ -519,6 +563,45 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
 
     // 7. PUBLIC PAGE: render widgets using stored layout in static grid
     if (lane !== 'admin') {
+      if (page.meta?.designId) {
+        try {
+          const res = await meltdownEmit('designer.getDesign', {
+            id: page.meta.designId,
+            moduleName: 'designer',
+            moduleType: 'community',
+            jwt: window.PUBLIC_TOKEN,
+          });
+          const layout = Array.isArray(res?.widgets)
+            ? res.widgets.map(w => ({
+                id: w.instance_id || w.instanceId,
+                widgetId: w.widget_id || w.widgetId,
+                xPercent: w.x_percent ?? w.xPercent,
+                yPercent: w.y_percent ?? w.yPercent,
+                wPercent: w.w_percent ?? w.wPercent,
+                hPercent: w.h_percent ?? w.hPercent,
+                code: {
+                  html: w.html,
+                  css: w.css,
+                  js: w.js,
+                  metadata: w.metadata,
+                },
+              }))
+            : [];
+          const combined = [...globalLayout, ...layout];
+          clearContentKeepHeader(contentEl);
+          if (res?.design?.bg_color)
+            contentEl.style.backgroundColor = res.design.bg_color;
+          if (res?.design?.bg_media_url) {
+            const u = sanitizeUrl(res.design.bg_media_url);
+            if (u) contentEl.style.backgroundImage = `url('${u}')`;
+          }
+          await renderStaticGrid(contentEl, combined, allWidgets, lane);
+          await renderAttachedContent(page, lane, allWidgets, contentEl);
+          return;
+        } catch (err) {
+          console.warn('[Renderer] failed to load design', err);
+        }
+      }
       if (config.layoutTemplate) {
         let layoutArr = [];
         try {

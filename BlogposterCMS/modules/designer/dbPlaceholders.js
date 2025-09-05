@@ -345,4 +345,139 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
   }
 }
 
-module.exports = { handleSaveDesignPlaceholder };
+async function handleGetDesignPlaceholder({ dbClient, params }) {
+  const opts = params[0] || {};
+  const designId = opts.id;
+  if (!designId) throw new Error("Missing design id");
+  const dbType = (process.env.CONTENT_DB_TYPE || "").toLowerCase();
+
+  if (dbType === "postgres") {
+    const metaRes = await dbClient.query(
+      `SELECT id, title, description, thumbnail, bg_color, bg_media_id, bg_media_url, created_at, updated_at, published_at, owner_id, version, is_draft FROM designer.designer_designs WHERE id=$1 AND deleted_at IS NULL`,
+      [designId]
+    );
+    if (!metaRes.rows[0]) return null;
+    const widgetsRes = await dbClient.query(
+      `SELECT w.instance_id, w.widget_id, w.x_percent, w.y_percent, w.w_percent, w.h_percent, w.z_index, w.rotation_deg, w.opacity, m.html, m.css, m.js, m.metadata FROM designer.designer_design_widgets w LEFT JOIN designer.designer_widget_meta m ON w.design_id = m.design_id AND w.instance_id = m.instance_id WHERE w.design_id=$1 ORDER BY w.instance_id`,
+      [designId]
+    );
+    return {
+      design: metaRes.rows[0],
+      widgets: widgetsRes.rows,
+    };
+  } else if (dbType === "sqlite") {
+    const meta = await dbClient.get(
+      `SELECT id, title, description, thumbnail, bg_color, bg_media_id, bg_media_url, created_at, updated_at, published_at, owner_id, version, is_draft FROM designer_designs WHERE id=? AND deleted_at IS NULL`,
+      [designId]
+    );
+    if (!meta) return null;
+    const rows = await dbClient.all(
+      `SELECT w.instance_id, w.widget_id, w.x_percent, w.y_percent, w.w_percent, w.h_percent, w.z_index, w.rotation_deg, w.opacity, m.html, m.css, m.js, m.metadata FROM designer_design_widgets w LEFT JOIN designer_widget_meta m ON w.design_id = m.design_id AND w.instance_id = m.instance_id WHERE w.design_id=? ORDER BY w.instance_id`,
+      [designId]
+    );
+    return { design: meta, widgets: rows };
+  } else if (dbType === "mongo" || dbType === "mongodb") {
+    const objId =
+      designId && ObjectId.isValid(designId) ? new ObjectId(designId) : null;
+    if (!objId) return null;
+    const designs = dbClient.collection("designer_designs");
+    const widgetsCol = dbClient.collection("designer_design_widgets");
+    const design = await designs.findOne({
+      _id: objId,
+      deleted_at: { $exists: false },
+    });
+    if (!design) return null;
+    const widgets = await widgetsCol
+      .aggregate([
+        { $match: { design_id: objId } },
+        {
+          $lookup: {
+            from: "designer_widget_meta",
+            let: { design_id: "$design_id", instance_id: "$instance_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$design_id", "$$design_id"] },
+                      { $eq: ["$instance_id", "$$instance_id"] },
+                    ],
+                  },
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  html: 1,
+                  css: 1,
+                  js: 1,
+                  metadata: 1,
+                },
+              },
+            ],
+            as: "meta",
+          },
+        },
+        { $unwind: { path: "$meta", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 0,
+            instance_id: 1,
+            widget_id: 1,
+            x_percent: 1,
+            y_percent: 1,
+            w_percent: 1,
+            h_percent: 1,
+            z_index: 1,
+            rotation_deg: 1,
+            opacity: 1,
+            html: "$meta.html",
+            css: "$meta.css",
+            js: "$meta.js",
+            metadata: "$meta.metadata",
+          },
+        },
+      ])
+      .toArray();
+    return { design: { ...design, id: String(design._id) }, widgets };
+  } else {
+    throw new Error("DESIGNER_GET_DESIGN not supported for this DB");
+  }
+}
+
+async function handleListDesignsPlaceholder({ dbClient, params }) {
+  const opts = params[0] || {};
+  const includeDrafts = !!opts.includeDrafts;
+  const dbType = (process.env.CONTENT_DB_TYPE || "").toLowerCase();
+
+  if (dbType === "postgres") {
+    const res = await dbClient.query(
+      `SELECT id, title, description, thumbnail, bg_color, bg_media_id, bg_media_url, created_at, updated_at, published_at, owner_id, version, is_draft FROM designer.designer_designs WHERE deleted_at IS NULL ${includeDrafts ? "" : "AND (is_draft IS NULL OR is_draft = false)"} ORDER BY updated_at DESC;`
+    );
+    return res.rows;
+  } else if (dbType === "sqlite") {
+    const rows = await dbClient.all(
+      `SELECT id, title, description, thumbnail, bg_color, bg_media_id, bg_media_url, created_at, updated_at, published_at, owner_id, version, is_draft FROM designer_designs WHERE deleted_at IS NULL ${includeDrafts ? "" : "AND (is_draft IS NULL OR is_draft = 0)"} ORDER BY updated_at DESC;`
+    );
+    return rows.map(r => ({ ...r, is_draft: !!r.is_draft }));
+  } else if (dbType === "mongo" || dbType === "mongodb") {
+    const coll = dbClient.collection("designer_designs");
+    const query = { deleted_at: { $exists: false } };
+    if (!includeDrafts) {
+      query.$or = [{ is_draft: { $eq: false } }, { is_draft: { $exists: false } }];
+    }
+    const rows = await coll
+      .find(query)
+      .sort({ updated_at: -1 })
+      .toArray();
+    return rows.map(r => ({ ...r, id: String(r._id) }));
+  } else {
+    throw new Error("DESIGNER_LIST_DESIGNS not supported for this DB");
+  }
+}
+
+module.exports = {
+  handleSaveDesignPlaceholder,
+  handleGetDesignPlaceholder,
+  handleListDesignsPlaceholder,
+};

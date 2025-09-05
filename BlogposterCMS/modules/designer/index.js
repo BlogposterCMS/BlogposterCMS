@@ -3,7 +3,11 @@
 const path = require("path");
 const sanitizeHtmlLib = require("sanitize-html");
 const { registerCustomPlaceholder } = require("../../mother/modules/databaseManager/placeholders/placeholderRegistry");
-const { handleSaveDesignPlaceholder } = require("./dbPlaceholders");
+const {
+  handleSaveDesignPlaceholder,
+  handleGetDesignPlaceholder,
+  handleListDesignsPlaceholder,
+} = require("./dbPlaceholders");
 
 async function initialize({ motherEmitter, jwt, nonce }) {
   console.log("[DESIGNER MODULE] Initializing designer module...");
@@ -59,6 +63,14 @@ async function initialize({ motherEmitter, jwt, nonce }) {
     registerCustomPlaceholder("DESIGNER_SAVE_DESIGN", {
       moduleName: "designer",
       functionName: "handleSaveDesignPlaceholder",
+    });
+    registerCustomPlaceholder("DESIGNER_LIST_DESIGNS", {
+      moduleName: "designer",
+      functionName: "handleListDesignsPlaceholder",
+    });
+    registerCustomPlaceholder("DESIGNER_GET_DESIGN", {
+      moduleName: "designer",
+      functionName: "handleGetDesignPlaceholder",
     });
 
     // 3) Listen for design save events and persist via custom placeholder
@@ -226,6 +238,48 @@ async function initialize({ motherEmitter, jwt, nonce }) {
         if (typeof callback === "function") callback(err);
       }
     });
+    motherEmitter.on("designer.getDesign", async (payload = {}, callback) => {
+      try {
+        if (!payload || typeof payload !== "object")
+          throw new Error("Invalid payload");
+        if (!payload.id) throw new Error("Missing design id");
+        const res = await new Promise((resolve, reject) => {
+          motherEmitter.emit(
+            "performDbOperation",
+            {
+              jwt,
+              moduleName: "designer",
+              operation: "DESIGNER_GET_DESIGN",
+              params: [payload],
+            },
+            (err, r) => (err ? reject(err) : resolve(r))
+          );
+        });
+        if (typeof callback === "function") callback(null, res);
+      } catch (err) {
+        if (typeof callback === "function") callback(err);
+      }
+    });
+
+    motherEmitter.on("designer.listDesigns", async (payload = {}, callback) => {
+      try {
+        const designs = await new Promise((resolve, reject) => {
+          motherEmitter.emit(
+            "performDbOperation",
+            {
+              jwt,
+              moduleName: "designer",
+              operation: "DESIGNER_LIST_DESIGNS",
+              params: [payload || {}],
+            },
+            (err, res) => (err ? reject(err) : resolve(res))
+          );
+        });
+        if (typeof callback === "function") callback(null, { designs });
+      } catch (err) {
+        if (typeof callback === "function") callback(err);
+      }
+    });
 
   console.log("[DESIGNER MODULE] designer module initialized.");
 }
@@ -233,4 +287,6 @@ async function initialize({ motherEmitter, jwt, nonce }) {
 module.exports = {
   initialize,
   handleSaveDesignPlaceholder,
+  handleGetDesignPlaceholder,
+  handleListDesignsPlaceholder,
 };

@@ -17,6 +17,7 @@ function mapColumn(column, dbType) {
     int: 'INTEGER',
     boolean: 'BOOLEAN',
     timestamp: 'TIMESTAMP',
+    float: 'DOUBLE PRECISION',
   };
   const sqliteMap = {
     id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
@@ -25,6 +26,7 @@ function mapColumn(column, dbType) {
     int: 'INTEGER',
     boolean: 'INTEGER',
     timestamp: 'TEXT',
+    float: 'REAL',
   };
   const map = dbType === 'postgres' ? pgMap : sqliteMap;
   if (!map[type]) {

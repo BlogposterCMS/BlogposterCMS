@@ -67,7 +67,16 @@ export function applyWidgetOptions(wrapper, opts = {}, grid) {
 
   if (wPercent != null) wrapper.dataset.wPercent = wPercent;
   if (hPercent != null) wrapper.dataset.hPercent = hPercent;
-  if (opts.overflow) wrapper.classList.add('overflow');
+  // Default behaviour: enable overflow unless explicitly set to false.
+  const enableOverflow = opts.overflow !== false;
+  const contentEl = wrapper.querySelector('.canvas-item-content');
+  if (enableOverflow) {
+    wrapper.classList.add('overflow');
+    if (contentEl) contentEl.classList.add('overflow');
+  } else {
+    wrapper.classList.remove('overflow');
+    if (contentEl) contentEl.classList.remove('overflow');
+  }
   if (grid && wPercent == null && hPercent == null) {
     grid.update(wrapper, {});
   }

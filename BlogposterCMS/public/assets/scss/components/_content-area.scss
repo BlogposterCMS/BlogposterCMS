@@ -124,6 +124,18 @@ body.dashboard-edit-mode .canvas-item-content {
   pointer-events: none;
 }
 
+// Allow interactive content and scrolling when a widget explicitly enables
+// overflow. This restores pointer events so scrollbars and inner UI work.
+body.dashboard-edit-mode .canvas-item.overflow .canvas-item-content,
+body.dashboard-edit-mode .canvas-item .canvas-item-content.overflow {
+  pointer-events: auto;
+}
+
+// When overflow is enabled, allow scrollbars inside the widget wrapper too.
+.canvas-item.overflow {
+  overflow: auto;
+}
+
 body.dashboard-edit-mode .canvas-item .widget-remove {
   position: absolute;
   top: 2px;
@@ -188,4 +200,3 @@ body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-drag
   outline-color: var(--user-color);
   box-shadow: 0 2px 10px rgba(0,0,0,.08);
 }
-

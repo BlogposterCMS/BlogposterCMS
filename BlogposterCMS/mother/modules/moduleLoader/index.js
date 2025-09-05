@@ -196,15 +196,27 @@ async function loadAllModules({ emitter, app, jwt }) {
 
 // Lädt ein Modul in einer einfachen vm-Sandbox
 function loadModuleSandboxed(indexJsPath) {
-  const allowedBuiltins = new Set(['path', 'fs', 'crypto']);
+  // Whitelist of packages accessible from sandboxed modules.
+  // Note: This includes a curated set of core modules and explicitly allowed deps.
+  const allowedBuiltins = new Set(['path', 'fs', 'crypto', 'sanitize-html']);
 
   function sandboxRequire(reqPath) {
+    // Allow listed core/external deps
     if (allowedBuiltins.has(reqPath)) {
       return require(reqPath);
     }
     if (reqPath.startsWith('./') || reqPath.startsWith('../')) {
-      const resolved = path.resolve(path.dirname(indexJsPath), reqPath);
-      if (!resolved.startsWith(path.dirname(indexJsPath))) {
+      const moduleDir = path.dirname(indexJsPath);
+      const resolved = path.resolve(moduleDir, reqPath);
+
+      // Primary rule: keep module-relative requires inside the module folder
+      const isInsideModule = resolved.startsWith(moduleDir + path.sep);
+
+      // Exception: allow read-only access to the placeholder registry for DB hooks
+      const placeholdersDir = path.resolve(__dirname, '../databaseManager/placeholders');
+      const isPlaceholderRegistry = resolved.startsWith(placeholdersDir + path.sep);
+
+      if (!isInsideModule && !isPlaceholderRegistry) {
         throw new Error('Invalid require path');
       }
       return require(resolved);

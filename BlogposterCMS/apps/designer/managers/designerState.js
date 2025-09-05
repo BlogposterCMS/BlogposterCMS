@@ -11,7 +11,9 @@ function readDefaultOpacity() {
 }
 
 export const designerState = {
-  defaultOpacity: readDefaultOpacity()
+  defaultOpacity: readDefaultOpacity(),
+  bgMediaId: '',
+  bgMediaUrl: ''
 };
 
 export function setDefaultOpacity(val) {

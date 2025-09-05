@@ -7,6 +7,13 @@ test('generates operations for postgres', () => {
   expect(ops[0].sql).toMatch(/CREATE TABLE IF NOT EXISTS demo/);
 });
 
+test('includes schema when provided', () => {
+  const def = { tables: [{ name: 'demo', schema: 'design', columns: [{ name: 'id', type: 'id' }] }] };
+  const ops = parseSchemaDefinition(def, 'postgres');
+  expect(ops[0].sql).toBe('CREATE SCHEMA IF NOT EXISTS design');
+  expect(ops[1].sql).toMatch(/CREATE TABLE IF NOT EXISTS design\.demo/);
+});
+
 test('generates collections for mongodb', () => {
   const def = { collections: ['demo'] };
   const ops = parseSchemaDefinition(def, 'mongodb');

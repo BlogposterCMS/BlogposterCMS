@@ -1,10 +1,6 @@
-import { getDesignerAppName } from '../../../utils.js';
-
 export async function render(el) {
   const meltdownEmit = window.meltdownEmit;
   const jwt = window.ADMIN_TOKEN;
-  const designerApp = await getDesignerAppName();
-  const designerUrl = designerApp ? `/admin/app/${encodeURIComponent(designerApp)}` : '';
 
   let templates = [];
   try {
@@ -81,11 +77,6 @@ export async function render(el) {
   function createItem(t) {
     const item = document.createElement('div');
     item.className = 'layout-gallery-item' + (t.isGlobal ? ' global-layout' : '');
-    item.addEventListener('click', () => {
-      if (designerUrl) {
-        window.location.href = `${designerUrl}?layout=${encodeURIComponent(t.name)}`;
-      }
-    });
 
     const menuBtn = document.createElement('button');
     menuBtn.className = 'layout-menu-btn';
@@ -96,7 +87,6 @@ export async function render(el) {
     const menu = document.createElement('div');
     menu.className = 'layout-card-menu';
     menu.innerHTML = `
-      <div class="menu-item open-layout">${window.featherIcon ? window.featherIcon('external-link') : '<img class="icon" src="/assets/icons/external-link.svg" alt="open" />'} Open in new tab</div>
       <div class="menu-item copy-layout">${window.featherIcon ? window.featherIcon('copy') : '<img class="icon" src="/assets/icons/copy.svg" alt="copy" />'} Copy layout</div>
       <div class="menu-item set-global">${window.featherIcon ? window.featherIcon('star') : '<img class="icon" src="/assets/icons/star.svg" alt="global" />'} Set as global</div>
       <div class="menu-item delete-layout">${window.featherIcon ? window.featherIcon('trash') : '<img class="icon" src="/assets/icons/trash.svg" alt="delete" />'} Delete</div>
@@ -108,14 +98,6 @@ export async function render(el) {
       document.addEventListener('click', e => {
         if (!menu.contains(e.target) && e.target !== menuBtn) menu.classList.remove('open');
       });
-
-      menu.querySelector('.open-layout').onclick = ev => {
-        ev.stopPropagation();
-        if (designerUrl) {
-          window.open(`${designerUrl}?layout=${encodeURIComponent(t.name)}`, '_blank');
-        }
-        menu.classList.remove('open');
-      };
 
       menu.querySelector('.copy-layout').onclick = async ev => {
         ev.stopPropagation();
@@ -266,9 +248,7 @@ export async function render(el) {
         layout: [],
         previewPath: ''
       });
-      if (designerUrl) {
-        window.location.href = `${designerUrl}?layout=${encodeURIComponent(layoutName.trim())}`;
-      }
+      window.location.reload();
     } catch (err) {
       alert('Error: ' + err.message);
     }

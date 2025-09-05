@@ -60,6 +60,9 @@ async function loadAllModules({ emitter, app, jwt }) {
   const modulesPath = path.resolve(__dirname, '../../../modules');
   const ALLOW_INDIVIDUAL_SANDBOX = (process.env.ALLOW_INDIVIDUAL_SANDBOX !== 'false');
 
+  // Expose a registry of loaded modules for placeholder dispatch
+  global.loadedModules = global.loadedModules || {};
+
   // 1) Sicherstellen, dass unser module_registry-Schema auch wirklich existiert
   try {
     await ensureModuleRegistrySchema(motherEmitter, jwt);
@@ -372,6 +375,7 @@ async function attemptModuleLoad(
   }
 
   motherEmitter.off('deactivateModule', deactivationListener);
+  global.loadedModules[moduleName] = modEntry;
   console.log(`[MODULE LOADER] Successfully loaded => ${moduleName}`);
   return true;
 
@@ -389,6 +393,7 @@ async function attemptModuleLoad(
 
     // Emitter aufräumen
     motherEmitter.emit('removeListenersByModule', { moduleName });
+    if (global.loadedModules) delete global.loadedModules[moduleName];
   }
 }
 

@@ -300,6 +300,7 @@ motherEmitter.on('deactivateModule', (payload) => {
   const { moduleName, reason } = payload || {};
   console.warn('[MotherEmitter] Deactivating module="%s" => reason="%s"', moduleName, reason);
   motherEmitter.emit('removeListenersByModule', { moduleName });
+  if (global.loadedModules) delete global.loadedModules[moduleName];
 });
 
 module.exports = {

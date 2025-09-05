@@ -26,6 +26,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.10.0",
     "pg": "^8.13.1",
+    "sanitize-html": "^2.17.0",
     "sqlite3": "^5.1.7",
     "uuid": "^11.0.3",
     "xml2js": "^0.6.2"

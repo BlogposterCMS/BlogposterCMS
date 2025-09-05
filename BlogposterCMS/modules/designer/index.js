@@ -1,10 +1,12 @@
 "use strict";
 
 const path = require("path");
+const sanitizeHtmlLib = require("sanitize-html");
+const { registerCustomPlaceholder } = require("../../mother/modules/databaseManager/placeholders/placeholderRegistry");
+const { handleSaveDesignPlaceholder } = require("./dbPlaceholders");
 
-module.exports = {
-  async initialize({ motherEmitter, jwt, nonce }) {
-    console.log("[DESIGNER MODULE] Initializing designer module...");
+async function initialize({ motherEmitter, jwt, nonce }) {
+  console.log("[DESIGNER MODULE] Initializing designer module...");
 
     // 1) Ensure dedicated database or schema for the designer module
     await new Promise((resolve, reject) => {
@@ -54,70 +56,181 @@ module.exports = {
       );
     });
 
-    // 3) Listen for layout save events using high level CRUD operations
-    motherEmitter.on("designer.saveLayout", (payload = {}, callback) => {
-      if (typeof payload !== "object") {
-        if (typeof callback === "function")
-          callback(new Error("Invalid payload"));
-        return;
-      }
-      const safeName = String(payload.name || "").replace(/[\n\r]/g, "");
-      if (!safeName) {
-        if (typeof callback === "function")
-          callback(new Error("Missing layout name"));
-        return;
-      }
-      const layoutJson = JSON.stringify(payload.layout || {});
-      const updatedAt = new Date().toISOString();
-
-      // First check if layout already exists
-      motherEmitter.emit(
-        "dbSelect",
-        {
-          jwt,
-          moduleName: "designer",
-          moduleType: "community",
-          table: "designer_layouts",
-          where: { name: safeName },
-        },
-        (selectErr, rows) => {
-          if (selectErr) {
-            if (typeof callback === "function") callback(selectErr);
-            return;
-          }
-
-          const exists = Array.isArray(rows) && rows.length > 0;
-          const eventName = exists ? "dbUpdate" : "dbInsert";
-          const payloadData = exists
-            ? {
-                jwt,
-                moduleName: "designer",
-                moduleType: "community",
-                table: "designer_layouts",
-                data: { layout_json: layoutJson, updated_at: updatedAt },
-                where: { name: safeName },
-              }
-            : {
-                jwt,
-                moduleName: "designer",
-                moduleType: "community",
-                table: "designer_layouts",
-                data: {
-                  name: safeName,
-                  layout_json: layoutJson,
-                  updated_at: updatedAt,
-                },
-              };
-
-          motherEmitter.emit(eventName, payloadData, (err) => {
-            if (typeof callback !== "function") return;
-            if (err) return callback(err);
-            callback(null, { success: true });
-          });
-        },
-      );
+    registerCustomPlaceholder("DESIGNER_SAVE_DESIGN", {
+      moduleName: "designer",
+      functionName: "handleSaveDesignPlaceholder",
     });
 
-    console.log("[DESIGNER MODULE] designer module initialized.");
-  },
+    // 3) Listen for design save events and persist via custom placeholder
+    motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
+      try {
+        if (!payload || typeof payload !== "object")
+          throw new Error("Invalid payload");
+        const { design = {}, widgets = [] } = payload;
+        const sanitizeColor = val => {
+          if (typeof val !== "string") return "";
+          const hex = val.match(/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/);
+          if (hex) return hex[0];
+          const rgb = val.match(/^rgba?\((\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*(?:\.\d+)?))?\)$/i);
+          if (rgb) {
+            const clamp255 = n => Math.min(255, Math.max(0, parseInt(n, 10)));
+            const r = clamp255(rgb[1]);
+            const g = clamp255(rgb[2]);
+            const b = clamp255(rgb[3]);
+            let out = `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
+            if (rgb[4] !== undefined) {
+              const a = Math.round(Math.min(1, Math.max(0, parseFloat(rgb[4]))) * 255);
+              out += a.toString(16).padStart(2, '0');
+            }
+            return out;
+          }
+          return "";
+        };
+        const sanitizeUrl = val => (typeof val === "string" && /^(https?:\/\/|\/)[^\s]*$/.test(val)
+          ? val
+          : "");
+        const sanitizeCss = (css, inline = false) => {
+          const expr = /expression/i;
+          const urlPattern = /url\(([^)]*)\)/gi;
+          const isUnsafeUrl = url => {
+            const val = url.trim().replace(/^['"]|['"]$/g, '').toLowerCase();
+            return /^(javascript|data|vbscript|file|ftp|chrome|chrome-extension|resource|about|blob):/.test(val);
+          };
+          if (inline) {
+            return String(css || '')
+              .split(';')
+              .map(s => s.trim())
+              .filter(Boolean)
+              .filter(rule => {
+                if (expr.test(rule)) return false;
+                const matches = rule.matchAll(urlPattern);
+                for (const [, url] of matches) {
+                  if (isUnsafeUrl(url)) return false;
+                }
+                return true;
+              })
+              .join('; ');
+          }
+          return String(css || '')
+            .replace(/expression\([^)]*\)/gi, '')
+            .replace(urlPattern, (match, url) => (isUnsafeUrl(url) ? '' : match));
+        };
+        const sanitizeHtml = html =>
+          sanitizeHtmlLib(html || '', {
+            allowedTags: sanitizeHtmlLib.defaults.allowedTags,
+            allowedAttributes: {
+              ...sanitizeHtmlLib.defaults.allowedAttributes,
+              '*': [
+                ...(sanitizeHtmlLib.defaults.allowedAttributes['*'] || []),
+                'style',
+              ],
+            },
+            allowedSchemes: ['http', 'https', 'data'],
+            allowProtocolRelative: false,
+            transformTags: {
+              '*': (tagName, attribs) => {
+                if (attribs.style) attribs.style = sanitizeCss(attribs.style, true);
+                return { tagName, attribs };
+              },
+              style: (tagName, attribs, { text }) => ({ tagName: 'style', text: sanitizeCss(text) }),
+            },
+          });
+        const title = String(design.title || "").replace(/[\n\r]/g, "").trim();
+        if (!title) throw new Error("Missing design title");
+        const description = String(design.description || "");
+        const thumbnail = sanitizeUrl(design.thumbnail || "");
+        const ownerId = String(design.ownerId || "");
+        const bg_color = sanitizeColor(design.bgColor || "");
+        const bg_media_id = String(design.bgMediaId || "");
+        const bg_media_url = sanitizeUrl(design.bgMediaUrl || "");
+        const published_at = design.publishedAt
+          ? new Date(design.publishedAt).toISOString()
+          : null;
+        // normalize draft flag to a real boolean for database compatibility
+        const is_draft = Boolean(design.isDraft);
+        const version = Number.isInteger(design.version) ? design.version : 0;
+        const now = new Date().toISOString();
+
+        const clamp = n => Math.min(100, Math.max(0, Number(n) || 0));
+        const cleanWidgets = [];
+        for (const w of Array.isArray(widgets) ? widgets : []) {
+          const instanceId = String(w.id || "").trim();
+          const widgetId = String(w.widgetId || "").trim();
+          if (!instanceId || !widgetId) continue;
+          const x = clamp(w.xPercent);
+          const y = clamp(w.yPercent);
+          const wPerc = clamp(w.wPercent);
+          const hPerc = clamp(w.hPercent);
+          const z = Number.isFinite(w.zIndex) ? Math.round(w.zIndex) : null;
+          const rot = Number.isFinite(w.rotationDeg) ? w.rotationDeg : null;
+          const op = Number.isFinite(w.opacity)
+            ? Math.min(1, Math.max(0, w.opacity))
+            : null;
+          const code = w.code && typeof w.code === "object" ? w.code : {};
+          const html =
+            typeof code.html === "string" ? sanitizeHtml(code.html) : null;
+          const css =
+            typeof code.css === "string" ? sanitizeCss(code.css) : null;
+          const js = typeof code.js === "string" ? code.js : null;
+          const metadata = code.meta ? JSON.stringify(code.meta) : null;
+          cleanWidgets.push({
+            instanceId,
+            widgetId,
+            x,
+            y,
+            wPerc,
+            hPerc,
+            zIndex: z,
+            rotation: rot,
+            opacity: op,
+            html,
+            css,
+            js,
+            metadata,
+          });
+        }
+
+        const result = await new Promise((resolve, reject) => {
+          motherEmitter.emit(
+            "performDbOperation",
+            {
+              jwt,
+              moduleName: "designer",
+              operation: "DESIGNER_SAVE_DESIGN",
+              params: [
+                {
+                  design: {
+                    id: design.id,
+                    title,
+                    description,
+                    thumbnail,
+                    bg_color,
+                    bg_media_id,
+                    bg_media_url,
+                    published_at,
+                    owner_id: ownerId,
+                    is_draft,
+                    version,
+                    now,
+                  },
+                  widgets: cleanWidgets,
+                },
+              ],
+            },
+            (err, res) => (err ? reject(err) : resolve(res)),
+          );
+        });
+
+        if (typeof callback === "function") callback(null, result);
+      } catch (err) {
+        if (typeof callback === "function") callback(err);
+      }
+    });
+
+  console.log("[DESIGNER MODULE] designer module initialized.");
+}
+
+module.exports = {
+  initialize,
+  handleSaveDesignPlaceholder,
 };

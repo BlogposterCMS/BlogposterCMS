@@ -15,7 +15,7 @@ const { sanitizeModuleName } = require('../../../utils/moduleUtils');
 const notificationEmitter = require('../../../emitters/notificationEmitter');
 const builtinPlaceholders = require('../placeholders/builtinPlaceholders');
 const { getCustomPlaceholder } = require('../placeholders/placeholderRegistry');
-const { handleBuiltInPlaceholderSqlite } = require('../placeholders/sqlitePlaceholders');
+const { handlePlaceholder } = require('../placeholders/handlePlaceholder');
 const { promisify } = require('util');
 
 function promisifyDbMethods(db) {
@@ -71,7 +71,7 @@ function performSqliteOperation(moduleName, operation, params = [], isOwnDb) {
 
         try {
           if (typeof operation === 'string' && await isPlaceholderOperation(operation)) {
-            const result = await handleBuiltInPlaceholderSqlite(db, operation, params);
+            const result = await handlePlaceholder(db, 'sqlite', operation, params);
             await db.close();
             return resolve(result);
           }

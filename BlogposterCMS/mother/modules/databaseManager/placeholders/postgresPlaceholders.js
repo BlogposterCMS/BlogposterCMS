@@ -1482,7 +1482,7 @@ switch (operation) {
       `, [d.instanceId]);
       return result.rows;
     }
-    
+
 }
     notificationEmitter.notify({
       moduleName: 'databaseManager',

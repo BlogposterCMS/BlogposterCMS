@@ -24,6 +24,11 @@ export function initPublishPanel({
   gridEl,
   updateAllWidgetContents,
   getAdminUserId,
+  getCurrentLayoutForLayer,
+  getActiveLayer,
+  ensureCodeMap,
+  capturePreview,
+  pageId,
   saveDesign
 }) {
   const publishPanel = document.getElementById('publishPanel');
@@ -139,8 +144,18 @@ export function initPublishPanel({
           }
         }
 
-        await saveDesign();
         const name = nameInput.value.trim();
+        await saveDesign({
+          name,
+          gridEl,
+          getCurrentLayoutForLayer,
+          getActiveLayer,
+          ensureCodeMap,
+          capturePreview,
+          updateAllWidgetContents,
+          ownerId: getAdminUserId(),
+          pageId
+        });
         const patch = {
           meta: { ...(selectedPage.meta || {}), layoutTemplate: name },
           status: draftCb.checked ? 'draft' : 'published'

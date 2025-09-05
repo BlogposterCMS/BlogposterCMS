@@ -5,9 +5,24 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-
+### Fixed
+- Builder applies saved background color and media when initializing a design so backgrounds persist across sessions.
+- Consolidated MongoDB engine detection to `mongodb` for consistent placeholder routing.
+- Publish panel passes full configuration to `saveDesign` before publishing to avoid TypeErrors and duplicate designs.
+- Built-in text widget registers its editable field with the designer editor so text remains editable in builder mode.
+- Design thumbnails now upload through the media manager and store share links; schema uses `text` type so long previews no longer fail.
+- Builder now preloads design ID and version from data attributes so existing designs update instead of creating duplicates.
+- `DESIGNER_SAVE_DESIGN` placeholder now supports MongoDB so designs can be saved on Mongo deployments.
+- Designer schema definition now creates tables in the `designer` schema so custom placeholders find them on PostgreSQL.
+- Normalized `rgb(a)` background colors to hex so designs with color-only backgrounds retain their color on save.
+- Designer saves preserve existing background images by reading grid styles when dataset attributes are missing.
 
 ### Added
+- Designer saves run inside a single database transaction with optimistic locking via `version`.
+- Split design background fields into `bg_color`, `bg_media_id`, and `bg_media_url` and clamp widget coordinates server side.
+- Background toolbar saves image selections via the media manager and stores color plus media object IDs in design metadata.
+- Designer now captures background styles and persists per-widget HTML/CSS/JS in a dedicated `designer_widget_meta` table.
+- Designer module now stores designs, widget coordinates and version history in dedicated tables, removing local layout storage.
 - Initial setup color picker now previews the chosen accent colour live and uses builder-style presets.
 - `saveDesign` now falls back to a shared `capturePreview` helper when no callback is provided, restoring automatic preview generation.
 - Builder now keeps separate undo/redo history for each design in the page builder.
@@ -20,6 +35,8 @@ El Psy Kongroo
 - CanvasGrid now accepts an `enableZoom` option; dashboard grids disable zoom by default to avoid the builder's zoom sizer.
 
 ### Changed
+- Designer server sanitization now uses `sanitize-html` and safer CSS filtering, and schema definition defaults escape backslashes and quotes to prevent SQL injection.
+- Designer database operations now register a custom placeholder, removing designer-specific hooks from the core database manager.
 - Page list card now shows a house icon before the slug to set or indicate the home page, removing the slug edit icon and right-side home action.
 - Updated page list card action icons to use pencil, brush, drafting-compass, external-link, share-2 and trash-2 for clarity, while preserving the option to set a page as the home page.
 - Admin home workspace now seeds roadmap intro, upcoming features, and drag demo widgets, replacing previous defaults.
@@ -33,10 +50,18 @@ El Psy Kongroo
 
 
 ### Removed
+- Hard-coded Designer app hooks from core widgets and utilities to keep the module optional.
 - Dropped weight-column migration placeholders (`CHECK_PAGES_TABLE`, `ADD_WEIGHT_COLUMN`); fresh installs already include the field.
 - Obsolete `uiEmitter` and dialog override scripts, restoring native browser dialogs and removing hanging confirmation Promises.
 - Support for dynamic action buttons in the content header.
 - Removed the right-side admin pages menu from the dashboard to streamline navigation.
+
+### Fixed
+- Module loader now registers modules in `global.loadedModules`, allowing custom placeholders like `DESIGNER_SAVE_DESIGN` to resolve without core hacks.
+- Server-side HTML sanitization now merges default allowed attributes with `style`, preserving `href`, `src`, `class` and other safe attributes on save.
+- Saving designs now casts the `is_draft` flag to boolean, preventing PostgreSQL type errors.
+- Database engine now routes custom placeholders through the generic handler so module-defined transactions execute.
+- Designer reuses the returned design ID to update existing records instead of creating duplicates.
 
 ### Changed
 - Initial setup color picker presets are now circular with a subtle gray border for clarity.

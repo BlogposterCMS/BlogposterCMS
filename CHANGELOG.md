@@ -7,6 +7,7 @@ El Psy Kongroo
 
 
 ### Added
+- Database manager schema parser now supports a `float` column type for module tables.
 - Optional widget option debugging to inspect grid measurements when seeding layouts.
 - Documented seeding admin widget height options and CanvasGrid sizing behaviour.
 - Initial setup color picker now previews the chosen accent colour live and uses builder-style presets.

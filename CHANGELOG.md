@@ -7,6 +7,8 @@ El Psy Kongroo
 
 
 ### Added
+- Public page renderer can load attached designs via new `designer.getDesign` API.
+- API endpoint `designer.listDesigns` to retrieve all saved designs.
 - Database manager schema parser now supports a `float` column type for module tables.
 - Optional widget option debugging to inspect grid measurements when seeding layouts.
 - Documented seeding admin widget height options and CanvasGrid sizing behaviour.
@@ -23,6 +25,7 @@ El Psy Kongroo
 
  
 ### Fixed
+- Import `handleGetDesign` placeholder in designer module to prevent initialization errors.
 - Designer schema definition now uses plain integer `design_id` columns to avoid SQLite "more than one primary key" errors.
 - Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.
 - Custom colour picker now updates the current swatch live instead of creating a new circle for each hue adjustment.
@@ -36,6 +39,7 @@ El Psy Kongroo
 - Sample designer `adminSeed.json` file.
 
 ### Changed
+- Content gallery and page content widgets now load designs from the new designer module and allow attaching them.
 - Initial setup color picker is now displayed inline beneath the project name for instant accent previews.
 - Page list card now shows a house icon before the slug to set or indicate the home page, removing the slug edit icon and right-side home action.
 - Updated page list card action icons to use pencil, brush, drafting-compass, external-link, share-2 and trash-2 for clarity, while preserving the option to set a page as the home page.

@@ -32,6 +32,8 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 ## Listened Events
 - `designer.saveDesign` – returns `{ id, version, updated_at }`; clients must reuse `id` and `version` on subsequent saves to avoid conflicts.
 - The publish panel supplies this configuration to `designer.saveDesign` before publishing so the persisted design reflects the latest edits.
+- `designer.listDesigns` – returns `{ designs: [...] }` with all non-deleted designs ordered by `updated_at`.
+- `designer.getDesign` – accepts `{ id }` and returns `{ design, widgets: [...] }` for rendering a specific saved design.
 
 ## Security Notes
 - Sanitises design titles and widget HTML/CSS before storage.

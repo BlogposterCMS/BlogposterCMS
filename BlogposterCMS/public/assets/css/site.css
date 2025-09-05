@@ -388,12 +388,16 @@
   --bd: var(--color-border);
 }
 
-.color-picker-toggle {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+.color-picker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.color-picker-field label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: #888;
+  font-size: 14px;
 }
 
 .app-scope form.step.active {
@@ -1034,17 +1038,18 @@ body:not(.dashboard-edit-mode) .canvas-item::before {
   gap: 8px;
   width: 100%;
   height: 100%;
+  position: relative;
 }
 .color-picker .color-section {
   display: grid;
   grid-auto-flow: row;
-  grid-template-columns: repeat(6, 24px);
-  gap: 6px;
+  grid-template-columns: repeat(6, 45px);
+  gap: 18px;
   align-items: center;
 }
 .color-picker .color-circle {
-  width: 20px;
-  height: 20px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid var(--color-border);
@@ -1996,16 +2001,17 @@ body.dashboard-edit-mode #edit-toggle:hover {
   color: #181818;
 }
 
-.edit-slug {
+.page-slug-row .home-indicator,
+.page-slug-row .set-home {
   width: 18px;
   height: 18px;
-  fill: #bbb;
+}
+
+.page-slug-row .set-home {
   cursor: pointer;
-  margin-left: 2px;
   opacity: 0.8;
 }
-.edit-slug:hover {
-  fill: var(--user-color);
+.page-slug-row .set-home:hover {
   opacity: 1;
 }
 

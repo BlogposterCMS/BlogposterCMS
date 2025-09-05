@@ -84,23 +84,16 @@ document.getElementById('adminForm').addEventListener('submit', e => {
 
 // color picker setup
 const colorInput = document.getElementById('favoriteColor');
-const colorToggle = document.getElementById('colorPickerToggle');
+const colorContainer = document.getElementById('colorPickerContainer');
 const picker = createColorPicker({
   initialColor: colorInput.value,
   onSelect: c => {
     colorInput.value = c;
-    colorToggle.style.backgroundColor = c;
     data.favoriteColor = c;
     setAccentVariables(c);
-  },
-  onClose: () => {}
+  }
 });
-picker.el.classList.add('floating', 'hidden');
-document.body.appendChild(picker.el);
-colorToggle.addEventListener('click', ev => {
-  const rect = colorToggle.getBoundingClientRect();
-  picker.showAt(rect.left, rect.bottom + window.scrollY);
-});
+colorContainer.appendChild(picker.el);
 
 document.getElementById('skipSite').addEventListener('click', submitInstall);
 

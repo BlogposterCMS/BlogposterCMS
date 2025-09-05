@@ -52,12 +52,14 @@ export function createColorPicker(options = {}) {
       onSelect(selectedColor);
       if (editable) {
         editingCircle = circle;
+        editingIndex = recentColors.indexOf(c);
         setFromHex(selectedColor, false);
         positionHueWrapper(circle);
         hueWrapper.classList.remove('hidden');
       } else {
         hueWrapper.classList.add('hidden');
         editingCircle = null;
+        editingIndex = null;
       }
     });
     return circle;
@@ -173,6 +175,7 @@ export function createColorPicker(options = {}) {
   closeBtn.addEventListener('click', () => {
     hueWrapper.classList.add('hidden');
     editingCircle = null;
+    editingIndex = null;
   });
   hueWrapper.appendChild(closeBtn);
 
@@ -223,6 +226,7 @@ export function createColorPicker(options = {}) {
 
   const sanitize = val => (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(val) ? val : null);
   let editingCircle = null;
+  let editingIndex = null;
 
   let hue = 0, sat = 1, val = 1, alpha = 1;
 
@@ -232,9 +236,16 @@ export function createColorPicker(options = {}) {
     previewColor.style.backgroundColor = color;
     container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
     if (editingCircle) {
+      const prev = editingCircle.dataset.color;
       editingCircle.dataset.color = color;
       editingCircle.style.backgroundColor = color;
       editingCircle.classList.add('active');
+      if (editingIndex !== null) {
+        recentColors[editingIndex] = color;
+      } else {
+        const idx = recentColors.indexOf(prev);
+        if (idx !== -1) recentColors[idx] = color;
+      }
     } else {
       addRecentColor(color);
       const circle = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
@@ -306,6 +317,7 @@ export function createColorPicker(options = {}) {
     if (e.key === 'Enter') {
       hueWrapper.classList.add('hidden');
       editingCircle = null;
+      editingIndex = null;
     }
   });
 
@@ -338,6 +350,7 @@ export function createColorPicker(options = {}) {
         handleColorChange(col);
         hueWrapper.classList.add('hidden');
         editingCircle = null;
+        editingIndex = null;
         search.value = '';
       }
     }
@@ -346,13 +359,15 @@ export function createColorPicker(options = {}) {
 
   let recentHidden = [];
   let recentMoreBtn = null;
-  function addRecentColor(color) {
+  function addRecentColor(color, { dedupe = true } = {}) {
     if (!color) return;
-    const idx = recentColors.indexOf(color);
-    if (idx !== -1) {
-      recentColors.splice(idx, 1);
-      const existing = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
-      existing?.remove();
+    if (dedupe) {
+      const idx = recentColors.indexOf(color);
+      if (idx !== -1) {
+        recentColors.splice(idx, 1);
+        const existing = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
+        existing?.remove();
+      }
     }
     recentColors.unshift(color);
     const circle = createCircle(color, true);
@@ -391,9 +406,13 @@ export function createColorPicker(options = {}) {
     addBtn.className = 'color-circle add-custom';
     addBtn.textContent = '+';
     addBtn.addEventListener('click', () => {
-      editingCircle = null;
+      addRecentColor(selectedColor, { dedupe: false });
+      editingCircle = recentSection.querySelector(`.color-circle[data-color="${selectedColor}"]`);
+      editingIndex = recentColors.indexOf(selectedColor);
+      container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
+      editingCircle?.classList.add('active');
       setFromHex(selectedColor, false);
-      positionHueWrapper(addBtn);
+      positionHueWrapper(editingCircle || addBtn);
       hueWrapper.classList.remove('hidden');
     });
     section.appendChild(addBtn);

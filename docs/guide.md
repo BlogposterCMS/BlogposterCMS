@@ -127,7 +127,7 @@ This layering keeps widgets secure from style collisions while allowing themes t
 
 ### Color Picker
 
-The builder's colour picker now scans only the active builder grid, listing colours actually used in your layout instead of the whole page. Your most recent selection always appears first in the **Custom colours** row and is pre‑selected when reopening the picker. Clicking the “plus” button opens a pop‑in hue editor directly beneath the chosen swatch, where you can fine‑tune the hex value or pick a new shade. A search field still accepts hex or common colour names to jump straight to a specific value.
+The builder's colour picker now scans only the active builder grid, listing colours actually used in your layout instead of the whole page. Your most recent selection always appears first in the **Custom colours** row and is pre‑selected when reopening the picker. Clicking the “plus” button opens a pop‑in hue editor directly beneath the chosen swatch, where you can fine‑tune the hex value or pick a new shade. Adjustments update the swatch live; closing the editor and opening it again spawns a new swatch for the next colour. A search field still accepts hex or common colour names to jump straight to a specific value.
 
 ## New Features in v0.5.0
 

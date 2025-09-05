@@ -75,12 +75,18 @@
   --bd: var(--color-border);
 }
 
-.color-picker-toggle {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+
+.color-picker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-family: var(--font-body);
+    font-weight: 500;
+    color: #888;
+    font-size: 14px;
+  }
 }
 
 .app-scope form.step.active {

@@ -26,8 +26,9 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Reads existing grid background styles so saves retain previously selected media without requiring a new selection.
 - Applies stored `bg_color` and `bg_media_url` when loading a design so the builder preview reflects the saved background.
 - When editing an existing design, the builder preloads `data-design-id` and
-  `data-design-version` from `#builderMain` (or `document.body`) so subsequent
-  saves update the original record instead of inserting duplicates.
+  `data-design-version` from `#builderMain` (or `document.body`). These values
+  are seeded from the `pageId` and `designVersion` query parameters so saves
+  update the original record instead of inserting duplicates.
 
 ## Listened Events
 - `designer.saveDesign` – returns `{ id, version, updated_at }`; clients must reuse `id` and `version` on subsequent saves to avoid conflicts.

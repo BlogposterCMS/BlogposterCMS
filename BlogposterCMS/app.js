@@ -940,9 +940,33 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     return res.status(500).send('App build missing');
   }
 
-  const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
   const pageId = sanitizeSlug(req.params.pageId || '');
-  const pageQuery = pageId ? `?pageId=${encodeURIComponent(pageId)}` : '';
+  let pageTitle = manifest.title || manifest.name || 'App';
+  let designVersion = null;
+  if (appName === 'designer' && pageId) {
+    const designId = parseInt(pageId, 10);
+    if (!Number.isNaN(designId)) {
+      try {
+        const design = await new Promise((resolve, reject) => {
+          motherEmitter.emit('designer.getDesign', { id: designId }, (err, res) => {
+            if (err) return reject(err);
+            resolve(res);
+          });
+        });
+        if (design?.design?.title) {
+          pageTitle = design.design.title;
+        }
+        const dv = parseInt(design?.design?.version, 10);
+        if (!Number.isNaN(dv)) designVersion = String(dv);
+      } catch (err) {
+        console.warn('[GET /admin/app] failed to fetch design title =>', err.message);
+      }
+    }
+  }
+  const titleSafe = escapeHtml(pageTitle);
+  const pageQuery = pageId
+    ? `?pageId=${encodeURIComponent(pageId)}${designVersion ? `&designVersion=${encodeURIComponent(designVersion)}` : ''}`
+    : '';
   const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
 
   const csrfSafe = escapeHtml(req.csrfToken());

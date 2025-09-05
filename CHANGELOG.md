@@ -25,6 +25,9 @@ El Psy Kongroo
 
  
 ### Fixed
+- Editing an existing design no longer creates duplicates; the builder now
+  receives the design ID and version so saves update the original record.
+- Designer app now shows the design's name in the browser title when editing an existing design.
 - Import `handleGetDesign` placeholder in designer module to prevent initialization errors.
 - Designer schema definition now uses plain integer `design_id` columns to avoid SQLite "more than one primary key" errors.
 - Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.

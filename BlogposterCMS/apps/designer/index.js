@@ -49,6 +49,14 @@ async function bootstrap() {
   const layerParam = parseInt(urlParams.get('layer'), 10);
   const startLayer = Number.isFinite(layerParam) ? layerParam : (layoutNameParam ? 1 : 0);
 
+  if (pageId) {
+    document.body.dataset.designId = pageId;
+  }
+  const dvParam = parseInt(urlParams.get('designVersion'), 10);
+  if (!Number.isNaN(dvParam)) {
+    document.body.dataset.designVersion = String(dvParam);
+  }
+
   await initBuilder(sidebarEl, contentEl, pageId, startLayer, layoutNameParam);
   enableAutoEdit();
 

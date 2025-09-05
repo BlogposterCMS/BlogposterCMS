@@ -29,7 +29,7 @@
       "schema": "designer",
       "columns": [
         { "name": "id", "type": "id" },
-        { "name": "design_id", "type": "id" },
+        { "name": "design_id", "type": "int" },
         { "name": "instance_id", "type": "string" },
         { "name": "widget_id", "type": "string" },
         { "name": "x_percent", "type": "float" },
@@ -53,7 +53,7 @@
       "schema": "designer",
       "columns": [
         { "name": "id", "type": "id" },
-        { "name": "design_id", "type": "id" },
+        { "name": "design_id", "type": "int" },
         { "name": "layout_json", "type": "text" },
         { "name": "created_at", "type": "timestamp" }
       ],
@@ -66,7 +66,7 @@
       "schema": "designer",
       "columns": [
         { "name": "id", "type": "id" },
-        { "name": "design_id", "type": "id" },
+        { "name": "design_id", "type": "int" },
         { "name": "instance_id", "type": "string" },
         { "name": "html", "type": "text" },
         { "name": "css", "type": "text" },

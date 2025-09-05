@@ -23,6 +23,7 @@ El Psy Kongroo
 
  
 ### Fixed
+- Designer schema definition now uses plain integer `design_id` columns to avoid SQLite "more than one primary key" errors.
 - Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.
 - Custom colour picker now updates the current swatch live instead of creating a new circle for each hue adjustment.
 

@@ -9,8 +9,6 @@ const {
   handleListDesignsPlaceholder,
 } = require("./dbPlaceholders");
 
-let initialized = false;
-
 function onceCallback(originalCb) {
   let fired = false;
   return (...args) => {
@@ -25,11 +23,6 @@ function onceCallback(originalCb) {
 }
 
 async function initialize({ motherEmitter, jwt, nonce }) {
-  if (initialized) {
-    console.warn("[DESIGNER MODULE] initialize called more than once; skipping.");
-    return;
-  }
-  initialized = true;
   console.log("[DESIGNER MODULE] Initializing designer module...");
 
     // 1) Ensure dedicated database or schema for the designer module

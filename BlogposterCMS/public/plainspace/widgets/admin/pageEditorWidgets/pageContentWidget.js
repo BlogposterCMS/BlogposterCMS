@@ -1,3 +1,5 @@
+import { sanitizeSlug } from '../defaultwidgets/pageList/pageService.js';
+
 export async function render(el) {
   const jwt = window.ADMIN_TOKEN;
   const meltdownEmit = window.meltdownEmit;
@@ -450,7 +452,13 @@ export async function render(el) {
       const li = document.createElement('li');
       li.textContent = app.title || app.name;
       li.addEventListener('click', () => {
-        window.location.href = `/admin/app/${encodeURIComponent(app.name)}/${page.id}`;
+        const base = `/admin/app/${encodeURIComponent(app.name)}`;
+        let targetId = page.id;
+        if (app.name === 'designer') {
+          const did = sanitizeSlug(page.meta?.designId || '');
+          targetId = did ? did : '';
+        }
+        window.location.href = targetId ? `${base}/${encodeURIComponent(targetId)}` : base;
       });
       menu.appendChild(li);
     });

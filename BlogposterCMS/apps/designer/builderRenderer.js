@@ -207,6 +207,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
 
   let allWidgets = [];
+  let loadedDesign = null;
   try {
     const widgetRes = await meltdownEmit('widget.registry.request.v1', {
       lane: 'public',
@@ -216,6 +217,29 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
   } catch (err) {
     console.error('[Designer] failed to load widgets', err);
+  }
+
+  if (!pageId && state.designId) {
+    try {
+      loadedDesign = await meltdownEmit('designer.getDesign', {
+        jwt: window.ADMIN_TOKEN,
+        moduleName: 'designer',
+        moduleType: 'community',
+        id: state.designId
+      });
+      if (loadedDesign?.design && typeof loadedDesign.design === 'object') {
+        window.INITIAL_DESIGN = loadedDesign.design;
+        if (!state.designVersion && loadedDesign.design.version !== undefined) {
+          const v = parseInt(loadedDesign.design.version, 10);
+          if (!Number.isNaN(v)) state.designVersion = v;
+        }
+        if (!state.designId && loadedDesign.design.id) {
+          state.designId = String(loadedDesign.design.id);
+        }
+      }
+    } catch (err) {
+      console.error('[Designer] failed to load design', err);
+    }
   }
 
   sidebarEl.querySelector('.drag-icons').innerHTML = allWidgets.map(w => `
@@ -501,8 +525,27 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     } catch (err) {
       console.error('[Designer] load layout or page error', err);
     }
-  }
-  else {
+  } else if (loadedDesign) {
+    // designer.getDesign returns widget rows with snake_case keys; convert
+    // them to the builder's expected camelCase layout schema.
+    initialLayout = Array.isArray(loadedDesign?.widgets)
+      ? loadedDesign.widgets.map(w => ({
+          id: w.instance_id || w.instanceId,
+          widgetId: w.widget_id || w.widgetId,
+          xPercent: w.x_percent ?? w.xPercent,
+          yPercent: w.y_percent ?? w.yPercent,
+          wPercent: w.w_percent ?? w.wPercent,
+          hPercent: w.h_percent ?? w.hPercent,
+          code: {
+            html: w.html,
+            css: w.css,
+            js: w.js,
+            metadata: w.metadata
+          }
+        }))
+      : [];
+    pageData = loadedDesign?.design || null;
+  } else {
     if (layoutNameParam) {
       try {
         const tplRes = await meltdownEmit('getLayoutTemplate', {
@@ -619,7 +662,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     pageData?.title ||
     'default';
 
-  currentDesignId = layoutName;
+  currentDesignId = state.designId || layoutName;
   historyByDesign[currentDesignId] = { undoStack: [], redoStack: [] };
   pushLayoutState(initialLayout);
 

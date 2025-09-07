@@ -87,8 +87,9 @@ async function initialize({ motherEmitter, jwt, nonce }) {
     });
 
     // 3) Listen for design save events and persist via custom placeholder
-    motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
-      try {
+    if (!motherEmitter.listenerCount("designer.saveDesign")) {
+      motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
+        try {
         if (!payload || typeof payload !== "object")
           throw new Error("Invalid payload");
         const { design = {}, widgets = [] } = payload;
@@ -242,7 +243,7 @@ async function initialize({ motherEmitter, jwt, nonce }) {
                 },
               ],
             },
-            (err, res) => (err ? reject(err) : resolve(res)),
+            onceCallback((err, res) => (err ? reject(err) : resolve(res))),
           );
         });
 
@@ -250,8 +251,10 @@ async function initialize({ motherEmitter, jwt, nonce }) {
       } catch (err) {
         if (typeof callback === "function") callback(err);
       }
-    });
-    motherEmitter.on("designer.getDesign", async (payload = {}, callback) => {
+      });
+    }
+    if (!motherEmitter.listenerCount("designer.getDesign")) {
+      motherEmitter.on("designer.getDesign", async (payload = {}, callback) => {
       try {
         if (!payload || typeof payload !== "object")
           throw new Error("Invalid payload");
@@ -265,16 +268,18 @@ async function initialize({ motherEmitter, jwt, nonce }) {
               operation: "DESIGNER_GET_DESIGN",
               params: [payload],
             },
-            (err, r) => (err ? reject(err) : resolve(r))
+            onceCallback((err, r) => (err ? reject(err) : resolve(r)))
           );
         });
         if (typeof callback === "function") callback(null, res);
       } catch (err) {
         if (typeof callback === "function") callback(err);
       }
-    });
+      });
+    }
 
-    motherEmitter.on("designer.getLayout", (payload = {}, originalCb) => {
+    if (!motherEmitter.listenerCount("designer.getLayout")) {
+      motherEmitter.on("designer.getLayout", (payload = {}, originalCb) => {
       const cb = onceCallback(originalCb);
       try {
         const { jwt: token, layoutRef = "" } = payload || {};
@@ -307,9 +312,10 @@ async function initialize({ motherEmitter, jwt, nonce }) {
       } catch (e) {
         cb(e);
       }
-    });
-
-    motherEmitter.on("designer.listDesigns", async (payload = {}, callback) => {
+      });
+    }
+    if (!motherEmitter.listenerCount("designer.listDesigns")) {
+      motherEmitter.on("designer.listDesigns", async (payload = {}, callback) => {
       try {
         const designs = await new Promise((resolve, reject) => {
           motherEmitter.emit(
@@ -320,14 +326,15 @@ async function initialize({ motherEmitter, jwt, nonce }) {
               operation: "DESIGNER_LIST_DESIGNS",
               params: [payload || {}],
             },
-            (err, res) => (err ? reject(err) : resolve(res))
+            onceCallback((err, res) => (err ? reject(err) : resolve(res)))
           );
         });
         if (typeof callback === "function") callback(null, { designs });
       } catch (err) {
         if (typeof callback === "function") callback(err);
       }
-    });
+      });
+    }
 
   console.log("[DESIGNER MODULE] designer module initialized.");
 }

@@ -6,7 +6,8 @@ export function registerDeselect(gridEl, state, actionBar, hideToolbar) {
       e.target.closest('.widget-action-bar') ||
       e.target.closest('.text-block-editor-toolbar') ||
       e.target.closest('.bg-editor-toolbar') ||
-      e.target.closest('.color-picker')
+      e.target.closest('.color-picker') ||
+      e.target.closest('.split-chooser')
     ) {
       return;
     }

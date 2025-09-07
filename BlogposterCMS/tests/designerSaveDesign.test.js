@@ -32,15 +32,18 @@ test('handleSaveDesignPlaceholder updates existing design by ID', async () => {
     description TEXT,
     thumbnail TEXT,
     bg_color TEXT,
-    bg_media_id TEXT,
-    bg_media_url TEXT,
-    created_at TEXT,
-    updated_at TEXT,
-    published_at TEXT,
-    owner_id TEXT,
-    version INTEGER,
-    is_draft INTEGER
-  );`);
+      bg_media_id TEXT,
+      bg_media_url TEXT,
+      created_at TEXT,
+      updated_at TEXT,
+      published_at TEXT,
+      owner_id TEXT,
+      version INTEGER,
+      is_draft INTEGER,
+      layout_id INTEGER,
+      is_layout INTEGER,
+      is_global INTEGER
+    );`);
   await db.exec(`CREATE TABLE designer_versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     design_id INTEGER,
@@ -69,19 +72,26 @@ test('handleSaveDesignPlaceholder updates existing design by ID', async () => {
     js TEXT,
     metadata TEXT
   );`);
+  await db.exec(`CREATE TABLE designer_layouts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    layout_json TEXT,
+    is_global INTEGER,
+    created_at TEXT,
+    updated_at TEXT
+  );`);
 
   const { handleSaveDesignPlaceholder } = require('../modules/designer/dbPlaceholders');
 
   const first = await handleSaveDesignPlaceholder({
     dbClient: db,
-    params: [{ design: { title: 'First', owner_id: 'u1', version: 0 }, widgets: [] }]
+    params: [{ design: { title: 'First', owner_id: 'u1', version: 0 }, widgets: [], layout: {} }]
   });
   expect(first.id).toBeDefined();
   expect(first.version).toBe(1);
 
   const second = await handleSaveDesignPlaceholder({
     dbClient: db,
-    params: [{ design: { id: first.id, title: 'Updated', owner_id: 'u1', version: first.version }, widgets: [] }]
+    params: [{ design: { id: first.id, title: 'Updated', owner_id: 'u1', version: first.version }, widgets: [], layout: {} }]
   });
   expect(second.id).toBe(first.id);
   expect(second.version).toBe(2);
@@ -90,6 +100,9 @@ test('handleSaveDesignPlaceholder updates existing design by ID', async () => {
   expect(rows).toHaveLength(1);
   expect(rows[0].title).toBe('Updated');
   expect(rows[0].version).toBe(2);
+
+  const layouts = await db.all('SELECT id, layout_json FROM designer_layouts;');
+  expect(layouts.length).toBeGreaterThan(0);
 
   await db.close();
 });

@@ -1,5 +1,6 @@
 import { capturePreview as defaultCapturePreview } from './capturePreview.js';
 import { designerState } from '../managers/designerState.js';
+import { serializeLayout } from '../editor/modes/splitMode.js';
 
 export function createSaveManager(state, ctx) {
   function scheduleAutosave() {
@@ -61,6 +62,10 @@ export function createSaveManager(state, ctx) {
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
     const layout = getCurrentLayoutForLayer(gridEl, getActiveLayer(), ensureCodeMap());
+    const rootLayout = gridEl?.classList?.contains('layout-container')
+      ? gridEl
+      : gridEl?.querySelector('.layout-container');
+    const layoutTree = rootLayout ? serializeLayout(rootLayout) : null;
     const previewDataUrl = typeof capturePreview === 'function'
       ? await capturePreview()
       : gridEl ? await defaultCapturePreview(gridEl) : '';
@@ -118,7 +123,8 @@ export function createSaveManager(state, ctx) {
           bgMediaUrl: bg ? bg.mediaUrl : '',
           version: state.designVersion
         },
-        widgets: layout
+        widgets: layout,
+        layout: layoutTree
       }, 20000);
       if (res && (typeof res.id === 'string' || typeof res.id === 'number')) {
         state.designId = res.id;

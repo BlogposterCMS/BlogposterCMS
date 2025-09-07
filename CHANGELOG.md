@@ -6,10 +6,15 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Background toolbar includes a split layout button that opens a layout selection popup.
+- Experimental split mode allows dividing layout containers horizontally or vertically.
+- Added horizontal split icon and popup ESC handling; split layouts serialize to `designer_layouts` and restore on load.
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
 - App loader validates required backend events before launching apps and warns users when the designer module is unavailable.
 
 ### Fixed
+- Layout selection popup no longer references a nonexistent `global-panel` and starts split mode directly.
+- Saving designs serializes the root layout container so top-level splits persist after reload.
 - Ensure designer module always registers event listeners so `designer.saveDesign` and related calls no longer emit "No listeners" warnings.
 - Designer preview capture now fetches allowed external font stylesheets to prevent cross-origin `cssRules` errors.
 - Designer save requests report a clear timeout error after 20s instead of failing silently.

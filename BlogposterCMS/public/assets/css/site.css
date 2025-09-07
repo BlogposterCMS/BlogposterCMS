@@ -544,6 +544,15 @@ body.dashboard-edit-mode .canvas-item-content {
   pointer-events: none;
 }
 
+body.dashboard-edit-mode .canvas-item.overflow .canvas-item-content,
+body.dashboard-edit-mode .canvas-item .canvas-item-content.overflow {
+  pointer-events: auto;
+}
+
+.canvas-item.overflow {
+  overflow: auto;
+}
+
 body.dashboard-edit-mode .canvas-item .widget-remove {
   position: absolute;
   top: 2px;

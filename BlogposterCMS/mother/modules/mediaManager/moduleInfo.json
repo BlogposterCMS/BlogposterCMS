@@ -1,6 +1,6 @@
 {
   "moduleName": "mediaManager",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Manages media library files and folders.",
   "developer": "Blogposter Team"
 }

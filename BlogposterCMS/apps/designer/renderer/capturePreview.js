@@ -16,11 +16,29 @@ async function loadToPng() {
   return _toPng;
 }
 
+async function getFontEmbedCss() {
+  const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+  const cssChunks = await Promise.all(links.map(async link => {
+    try {
+      const url = new URL(link.href, window.location.href);
+      const allowed = url.origin === window.location.origin || url.origin === 'https://fonts.googleapis.com';
+      if (!allowed) return '';
+      const res = await fetch(url.href, { mode: 'cors' });
+      if (!res.ok) return '';
+      return await res.text();
+    } catch {
+      return '';
+    }
+  }));
+  return cssChunks.filter(Boolean).join('\n');
+}
+
 export async function capturePreview(gridEl) {
   if (!gridEl) return '';
   try {
     const toPng = await loadToPng();
-    return await toPng(gridEl, { cacheBust: true });
+    const fontEmbedCss = await getFontEmbedCss();
+    return await toPng(gridEl, { cacheBust: true, fontEmbedCss });
   } catch (err) {
     console.error('[Designer] preview capture error', err);
     return '';

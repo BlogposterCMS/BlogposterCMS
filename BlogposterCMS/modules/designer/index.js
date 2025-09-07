@@ -94,8 +94,7 @@ async function initialize({ motherEmitter, jwt, nonce }) {
     });
 
     // 3) Listen for design save events and persist via custom placeholder
-    if (!motherEmitter.listenerCount("designer.saveDesign")) {
-      motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
+    motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
         try {
         if (!payload || typeof payload !== "object")
           throw new Error("Invalid payload");
@@ -259,9 +258,7 @@ async function initialize({ motherEmitter, jwt, nonce }) {
         if (typeof callback === "function") callback(err);
       }
       });
-    }
-    if (!motherEmitter.listenerCount("designer.getDesign")) {
-      motherEmitter.on("designer.getDesign", async (payload = {}, callback) => {
+    motherEmitter.on("designer.getDesign", async (payload = {}, callback) => {
       try {
         if (!payload || typeof payload !== "object")
           throw new Error("Invalid payload");
@@ -283,10 +280,8 @@ async function initialize({ motherEmitter, jwt, nonce }) {
         if (typeof callback === "function") callback(err);
       }
       });
-    }
 
-    if (!motherEmitter.listenerCount("designer.getLayout")) {
-      motherEmitter.on("designer.getLayout", (payload = {}, originalCb) => {
+    motherEmitter.on("designer.getLayout", (payload = {}, originalCb) => {
       const cb = onceCallback(originalCb);
       try {
         const { jwt: token, layoutRef = "" } = payload || {};
@@ -320,9 +315,7 @@ async function initialize({ motherEmitter, jwt, nonce }) {
         cb(e);
       }
       });
-    }
-    if (!motherEmitter.listenerCount("designer.listDesigns")) {
-      motherEmitter.on("designer.listDesigns", async (payload = {}, callback) => {
+    motherEmitter.on("designer.listDesigns", async (payload = {}, callback) => {
       try {
         const designs = await new Promise((resolve, reject) => {
           motherEmitter.emit(
@@ -341,7 +334,6 @@ async function initialize({ motherEmitter, jwt, nonce }) {
         if (typeof callback === "function") callback(err);
       }
       });
-    }
 
   console.log("[DESIGNER MODULE] designer module initialized.");
 }

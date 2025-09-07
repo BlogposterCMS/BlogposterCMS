@@ -119,7 +119,7 @@ export function createSaveManager(state, ctx) {
           version: state.designVersion
         },
         widgets: layout
-      });
+      }, 20000);
       if (res && (typeof res.id === 'string' || typeof res.id === 'number')) {
         state.designId = res.id;
       }
@@ -145,7 +145,12 @@ export function createSaveManager(state, ctx) {
       }));
       if (events.length) await window.meltdownEmitBatch(events);
     } catch (err) {
-      console.error('[Designer] saveDesign error', err);
+      if (err.name === 'AbortError') {
+        console.error('[Designer] saveDesign timed out', err);
+        alert('Saving design timed out. Please try again.');
+      } else {
+        console.error('[Designer] saveDesign error', err);
+      }
       throw err;
     }
   }

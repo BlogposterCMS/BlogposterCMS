@@ -43,6 +43,12 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - `designer.getDesign` – accepts `{ id }` and returns `{ design, widgets: [...] }` for rendering a specific saved design.
 - `designer.getLayout` – accepts `{ layoutRef }` (public token required) and returns `{ grid, items, layoutRef }` for public rendering.
 
+These listeners register during module initialization; seeing "No listeners for event designer.*" in the logs usually means the designer module failed to load.
+
+## Preview Capture
+- The builder fetches external font stylesheets (currently allowing only same-origin and Google Fonts) before calling `html-to-image` so previews render with correct typography without touching cross-origin stylesheets.
+- If the design save request does not complete within 20 seconds, the client now reports a timeout to the user for clearer error handling.
+
 ## Security Notes
 - Sanitises design titles and widget HTML/CSS before storage.
 - HTML sanitization uses the server-side `sanitize-html` library with default tag and attribute allowlists plus inline style filtering for stronger XSS protection.

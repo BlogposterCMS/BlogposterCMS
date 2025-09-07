@@ -34,6 +34,7 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - The publish panel supplies this configuration to `designer.saveDesign` before publishing so the persisted design reflects the latest edits.
 - `designer.listDesigns` – returns `{ designs: [...] }` with all non-deleted designs ordered by `updated_at`.
 - `designer.getDesign` – accepts `{ id }` and returns `{ design, widgets: [...] }` for rendering a specific saved design.
+- `designer.getLayout` – accepts `{ layoutRef }` (public token required) and returns `{ grid, items, layoutRef }` for public rendering.
 
 ## Security Notes
 - Sanitises design titles and widget HTML/CSS before storage.

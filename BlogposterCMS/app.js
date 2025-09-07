@@ -936,9 +936,23 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     registryInfo = registry && registry.app_info ? JSON.parse(registry.app_info) : {};
   } catch (_) {}
   const indexPath = path.join(appDir, 'index.html');
-  if (!registryInfo.hasIndexHtml || !registryInfo.isBuilt || !fs.existsSync(indexPath)) {
-    return res.status(500).send('App build missing');
-  }
+    if (!registryInfo.hasIndexHtml || !registryInfo.isBuilt || !fs.existsSync(indexPath)) {
+      return res.status(500).send('App build missing');
+    }
+
+    const requiredEvents = Array.isArray(manifest.requiredEvents)
+      ? manifest.requiredEvents
+      : [];
+    const missingEvents = requiredEvents.filter(ev => !motherEmitter.listenerCount(ev));
+    if (missingEvents.length) {
+      const appSafe = escapeHtml(appName);
+      const missingList = missingEvents
+        .map(ev => `<li>${escapeHtml(ev)}</li>`)
+        .join('');
+      const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${appSafe} unavailable</title></head>` +
+        `<body class="dashboard-app"><p>App "${appSafe}" cannot start because required API events are missing:</p><ul>${missingList}</ul></body></html>`;
+      return res.status(503).send(html);
+    }
 
   const idParam = sanitizeSlug(req.params.pageId || '');
   let pageTitle = manifest.title || manifest.name || 'App';

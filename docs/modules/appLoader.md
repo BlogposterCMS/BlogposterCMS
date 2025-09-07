@@ -15,6 +15,7 @@ Builds the app registry by scanning `apps/*/app.json` manifests during startup. 
 - Handles `dispatchAppEvent` messages forwarded from sandboxed iframes and re-emits them as `appLoader:appEvent` for other modules.
 - Supplies Webpack with entry point information so app bundles can be resolved automatically.
 - Persists registry entries through database placeholders, supporting SQLite, PostgreSQL and MongoDB backends.
+- Validates `requiredEvents` declared in app manifests before serving an app and blocks launch if any API event has no listener.
 
 ## APIs
 - `POST /admin/api/apps/install` – copy an app folder into `apps/` and register it.

@@ -25,7 +25,7 @@ function escapeHtml(str) {
   }[c]));
 }
 
-async function startServer(fakeDesigns) {
+async function startServer(fakeDesigns, availableEvents = []) {
   const app = express();
   const csrfStub = (req, res, next) => { req.csrfToken = () => 'test-token'; next(); };
   app.get('/admin/app/:appName/:pageId?', csrfStub, async (req, res) => {
@@ -33,6 +33,11 @@ async function startServer(fakeDesigns) {
     const manifestPath = path.join(__dirname, '..', 'apps', appName, 'app.json');
     if (!fs.existsSync(manifestPath)) return res.status(404).send('App not found');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const required = Array.isArray(manifest.requiredEvents) ? manifest.requiredEvents : [];
+    const missing = required.filter(ev => !availableEvents.includes(ev));
+    if (missing.length) {
+      return res.status(503).send('Required API events missing: ' + missing.join(', '));
+    }
     const idParam = sanitizeSlug(req.params.pageId || '');
     let title = manifest.title || manifest.name || 'App';
     let version = null;
@@ -59,7 +64,10 @@ async function startServer(fakeDesigns) {
 }
 
 test('GET /admin/app/designer/123 returns iframe with tokens', async () => {
-  const server = await startServer({ '123': { title: 'My Design', version: 5 } });
+  const server = await startServer(
+    { '123': { title: 'My Design', version: 5 } },
+    ['designer.saveDesign', 'designer.listDesigns', 'designer.getDesign']
+  );
   const port = server.address().port;
   const res = await axios.get(`http://localhost:${port}/admin/app/designer/123`);
   expect(res.status).toBe(200);
@@ -71,12 +79,24 @@ test('GET /admin/app/designer/123 returns iframe with tokens', async () => {
 
 test('GET /admin/app/designer/507f1f77bcf86cd799439011 preserves string IDs', async () => {
   const mongoId = '507f1f77bcf86cd799439011';
-  const server = await startServer({ [mongoId]: { title: 'Hex Design', version: 1 } });
+  const server = await startServer(
+    { [mongoId]: { title: 'Hex Design', version: 1 } },
+    ['designer.saveDesign', 'designer.listDesigns', 'designer.getDesign']
+  );
   const port = server.address().port;
   const res = await axios.get(`http://localhost:${port}/admin/app/designer/${mongoId}`);
   expect(res.status).toBe(200);
   expect(res.data).toContain(`<iframe id="app-frame" src="/apps/designer/index.html?designId=${mongoId}&designVersion=1"`);
   expect(res.data).toContain('<title>Hex Design</title>');
+  server.close();
+});
+
+test('GET /admin/app/designer warns when required events missing', async () => {
+  const server = await startServer({}, []);
+  const port = server.address().port;
+  const res = await axios.get(`http://localhost:${port}/admin/app/designer`).catch(e => e.response);
+  expect(res.status).toBe(503);
+  expect(res.data).toMatch(/Required API events missing/i);
   server.close();
 });
 

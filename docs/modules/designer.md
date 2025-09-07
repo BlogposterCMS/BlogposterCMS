@@ -45,6 +45,8 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 
 These listeners register during module initialization; seeing "No listeners for event designer.*" in the logs usually means the designer module failed to load.
 
+The app loader verifies these events before launching the designer. If any required event is missing, the loader halts startup and informs the user instead of letting requests hang. The designer's `app.json` lists these under `requiredEvents`.
+
 ## Preview Capture
 - The builder fetches external font stylesheets (currently allowing only same-origin and Google Fonts) before calling `html-to-image` so previews render with correct typography without touching cross-origin stylesheets.
 - If the design save request does not complete within 20 seconds, the client now reports a timeout to the user for clearer error handling.

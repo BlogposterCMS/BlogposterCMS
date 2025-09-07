@@ -7,9 +7,34 @@ import { applyUserColor } from '../../public/assets/js/userColor.js';
 
 let bootstrapped = false;
 
+async function ensureDesignerEvents() {
+  if (typeof window.meltdownEmit !== 'function') {
+    console.warn('[Designer App] meltdownEmit not available');
+    return false;
+  }
+  try {
+    await window.meltdownEmit(
+      'designer.listDesigns',
+      { jwt: window.ADMIN_TOKEN, moduleName: 'designer', moduleType: 'community', limit: 1 },
+      3000
+    );
+    return true;
+  } catch (err) {
+    console.warn('[Designer App] Required designer events unavailable:', err);
+    const msg = document.createElement('p');
+    msg.textContent = 'Designer module unavailable. Please reload or contact an administrator.';
+    document.body.innerHTML = '';
+    document.body.appendChild(msg);
+    return false;
+  }
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
+  if (!(await ensureDesignerEvents())) {
+    return;
+  }
   await applyUserColor(true);
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('builderMain');

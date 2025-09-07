@@ -14,6 +14,8 @@
 
 'use strict';
 
+let initialized = false;
+
 module.exports = {
     /**
      * Called by the moduleLoader:
@@ -25,6 +27,11 @@ module.exports = {
      *   - trigger "performDbOperation" / "createDatabase"
      */
     async initialize({ motherEmitter, jwt, nonce }) {
+      if (initialized) {
+        console.warn('[DUMMY MODULE] initialize called more than once; skipping.');
+        return;
+      }
+      initialized = true;
       console.log('[DUMMY MODULE] Initializing dummyModule...');
       // jwt => signed token issued by the loader; include in all non-public events
       // nonce => unique value for replay protection (not used in this demo)

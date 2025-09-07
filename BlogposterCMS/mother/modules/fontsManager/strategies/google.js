@@ -87,6 +87,10 @@ module.exports = {
       description: 'Google Fonts provider',
       isEnabled: false,
       initFunction
+    }, (err) => {
+      if (err) {
+        console.warn('[FONTS MANAGER][google] registerFontProvider failed:', err.message);
+      }
     });
   }
 };

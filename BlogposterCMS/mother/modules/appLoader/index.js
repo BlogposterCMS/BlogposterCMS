@@ -174,9 +174,15 @@ module.exports = {
       }
     });
 
+    motherEmitter.on('appLoader:appEvent', (payload, cb) => {
+      if (typeof cb === 'function') {
+        cb(null, { handled: false });
+      }
+    });
+
     motherEmitter.on('dispatchAppEvent', (payload, callback) => {
       try {
-        motherEmitter.emit('appLoader:appEvent', payload);
+        motherEmitter.emit('appLoader:appEvent', payload, () => {});
         callback(null, { ok: true });
       } catch (err) {
         callback(err);

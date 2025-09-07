@@ -7,7 +7,7 @@ El Psy Kongroo
 
 ### Added
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
-- Designer app verifies required backend events at startup and warns users if the designer module is unavailable.
+- App loader validates required backend events before launching apps and warns users when the designer module is unavailable.
 
 ### Fixed
 - Ensure designer module always registers event listeners so `designer.saveDesign` and related calls no longer emit "No listeners" warnings.

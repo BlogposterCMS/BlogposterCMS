@@ -4,6 +4,11 @@
   "icon": "layout",
   "entry": "designer",
   "permissions": ["builder.use"],
+  "requiredEvents": [
+    "designer.saveDesign",
+    "designer.listDesigns",
+    "designer.getDesign"
+  ],
   "launchable": true,
   "tags": ["builder"]
 }

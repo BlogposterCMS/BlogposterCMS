@@ -3,8 +3,9 @@ const jwt = window.ADMIN_TOKEN;
 const baseOptions = { moduleName: 'pagesManager', moduleType: 'core' };
 
 export const sanitizeSlug = raw =>
-  raw
+  (raw == null ? '' : String(raw))
     .trim()
+    .toLowerCase()
     .replace(/^\/+/g, '')
     .replace(/[^a-z0-9/-]/gi, '')
     .replace(/\/+/g, '/')

@@ -1,5 +1,4 @@
 import { enterSplitMode } from '../modes/splitMode.js';
-import { showBuilderPanel } from '../../managers/panelManager.js';
 
 let popup;
 let escHandler;
@@ -28,8 +27,6 @@ function ensurePopup() {
   const handle = () => {
     hideLayoutPopup();
     const ctx = popup._ctx || {};
-    const panel = showBuilderPanel('global-panel');
-    if (!panel) showBuilderPanel('color-panel');
     if (ctx.rootEl) enterSplitMode({ rootEl: ctx.rootEl, onChange: ctx.onChange });
   };
   useBtn?.addEventListener('click', handle);

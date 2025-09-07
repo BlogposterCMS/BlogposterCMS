@@ -16,6 +16,8 @@ El Psy Kongroo
 - Normalise `designer.getDesign` widget rows to camelCase so saved layouts
   render correctly in the builder.
 - Designer bootstrap fetches existing design data by `designId` so opening a saved design no longer erases its layout.
+- Lowercase and handle non-string inputs in `sanitizeSlug` to prevent `raw.trim`
+  runtime errors when opening designs from the layout gallery.
 
 ### Added
 - Regression test ensures designs update existing design by ID.

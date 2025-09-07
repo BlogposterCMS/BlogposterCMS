@@ -14,6 +14,9 @@ It wraps `meltdownEmit` calls so UI code can remain focused on rendering.
 - `delete(id)` – remove a page.
 
 The module also exports `sanitizeSlug(raw)` for consistent slug normalization.
+It lowercases input, accepts strings or numbers, and returns an empty string for
+`null`/`undefined` values so UI components can safely generate links without
+runtime errors.
 
 All methods automatically include the current admin token and module
 identifiers, ensuring consistent and secure access to the event bus.

@@ -397,7 +397,7 @@ async function attemptModuleLoad(
       moduleName,
       notificationType: 'system',
       priority: 'error',
-      message: `[MODULE LOADER] ${moduleName} konnte nicht geladen werden: ${err.message}`
+      message: `[MODULE LOADER] ${moduleName} could not be loaded: ${err.message}`
     });
 
     // Deaktivieren in DB

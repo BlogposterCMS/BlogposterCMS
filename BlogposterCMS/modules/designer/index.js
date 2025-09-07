@@ -3,12 +3,24 @@
 const path = require("path");
 const sanitizeHtmlLib = require("sanitize-html");
 const { registerCustomPlaceholder } = require("../../mother/modules/databaseManager/placeholders/placeholderRegistry");
-const { onceCallback } = require("../../mother/emitters/motherEmitter");
 const {
   handleSaveDesignPlaceholder,
   handleGetDesignPlaceholder,
   handleListDesignsPlaceholder,
 } = require("./dbPlaceholders");
+
+function onceCallback(originalCb) {
+  let fired = false;
+  return (...args) => {
+    if (fired) return;
+    fired = true;
+    if (typeof originalCb === "function") {
+      originalCb(...args);
+    } else {
+      console.warn("[DESIGNER MODULE] Callback missing or not a function.");
+    }
+  };
+}
 
 async function initialize({ motherEmitter, jwt, nonce }) {
   console.log("[DESIGNER MODULE] Initializing designer module...");

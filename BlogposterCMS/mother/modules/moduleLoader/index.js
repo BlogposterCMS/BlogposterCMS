@@ -1,15 +1,15 @@
 /**
  * mother/modules/moduleLoader/index.js
  *
- * Neuer, optimierter Module Loader mit Health-Check und Auto-Retry-Logik.
- * 
- * Folgende Highlights erwarten Sie:
- * 1) Prüfung, ob die Module sauber initialisiert werden können (Health Check).
- * 2) Nutzung einer einfachen Node-vm-Sandbox, um Module in Quarantäne zu testen.
- * 3) Deaktivierung fehlerhafter Module (wenn sie nicht kuschen wollen).
- * 4) Nach erfolgreichem Health Check erneutes "richtiges" Laden im Produktivmodus.
- * 5) Auto-Retry für zuvor gecrashte Module (zweite Chance für Chaos).
- * 6) Optionales Ausliefern von Grapes-Frontends.
+ * New, optimized Module Loader with health checks and auto-retry logic.
+ *
+ * Highlights:
+ * 1) Checks whether modules can initialize cleanly (health check).
+ * 2) Uses a simple Node vm sandbox to test modules in isolation.
+ * 3) Deactivates malfunctioning modules.
+ * 4) After a successful health check, reloads the module in production mode.
+ * 5) Auto-retries previously crashed modules.
+ * 6) Optionally serves Grapes frontends.
  */
 
 require('dotenv').config();
@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-// Falls Sie einen eigenen NotificationEmitter haben, könnten Sie den hier integrieren:
+// If you have a custom NotificationEmitter, you could integrate it here:
 const notificationEmitter = require('../../emitters/notificationEmitter');
 
 // Safe wrapper to avoid losing critical errors when the emitter is missing
@@ -29,7 +29,7 @@ const notify = (payload) => {
   }
 };
 
-// meltdown registry - unsere Database-Helferlein
+// meltdown registry - database helper utilities
 const {
   ensureModuleRegistrySchema,
   initGetModuleRegistryEvent,
@@ -44,14 +44,14 @@ const {
 const { initModuleRegistryAdminEvents } = require('./moduleRegistryEvents');
 
 /**
- * Hauptfunktion, die Ihren Module Loader in Gang setzt. 
- * Hier wird:
- *  - das Schema validiert,
- *  - Events initialisiert,
- *  - das /modules-Verzeichnis ausgelesen
- *  - Module eingetragen (falls neu)
- *  - Aktive Module + ggf. Auto-Retry ausgeführt
- *  - Fertig gemeldete Frontends ausgeliefert (falls vorhanden).
+ * Main function that starts the module loader.
+ * It performs the following:
+ *  - validates the schema,
+ *  - initializes events,
+ *  - reads the /modules directory,
+ *  - registers modules (if new),
+ *  - loads active modules and performs auto-retry when needed,
+ *  - serves registered frontends (if available).
  */
 async function loadAllModules({ emitter, app, jwt }) {
   console.log('[MODULE LOADER] Starting up with enhanced Health Check...');
@@ -63,7 +63,7 @@ async function loadAllModules({ emitter, app, jwt }) {
   // Expose a registry of loaded modules for placeholder dispatch
   global.loadedModules = global.loadedModules || {};
 
-  // 1) Sicherstellen, dass unser module_registry-Schema auch wirklich existiert
+  // 1) Ensure the module_registry schema exists
   try {
     await ensureModuleRegistrySchema(motherEmitter, jwt);
   } catch (err) {
@@ -71,25 +71,25 @@ async function loadAllModules({ emitter, app, jwt }) {
     return;
   }
 
-  // 2) meltdown Events für Registry-Fetch + Admin-Kram
+  // 2) Initialize meltdown events for registry fetch and admin tasks
   initGetModuleRegistryEvent(motherEmitter);
   initListActiveGrapesModulesEvent(motherEmitter);
   initListSystemModulesEvent(motherEmitter);
   initModuleRegistryAdminEvents(motherEmitter, app);
 
-  // Ohne meltdown JWT können wir nichts laden. Also frühzeitiger Abbruch.
+  // Without a meltdown JWT we cannot load optional modules, so abort early.
   if (!jwt) {
     console.warn('[MODULE LOADER] No meltdown JWT => cannot load optional modules. Doing nothing...');
     return;
   }
 
-  // 3) modules directory checken
+  // 3) Check the modules directory
   if (!fs.existsSync(modulesPath)) {
     console.warn('[MODULE LOADER] Optional modules dir not found =>', modulesPath);
     return;
   }
 
-  // 4) Registry aus DB holen
+  // 4) Fetch module registry from the database
   let dbRegistry;
   try {
     dbRegistry = await getModuleRegistry(motherEmitter, jwt);
@@ -98,13 +98,13 @@ async function loadAllModules({ emitter, app, jwt }) {
     return;
   }
 
-  // 5) Im modules-Verzeichnis nach Unterordnern fahnden
+  // 5) Scan the modules directory for subfolders
   const folderNames = fs
     .readdirSync(modulesPath, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name);
 
-  // 6) Neue Module ins Registry pfeffern
+  // 6) Insert new modules into the registry
   const knownNames = dbRegistry.map(r => r.module_name);
 
   for (const folder of folderNames) {
@@ -123,7 +123,7 @@ async function loadAllModules({ emitter, app, jwt }) {
       console.warn(`[MODULE LOADER] moduleInfo.json missing for "${folder}". Using defaults.`);
     }
 
-    // Minimale Standardangaben
+    // Minimal default fields
     if (!moduleInfo.moduleName)    moduleInfo.moduleName = folder;
     if (!moduleInfo.developer)     moduleInfo.developer  = 'Unknown Developer';
     if (!moduleInfo.version)       moduleInfo.version    = '';
@@ -145,7 +145,7 @@ async function loadAllModules({ emitter, app, jwt }) {
     }
   }
 
-  // 7) PASS #1 => Alle aktiven Module durchprobieren
+  // 7) PASS #1 => Try loading all active modules
   for (const row of dbRegistry) {
     if (row.is_active) {
       await attemptModuleLoad(
@@ -156,12 +156,12 @@ async function loadAllModules({ emitter, app, jwt }) {
         app,
         jwt,
         ALLOW_INDIVIDUAL_SANDBOX,
-        false // Ist kein Auto-Retry, sondern der normale Ladevorgang
+          false // Normal load, not an auto-retry
       );
     }
   }
 
-  // 8) PASS #2 => Auto-Retry für ehemals gecrashte Module
+  // 8) PASS #2 => Auto-retry previously crashed modules
   for (const row of dbRegistry) {
     if (!row.is_active && row.last_error && row.last_error.trim() !== '') {
       console.log(`[MODULE LOADER] Auto-retrying "${row.module_name}" => last error: ${row.last_error}`);
@@ -178,7 +178,7 @@ async function loadAllModules({ emitter, app, jwt }) {
     }
   }
 
-  // 9) Optional Grapes Frontends ausliefern
+  // 9) Optionally serve Grapes frontends
   for (const row of dbRegistry) {
     if (row.is_active && row.moduleInfo && row.moduleInfo.grapesComponent) {
       const modName = row.module_name;
@@ -194,7 +194,7 @@ async function loadAllModules({ emitter, app, jwt }) {
   console.log('[MODULE LOADER] All optional modules loaded / retried successfully. The meltdown continues.');
 }
 
-// Lädt ein Modul in einer einfachen vm-Sandbox
+// Load a module in a simple vm sandbox
 function loadModuleSandboxed(indexJsPath) {
   // Whitelist of packages accessible from sandboxed modules.
   // Note: This includes a curated set of core modules and explicitly allowed deps.
@@ -253,12 +253,12 @@ function loadModuleSandboxed(indexJsPath) {
 }
 
 /**
- * attemptModuleLoad: versucht das Laden eines einzelnen Moduls mit vorgeschaltetem Health-Check.
- * - Lädt Module aus dem entsprechenden Ordner
- * - Führt Health-Check durch (Test-Initialize)
- * - Falls Fehler -> Modul deaktivieren + remove event listeners
- * - Falls Erfolg -> realer Load-Vorgang (Initialize mit echtem Emitter)
- * - Falls Auto-Retry -> Re-Aktivierung in der DB
+ * attemptModuleLoad: tries to load a single module with a preceding health check.
+ * - Loads the module from its folder
+ * - Runs a health check (test initialize)
+ * - On error -> deactivate module and remove event listeners
+ * - On success -> perform real load (initialize with the real emitter)
+ * - On auto-retry -> reactivate the module in the database
  */
 async function attemptModuleLoad(
   registryRow,
@@ -272,13 +272,13 @@ async function attemptModuleLoad(
 ) {
   const { module_name: moduleName } = registryRow;
 
-  // Existiert der Ordner überhaupt noch?
+  // Does the folder still exist?
   if (!folderNames.includes(moduleName)) {
     console.warn(`[MODULE LOADER] No folder => ${moduleName}. Possibly was deleted.`);
     return false;
   }
 
-  // Force "community" – das will man ja meist so
+  // Force "community" as the module type
   motherEmitter.registerModuleType(moduleName, 'community');
 
   const indexJsPath = path.join(modulesPath, moduleName, 'index.js');
@@ -313,8 +313,8 @@ async function attemptModuleLoad(
     if (ALLOW_INDIVIDUAL_SANDBOX) {
       modEntry = loadModuleSandboxed(indexJsPath);
     } else {
-      // Tja, wenn schon isoliert sein soll, aber ALLOW_INDIVIDUAL_SANDBOX = false...
-      // Laden wir's eben direkt. Möge der Chaosgott uns gnädig sein.
+        // If isolation is desired but ALLOW_INDIVIDUAL_SANDBOX = false,
+        // load it directly and hope for the best.
       modEntry = require(indexJsPath);
     }
   } catch (err) {
@@ -324,11 +324,11 @@ async function attemptModuleLoad(
 
   if (!loadFailed) {
     try {
-      // Erst mal Health-Check
+        // Run the health check first
       await performHealthCheck(modEntry, moduleName, app, jwt);
 
-      // Wenn wir hier sind, lief der Health-Check sauber
-      // => Modul "richtig" initialisieren
+        // If we reach this point, the health check succeeded
+        // => initialize the module for real
       await modEntry.initialize({
         motherEmitter,
         app,
@@ -346,10 +346,10 @@ async function attemptModuleLoad(
     return false;
   }
 
-  // Erfolgreiches Laden => last_error leeren
+    // Successful load => clear last_error
   await updateModuleLastError(motherEmitter, jwt, moduleName, null);
 
-  // Falls Auto-Retry => wieder aktivieren
+    // If auto-retry => reactivate module
   if (isAutoRetry) {
     console.log(`[MODULE LOADER] Auto-retry => reactivating "${moduleName}".`);
     await new Promise((resolve, reject) => {
@@ -397,59 +397,59 @@ async function attemptModuleLoad(
       moduleName,
       notificationType: 'system',
       priority: 'error',
-      message: `[MODULE LOADER] ${moduleName} konnte nicht geladen werden: ${err.message}`
+      message: `[MODULE LOADER] ${moduleName} could not be loaded: ${err.message}`
     });
 
-    // Deaktivieren in DB
+    // Deactivate in the database
     await deactivateModule(motherEmitter, jwt, moduleName, errorMsg);
 
-    // Emitter aufräumen
+    // Clean up emitter listeners
     motherEmitter.emit('removeListenersByModule', { moduleName });
     if (global.loadedModules) delete global.loadedModules[moduleName];
   }
 }
 
 /**
- * performHealthCheck: Führen wir den "Testlauf" des Moduls durch.
- * Falls das Modul sich daneben benimmt (z.B. kein initialize() hat oder falsche Events raushaut),
- * fliegt es raus.
+ * performHealthCheck: run a trial initialization of the module.
+ * If the module misbehaves (e.g., missing initialize() or emitting invalid events),
+ * it gets rejected.
  */
 async function performHealthCheck(modEntry, moduleName, app, jwt) {
-  // 1) Hat das Modul überhaupt initialize()?
+  // 1) Does the module even have an initialize() function?
   if (!modEntry || typeof modEntry.initialize !== 'function') {
     throw new Error('[HEALTH CHECK] Module has no initialize() function.');
   }
 
   let healthCheckPassed = false;
 
-  // 2) Probelauf in abgespeckter "Test-Emitter"-Umgebung
+  // 2) Dry run in a stripped-down "test emitter" environment
   const testEmitter = {
     emit(event, payload, cb) {
-      // Wir prüfen, ob vernünftig ein Callback bereitgestellt wird
+        // Ensure a callback is provided
       if (typeof cb !== 'function') {
         throw new Error('HealthCheck-Emitter: A callback is required in emitter events.');
       }
-      // Check, ob moduleName und moduleType korrekt sind
+        // Verify moduleName and moduleType are correct
       if (!payload.moduleName || payload.moduleType !== 'community') {
-        throw new Error(`Invalid payload from module "${moduleName}" – missing moduleName/moduleType.`);
+        throw new Error(`Invalid payload from module "${moduleName}" - missing moduleName/moduleType.`);
       }
       healthCheckPassed = true;
-      cb(null); // Simuliere erfolgreichen Callback
+        cb(null); // Simulate a successful callback
     },
-    on() {
-      /* Noop: Während des Health Checks lauschen wir auf nix. */
-    },
+      on() {
+        /* Noop: we don't listen to events during the health check. */
+      },
     listenerCount() {
       // Modules may call listenerCount to avoid duplicate handlers. During
       // the health check we don't register listeners, so always return 0.
       return 0;
     },
-    registerModuleType() {
-      // Für den Testlauf nicht relevant, wir tun so als wäre es schon geschehen.
-    }
+      registerModuleType() {
+        // Not relevant for the test run; pretend it's already done.
+      }
   };
 
-  // 3) Ausführen der initialize-Methode: wir hoffen, es knallt nicht.
+    // 3) Execute the initialize method; hope it doesn't blow up.
   await modEntry.initialize({
     motherEmitter: testEmitter,
     app,
@@ -462,7 +462,7 @@ async function performHealthCheck(modEntry, moduleName, app, jwt) {
       `Health check failed: Module "${moduleName}" did not emit a valid event or never used the emitter.`
     );
   }
-  // Läuft.
+  // Looks good.
 }
 
 module.exports = {

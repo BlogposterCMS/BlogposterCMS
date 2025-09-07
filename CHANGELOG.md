@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Background toolbar includes a split layout button that opens a layout selection popup.
+- Experimental split mode allows dividing layout containers horizontally or vertically.
+- Added horizontal split icon and popup ESC handling; split layouts serialize to `designer_layouts` and restore on load.
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
 - App loader validates required backend events before launching apps and warns users when the designer module is unavailable.
 

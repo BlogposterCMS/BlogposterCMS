@@ -17,6 +17,9 @@
         { "name": "owner_id", "type": "string" },
         { "name": "version", "type": "int" },
         { "name": "is_draft", "type": "boolean" },
+        { "name": "layout_id", "type": "int" },
+        { "name": "is_layout", "type": "boolean" },
+        { "name": "is_global", "type": "boolean" },
         { "name": "deleted_at", "type": "timestamp" }
       ],
       "indexes": [
@@ -78,6 +81,17 @@
       ],
       "uniques": [
         { "name": "uniq_meta_design_instance", "columns": ["design_id", "instance_id"] }
+      ]
+    }
+    ,{
+      "name": "designer_layouts",
+      "schema": "designer",
+      "columns": [
+        { "name": "id", "type": "id" },
+        { "name": "layout_json", "type": "text" },
+        { "name": "is_global", "type": "boolean" },
+        { "name": "created_at", "type": "timestamp" },
+        { "name": "updated_at", "type": "timestamp" }
       ]
     }
   ]

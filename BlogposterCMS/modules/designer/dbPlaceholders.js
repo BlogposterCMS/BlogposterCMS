@@ -3,7 +3,7 @@
 const { ObjectId } = require("mongodb");
 
 async function handleSaveDesignPlaceholder({ dbClient, params }) {
-  const { design = {}, widgets = [] } = params[0] || {};
+  const { design = {}, widgets = [], layout = null } = params[0] || {};
   const dbType = (process.env.CONTENT_DB_TYPE || "").toLowerCase();
   const now = design.now || new Date().toISOString();
   let designId = design.id || null;
@@ -112,6 +112,26 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
         }
       }
 
+      let layoutId = design.layout_id || null;
+      if (layout) {
+        if (layoutId) {
+          await client.query(
+            `UPDATE designer.designer_layouts SET layout_json=$1, is_global=$2, updated_at=$3 WHERE id=$4;`,
+            [JSON.stringify(layout), design.is_global ? true : false, now, layoutId],
+          );
+        } else {
+          const lres = await client.query(
+            `INSERT INTO designer.designer_layouts (layout_json, is_global, created_at, updated_at) VALUES ($1,$2,$3,$3) RETURNING id;`,
+            [JSON.stringify(layout), design.is_global ? true : false, now],
+          );
+          layoutId = lres.rows[0].id;
+        }
+        await client.query(
+          `UPDATE ${tblDesigns} SET layout_id=$1, is_layout=$2, is_global=$3 WHERE id=$4;`,
+          [layoutId, design.is_layout ? true : false, design.is_global ? true : false, designId],
+        );
+      }
+
       await client.query(
         `
           INSERT INTO ${tblVersions} (design_id, layout_json, created_at)
@@ -218,6 +238,26 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
         }
       }
 
+      let layoutId = design.layout_id || null;
+      if (layout) {
+        if (layoutId) {
+          await db.run(
+            `UPDATE designer_layouts SET layout_json = ?, is_global = ?, updated_at = ? WHERE id = ?;`,
+            [JSON.stringify(layout), design.is_global ? 1 : 0, now, layoutId],
+          );
+        } else {
+          const lres = await db.run(
+            `INSERT INTO designer_layouts (layout_json, is_global, created_at, updated_at) VALUES (?,?,?,?);`,
+            [JSON.stringify(layout), design.is_global ? 1 : 0, now, now],
+          );
+          layoutId = lres.lastID;
+        }
+        await db.run(
+          `UPDATE designer_designs SET layout_id = ?, is_layout = ?, is_global = ? WHERE id = ?;`,
+          [layoutId, design.is_layout ? 1 : 0, design.is_global ? 1 : 0, designId],
+        );
+      }
+
       await db.run(
         `
       INSERT INTO designer_versions (design_id, layout_json, created_at)
@@ -238,6 +278,7 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
     const widgetsCol = db.collection("designer_design_widgets");
     const metaCol = db.collection("designer_widget_meta");
     const versionsCol = db.collection("designer_versions");
+    const layoutsCol = db.collection("designer_layouts");
     const session = db.client && typeof db.client.startSession === "function" ? db.client.startSession() : null;
 
     const runOps = async (sess) => {
@@ -317,6 +358,30 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
             { session: sess }
           );
         }
+      }
+
+      let layoutId = design.layout_id && ObjectId.isValid(design.layout_id)
+        ? new ObjectId(design.layout_id)
+        : null;
+      if (layout) {
+        if (layoutId) {
+          await layoutsCol.updateOne(
+            { _id: layoutId },
+            { $set: { layout_json: layout, is_global: !!design.is_global, updated_at: now } },
+            { session: sess }
+          );
+        } else {
+          const lres = await layoutsCol.insertOne(
+            { layout_json: layout, is_global: !!design.is_global, created_at: now, updated_at: now },
+            { session: sess }
+          );
+          layoutId = lres.insertedId;
+        }
+        await designs.updateOne(
+          { _id: objId },
+          { $set: { layout_id: layoutId, is_layout: !!design.is_layout, is_global: !!design.is_global } },
+          { session: sess }
+        );
       }
 
       await versionsCol.insertOne(

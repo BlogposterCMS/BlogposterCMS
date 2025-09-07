@@ -15,6 +15,7 @@ import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 import { designerState } from './managers/designerState.js';
+import { deserializeLayout } from './editor/modes/splitMode.js';
 
 import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
 
@@ -294,6 +295,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
   designerState.bgMediaId = gridEl.dataset.bgImageId || '';
   designerState.bgMediaUrl = gridEl.dataset.bgImageUrl || '';
+
+  try {
+    const designData = window.DESIGN_DATA || window.INITIAL_DESIGN;
+    const layoutData = designData?.layout || designData?.layout_json;
+    if (layoutData) {
+      const obj = typeof layoutData === 'string' ? JSON.parse(layoutData) : layoutData;
+      gridEl.classList.add('layout-container');
+      deserializeLayout(obj, gridEl);
+    }
+  } catch (e) {
+    console.warn('[Designer] failed to deserialize layout', e);
+  }
   const gridViewportEl = document.getElementById('builderViewport');
   const viewportSizeEl = document.createElement('div');
   viewportSizeEl.className = 'viewport-size-display';

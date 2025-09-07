@@ -25,6 +25,9 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Tracks change history via `designer_versions`.
 - Reads existing grid background styles so saves retain previously selected media without requiring a new selection.
 - Applies stored `bg_color` and `bg_media_url` when loading a design so the builder preview reflects the saved background.
+- Background toolbar now includes a split layout control that opens a layout selection popup (experimental).
+- Split mode lets users divide layout containers horizontally or vertically; layouts are persisted in a new `designer_layouts` table.
+- Saving a design serializes the split-layout tree into `designer_layouts` and restores it when the builder loads the design.
 - When editing an existing design, the builder preloads `data-design-id` and
   `data-design-version` from `#builderMain` (or `document.body`). These values
   are seeded from the `designId` and `designVersion` query parameters so saves

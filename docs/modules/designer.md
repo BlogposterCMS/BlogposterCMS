@@ -27,8 +27,14 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Applies stored `bg_color` and `bg_media_url` when loading a design so the builder preview reflects the saved background.
 - When editing an existing design, the builder preloads `data-design-id` and
   `data-design-version` from `#builderMain` (or `document.body`). These values
-  are seeded from the `pageId` and `designVersion` query parameters so saves
-  update the original record instead of inserting duplicates.
+  are seeded from the `designId` and `designVersion` query parameters so saves
+  update the original record instead of inserting duplicates. If a `designId`
+  is provided, the builder now fetches the saved widgets via
+  `designer.getDesign`, normalising snake_case widget fields to the builder's
+  camelCase layout before rendering so editing a design no longer wipes its
+  existing layout.
+- The `designId` parameter is treated as an opaque string so non-numeric IDs
+  (e.g. MongoDB ObjectIds) are preserved without coercion.
 
 ## Listened Events
 - `designer.saveDesign` – returns `{ id, version, updated_at }`; clients must reuse `id` and `version` on subsequent saves to avoid conflicts.

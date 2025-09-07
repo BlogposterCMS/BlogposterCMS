@@ -1,3 +1,5 @@
+import { sanitizeSlug } from './pageList/pageService.js';
+
 export async function render(el) {
   const meltdownEmit = window.meltdownEmit;
   const jwt = window.ADMIN_TOKEN;
@@ -79,7 +81,9 @@ export async function render(el) {
     const item = document.createElement('div');
     item.className = 'layout-gallery-item';
     item.addEventListener('click', () => {
-      window.open(`/admin/app/designer/${encodeURIComponent(t.id)}`, '_blank');
+      const designId = sanitizeSlug(t.id);
+      if (!designId) return;
+      window.open(`/admin/app/designer/${encodeURIComponent(designId)}`, '_blank');
     });
 
     const img = document.createElement('img');

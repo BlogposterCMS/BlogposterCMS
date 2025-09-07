@@ -44,12 +44,20 @@ async function bootstrap() {
   }
 
   const urlParams = new URLSearchParams(window.location.search);
-  const pageId = urlParams.get('pageId');
+  const designId = urlParams.get('designId');
   const layoutNameParam = urlParams.get('layout') || null;
   const layerParam = parseInt(urlParams.get('layer'), 10);
   const startLayer = Number.isFinite(layerParam) ? layerParam : (layoutNameParam ? 1 : 0);
 
-  await initBuilder(sidebarEl, contentEl, pageId, startLayer, layoutNameParam);
+  if (designId) {
+    document.body.dataset.designId = designId;
+  }
+  const dvParam = parseInt(urlParams.get('designVersion'), 10);
+  if (!Number.isNaN(dvParam)) {
+    document.body.dataset.designVersion = String(dvParam);
+  }
+
+  await initBuilder(sidebarEl, contentEl, null, startLayer, layoutNameParam);
   enableAutoEdit();
 
   window.parent.postMessage({ type: 'designer-ready' }, '*');

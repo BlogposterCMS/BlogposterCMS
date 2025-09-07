@@ -940,9 +940,35 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     return res.status(500).send('App build missing');
   }
 
-  const titleSafe = escapeHtml(manifest.title || manifest.name || 'App');
-  const pageId = sanitizeSlug(req.params.pageId || '');
-  const pageQuery = pageId ? `?pageId=${encodeURIComponent(pageId)}` : '';
+  const idParam = sanitizeSlug(req.params.pageId || '');
+  let pageTitle = manifest.title || manifest.name || 'App';
+  let designVersion = null;
+  let pageId = null;
+  let designId = null;
+  if (appName === 'designer' && idParam) {
+    designId = idParam;
+    try {
+      const design = await new Promise((resolve, reject) => {
+        motherEmitter.emit('designer.getDesign', { id: designId }, (err, res) => {
+          if (err) return reject(err);
+          resolve(res);
+        });
+      });
+      if (design?.design?.title) {
+        pageTitle = design.design.title;
+      }
+      const dv = parseInt(design?.design?.version, 10);
+      if (!Number.isNaN(dv)) designVersion = String(dv);
+    } catch (err) {
+      console.warn('[GET /admin/app] failed to fetch design title =>', err.message);
+    }
+  } else if (idParam) {
+    pageId = idParam;
+  }
+  const titleSafe = escapeHtml(pageTitle);
+  const pageQuery = (appName === 'designer' && designId)
+    ? `?designId=${encodeURIComponent(designId)}${designVersion ? `&designVersion=${encodeURIComponent(designVersion)}` : ''}`
+    : (pageId ? `?pageId=${encodeURIComponent(pageId)}` : '');
   const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
 
   const csrfSafe = escapeHtml(req.csrfToken());

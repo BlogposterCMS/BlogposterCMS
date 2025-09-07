@@ -7,6 +7,14 @@ El Psy Kongroo
 
 ### Added
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
+
+### Fixed
+- Normalise `designer.getDesign` widget rows to camelCase so saved layouts
+  render correctly in the builder.
+- Designer bootstrap fetches existing design data by `designId` so opening a saved design no longer erases its layout.
+
+### Added
+- Regression test ensures designs update existing design by ID.
 - Public page renderer can load attached designs via new `designer.getDesign` API.
 - API endpoint `designer.listDesigns` to retrieve all saved designs.
 - Database manager schema parser now supports a `float` column type for module tables.
@@ -32,6 +40,13 @@ El Psy Kongroo
 - Home page requests resolve the configured start page before requesting its envelope to avoid empty slug errors.
 - HTML attachments now tag `source: "pagesManager"` so the client can resolve the correct loader.
 - Ensured public envelope requests use a retrieved public token and corrected loader paths and widget registry parameters for secure rendering.
+- Admin app route and widgets no longer coerce design IDs to integers,
+  preserving non-numeric identifiers when launching the Designer.
+- Page content and layout gallery widgets now launch the Designer with validated design IDs so edits update existing designs instead of creating new ones.
+- Designer app accepts a dedicated `designId` query parameter instead of reusing `pageId`, decoupling designs from pages.
+- Editing an existing design no longer creates duplicates; the builder now
+  receives the design ID and version so saves update the original record.
+- Designer app now shows the design's name in the browser title when editing an existing design.
 - Import `handleGetDesign` placeholder in designer module to prevent initialization errors.
 - Designer schema definition now uses plain integer `design_id` columns to avoid SQLite "more than one primary key" errors.
 - Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.

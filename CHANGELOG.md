@@ -9,6 +9,7 @@ El Psy Kongroo
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
 
 ### Fixed
+- Module loader source and log messages now fully in English for clearer maintenance.
 - Designer module no longer requires core emitter utilities, allowing sandboxed loading.
 - Module loader error notifications now display in English.
 - Normalise `designer.getDesign` widget rows to camelCase so saved layouts

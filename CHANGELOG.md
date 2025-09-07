@@ -5,8 +5,8 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-
 ### Added
+- New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
 - Public page renderer can load attached designs via new `designer.getDesign` API.
 - API endpoint `designer.listDesigns` to retrieve all saved designs.
 - Database manager schema parser now supports a `float` column type for module tables.
@@ -25,6 +25,13 @@ El Psy Kongroo
 
  
 ### Fixed
+- `designer.getLayout` now resolves saved layouts instead of returning an empty grid so published pages render their stored widgets.
+- Public orchestrator resolves module loaders from `/modules/<source>/publicLoader.js` or `/mother/modules/<source>/publicLoader.js` and widget loader decodes registry `content` JSON for secure rendering.
+  - Public HTML loader lazily imports sanitizer and executes inline scripts via Blob URLs instead of `eval` for safer rendering.
+- Widget loader converts percentage-based layout coordinates to grid units so widgets render at their saved positions.
+- Home page requests resolve the configured start page before requesting its envelope to avoid empty slug errors.
+- HTML attachments now tag `source: "pagesManager"` so the client can resolve the correct loader.
+- Ensured public envelope requests use a retrieved public token and corrected loader paths and widget registry parameters for secure rendering.
 - Import `handleGetDesign` placeholder in designer module to prevent initialization errors.
 - Designer schema definition now uses plain integer `design_id` columns to avoid SQLite "more than one primary key" errors.
 - Custom colour picker now spawns a fresh swatch when reopening the editor instead of overwriting the previous one.
@@ -39,6 +46,8 @@ El Psy Kongroo
 - Sample designer `adminSeed.json` file.
 
 ### Changed
+- Public loaders now reside in each module directory and expose a `registerLoaders` helper so headless clients can wire them up without Plainspace.
+- Shared envelope orchestrator and loader registry moved to `/assets/js/envelope` for framework-agnostic use.
 - Content gallery and page content widgets now load designs from the new designer module and allow attaching them.
 - Initial setup color picker is now displayed inline beneath the project name for instant accent previews.
 - Page list card now shows a house icon before the slug to set or indicate the home page, removing the slug edit icon and right-side home action.

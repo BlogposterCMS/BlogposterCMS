@@ -584,6 +584,90 @@ function setupPagesManagerEvents(motherEmitter) {
   });
 
   // ─────────────────────────────────────────────────────────────────
+  // GET ENVELOPE (public)
+  // ─────────────────────────────────────────────────────────────────
+  motherEmitter.on('getEnvelope', (payload, originalCb) => {
+    const cb = onceCallback(originalCb);
+    try {
+      const { jwt, moduleName, moduleType, slug = '', language = 'en' } = payload || {};
+      if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
+        return cb(new Error('[pagesManager] getEnvelope => invalid payload.'));
+      }
+
+      motherEmitter.emit(
+        'getPageBySlug',
+        {
+          jwt,
+          moduleName: 'pagesManager',
+          moduleType: 'core',
+          slug,
+          lane: 'public',
+          language
+        },
+        onceCallback((err, page) => {
+          if (err) return cb(err);
+          if (!page) return cb(new Error('Page not found'));
+
+          const theme = page?.meta?.theme || 'default';
+          const layoutRef = page?.meta?.design_layout || `layout:${page.slug || 'default'}@v1`;
+
+          const envelope = {
+            id: page.id,
+            slug: page.slug,
+            language: page.language || language,
+            lane: 'public',
+            meta: {
+              seoTitle: page.seo_title || page.title || '',
+              seoDesc: page.meta_desc || '',
+              seoKeywords: page.seo_keywords || ''
+            },
+            attachments: [
+              {
+                type: 'design',
+                source: 'designer',
+                descriptor: {
+                  theme,
+                  engine: 'grid-v2',
+                  css: [`/themes/${theme}/theme.css`],
+                  layoutRef
+                },
+                priority: 10,
+                blocking: true,
+                cache: 'public,max-age=600'
+              },
+              {
+                type: 'html',
+                source: 'pagesManager',
+                descriptor: {
+                  htmlRef: `pageHtml:${page.id}@v1`,
+                  inline: {
+                    html: page.html || '',
+                    css: page.css || '',
+                    js: page.js || ''
+                  }
+                },
+                priority: 20,
+                blocking: false
+              },
+              {
+                type: 'widgets',
+                source: 'widgetManager',
+                descriptor: { registry: 'public', layoutRef },
+                priority: 30,
+                blocking: false
+              }
+            ]
+          };
+
+          cb(null, envelope);
+        })
+      );
+    } catch (e) {
+      cb(e);
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────
   // UPDATE PAGE
   // ─────────────────────────────────────────────────────────────────
   motherEmitter.on('updatePage', (payload, originalCb) => {

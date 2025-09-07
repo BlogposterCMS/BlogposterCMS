@@ -3,7 +3,7 @@
 Responsible for CRUD operations on pages and for generating default pages when the CMS starts.
 
 ## Startup
-- Core module; ensures its database schema exists then seeds default pages if needed.
+- (public token required) Core module; ensures its database schema exists then seeds default pages if needed.
 
 ## Purpose
 - Provides events to create, retrieve and update pages.
@@ -17,6 +17,7 @@ Responsible for CRUD operations on pages and for generating default pages when t
 - `getPageBySlug`
 - `getStartPage`
 - `getChildPages`
+- `getEnvelope` (public token required)
 - `updatePage`
 - `setAsDeleted`
 - `searchPages`
@@ -38,3 +39,6 @@ Permissions are checked for each sensitive operation to avoid unauthorized modif
 - Each page also exposes a `weight` integer (default `0`). Admin interfaces sort header and sidebar menus using this field.
 - `getPagesByLane` accepts an optional `language` to limit translations to a single locale per page.
 - **Update semantics:** `updatePage` only modifies the `weight` when the field is supplied. Omitting `weight` keeps the existing value.
+- `getEnvelope` returns a `PageEnvelope` with ordered attachments describing design, HTML and widgets for the requested public page. Clients resolve attachments by importing `/modules/<source>/publicLoader.js` or `/mother/modules/<source>/publicLoader.js` and invoking its `registerLoaders` helper to wire the loaders into their orchestrator.
+
+A shared, framework-agnostic orchestrator and loader registry live under `/assets/js/envelope/` so Plainspace, Vue, or React clients can import `/assets/js/envelope/orchestrator.js` and `/assets/js/envelope/loaderRegistry.js` to process envelopes.

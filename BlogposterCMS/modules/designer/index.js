@@ -3,6 +3,7 @@
 const path = require("path");
 const sanitizeHtmlLib = require("sanitize-html");
 const { registerCustomPlaceholder } = require("../../mother/modules/databaseManager/placeholders/placeholderRegistry");
+const { onceCallback } = require("../../mother/emitters/motherEmitter");
 const {
   handleSaveDesignPlaceholder,
   handleGetDesignPlaceholder,
@@ -258,6 +259,41 @@ async function initialize({ motherEmitter, jwt, nonce }) {
         if (typeof callback === "function") callback(null, res);
       } catch (err) {
         if (typeof callback === "function") callback(err);
+      }
+    });
+
+    motherEmitter.on("designer.getLayout", (payload = {}, originalCb) => {
+      const cb = onceCallback(originalCb);
+      try {
+        const { jwt: token, layoutRef = "" } = payload || {};
+        if (!token) throw new Error("Missing jwt");
+        const match = typeof layoutRef === "string" && layoutRef.match(/^layout:([^@]+)(?:@.*)?$/);
+        if (!match) throw new Error("Invalid layoutRef");
+        const designId = match[1];
+        motherEmitter.emit(
+          "designer.getDesign",
+          { id: designId },
+          onceCallback((err, res) => {
+            if (err) return cb(err);
+            if (!res) return cb(new Error("Design not found"));
+            const clamp = n => Math.min(100, Math.max(0, Number(n) || 0));
+            const items = Array.isArray(res.widgets)
+              ? res.widgets
+                  .map(w => ({
+                    instanceId: String(w.instance_id || ""),
+                    widgetId: String(w.widget_id || ""),
+                    xPercent: clamp(w.x_percent),
+                    yPercent: clamp(w.y_percent),
+                    wPercent: clamp(w.w_percent),
+                    hPercent: clamp(w.h_percent)
+                  }))
+                  .filter(it => it.instanceId && it.widgetId)
+              : [];
+            cb(null, { grid: { columns: 12, cellHeight: 8 }, items, layoutRef });
+          })
+        );
+      } catch (e) {
+        cb(e);
       }
     });
 

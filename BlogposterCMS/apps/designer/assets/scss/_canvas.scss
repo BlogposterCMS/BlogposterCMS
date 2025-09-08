@@ -528,6 +528,10 @@ body.builder-mode .canvas-item.inactive-layer {
         }
       }
 
+      input[type='range'] {
+        accent-color: var(--accent-color);
+      }
+
       .zoom-level {
         min-width: 60px;
         text-align: center;

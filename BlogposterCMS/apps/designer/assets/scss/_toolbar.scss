@@ -368,54 +368,6 @@
   }
 }
 
-// Layout selection popup
-.layout-popup {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-dialog, 1000);
-
-  &.show {
-    display: flex;
-  }
-
-  .layout-popup-content {
-    background: var(--color-white, #fff);
-    border-radius: 12px;
-    padding: 24px 32px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    text-align: center;
-
-    h4 {
-      margin-top: 0;
-      margin-bottom: 16px;
-      font-size: 18px;
-    }
-
-    .layout-popup-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-
-      button {
-        padding: 8px 12px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        background: var(--color-white, #fff);
-        cursor: pointer;
-        transition: background 0.2s ease;
-
-        &:hover {
-          background: rgba(0, 0, 0, 0.05);
-        }
-      }
-    }
-  }
-}
-
 // Responsive adjustments
 @media (max-width: 768px) {
   .text-block-editor-toolbar, .bg-editor-toolbar {

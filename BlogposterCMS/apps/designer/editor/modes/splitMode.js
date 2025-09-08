@@ -119,6 +119,7 @@ export function serializeLayout(container) {
 
 export function deserializeLayout(obj, container) {
   if (!container || !obj) return;
+  container.replaceChildren();
   if (obj.orientation) {
     container.dataset.split = 'true';
     container.dataset.orientation = obj.orientation;

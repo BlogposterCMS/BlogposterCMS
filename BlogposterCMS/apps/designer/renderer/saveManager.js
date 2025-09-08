@@ -57,7 +57,9 @@ export function createSaveManager(state, ctx) {
     capturePreview,
     updateAllWidgetContents,
     ownerId,
-    pageId
+    pageId,
+    isLayout = false,
+    isGlobal = false
   }) {
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
@@ -121,7 +123,9 @@ export function createSaveManager(state, ctx) {
           bgColor: bg ? bg.color : '',
           bgMediaId: bg ? bg.mediaId : '',
           bgMediaUrl: bg ? bg.mediaUrl : '',
-          version: state.designVersion
+          version: state.designVersion,
+          isLayout,
+          isGlobal
         },
         widgets: layout,
         layout: layoutTree

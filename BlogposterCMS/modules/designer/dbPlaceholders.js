@@ -541,8 +541,80 @@ async function handleListDesignsPlaceholder({ dbClient, params }) {
   }
 }
 
+async function handleGetLayoutPlaceholder({ dbClient, params }) {
+  const { id } = params[0] || {};
+  const dbType = (process.env.CONTENT_DB_TYPE || "").toLowerCase();
+  if (!id) throw new Error("Missing layout id");
+
+  if (dbType === "postgres") {
+    const res = await dbClient.query(
+      `SELECT id, layout_json, is_global, created_at, updated_at FROM designer.designer_layouts WHERE id=$1;`,
+      [id]
+    );
+    if (!res.rows.length) return null;
+    const row = res.rows[0];
+    return {
+      id: row.id,
+      layout: JSON.parse(row.layout_json || '{}'),
+      is_global: row.is_global,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  } else if (dbType === "sqlite") {
+    const row = await dbClient.get(
+      `SELECT id, layout_json, is_global, created_at, updated_at FROM designer_layouts WHERE id = ?;`,
+      [id]
+    );
+    if (!row) return null;
+    return {
+      id: row.id,
+      layout: JSON.parse(row.layout_json || '{}'),
+      is_global: !!row.is_global,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  } else if (dbType === "mongo" || dbType === "mongodb") {
+    const coll = dbClient.collection("designer_layouts");
+    const doc = await coll.findOne({ _id: ObjectId.isValid(id) ? new ObjectId(id) : id });
+    if (!doc) return null;
+    return {
+      id: String(doc._id),
+      layout: typeof doc.layout_json === 'string' ? JSON.parse(doc.layout_json) : doc.layout_json || {},
+      is_global: !!doc.is_global,
+      created_at: doc.created_at,
+      updated_at: doc.updated_at,
+    };
+  } else {
+    throw new Error("DESIGNER_GET_LAYOUT not supported for this DB");
+  }
+}
+
+async function handleListLayoutsPlaceholder({ dbClient, params }) {
+  const dbType = (process.env.CONTENT_DB_TYPE || "").toLowerCase();
+
+  if (dbType === "postgres") {
+    const res = await dbClient.query(
+      `SELECT id, is_global, created_at, updated_at FROM designer.designer_layouts ORDER BY updated_at DESC;`
+    );
+    return res.rows;
+  } else if (dbType === "sqlite") {
+    const rows = await dbClient.all(
+      `SELECT id, is_global, created_at, updated_at FROM designer_layouts ORDER BY updated_at DESC;`
+    );
+    return rows.map(r => ({ ...r, is_global: !!r.is_global }));
+  } else if (dbType === "mongo" || dbType === "mongodb") {
+    const coll = dbClient.collection("designer_layouts");
+    const rows = await coll.find({}).sort({ updated_at: -1 }).toArray();
+    return rows.map(r => ({ id: String(r._id), is_global: !!r.is_global, created_at: r.created_at, updated_at: r.updated_at }));
+  } else {
+    throw new Error("DESIGNER_LIST_LAYOUTS not supported for this DB");
+  }
+}
+
 module.exports = {
   handleSaveDesignPlaceholder,
   handleGetDesignPlaceholder,
   handleListDesignsPlaceholder,
+  handleGetLayoutPlaceholder,
+  handleListLayoutsPlaceholder,
 };

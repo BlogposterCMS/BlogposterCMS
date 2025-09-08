@@ -51,6 +51,7 @@ export function createSaveManager(state, ctx) {
     name,
     description = '',
     gridEl,
+    layoutRoot = gridEl,
     getCurrentLayoutForLayer,
     getActiveLayer,
     ensureCodeMap,
@@ -64,9 +65,9 @@ export function createSaveManager(state, ctx) {
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
     const layout = getCurrentLayoutForLayer(gridEl, getActiveLayer(), ensureCodeMap());
-    const rootLayout = gridEl?.classList?.contains('layout-container')
-      ? gridEl
-      : gridEl?.querySelector('.layout-container');
+    const rootLayout = layoutRoot?.classList?.contains('layout-container')
+      ? layoutRoot
+      : layoutRoot?.querySelector('.layout-container');
     const layoutTree = rootLayout ? serializeLayout(rootLayout) : null;
     const previewDataUrl = typeof capturePreview === 'function'
       ? await capturePreview()

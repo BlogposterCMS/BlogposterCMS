@@ -10,6 +10,10 @@ function getGridEl() {
   return document.getElementById('builderGrid');
 }
 
+function getLayoutRootEl() {
+  return document.getElementById('layoutRoot');
+}
+
 function updateToolbarPosition() {
   if (!bgToolbar) return;
   const header = document.querySelector('.builder-header');
@@ -93,13 +97,21 @@ export function initBackgroundToolbar() {
 
     layoutBtn.addEventListener('click', ev => {
       ev.stopPropagation();
-      const grid = getGridEl();
+      const workspace = getLayoutRootEl();
       document.dispatchEvent(
         new CustomEvent('designer.openLayoutPanel', {
           detail: {
-            rootEl: grid,
+            rootEl: workspace,
             onChange: () => {
               try { designerState.pendingSave = true; } catch (e) {}
+              try {
+                const root = getLayoutRootEl();
+                const grid = getGridEl();
+                if (root && grid) {
+                  const wa = root.querySelector('.layout-container[data-workarea="true"]') || root;
+                  if (grid.parentNode !== wa) wa.appendChild(grid);
+                }
+              } catch (_) {}
             }
           }
         })

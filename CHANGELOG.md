@@ -5,20 +5,28 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
+
 ### Changed
 - Builder opens designs in the Design layer by default and renames toolbar layers to "Layout" and "Design".
 - Split layout control opens a builder panel instead of a popup for layout selection.
 
 ### Added
+- Builder grid now sits alongside a persistent `#layoutRoot` container inside `#workspaceMain` so layouts deserialize without detaching the grid and serialize from a stable root.
+- Layout layer now highlights the Primary Workarea outside of split mode for clearer widget placement.
 - API endpoints to list layouts and fetch individual layouts via `designer.listLayouts` and `designer.getLayout`.
 - Background toolbar includes a split layout button that opens a layout selection panel.
 - `designer.openLayoutPanel` event allows triggering the layout panel programmatically.
 - Experimental split mode allows dividing layout containers horizontally or vertically.
 - Added horizontal split icon and popup ESC handling; split layouts serialize to `designer_layouts` and restore on load.
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
-- App loader validates required backend events before launching apps and warns users when the designer module is unavailable.
 
 ### Fixed
+- Default workarea now falls back to the first layout container when sizes are unmeasurable, keeping the builder grid in the correct region on load.
+- Splitting the primary workarea now moves existing children—including the builder grid—and transfers the workarea flag to a child container so editing continues in the correct region.
+- The layout root inserts a fallback container and reattaches the grid on window resize to avoid detached canvases when designs provide an empty tree or the DOM shifts.
+- App loader validates required backend events before launching apps and warns users when the designer module is unavailable.
 - `designer.getLayout` now forwards the provided token to database calls, preventing unauthenticated layout requests from failing.
 - Import missing layout placeholder handlers so the designer module loads without ReferenceErrors.
 - Deserializing layouts now resets containers to prevent duplicate children after reload.

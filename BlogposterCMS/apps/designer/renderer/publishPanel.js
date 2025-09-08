@@ -22,6 +22,7 @@ export function initPublishPanel({
   publishBtn,
   nameInput,
   gridEl,
+  layoutRoot,
   updateAllWidgetContents,
   getAdminUserId,
   getCurrentLayoutForLayer,
@@ -148,6 +149,7 @@ export function initPublishPanel({
         await saveDesign({
           name,
           gridEl,
+          layoutRoot,
           getCurrentLayoutForLayer,
           getActiveLayer,
           ensureCodeMap,

@@ -14,6 +14,8 @@
 @use 'color-picker';
 @use 'canvas';
 @use 'split-mode';
+@use 'layout-root';
+@use 'workarea';
 
 html, body {
   height: 100%;

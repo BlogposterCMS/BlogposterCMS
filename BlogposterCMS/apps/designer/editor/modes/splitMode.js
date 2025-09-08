@@ -60,6 +60,10 @@ export function exitSplitMode() {
 
 export function splitContainer(container, orientation) {
   if (!container || container.dataset.split === 'true') return;
+  const existing = Array.from(container.childNodes);
+  const frag = document.createDocumentFragment();
+  existing.forEach(ch => frag.appendChild(ch));
+  const isWorkarea = container.dataset.workarea === 'true';
   container.dataset.split = 'true';
   container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
   container.classList.add('layout-container');
@@ -73,6 +77,11 @@ export function splitContainer(container, orientation) {
   childB.style.flex = '1 1 0';
   container.appendChild(childA);
   container.appendChild(childB);
+  childA.appendChild(frag);
+  if (isWorkarea) {
+    childA.dataset.workarea = 'true';
+    container.removeAttribute('data-workarea');
+  }
   cleanupChooser();
   if (typeof state.onChange === 'function') {
     try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }
@@ -114,7 +123,8 @@ export function serializeLayout(container) {
   const children = Array.from(container.children)
     .filter(ch => ch.classList.contains('layout-container'))
     .map(ch => serializeLayout(ch));
-  return { orientation, children };
+  const workarea = container.dataset.workarea === 'true';
+  return { orientation, workarea, children };
 }
 
 export function deserializeLayout(obj, container) {
@@ -132,5 +142,8 @@ export function deserializeLayout(obj, container) {
       container.appendChild(div);
       deserializeLayout(child, div);
     }
+  }
+  if (obj.workarea) {
+    container.dataset.workarea = 'true';
   }
 }

@@ -1,0 +1,13 @@
+#layoutRoot {
+  display: flex;
+  min-height: 100%;
+}
+
+.layout-container {
+  flex: 1 1 0;
+}
+
+#builderGrid {
+  width: 100%;
+  height: 100%;
+}

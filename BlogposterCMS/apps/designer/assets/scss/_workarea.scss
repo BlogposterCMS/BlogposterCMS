@@ -1,0 +1,16 @@
+body[data-active-layer='0'] .layout-container[data-workarea='true'] {
+  position: relative;
+  outline: 2px dashed var(--user-color);
+}
+
+body[data-active-layer='0'] .layout-container[data-workarea='true']::after {
+  content: 'Workarea';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: var(--user-color);
+  color: var(--color-primary-contrast);
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}

@@ -21,6 +21,30 @@ import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
 
 const historyByDesign = {};
 
+function setDefaultWorkarea(root) {
+  if (!root) return;
+  if (root.querySelector('.layout-container[data-workarea="true"]')) return;
+  const all = Array.from(root.querySelectorAll('.layout-container'));
+  const candidates = all.filter(el => el.dataset.split !== 'true');
+  const containers = candidates.length ? candidates : all.slice(0, 1);
+  let largest = null;
+  let maxArea = 0;
+  for (const el of containers) {
+    const rect = el.getBoundingClientRect();
+    const area = rect.width * rect.height;
+    if (area > maxArea) {
+      maxArea = area;
+      largest = el;
+    }
+  }
+  if (!largest && containers.length) {
+    largest = containers[0];
+  }
+  if (largest) {
+    largest.dataset.workarea = 'true';
+  }
+}
+
 function getHistory(designId) {
   if (!historyByDesign[designId]) {
     historyByDesign[designId] = { undoStack: [], redoStack: [] };
@@ -158,7 +182,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       return fallback;
     }
   }
-
+  let layoutRoot;
   let gridEl;
   let codeMap = {};
   // Track when the BG toolbar was just opened to avoid immediate hide by global click
@@ -265,9 +289,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // actual canvas content.
   contentEl.innerHTML = `
     <div id="builderViewport" class="builder-viewport">
-      <div id="builderGrid" class="builder-grid"></div>
+      <div id="workspaceMain" class="workspace-root">
+        <div id="layoutRoot" class="layout-root layout-container"></div>
+        <div id="builderGrid" class="builder-grid"></div>
+      </div>
     </div>
   `;
+  layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('builderGrid');
 
   // Apply persisted background settings from the initial design payload so
@@ -301,12 +329,24 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const layoutData = designData?.layout || designData?.layout_json;
     if (layoutData) {
       const obj = typeof layoutData === 'string' ? JSON.parse(layoutData) : layoutData;
-      gridEl.classList.add('layout-container');
-      deserializeLayout(obj, gridEl);
+      deserializeLayout(obj, layoutRoot);
     }
   } catch (e) {
     console.warn('[Designer] failed to deserialize layout', e);
   }
+  if (!layoutRoot.querySelector('.layout-container')) {
+    const div = document.createElement('div');
+    div.className = 'layout-container';
+    layoutRoot.appendChild(div);
+  }
+  setDefaultWorkarea(layoutRoot);
+  const workareaEl =
+    layoutRoot.querySelector('.layout-container[data-workarea="true"]') || layoutRoot;
+  if (gridEl.parentNode !== workareaEl) workareaEl.appendChild(gridEl);
+  window.addEventListener('resize', () => {
+    const wa = layoutRoot.querySelector('.layout-container[data-workarea="true"]') || layoutRoot;
+    if (gridEl.parentNode !== wa) wa.appendChild(gridEl);
+  });
   const gridViewportEl = document.getElementById('builderViewport');
   const viewportSizeEl = document.createElement('div');
   viewportSizeEl.className = 'viewport-size-display';
@@ -749,6 +789,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       await saveDesign({
         name: nameInput.value.trim(),
         gridEl,
+        layoutRoot,
         getCurrentLayoutForLayer,
         getActiveLayer: () => activeLayer,
         ensureCodeMap,
@@ -787,6 +828,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       publishBtn,
       nameInput,
       gridEl,
+      layoutRoot,
       updateAllWidgetContents,
       getAdminUserId,
       getCurrentLayoutForLayer,

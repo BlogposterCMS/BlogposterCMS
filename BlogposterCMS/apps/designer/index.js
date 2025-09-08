@@ -3,9 +3,15 @@ import { initBuilder } from './builderRenderer.js';
 import { enableAutoEdit } from './editor/editor.js';
 import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
 import { initBuilderPanel } from './managers/panelManager.js';
+import { showLayoutPanel } from './editor/toolbar/layoutPanel.js';
 import { applyUserColor } from '../../public/assets/js/userColor.js';
 
 let bootstrapped = false;
+
+document.addEventListener('designer.openLayoutPanel', e => {
+  const { rootEl, onChange } = e.detail || {};
+  showLayoutPanel({ rootEl, onChange });
+});
 
 async function bootstrap() {
   if (bootstrapped) return;
@@ -34,6 +40,15 @@ async function bootstrap() {
         } catch (e) {
           console.warn('[Designer App] Failed to load color panel:', e);
         }
+
+        try {
+          const layoutHtml = await fetchPartial('layout-panel', 'builder');
+          panelContainer.insertAdjacentHTML('beforeend', sanitizeHtml(layoutHtml));
+          const layoutPanel = panelContainer.querySelector('.layout-panel');
+          if (layoutPanel) layoutPanel.style.display = 'none';
+        } catch (e) {
+          console.warn('[Designer App] Failed to load layout panel:', e);
+        }
       }
     } catch (e) {
       console.error('[Designer App] Failed to load builder panel:', e);
@@ -47,7 +62,7 @@ async function bootstrap() {
   const designId = urlParams.get('designId');
   const layoutNameParam = urlParams.get('layout') || null;
   const layerParam = parseInt(urlParams.get('layer'), 10);
-  const startLayer = Number.isFinite(layerParam) ? layerParam : (layoutNameParam ? 1 : 0);
+  const startLayer = Number.isFinite(layerParam) ? layerParam : 1;
 
   if (designId) {
     document.body.dataset.designId = designId;

@@ -7,6 +7,8 @@ const {
   handleSaveDesignPlaceholder,
   handleGetDesignPlaceholder,
   handleListDesignsPlaceholder,
+  handleGetLayoutPlaceholder,
+  handleListLayoutsPlaceholder,
 } = require("./dbPlaceholders");
 
 function onceCallback(originalCb) {
@@ -85,13 +87,21 @@ async function initialize({ motherEmitter, jwt, nonce }) {
       moduleName: "designer",
       functionName: "handleGetDesignPlaceholder",
     });
+    registerCustomPlaceholder("DESIGNER_GET_LAYOUT", {
+      moduleName: "designer",
+      functionName: "handleGetLayoutPlaceholder",
+    });
+    registerCustomPlaceholder("DESIGNER_LIST_LAYOUTS", {
+      moduleName: "designer",
+      functionName: "handleListLayoutsPlaceholder",
+    });
 
     // 3) Listen for design save events and persist via custom placeholder
     motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
         try {
         if (!payload || typeof payload !== "object")
           throw new Error("Invalid payload");
-        const { design = {}, widgets = [] } = payload;
+        const { design = {}, widgets = [], layout = null } = payload;
         const sanitizeColor = val => {
           if (typeof val !== "string") return "";
           const hex = val.match(/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/);
@@ -173,6 +183,8 @@ async function initialize({ motherEmitter, jwt, nonce }) {
           : null;
         // normalize draft flag to a real boolean for database compatibility
         const is_draft = Boolean(design.isDraft);
+        const is_layout = Boolean(design.isLayout || design.is_layout);
+        const is_global = Boolean(design.isGlobal || design.is_global);
         const version = Number.isInteger(design.version) ? design.version : 0;
         const now = new Date().toISOString();
 
@@ -235,10 +247,13 @@ async function initialize({ motherEmitter, jwt, nonce }) {
                     published_at,
                     owner_id: ownerId,
                     is_draft,
+                    is_layout,
+                    is_global,
                     version,
                     now,
                   },
                   widgets: cleanWidgets,
+                  layout,
                 },
               ],
             },
@@ -277,9 +292,23 @@ async function initialize({ motherEmitter, jwt, nonce }) {
     motherEmitter.on("designer.getLayout", (payload = {}, originalCb) => {
       const cb = onceCallback(originalCb);
       try {
-        const { jwt: token, layoutRef = "" } = payload || {};
+        const { jwt: token, id, layoutRef = "" } = payload || {};
         if (!token) throw new Error("Missing jwt");
-        const match = typeof layoutRef === "string" && layoutRef.match(/^layout:([^@]+)(?:@.*)?$/);
+        if (id) {
+          motherEmitter.emit(
+            "performDbOperation",
+            {
+              jwt: token,
+              moduleName: "designer",
+              operation: "DESIGNER_GET_LAYOUT",
+              params: [{ id }],
+            },
+            onceCallback((err, res) => (err ? cb(err) : cb(null, res)))
+          );
+          return;
+        }
+        const match =
+          typeof layoutRef === "string" && layoutRef.match(/^layout:([^@]+)(?:@.*)?$/);
         if (!match) throw new Error("Invalid layoutRef");
         const designId = match[1];
         motherEmitter.emit(
@@ -307,7 +336,7 @@ async function initialize({ motherEmitter, jwt, nonce }) {
       } catch (e) {
         cb(e);
       }
-      });
+    });
     motherEmitter.on("designer.listDesigns", async (payload = {}, callback) => {
       try {
         const designs = await new Promise((resolve, reject) => {
@@ -328,6 +357,26 @@ async function initialize({ motherEmitter, jwt, nonce }) {
       }
       });
 
+    motherEmitter.on("designer.listLayouts", async (payload = {}, callback) => {
+      try {
+        const layouts = await new Promise((resolve, reject) => {
+          motherEmitter.emit(
+            "performDbOperation",
+            {
+              jwt,
+              moduleName: "designer",
+              operation: "DESIGNER_LIST_LAYOUTS",
+              params: [payload || {}],
+            },
+            onceCallback((err, res) => (err ? reject(err) : resolve(res)))
+          );
+        });
+        if (typeof callback === "function") callback(null, { layouts });
+      } catch (err) {
+        if (typeof callback === "function") callback(err);
+      }
+    });
+
   console.log("[DESIGNER MODULE] designer module initialized.");
 }
 
@@ -336,4 +385,6 @@ module.exports = {
   handleSaveDesignPlaceholder,
   handleGetDesignPlaceholder,
   handleListDesignsPlaceholder,
+  handleGetLayoutPlaceholder,
+  handleListLayoutsPlaceholder,
 };

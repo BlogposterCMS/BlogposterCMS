@@ -25,10 +25,11 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Tracks change history via `designer_versions`.
 - Reads existing grid background styles so saves retain previously selected media without requiring a new selection.
 - Applies stored `bg_color` and `bg_media_url` when loading a design so the builder preview reflects the saved background.
-- Background toolbar now includes a split layout control that opens a layout selection popup (experimental).
+- Background toolbar now includes a split layout control that opens a layout selection panel (experimental).
+- A `designer.openLayoutPanel` event can open the same layout panel programmatically.
 - Split mode lets users divide layout containers horizontally or vertically; layouts are persisted in a new `designer_layouts` table.
 - Saving a design serializes the split-layout tree into `designer_layouts` and restores it when the builder loads the design.
- - Layout selection popup launches split mode directly without switching builder panels.
+ - Layout selection panel launches split mode directly without switching builder panels.
  - Saving uses the root layout container to persist the entire split tree.
 - When editing an existing design, the builder preloads `data-design-id` and
   `data-design-version` from `#builderMain` (or `document.body`). These values
@@ -42,11 +43,12 @@ server through `appLoader`'s `dispatchAppEvent` handler.
   (e.g. MongoDB ObjectIds) are preserved without coercion.
 
 ## Listened Events
-- `designer.saveDesign` – returns `{ id, version, updated_at }`; clients must reuse `id` and `version` on subsequent saves to avoid conflicts.
+- `designer.saveDesign` – returns `{ id, version, updated_at }`; clients must reuse `id` and `version` on subsequent saves to avoid conflicts. Passing `isLayout: true` stores the current layout in `designer_layouts` and marks the entry as a reusable layout template. An optional `isGlobal` flag records whether the layout is shared across designs.
 - The publish panel supplies this configuration to `designer.saveDesign` before publishing so the persisted design reflects the latest edits.
 - `designer.listDesigns` – returns `{ designs: [...] }` with all non-deleted designs ordered by `updated_at`.
 - `designer.getDesign` – accepts `{ id }` and returns `{ design, widgets: [...] }` for rendering a specific saved design.
-- `designer.getLayout` – accepts `{ layoutRef }` (public token required) and returns `{ grid, items, layoutRef }` for public rendering.
+- `designer.listLayouts` – returns `{ layouts: [...] }` with all saved layouts.
+- `designer.getLayout` – accepts `{ id }` to fetch a saved layout or `{ layoutRef }` (public token required) to resolve public layouts.
 
 These listeners register during module initialization; seeing "No listeners for event designer.*" in the logs usually means the designer module failed to load.
 

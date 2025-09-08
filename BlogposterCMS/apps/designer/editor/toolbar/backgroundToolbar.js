@@ -1,7 +1,6 @@
 import { state } from '../core/editor.js';
 import { showBuilderPanel, hideBuilderPanel } from '../../managers/panelManager.js';
 import { designerState } from '../../managers/designerState.js';
-import { showLayoutPopup } from './layoutPopup.js';
 
 let bgToolbar = null;
 let listenersAttached = false;
@@ -95,12 +94,16 @@ export function initBackgroundToolbar() {
     layoutBtn.addEventListener('click', ev => {
       ev.stopPropagation();
       const grid = getGridEl();
-      showLayoutPopup({
-        rootEl: grid,
-        onChange: () => {
-          try { designerState.pendingSave = true; } catch (e) {}
-        }
-      });
+      document.dispatchEvent(
+        new CustomEvent('designer.openLayoutPanel', {
+          detail: {
+            rootEl: grid,
+            onChange: () => {
+              try { designerState.pendingSave = true; } catch (e) {}
+            }
+          }
+        })
+      );
     });
 
   // Ensure global color picker starts hidden for background use

@@ -5,15 +5,27 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Changed
+- Builder opens designs in the Design layer by default and renames toolbar layers to "Layout" and "Design".
+- Split layout control opens a builder panel instead of a popup for layout selection.
+
 ### Added
-- Background toolbar includes a split layout button that opens a layout selection popup.
+- API endpoints to list layouts and fetch individual layouts via `designer.listLayouts` and `designer.getLayout`.
+- Background toolbar includes a split layout button that opens a layout selection panel.
+- `designer.openLayoutPanel` event allows triggering the layout panel programmatically.
 - Experimental split mode allows dividing layout containers horizontally or vertically.
 - Added horizontal split icon and popup ESC handling; split layouts serialize to `designer_layouts` and restore on load.
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
 - App loader validates required backend events before launching apps and warns users when the designer module is unavailable.
 
 ### Fixed
-- Layout selection popup no longer references a nonexistent `global-panel` and starts split mode directly.
+- `designer.getLayout` now forwards the provided token to database calls, preventing unauthenticated layout requests from failing.
+- Import missing layout placeholder handlers so the designer module loads without ReferenceErrors.
+- Deserializing layouts now resets containers to prevent duplicate children after reload.
+- Layout panel collapse button now closes the panel properly.
+- Layout panel labels restored to reference the global layout, preserving the opt-out workflow per design.
+- `designer.saveDesign` now forwards layout data and layout flags so layouts persist in `designer_layouts` and designs in `designer_designs`, enabling separate editing of templates and designs.
+- Layout selection panel no longer references a nonexistent `global-panel` and starts split mode directly.
 - Saving designs serializes the root layout container so top-level splits persist after reload.
 - Ensure designer module always registers event listeners so `designer.saveDesign` and related calls no longer emit "No listeners" warnings.
 - Designer preview capture now fetches allowed external font stylesheets to prevent cross-origin `cssRules` errors.

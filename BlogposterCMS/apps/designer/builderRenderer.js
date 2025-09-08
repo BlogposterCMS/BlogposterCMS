@@ -52,7 +52,7 @@ function getAdminUserId() {
   }
 }
 
-export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 0, layoutNameParam = null) {
+export async function initBuilder(sidebarEl, contentEl, pageId = null, startLayer = 1, layoutNameParam = null) {
   document.body.classList.add('builder-mode');
   document.body.style.setProperty('--widget-opacity', String(designerState.defaultOpacity));
   initTextEditor();
@@ -93,8 +93,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let previewHeader;
   let viewportSelect;
   const layoutLayers = [
-    { name: 'Global', layout: [] },
-    { name: 'Layer 1', layout: [] }
+    { name: 'Layout', layout: [] },
+    { name: 'Design', layout: [] }
   ];
   const startLayerNum = Number(startLayer);
   let activeLayer = Number.isFinite(startLayerNum)
@@ -755,9 +755,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         capturePreview: () => captureGridPreview(gridEl),
         updateAllWidgetContents,
         ownerId: getAdminUserId(),
-        pageId
+        pageId,
+        isLayout: activeLayer === 0,
+        isGlobal: activeLayer === 0
       });
-      alert('Layout template saved');
+      alert(activeLayer === 0 ? 'Layout template saved' : 'Design saved');
     } catch (err) {
       alert('Save failed: ' + err.message);
     }
@@ -891,7 +893,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     // Layer buttons
     layoutLayers.forEach((layer, idx) => {
       const btn = document.createElement('button');
-      btn.textContent = idx === 0 ? 'Global' : `Layer ${idx}`;
+      btn.textContent = idx === 0 ? 'Layout' : 'Design';
       if (idx === activeLayer) btn.classList.add('active');
       btn.addEventListener('click', () => switchLayer(idx));
       layoutBar.appendChild(btn);

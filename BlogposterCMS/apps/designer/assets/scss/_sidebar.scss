@@ -427,6 +427,29 @@
   flex: 1;
 }
 
+.layout-panel {
+  text-align: center;
+
+  .layout-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+
+    button {
+      padding: 8px 12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      background: var(--color-white, #fff);
+      cursor: pointer;
+      transition: background 0.2s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+}
+
 // Responsive adjustments
 @media (max-width: 1024px) {
   .builder-sidebar {

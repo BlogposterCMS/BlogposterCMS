@@ -18,6 +18,7 @@ El Psy Kongroo
 - Ensure designer module always registers event listeners so `designer.saveDesign` and related calls no longer emit "No listeners" warnings.
 - Designer preview capture now fetches allowed external font stylesheets to prevent cross-origin `cssRules` errors.
 - Designer save requests report a clear timeout error after 20s instead of failing silently.
+- Zoom control and viewport sliders now use the user-selected accent color instead of the default blue.
 - Prevented double initialization of optional modules and added missing event callbacks to remove startup warnings.
 - Prevented duplicate designer event listeners from triggering multiple responses and `ERR_HTTP_HEADERS_SENT` errors when saving or listing designs.
 - Module loader source and log messages now fully in English for clearer maintenance.

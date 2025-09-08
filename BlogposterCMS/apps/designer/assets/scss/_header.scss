@@ -149,7 +149,7 @@
   z-index: 200; gap: 12px;
   display: none; align-items: center;  /* default hidden */
   &.open { display: flex; }            /* visible via .open */
-  .viewport-range { flex: 1; }
+  .viewport-range { flex: 1; accent-color: var(--accent-color); }
   .viewport-value { font-size: 14px; color: var(--color-text, #333); min-width: 48px; text-align: right; }
 }
 

@@ -54,6 +54,10 @@ function updateAndDispatch(el) {
   const html = el.outerHTML.trim();
   el.__onSave?.(html);
   dispatchHtmlUpdate(el);
+  const widget = findWidget(el);
+  const grid = widget?.closest('.pixel-grid, .canvas-grid')?.__grid;
+  grid?.emitChange?.(widget, { contentOnly: true });
+  document.dispatchEvent(new Event('designerContentChanged'));
 }
 
 export function toggleStyle(prop, value) {

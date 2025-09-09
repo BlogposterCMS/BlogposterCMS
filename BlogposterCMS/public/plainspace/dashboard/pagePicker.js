@@ -51,8 +51,9 @@
   }
 
   // 2) persist new order on move
-  grid.on('change', (_event, items) => {
-    items
+  grid.on('change', () => {
+    grid.widgets
+      .map(el => ({ el, y: +el.dataset.y || 0 }))
       .sort((a, b) => a.y - b.y)
       .forEach((i, idx) => {
         meltdownEmit('updatePage', {

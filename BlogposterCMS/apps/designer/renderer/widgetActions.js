@@ -172,6 +172,8 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
       }
       overlay.style.display = 'none';
       renderWidget(el, widgetDef, codeMap);
+      const grid = el.closest('.pixel-grid, .canvas-grid')?.__grid;
+      grid?.emitChange?.(el, { contentOnly: true });
       if (pageId) scheduleAutosave();
     };
     overlay.querySelector('.reset-btn').onclick = () => {
@@ -183,6 +185,8 @@ export function attachEditButton(el, widgetDef, codeMap, pageId, scheduleAutosav
       overlay.querySelector('.editor-js').value = overlay.defaultJs || '';
       overlay.currentSelector = '';
       overlay.updateRender && overlay.updateRender();
+      const grid = el.closest('.pixel-grid, .canvas-grid')?.__grid;
+      grid?.emitChange?.(el, { contentOnly: true });
       if (pageId) scheduleAutosave();
     };
     overlay.querySelector('.cancel-btn').onclick = () => {
@@ -225,7 +229,7 @@ export function attachResizeButton(el, grid) {
     btn.dataset.state = newW <= 4 ? 'small' : 'large';
     setIcon();
     grid._updateGridHeight();
-    grid._emit('change', el);
+    grid.emitChange(el);
   });
 
   el.appendChild(btn);

@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- `#workspaceMain` now stretches to match its parent container size, preventing overflow and clipping.
 - Viewport slider now resizes the builder viewport so the layout root and work area match the selected width.
 - Restored canvas zoom sizer wrapper around `#layoutRoot` so viewport zoom functions correctly.
 - Layout root carries builder grid styling so workspaces stay centered after splits.
@@ -13,6 +14,7 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Removed designer CSS output; SCSS is the source of truth for designer layout.
 - `#workspaceMain` now lives inside `#layoutRoot`; splitting it creates a new sibling container rather than dividing the main workspace.
 - `#layoutRoot` now lives inside the zoom viewport and overlays the `#workspaceMain` workarea; splitting a container spawns two child grids and assigns one as the new workarea.
 - Builder viewport separates design (`#workspaceMain`) and layout (`#builderGrid`) grids so layout splits no longer wrap the design canvas.

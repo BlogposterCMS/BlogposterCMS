@@ -6,6 +6,10 @@ const state = {
   chooserEl: null
 };
 
+function generateGridId() {
+  return `canvasGrid-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function cleanupChooser() {
   if (state.chooserEl && state.chooserEl.parentNode) {
     state.chooserEl.parentNode.removeChild(state.chooserEl);
@@ -59,9 +63,30 @@ export function exitSplitMode() {
 }
 
 export function splitContainer(container, orientation) {
-  if (!container || container.dataset.split === 'true') return;
+  if (!container) return;
   const hasWorkspace = container.querySelector('#workspaceMain');
-  if (hasWorkspace && container.id !== 'layoutRoot') {
+  const alreadySplit = container.dataset.split === 'true';
+  if (container.id === 'layoutRoot') {
+    container.dataset.split = 'true';
+    container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
+    container.style.display = 'flex';
+    container.style.flexDirection = container.dataset.orientation === 'horizontal' ? 'column' : 'row';
+    const div = document.createElement('div');
+    div.className = 'layout-container';
+    div.style.flex = '1 1 0';
+    const grid = document.createElement('div');
+    grid.className = 'builder-grid';
+    grid.id = generateGridId();
+    div.appendChild(grid);
+    container.appendChild(div);
+    cleanupChooser();
+    if (typeof state.onChange === 'function') {
+      try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }
+    }
+    return;
+  }
+  if (alreadySplit) return;
+  if (hasWorkspace) {
     const parent = container.parentElement;
     if (parent) {
       const div = document.createElement('div');
@@ -69,6 +94,7 @@ export function splitContainer(container, orientation) {
       div.style.flex = '1 1 0';
       const grid = document.createElement('div');
       grid.className = 'builder-grid';
+      grid.id = generateGridId();
       div.appendChild(grid);
       parent.appendChild(div);
       cleanupChooser();
@@ -106,9 +132,11 @@ export function splitContainer(container, orientation) {
   childA.appendChild(frag);
   const gridA = existingGrid || document.createElement('div');
   gridA.classList.add('builder-grid');
+  if (!existingGrid) gridA.id = generateGridId();
   childA.appendChild(gridA);
   const gridB = document.createElement('div');
   gridB.className = 'builder-grid';
+  gridB.id = generateGridId();
   childB.appendChild(gridB);
   if (isWorkarea) {
     childA.dataset.workarea = 'true';

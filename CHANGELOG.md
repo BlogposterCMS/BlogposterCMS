@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Adding a container at the layout root now appends a single builder grid with a unique id and honors the selected flex direction.
 - Zoom sizer now derives height from the larger of the grid and viewport to prevent collapse during canvas zooming.
 - Removed builder grid min-size constraints so `#workspaceMain` always mirrors its parent container without overflow.
 - Viewport slider now resizes the builder viewport so the layout root and work area match the selected width.

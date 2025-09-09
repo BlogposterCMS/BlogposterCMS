@@ -13,6 +13,20 @@ function cleanupChooser() {
   state.chooserEl = null;
 }
 
+function normalizeChildSizes(parent) {
+  if (!parent) return;
+  const kids = Array.from(parent.children).filter(ch =>
+    ch.classList && ch.classList.contains('layout-container')
+  );
+  if (!kids.length) return;
+  const pct = 100 / kids.length;
+  kids.forEach(ch => {
+    if (!ch.style.flexBasis) {
+      ch.style.flex = `0 0 ${pct}%`;
+    }
+  });
+}
+
 function handleEsc(ev) {
   if (ev.key === 'Escape') {
     ev.stopPropagation();
@@ -35,8 +49,8 @@ export function enterSplitMode({ rootEl, onChange } = {}) {
     const root = document.createElement('div');
     root.className = 'layout-container';
     root.style.minHeight = '100%';
-    root.style.flex = '1 1 auto';
     rootEl.appendChild(root);
+    normalizeChildSizes(rootEl);
   }
   rootEl.classList.add('split-mode');
   state.escHandler = handleEsc;
@@ -66,11 +80,11 @@ export function splitContainer(container, orientation) {
     if (parent) {
       const div = document.createElement('div');
       div.className = 'layout-container';
-      div.style.flex = '1 1 0';
       const grid = document.createElement('div');
       grid.className = 'builder-grid';
       div.appendChild(grid);
       parent.appendChild(div);
+      normalizeChildSizes(parent);
       cleanupChooser();
       if (typeof state.onChange === 'function') {
         try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }
@@ -99,8 +113,6 @@ export function splitContainer(container, orientation) {
   const childB = document.createElement('div');
   childA.className = 'layout-container';
   childB.className = 'layout-container';
-  childA.style.flex = '1 1 0';
-  childB.style.flex = '1 1 0';
   container.appendChild(childA);
   container.appendChild(childB);
   childA.appendChild(frag);
@@ -114,6 +126,7 @@ export function splitContainer(container, orientation) {
     childA.dataset.workarea = 'true';
     container.removeAttribute('data-workarea');
   }
+  normalizeChildSizes(container);
   cleanupChooser();
   if (typeof state.onChange === 'function') {
     try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }
@@ -154,14 +167,23 @@ export function serializeLayout(container) {
   const orientation = container.dataset.orientation || null;
   const children = Array.from(container.children)
     .filter(ch => ch.classList.contains('layout-container'))
-    .map(ch => serializeLayout(ch));
+    .map(ch => {
+      const data = serializeLayout(ch);
+      const basis = ch.style.flexBasis;
+      if (basis) data.size = basis;
+      return data;
+    });
   const workarea = container.dataset.workarea === 'true';
-  return { orientation, workarea, children };
+  const size = container.style.flexBasis;
+  return { orientation, workarea, size: size || undefined, children };
 }
 
 export function deserializeLayout(obj, container) {
   if (!container || !obj) return;
   container.replaceChildren();
+  if (obj.size) {
+    container.style.flex = `0 0 ${obj.size}`;
+  }
   if (obj.orientation) {
     container.dataset.split = 'true';
     container.dataset.orientation = obj.orientation;
@@ -170,10 +192,13 @@ export function deserializeLayout(obj, container) {
     for (const child of obj.children || []) {
       const div = document.createElement('div');
       div.className = 'layout-container';
-      div.style.flex = '1 1 0';
       container.appendChild(div);
       deserializeLayout(child, div);
+      if (child.size) {
+        div.style.flex = `0 0 ${child.size}`;
+      }
     }
+    normalizeChildSizes(container);
   }
   if (obj.workarea) {
     container.dataset.workarea = 'true';

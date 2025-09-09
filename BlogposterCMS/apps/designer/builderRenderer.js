@@ -295,9 +295,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       </div>
     </div>
   `;
+  const gridViewportEl = document.getElementById('builderViewport');
   layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('workspaceMain');
   gridEl.dataset.workarea = 'true';
+  // Ensure CanvasGrid can wrap the workspace with a zoom sizer
+  if (gridEl.parentElement !== gridViewportEl) {
+    gridViewportEl.appendChild(gridEl);
+  }
 
   // Apply persisted background settings from the initial design payload so
   // backgrounds survive reloads and future saves reuse the same media object.
@@ -335,11 +340,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   } catch (e) {
     console.warn('[Designer] failed to deserialize layout', e);
   }
-  setDefaultWorkarea(layoutRoot);
-  window.addEventListener('resize', () => {
-    setDefaultWorkarea(layoutRoot);
-  });
-  const gridViewportEl = document.getElementById('builderViewport');
   const viewportSizeEl = document.createElement('div');
   viewportSizeEl.className = 'viewport-size-display';
   gridViewportEl.appendChild(viewportSizeEl);
@@ -390,9 +390,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     enableZoom: true
   });
   const sizer = grid?.sizer;
-  if (sizer && layoutRoot && layoutRoot.parentElement !== sizer) {
+  if (sizer && layoutRoot) {
     sizer.appendChild(layoutRoot);
+    layoutRoot.appendChild(gridEl);
   }
+  setDefaultWorkarea(layoutRoot);
+  window.addEventListener('resize', () => {
+    setDefaultWorkarea(layoutRoot);
+  });
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
   function selectWidget(el) {
     baseSelectWidget(el);

@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Viewport slider now resizes the builder viewport so the layout root and work area match the selected width.
 - Restored canvas zoom sizer wrapper around `#layoutRoot` so viewport zoom functions correctly.
 - Layout root carries builder grid styling so workspaces stay centered after splits.
 - Content-only grid changes no longer flood layout history or trigger redundant autosaves.

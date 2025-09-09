@@ -423,7 +423,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   function collectDocumentColors() {
     const colors = new Set();
-    const grid = document.getElementById('builderGrid');
+    const grid = document.getElementById('workspaceMain');
     if (!grid) return [];
     grid.querySelectorAll('*').forEach(el => {
       const style = getComputedStyle(el);

@@ -6,7 +6,11 @@ let bgToolbar = null;
 let listenersAttached = false;
 const BGLOG = (...args) => { try { console.log('[BG/TB]', ...args); } catch (_) {} };
 
-function getGridEl() {
+function getWorkspaceEl() {
+  return document.getElementById('workspaceMain');
+}
+
+function getLayoutGridEl() {
   return document.getElementById('builderGrid');
 }
 
@@ -56,7 +60,7 @@ export function initBackgroundToolbar() {
   colorIcon.style.textDecoration = 'underline';
   colorIcon.style.textDecorationThickness = '3px';
   colorIcon.style.textUnderlineOffset = '2px';
-  const currentBg = getComputedStyle(getGridEl() || document.body).backgroundColor;
+  const currentBg = getComputedStyle(getWorkspaceEl() || document.body).backgroundColor;
   colorIcon.style.textDecorationColor = currentBg || '#ffffff';
   colorBtn.appendChild(colorIcon);
 
@@ -106,7 +110,7 @@ export function initBackgroundToolbar() {
               try { designerState.pendingSave = true; } catch (e) {}
               try {
                 const root = getLayoutRootEl();
-                const grid = getGridEl();
+                const grid = getLayoutGridEl();
                 if (root && grid) {
                   const wa = root.querySelector('.layout-container[data-workarea="true"]') || root;
                   if (grid.parentNode !== wa) wa.appendChild(grid);
@@ -165,12 +169,12 @@ export function initBackgroundToolbar() {
 
   colorBtn.addEventListener('click', async ev => {
     ev.stopPropagation();
-    const grid = getGridEl();
+    const grid = getWorkspaceEl();
     const currentBg = getComputedStyle(grid || document.body).backgroundColor;
     state.colorPicker.updateOptions({
       initialColor: currentBg || '#ffffff',
       onSelect: c => {
-        const g = getGridEl();
+        const g = getWorkspaceEl();
         if (!g) return;
         g.style.backgroundImage = '';
         delete g.dataset.bgImageId;
@@ -210,7 +214,7 @@ export function initBackgroundToolbar() {
     try {
       const { shareURL, objectId } = await window.meltdownEmit('openMediaExplorer', { jwt: window.ADMIN_TOKEN });
       if (shareURL) {
-        const grid = getGridEl();
+        const grid = getWorkspaceEl();
         if (!grid) return;
         const safeUrl = String(shareURL).replace(/"/g, '&quot;');
         grid.style.backgroundImage = `url("${safeUrl}")`;
@@ -229,7 +233,7 @@ export function initBackgroundToolbar() {
 
   clearBtn.addEventListener('click', ev => {
     ev.stopPropagation();
-    const grid = getGridEl();
+    const grid = getWorkspaceEl();
     if (!grid) return;
     grid.style.backgroundImage = '';
     grid.style.backgroundColor = '';

@@ -28,7 +28,7 @@ Initialize the grid in your admin scripts:
 ```js
 import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
 
-const gridEl = document.querySelector('#builderGrid');
+const gridEl = document.querySelector('#workspaceMain');
 const grid = initCanvasGrid({
   columns: 12,
   rows: Infinity,

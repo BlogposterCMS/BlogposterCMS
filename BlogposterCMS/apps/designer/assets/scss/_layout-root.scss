@@ -6,19 +6,18 @@
 }
 
 .layout-container {
+  flex: 1 1 0;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  max-width: 100%;
-  max-height: 100%;
-  flex: 0 0 auto;
 }
 
 body.builder-mode .layout-container > .builder-grid {
   width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+  min-height: 70vh;
+  min-width: 320px;
+  max-width: 3840px;
   margin: 0 auto;
   background: white;
   border-radius: 12px;

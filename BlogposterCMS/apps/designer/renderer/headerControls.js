@@ -1,4 +1,4 @@
-export function initHeaderControls(topBar, layoutRootEl, viewportSizeEl, grid, gridEl, { undo, redo }) {
+export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo, redo }) {
   const viewportBtn = topBar.querySelector('#viewportControlBtn');
   const viewportPanel = topBar.querySelector('.viewport-slider');
   const viewportRange = viewportPanel?.querySelector('.viewport-range');
@@ -9,8 +9,8 @@ export function initHeaderControls(topBar, layoutRootEl, viewportSizeEl, grid, g
 
   const DEFAULT_VIEWPORT = 1920;
   function setViewportWidth(val) {
-    layoutRootEl.style.width = `${val}px`;
-    layoutRootEl.style.margin = '0 auto';
+    gridEl.style.width = `${val}px`;
+    gridEl.style.margin = '0 auto';
     if (viewportValue) viewportValue.textContent = `${val}px`;
     viewportSizeEl.textContent = `${val}px`;
     if (grid && typeof grid.setScale === 'function') {
@@ -67,7 +67,7 @@ export function initHeaderControls(topBar, layoutRootEl, viewportSizeEl, grid, g
       if (viewportValue) viewportValue.textContent = `${width}px`;
       viewportSizeEl.textContent = `${width}px`;
     });
-    resizeObserver.observe(layoutRootEl);
+    resizeObserver.observe(gridEl);
   }
 
   const headerMenuBtn = topBar.querySelector('.builder-menu-btn');

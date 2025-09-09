@@ -297,6 +297,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   `;
   layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('workspaceMain');
+  gridEl.dataset.workarea = 'true';
 
   // Apply persisted background settings from the initial design payload so
   // backgrounds survive reloads and future saves reuse the same media object.
@@ -746,7 +747,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
   saveWrapper.appendChild(saveDropdown);
 
-  initHeaderControls(topBar, layoutRoot, viewportSizeEl, grid, gridEl, {
+  initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
     undo: () => undo(currentDesignId),
     redo: () => redo(currentDesignId)
   });

@@ -159,22 +159,6 @@ body.builder-mode #builderViewport .canvas-zoom-sizer {
   margin-top: 40px;
 }
 
-// Ensure the inner grid has a baseline size so _updateGridHeight()
-// never computes 0px on empty layouts.
-body.builder-mode #workspaceMain {
-  min-height: 70vh;
-  min-width: 320px;
-  width: 100%;
-  max-width: 100%;
-  max-width: 3840px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
 // Ensure themed widget content matches its wrapper dimensions
 body.builder-mode .canvas-item-content.builder-themed {
   width: 100%;
@@ -225,7 +209,7 @@ body.preview-mode {
   }
 
   // Disable interactions with the canvas in preview mode
-  #workspaceMain {
+  .builder-grid {
     pointer-events: none;
   }
 

@@ -6,10 +6,12 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Layout root carries builder grid styling so workspaces stay centered after splits.
 - Content-only grid changes no longer flood layout history or trigger redundant autosaves.
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- `#workspaceMain` now lives inside `#layoutRoot`; splitting it creates a new sibling container rather than dividing the main workspace.
 - `#layoutRoot` now lives inside the zoom viewport and overlays the `#workspaceMain` workarea; splitting a container spawns two child grids and assigns one as the new workarea.
 - Builder viewport separates design (`#workspaceMain`) and layout (`#builderGrid`) grids so layout splits no longer wrap the design canvas.
 - Change event payload includes current grid width for precise viewport marker placement.

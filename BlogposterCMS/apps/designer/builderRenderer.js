@@ -285,20 +285,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // CSS variable works with the BoundingBoxManager.
   //
   // Wrap the grid in a scrollable viewport so scrollbars live "inside"
-  // the designer instead of the page. The separate #workspaceMain hosts the
-  // actual canvas content while #builderGrid tracks layout splits.
+  // the designer instead of the page. The #layoutRoot now hosts
+  // #workspaceMain directly so additional layout containers appear
+  // alongside the main workspace.
   contentEl.innerHTML = `
     <div id="builderViewport" class="builder-viewport">
-      <div id="workspaceMain" class="builder-grid"></div>
       <div id="layoutRoot" class="layout-root layout-container">
-        <div id="builderGrid" class="builder-grid"></div>
+        <div id="workspaceMain" class="builder-grid"></div>
       </div>
     </div>
   `;
   layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('workspaceMain');
   gridEl.dataset.workarea = 'true';
-  const layoutGridEl = document.getElementById('builderGrid');
 
   // Apply persisted background settings from the initial design payload so
   // backgrounds survive reloads and future saves reuse the same media object.
@@ -336,18 +335,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   } catch (e) {
     console.warn('[Designer] failed to deserialize layout', e);
   }
-  if (!layoutRoot.querySelector('.layout-container')) {
-    const div = document.createElement('div');
-    div.className = 'layout-container';
-    layoutRoot.appendChild(div);
-  }
   setDefaultWorkarea(layoutRoot);
-  const workareaEl =
-    layoutRoot.querySelector('.layout-container[data-workarea="true"]') || layoutRoot;
-  if (layoutGridEl.parentNode !== workareaEl) workareaEl.appendChild(layoutGridEl);
   window.addEventListener('resize', () => {
-    const wa = layoutRoot.querySelector('.layout-container[data-workarea="true"]') || layoutRoot;
-    if (layoutGridEl.parentNode !== wa) wa.appendChild(layoutGridEl);
+    setDefaultWorkarea(layoutRoot);
   });
   const gridViewportEl = document.getElementById('builderViewport');
   const viewportSizeEl = document.createElement('div');

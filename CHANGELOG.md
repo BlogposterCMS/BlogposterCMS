@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Restored canvas zoom sizer wrapper around `#layoutRoot` so viewport zoom functions correctly.
 - Layout root carries builder grid styling so workspaces stay centered after splits.
 - Content-only grid changes no longer flood layout history or trigger redundant autosaves.
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.

@@ -50,9 +50,9 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
   __gridRO.observe(scrollContainer);
   gridEl.__gridRO = __gridRO;
 
-  grid.on('change', el => {
-    if (el) selectWidget(el);
-  });
+    grid.on('change', ({ el } = {}) => {
+      if (el) selectWidget(el);
+    });
   return grid;
 }
 

@@ -14,6 +14,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 - Widgets receive a `dragging` class while moved so interfaces can reveal context‑sensitive controls and temporarily drop transitions, shadows and filters for maximum performance.
 - Ctrl+wheel zoom scales the grid around its center, keeping layouts anchored in view.
 - Header viewport control lets you adjust the canvas width via a slider (default 1920px, up to 3840px) for responsive previews.
+- Content edits emit change events so viewport markers capture text or media adjustments for the active width; call `grid.emitChange(el, { contentOnly: true })` after programmatic updates. Change event detail includes `{ el, width, contentOnly }` for the affected widget, current grid width and whether the change only updated content.
 - Workspace displays the current viewport width in the top-right corner for quick reference.
 - Zoom sizer follows container resize using the unscaled viewport width and expands to the grid's width when the canvas exceeds the viewport, keeping scaled canvases fully scrollable without runaway growth.
 - Zoom sizer in the builder now applies equal left and right margins with a doubled top offset so the canvas has balanced spacing within the viewport.
@@ -71,8 +72,21 @@ grid.on('dragstart', el => el.classList.add('dragging'));
 grid.on('dragstop', el => el.classList.remove('dragging'));
 ```
 
+After programmatically updating widget contents, call `grid.emitChange(el, { contentOnly: true })` so listeners can react to the adjustment without triggering layout history:
 
-Listen for the `change` event to persist layout updates when users move or resize widgets.
+```js
+widget.querySelector('img').src = '/new/image.png';
+grid.emitChange(widget, { contentOnly: true });
+```
+
+
+Listen for the `change` event to persist layout updates when users move or resize widgets. The callback receives the affected element and current width:
+
+```js
+grid.on('change', ({ el, width, contentOnly }) => {
+  console.log('changed', el, 'at', width, 'px', contentOnly ? '(content only)' : '');
+});
+```
 
 When `percentageMode` is enabled, the grid keeps `data-*Percent` attributes (`xPercent`, `yPercent`, `wPercent`, `hPercent`) in sync so you can store layouts in relative units.
 

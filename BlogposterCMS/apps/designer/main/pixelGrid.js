@@ -27,6 +27,7 @@ export class PixelGrid {
       this.options.columns = this.options.column;
     }
     this.el = typeof el === 'string' ? document.querySelector(el) : el;
+    if (this.el) this.el.__grid = this;
     this.el.classList.add('pixel-grid');
     this.widgets = [];
     this.activeEl = null;
@@ -60,6 +61,10 @@ export class PixelGrid {
 
   on(evt, cb) {
     this._emitter.addEventListener(evt, e => cb(e.detail));
+  }
+
+  emitChange(el, meta = {}) {
+    this._emit('change', { el, width: this.el.clientWidth, ...meta });
   }
 
   _emit(evt, detail) {
@@ -146,7 +151,7 @@ export class PixelGrid {
     this.widgets.push(el);
     if (this.pushOnOverlap) this._resolveCollisions(el);
     this._updateGridHeight();
-    this._emit('change', el);
+    this.emitChange(el);
   }
 
   addWidget(opts = {}) {
@@ -166,7 +171,7 @@ export class PixelGrid {
       if (this.activeEl === el) this.clearSelection();
       el.remove();
       this._updateGridHeight();
-      this._emit('change', el);
+      this.emitChange(el);
     }
   }
 
@@ -185,7 +190,7 @@ export class PixelGrid {
     if (this.pushOnOverlap) this._resolveCollisions(el);
     if (el === this.activeEl) this._updateBBox();
     this._updateGridHeight();
-    if (!meta.silent) this._emit('change', el);
+    if (!meta.silent) this.emitChange(el);
   }
 
   _bindResize(el) {

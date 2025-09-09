@@ -419,20 +419,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // hide the text toolbar and show the background toolbar. Record the
   // opening timestamp so the global click handler does not immediately hide
   // it again.
-  grid.on('change', el => {
-    if (el) {
-      // Selecting a widget hides the background toolbar and shows the text toolbar
-      selectWidget(el);
-    } else {
-      // Deselecting: hide text toolbar and show background toolbar
-      hideToolbar();
-      showBgToolbar();
-      bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
-    }
-    const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
-    pushLayoutState(layout);
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
-  });
+    grid.on('change', ({ el, contentOnly } = {}) => {
+      if (el) {
+        // Selecting a widget hides the background toolbar and shows the text toolbar
+        selectWidget(el);
+      } else {
+        // Deselecting: hide text toolbar and show background toolbar
+        hideToolbar();
+        showBgToolbar();
+        bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
+      }
+      if (contentOnly) return;
+      const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
+      pushLayoutState(layout);
+      if (pageId && state.autosaveEnabled) scheduleAutosave();
+    });
   grid.on("dragstart", () => {
     grid.bboxManager?.hide?.();
     actionBar.style.display = "none";

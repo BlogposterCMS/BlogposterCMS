@@ -12,6 +12,8 @@ export function createSaveManager(state, ctx) {
     }, 1000);
   }
 
+  document.addEventListener('designerContentChanged', scheduleAutosave);
+
   function startAutosave() {
     if (state.autosaveInterval) clearInterval(state.autosaveInterval);
     if (state.autosaveEnabled && state.pageId) {

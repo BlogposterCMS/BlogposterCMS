@@ -48,8 +48,8 @@ export function attachDashboardControls(el, grid) {
     if (typeof grid._updateGridHeight === 'function') {
       grid._updateGridHeight();
     }
-    if (typeof grid._emit === 'function') {
-      grid._emit('change', el);
+    if (typeof grid.emitChange === 'function') {
+      grid.emitChange(el);
     }
   });
   el.appendChild(resizeBtn);

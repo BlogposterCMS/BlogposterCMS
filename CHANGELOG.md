@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- `#workspaceMain` now stretches to match its parent container size, preventing overflow and clipping.
 - Viewport slider now resizes the builder viewport so the layout root and work area match the selected width.
 - Restored canvas zoom sizer wrapper around `#layoutRoot` so viewport zoom functions correctly.
 - Layout root carries builder grid styling so workspaces stay centered after splits.

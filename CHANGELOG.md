@@ -10,6 +10,7 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Builder viewport separates design (`#workspaceMain`) and layout (`#builderGrid`) grids so layout splits no longer wrap the design canvas.
 - Change event payload includes current grid width for precise viewport marker placement.
 - Content edits now emit grid change events so the viewport slider marks text or image updates per breakpoint.
 - Builder opens designs in the Design layer by default and renames toolbar layers to "Layout" and "Design".
@@ -17,7 +18,7 @@ El Psy Kongroo
 
 ### Added
 - Public `grid.emitChange()` helper and `designerContentChanged` autosave event for responsive content updates.
-- Builder grid now sits alongside a persistent `#layoutRoot` container inside `#workspaceMain` so layouts deserialize without detaching the grid and serialize from a stable root.
+- Dedicated `#workspaceMain` design grid renders alongside a persistent `#layoutRoot` containing a layout-only `#builderGrid` so layouts deserialize without detaching the canvas.
 - Layout layer now highlights the Primary Workarea outside of split mode for clearer widget placement.
 - API endpoints to list layouts and fetch individual layouts via `designer.listLayouts` and `designer.getLayout`.
 - Background toolbar includes a split layout button that opens a layout selection panel.

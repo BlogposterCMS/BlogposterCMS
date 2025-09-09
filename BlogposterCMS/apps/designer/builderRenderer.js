@@ -285,18 +285,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // CSS variable works with the BoundingBoxManager.
   //
   // Wrap the grid in a scrollable viewport so scrollbars live "inside"
-  // the designer instead of the page. The inner #builderGrid hosts the
-  // actual canvas content.
+  // the designer instead of the page. The separate #workspaceMain hosts the
+  // actual canvas content while #builderGrid tracks layout splits.
   contentEl.innerHTML = `
     <div id="builderViewport" class="builder-viewport">
-      <div id="workspaceMain" class="workspace-root">
-        <div id="layoutRoot" class="layout-root layout-container"></div>
+      <div id="workspaceMain" class="builder-grid"></div>
+      <div id="layoutRoot" class="layout-root layout-container">
         <div id="builderGrid" class="builder-grid"></div>
       </div>
     </div>
   `;
   layoutRoot = document.getElementById('layoutRoot');
-  gridEl = document.getElementById('builderGrid');
+  gridEl = document.getElementById('workspaceMain');
+  const layoutGridEl = document.getElementById('builderGrid');
 
   // Apply persisted background settings from the initial design payload so
   // backgrounds survive reloads and future saves reuse the same media object.
@@ -342,10 +343,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   setDefaultWorkarea(layoutRoot);
   const workareaEl =
     layoutRoot.querySelector('.layout-container[data-workarea="true"]') || layoutRoot;
-  if (gridEl.parentNode !== workareaEl) workareaEl.appendChild(gridEl);
+  if (layoutGridEl.parentNode !== workareaEl) workareaEl.appendChild(layoutGridEl);
   window.addEventListener('resize', () => {
     const wa = layoutRoot.querySelector('.layout-container[data-workarea="true"]') || layoutRoot;
-    if (gridEl.parentNode !== wa) wa.appendChild(gridEl);
+    if (layoutGridEl.parentNode !== wa) wa.appendChild(layoutGridEl);
   });
   const gridViewportEl = document.getElementById('builderViewport');
   const viewportSizeEl = document.createElement('div');
@@ -492,13 +493,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   gridEl.addEventListener('pointerdown', contentClickHandler);
   const contentRoot = document.getElementById('content');
   if (contentRoot && contentRoot !== gridEl) contentRoot.addEventListener('pointerdown', contentClickHandler);
-  BGLOG('listeners attached: pointerdown on #builderGrid and #content');
+  BGLOG('listeners attached: pointerdown on #workspaceMain and #content');
 
   // Capture-phase handler to catch clicks swallowed by other listeners
   const captureBackgroundIntent = e => {
     if (document.body.classList.contains('preview-mode')) { BGLOG('skip: preview-mode capture'); return; }
     let inContent = e.target.closest('#content');
-    // If an overlay outside #content captures the event, fall back to hit-testing #builderGrid bounds
+    // If an overlay outside #content captures the event, fall back to hit-testing #workspaceMain bounds
     if (!inContent) {
       const gridRect = gridEl?.getBoundingClientRect?.();
       const cx = (e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? -1);
@@ -528,9 +529,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   // Hide background toolbar when clicking outside of canvas/toolbar
   document.addEventListener('click', e => {
-    if (!document.getElementById('builderGrid')) return;
+    if (!document.getElementById('workspaceMain')) return;
     const insideBgToolbar = e.target.closest('.bg-editor-toolbar');
-    const insideGrid = e.target.closest('#builderGrid');
+    const insideGrid = e.target.closest('#workspaceMain');
     const insidePicker = e.target.closest('.color-picker');
     const insideTextTb = e.target.closest('.text-block-editor-toolbar');
     if (insideBgToolbar || insidePicker || insideTextTb) { BGLOG('global click inside UI, ignore', { insideBgToolbar: !!insideBgToolbar, insidePicker: !!insidePicker, insideTextTb: !!insideTextTb }); return; }

@@ -49,7 +49,7 @@ export async function applyDesignerTheme() {
       return;
     }
     const css = await res.text();
-    const scoped = scopeThemeCss(css, '#builderGrid', '#builderGrid .builder-themed');
+    const scoped = scopeThemeCss(css, '#workspaceMain', '#workspaceMain .builder-themed');
     const style = document.createElement('style');
     style.dataset.builderTheme = theme;
     style.textContent = scoped;

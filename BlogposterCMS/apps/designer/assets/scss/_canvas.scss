@@ -161,7 +161,7 @@ body.builder-mode #builderViewport .canvas-zoom-sizer {
 
 // Ensure the inner grid has a baseline size so _updateGridHeight()
 // never computes 0px on empty layouts.
-body.builder-mode #builderGrid {
+body.builder-mode #workspaceMain {
   min-height: 70vh;
   min-width: 320px;
   width: 100%;
@@ -225,7 +225,7 @@ body.preview-mode {
   }
 
   // Disable interactions with the canvas in preview mode
-  #builderGrid {
+  #workspaceMain {
     pointer-events: none;
   }
 

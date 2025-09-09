@@ -16,7 +16,7 @@ The builder now uses `CanvasGrid` for responsive layouts, but PixelGrid remains 
 ```js
 import { init as initPixelGrid } from '/apps/designer/main/pixelGrid.js';
 
-const gridEl = document.getElementById('builderGrid');
+const gridEl = document.getElementById('workspaceMain');
 const grid = initPixelGrid({}, gridEl);
 ```
 

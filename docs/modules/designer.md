@@ -32,7 +32,7 @@ server through `appLoader`'s `dispatchAppEvent` handler.
  - Layout selection panel launches split mode directly without switching builder panels.
 - Saving uses the root layout container to persist the entire split tree.
 - The largest leaf layout container is automatically marked as the Primary Workarea and highlighted in layout mode for easier widget placement. Split containers and the layout root are ignored; if no candidate has a measurable size during load, the first leaf is chosen.
-- The builder wraps the grid in a `#workspaceMain` container with a dedicated `#layoutRoot` so layouts persist without detaching the grid and serialize from this stable root. The grid is reattached to the current workarea when designs load, allowing page switches without reloading the layout tree. Splitting the primary workarea moves the grid and its flag into the first new container and a resize handler reattaches the grid if the DOM shifts.
+- The builder renders a dedicated `#workspaceMain` grid for design content alongside a persistent `#layoutRoot` that hosts a layout-only `#builderGrid`. Layout splits manipulate this secondary grid while the design grid remains separate.
 - When editing an existing design, the builder preloads `data-design-id` and
   `data-design-version` from `#builderMain` (or `document.body`). These values
   are seeded from the `designId` and `designVersion` query parameters so saves

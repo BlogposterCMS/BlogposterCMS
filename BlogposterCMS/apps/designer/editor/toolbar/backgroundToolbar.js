@@ -9,11 +9,6 @@ const BGLOG = (...args) => { try { console.log('[BG/TB]', ...args); } catch (_) 
 function getWorkspaceEl() {
   return document.getElementById('workspaceMain');
 }
-
-function getLayoutGridEl() {
-  return document.getElementById('builderGrid');
-}
-
 function getLayoutRootEl() {
   return document.getElementById('layoutRoot');
 }
@@ -108,14 +103,6 @@ export function initBackgroundToolbar() {
             rootEl: workspace,
             onChange: () => {
               try { designerState.pendingSave = true; } catch (e) {}
-              try {
-                const root = getLayoutRootEl();
-                const grid = getLayoutGridEl();
-                if (root && grid) {
-                  const wa = root.querySelector('.layout-container[data-workarea="true"]') || root;
-                  if (grid.parentNode !== wa) wa.appendChild(grid);
-                }
-              } catch (_) {}
             }
           }
         })

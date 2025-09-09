@@ -60,6 +60,24 @@ export function exitSplitMode() {
 
 export function splitContainer(container, orientation) {
   if (!container || container.dataset.split === 'true') return;
+  const hasWorkspace = container.querySelector('#workspaceMain');
+  if (hasWorkspace && container.id !== 'layoutRoot') {
+    const parent = container.parentElement;
+    if (parent) {
+      const div = document.createElement('div');
+      div.className = 'layout-container';
+      div.style.flex = '1 1 0';
+      const grid = document.createElement('div');
+      grid.className = 'builder-grid';
+      div.appendChild(grid);
+      parent.appendChild(div);
+      cleanupChooser();
+      if (typeof state.onChange === 'function') {
+        try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }
+      }
+    }
+    return;
+  }
   const existing = Array.from(container.childNodes);
   const frag = document.createDocumentFragment();
   let existingGrid = null;

@@ -14,6 +14,7 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Removed designer CSS output; SCSS is the source of truth for designer layout.
 - `#workspaceMain` now lives inside `#layoutRoot`; splitting it creates a new sibling container rather than dividing the main workspace.
 - `#layoutRoot` now lives inside the zoom viewport and overlays the `#workspaceMain` workarea; splitting a container spawns two child grids and assigns one as the new workarea.
 - Builder viewport separates design (`#workspaceMain`) and layout (`#builderGrid`) grids so layout splits no longer wrap the design canvas.

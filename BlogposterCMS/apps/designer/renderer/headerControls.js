@@ -7,10 +7,13 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
     viewportBtn.innerHTML = window.featherIcon('monitor');
   }
 
+  const viewportEl = grid?.scrollContainer || gridEl.parentElement || gridEl;
   const DEFAULT_VIEWPORT = 1920;
   function setViewportWidth(val) {
-    gridEl.style.width = `${val}px`;
-    gridEl.style.margin = '0 auto';
+    if (viewportEl) {
+      viewportEl.style.width = `${val}px`;
+      viewportEl.style.margin = '0 auto';
+    }
     if (viewportValue) viewportValue.textContent = `${val}px`;
     viewportSizeEl.textContent = `${val}px`;
     if (grid && typeof grid.setScale === 'function') {
@@ -59,7 +62,7 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
     if (Number.isFinite(val)) setViewportWidth(val);
   });
 
-  if (window.ResizeObserver) {
+  if (window.ResizeObserver && viewportEl) {
     const resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       const width = Math.round(entry.contentRect.width);
@@ -67,7 +70,7 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
       if (viewportValue) viewportValue.textContent = `${width}px`;
       viewportSizeEl.textContent = `${width}px`;
     });
-    resizeObserver.observe(gridEl);
+    resizeObserver.observe(viewportEl);
   }
 
   const headerMenuBtn = topBar.querySelector('.builder-menu-btn');

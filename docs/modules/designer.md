@@ -33,6 +33,8 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Saving uses the root layout container to persist the entire split tree.
 - The largest leaf layout container is automatically marked as the Primary Workarea and highlighted in layout mode for easier widget placement. Split containers and the layout root are ignored; if no candidate has a measurable size during load, the first leaf is chosen.
 - The builder now embeds `#workspaceMain` directly inside a persistent `#layoutRoot`. Splitting the root adds new sibling layout containers with their own builder grids beside the main workspace. Only `#workspaceMain` loads design widgets; attempting to split its container creates an additional sibling instead of dividing the workspace itself.
+- Layout containers inside `#layoutRoot` now size themselves with percentage-based flex rules. Each child remains within the root's bounds and can be assigned an explicit percentage so multiple containers share the space precisely.
+- Splitting a container rebalances all sibling percentages so their combined size never exceeds the layout root.
 - When editing an existing design, the builder preloads `data-design-id` and
   `data-design-version` from `#builderMain` (or `document.body`). These values
   are seeded from the `designId` and `designVersion` query parameters so saves

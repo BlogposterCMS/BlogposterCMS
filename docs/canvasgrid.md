@@ -17,6 +17,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 - Content edits emit change events so viewport markers capture text or media adjustments for the active width; call `grid.emitChange(el, { contentOnly: true })` after programmatic updates. Change event detail includes `{ el, width, contentOnly }` for the affected widget, current grid width and whether the change only updated content.
 - Workspace displays the current viewport width in the top-right corner for quick reference.
 - Zoom sizer follows container resize using the unscaled viewport width and expands to the grid's width when the canvas exceeds the viewport, keeping scaled canvases fully scrollable without runaway growth.
+- Zoom sizer bases its height on the larger of the viewport and grid so empty canvases don't collapse during zoom.
 - Zoom sizer in the builder now applies equal left and right margins with a doubled top offset so the canvas has balanced spacing within the viewport.
 - Viewport recenters on container width changes only when near the origin, preserving scroll position during normal editing.
 - Pass `{ enableZoom: false }` to disable zoom and omit the zoom sizer for static dashboards or other non-builder grids.

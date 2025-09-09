@@ -162,7 +162,9 @@ export class CanvasGrid {
     const scW = (this.scrollContainer && this.scrollContainer.clientWidth) || 0;
     const gridW = this.el.offsetWidth || 0;
     const baseW = Math.max(scW, gridW);
-    const baseH = this.el.offsetHeight || 0;
+    const scH = (this.scrollContainer && this.scrollContainer.clientHeight) || 0;
+    const gridH = this.el.offsetHeight || 0;
+    const baseH = Math.max(scH, gridH);
     const targetW = baseW * scale;
     const targetH = baseH * scale;
     if (

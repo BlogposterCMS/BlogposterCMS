@@ -297,6 +297,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   `;
   layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('workspaceMain');
+  gridEl.dataset.workarea = 'true';
   const layoutGridEl = document.getElementById('builderGrid');
 
   // Apply persisted background settings from the initial design payload so
@@ -398,6 +399,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     scrollContainer: gridViewportEl,
     enableZoom: true
   });
+  const sizer = grid?.sizer;
+  if (sizer && layoutRoot && layoutRoot.parentElement !== sizer) {
+    sizer.appendChild(layoutRoot);
+  }
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
   function selectWidget(el) {
     baseSelectWidget(el);

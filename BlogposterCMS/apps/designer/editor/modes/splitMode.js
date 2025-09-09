@@ -62,7 +62,15 @@ export function splitContainer(container, orientation) {
   if (!container || container.dataset.split === 'true') return;
   const existing = Array.from(container.childNodes);
   const frag = document.createDocumentFragment();
-  existing.forEach(ch => frag.appendChild(ch));
+  let existingGrid = null;
+  existing.forEach(ch => {
+    if (ch.classList && ch.classList.contains('builder-grid')) {
+      existingGrid = existingGrid || ch;
+      container.removeChild(ch);
+    } else {
+      frag.appendChild(ch);
+    }
+  });
   const isWorkarea = container.dataset.workarea === 'true';
   container.dataset.split = 'true';
   container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
@@ -78,6 +86,12 @@ export function splitContainer(container, orientation) {
   container.appendChild(childA);
   container.appendChild(childB);
   childA.appendChild(frag);
+  const gridA = existingGrid || document.createElement('div');
+  gridA.classList.add('builder-grid');
+  childA.appendChild(gridA);
+  const gridB = document.createElement('div');
+  gridB.className = 'builder-grid';
+  childB.appendChild(gridB);
   if (isWorkarea) {
     childA.dataset.workarea = 'true';
     container.removeAttribute('data-workarea');

@@ -4,7 +4,7 @@ body[data-active-layer='0'] .layout-container[data-workarea='true'] {
 }
 
 body[data-active-layer='0'] .layout-container[data-workarea='true']::after {
-  content: 'Workarea';
+  content: attr(data-workarea-label);
   position: absolute;
   top: 4px;
   left: 4px;

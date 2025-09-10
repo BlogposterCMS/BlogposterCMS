@@ -9,6 +9,7 @@ import {
   undoTextCommand,
   redoTextCommand
 } from './editor/editor.js';
+import { STRINGS } from './i18n.js';
 import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar, isBackgroundToolbar } from './editor/toolbar/backgroundToolbar.js';
 import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
 import { applyLayout, getItemData } from './managers/layoutManager.js';
@@ -42,6 +43,7 @@ function setDefaultWorkarea(root) {
   }
   if (largest) {
     largest.dataset.workarea = 'true';
+    largest.dataset.workareaLabel = STRINGS.workareaLabel;
   }
 }
 

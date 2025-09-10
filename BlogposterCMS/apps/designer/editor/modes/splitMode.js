@@ -1,3 +1,5 @@
+import { STRINGS } from '../../i18n.js';
+
 const state = {
   rootEl: null,
   onChange: null,
@@ -75,16 +77,22 @@ export function splitContainer(container, orientation) {
         minWidth: '0',
         minHeight: '0'
       });
+      workspace.dataset.emptyHint = STRINGS.splitHint;
+      if (workspace.dataset.workarea === 'true') {
+        workspace.dataset.workareaLabel = STRINGS.workareaLabel;
+      }
     }
     container.dataset.split = 'true';
     container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
     container.style.display = 'flex';
     container.style.flexDirection = container.dataset.orientation === 'horizontal' ? 'column' : 'row';
+    container.dataset.emptyHint = STRINGS.splitHint;
 
     const sibling = document.createElement('div');
     sibling.className = 'layout-container builder-grid canvas-grid';
     sibling.style.flex = '1 1 0';
     sibling.id = generateGridId();
+    sibling.dataset.emptyHint = STRINGS.splitHint;
     container.appendChild(sibling);
 
     cleanupChooser();
@@ -105,24 +113,29 @@ export function splitContainer(container, orientation) {
   container.style.flexDirection = container.dataset.orientation === 'horizontal' ? 'column' : 'row';
   container.classList.add('layout-container');
   container.replaceChildren();
+  container.dataset.emptyHint = STRINGS.splitHint;
 
   const first = document.createElement('div');
   first.className = 'layout-container builder-grid canvas-grid';
   first.style.flex = '1 1 0';
   first.id = generateGridId();
+  first.dataset.emptyHint = STRINGS.splitHint;
   first.appendChild(frag);
 
   const second = document.createElement('div');
   second.className = 'layout-container builder-grid canvas-grid';
   second.style.flex = '1 1 0';
   second.id = generateGridId();
+  second.dataset.emptyHint = STRINGS.splitHint;
 
   container.appendChild(first);
   container.appendChild(second);
 
   if (wasWorkarea) {
     first.dataset.workarea = 'true';
+    first.dataset.workareaLabel = STRINGS.workareaLabel;
     container.removeAttribute('data-workarea');
+    container.removeAttribute('data-workarea-label');
   }
 
   cleanupChooser();
@@ -135,10 +148,13 @@ export function showSplitChooser(container, x, y) {
   cleanupChooser();
   const chooser = document.createElement('div');
   chooser.className = 'split-chooser';
+  chooser.setAttribute('role', 'dialog');
+  chooser.setAttribute('aria-label', STRINGS.chooseSplit);
   const makeBtn = (cls, icon, label, orient) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = cls;
+    btn.setAttribute('aria-label', label);
     const img = document.createElement('img');
     img.src = `/assets/icons/${icon}`;
     img.alt = label;
@@ -152,8 +168,8 @@ export function showSplitChooser(container, x, y) {
     });
     return btn;
   };
-  const vBtn = makeBtn('split-vertical', 'square-split-vertical.svg', 'Side by side', 'vertical');
-  const hBtn = makeBtn('split-horizontal', 'square-split-horizontal.svg', 'Stacked', 'horizontal');
+  const vBtn = makeBtn('split-vertical', 'square-split-vertical.svg', STRINGS.splitSideBySide, 'vertical');
+  const hBtn = makeBtn('split-horizontal', 'square-split-horizontal.svg', STRINGS.splitStacked, 'horizontal');
   chooser.appendChild(vBtn);
   chooser.appendChild(hBtn);
   document.body.appendChild(chooser);
@@ -161,6 +177,7 @@ export function showSplitChooser(container, x, y) {
   chooser.style.left = (x || rect.left + rect.width / 2) + 'px';
   chooser.style.top = (y || rect.top + rect.height / 2) + 'px';
   state.chooserEl = chooser;
+  vBtn.focus();
 }
 
 export function serializeLayout(container) {
@@ -198,7 +215,9 @@ export function deserializeLayout(obj, container) {
     container.className = 'layout-container builder-grid canvas-grid';
     container.style.flex = '1 1 0';
   }
+  container.dataset.emptyHint = STRINGS.splitHint;
   if (obj.workarea) {
     container.dataset.workarea = 'true';
+    container.dataset.workareaLabel = STRINGS.workareaLabel;
   }
 }

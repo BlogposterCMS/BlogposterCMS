@@ -30,6 +30,7 @@ body.builder-mode .layout-container.builder-grid {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
   overflow: hidden;
   box-sizing: border-box;
+  min-height: 120px;
 }
 
 body.builder-mode #builderViewport > .builder-grid {
@@ -38,7 +39,7 @@ body.builder-mode #builderViewport > .builder-grid {
 }
 
 body.builder-mode .layout-container.builder-grid:empty::after {
-  content: 'Click here to split';
+  content: attr(data-empty-hint);
   color: #777;
   font-size: 12px;
   display: flex;
@@ -54,7 +55,7 @@ body.builder-mode .layout-container[data-workarea='true'] {
 }
 
 body.builder-mode .layout-container[data-workarea='true']::after {
-  content: 'Design area';
+  content: attr(data-workarea-label);
   position: absolute;
   top: 4px;
   left: 4px;

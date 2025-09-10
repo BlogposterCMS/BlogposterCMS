@@ -62,6 +62,11 @@ export function splitContainer(container, orientation) {
   if (container.id === 'layoutRoot') {
     const workspace = container.querySelector('#workspaceMain');
     if (workspace) {
+      workspace.classList.add('layout-container', 'builder-grid', 'canvas-grid');
+      workspace.style.position = '';
+      workspace.style.left = '';
+      workspace.style.top = '';
+      workspace.style.height = '';
       workspace.style.minHeight = '100%';
       workspace.style.flex = '1 1 0';
     }

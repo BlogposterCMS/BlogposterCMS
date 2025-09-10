@@ -6,7 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
-- Root splits now wrap `#workspaceMain` in a `layout-container` so flex direction properties apply to the primary workspace.
+- Root splits now add a `layout-container` class to `#workspaceMain` and append sibling grids with `layout-container builder-grid canvas-grid` classes and unique ids.
 - `#workspaceMain` now flexes alongside new root layout containers, allowing siblings to share horizontal or vertical space.
 - Adding a container at the layout root now appends a single builder grid with a unique id and honors the selected flex direction.
 - Zoom sizer now derives height from the larger of the grid and viewport to prevent collapse during canvas zooming.

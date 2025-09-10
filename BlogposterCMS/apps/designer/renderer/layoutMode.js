@@ -10,7 +10,7 @@ export function initLayoutMode(sidebarEl) {
   widgetsPanelTemplate = sidebarEl.innerHTML;
 }
 
-export function populateWidgetsPanel(sidebarEl, allWidgets, iconMap = {}) {
+export function populateWidgetsPanel(sidebarEl, allWidgets, iconMap = {}, switchToLayout) {
   sidebarEl.innerHTML = widgetsPanelTemplate;
   const dragWrap = sidebarEl.querySelector('.drag-icons');
   if (dragWrap) {
@@ -20,6 +20,16 @@ export function populateWidgetsPanel(sidebarEl, allWidgets, iconMap = {}) {
       <span class="label">${w.metadata.label}</span>
     </div>
   `).join('');
+
+    if (typeof switchToLayout === 'function') {
+      const layoutSwitcher = document.createElement('div');
+      layoutSwitcher.className = 'sidebar-item layout-switcher';
+      layoutSwitcher.innerHTML = `${window.featherIcon ? window.featherIcon('panels-top-left') : ''}<span class="label">${STRINGS.layoutEditor}</span>`;
+      layoutSwitcher.setAttribute('draggable', 'false');
+      layoutSwitcher.addEventListener('click', switchToLayout);
+      dragWrap.prepend(layoutSwitcher);
+    }
+
     dragWrap.querySelectorAll('.drag-widget-icon').forEach(icon => {
       icon.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/plain', icon.dataset.widgetId);
@@ -100,7 +110,7 @@ export async function startLayoutMode(ctx) {
 }
 
 export function stopLayoutMode(ctx) {
-  populateWidgetsPanel(ctx.sidebarEl, ctx.allWidgets, ctx.ICON_MAP);
+  populateWidgetsPanel(ctx.sidebarEl, ctx.allWidgets, ctx.ICON_MAP, () => ctx.switchLayer(0));
   if (ctx.gridEl) ctx.gridEl.style.pointerEvents = '';
   ctx.showToolbar();
   hideLayoutPill();

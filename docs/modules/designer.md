@@ -15,6 +15,7 @@ The builder now separates structure from content with distinct **Layout** and **
 Layout mode swaps the widget sidebar for a layout panel placeholder, disables widget
 interactions on the canvas and shows a "Layout-Editor" pill with save and close actions.
 Switching back to design mode restores the widget sidebar and re‑enables normal editing.
+Both editors share a footer with zoom controls, and the design sidebar now features a leading layout switch bubble for jumping to the layout editor.
 Layout mode now exposes a container action bar above each layout leaf with controls to
 add new containers, toggle the design surface, assign static designs and remove containers. The add control
 opens a placement picker offering top, right, bottom, left or inside insertion points;

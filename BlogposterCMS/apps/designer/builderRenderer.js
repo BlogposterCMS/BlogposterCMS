@@ -9,6 +9,7 @@ import {
   undoTextCommand,
   redoTextCommand
 } from './editor/editor.js';
+import { STRINGS } from './i18n.js';
 import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar, isBackgroundToolbar } from './editor/toolbar/backgroundToolbar.js';
 import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
 import { applyLayout, getItemData } from './managers/layoutManager.js';
@@ -42,6 +43,7 @@ function setDefaultWorkarea(root) {
   }
   if (largest) {
     largest.dataset.workarea = 'true';
+    largest.dataset.workareaLabel = STRINGS.workareaLabel;
   }
 }
 
@@ -290,7 +292,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // alongside the main workspace.
   contentEl.innerHTML = `
     <div id="builderViewport" class="builder-viewport">
-      <div id="layoutRoot" class="layout-root layout-container">
+      <div id="layoutRoot" class="layout-root">
         <div id="workspaceMain" class="builder-grid"></div>
       </div>
     </div>
@@ -299,9 +301,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('workspaceMain');
   gridEl.dataset.workarea = 'true';
-  // Ensure CanvasGrid can wrap the workspace with a zoom sizer
-  if (gridEl.parentElement !== gridViewportEl) {
-    gridViewportEl.appendChild(gridEl);
+  // Ensure the layout root sits inside the viewport so the workspace remains nested
+  if (layoutRoot.parentElement !== gridViewportEl) {
+    gridViewportEl.appendChild(layoutRoot);
   }
 
   // Apply persisted background settings from the initial design payload so

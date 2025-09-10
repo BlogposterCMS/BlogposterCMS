@@ -67,10 +67,9 @@ export function createSaveManager(state, ctx) {
     if (!name) { alert('Enter a name'); return; }
     updateAllWidgetContents();
     const layout = getCurrentLayoutForLayer(gridEl, getActiveLayer(), ensureCodeMap());
-    const rootLayout = layoutRoot?.classList?.contains('layout-container')
-      ? layoutRoot
-      : layoutRoot?.querySelector('.layout-container');
-    const layoutTree = rootLayout ? serializeLayout(rootLayout) : null;
+    const layoutTree = layoutRoot?.querySelector('.layout-container')
+      ? serializeLayout(layoutRoot)
+      : null;
     const previewDataUrl = typeof capturePreview === 'function'
       ? await capturePreview()
       : gridEl ? await defaultCapturePreview(gridEl) : '';

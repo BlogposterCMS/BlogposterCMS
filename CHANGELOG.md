@@ -24,6 +24,7 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Footer no longer shows layout/design tabs; zoom controls remain shared across editors.
 - Layout structure features enabled by default; set `FEATURE_LAYOUT_STRUCTURE=false` to disable.
 - Page loader now recognises `workarea` flags as dynamic host indicators.
 - Removed legacy split layout controls and gated layout structure UI behind `FEATURE_LAYOUT_STRUCTURE`; docs updated for the new layout/design flow.
@@ -40,6 +41,7 @@ El Psy Kongroo
 - Split layout control opens a builder panel instead of a popup for layout selection.
 
 ### Added
+- Design sidebar includes a leading layout switch bubble to open the layout editor.
 - Container action bar gains a design assignment control that stores a `designRef` on each container.
 - Layout serialization now persists stable `nodeId`s, split sizes and design references for deterministic runtime mapping.
 - Runtime page loader renders layouts, mounts static design refs and injects page designs into the dynamic host.

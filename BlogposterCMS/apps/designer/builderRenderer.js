@@ -581,7 +581,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     deactivateArrange
   };
 
-  populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP);
+  populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP, HAS_LAYOUT_STRUCTURE ? () => switchLayer(0) : null);
 
   function undo(designId) {
     const { undoStack, redoStack } = getHistory(designId);
@@ -1105,9 +1105,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   function updateLayoutBar() {
     if (!layoutBar) return;
-    layoutBar.querySelectorAll('button').forEach((btn, idx) => {
-      btn.classList.toggle('active', idx === activeLayer);
-    });
+    // No layer tabs to update; footer only hosts zoom controls now.
   }
 
   function markInactiveWidgets() {
@@ -1180,20 +1178,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function buildLayoutBar() {
-    if (layoutName === globalLayoutName) return;
     layoutBar = document.createElement('div');
     layoutBar.className = 'layout-bar';
 
-    // Layer buttons
-    layoutLayers.forEach((layer, idx) => {
-      const btn = document.createElement('button');
-      btn.textContent = layer.name;
-      if (idx === activeLayer) btn.classList.add('active');
-      btn.addEventListener('click', () => switchLayer(idx));
-      layoutBar.appendChild(btn);
-    });
-
-    // Zoom controls (10% � 500%, default 100%)
+    // Zoom controls (10% – 500%, default 100%)
     const zoomWrap = document.createElement('div');
     zoomWrap.className = 'zoom-controls';
     const zoomOut = document.createElement('button');

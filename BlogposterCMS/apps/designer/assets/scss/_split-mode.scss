@@ -40,8 +40,8 @@
   border: 1px solid #ccc;
   border-radius: 4px;
   display: flex;
-  gap: 4px;
-  padding: 4px;
+  gap: 8px;
+  padding: 8px;
 }
 
 .split-chooser button {
@@ -49,9 +49,17 @@
   border: none;
   cursor: pointer;
   padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .split-chooser img {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
+}
+
+.split-chooser span {
+  font-size: 12px;
+  margin-top: 2px;
 }

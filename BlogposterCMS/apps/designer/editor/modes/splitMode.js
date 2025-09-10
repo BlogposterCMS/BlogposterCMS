@@ -135,22 +135,25 @@ export function showSplitChooser(container, x, y) {
   cleanupChooser();
   const chooser = document.createElement('div');
   chooser.className = 'split-chooser';
-  const vBtn = document.createElement('button');
-  vBtn.type = 'button';
-  vBtn.className = 'split-vertical';
-  vBtn.innerHTML = '<img src="/assets/icons/square-split-vertical.svg" alt="vertical" />';
-  const hBtn = document.createElement('button');
-  hBtn.type = 'button';
-  hBtn.className = 'split-horizontal';
-  hBtn.innerHTML = '<img src="/assets/icons/square-split-horizontal.svg" alt="horizontal" />';
-  vBtn.addEventListener('click', ev => {
-    ev.stopPropagation();
-    splitContainer(container, 'vertical');
-  });
-  hBtn.addEventListener('click', ev => {
-    ev.stopPropagation();
-    splitContainer(container, 'horizontal');
-  });
+  const makeBtn = (cls, icon, label, orient) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = cls;
+    const img = document.createElement('img');
+    img.src = `/assets/icons/${icon}`;
+    img.alt = label;
+    const span = document.createElement('span');
+    span.textContent = label;
+    btn.appendChild(img);
+    btn.appendChild(span);
+    btn.addEventListener('click', ev => {
+      ev.stopPropagation();
+      splitContainer(container, orient);
+    });
+    return btn;
+  };
+  const vBtn = makeBtn('split-vertical', 'square-split-vertical.svg', 'Nebeneinander', 'vertical');
+  const hBtn = makeBtn('split-horizontal', 'square-split-horizontal.svg', 'Übereinander', 'horizontal');
   chooser.appendChild(vBtn);
   chooser.appendChild(hBtn);
   document.body.appendChild(chooser);

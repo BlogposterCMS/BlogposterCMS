@@ -34,6 +34,7 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - The largest leaf layout container is automatically marked as the Primary Workarea and highlighted in layout mode for easier widget placement. Split containers and the layout root are ignored; if no candidate has a measurable size during load, the first leaf is chosen.
 - The builder embeds `#workspaceMain` inside a persistent `#layoutRoot`. When the layout is first split, `#workspaceMain` gains a `layout-container` class, its absolute positioning styles are removed, and `#layoutRoot` appends a single empty sibling container with `layout-container builder-grid canvas-grid` classes and a unique id. Any layout container can be split again to create two new layout containers inside it.
 - Builder grid elements now stretch to fill their layout containers so `#workspaceMain` always mirrors `#layoutRoot` dimensions and flexes alongside newly added root containers.
+- Empty layout containers display a hint inviting users to split or add content, and the current design host is outlined and labelled "Design-Fläche" for clarity.
 - When editing an existing design, the builder preloads `data-design-id` and
   `data-design-version` from `#builderMain` (or `document.body`). These values
   are seeded from the `designId` and `designVersion` query parameters so saves

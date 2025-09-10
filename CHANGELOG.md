@@ -31,6 +31,7 @@ El Psy Kongroo
 - Split layout control opens a builder panel instead of a popup for layout selection.
 
 ### Added
+- Split chooser now uses labelled buttons for orientation, empty layout containers show guidance text, and the active design host is visibly highlighted.
 - Public `grid.emitChange()` helper and `designerContentChanged` autosave event for responsive content updates.
 - Dedicated `#workspaceMain` design grid renders alongside a persistent `#layoutRoot` containing a layout-only `#builderGrid` so layouts deserialize without detaching the canvas.
 - Layout layer now highlights the Primary Workarea outside of split mode for clearer widget placement.

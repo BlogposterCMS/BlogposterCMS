@@ -6,8 +6,6 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
-- Layout deserialization now reuses the existing `#workspaceMain` as the workarea, preventing duplicate grids.
-- Root layout element no longer carries a `layout-container` class; styles cover layout containers that double as builder grids.
 - Root splits now add a `layout-container` class to `#workspaceMain` and append sibling grids with `layout-container builder-grid canvas-grid` classes and unique ids.
 - `#workspaceMain` now flexes alongside new root layout containers, allowing siblings to share horizontal or vertical space.
 - Adding a container at the layout root now appends a single builder grid with a unique id and honors the selected flex direction.
@@ -20,8 +18,6 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
-- Saving designs serializes the entire layout tree from `#layoutRoot` so root split orientation persists.
-- Split mode now divides any non-root layout container into two empty containers (`layout-container builder-grid canvas-grid`) for nested layouts while keeping `#workspaceMain` as the primary work area.
 - Layout containers created in split mode now start with a single canvas-enabled builder grid instead of two nested child containers, enabling widget placement in both containers.
 - Removed designer CSS output; SCSS is the source of truth for designer layout.
 - `#workspaceMain` now lives inside `#layoutRoot`; splitting it creates a new sibling container rather than dividing the main workspace.

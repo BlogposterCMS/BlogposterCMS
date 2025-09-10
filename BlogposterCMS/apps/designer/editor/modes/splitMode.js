@@ -68,29 +68,19 @@ export function splitContainer(container, orientation) {
   const alreadySplit = container.dataset.split === 'true';
   if (container.id === 'layoutRoot') {
     const workspace = container.querySelector('#workspaceMain');
-    if (workspace && !workspace.parentElement.classList.contains('layout-container')) {
-      const wrap = document.createElement('div');
-      wrap.className = 'layout-container';
-      wrap.style.flex = '1 1 0';
-      if (workspace.dataset.workarea === 'true') {
-        wrap.dataset.workarea = 'true';
-        workspace.removeAttribute('data-workarea');
-      }
-      container.insertBefore(wrap, workspace);
-      wrap.appendChild(workspace);
+    if (workspace && !workspace.classList.contains('layout-container')) {
+      workspace.classList.add('layout-container');
+      workspace.style.flex = '1 1 0';
     }
     container.dataset.split = 'true';
     container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
     container.style.display = 'flex';
     container.style.flexDirection = container.dataset.orientation === 'horizontal' ? 'column' : 'row';
-    const div = document.createElement('div');
-    div.className = 'layout-container';
-    div.style.flex = '1 1 0';
     const grid = document.createElement('div');
-    grid.className = 'builder-grid canvas-grid';
+    grid.className = 'layout-container builder-grid canvas-grid';
+    grid.style.flex = '1 1 0';
     grid.id = generateGridId();
-    div.appendChild(grid);
-    container.appendChild(div);
+    container.appendChild(grid);
     cleanupChooser();
     if (typeof state.onChange === 'function') {
       try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }
@@ -101,14 +91,11 @@ export function splitContainer(container, orientation) {
   if (hasWorkspace) {
     const parent = container.parentElement;
     if (parent) {
-      const div = document.createElement('div');
-      div.className = 'layout-container';
-      div.style.flex = '1 1 0';
       const grid = document.createElement('div');
-      grid.className = 'builder-grid canvas-grid';
+      grid.className = 'layout-container builder-grid canvas-grid';
+      grid.style.flex = '1 1 0';
       grid.id = generateGridId();
-      div.appendChild(grid);
-      parent.appendChild(div);
+      parent.appendChild(grid);
       cleanupChooser();
       if (typeof state.onChange === 'function') {
         try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }

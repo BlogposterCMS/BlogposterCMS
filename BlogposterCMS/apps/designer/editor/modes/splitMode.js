@@ -35,13 +35,6 @@ export function enterSplitMode({ rootEl, onChange } = {}) {
   if (!rootEl) return;
   state.rootEl = rootEl;
   state.onChange = typeof onChange === 'function' ? onChange : () => {};
-  if (!rootEl.querySelector('.layout-container')) {
-    const root = document.createElement('div');
-    root.className = 'layout-container';
-    root.style.minHeight = '100%';
-    root.style.flex = '1 1 auto';
-    rootEl.appendChild(root);
-  }
   rootEl.classList.add('split-mode');
   state.escHandler = handleEsc;
   state.clickHandler = handleClick;
@@ -68,28 +61,19 @@ export function splitContainer(container, orientation) {
   const alreadySplit = container.dataset.split === 'true';
   if (container.id === 'layoutRoot') {
     const workspace = container.querySelector('#workspaceMain');
-    if (workspace && !workspace.parentElement.classList.contains('layout-container')) {
-      const wrap = document.createElement('div');
-      wrap.className = 'layout-container';
-      wrap.style.flex = '1 1 0';
-      if (workspace.dataset.workarea === 'true') {
-        wrap.dataset.workarea = 'true';
-        workspace.removeAttribute('data-workarea');
-      }
-      container.insertBefore(wrap, workspace);
-      wrap.appendChild(workspace);
+    if (workspace) {
+      workspace.style.minHeight = '100%';
+      workspace.style.flex = '1 1 0';
     }
     container.dataset.split = 'true';
     container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
     container.style.display = 'flex';
     container.style.flexDirection = container.dataset.orientation === 'horizontal' ? 'column' : 'row';
     const div = document.createElement('div');
-    div.className = 'layout-container';
+    div.className = 'layout-container builder-grid canvas-grid';
     div.style.flex = '1 1 0';
-    const grid = document.createElement('div');
-    grid.className = 'builder-grid canvas-grid';
-    grid.id = generateGridId();
-    div.appendChild(grid);
+    div.style.minHeight = '100%';
+    div.id = generateGridId();
     container.appendChild(div);
     cleanupChooser();
     if (typeof state.onChange === 'function') {
@@ -102,12 +86,10 @@ export function splitContainer(container, orientation) {
     const parent = container.parentElement;
     if (parent) {
       const div = document.createElement('div');
-      div.className = 'layout-container';
+      div.className = 'layout-container builder-grid canvas-grid';
       div.style.flex = '1 1 0';
-      const grid = document.createElement('div');
-      grid.className = 'builder-grid canvas-grid';
-      grid.id = generateGridId();
-      div.appendChild(grid);
+      div.style.minHeight = '100%';
+      div.id = generateGridId();
       parent.appendChild(div);
       cleanupChooser();
       if (typeof state.onChange === 'function') {
@@ -123,21 +105,20 @@ export function splitContainer(container, orientation) {
     if (ch.classList && ch.classList.contains('builder-grid')) {
       existingGrid = existingGrid || ch;
       container.removeChild(ch);
+      while (ch.firstChild) frag.appendChild(ch.firstChild);
     } else {
       frag.appendChild(ch);
     }
   });
   const isWorkarea = container.dataset.workarea === 'true';
-  container.classList.add('layout-container');
+  container.classList.add('layout-container', 'builder-grid', 'canvas-grid');
   container.style.flex = '1 1 0';
+  container.style.minHeight = '100%';
   container.removeAttribute('data-split');
   container.removeAttribute('data-orientation');
+  if (!container.id) container.id = existingGrid?.id || generateGridId();
   container.replaceChildren();
   container.appendChild(frag);
-  const grid = existingGrid || document.createElement('div');
-  grid.classList.add('builder-grid', 'canvas-grid');
-  if (!existingGrid) grid.id = generateGridId();
-  container.appendChild(grid);
   if (isWorkarea) container.dataset.workarea = 'true';
   cleanupChooser();
   if (typeof state.onChange === 'function') {
@@ -194,8 +175,10 @@ export function deserializeLayout(obj, container) {
     container.style.flexDirection = obj.orientation === 'horizontal' ? 'column' : 'row';
     for (const child of obj.children || []) {
       const div = document.createElement('div');
-      div.className = 'layout-container';
+      div.className = 'layout-container builder-grid canvas-grid';
       div.style.flex = '1 1 0';
+      div.style.minHeight = '100%';
+      div.id = generateGridId();
       container.appendChild(div);
       deserializeLayout(child, div);
     }

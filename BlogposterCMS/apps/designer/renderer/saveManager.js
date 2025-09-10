@@ -1,6 +1,6 @@
 import { capturePreview as defaultCapturePreview } from './capturePreview.js';
 import { designerState } from '../managers/designerState.js';
-import { serializeLayout } from '../editor/modes/splitMode.js';
+import { serializeLayout } from './layoutSerialize.js';
 
 export function createSaveManager(state, ctx) {
   function scheduleAutosave() {

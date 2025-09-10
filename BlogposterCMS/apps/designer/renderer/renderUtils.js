@@ -22,3 +22,8 @@ export function getWidgetIcon(w, iconMap = {}) {
     ? window.featherIcon(iconName)
     : `<img src="/assets/icons/${iconName}.svg" alt="${iconName}" />`;
 }
+
+export function generateNodeId() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}

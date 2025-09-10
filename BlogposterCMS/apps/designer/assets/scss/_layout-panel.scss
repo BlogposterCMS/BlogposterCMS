@@ -1,0 +1,42 @@
+  .layout-panel {
+    padding: 16px;
+    h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    p {
+      margin: 0;
+      font-size: 12px;
+      color: #666;
+    }
+    .arrange-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+  }
+
+.layout-mode-pill {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 9999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  z-index: 200;
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    color: #333;
+  }
+}

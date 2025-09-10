@@ -16,10 +16,17 @@ import { applyLayout, getItemData } from './managers/layoutManager.js';
 import { registerDeselect } from './managers/eventManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 import { designerState } from './managers/designerState.js';
-import { deserializeLayout } from './editor/modes/splitMode.js';
+import { deserializeLayout, serializeLayout } from './renderer/layoutSerialize.js';
+import { initLayoutMode, populateWidgetsPanel, startLayoutMode, stopLayoutMode } from './renderer/layoutMode.js';
+import { attachContainerBar } from './ux/containerActionBar.js';
+import { renderLayoutTreeSidebar } from './renderer/layoutTreeView.js';
+import { activateArrange as enableArrange, deactivateArrange as disableArrange } from './managers/layoutArrange.js';
+import { generateNodeId } from './renderer/renderUtils.js';
 
 import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
 
+// Enable layout structure features by default unless explicitly disabled
+const HAS_LAYOUT_STRUCTURE = window.FEATURE_LAYOUT_STRUCTURE !== false;
 const historyByDesign = {};
 
 function setDefaultWorkarea(root) {
@@ -118,14 +125,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   let previewHeader;
   let viewportSelect;
-  const layoutLayers = [
-    { name: 'Layout', layout: [] },
-    { name: 'Design', layout: [] }
-  ];
+  const layoutLayers = HAS_LAYOUT_STRUCTURE
+    ? [{ name: 'Layout', layout: [] }, { name: 'Design', layout: [] }]
+    : [{ name: 'Design', layout: [] }];
   const startLayerNum = Number(startLayer);
-  let activeLayer = Number.isFinite(startLayerNum)
+  let activeLayer = HAS_LAYOUT_STRUCTURE && Number.isFinite(startLayerNum)
     ? Math.max(0, Math.min(layoutLayers.length - 1, startLayerNum))
-    : 1;
+    : 0;
   document.body.dataset.activeLayer = String(activeLayer);
   const footer = document.getElementById('builderFooter');
   let layoutBar;
@@ -229,9 +235,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
-
-
-
+  initLayoutMode(sidebarEl);
 
   let allWidgets = [];
   let loadedDesign = null;
@@ -269,20 +273,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
 
-  sidebarEl.querySelector('.drag-icons').innerHTML = allWidgets.map(w => `
-    <div class="sidebar-item drag-widget-icon" draggable="true" data-widget-id="${w.id}">
-      ${getWidgetIcon(w, ICON_MAP)}
-      <span class="label">${w.metadata.label}</span>
-    </div>
-  `).join('');
-
-  sidebarEl.querySelectorAll('.drag-widget-icon').forEach(icon => {
-    icon.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', icon.dataset.widgetId);
-    });
-  });
-
-    // Use a plain builder grid container. CanvasGrid will add its own
+  // Use a plain builder grid container. CanvasGrid will add its own
   // `canvas-grid` class; avoid `pixel-grid` here so zoom scaling via
   // CSS variable works with the BoundingBoxManager.
   //
@@ -362,6 +353,235 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     getLayer: () => activeLayer
   };
   const { scheduleAutosave, startAutosave, saveDesign } = createSaveManager(state, saveLayoutCtx);
+  function createLeaf() {
+    const div = document.createElement('div');
+    div.className = 'layout-container builder-grid canvas-grid';
+    div.style.flex = '1 1 0';
+    div.dataset.emptyHint = STRINGS.splitHint;
+    // Assign deterministic node ids for stable layout serialization
+    div.dataset.nodeId = generateNodeId();
+    return div;
+  }
+
+  function pushAndSave() {
+    const layout = serializeLayout(layoutRoot);
+    pushLayoutState(layout);
+    if (pageId && state.autosaveEnabled) scheduleAutosave();
+  }
+
+  let layoutCtx;
+
+  function refreshContainerBars() {
+    if (!HAS_LAYOUT_STRUCTURE) return;
+    layoutRoot?.querySelectorAll('.layout-container').forEach(el => {
+      if (el.dataset.split === 'true') return;
+      attachContainerBar(el, layoutCtx);
+    });
+  }
+
+  function refreshLayoutTree() {
+    if (!HAS_LAYOUT_STRUCTURE) return;
+    const panel = sidebarEl.querySelector('.layout-panel');
+    if (!panel) return;
+    renderLayoutTreeSidebar(panel, layoutRoot, el => {
+      try {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('tree-selected');
+        setTimeout(() => el.classList.remove('tree-selected'), 1000);
+      } catch (_) {
+      }
+    });
+  }
+
+  function placeContainer(targetEl, pos) {
+    if (!targetEl) return;
+    const orientation = (pos === 'left' || pos === 'right') ? 'vertical'
+      : (pos === 'top' || pos === 'bottom') ? 'horizontal' : 'horizontal';
+    const newLeaf = createLeaf();
+    if (pos === 'inside') {
+      if (targetEl.dataset.split === 'true') {
+        targetEl.appendChild(newLeaf);
+      } else {
+        const frag = document.createDocumentFragment();
+        while (targetEl.firstChild) frag.appendChild(targetEl.firstChild);
+        targetEl.dataset.split = 'true';
+        targetEl.dataset.orientation = orientation;
+        targetEl.style.display = 'flex';
+        targetEl.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
+        const existing = createLeaf();
+        existing.appendChild(frag);
+        targetEl.append(existing, newLeaf);
+      }
+    } else {
+      const parent = targetEl.parentElement;
+      if (parent && parent.dataset.split === 'true' && parent.dataset.orientation === orientation) {
+        if (pos === 'left' || pos === 'top') parent.insertBefore(newLeaf, targetEl);
+        else parent.insertBefore(newLeaf, targetEl.nextSibling);
+      } else {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'layout-container';
+        wrapper.dataset.split = 'true';
+        wrapper.dataset.orientation = orientation;
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
+        wrapper.dataset.emptyHint = STRINGS.splitHint;
+        if (parent) parent.replaceChild(wrapper, targetEl);
+        wrapper.appendChild(targetEl);
+        targetEl.style.flex = '1 1 0';
+        if (pos === 'left' || pos === 'top') wrapper.insertBefore(newLeaf, targetEl);
+        else wrapper.appendChild(newLeaf);
+      }
+    }
+    refreshContainerBars();
+    pushAndSave();
+    setDefaultWorkarea(layoutRoot);
+    refreshLayoutTree();
+  }
+
+  function setDynamicHost(el) {
+    layoutRoot.querySelectorAll('.layout-container[data-workarea="true"]').forEach(n => {
+      n.removeAttribute('data-workarea');
+      n.removeAttribute('data-workarea-label');
+    });
+    if (el) {
+      el.dataset.workarea = 'true';
+      el.dataset.workareaLabel = STRINGS.workareaLabel;
+    }
+    refreshContainerBars();
+    pushAndSave();
+  }
+
+  function setDesignRef(el, designId) {
+    if (!el) return;
+    if (designId) el.dataset.designRef = designId;
+    else delete el.dataset.designRef;
+    refreshContainerBars();
+    pushAndSave();
+  }
+
+  function deleteContainer(el) {
+    if (!el) return;
+    const parent = el.parentElement;
+    el.remove();
+    if (parent && parent.dataset && parent.dataset.split === 'true') {
+      const children = Array.from(parent.children);
+      if (children.length === 1) {
+        const only = children[0];
+        if (parent.dataset.workarea === 'true') {
+          only.dataset.workarea = 'true';
+          only.dataset.workareaLabel = STRINGS.workareaLabel;
+        }
+        parent.replaceWith(only);
+      }
+    }
+    setDefaultWorkarea(layoutRoot);
+    refreshContainerBars();
+    pushAndSave();
+    refreshLayoutTree();
+  }
+
+  function moveContainer(srcEl, targetEl, pos) {
+    if (!srcEl || !targetEl || srcEl === targetEl) return;
+    const orientation = (pos === 'left' || pos === 'right') ? 'vertical'
+      : (pos === 'top' || pos === 'bottom') ? 'horizontal'
+      : targetEl.dataset.orientation || 'horizontal';
+    const srcParent = srcEl.parentElement;
+    if (pos === 'inside') {
+      if (targetEl.dataset.split === 'true') {
+        targetEl.appendChild(srcEl);
+      } else {
+        const frag = document.createDocumentFragment();
+        while (targetEl.firstChild) frag.appendChild(targetEl.firstChild);
+        targetEl.dataset.split = 'true';
+        targetEl.dataset.orientation = orientation;
+        targetEl.style.display = 'flex';
+        targetEl.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
+        const existing = createLeaf();
+        existing.appendChild(frag);
+        targetEl.append(existing, srcEl);
+      }
+    } else {
+      const parent = targetEl.parentElement;
+      if (parent && parent.dataset.split === 'true' && parent.dataset.orientation === orientation) {
+        if (pos === 'left' || pos === 'top') parent.insertBefore(srcEl, targetEl);
+        else parent.insertBefore(srcEl, targetEl.nextSibling);
+      } else {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'layout-container';
+        wrapper.dataset.split = 'true';
+        wrapper.dataset.orientation = orientation;
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
+        wrapper.dataset.emptyHint = STRINGS.splitHint;
+        if (parent) parent.replaceChild(wrapper, targetEl);
+        wrapper.appendChild(targetEl);
+        targetEl.style.flex = '1 1 0';
+        if (pos === 'left' || pos === 'top') wrapper.insertBefore(srcEl, targetEl);
+        else wrapper.appendChild(srcEl);
+      }
+    }
+    if (srcParent && srcParent.dataset && srcParent.dataset.split === 'true') {
+      const kids = Array.from(srcParent.children);
+      if (kids.length === 1) {
+        const only = kids[0];
+        if (srcParent.dataset.workarea === 'true') {
+          only.dataset.workarea = 'true';
+          only.dataset.workareaLabel = STRINGS.workareaLabel;
+        }
+        srcParent.replaceWith(only);
+      }
+    }
+    refreshContainerBars();
+    pushAndSave();
+    setDefaultWorkarea(layoutRoot);
+    refreshLayoutTree();
+  }
+
+  function activateArrange() {
+    enableArrange(layoutRoot, { moveContainer });
+  }
+
+  function deactivateArrange() {
+    disableArrange(layoutRoot);
+  }
+
+  function wireArrangeToggle() {
+    const toggle = sidebarEl.querySelector('.layout-arrange-toggle');
+    if (!toggle) return;
+    toggle.addEventListener('change', () => {
+      if (toggle.checked) activateArrange();
+      else deactivateArrange();
+    });
+  }
+
+  layoutCtx = {
+    sidebarEl,
+    gridEl,
+    allWidgets,
+    ICON_MAP,
+    hideToolbar,
+    showToolbar,
+    saveDesign,
+    getCurrentLayoutForLayer,
+    getActiveLayer: () => activeLayer,
+    ensureCodeMap,
+    capturePreview: () => captureGridPreview(gridEl),
+    updateAllWidgetContents,
+    getAdminUserId,
+    pageId,
+    layoutRoot,
+    switchLayer,
+    placeContainer,
+    setDynamicHost,
+    setDesignRef,
+    deleteContainer,
+    refreshContainerBars,
+    refreshLayoutTree,
+    activateArrange,
+    deactivateArrange
+  };
+
+  populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP);
 
   function undo(designId) {
     const { undoStack, redoStack } = getHistory(designId);
@@ -397,6 +617,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     layoutRoot.appendChild(gridEl);
   }
   setDefaultWorkarea(layoutRoot);
+  layoutCtx.refreshContainerBars();
+  layoutCtx.refreshLayoutTree();
   window.addEventListener('resize', () => {
     setDefaultWorkarea(layoutRoot);
   });
@@ -568,16 +790,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       });
       pageData = pageRes?.data ?? pageRes ?? null;
 
-      try {
-        const globalRes = await meltdownEmit('getGlobalLayoutTemplate', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core'
-        });
-        layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
-        globalLayoutName = globalRes?.name || null;
-      } catch (err) {
-        console.warn('[Designer] failed to load global layout', err);
+      if (HAS_LAYOUT_STRUCTURE) {
+        try {
+          const globalRes = await meltdownEmit('getGlobalLayoutTemplate', {
+            jwt: window.ADMIN_TOKEN,
+            moduleName: 'plainspace',
+            moduleType: 'core'
+          });
+          layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
+          globalLayoutName = globalRes?.name || null;
+        } catch (err) {
+          console.warn('[Designer] failed to load global layout', err);
+        }
       }
     } catch (err) {
       console.error('[Designer] load layout or page error', err);
@@ -617,23 +841,29 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         console.warn('[Designer] failed to load layout template', err);
       }
     }
-    try {
-      const globalRes = await meltdownEmit('getGlobalLayoutTemplate', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core'
-      });
-      layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
-      globalLayoutName = globalRes?.name || null;
-    } catch (err) {
-      console.warn('[Designer] failed to load global layout', err);
+    if (HAS_LAYOUT_STRUCTURE) {
+      try {
+        const globalRes = await meltdownEmit('getGlobalLayoutTemplate', {
+          jwt: window.ADMIN_TOKEN,
+          moduleName: 'plainspace',
+          moduleType: 'core'
+        });
+        layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
+        globalLayoutName = globalRes?.name || null;
+      } catch (err) {
+        console.warn('[Designer] failed to load global layout', err);
+      }
     }
   }
 
 
 
 
-  layoutLayers[1].layout = initialLayout;
+  if (HAS_LAYOUT_STRUCTURE) {
+    layoutLayers[1].layout = initialLayout;
+  } else {
+    layoutLayers[0].layout = initialLayout;
+  }
   applyCompositeLayout(activeLayer);
   markInactiveWidgets();
 
@@ -788,6 +1018,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   startAutosave();
   buildLayoutBar();
 
+  if (HAS_LAYOUT_STRUCTURE) {
+    if (activeLayer === 0) {
+      startLayoutMode(layoutCtx);
+      wireArrangeToggle();
+    } else {
+      stopLayoutMode(layoutCtx);
+    }
+  }
+
   saveBtn.addEventListener('click', async () => {
     try {
       await saveDesign({
@@ -929,6 +1168,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.dataset.activeLayer = String(activeLayer);
     applyCompositeLayout(idx);
     updateLayoutBar();
+    if (HAS_LAYOUT_STRUCTURE) {
+      if (activeLayer === 0) {
+        startLayoutMode(layoutCtx);
+        wireArrangeToggle();
+      } else {
+        deactivateArrange();
+        stopLayoutMode(layoutCtx);
+      }
+    }
   }
 
   function buildLayoutBar() {
@@ -939,7 +1187,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     // Layer buttons
     layoutLayers.forEach((layer, idx) => {
       const btn = document.createElement('button');
-      btn.textContent = idx === 0 ? 'Layout' : 'Design';
+      btn.textContent = layer.name;
       if (idx === activeLayer) btn.classList.add('active');
       btn.addEventListener('click', () => switchLayer(idx));
       layoutBar.appendChild(btn);

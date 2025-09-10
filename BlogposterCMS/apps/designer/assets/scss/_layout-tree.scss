@@ -1,0 +1,14 @@
+.layout-tree {
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.layout-tree-item {
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.layout-tree-item.selected {
+  background: #e5e7eb;
+}

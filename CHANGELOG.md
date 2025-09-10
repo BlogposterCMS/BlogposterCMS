@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Root-level builder grids now flex to fill `#layoutRoot`, ensuring `#workspaceMain` spans the full work area before any splits.
 - Splitting a non-root container now transfers the `data-workarea` flag to the first new child so the active work area persists.
  - Root splits now add a `layout-container` class to `#workspaceMain`, remove its absolute positioning styles, and append a single empty sibling grid with `layout-container builder-grid canvas-grid` classes and a unique id.
  - `#workspaceMain` now flexes alongside new root layout containers, allowing siblings to share horizontal or vertical space.

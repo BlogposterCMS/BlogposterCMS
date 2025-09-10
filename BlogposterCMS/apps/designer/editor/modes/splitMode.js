@@ -67,6 +67,18 @@ export function splitContainer(container, orientation) {
   const hasWorkspace = container.querySelector('#workspaceMain');
   const alreadySplit = container.dataset.split === 'true';
   if (container.id === 'layoutRoot') {
+    const workspace = container.querySelector('#workspaceMain');
+    if (workspace && !workspace.parentElement.classList.contains('layout-container')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'layout-container';
+      wrap.style.flex = '1 1 0';
+      if (workspace.dataset.workarea === 'true') {
+        wrap.dataset.workarea = 'true';
+        workspace.removeAttribute('data-workarea');
+      }
+      container.insertBefore(wrap, workspace);
+      wrap.appendChild(workspace);
+    }
     container.dataset.split = 'true';
     container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
     container.style.display = 'flex';

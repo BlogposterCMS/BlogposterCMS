@@ -287,11 +287,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // Wrap the grid in a scrollable viewport so scrollbars live "inside"
   // the designer instead of the page. The #layoutRoot now hosts
   // #workspaceMain directly so additional layout containers appear
-  // alongside the main workspace.
+  // alongside the main workspace. The workarea itself combines the
+  // layout and canvas grid classes so it flexes with sibling grids.
   contentEl.innerHTML = `
     <div id="builderViewport" class="builder-viewport">
       <div id="layoutRoot" class="layout-root layout-container">
-        <div id="workspaceMain" class="builder-grid"></div>
+        <div id="workspaceMain" class="layout-container builder-grid canvas-grid"></div>
       </div>
     </div>
   `;

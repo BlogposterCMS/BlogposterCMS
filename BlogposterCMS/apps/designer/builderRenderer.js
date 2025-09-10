@@ -290,7 +290,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // alongside the main workspace.
   contentEl.innerHTML = `
     <div id="builderViewport" class="builder-viewport">
-      <div id="layoutRoot" class="layout-root layout-container">
+      <div id="layoutRoot" class="layout-root">
         <div id="workspaceMain" class="builder-grid"></div>
       </div>
     </div>
@@ -335,7 +335,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const layoutData = designData?.layout || designData?.layout_json;
     if (layoutData) {
       const obj = typeof layoutData === 'string' ? JSON.parse(layoutData) : layoutData;
-      deserializeLayout(obj, layoutRoot);
+      deserializeLayout(obj, layoutRoot, gridEl);
     }
   } catch (e) {
     console.warn('[Designer] failed to deserialize layout', e);
@@ -392,7 +392,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const sizer = grid?.sizer;
   if (sizer && layoutRoot) {
     sizer.appendChild(layoutRoot);
-    layoutRoot.appendChild(gridEl);
   }
   setDefaultWorkarea(layoutRoot);
   window.addEventListener('resize', () => {

@@ -38,7 +38,7 @@ body.builder-mode #builderViewport > .builder-grid {
 }
 
 body.builder-mode .layout-container.builder-grid:empty::after {
-  content: 'Hier klicken, um zu teilen';
+  content: 'Click here to split';
   color: #777;
   font-size: 12px;
   display: flex;
@@ -54,7 +54,7 @@ body.builder-mode .layout-container[data-workarea='true'] {
 }
 
 body.builder-mode .layout-container[data-workarea='true']::after {
-  content: 'Design-Fläche';
+  content: 'Design area';
   position: absolute;
   top: 4px;
   left: 4px;

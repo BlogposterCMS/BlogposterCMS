@@ -152,8 +152,8 @@ export function showSplitChooser(container, x, y) {
     });
     return btn;
   };
-  const vBtn = makeBtn('split-vertical', 'square-split-vertical.svg', 'Nebeneinander', 'vertical');
-  const hBtn = makeBtn('split-horizontal', 'square-split-horizontal.svg', 'Übereinander', 'horizontal');
+  const vBtn = makeBtn('split-vertical', 'square-split-vertical.svg', 'Side by side', 'vertical');
+  const hBtn = makeBtn('split-horizontal', 'square-split-horizontal.svg', 'Stacked', 'horizontal');
   chooser.appendChild(vBtn);
   chooser.appendChild(hBtn);
   document.body.appendChild(chooser);

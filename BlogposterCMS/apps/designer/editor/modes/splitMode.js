@@ -35,14 +35,18 @@ export function enterSplitMode({ rootEl, onChange } = {}) {
   if (!rootEl) return;
   state.rootEl = rootEl;
   state.onChange = typeof onChange === 'function' ? onChange : () => {};
+  if (!rootEl.querySelector('.layout-container')) {
+    const root = document.createElement('div');
+    root.className = 'layout-container';
+    root.style.minHeight = '100%';
+    root.style.flex = '1 1 auto';
+    rootEl.appendChild(root);
+  }
   rootEl.classList.add('split-mode');
   state.escHandler = handleEsc;
   state.clickHandler = handleClick;
   document.addEventListener('keydown', state.escHandler, true);
   rootEl.addEventListener('click', state.clickHandler, true);
-  if (!rootEl.querySelector('.layout-container')) {
-    showSplitChooser(rootEl);
-  }
 }
 
 export function exitSplitMode() {
@@ -60,13 +64,13 @@ export function exitSplitMode() {
 
 export function splitContainer(container, orientation) {
   if (!container) return;
+  const hasWorkspace = container.querySelector('#workspaceMain');
   const alreadySplit = container.dataset.split === 'true';
   if (container.id === 'layoutRoot') {
     const workspace = container.querySelector('#workspaceMain');
     if (workspace && !workspace.classList.contains('layout-container')) {
       workspace.classList.add('layout-container');
       workspace.style.flex = '1 1 0';
-      workspace.style.minHeight = '100%';
     }
     container.dataset.split = 'true';
     container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
@@ -75,7 +79,6 @@ export function splitContainer(container, orientation) {
     const grid = document.createElement('div');
     grid.className = 'layout-container builder-grid canvas-grid';
     grid.style.flex = '1 1 0';
-    grid.style.minHeight = '100%';
     grid.id = generateGridId();
     container.appendChild(grid);
     cleanupChooser();
@@ -85,13 +88,12 @@ export function splitContainer(container, orientation) {
     return;
   }
   if (alreadySplit) return;
-  if (container.id === 'workspaceMain') {
+  if (hasWorkspace) {
     const parent = container.parentElement;
     if (parent) {
       const grid = document.createElement('div');
       grid.className = 'layout-container builder-grid canvas-grid';
       grid.style.flex = '1 1 0';
-      grid.style.minHeight = '100%';
       grid.id = generateGridId();
       parent.appendChild(grid);
       cleanupChooser();
@@ -102,24 +104,28 @@ export function splitContainer(container, orientation) {
     return;
   }
   const existing = Array.from(container.childNodes);
-  const first = document.createElement('div');
-  const second = document.createElement('div');
-  first.className = 'layout-container builder-grid canvas-grid';
-  second.className = 'layout-container builder-grid canvas-grid';
-  first.style.flex = '1 1 0';
-  second.style.flex = '1 1 0';
-  first.style.minHeight = '100%';
-  second.style.minHeight = '100%';
-  first.id = generateGridId();
-  second.id = generateGridId();
-  if (existing.length) {
-    first.append(...existing);
-  }
-  container.dataset.split = 'true';
-  container.dataset.orientation = orientation === 'horizontal' ? 'horizontal' : 'vertical';
-  container.style.display = 'flex';
-  container.style.flexDirection = container.dataset.orientation === 'horizontal' ? 'column' : 'row';
-  container.replaceChildren(first, second);
+  const frag = document.createDocumentFragment();
+  let existingGrid = null;
+  existing.forEach(ch => {
+    if (ch.classList && ch.classList.contains('builder-grid')) {
+      existingGrid = existingGrid || ch;
+      container.removeChild(ch);
+    } else {
+      frag.appendChild(ch);
+    }
+  });
+  const isWorkarea = container.dataset.workarea === 'true';
+  container.classList.add('layout-container');
+  container.style.flex = '1 1 0';
+  container.removeAttribute('data-split');
+  container.removeAttribute('data-orientation');
+  container.replaceChildren();
+  container.appendChild(frag);
+  const grid = existingGrid || document.createElement('div');
+  grid.classList.add('builder-grid', 'canvas-grid');
+  if (!existingGrid) grid.id = generateGridId();
+  container.appendChild(grid);
+  if (isWorkarea) container.dataset.workarea = 'true';
   cleanupChooser();
   if (typeof state.onChange === 'function') {
     try { state.onChange(); } catch (e) { console.warn('[splitMode] onChange error', e); }
@@ -165,51 +171,23 @@ export function serializeLayout(container) {
   return { orientation, workarea, children };
 }
 
-export function deserializeLayout(obj, container, workEl = document.getElementById('workspaceMain')) {
+export function deserializeLayout(obj, container) {
   if (!container || !obj) return;
-  if (!obj.orientation && (!obj.children || !obj.children.length)) {
-    if (workEl && container === document.getElementById('layoutRoot')) {
-      container.replaceChildren(workEl);
-    } else {
-      container.replaceChildren();
-    }
-    if (obj.workarea && workEl) {
-      workEl.dataset.workarea = 'true';
-      workEl.classList.add('layout-container', 'builder-grid', 'canvas-grid');
-      workEl.style.flex = '1 1 0';
-      workEl.style.minHeight = '100%';
-    }
-    return;
-  }
-  container.dataset.split = obj.orientation ? 'true' : 'false';
+  container.replaceChildren();
   if (obj.orientation) {
+    container.dataset.split = 'true';
     container.dataset.orientation = obj.orientation;
     container.style.display = 'flex';
     container.style.flexDirection = obj.orientation === 'horizontal' ? 'column' : 'row';
-  } else {
-    container.style.removeProperty('display');
-    container.style.removeProperty('flex-direction');
-  }
-  const children = [];
-  for (const child of obj.children || []) {
-    let el;
-    if (child.workarea && workEl) {
-      el = workEl;
-      el.classList.add('layout-container', 'builder-grid', 'canvas-grid');
-      el.style.flex = '1 1 0';
-      el.style.minHeight = '100%';
-    } else {
-      el = document.createElement('div');
-      el.className = 'layout-container builder-grid canvas-grid';
-      el.style.flex = '1 1 0';
-      el.style.minHeight = '100%';
-      el.id = generateGridId();
+    for (const child of obj.children || []) {
+      const div = document.createElement('div');
+      div.className = 'layout-container';
+      div.style.flex = '1 1 0';
+      container.appendChild(div);
+      deserializeLayout(child, div);
     }
-    deserializeLayout(child, el, workEl && el === workEl ? workEl : null);
-    children.push(el);
   }
-  container.replaceChildren(...children);
-  if (obj.workarea && container === workEl) {
+  if (obj.workarea) {
     container.dataset.workarea = 'true';
   }
 }

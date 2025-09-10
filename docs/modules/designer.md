@@ -11,6 +11,25 @@ from the dashboard.
 It communicates with the dashboard via `window.postMessage`; events are forwarded to the
 server through `appLoader`'s `dispatchAppEvent` handler.
 
+The builder now separates structure from content with distinct **Layout** and **Design** modes.
+Layout mode swaps the widget sidebar for a layout panel placeholder, disables widget
+interactions on the canvas and shows a "Layout-Editor" pill with save and close actions.
+Switching back to design mode restores the widget sidebar and re‑enables normal editing.
+Layout mode now exposes a container action bar above each layout leaf with controls to
+add new containers, toggle the design surface, assign static designs and remove containers. The add control
+opens a placement picker offering top, right, bottom, left or inside insertion points;
+new containers split their parent 50/50, the star button designates the sole dynamic
+host, updating badges automatically, and the design button stores a `designRef` so
+static content can mount inside the container at runtime.
+
+ The sidebar layout panel now lists the current container tree. Selecting an entry
+ scrolls the canvas to the corresponding container and keeps its action bar in view.
+ An arrange toggle enables drag-and-drop container reordering with undo/redo and autosave.
+
+A runtime page loader now renders the resolved layout, mounts any static design references, locates the dynamic host (falling back to the largest leaf), and injects the page design when auto-mount is enabled. All backend requests include the correct JWT and module identifiers to satisfy auth checks.
+
+Each layout node carries a stable `nodeId` so runtime mapping between the JSON tree and DOM elements remains deterministic.
+
 ## Startup
 - Loaded from `modules/designer` when present.
 - Exports `initialize({ motherEmitter, jwt, nonce })`.
@@ -25,16 +44,6 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 - Tracks change history via `designer_versions`.
 - Reads existing grid background styles so saves retain previously selected media without requiring a new selection.
 - Applies stored `bg_color` and `bg_media_url` when loading a design so the builder preview reflects the saved background.
-- Background toolbar now includes a split layout control that opens a layout selection panel (experimental).
-- A `designer.openLayoutPanel` event can open the same layout panel programmatically.
-- Split mode lets users divide layout containers horizontally or vertically; layouts are persisted in a new `designer_layouts` table.
-- Saving a design serializes the split-layout tree into `designer_layouts` and restores it when the builder loads the design.
- - Layout selection panel launches split mode directly without switching builder panels.
-- Saving uses the root layout container to persist the entire split tree.
-- The largest leaf layout container is automatically marked as the Primary Workarea and highlighted in layout mode for easier widget placement. Split containers and the layout root are ignored; if no candidate has a measurable size during load, the first leaf is chosen.
- - The builder embeds `#workspaceMain` inside a persistent `#layoutRoot`. When the layout is first split, `#workspaceMain` gains a `layout-container` class, its absolute positioning styles are removed, and `#layoutRoot` appends a single empty sibling container with `layout-container builder-grid canvas-grid` classes and a unique id. Any layout container can be split again to create two new layout containers inside it.
-- Builder grid elements now stretch to fill their layout containers and the layout root so `#workspaceMain` mirrors `#layoutRoot` dimensions even before any splits and flexes alongside newly added root containers.
- - Empty layout containers display a hint inviting users to split or add content, and the current design host is outlined and labelled "Design area" for clarity.
 - When editing an existing design, the builder preloads `data-design-id` and
   `data-design-version` from `#builderMain` (or `document.body`). These values
   are seeded from the `designId` and `designVersion` query parameters so saves

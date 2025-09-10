@@ -13,9 +13,12 @@
 @use 'widget-code-editor';
 @use 'color-picker';
 @use 'canvas';
-@use 'split-mode';
 @use 'layout-root';
+@use 'layout-panel';
 @use 'workarea';
+@use 'actionbar';
+@use 'place-picker';
+@use 'layout-tree';
 
 html, body {
   height: 100%;

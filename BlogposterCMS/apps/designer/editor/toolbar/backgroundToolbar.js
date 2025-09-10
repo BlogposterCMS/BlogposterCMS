@@ -81,33 +81,6 @@ export function initBackgroundToolbar() {
     clearBtn.textContent = 'Clear';
   }
 
-  // Layout button
-  const layoutBtn = document.createElement('button');
-  layoutBtn.type = 'button';
-  layoutBtn.className = 'tb-btn';
-  layoutBtn.title = 'Split layout';
-  try {
-    layoutBtn.innerHTML = window.featherIcon
-      ? window.featherIcon('square-split-vertical')
-      : '<img src="/assets/icons/square-split-vertical.svg" alt="Split" />';
-  } catch (e) {
-    layoutBtn.textContent = 'Split';
-  }
-
-    layoutBtn.addEventListener('click', ev => {
-      ev.stopPropagation();
-      const workspace = getLayoutRootEl();
-      document.dispatchEvent(
-        new CustomEvent('designer.openLayoutPanel', {
-          detail: {
-            rootEl: workspace,
-            onChange: () => {
-              try { designerState.pendingSave = true; } catch (e) {}
-            }
-          }
-        })
-      );
-    });
 
   // Ensure global color picker starts hidden for background use
   state.colorPicker?.el?.classList.add('hidden');
@@ -237,7 +210,6 @@ export function initBackgroundToolbar() {
 
   bgToolbar.appendChild(colorBtn);
   bgToolbar.appendChild(imageBtn);
-  bgToolbar.appendChild(layoutBtn);
   bgToolbar.appendChild(clearBtn);
 
   document.body.prepend(bgToolbar);

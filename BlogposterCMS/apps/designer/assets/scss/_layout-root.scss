@@ -23,7 +23,7 @@
 }
 
 #layoutRoot > .builder-grid {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   align-self: stretch;
   width: 100%;
   height: 100%;
@@ -73,4 +73,26 @@ body.builder-mode .layout-container[data-workarea='true']::after {
   font-size: 10px;
   padding: 2px 4px;
   border-radius: 2px;
+}
+
+body.builder-mode .layout-container.tree-selected {
+  outline: 2px dashed #f97316;
+}
+
+body[data-active-layer='0'] .canvas-item {
+  pointer-events: none;
+}
+
+body[data-active-layer='0'] .layout-bar {
+  display: none;
+}
+
+.layout-placeholder {
+  flex: 1 1 0;
+  min-height: 20px;
+  outline: 2px dashed #9ca3af;
+}
+
+.layout-container.drag-ghost {
+  opacity: 0.5;
 }

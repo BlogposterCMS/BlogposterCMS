@@ -3,15 +3,10 @@ import { initBuilder } from './builderRenderer.js';
 import { enableAutoEdit } from './editor/editor.js';
 import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
 import { initBuilderPanel } from './managers/panelManager.js';
-import { showLayoutPanel } from './editor/toolbar/layoutPanel.js';
 import { applyUserColor } from '../../public/assets/js/userColor.js';
 
 let bootstrapped = false;
 
-document.addEventListener('designer.openLayoutPanel', e => {
-  const { rootEl, onChange } = e.detail || {};
-  showLayoutPanel({ rootEl, onChange });
-});
 
 async function bootstrap() {
   if (bootstrapped) return;
@@ -41,14 +36,6 @@ async function bootstrap() {
           console.warn('[Designer App] Failed to load color panel:', e);
         }
 
-        try {
-          const layoutHtml = await fetchPartial('layout-panel', 'builder');
-          panelContainer.insertAdjacentHTML('beforeend', sanitizeHtml(layoutHtml));
-          const layoutPanel = panelContainer.querySelector('.layout-panel');
-          if (layoutPanel) layoutPanel.style.display = 'none';
-        } catch (e) {
-          console.warn('[Designer App] Failed to load layout panel:', e);
-        }
       }
     } catch (e) {
       console.error('[Designer App] Failed to load builder panel:', e);

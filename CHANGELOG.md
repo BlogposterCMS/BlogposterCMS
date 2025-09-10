@@ -6,6 +6,10 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Container action bar uses SVG icons instead of emojis for a consistent theme.
+- Node ID generation now falls back to a timestamped random string to minimize collision risk.
+- Runtime page loader now sends module-authenticated requests so layout and page data resolve correctly.
+- Layout mode only disables pointer events on widget canvas items, leaving container controls clickable.
 - Root-level builder grids now flex to fill `#layoutRoot`, ensuring `#workspaceMain` spans the full work area before any splits.
 - Splitting a non-root container now transfers the `data-workarea` flag to the first new child so the active work area persists.
  - Root splits now add a `layout-container` class to `#workspaceMain`, remove its absolute positioning styles, and append a single empty sibling grid with `layout-container builder-grid canvas-grid` classes and a unique id.
@@ -20,7 +24,11 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
- - Root splits now spawn a single empty layout container beside `#workspaceMain`; further splits divide containers in two.
+- Layout structure features enabled by default; set `FEATURE_LAYOUT_STRUCTURE=false` to disable.
+- Page loader now recognises `workarea` flags as dynamic host indicators.
+- Removed legacy split layout controls and gated layout structure UI behind `FEATURE_LAYOUT_STRUCTURE`; docs updated for the new layout/design flow.
+- Refactored layout mode handling into a dedicated renderer module to keep `builderRenderer` modular.
+- Root splits now spawn a single empty layout container beside `#workspaceMain`; further splits divide containers in two.
 - Layout containers created in split mode now start with a single canvas-enabled builder grid instead of two nested child containers, enabling widget placement in both containers.
 - Removed designer CSS output; SCSS is the source of truth for designer layout.
 - `#workspaceMain` now lives inside `#layoutRoot`; splitting it creates a new sibling container rather than dividing the main workspace.
@@ -32,15 +40,17 @@ El Psy Kongroo
 - Split layout control opens a builder panel instead of a popup for layout selection.
 
 ### Added
-- Split chooser now uses labelled buttons for orientation, empty layout containers show guidance text, and the active design host is visibly highlighted.
+- Container action bar gains a design assignment control that stores a `designRef` on each container.
+- Layout serialization now persists stable `nodeId`s, split sizes and design references for deterministic runtime mapping.
+- Runtime page loader renders layouts, mounts static design refs and injects page designs into the dynamic host.
+- Layout panel offers an arrange toggle for drag-and-drop container reordering with history and autosave.
+- Layout panel now renders a clickable tree of layout containers that scrolls the canvas to the selected node.
+- Layout mode now offers container action bars with add, host toggle and delete controls plus a placement picker for 50/50 container insertion.
+- Designer now supports a basic layout mode that swaps the widget sidebar for a layout panel placeholder, disables widget interactions and shows a "Layout-Editor" pill with save and close actions.
 - Public `grid.emitChange()` helper and `designerContentChanged` autosave event for responsive content updates.
 - Dedicated `#workspaceMain` design grid renders alongside a persistent `#layoutRoot` containing a layout-only `#builderGrid` so layouts deserialize without detaching the canvas.
-- Layout layer now highlights the Primary Workarea outside of split mode for clearer widget placement.
+- Layout layer highlights the Primary Workarea for clearer widget placement.
 - API endpoints to list layouts and fetch individual layouts via `designer.listLayouts` and `designer.getLayout`.
-- Background toolbar includes a split layout button that opens a layout selection panel.
-- `designer.openLayoutPanel` event allows triggering the layout panel programmatically.
-- Experimental split mode allows dividing layout containers horizontally or vertically.
-- Added horizontal split icon and popup ESC handling; split layouts serialize to `designer_layouts` and restore on load.
 - New `getEnvelope` event and client-side orchestrator for loader-based public page rendering.
 
 ### Fixed

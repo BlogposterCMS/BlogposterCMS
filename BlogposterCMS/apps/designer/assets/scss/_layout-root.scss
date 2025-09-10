@@ -12,7 +12,8 @@
   align-items: flex-start;
 }
 
-.layout-container > .builder-grid {
+.layout-container > .builder-grid,
+.layout-container.builder-grid {
   flex: 1 1 auto;
   align-self: stretch;
   width: 100%;
@@ -21,7 +22,8 @@
   min-height: 0;
 }
 
-body.builder-mode .layout-container > .builder-grid {
+body.builder-mode .layout-container > .builder-grid,
+body.builder-mode .layout-container.builder-grid {
   margin: 0 auto;
   background: white;
   border-radius: 12px;

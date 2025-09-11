@@ -243,7 +243,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     try {
       if (reload) {
         const old = document.getElementById('builder-header');
-        if (old) old.remove();
+        if (old) {
+          const oldInput = old.querySelector('#layoutNameInput');
+          if (oldInput) layoutName = oldInput.value;
+          old.remove();
+        }
       }
       topBar = await loadHeaderPartial();
       const backBtn = topBar.querySelector('.builder-back-btn');
@@ -272,6 +276,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       }
       if (nameInput) {
         try { nameInput.value = layoutName; } catch (_) {}
+        nameInput.addEventListener('input', () => {
+          layoutName = nameInput.value;
+        });
       }
 
       const headerActions = topBar.querySelector('.header-actions') || topBar;

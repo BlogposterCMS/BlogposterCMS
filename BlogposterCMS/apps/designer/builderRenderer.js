@@ -135,6 +135,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   document.body.dataset.activeLayer = String(activeLayer);
   const footer = document.getElementById('builderFooter');
   let layoutBar;
+  let layoutExitBtn;
   let globalLayoutName = null;
 
   function showPreviewHeader() {
@@ -975,6 +976,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const previewBtn = topBar.querySelector('#previewLayoutBtn');
   const publishBtn = topBar.querySelector('#publishLayoutBtn');
 
+  layoutExitBtn = document.createElement('button');
+  layoutExitBtn.id = 'exitLayoutBtn';
+  layoutExitBtn.className = 'button layout-exit-btn';
+  layoutExitBtn.innerHTML =
+    (window.featherIcon
+      ? window.featherIcon('brush')
+      : '<img src="/assets/icons/brush.svg" class="icon" alt="Design" />') +
+    ' Design';
+  layoutExitBtn.addEventListener('click', () => switchLayer(1));
+  headerActions.prepend(layoutExitBtn);
+  if (activeLayer !== 0) layoutExitBtn.style.display = 'none';
+
   // Wrap save button to attach autosave dropdown like before
   const saveWrapper = document.createElement('div');
   saveWrapper.className = 'builder-save-wrapper';
@@ -1181,6 +1194,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.dataset.activeLayer = String(activeLayer);
     applyCompositeLayout(idx);
     updateLayoutBar();
+    if (layoutExitBtn) layoutExitBtn.style.display = activeLayer === 0 ? '' : 'none';
     if (HAS_LAYOUT_STRUCTURE) {
       if (activeLayer === 0) {
         startLayoutMode(layoutCtx);

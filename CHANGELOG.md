@@ -6,6 +6,7 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.
 - Container action bar uses SVG icons instead of emojis for a consistent theme.
 - Node ID generation now falls back to a timestamped random string to minimize collision risk.
 - Runtime page loader now sends module-authenticated requests so layout and page data resolve correctly.
@@ -24,6 +25,8 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Layout title defaults to "Layout name" when no previous name is provided.
+- Removed the layout editor pill; saving now uses the header control and the publish action is hidden in layout mode.
 - Footer no longer shows layout/design tabs; zoom controls remain shared across editors.
 - Layout structure features enabled by default; set `FEATURE_LAYOUT_STRUCTURE=false` to disable.
 - Page loader now recognises `workarea` flags as dynamic host indicators.

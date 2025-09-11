@@ -941,19 +941,32 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   const topBar = await loadHeaderPartial();
   const backBtn = topBar.querySelector('.builder-back-btn');
-  if (backBtn) backBtn.addEventListener('click', () => history.back());
+  if (backBtn) backBtn.addEventListener('click', () => {
+    try {
+      const ref = document.referrer;
+      if (ref) {
+        const url = new URL(ref, location.href);
+        if (url.origin === location.origin && !url.pathname.startsWith('/login')) {
+          history.back();
+          return;
+        }
+      }
+    } catch (e) { /* ignore malformed referrer */ }
+    window.location.href = '/';
+  });
 
+  const nameInput = topBar.querySelector('#layoutNameInput');
   const layoutName =
     layoutNameParam ||
     pageData?.meta?.layoutTemplate ||
     pageData?.title ||
-    'default';
+    nameInput?.placeholder ||
+    'layout-title';
 
   currentDesignId = state.designId || layoutName;
   historyByDesign[currentDesignId] = { undoStack: [], redoStack: [] };
   pushLayoutState(initialLayout);
 
-  const nameInput = topBar.querySelector('#layoutNameInput');
   if (nameInput) {
     try { nameInput.value = layoutName; } catch (_) {}
   }
@@ -1066,7 +1079,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   }
 
-  if (publishBtn) {
+  if (activeLayer === 0 && publishBtn) {
+    publishBtn.remove();
+  } else if (publishBtn) {
     initPublishPanel({
       publishBtn,
       nameInput,

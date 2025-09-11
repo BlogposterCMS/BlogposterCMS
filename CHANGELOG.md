@@ -5,9 +5,6 @@ El Psy Kongroo
 
 ## [Unreleased]
 
-### Added
-- Temporary header button exits layout mode and returns to design editing.
-
 ### Fixed
 - Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.
 - Container action bar uses SVG icons instead of emojis for a consistent theme.
@@ -28,6 +25,7 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Removed temporary layout exit button to keep the layout editor distinct; use the back button to leave layout mode.
 - Layout title defaults to "Layout name" when no previous name is provided.
 - Removed the layout editor pill; saving now uses the header control and the publish action is hidden in layout mode.
 - Footer no longer shows layout/design tabs; zoom controls remain shared across editors.

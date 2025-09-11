@@ -13,8 +13,9 @@ server through `appLoader`'s `dispatchAppEvent` handler.
 
 The builder now separates structure from content with distinct **Layout** and **Design** modes.
 Layout mode swaps the widget sidebar for a layout panel placeholder, disables widget
-interactions on the canvas and uses the existing header controls for saving. A temporary
-header button returns to design mode, while the header back button exits the editor entirely.
+interactions on the canvas and uses the existing header controls for saving. The header
+back button exits the editor entirely, returning to the previous page (such as the design editor)
+or falling back to the dashboard.
 Switching back to design mode restores the widget sidebar and re‑enables normal editing.
 Both editors share a footer with zoom controls, and the design sidebar now features a leading layout switch bubble for jumping to the layout editor.
 Layouts without an explicit title initialise the header input to "Layout name" instead of a generic "default" tag.

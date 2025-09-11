@@ -193,6 +193,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let layoutRoot;
   let gridEl;
   let codeMap = {};
+  let topBar;
+  let layoutName;
   // Track when the BG toolbar was just opened to avoid immediate hide by global click
   let bgToolbarOpenedTs = 0;
   // Debug helper for background interactions
@@ -236,6 +238,168 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
   initLayoutMode(sidebarEl);
+
+  async function renderHeader(reload = false) {
+    try {
+      if (reload) {
+        const old = document.getElementById('builder-header');
+        if (old) {
+          const oldInput = old.querySelector('#layoutNameInput');
+          if (oldInput) layoutName = oldInput.value;
+          old.remove();
+        }
+      }
+      topBar = await loadHeaderPartial();
+      const backBtn = topBar.querySelector('.builder-back-btn');
+      if (backBtn) backBtn.addEventListener('click', () => {
+        try {
+          const ref = document.referrer;
+          if (ref) {
+            const url = new URL(ref, location.href);
+            if (url.origin === location.origin && !url.pathname.startsWith('/login')) {
+              history.back();
+              return;
+            }
+          }
+        } catch (e) { /* ignore malformed referrer */ }
+        window.location.href = '/';
+      });
+
+      const nameInput = topBar.querySelector('#layoutNameInput');
+      if (!layoutName) {
+        layoutName =
+          layoutNameParam ||
+          pageData?.meta?.layoutTemplate ||
+          pageData?.title ||
+          nameInput?.placeholder ||
+          'layout-title';
+      }
+      if (nameInput) {
+        try { nameInput.value = layoutName; } catch (_) {}
+        nameInput.addEventListener('input', () => {
+          layoutName = nameInput.value;
+        });
+      }
+
+      const headerActions = topBar.querySelector('.header-actions') || topBar;
+      const saveBtn = topBar.querySelector('#saveLayoutBtn');
+      const previewBtn = topBar.querySelector('#previewLayoutBtn');
+      const publishBtn = topBar.querySelector('#publishLayoutBtn');
+
+      const saveWrapper = document.createElement('div');
+      saveWrapper.className = 'builder-save-wrapper';
+      if (saveBtn) {
+        headerActions.insertBefore(saveWrapper, saveBtn);
+        saveWrapper.appendChild(saveBtn);
+      } else {
+        headerActions.appendChild(saveWrapper);
+      }
+
+      const saveMenuBtn = document.createElement('button');
+      saveMenuBtn.className = 'builder-save-dropdown-toggle';
+      saveMenuBtn.innerHTML = window.featherIcon
+        ? window.featherIcon('chevron-down')
+        : '<img src="/assets/icons/chevron-down.svg" alt="more" />';
+      saveWrapper.appendChild(saveMenuBtn);
+
+      const saveDropdown = document.createElement('div');
+      saveDropdown.className = 'builder-save-dropdown';
+      saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
+      saveWrapper.appendChild(saveDropdown);
+
+      initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
+        undo: () => undo(currentDesignId),
+        redo: () => redo(currentDesignId)
+      });
+
+      saveMenuBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (saveDropdown.style.display === 'block') { hideSaveDropdown(); return; }
+        saveDropdown.style.display = 'block';
+        document.addEventListener('click', outsideSaveHandler);
+      });
+
+      function hideSaveDropdown() {
+        saveDropdown.style.display = 'none';
+        document.removeEventListener('click', outsideSaveHandler);
+      }
+
+      function outsideSaveHandler(e) {
+        if (!saveWrapper.contains(e.target)) hideSaveDropdown();
+      }
+
+      const autosaveToggle = saveDropdown.querySelector('.autosave-toggle');
+      autosaveToggle.checked = state.autosaveEnabled;
+      autosaveToggle.addEventListener('change', () => {
+        state.autosaveEnabled = autosaveToggle.checked;
+        startAutosave();
+      });
+
+      startAutosave();
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          try {
+            await saveDesign({
+              name: nameInput.value.trim(),
+              gridEl,
+              layoutRoot,
+              getCurrentLayoutForLayer,
+              getActiveLayer: () => activeLayer,
+              ensureCodeMap,
+              capturePreview: () => captureGridPreview(gridEl),
+              updateAllWidgetContents,
+              ownerId: getAdminUserId(),
+              pageId,
+              isLayout: activeLayer === 0,
+              isGlobal: activeLayer === 0
+            });
+            alert(activeLayer === 0 ? 'Layout template saved' : 'Design saved');
+          } catch (err) {
+            alert('Save failed: ' + err.message);
+          }
+        });
+      }
+
+      if (previewBtn) {
+        previewBtn.addEventListener('click', () => {
+          const active = document.body.classList.toggle('preview-mode');
+          if (window.featherIcon) {
+            previewBtn.innerHTML = window.featherIcon(active ? 'eye-off' : 'eye');
+          } else {
+            const icon = active ? 'eye-off' : 'eye';
+            previewBtn.innerHTML = `<img src="/assets/icons/${icon}.svg" alt="Preview" />`;
+          }
+          if (active) {
+            showPreviewHeader();
+          } else {
+            hidePreviewHeader();
+          }
+        });
+      }
+
+      if (activeLayer === 0 && publishBtn) {
+        publishBtn.remove();
+      } else if (publishBtn) {
+        initPublishPanel({
+          publishBtn,
+          nameInput,
+          gridEl,
+          layoutRoot,
+          updateAllWidgetContents,
+          getAdminUserId,
+          getCurrentLayoutForLayer,
+          getActiveLayer: () => activeLayer,
+          ensureCodeMap,
+          capturePreview: () => captureGridPreview(gridEl),
+          pageId,
+          saveDesign
+        });
+      }
+    } catch (err) {
+      console.error('[Designer] failed to render header', err);
+    }
+  }
 
   let allWidgets = [];
   let loadedDesign = null;
@@ -939,96 +1103,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (pageId) scheduleAutosave();
   });
 
-  const topBar = await loadHeaderPartial();
-  const backBtn = topBar.querySelector('.builder-back-btn');
-  if (backBtn) backBtn.addEventListener('click', () => {
-    try {
-      const ref = document.referrer;
-      if (ref) {
-        const url = new URL(ref, location.href);
-        if (url.origin === location.origin && !url.pathname.startsWith('/login')) {
-          history.back();
-          return;
-        }
-      }
-    } catch (e) { /* ignore malformed referrer */ }
-    window.location.href = '/';
-  });
-
-  const nameInput = topBar.querySelector('#layoutNameInput');
-  const layoutName =
+  layoutName =
     layoutNameParam ||
     pageData?.meta?.layoutTemplate ||
     pageData?.title ||
-    nameInput?.placeholder ||
     'layout-title';
 
   currentDesignId = state.designId || layoutName;
   historyByDesign[currentDesignId] = { undoStack: [], redoStack: [] };
   pushLayoutState(initialLayout);
 
-  if (nameInput) {
-    try { nameInput.value = layoutName; } catch (_) {}
-  }
-  const headerActions = topBar.querySelector('.header-actions') || topBar;
-  const saveBtn = topBar.querySelector('#saveLayoutBtn');
-  const previewBtn = topBar.querySelector('#previewLayoutBtn');
-  const publishBtn = topBar.querySelector('#publishLayoutBtn');
-
-  // Wrap save button to attach autosave dropdown like before
-  const saveWrapper = document.createElement('div');
-  saveWrapper.className = 'builder-save-wrapper';
-  if (saveBtn) {
-    headerActions.insertBefore(saveWrapper, saveBtn);
-    saveWrapper.appendChild(saveBtn);
-  } else {
-    headerActions.appendChild(saveWrapper);
-  }
-
-  const saveMenuBtn = document.createElement('button');
-  saveMenuBtn.className = 'builder-save-dropdown-toggle';
-  saveMenuBtn.innerHTML = window.featherIcon
-    ? window.featherIcon('chevron-down')
-    : '<img src="/assets/icons/chevron-down.svg" alt="more" />';
-  saveWrapper.appendChild(saveMenuBtn);
-
-  const saveDropdown = document.createElement('div');
-  saveDropdown.className = 'builder-save-dropdown';
-  saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
-  saveWrapper.appendChild(saveDropdown);
-
-  initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
-    undo: () => undo(currentDesignId),
-    redo: () => redo(currentDesignId)
-  });
-
-  saveMenuBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (saveDropdown.style.display === 'block') { hideSaveDropdown(); return; }
-    saveDropdown.style.display = 'block';
-    document.addEventListener('click', outsideSaveHandler);
-  });
-
-  function hideSaveDropdown() {
-    saveDropdown.style.display = 'none';
-    document.removeEventListener('click', outsideSaveHandler);
-  }
-
-  function outsideSaveHandler(e) {
-    if (!saveWrapper.contains(e.target)) hideSaveDropdown();
-  }
-
-  const autosaveToggle = saveDropdown.querySelector('.autosave-toggle');
-  autosaveToggle.checked = state.autosaveEnabled;
-  autosaveToggle.addEventListener('change', () => {
-    state.autosaveEnabled = autosaveToggle.checked;
-    startAutosave();
-  });
-
-  // Header already injected by loadHeaderPartial();
-  // (no extra style injection)
-
-  startAutosave();
+  await renderHeader();
   buildLayoutBar();
 
   if (HAS_LAYOUT_STRUCTURE) {
@@ -1038,64 +1123,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     } else {
       stopLayoutMode(layoutCtx);
     }
-  }
-
-  saveBtn.addEventListener('click', async () => {
-    try {
-      await saveDesign({
-        name: nameInput.value.trim(),
-        gridEl,
-        layoutRoot,
-        getCurrentLayoutForLayer,
-        getActiveLayer: () => activeLayer,
-        ensureCodeMap,
-        capturePreview: () => captureGridPreview(gridEl),
-        updateAllWidgetContents,
-        ownerId: getAdminUserId(),
-        pageId,
-        isLayout: activeLayer === 0,
-        isGlobal: activeLayer === 0
-      });
-      alert(activeLayer === 0 ? 'Layout template saved' : 'Design saved');
-    } catch (err) {
-      alert('Save failed: ' + err.message);
-    }
-  });
-
-  if (previewBtn) {
-    previewBtn.addEventListener('click', () => {
-      const active = document.body.classList.toggle('preview-mode');
-      if (window.featherIcon) {
-        previewBtn.innerHTML = window.featherIcon(active ? 'eye-off' : 'eye');
-      } else {
-        const icon = active ? 'eye-off' : 'eye';
-        previewBtn.innerHTML = `<img src="/assets/icons/${icon}.svg" alt="Preview" />`;
-      }
-      if (active) {
-        showPreviewHeader();
-      } else {
-        hidePreviewHeader();
-      }
-    });
-  }
-
-  if (activeLayer === 0 && publishBtn) {
-    publishBtn.remove();
-  } else if (publishBtn) {
-    initPublishPanel({
-      publishBtn,
-      nameInput,
-      gridEl,
-      layoutRoot,
-      updateAllWidgetContents,
-      getAdminUserId,
-      getCurrentLayoutForLayer,
-      getActiveLayer: () => activeLayer,
-      ensureCodeMap,
-      capturePreview: () => captureGridPreview(gridEl),
-      pageId,
-      saveDesign
-    });
   }
 
     let versionEl = document.getElementById('builderVersion');
@@ -1174,7 +1201,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     markInactiveWidgets();
   }
 
-  function switchLayer(idx) {
+  async function switchLayer(idx) {
     if (idx === activeLayer) return;
     saveActiveLayer();
     activeLayer = idx;
@@ -1183,6 +1210,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     updateLayoutBar();
     if (HAS_LAYOUT_STRUCTURE) {
       if (activeLayer === 0) {
+        await renderHeader(true);
         startLayoutMode(layoutCtx);
         wireArrangeToggle();
       } else {

@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Layout name input now retains unsaved text when switching layers by capturing the current value before the header reloads.
+- Builder header reloads when entering layout mode so the back button reflects the correct origin.
 - Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.
 - Container action bar uses SVG icons instead of emojis for a consistent theme.
 - Node ID generation now falls back to a timestamped random string to minimize collision risk.

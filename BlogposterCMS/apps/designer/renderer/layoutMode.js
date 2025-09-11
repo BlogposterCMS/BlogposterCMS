@@ -55,63 +55,16 @@ async function showLayoutPanel(sidebarEl) {
   if (arrangeText) arrangeText.textContent = STRINGS.arrangeMode;
 }
 
-function showLayoutPill(ctx) {
-  if (document.getElementById('layoutModePill')) return;
-  const pill = document.createElement('div');
-  pill.id = 'layoutModePill';
-  pill.className = 'layout-mode-pill';
-  pill.innerHTML = `
-      <span>${STRINGS.layoutEditor}</span>
-      <button type="button" class="pill-save">${STRINGS.save}</button>
-      <button type="button" class="pill-close">${STRINGS.close}</button>
-    `;
-  const header = document.getElementById('builder-header');
-  (header || document.body).appendChild(pill);
-  const saveBtn = pill.querySelector('.pill-save');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      try {
-        await ctx.saveDesign({
-          name: (document.getElementById('layoutNameInput')?.value || '').trim(),
-          gridEl: ctx.gridEl,
-          layoutRoot: ctx.layoutRoot,
-          getCurrentLayoutForLayer: ctx.getCurrentLayoutForLayer,
-          getActiveLayer: ctx.getActiveLayer,
-          ensureCodeMap: ctx.ensureCodeMap,
-          capturePreview: ctx.capturePreview,
-          updateAllWidgetContents: ctx.updateAllWidgetContents,
-          ownerId: ctx.getAdminUserId(),
-          pageId: ctx.pageId,
-          isLayout: true,
-          isGlobal: true
-        });
-        alert('Layout template saved');
-      } catch (err) {
-        alert('Save failed: ' + err.message);
-      }
-    });
-  }
-  const closeBtn = pill.querySelector('.pill-close');
-  if (closeBtn) closeBtn.addEventListener('click', () => ctx.switchLayer(1));
-}
-
-function hideLayoutPill() {
-  const pill = document.getElementById('layoutModePill');
-  if (pill) pill.remove();
-}
-
 export async function startLayoutMode(ctx) {
   await showLayoutPanel(ctx.sidebarEl);
   ctx.hideToolbar();
   if (ctx.gridEl) ctx.gridEl.style.pointerEvents = 'none';
   try { ctx.refreshContainerBars?.(); } catch (e) { }
   try { ctx.refreshLayoutTree?.(); } catch (e) { }
-  showLayoutPill(ctx);
 }
 
 export function stopLayoutMode(ctx) {
   populateWidgetsPanel(ctx.sidebarEl, ctx.allWidgets, ctx.ICON_MAP, () => ctx.switchLayer(0));
   if (ctx.gridEl) ctx.gridEl.style.pointerEvents = '';
   ctx.showToolbar();
-  hideLayoutPill();
 }

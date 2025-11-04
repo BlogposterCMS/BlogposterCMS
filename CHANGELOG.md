@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Added
+- Designer app now shows skeleton placeholders and inline error alerts while
+  loading sidebar and panel partials so authors receive immediate feedback when
+  partial requests succeed or fail.
 - Added a back button to the site setup step so installers can quickly return to adjust admin credentials without losing their
   progress.
 

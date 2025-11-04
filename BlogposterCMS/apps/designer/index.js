@@ -5,6 +5,95 @@ import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
 import { initBuilderPanel } from './managers/panelManager.js';
 import { applyUserColor } from '../../public/assets/js/userColor.js';
 
+const LOADER_VARIANTS = {
+  sidebar: { className: 'designer-loader--sidebar', lines: 6 },
+  panel: { className: 'designer-loader--panel', lines: 4 },
+  section: { className: 'designer-loader--section', lines: 3 }
+};
+
+const createLoaderElement = (variantKey = 'section') => {
+  const variant = LOADER_VARIANTS[variantKey] || LOADER_VARIANTS.section;
+  const loader = document.createElement('div');
+  loader.classList.add('designer-loader', variant.className);
+  loader.setAttribute('role', 'status');
+  loader.setAttribute('aria-live', 'polite');
+
+  const srLabel = document.createElement('span');
+  srLabel.className = 'designer-sr-only';
+  srLabel.textContent = 'Loading content';
+  loader.appendChild(srLabel);
+
+  const lines = Number.isFinite(variant.lines) ? variant.lines : 3;
+  for (let i = 0; i < lines; i += 1) {
+    const bar = document.createElement('span');
+    bar.className = 'designer-loader__bar';
+    const width = Math.max(40, 100 - (i * 12));
+    bar.style.setProperty('--loader-bar-width', `${width}%`);
+    bar.style.setProperty('--loader-bar-delay', `${i * 0.08}s`);
+    loader.appendChild(bar);
+  }
+
+  return loader;
+};
+
+const attachLoader = ({ container, before, variant = 'section' }) => {
+  if (!container && !before) {
+    return { remove: () => {}, element: null };
+  }
+
+  const loader = createLoaderElement(variant);
+  if (before && before.parentElement) {
+    before.parentElement.insertBefore(loader, before);
+  } else if (container) {
+    container.appendChild(loader);
+  }
+
+  const remove = () => {
+    if (loader.isConnected) {
+      loader.remove();
+    }
+  };
+
+  return { remove, element: loader };
+};
+
+const renderLoadError = ({
+  container,
+  before,
+  message,
+  title = 'Unable to load content',
+  variant = 'section',
+  replace = false
+}) => {
+  if (!container && !before) {
+    return null;
+  }
+
+  const error = document.createElement('div');
+  error.classList.add('designer-load-error', `designer-load-error--${variant}`);
+  error.setAttribute('role', 'alert');
+  error.setAttribute('aria-live', 'assertive');
+
+  const heading = document.createElement('p');
+  heading.className = 'designer-load-error__title';
+  heading.textContent = title;
+  const description = document.createElement('p');
+  description.className = 'designer-load-error__message';
+  description.textContent = message;
+
+  error.append(heading, description);
+
+  if (replace && container) {
+    container.replaceChildren(error);
+  } else if (before && before.parentElement) {
+    before.parentElement.insertBefore(error, before);
+  } else if (container) {
+    container.appendChild(error);
+  }
+
+  return error;
+};
+
 let bootstrapped = false;
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -72,18 +161,59 @@ async function bootstrap() {
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('builderMain');
   const rowEl = document.getElementById('builderRow');
+  if (!sidebarEl || !contentEl || !rowEl) {
+    console.error('[Designer App] Missing required layout containers.');
+    return;
+  }
+  const sidebarLoader = attachLoader({ container: sidebarEl, variant: 'sidebar' });
   try {
-    sidebarEl.innerHTML = sanitizeHtml(await fetchPartial('sidebar-builder'));
-    let panelContainer = null;
-    try {
-      const panelHtml = await fetchPartial('builder-panel');
-      const tpl = document.createElement('template');
-      tpl.innerHTML = sanitizeHtml(panelHtml);
-      panelContainer = tpl.content.firstElementChild;
-      if (panelContainer && rowEl) {
-        rowEl.insertBefore(panelContainer, document.getElementById('content'));
+    const sidebarMarkup = await fetchPartial('sidebar-builder');
+    sidebarEl.innerHTML = sanitizeHtml(sidebarMarkup);
+  } catch (err) {
+    console.error('[Designer App] Failed to load sidebar:', err);
+    renderLoadError({
+      container: sidebarEl,
+      message: 'The builder sidebar could not be loaded. Please refresh the page.',
+      title: 'Sidebar unavailable',
+      variant: 'sidebar',
+      replace: true
+    });
+  } finally {
+    sidebarLoader.remove();
+  }
+
+  let panelContainer = null;
+  const contentAnchor = document.getElementById('content');
+  const panelLoader = attachLoader({ container: rowEl, before: contentAnchor, variant: 'panel' });
+  try {
+    const panelHtml = await fetchPartial('builder-panel');
+    const tpl = document.createElement('template');
+    tpl.innerHTML = sanitizeHtml(panelHtml);
+    panelContainer = tpl.content.firstElementChild;
+    if (panelContainer && rowEl) {
+      panelLoader.remove();
+      rowEl.insertBefore(panelContainer, contentAnchor);
+      let textPanelLoaded = false;
+      const textLoader = attachLoader({ container: panelContainer, variant: 'section' });
+      try {
         const textHtml = await fetchPartial('text-panel', 'builder');
         panelContainer.innerHTML = sanitizeHtml(textHtml);
+        textPanelLoaded = true;
+      } catch (e) {
+        console.error('[Designer App] Failed to load text tools panel:', e);
+        renderLoadError({
+          container: panelContainer,
+          message: 'The text tools panel is unavailable right now. Reload the designer to try again.',
+          title: 'Text panel unavailable',
+          variant: 'section',
+          replace: true
+        });
+      } finally {
+        textLoader.remove();
+      }
+
+      if (textPanelLoaded) {
+        const colorLoader = attachLoader({ container: panelContainer, variant: 'section' });
         try {
           const colorHtml = await fetchPartial('color-panel', 'builder');
           panelContainer.insertAdjacentHTML('beforeend', sanitizeHtml(colorHtml));
@@ -91,16 +221,32 @@ async function bootstrap() {
           if (colorPanel) colorPanel.style.display = 'none';
         } catch (e) {
           console.warn('[Designer App] Failed to load color panel:', e);
+          renderLoadError({
+            container: panelContainer,
+            message: 'Color controls could not be loaded. Some styling actions may be unavailable.',
+            title: 'Color panel unavailable',
+            variant: 'section'
+          });
+        } finally {
+          colorLoader.remove();
         }
-
       }
-    } catch (e) {
-      console.error('[Designer App] Failed to load builder panel:', e);
     }
-    initBuilderPanel();
-  } catch (err) {
-    console.error('[Designer App] Failed to load sidebar:', err);
+  } catch (e) {
+    console.error('[Designer App] Failed to load builder panel:', e);
+    panelLoader.remove();
+    renderLoadError({
+      container: rowEl,
+      before: contentAnchor,
+      message: 'The builder controls failed to load. Try refreshing the page.',
+      title: 'Builder panel unavailable',
+      variant: 'panel'
+    });
+  } finally {
+    panelLoader.remove();
   }
+
+  initBuilderPanel();
 
   const designId = urlParams.get('designId');
   const layoutNameParam = urlParams.get('layout') || null;

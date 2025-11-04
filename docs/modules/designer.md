@@ -26,6 +26,26 @@ new containers split their parent 50/50, the star button designates the sole dyn
 host, updating badges automatically, and the design button stores a `designRef` so
 static content can mount inside the container at runtime.
 
+## Renderer module structure
+
+The builder renderer now splits major responsibilities into focused helpers so the
+entry point coordinates features instead of re-implementing them inline:
+
+- `apps/designer/renderer/builderHeader.js` loads the header partial, wires save/
+  preview/publish buttons and exposes an autosave toggle.
+- `apps/designer/renderer/previewHeader.js` manages the responsive viewport header shown
+  during preview mode.
+- `apps/designer/renderer/layoutBar.js` renders the zoom controls that live in the footer.
+- `apps/designer/renderer/layoutStructureHandlers.js` refreshes container bars and the
+  layout tree sidebar whenever containers change.
+- `apps/designer/managers/layoutContainerManager.js` owns DOM manipulation for placing,
+  moving and deleting layout containers while keeping workarea metadata in sync.
+- `apps/designer/managers/historyManager.js` centralises undo/redo stacks so widget edits
+  and container changes share a single history implementation.
+
+`apps/designer/builderRenderer.js` now imports these helpers and focuses on orchestration:
+initialising the editor, wiring autosave, switching layers and coordinating widget events.
+
 `#layoutRoot` now always acts as the root layout container. When no saved layout tree exists the builder seeds a leaf node,
 assigns it a deterministic `nodeId`, and persists that node instead of the wrapper element. Subsequent splits or container moves
 reuse these stable identifiers so workarea flags and `designRef` assignments survive reloads and publishing.

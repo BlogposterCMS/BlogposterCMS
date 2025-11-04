@@ -9,7 +9,6 @@ import {
   undoTextCommand,
   redoTextCommand
 } from './editor/editor.js';
-import { STRINGS } from './i18n.js';
 import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar, isBackgroundToolbar } from './editor/toolbar/backgroundToolbar.js';
 import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
 import { applyLayout, getItemData } from './managers/layoutManager.js';
@@ -21,57 +20,39 @@ import { initLayoutMode, populateWidgetsPanel, startLayoutMode, stopLayoutMode }
 import { attachContainerBar } from './ux/containerActionBar.js';
 import { renderLayoutTreeSidebar } from './renderer/layoutTreeView.js';
 import { activateArrange as enableArrange, deactivateArrange as disableArrange } from './managers/layoutArrange.js';
-import { generateNodeId } from './renderer/renderUtils.js';
-
 import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
-
-// Enable layout structure features by default unless explicitly disabled
-const HAS_LAYOUT_STRUCTURE = window.FEATURE_LAYOUT_STRUCTURE !== false;
-const historyByDesign = {};
-
-function setDefaultWorkarea(root) {
-  if (!root) return;
-  if (root.querySelector('.layout-container[data-workarea="true"]')) return;
-  const all = Array.from(root.querySelectorAll('.layout-container'));
-  const candidates = all.filter(el => el.dataset.split !== 'true');
-  const containers = candidates.length ? candidates : all.slice(0, 1);
-  let largest = null;
-  let maxArea = 0;
-  for (const el of containers) {
-    const rect = el.getBoundingClientRect();
-    const area = rect.width * rect.height;
-    if (area > maxArea) {
-      maxArea = area;
-      largest = el;
-    }
-  }
-  if (!largest && containers.length) {
-    largest = containers[0];
-  }
-  if (largest) {
-    largest.dataset.workarea = 'true';
-    largest.dataset.workareaLabel = STRINGS.workareaLabel;
-  }
-}
-
-function getHistory(designId) {
-  if (!historyByDesign[designId]) {
-    historyByDesign[designId] = { undoStack: [], redoStack: [] };
-  }
-  return historyByDesign[designId];
-}
+import { createActionBar } from './renderer/actionBar.js';
+import { createSaveManager } from './renderer/saveManager.js';
+import { registerBuilderEvents } from './renderer/eventHandlers.js';
+import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
+import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
+import { createBuilderHeader } from './renderer/builderHeader.js';
+import { createPreviewHeader } from './renderer/previewHeader.js';
+import { buildLayoutBar } from './renderer/layoutBar.js';
+import { createLayoutStructureHandlers } from './renderer/layoutStructureHandlers.js';
+import {
+  setDefaultWorkarea,
+  ensureLayoutRootContainer,
+  setDynamicHost as setDynamicHostContainer,
+  setDesignRef as setContainerDesignRef,
+  placeContainer as placeContainerNode,
+  deleteContainer as deleteContainerNode,
+  moveContainer as moveContainerNode
+} from './managers/layoutContainerManager.js';
+import {
+  pushLayoutSnapshot,
+  undoDesign,
+  redoDesign,
+  resetDesignHistory
+} from './managers/historyManager.js';
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
   try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/builder]', ...args); } catch (e) {}
 }
-import { createActionBar } from './renderer/actionBar.js';
-import { createSaveManager } from './renderer/saveManager.js';
-import { registerBuilderEvents } from './renderer/eventHandlers.js';
-import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
-import { initPublishPanel } from './renderer/publishPanel.js';
-import { initHeaderControls } from './renderer/headerControls.js';
-import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
+
+// Enable layout structure features by default unless explicitly disabled
+const HAS_LAYOUT_STRUCTURE = window.FEATURE_LAYOUT_STRUCTURE !== false;
 
 function getAdminUserId() {
   try {
@@ -123,8 +104,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     textBox: 'type'
   };
 
-  let previewHeader;
-  let viewportSelect;
+  const { showPreviewHeader, hidePreviewHeader } = createPreviewHeader(displayPorts);
   const layoutLayers = HAS_LAYOUT_STRUCTURE
     ? [{ name: 'Layout', layout: [] }, { name: 'Design', layout: [] }]
     : [{ name: 'Design', layout: [] }];
@@ -137,64 +117,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let layoutBar;
   let globalLayoutName = null;
 
-  function showPreviewHeader() {
-    if (previewHeader) return;
-    previewHeader = document.createElement('div');
-    previewHeader.id = 'previewHeader';
-    previewHeader.className = 'preview-header';
-    viewportSelect = document.createElement('select');
-    displayPorts.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p.class;
-      o.textContent = p.label;
-      viewportSelect.appendChild(o);
-    });
-    viewportSelect.addEventListener('change', () => {
-      document.body.classList.remove('preview-mobile', 'preview-tablet', 'preview-desktop');
-      const cls = viewportSelect.value;
-      if (cls) document.body.classList.add(cls);
-    });
-    previewHeader.appendChild(viewportSelect);
-    document.body.prepend(previewHeader);
-    viewportSelect.dispatchEvent(new Event('change'));
-  }
-
-  function hidePreviewHeader() {
-    if (previewHeader) {
-      previewHeader.remove();
-      previewHeader = null;
-      viewportSelect = null;
-    }
-    document.body.classList.remove('preview-mobile', 'preview-tablet', 'preview-desktop');
-  }
-
-  // Load the builder header from HTML partial and inject it at the top
-  async function loadHeaderPartial() {
-    try {
-      const res = await fetch('/apps/designer/partials/builder-header.html', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
-      const tpl = document.createElement('template');
-      tpl.innerHTML = html.trim();
-      const headerEl = tpl.content.firstElementChild;
-      const appScope = document.querySelector('.app-scope');
-      if (appScope) appScope.prepend(headerEl); else document.body.prepend(headerEl);
-      return headerEl;
-    } catch (err) {
-      console.warn('[Designer] Failed to load builder-header.html, falling back to JS header shell', err);
-      const fallback = document.createElement('header');
-      fallback.id = 'builder-header';
-      fallback.className = 'builder-header';
-      const appScope = document.querySelector('.app-scope');
-      if (appScope) appScope.prepend(fallback); else document.body.prepend(fallback);
-      return fallback;
-    }
-  }
   let layoutRoot;
   let gridEl;
   let codeMap = {};
-  let topBar;
-  let layoutName;
   // Track when the BG toolbar was just opened to avoid immediate hide by global click
   let bgToolbarOpenedTs = 0;
   // Debug helper for background interactions
@@ -202,32 +127,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function ensureCodeMap() {
     if (!codeMap || typeof codeMap !== 'object') codeMap = {};
     return codeMap;
-  }
-
-  function getRootLayoutContainer() {
-    if (!layoutRoot) return null;
-    if (layoutRoot.classList.contains('layout-container')) return layoutRoot;
-    return layoutRoot.querySelector(':scope > .layout-container');
-  }
-
-  function ensureLayoutRootContainer() {
-    if (!layoutRoot) return null;
-    layoutRoot.classList.add('layout-root');
-    let rootContainer = getRootLayoutContainer();
-    if (!rootContainer) {
-      layoutRoot.classList.add('layout-container', 'builder-grid', 'canvas-grid');
-      layoutRoot.dataset.emptyHint = STRINGS.splitHint;
-      layoutRoot.dataset.nodeId = layoutRoot.dataset.nodeId || generateNodeId();
-      rootContainer = layoutRoot;
-    } else {
-      if (!rootContainer.dataset.nodeId) {
-        rootContainer.dataset.nodeId = generateNodeId();
-      }
-      if (!rootContainer.dataset.emptyHint) {
-        rootContainer.dataset.emptyHint = STRINGS.splitHint;
-      }
-    }
-    return rootContainer;
   }
   const state = {
     pageId,
@@ -265,167 +164,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const genId = () => `w${Math.random().toString(36).slice(2,8)}`;
   initLayoutMode(sidebarEl);
 
-  async function renderHeader(reload = false) {
-    try {
-      if (reload) {
-        const old = document.getElementById('builder-header');
-        if (old) {
-          const oldInput = old.querySelector('#layoutNameInput');
-          if (oldInput) layoutName = oldInput.value;
-          old.remove();
-        }
-      }
-      topBar = await loadHeaderPartial();
-      const backBtn = topBar.querySelector('.builder-back-btn');
-      if (backBtn) backBtn.addEventListener('click', () => {
-        try {
-          const ref = document.referrer;
-          if (ref) {
-            const url = new URL(ref, location.href);
-            if (url.origin === location.origin && !url.pathname.startsWith('/login')) {
-              history.back();
-              return;
-            }
-          }
-        } catch (e) { /* ignore malformed referrer */ }
-        window.location.href = '/';
-      });
-
-      const nameInput = topBar.querySelector('#layoutNameInput');
-      if (!layoutName) {
-        layoutName =
-          layoutNameParam ||
-          pageData?.meta?.layoutTemplate ||
-          pageData?.title ||
-          nameInput?.placeholder ||
-          'layout-title';
-      }
-      if (nameInput) {
-        try { nameInput.value = layoutName; } catch (_) {}
-        nameInput.addEventListener('input', () => {
-          layoutName = nameInput.value;
-        });
-      }
-
-      const headerActions = topBar.querySelector('.header-actions') || topBar;
-      const saveBtn = topBar.querySelector('#saveLayoutBtn');
-      const previewBtn = topBar.querySelector('#previewLayoutBtn');
-      const publishBtn = topBar.querySelector('#publishLayoutBtn');
-
-      const saveWrapper = document.createElement('div');
-      saveWrapper.className = 'builder-save-wrapper';
-      if (saveBtn) {
-        headerActions.insertBefore(saveWrapper, saveBtn);
-        saveWrapper.appendChild(saveBtn);
-      } else {
-        headerActions.appendChild(saveWrapper);
-      }
-
-      const saveMenuBtn = document.createElement('button');
-      saveMenuBtn.className = 'builder-save-dropdown-toggle';
-      saveMenuBtn.innerHTML = window.featherIcon
-        ? window.featherIcon('chevron-down')
-        : '<img src="/assets/icons/chevron-down.svg" alt="more" />';
-      saveWrapper.appendChild(saveMenuBtn);
-
-      const saveDropdown = document.createElement('div');
-      saveDropdown.className = 'builder-save-dropdown';
-      saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
-      saveWrapper.appendChild(saveDropdown);
-
-      initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
-        undo: () => undo(currentDesignId),
-        redo: () => redo(currentDesignId)
-      });
-
-      saveMenuBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        if (saveDropdown.style.display === 'block') { hideSaveDropdown(); return; }
-        saveDropdown.style.display = 'block';
-        document.addEventListener('click', outsideSaveHandler);
-      });
-
-      function hideSaveDropdown() {
-        saveDropdown.style.display = 'none';
-        document.removeEventListener('click', outsideSaveHandler);
-      }
-
-      function outsideSaveHandler(e) {
-        if (!saveWrapper.contains(e.target)) hideSaveDropdown();
-      }
-
-      const autosaveToggle = saveDropdown.querySelector('.autosave-toggle');
-      autosaveToggle.checked = state.autosaveEnabled;
-      autosaveToggle.addEventListener('change', () => {
-        state.autosaveEnabled = autosaveToggle.checked;
-        startAutosave();
-      });
-
-      startAutosave();
-
-      if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-          try {
-            await saveDesign({
-              name: nameInput.value.trim(),
-              gridEl,
-              layoutRoot,
-              getCurrentLayoutForLayer,
-              getActiveLayer: () => activeLayer,
-              ensureCodeMap,
-              capturePreview: () => captureGridPreview(gridEl),
-              updateAllWidgetContents,
-              ownerId: getAdminUserId(),
-              pageId,
-              isLayout: activeLayer === 0,
-              isGlobal: activeLayer === 0
-            });
-            alert(activeLayer === 0 ? 'Layout template saved' : 'Design saved');
-          } catch (err) {
-            alert('Save failed: ' + err.message);
-          }
-        });
-      }
-
-      if (previewBtn) {
-        previewBtn.addEventListener('click', () => {
-          const active = document.body.classList.toggle('preview-mode');
-          if (window.featherIcon) {
-            previewBtn.innerHTML = window.featherIcon(active ? 'eye-off' : 'eye');
-          } else {
-            const icon = active ? 'eye-off' : 'eye';
-            previewBtn.innerHTML = `<img src="/assets/icons/${icon}.svg" alt="Preview" />`;
-          }
-          if (active) {
-            showPreviewHeader();
-          } else {
-            hidePreviewHeader();
-          }
-        });
-      }
-
-      if (activeLayer === 0 && publishBtn) {
-        publishBtn.remove();
-      } else if (publishBtn) {
-        initPublishPanel({
-          publishBtn,
-          nameInput,
-          gridEl,
-          layoutRoot,
-          updateAllWidgetContents,
-          getAdminUserId,
-          getCurrentLayoutForLayer,
-          getActiveLayer: () => activeLayer,
-          ensureCodeMap,
-          capturePreview: () => captureGridPreview(gridEl),
-          pageId,
-          saveDesign
-        });
-      }
-    } catch (err) {
-      console.error('[Designer] failed to render header', err);
-    }
-  }
 
   let allWidgets = [];
   let loadedDesign = null;
@@ -482,7 +220,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('workspaceMain');
   gridEl.dataset.workarea = 'true';
-  ensureLayoutRootContainer();
+  ensureLayoutRootContainer(layoutRoot);
   // Ensure the layout root sits inside the viewport so the workspace remains nested
   if (layoutRoot.parentElement !== gridViewportEl) {
     gridViewportEl.appendChild(layoutRoot);
@@ -520,7 +258,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (layoutData) {
       const obj = typeof layoutData === 'string' ? JSON.parse(layoutData) : layoutData;
       deserializeLayout(obj, layoutRoot);
-      ensureLayoutRootContainer();
+      ensureLayoutRootContainer(layoutRoot);
     }
   } catch (e) {
     console.warn('[Designer] failed to deserialize layout', e);
@@ -531,8 +269,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let currentDesignId = null;
   function pushLayoutState(layout) {
     if (!currentDesignId) return;
-    const { undoStack, redoStack } = getHistory(currentDesignId);
-    pushHistoryState(undoStack, redoStack, layout);
+    pushLayoutSnapshot(currentDesignId, layout, pushHistoryState);
   }
   const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
@@ -545,18 +282,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     getLayer: () => activeLayer
   };
   const { scheduleAutosave, startAutosave, saveDesign } = createSaveManager(state, saveLayoutCtx);
-  function createLeaf() {
-    const div = document.createElement('div');
-    div.className = 'layout-container builder-grid canvas-grid';
-    div.style.flex = '1 1 0';
-    div.dataset.emptyHint = STRINGS.splitHint;
-    // Assign deterministic node ids for stable layout serialization
-    div.dataset.nodeId = generateNodeId();
-    return div;
-  }
-
   function pushAndSave() {
-    const rootContainer = ensureLayoutRootContainer();
+    const rootContainer = ensureLayoutRootContainer(layoutRoot);
     if (!rootContainer) return;
     const layout = serializeLayout(rootContainer);
     pushLayoutState(layout);
@@ -564,179 +291,39 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   let layoutCtx;
-
-  function refreshContainerBars() {
-    if (!HAS_LAYOUT_STRUCTURE) return;
-    if (!ensureLayoutRootContainer()) return;
-    layoutRoot?.querySelectorAll('.layout-container').forEach(el => {
-      if (el.dataset.split === 'true') return;
-      attachContainerBar(el, layoutCtx);
-    });
-  }
-
-  function refreshLayoutTree() {
-    if (!HAS_LAYOUT_STRUCTURE) return;
-    const panel = sidebarEl.querySelector('.layout-panel');
-    if (!panel) return;
-    const rootContainer = ensureLayoutRootContainer();
-    if (!rootContainer) return;
-    renderLayoutTreeSidebar(panel, rootContainer, el => {
-      try {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('tree-selected');
-        setTimeout(() => el.classList.remove('tree-selected'), 1000);
-      } catch (_) {
-      }
-    });
-  }
+  const { refreshContainerBars, refreshLayoutTree, handleContainerChange } = createLayoutStructureHandlers({
+    layoutRootRef: () => layoutRoot,
+    sidebarEl,
+    hasLayoutStructure: HAS_LAYOUT_STRUCTURE,
+    attachContainerBar,
+    renderLayoutTreeSidebar,
+    pushAndSave,
+    layoutCtxProvider: () => layoutCtx
+  });
 
   function placeContainer(targetEl, pos) {
-    if (!targetEl) return;
-    const orientation = (pos === 'left' || pos === 'right') ? 'vertical'
-      : (pos === 'top' || pos === 'bottom') ? 'horizontal' : 'horizontal';
-    const newLeaf = createLeaf();
-    if (pos === 'inside') {
-      if (targetEl.dataset.split === 'true') {
-        targetEl.appendChild(newLeaf);
-      } else {
-        const frag = document.createDocumentFragment();
-        while (targetEl.firstChild) frag.appendChild(targetEl.firstChild);
-        targetEl.dataset.split = 'true';
-        targetEl.dataset.orientation = orientation;
-        targetEl.style.display = 'flex';
-        targetEl.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
-        const existing = createLeaf();
-        existing.appendChild(frag);
-        targetEl.append(existing, newLeaf);
-      }
-    } else {
-      const parent = targetEl.parentElement;
-      if (parent && parent.dataset.split === 'true' && parent.dataset.orientation === orientation) {
-        if (pos === 'left' || pos === 'top') parent.insertBefore(newLeaf, targetEl);
-        else parent.insertBefore(newLeaf, targetEl.nextSibling);
-      } else {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'layout-container';
-        wrapper.dataset.split = 'true';
-        wrapper.dataset.orientation = orientation;
-        wrapper.style.display = 'flex';
-        wrapper.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
-        wrapper.dataset.emptyHint = STRINGS.splitHint;
-        wrapper.dataset.nodeId = generateNodeId();
-        if (parent) parent.replaceChild(wrapper, targetEl);
-        wrapper.appendChild(targetEl);
-        targetEl.style.flex = '1 1 0';
-        if (pos === 'left' || pos === 'top') wrapper.insertBefore(newLeaf, targetEl);
-        else wrapper.appendChild(newLeaf);
-      }
-    }
-    refreshContainerBars();
-    pushAndSave();
-    ensureLayoutRootContainer();
-    setDefaultWorkarea(layoutRoot);
-    refreshLayoutTree();
+    placeContainerNode(targetEl, pos, {
+      layoutRoot,
+      onAfterChange: handleContainerChange
+    });
   }
 
   function setDynamicHost(el) {
-    layoutRoot.querySelectorAll('.layout-container[data-workarea="true"]').forEach(n => {
-      n.removeAttribute('data-workarea');
-      n.removeAttribute('data-workarea-label');
-    });
-    if (el) {
-      el.dataset.workarea = 'true';
-      el.dataset.workareaLabel = STRINGS.workareaLabel;
-    }
-    refreshContainerBars();
-    pushAndSave();
+    setDynamicHostContainer(layoutRoot, el);
+    handleContainerChange();
   }
 
   function setDesignRef(el, designId) {
-    if (!el) return;
-    if (designId) el.dataset.designRef = designId;
-    else delete el.dataset.designRef;
-    refreshContainerBars();
-    pushAndSave();
+    setContainerDesignRef(el, designId);
+    handleContainerChange();
   }
 
   function deleteContainer(el) {
-    if (!el) return;
-    const parent = el.parentElement;
-    el.remove();
-    if (parent && parent.dataset && parent.dataset.split === 'true') {
-      const children = Array.from(parent.children);
-      if (children.length === 1) {
-        const only = children[0];
-        if (parent.dataset.workarea === 'true') {
-          only.dataset.workarea = 'true';
-          only.dataset.workareaLabel = STRINGS.workareaLabel;
-        }
-        parent.replaceWith(only);
-      }
-    }
-    ensureLayoutRootContainer();
-    setDefaultWorkarea(layoutRoot);
-    refreshContainerBars();
-    pushAndSave();
-    refreshLayoutTree();
+    deleteContainerNode(el, { onAfterChange: handleContainerChange });
   }
 
   function moveContainer(srcEl, targetEl, pos) {
-    if (!srcEl || !targetEl || srcEl === targetEl) return;
-    const orientation = (pos === 'left' || pos === 'right') ? 'vertical'
-      : (pos === 'top' || pos === 'bottom') ? 'horizontal'
-      : targetEl.dataset.orientation || 'horizontal';
-    const srcParent = srcEl.parentElement;
-    if (pos === 'inside') {
-      if (targetEl.dataset.split === 'true') {
-        targetEl.appendChild(srcEl);
-      } else {
-        const frag = document.createDocumentFragment();
-        while (targetEl.firstChild) frag.appendChild(targetEl.firstChild);
-        targetEl.dataset.split = 'true';
-        targetEl.dataset.orientation = orientation;
-        targetEl.style.display = 'flex';
-        targetEl.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
-        const existing = createLeaf();
-        existing.appendChild(frag);
-        targetEl.append(existing, srcEl);
-      }
-    } else {
-      const parent = targetEl.parentElement;
-      if (parent && parent.dataset.split === 'true' && parent.dataset.orientation === orientation) {
-        if (pos === 'left' || pos === 'top') parent.insertBefore(srcEl, targetEl);
-        else parent.insertBefore(srcEl, targetEl.nextSibling);
-      } else {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'layout-container';
-        wrapper.dataset.split = 'true';
-        wrapper.dataset.orientation = orientation;
-        wrapper.style.display = 'flex';
-        wrapper.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
-        wrapper.dataset.emptyHint = STRINGS.splitHint;
-        wrapper.dataset.nodeId = generateNodeId();
-        if (parent) parent.replaceChild(wrapper, targetEl);
-        wrapper.appendChild(targetEl);
-        targetEl.style.flex = '1 1 0';
-        if (pos === 'left' || pos === 'top') wrapper.insertBefore(srcEl, targetEl);
-        else wrapper.appendChild(srcEl);
-      }
-    }
-    if (srcParent && srcParent.dataset && srcParent.dataset.split === 'true') {
-      const kids = Array.from(srcParent.children);
-      if (kids.length === 1) {
-        const only = kids[0];
-        if (srcParent.dataset.workarea === 'true') {
-          only.dataset.workarea = 'true';
-          only.dataset.workareaLabel = STRINGS.workareaLabel;
-        }
-        srcParent.replaceWith(only);
-      }
-    }
-    refreshContainerBars();
-    pushAndSave();
-    ensureLayoutRootContainer();
-    setDefaultWorkarea(layoutRoot);
-    refreshLayoutTree();
+    moveContainerNode(srcEl, targetEl, pos, { onAfterChange: handleContainerChange });
   }
 
   function activateArrange() {
@@ -784,28 +371,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   };
 
   populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP, HAS_LAYOUT_STRUCTURE ? () => switchLayer(0) : null);
-
-  function undo(designId) {
-    const { undoStack, redoStack } = getHistory(designId);
-    if (undoTextCommand()) return;
-    if (undoStack.length < 2) return;
-    const current = undoStack.pop();
-    redoStack.push(current);
-    const prev = JSON.parse(undoStack[undoStack.length - 1]);
-    applyLayout(prev, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
-  }
-
-  function redo(designId) {
-    const { undoStack, redoStack } = getHistory(designId);
-    if (redoTextCommand()) return;
-    if (!redoStack.length) return;
-    const next = redoStack.pop();
-    undoStack.push(next);
-    const layout = JSON.parse(next);
-    applyLayout(layout, { gridEl, grid, codeMap: ensureCodeMap(), allWidgets, layerIndex: activeLayer, iconMap: ICON_MAP });
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
-  }
 
   await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
@@ -1148,11 +713,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     'layout-title';
 
   currentDesignId = state.designId || layoutName;
-  historyByDesign[currentDesignId] = { undoStack: [], redoStack: [] };
+  resetDesignHistory(currentDesignId);
   pushLayoutState(initialLayout);
-
-  await renderHeader();
-  buildLayoutBar();
+  layoutBar = buildLayoutBar({ footer, grid, gridEl });
 
   if (HAS_LAYOUT_STRUCTURE) {
     if (activeLayer === 0) {
@@ -1218,6 +781,64 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   }
 
+  const applySnapshot = layout => {
+    applyLayout(layout, {
+      gridEl,
+      grid,
+      codeMap: ensureCodeMap(),
+      allWidgets,
+      layerIndex: activeLayer,
+      iconMap: ICON_MAP
+    });
+    markInactiveWidgets();
+  };
+
+  const undoCurrentDesign = () => {
+    const shouldAutosave = Boolean(pageId && state.autosaveEnabled);
+    undoDesign(currentDesignId, {
+      applySnapshot,
+      undoTextCommand,
+      scheduleAutosave,
+      shouldAutosave
+    });
+  };
+
+  const redoCurrentDesign = () => {
+    const shouldAutosave = Boolean(pageId && state.autosaveEnabled);
+    redoDesign(currentDesignId, {
+      applySnapshot,
+      redoTextCommand,
+      scheduleAutosave,
+      shouldAutosave
+    });
+  };
+
+  const headerController = createBuilderHeader({
+    initialLayoutName: layoutName,
+    layoutNameParam,
+    pageData,
+    gridEl,
+    viewportSizeEl,
+    grid,
+    saveDesign,
+    getCurrentLayoutForLayer,
+    getActiveLayer: () => activeLayer,
+    ensureCodeMap,
+    capturePreview: () => captureGridPreview(gridEl),
+    updateAllWidgetContents,
+    getAdminUserId,
+    pageId,
+    layoutRoot,
+    state,
+    startAutosave,
+    showPreviewHeader,
+    hidePreviewHeader,
+    undo: undoCurrentDesign,
+    redo: redoCurrentDesign
+  });
+
+  await headerController.renderHeader();
+
   function applyCompositeLayout(idx) {
     if (grid && typeof grid.removeAll === 'function') {
       grid.removeAll();
@@ -1248,7 +869,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     updateLayoutBar();
     if (HAS_LAYOUT_STRUCTURE) {
       if (activeLayer === 0) {
-        await renderHeader(true);
+        await headerController.renderHeader({ reload: true });
         startLayoutMode(layoutCtx);
         wireArrangeToggle();
       } else {
@@ -1256,73 +877,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         stopLayoutMode(layoutCtx);
       }
     }
-  }
-
-  function buildLayoutBar() {
-    layoutBar = document.createElement('div');
-    layoutBar.className = 'layout-bar';
-
-    // Zoom controls (10% – 500%, default 100%)
-    const zoomWrap = document.createElement('div');
-    zoomWrap.className = 'zoom-controls';
-    const zoomOut = document.createElement('button');
-    zoomOut.title = 'Zoom out';
-    zoomOut.innerHTML = window.featherIcon ? window.featherIcon('minus') : '<img src="/assets/icons/zoom-out.svg" alt="-" />';
-    const zoomLevel = document.createElement('span');
-    zoomLevel.className = 'zoom-level';
-    const zoomSlider = document.createElement('input');
-    zoomSlider.type = 'range';
-    zoomSlider.min = '10';
-    zoomSlider.max = '500';
-    zoomSlider.step = '1';
-    zoomSlider.value = '100';
-    zoomSlider.style.width = '180px';
-    const zoomIn = document.createElement('button');
-    zoomIn.title = 'Zoom in';
-    zoomIn.innerHTML = window.featherIcon ? window.featherIcon('plus') : '<img src="/assets/icons/zoom-in.svg" alt="+" />';
-
-    let zoomPct = 100;
-    function applyZoom(pct) {
-      zoomPct = Math.max(10, Math.min(500, Math.round(pct)));
-      zoomSlider.value = String(zoomPct);
-      zoomLevel.textContent = `${zoomPct}%`;
-      const scale = zoomPct / 100;
-      if (grid && typeof grid.setScale === 'function') {
-        // Let CanvasGrid manage transforms and CSS vars
-        grid.setScale(scale);
-      } else if (gridEl) {
-        // Fallback: apply transform directly
-        gridEl.style.transformOrigin = 'center center';
-        gridEl.style.transform = `scale(${scale})`;
-        gridEl.style.setProperty('--canvas-scale', String(scale));
-        gridEl.dispatchEvent(new Event('zoom', { bubbles: true }));
-      }
-    }
-    // Initial zoom
-    applyZoom(100);
-
-    zoomOut.addEventListener('click', () => applyZoom(zoomPct - 10));
-    zoomIn.addEventListener('click', () => applyZoom(zoomPct + 10));
-    zoomSlider.addEventListener('input', () => applyZoom(parseInt(zoomSlider.value, 10) || 100));
-
-    // Sync UI when zoom changes via Ctrl+Wheel on the grid
-    gridEl.addEventListener('zoom', () => {
-      const sc = parseFloat(
-        getComputedStyle(gridEl).getPropertyValue('--canvas-scale') || '1'
-      );
-      const pct = Math.round(sc * 100);
-      zoomPct = pct;
-      zoomSlider.value = String(pct);
-      zoomLevel.textContent = `${pct}%`;
-    });
-
-    zoomWrap.appendChild(zoomOut);
-    zoomWrap.appendChild(zoomSlider);
-    zoomWrap.appendChild(zoomLevel);
-    zoomWrap.appendChild(zoomIn);
-    layoutBar.appendChild(zoomWrap);
-
-    (footer || document.body).appendChild(layoutBar);
   }
 
 }

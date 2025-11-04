@@ -7,6 +7,38 @@ const { sanitizeHtml } = await import(
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
 
+function normalizeDesignerWidget(widget = {}) {
+  if (!widget || typeof widget !== 'object') return null;
+  const layer = widget.layer ?? widget.zIndex ?? widget.z_index;
+  const rotation = widget.rotationDeg ?? widget.rotation_deg;
+  const opacity = widget.opacity;
+  const parseNumber = val => {
+    if (val === null || val === undefined) return null;
+    const num = typeof val === 'string' ? parseFloat(val) : Number(val);
+    return Number.isFinite(num) ? num : null;
+  };
+  const layerNum = parseNumber(layer);
+  const rotationNum = parseNumber(rotation);
+  const opacityNum = parseNumber(opacity);
+  return {
+    id: widget.instance_id || widget.instanceId,
+    widgetId: widget.widget_id || widget.widgetId,
+    xPercent: widget.x_percent ?? widget.xPercent,
+    yPercent: widget.y_percent ?? widget.yPercent,
+    wPercent: widget.w_percent ?? widget.wPercent,
+    hPercent: widget.h_percent ?? widget.hPercent,
+    layer: layerNum,
+    rotationDeg: rotationNum,
+    opacity: opacityNum,
+    code: {
+      html: widget.html,
+      css: widget.css,
+      js: widget.js,
+      metadata: widget.metadata,
+    },
+  };
+}
+
 // Default rows for admin widgets (~100px with CanvasGrid)
 // Temporary patch: double the default height for larger widgets
 const DEFAULT_ADMIN_ROWS = 100;
@@ -291,6 +323,24 @@ function ensureLayout(layout = {}, lane = 'public') {
   }
 }
 
+function computeStaticGridMetrics(gridEl, layout = []) {
+  const width = gridEl?.getBoundingClientRect()?.width || gridEl?.clientWidth || 1;
+  const maxPercent = layout.reduce(
+    (m, it) => Math.max(m, (Number(it.yPercent) || 0) + (Number(it.hPercent) || 0)),
+    100
+  );
+  const clampedPercent = Math.max(100, Math.min(1000, Math.round(maxPercent)));
+  const height = Math.max(1, (clampedPercent / 100) * width);
+  const scaleX = width / 100;
+  const scaleY = height / 100;
+  return {
+    width,
+    height,
+    scaleX,
+    scaleY,
+  };
+}
+
 async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
   if (!target) return { gridEl: null, grid: null };
   let { gridEl, grid, append = false } = opts;
@@ -307,31 +357,36 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
         cellHeight: 1,
         columnWidth,
         columns,
-        enableZoom: false
+        enableZoom: false,
       },
       gridEl
     );
   }
   const pending = [];
-  const { cols, rows } = deriveGridSize(gridEl, grid, layout);
+  const metrics = computeStaticGridMetrics(gridEl, layout);
+  grid.options.columnWidth = 1;
+  grid.options.cellHeight = 1;
+  grid.options.columns = Infinity;
+  grid.options.rows = Infinity;
+  gridEl.style.height = `${metrics.height}px`;
   for (const item of layout) {
     const def = allWidgets.find(w => w.id === item.widgetId);
     if (!def) continue;
     const x =
       item.xPercent !== undefined
-        ? Math.round((item.xPercent / 100) * cols)
+        ? Math.round((Number(item.xPercent) || 0) * metrics.scaleX)
         : item.x ?? 0;
     const y =
       item.yPercent !== undefined
-        ? Math.round((item.yPercent / 100) * rows)
+        ? Math.round((Number(item.yPercent) || 0) * metrics.scaleY)
         : item.y ?? 0;
     const w =
       item.wPercent !== undefined
-        ? Math.max(1, Math.round((item.wPercent / 100) * cols))
+        ? Math.max(1, Math.round((Number(item.wPercent) || 0) * metrics.scaleX))
         : item.w ?? 8;
     const h =
       item.hPercent !== undefined
-        ? Math.max(1, Math.round((item.hPercent / 100) * rows))
+        ? Math.max(1, Math.round((Number(item.hPercent) || 0) * metrics.scaleY))
         : item.h ?? 4;
     const wrapper = document.createElement('div');
     wrapper.classList.add('canvas-item', 'loading');
@@ -343,6 +398,36 @@ async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
     wrapper.setAttribute('gs-min-h', 4);
     wrapper.dataset.widgetId = def.id;
     wrapper.dataset.instanceId = item.id;
+    if (item.xPercent != null) wrapper.dataset.xPercent = String(item.xPercent);
+    if (item.yPercent != null) wrapper.dataset.yPercent = String(item.yPercent);
+    if (item.wPercent != null) wrapper.dataset.wPercent = String(item.wPercent);
+    if (item.hPercent != null) wrapper.dataset.hPercent = String(item.hPercent);
+    if (item.layer != null) {
+      const layerVal = typeof item.layer === 'string' ? parseFloat(item.layer) : Number(item.layer);
+      if (Number.isFinite(layerVal)) {
+        wrapper.dataset.layer = String(layerVal);
+      }
+    } else if (item.zIndex != null || item.z_index != null) {
+      const raw = item.zIndex ?? item.z_index;
+      const layerVal = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
+      if (Number.isFinite(layerVal)) {
+        wrapper.dataset.layer = String(layerVal);
+      }
+    }
+    const rotationRaw = item.rotationDeg ?? item.rotation_deg;
+    if (rotationRaw != null) {
+      const rotationVal = typeof rotationRaw === 'string' ? parseFloat(rotationRaw) : Number(rotationRaw);
+      if (Number.isFinite(rotationVal)) {
+        wrapper.dataset.rotationDeg = String(rotationVal);
+      }
+    }
+    if (item.opacity != null) {
+      const opacityVal = typeof item.opacity === 'string' ? parseFloat(item.opacity) : Number(item.opacity);
+      if (Number.isFinite(opacityVal)) {
+        const clamped = Math.min(1, Math.max(0, opacityVal));
+        wrapper.style.opacity = String(clamped);
+      }
+    }
     const ph = document.createElement('div');
     ph.className = 'widget-placeholder';
     ph.textContent = def.metadata?.label || def.id;
@@ -405,20 +490,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
               : { jwt: window.PUBLIC_TOKEN }),
           });
           const layout = Array.isArray(res?.widgets)
-            ? res.widgets.map(w => ({
-                id: w.instance_id || w.instanceId,
-                widgetId: w.widget_id || w.widgetId,
-                xPercent: w.x_percent ?? w.xPercent,
-                yPercent: w.y_percent ?? w.yPercent,
-                wPercent: w.w_percent ?? w.wPercent,
-                hPercent: w.h_percent ?? w.hPercent,
-                code: {
-                  html: w.html,
-                  css: w.css,
-                  js: w.js,
-                  metadata: w.metadata,
-                },
-              }))
+            ? res.widgets.map(normalizeDesignerWidget).filter(Boolean)
             : [];
           if (res?.design?.bg_color)
             section.style.backgroundColor = res.design.bg_color;
@@ -595,20 +667,7 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
             jwt: window.PUBLIC_TOKEN,
           });
           const layout = Array.isArray(res?.widgets)
-            ? res.widgets.map(w => ({
-                id: w.instance_id || w.instanceId,
-                widgetId: w.widget_id || w.widgetId,
-                xPercent: w.x_percent ?? w.xPercent,
-                yPercent: w.y_percent ?? w.yPercent,
-                wPercent: w.w_percent ?? w.wPercent,
-                hPercent: w.h_percent ?? w.hPercent,
-                code: {
-                  html: w.html,
-                  css: w.css,
-                  js: w.js,
-                  metadata: w.metadata,
-                },
-              }))
+            ? res.widgets.map(normalizeDesignerWidget).filter(Boolean)
             : [];
           const combined = [...globalLayout, ...layout];
           clearContentKeepHeader(contentEl);

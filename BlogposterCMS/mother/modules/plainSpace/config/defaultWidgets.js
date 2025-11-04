@@ -30,6 +30,17 @@ module.exports.DEFAULT_WIDGETS = [
     }
   },
   {
+    widgetId: 'accessSettings',
+    widgetType: ADMIN_LANE,
+    label: 'Access Control',
+    content: '/plainspace/widgets/admin/accessSettingsWidget.js',
+    category: 'core',
+    options: { height: 120, halfWidth: true },
+    metadata: {
+      apiEvents: ['getSetting', 'setSetting']
+    }
+  },
+  {
     widgetId: 'activityLog',
     widgetType: ADMIN_LANE,
     label: 'Activity Log',

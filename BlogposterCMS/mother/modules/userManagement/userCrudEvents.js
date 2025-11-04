@@ -208,7 +208,7 @@ function setupUserCrudEvents(motherEmitter) {
   });
 
   // ==================== PUBLIC REGISTER ====================
-  motherEmitter.on('publicRegister', (payload, originalCb) => {
+  motherEmitter.on('publicRegister', async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     const {
@@ -235,32 +235,74 @@ function setupUserCrudEvents(motherEmitter) {
       return callback(new Error('Missing AUTH_MODULE_INTERNAL_SECRET'));
     }
 
-    motherEmitter.emit(
-      'issueModuleToken',
-      {
-        skipJWT: true,
-        authModuleSecret,
-        moduleName: 'auth',
-        moduleType: 'core',
-        trustLevel: 'high',
-        signAsModule: 'userManagement'
-      },
-      (err, highTok) => {
-        if (err) return callback(err);
+    try {
+      const firstInstallDone = await new Promise((resolve, reject) => {
         motherEmitter.emit(
-          'createUser',
+          'getPublicSetting',
           {
-            jwt: highTok,
-            moduleName: 'userManagement',
+            jwt,
+            moduleName: 'settingsManager',
             moduleType: 'core',
-            username,
-            password,
-            role: role || 'standard'
+            key: 'FIRST_INSTALL_DONE'
           },
-          callback
+          (err, val) => (err ? reject(err) : resolve(val))
         );
+      });
+
+      const installationFinished = String(firstInstallDone).toLowerCase() === 'true';
+
+      if (installationFinished) {
+        const allowRegistration = await new Promise((resolve, reject) => {
+          motherEmitter.emit(
+            'getPublicSetting',
+            {
+              jwt,
+              moduleName: 'settingsManager',
+              moduleType: 'core',
+              key: 'ALLOW_REGISTRATION'
+            },
+            (err, val) => (err ? reject(err) : resolve(val))
+          );
+        });
+
+        if (String(allowRegistration).toLowerCase() !== 'true') {
+          return callback(new Error('Public registration is disabled.'));
+        }
       }
-    );
+
+      const targetRole = installationFinished
+        ? 'standard'
+        : (role === 'admin' ? 'admin' : (role || 'admin'));
+
+      motherEmitter.emit(
+        'issueModuleToken',
+        {
+          skipJWT: true,
+          authModuleSecret,
+          moduleName: 'auth',
+          moduleType: 'core',
+          trustLevel: 'high',
+          signAsModule: 'userManagement'
+        },
+        (err, highTok) => {
+          if (err) return callback(err);
+          motherEmitter.emit(
+            'createUser',
+            {
+              jwt: highTok,
+              moduleName: 'userManagement',
+              moduleType: 'core',
+              username,
+              password,
+              role: targetRole
+            },
+            callback
+          );
+        }
+      );
+    } catch (err) {
+      callback(err);
+    }
   });
 
   // ==================== GET ALL USERS ====================

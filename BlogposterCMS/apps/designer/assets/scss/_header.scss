@@ -6,7 +6,11 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  width: 100%;
+  min-height: var(--builder-header-height, 64px);
   padding: 10px 24px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.9);
   background: color-mix(in srgb, var(--color-white), transparent 20%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-text), transparent 90%);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);

@@ -120,6 +120,7 @@
   // Component specific variables
   --toolbar-height: 48px;
   --header-height: 64px;
+  --builder-header-height: var(--header-height, 64px);
   --sidebar-width: 72px;
   --panel-width: 280px;
   

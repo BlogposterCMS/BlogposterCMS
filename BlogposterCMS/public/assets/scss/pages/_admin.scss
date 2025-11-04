@@ -10,7 +10,9 @@
 
 #adminGrid {
   min-height: 100vh;
-  padding: 0 20px;
+  padding: clamp(32px, 5vw, 72px) clamp(24px, 4vw, 64px) clamp(56px, 6vw, 96px);
+  scroll-margin-top: clamp(72px, 12vh, 128px);
+  position: relative;
 }
 
 .resize-handle.br {

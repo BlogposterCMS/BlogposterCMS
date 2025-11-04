@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Admin dashboard placement mode now respects the canvas padding when calculating drag and drop positions, keeping the grid anchored on screen and ensuring widgets land exactly where they're dropped.
+- Admin dashboard widgets no longer scale on hover in placement mode, keeping their grid size stable while arranging layouts.
 - Layout name input now retains unsaved text when switching layers by capturing the current value before the header reloads.
 - Builder header reloads when entering layout mode so the back button reflects the correct origin.
 - Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.

@@ -31,6 +31,7 @@ const entry = {
   sortable: resolveSource(__dirname, './public/assets/js/sortable.min'),
   tokenLoader: resolveSource(__dirname, './public/assets/js/tokenLoader'),
   topHeaderActions: resolveSource(__dirname, './public/plainspace/dashboard/topHeaderActions'),
+  workspaces: resolveSource(__dirname, './public/plainspace/dashboard/workspaces'),
   openExplorer: resolveSource(__dirname, './public/assets/js/openExplorer'),
   pageActions: resolveSource(__dirname, './public/plainspace/dashboard/pageActions'),
   fontsLoader: resolveSource(__dirname, './public/assets/js/fontsLoader'),

@@ -10,6 +10,9 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Regenerated the CMS `package-lock.json` so the new TypeScript dev dependency is captured for reproducible installs.
+- Added a project-wide TypeScript configuration enforcing strict type-safety defaults (`strict`, `noUncheckedIndexedAccess`,
+  `noImplicitOverride`) to guide all future `.ts` and `.tsx` development.
 - Refactored the designer builder renderer into dedicated header, preview, layout, and
   history helpers so `builderRenderer` now orchestrates imports instead of embedding the
   full implementation.

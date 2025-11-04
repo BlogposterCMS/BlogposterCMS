@@ -45,6 +45,7 @@ const securityConfig = require('./config/security');
 const { motherEmitter, meltdownForModule } = require('./mother/emitters/motherEmitter');
 const moduleNameFromStack = require('./mother/utils/moduleNameFromStack');
 const { registerOrUpdateApp, runDbSelectPlaceholder } = require('./mother/modules/appLoader/appRegistryService');
+const { validateInstallInput } = require('./mother/utils/installValidation');
 
 function handleGlobalError(err) {
   console.error('[GLOBAL] Unhandled error =>', err);
@@ -1169,20 +1170,27 @@ app.get('/login', csrfProtection, async (req, res) => {
 
 app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
   const { username, email, password, favoriteColor, siteName } = req.body || {};
-  if (!username || !email || !password) {
-    return res.status(400).send('Missing fields');
-  }
-  if (fs.existsSync(installLockPath)) {
-    return res.status(403).send('Already installed');
-  }
+  const trimmedUsername = String(username || '').trim();
+  const trimmedEmail = String(email || '').trim();
+  const trimmedSiteName = siteName != null ? String(siteName).trim() : '';
+  const safePassword = typeof password === 'string' ? password : '';
   const localIps = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
   const allowWeak = process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL';
   const isLocal = localIps.includes(req.ip);
   const forbidden = ['admin', 'root', 'test'];
-  if (forbidden.includes(String(username).toLowerCase()) && (!allowWeak || !isLocal)) {
-    return res.status(400).send('Username not allowed');
+
+  const { error } = validateInstallInput(
+    { username: trimmedUsername, email: trimmedEmail, password: safePassword },
+    { forbidden, allowWeak, isLocal }
+  );
+
+  if (error) {
+    return res.status(error.status).send(error.message);
   }
-  const strong = password.length >= 12 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
+  if (fs.existsSync(installLockPath)) {
+    return res.status(403).send('Already installed');
+  }
+  const strong = safePassword.length >= 12 && /[a-z]/.test(safePassword) && /[A-Z]/.test(safePassword) && /\d/.test(safePassword);
   if (!strong && (!allowWeak || !isLocal)) {
     return res.status(400).send('Password too weak');
   }
@@ -1226,10 +1234,10 @@ app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
           jwt: dbManagerToken,
           moduleName: 'userManagement',
           moduleType: 'core',
-          username: username.trim(),
-          password,
-          email: email.trim(),
-          displayName: username.trim(),
+          username: trimmedUsername,
+          password: safePassword,
+          email: trimmedEmail,
+          displayName: trimmedUsername,
           uiColor: favoriteColor,
           role: 'admin'
         },
@@ -1249,7 +1257,7 @@ app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
         err => (err ? reject(err) : resolve())
       );
     });
-    if (siteName) {
+    if (trimmedSiteName) {
       await new Promise((resolve, reject) => {
         motherEmitter.emit(
           'setSetting',
@@ -1258,7 +1266,7 @@ app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
             moduleName: 'settingsManager',
             moduleType: 'core',
             key: 'SITE_NAME',
-            value: String(siteName).trim()
+            value: trimmedSiteName
           },
           err => (err ? reject(err) : resolve())
         );

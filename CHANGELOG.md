@@ -13,6 +13,8 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Migrated the admin workspace navigation script to TypeScript and wired it
+  into the webpack bundle so future optimisations share consistent tooling.
 - Cleared ESLint unused-variable warnings across builder and admin assets by
   trimming dead imports, renaming unused parameters, and adding targeted error
   logging where helpful.
@@ -36,6 +38,11 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Restored parent workspace assignment when creating subpages so they remain
+  linked even when the page API returns a single object payload.
+- Admin workspace navigation now deduplicates fetches and skips redundant DOM
+  rebuilds so the dashboard no longer stutters when headers or sidebars emit
+  repeated load events.
 - Designer builder header now renders reliably again thanks to sanitized
   partial loading with a resilient fallback shell, and all designer panels
   align to the live header height via CSS variables to prevent layout gaps.

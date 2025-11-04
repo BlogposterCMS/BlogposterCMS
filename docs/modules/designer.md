@@ -26,6 +26,10 @@ new containers split their parent 50/50, the star button designates the sole dyn
 host, updating badges automatically, and the design button stores a `designRef` so
 static content can mount inside the container at runtime.
 
+`#layoutRoot` now always acts as the root layout container. When no saved layout tree exists the builder seeds a leaf node,
+assigns it a deterministic `nodeId`, and persists that node instead of the wrapper element. Subsequent splits or container moves
+reuse these stable identifiers so workarea flags and `designRef` assignments survive reloads and publishing.
+
  The sidebar layout panel now lists the current container tree. Selecting an entry
  scrolls the canvas to the corresponding container and keeps its action bar in view.
  An arrange toggle enables drag-and-drop container reordering with undo/redo and autosave.

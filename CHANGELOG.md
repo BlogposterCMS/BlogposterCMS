@@ -13,6 +13,12 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Public renderer now converts designer percentages into pixel offsets using the saved canvas footprint so published layouts align pixel-for-pixel with the designer preview.
+- Designer-rendered pages now honor saved widget layering, rotation, and opacity so public layouts match the designer preview.
+- Admin dashboard placement mode now respects the canvas padding when calculating drag and drop positions, keeping the grid anchored on screen and ensuring widgets land exactly where they're dropped.
+- Admin dashboard widgets no longer scale on hover in placement mode, keeping their grid size stable while arranging layouts.
+- Layout mode now seeds a stable root container and serializes that node instead of the wrapper element, so splits, workarea
+  flags, and design references persist reliably across reloads.
 - Layout name input now retains unsaved text when switching layers by capturing the current value before the header reloads.
 - Builder header reloads when entering layout mode so the back button reflects the correct origin.
 - Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.
@@ -34,6 +40,7 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Publish panel now surfaces validation, success, and error messaging inline with improved focus handling, replacing blocking alerts during design publishing.
 - Removed temporary layout exit button to keep the layout editor distinct; use the back button to leave layout mode.
 - Layout title defaults to "Layout name" when no previous name is provided.
 - Removed the layout editor pill; saving now uses the header control and the publish action is hidden in layout mode.
@@ -54,6 +61,7 @@ El Psy Kongroo
 - Split layout control opens a builder panel instead of a popup for layout selection.
 
 ### Added
+- Admin settings workspace now includes dedicated **Access Control** and **Audit Log** pages. The Access Control widget surfaces the `ALLOW_REGISTRATION` toggle while the Audit page exposes the activity log directly inside settings.
 - Design sidebar includes a leading layout switch bubble to open the layout editor.
 - Container action bar gains a design assignment control that stores a `designRef` on each container.
 - Layout serialization now persists stable `nodeId`s, split sizes and design references for deterministic runtime mapping.

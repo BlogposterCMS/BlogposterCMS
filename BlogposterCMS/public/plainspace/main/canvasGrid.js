@@ -78,17 +78,17 @@ export class CanvasGrid {
     });
     this._emitter = new EventTarget();
     bindGlobalListeners(this.el, (evt, e) => this._emit(evt, e));
+    this._canvasMetrics = null;
     this._updateGridHeight();
+    this._refreshCanvasMetrics();
     // Observe container size changes (e.g., sidebar open/close) and
     // recompute column width so percentage-based layout stays correct.
     try {
-      let prevWidth = this.el?.clientWidth || parseFloat(getComputedStyle(this.el).width) || 1;
+      let prevWidth = this._refreshCanvasMetrics().width || 1;
       const _ro = new ResizeObserver(() => {
-        // Use clientWidth to avoid counting CSS transforms applied to
-        // the container (e.g. when the sidebar "plops" open we scale
-        // #content). getBoundingClientRect() would include the scale
-        // and break our column width math.
-        const w = this.el?.clientWidth || parseFloat(getComputedStyle(this.el).width) || 1;
+        // Use the inner width (minus padding) so column calculations
+        // remain accurate even if the canvas has decorative padding.
+        const { width: w } = this._refreshCanvasMetrics();
         const cols = this.options.columns || 1;
         this.options.columnWidth = w / cols;
         this.widgets.forEach(wi => this._applyPosition(wi, false));
@@ -141,7 +141,8 @@ export class CanvasGrid {
   }
 
   emitChange(el, meta = {}) {
-    this._emit('change', { el, width: this.el.clientWidth, ...meta });
+    const { width } = this._getCanvasMetrics();
+    this._emit('change', { el, width, ...meta });
   }
 
   _emit(evt, detail) {
@@ -226,6 +227,7 @@ export class CanvasGrid {
     const height = Math.max(rows * cellHeight, min);
     this.el.style.height = `${height}px`;
     this._syncSizer();
+    this._refreshCanvasMetrics();
   }
 
   _applyPosition(el, recalc = true) {
@@ -262,11 +264,22 @@ export class CanvasGrid {
     el.style.zIndex = layer.toString();
 
     el.style.position = 'absolute';
+    const rotationAttr =
+      el.dataset.rotationDeg ?? el.dataset.rotation ?? el.dataset.rotate;
+    const rotationVal =
+      rotationAttr != null
+        ? (typeof rotationAttr === 'string'
+            ? parseFloat(rotationAttr)
+            : Number(rotationAttr))
+        : null;
+    const rotateSuffix =
+      Number.isFinite(rotationVal) && rotationVal !== 0
+        ? ` rotate(${rotationVal}deg)`
+        : '';
     el.style.transform =
-      `translate3d(${x * columnWidth}px, ${y * cellHeight}px, 0)`;
+      `translate3d(${x * columnWidth}px, ${y * cellHeight}px, 0)${rotateSuffix}`;
     if (this.options.percentageMode) {
-      const gridW = this.el.clientWidth || 1;
-      const gridH = this.el.clientHeight || 1;
+      const { width: gridW, height: gridH } = this._getCanvasMetrics();
       const xPercent = Math.min((x * columnWidth / gridW) * 100, 100);
       const yPercent = Math.min((y * cellHeight / gridH) * 100, 100);
       el.dataset.xPercent = xPercent;
@@ -552,8 +565,7 @@ export class CanvasGrid {
       el.dataset.x = snap.x;
       el.dataset.y = snap.y;
       if (this.options.percentageMode) {
-        const gridW = this.el.clientWidth || 1;
-        const gridH = this.el.clientHeight || 1;
+        const { width: gridW, height: gridH } = this._getCanvasMetrics();
         el.dataset.xPercent = Math.min((snap.x * this.options.columnWidth / gridW) * 100, 100);
         el.dataset.yPercent = Math.min((snap.y * this.options.cellHeight / gridH) * 100, 100);
       }
@@ -620,6 +632,39 @@ export class CanvasGrid {
 
     el.addEventListener('pointerdown', start);
     el._gridDragStart = startDrag;
+  }
+
+  _refreshCanvasMetrics() {
+    const style = getComputedStyle(this.el);
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    let width = (this.el.clientWidth || 0) - paddingLeft - paddingRight;
+    let height = (this.el.clientHeight || 0) - paddingTop - paddingBottom;
+    if (!Number.isFinite(width) || width <= 0) {
+      width = this.el.clientWidth || parseFloat(style.width) || 0;
+    }
+    if (!Number.isFinite(height) || height <= 0) {
+      height = this.el.clientHeight || parseFloat(style.height) || 0;
+    }
+    this._canvasMetrics = {
+      width,
+      height,
+      paddingLeft,
+      paddingRight,
+      paddingTop,
+      paddingBottom
+    };
+    return this._canvasMetrics;
+  }
+
+  _getCanvasMetrics() {
+    return this._canvasMetrics || this._refreshCanvasMetrics();
+  }
+
+  refreshMetrics() {
+    return this._refreshCanvasMetrics();
   }
 
   // snapToGrid, elementRect and rectsCollide are imported from grid-utils.js

@@ -262,8 +262,20 @@ export class CanvasGrid {
     el.style.zIndex = layer.toString();
 
     el.style.position = 'absolute';
+    const rotationAttr =
+      el.dataset.rotationDeg ?? el.dataset.rotation ?? el.dataset.rotate;
+    const rotationVal =
+      rotationAttr != null
+        ? (typeof rotationAttr === 'string'
+            ? parseFloat(rotationAttr)
+            : Number(rotationAttr))
+        : null;
+    const rotateSuffix =
+      Number.isFinite(rotationVal) && rotationVal !== 0
+        ? ` rotate(${rotationVal}deg)`
+        : '';
     el.style.transform =
-      `translate3d(${x * columnWidth}px, ${y * cellHeight}px, 0)`;
+      `translate3d(${x * columnWidth}px, ${y * cellHeight}px, 0)${rotateSuffix}`;
     if (this.options.percentageMode) {
       const gridW = this.el.clientWidth || 1;
       const gridH = this.el.clientHeight || 1;

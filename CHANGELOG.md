@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Public renderer now converts designer percentages into pixel offsets using the saved canvas footprint so published layouts align pixel-for-pixel with the designer preview.
+- Designer-rendered pages now honor saved widget layering, rotation, and opacity so public layouts match the designer preview.
 - Layout name input now retains unsaved text when switching layers by capturing the current value before the header reloads.
 - Builder header reloads when entering layout mode so the back button reflects the correct origin.
 - Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.

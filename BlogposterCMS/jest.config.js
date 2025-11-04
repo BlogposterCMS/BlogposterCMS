@@ -1,6 +1,7 @@
 module.exports = {
   testEnvironment: 'node',
   transform: {
-    '^.+\\.[jt]sx?$': 'babel-jest'
-  }
+    '^.+\\.[tj]sx?$': 'babel-jest',
+  },
+  transformIgnorePatterns: ['/node_modules/'],
 };

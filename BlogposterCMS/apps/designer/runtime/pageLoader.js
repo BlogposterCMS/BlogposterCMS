@@ -1,11 +1,56 @@
 import { renderLayoutTree } from '../renderer/layoutRender.js';
 import { executeJs } from '../utils.js';
+import { sanitizeHtml } from '../../../public/plainspace/sanitizer.js';
 
-const JWT = window.ADMIN_TOKEN || window.PUBLIC_TOKEN || null;
-const basePayload = extra => ({ jwt: JWT, ...extra });
+const JS_TRUST_FLAGS = [
+  'allowCustomJs',
+  'allow_custom_js',
+  'trustedAuthor',
+  'trusted_author',
+  'trusted',
+  'trustedJs',
+  'trusted_js',
+  'jsTrusted',
+  'js_trusted'
+];
+
+const TRUTHY_FLAG_LITERALS = new Set(['true', '1', 'yes', 'y', 'on']);
+
+const isExplicitlyTruthy = value => {
+  if (value === true) return true;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return false;
+    return TRUTHY_FLAG_LITERALS.has(normalized);
+  }
+  return false;
+};
+
+const getJwt = () => window.ADMIN_TOKEN || window.PUBLIC_TOKEN || null;
+
+export const canExecuteCustomJs = design => {
+  if (!design || typeof design !== 'object') return false;
+  for (const key of JS_TRUST_FLAGS) {
+    if (key in design) return isExplicitlyTruthy(design[key]);
+  }
+  const meta = design.meta || design.metadata;
+  if (meta && typeof meta === 'object') {
+    for (const key of JS_TRUST_FLAGS) {
+      if (key in meta) return isExplicitlyTruthy(meta[key]);
+    }
+  }
+  return false;
+};
+
+const applySanitizedHtml = (target, html) => {
+  target.innerHTML = sanitizeHtml(html);
+};
+const basePayload = extra => ({ jwt: getJwt(), ...extra });
 
 async function safeEmit(event, payload) {
-  if (typeof window.meltdownEmit !== 'function' || !JWT) return null;
+  const jwt = getJwt();
+  if (typeof window.meltdownEmit !== 'function' || !jwt) return null;
   try {
     return await window.meltdownEmit(event, payload);
   } catch (err) {
@@ -71,9 +116,13 @@ export async function renderPage(pageId, mountEl) {
     if (node.designRef) {
       const design = await loadDesign(node.designRef);
       if (design && typeof design.html === 'string') {
-        el.innerHTML = design.html;
+        applySanitizedHtml(el, design.html);
         if (design.js) {
-          try { executeJs(design.js, el, el); } catch (e) { console.error('[PageLoader] design js error', e); }
+          if (canExecuteCustomJs(design)) {
+            try { executeJs(design.js, el, el); } catch (e) { console.error('[PageLoader] design js error', e); }
+          } else {
+            console.warn('[PageLoader] blocked custom js for untrusted design', node.designRef);
+          }
         }
       }
     }
@@ -95,9 +144,13 @@ export async function renderPage(pageId, mountEl) {
   if (host && designId && page.auto_mount !== false) {
     const pageDesign = await loadDesign(designId);
     if (pageDesign && typeof pageDesign.html === 'string') {
-      host.innerHTML = pageDesign.html;
+      applySanitizedHtml(host, pageDesign.html);
       if (pageDesign.js) {
-        try { executeJs(pageDesign.js, host, host); } catch (e) { console.error('[PageLoader] page design js error', e); }
+        if (canExecuteCustomJs(pageDesign)) {
+          try { executeJs(pageDesign.js, host, host); } catch (e) { console.error('[PageLoader] page design js error', e); }
+        } else {
+          console.warn('[PageLoader] blocked custom js for untrusted page design', designId);
+        }
       }
     }
   }

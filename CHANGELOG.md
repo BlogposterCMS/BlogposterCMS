@@ -5,6 +5,13 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Maintenance
+- Align `babel-jest` and `jest-environment-jsdom` with the existing Jest 29 toolchain so runtime sanitization tests install and run without peer dependency conflicts.
+
+### Security
+- Runtime page loader now requires explicit truthy trust flag literals (boolean `true`, numeric `1` or the strings `'true'`, `'1'`, `'yes'`, `'y'` or `'on'`) before executing custom design scripts, preventing stringified falsy values from bypassing the trust gate.
+- Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
+
 ### Fixed
 - Public renderer now converts designer percentages into pixel offsets using the saved canvas footprint so published layouts align pixel-for-pixel with the designer preview.
 - Designer-rendered pages now honor saved widget layering, rotation, and opacity so public layouts match the designer preview.

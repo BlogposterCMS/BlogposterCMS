@@ -1,9 +1,9 @@
 // Canva-inspired Sidebar Design
  .builder-sidebar {
    position: sticky;
-   top: 64px; // stick under the header
+   top: var(--builder-header-height, var(--header-height, 64px)); // stick under the header
    align-self: flex-start;
-   height: calc(100vh - 64px);
+   height: calc(100vh - var(--builder-header-height, var(--header-height, 64px)));
    left: 0;
    width: var(--sidebar-width, 72px); // control via CSS var
    padding: 20px 16px 0;
@@ -38,10 +38,10 @@
   // Expandable panel
   .builder-panel {
     position: fixed;
-    top: 64px;
+    top: var(--builder-header-height, var(--header-height, 64px));
     left: calc(var(--sidebar-width, 72px) + 12px); // 12px gutter
     width: 280px; // Slightly wider
-    height: calc(100% - 64px);
+    height: calc(100% - var(--builder-header-height, var(--header-height, 64px)));
     background: white;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
     border: 1px solid rgba(0, 0, 0, 0.08);

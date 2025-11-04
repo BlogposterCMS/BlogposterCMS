@@ -75,8 +75,30 @@ const csrf = {
  *  #3  postMessage security – iframe communication whitelist
  *─────────────────────────────────────────────────────────────────────*/
 const defaultOrigin = normalizeOrigin(env.PUBLIC_URL) || 'http://localhost:3000';
+
+const originTokenPrivateKey = typeof env.APP_FRAME_ORIGIN_TOKEN_PRIVATE_KEY === 'string'
+  ? env.APP_FRAME_ORIGIN_TOKEN_PRIVATE_KEY.replace(/\\n/g, '\n')
+  : null;
+const originTokenPublicKey = typeof env.APP_FRAME_ORIGIN_TOKEN_PUBLIC_KEY === 'string'
+  ? env.APP_FRAME_ORIGIN_TOKEN_PUBLIC_KEY.replace(/\\n/g, '\n')
+  : null;
+
+if (!originTokenPrivateKey || !originTokenPublicKey) {
+  const guidance = [
+    '[SECURITY] Missing RSA key material for APP_FRAME origin token signing.',
+    'Set APP_FRAME_ORIGIN_TOKEN_PRIVATE_KEY (PKCS#8 PEM) and APP_FRAME_ORIGIN_TOKEN_PUBLIC_KEY (SPKI PEM)',
+    'before starting the server. See docs/security.md#admin-iframe-origin-whitelist for setup instructions.'
+  ].join('\n');
+  throw new Error(guidance);
+}
+
 const postMessage = {
-  allowedOrigins: parseAllowedOrigins(env.APP_FRAME_ALLOWED_ORIGINS)
+  allowedOrigins: parseAllowedOrigins(env.APP_FRAME_ALLOWED_ORIGINS),
+  originToken: {
+    privateKey: originTokenPrivateKey,
+    publicKey: originTokenPublicKey,
+    ttlSeconds: Number(env.APP_FRAME_ORIGIN_TOKEN_TTL_SECONDS || 300)
+  }
 };
 
 if (!postMessage.allowedOrigins.length) {

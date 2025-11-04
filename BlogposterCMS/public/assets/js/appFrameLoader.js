@@ -10,6 +10,8 @@
   const frame = document.getElementById('app-frame');
   if (!frame) return;
 
+  const originToken = frame.dataset.originToken || '';
+
   const normalizeOrigin = (value) => {
     if (!value) return null;
     const raw = String(value).trim();
@@ -48,7 +50,8 @@
       type: 'init-tokens',
       csrfToken: window.CSRF_TOKEN,
       adminToken: window.ADMIN_TOKEN,
-      allowedOrigins
+      allowedOrigins,
+      originToken
     }, frameOrigin);
   });
 

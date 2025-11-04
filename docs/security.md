@@ -23,9 +23,25 @@ Always review your access logs and keep dependencies up to date. Security patche
 
 ## Admin iframe origin whitelist
 
-The admin dashboard loads apps such as the designer inside an `<iframe>` and exchanges data via `postMessage`. To stop hostile pages from injecting commands, define the set of trusted parent origins in `config/security.js` or via the `APP_FRAME_ALLOWED_ORIGINS` environment variable. Multiple origins can be supplied as a comma-separated list (for example `https://admin.example.com,https://staging-admin.example.com`). The server forwards the whitelist to the iframe, and any message originating from a different origin is ignored.
+The admin dashboard loads apps such as the designer inside an `<iframe>` and exchanges data via `postMessage`. To stop hostile pages from injecting commands, define the set of trusted parent origins in `config/security.js` or via the `APP_FRAME_ALLOWED_ORIGINS` environment variable. Multiple origins can be supplied as a comma-separated list (for example `https://admin.example.com,https://staging-admin.example.com`).
 
-Origins reported as `null` (from sandboxed or `about:blank` documents) or using non-HTTP(S) schemes are always rejected, even if the local admin origin is part of the whitelist.
+At startup the CMS now requires an RSA key pair for iframe origin tokens. Provide the PEM-encoded values through the environment:
+
+- `APP_FRAME_ORIGIN_TOKEN_PRIVATE_KEY` – PKCS#8 private key
+- `APP_FRAME_ORIGIN_TOKEN_PUBLIC_KEY` – SPKI public key
+
+Startup aborts if either value is missing so deployments cannot fall back to an insecure development key. A short-lived, signed token that encodes the allowed origins is delivered to the iframe via the query string, and the designer downloads the matching public key from `/apps/designer/origin-public-key.json` before verifying the signature with the WebCrypto API. Only when the signature, referrer origin, and `postMessage` source all match the configured whitelist will the iframe accept admin tokens.
+
+Origins reported as `null` (from sandboxed or `about:blank` documents) or using non-HTTP(S) schemes remain blocked even if the origin token lists them.
+
+For local development you can generate a key pair with:
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out origin-token-private.pem
+openssl rsa -in origin-token-private.pem -pubout -out origin-token-public.pem
+```
+
+Paste the PEM strings (with newline escapes) into your `.env` file before starting the server.
 
 ## Troubleshooting Secure Login
 

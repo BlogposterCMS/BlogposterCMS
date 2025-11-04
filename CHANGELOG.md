@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Admin iframe postMessage whitelist now rejects `null` origins and non-HTTP(S) protocols to block sandboxed pages from spoofing trusted hosts.
+- Designer iframe now responds to the origin that delivers init tokens so multi-origin admin hosts receive readiness events reliably.
+- Designer iframe communication now whitelists parent origins and ignores untrusted messages before processing tokens.
 - Layout name input now retains unsaved text when switching layers by capturing the current value before the header reloads.
 - Builder header reloads when entering layout mode so the back button reflects the correct origin.
 - Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.

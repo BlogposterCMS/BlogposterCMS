@@ -6,6 +6,63 @@ import { initBuilderPanel } from './managers/panelManager.js';
 import { applyUserColor } from '../../public/assets/js/userColor.js';
 
 let bootstrapped = false;
+const urlParams = new URLSearchParams(window.location.search);
+
+const allowedOrigins = new Set();
+
+const normalizeOrigin = (value) => {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw || raw.toLowerCase() === 'null') {
+    return null;
+  }
+  try {
+    const url = new URL(raw, window.location.href);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return url.origin;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const getPrimaryAllowedOrigin = () => {
+  const first = allowedOrigins.values().next();
+  return first.done ? window.location.origin : first.value;
+};
+
+let parentPostMessageOrigin = window.location.origin;
+
+const addAllowedOrigins = (origins) => {
+  if (!Array.isArray(origins)) return;
+  let changed = false;
+  origins.forEach((originValue) => {
+    const normalized = normalizeOrigin(originValue);
+    if (normalized && !allowedOrigins.has(normalized)) {
+      allowedOrigins.add(normalized);
+      changed = true;
+    }
+  });
+  if (changed) {
+    parentPostMessageOrigin = getPrimaryAllowedOrigin();
+  }
+};
+
+const isAllowedOrigin = (origin) => {
+  const normalized = normalizeOrigin(origin);
+  return normalized ? allowedOrigins.has(normalized) : false;
+};
+
+const initialAllowedParam = urlParams.get('allowedOrigins');
+if (initialAllowedParam) {
+  addAllowedOrigins(initialAllowedParam.split(','));
+}
+if (!allowedOrigins.size) {
+  addAllowedOrigins([window.location.origin]);
+} else {
+  parentPostMessageOrigin = getPrimaryAllowedOrigin();
+}
 
 
 async function bootstrap() {
@@ -45,7 +102,6 @@ async function bootstrap() {
     console.error('[Designer App] Failed to load sidebar:', err);
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
   const designId = urlParams.get('designId');
   const layoutNameParam = urlParams.get('layout') || null;
   const layerParam = parseInt(urlParams.get('layer'), 10);
@@ -62,7 +118,7 @@ async function bootstrap() {
   await initBuilder(sidebarEl, contentEl, null, startLayer, layoutNameParam);
   enableAutoEdit();
 
-  window.parent.postMessage({ type: 'designer-ready' }, '*');
+  window.parent.postMessage({ type: 'designer-ready' }, parentPostMessageOrigin);
 }
 
 function maybeBootstrap() {
@@ -73,9 +129,21 @@ function maybeBootstrap() {
 
 window.addEventListener('message', (e) => {
   const msg = e.data || {};
+  if (!isAllowedOrigin(e.origin)) {
+    return;
+  }
   if (msg.type === 'init-tokens') {
+    const respondingOrigin = normalizeOrigin(e.origin);
+    if (Array.isArray(msg.allowedOrigins)) {
+      addAllowedOrigins(msg.allowedOrigins);
+    } else if (typeof msg.allowedOrigin === 'string') {
+      addAllowedOrigins([msg.allowedOrigin]);
+    }
     window.CSRF_TOKEN = msg.csrfToken;
     window.ADMIN_TOKEN = msg.adminToken;
+    if (respondingOrigin && allowedOrigins.has(respondingOrigin)) {
+      parentPostMessageOrigin = respondingOrigin;
+    }
     maybeBootstrap();
   } else if (msg.type === 'refresh') {
     window.location.reload();

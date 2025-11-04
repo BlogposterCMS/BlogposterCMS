@@ -35,6 +35,7 @@ const {
 } = require('./mother/modules/plainSpace/plainSpaceService');
 const { DEFAULT_WIDGETS } = require('./mother/modules/plainSpace/config/defaultWidgets');
 const { ADMIN_PAGES } = require('./mother/modules/plainSpace/config/adminPages');
+const securityConfig = require('./config/security');
 
 
 
@@ -980,16 +981,41 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
     pageId = idParam;
   }
   const titleSafe = escapeHtml(pageTitle);
-  const pageQuery = (appName === 'designer' && designId)
-    ? `?designId=${encodeURIComponent(designId)}${designVersion ? `&designVersion=${encodeURIComponent(designVersion)}` : ''}`
-    : (pageId ? `?pageId=${encodeURIComponent(pageId)}` : '');
-  const iframeSrc = `/apps/${appName}/index.html${pageQuery}`;
+  const configuredOrigins = Array.isArray(securityConfig.postMessage?.allowedOrigins)
+    ? securityConfig.postMessage.allowedOrigins.filter(Boolean)
+    : [];
+  const requestHost = req.get('host');
+  if (requestHost) {
+    try {
+      const origin = new URL(`${req.protocol}://${requestHost}`).origin;
+      if (!configuredOrigins.includes(origin)) {
+        configuredOrigins.push(origin);
+      }
+    } catch (err) {
+      console.warn('[GET /admin/app] Failed to derive request origin =>', err.message);
+    }
+  }
+  const queryParams = new URLSearchParams();
+  if (appName === 'designer' && designId) {
+    queryParams.set('designId', designId);
+    if (designVersion) {
+      queryParams.set('designVersion', designVersion);
+    }
+  } else if (pageId) {
+    queryParams.set('pageId', pageId);
+  }
+  if (configuredOrigins.length) {
+    queryParams.set('allowedOrigins', configuredOrigins.join(','));
+  }
+  const queryString = queryParams.toString();
+  const iframeSrc = `/apps/${appName}/index.html${queryString ? `?${queryString}` : ''}`;
 
   const csrfSafe = escapeHtml(req.csrfToken());
   const adminSafe = escapeHtml(adminJwt);
   const appSafe = escapeHtml(appName);
+  const allowedOriginsSafe = escapeHtml(configuredOrigins.join(','));
 
-  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${csrfSafe}"><meta name="admin-token" content="${adminSafe}"><meta name="app-name" content="${appSafe}"><link rel="stylesheet" href="/assets/css/app.css"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
+  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${csrfSafe}"><meta name="admin-token" content="${adminSafe}"><meta name="app-name" content="${appSafe}"><meta name="app-frame-allowed-origins" content="${allowedOriginsSafe}"><link rel="stylesheet" href="/assets/css/app.css"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" data-allowed-origins="${allowedOriginsSafe}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
   html = injectDevBanner(html);
   return res.send(html);
 });

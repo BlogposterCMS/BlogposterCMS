@@ -228,6 +228,22 @@ module.exports.ADMIN_PAGES = [
     }
   },
   {
+    title: 'Access Control',
+    slug: 'access',
+    parentSlug: 'settings',
+    lane: 'admin',
+    weight: 35,
+    config: {
+      layout: {
+        header: 'top-header',
+        sidebar: 'settings-sidebar',
+        inheritsLayout: true
+      },
+      icon: '/assets/icons/shield-check.svg',
+      widgets: ['accessSettings']
+    }
+  },
+  {
     title: 'Login',
     slug: 'login',
     parentSlug: 'settings',
@@ -277,6 +293,22 @@ module.exports.ADMIN_PAGES = [
       },
       icon: '/assets/icons/type.svg',
       widgets: ['fontsList']
+    }
+  },
+  {
+    title: 'Audit Log',
+    slug: 'audit',
+    parentSlug: 'settings',
+    lane: 'admin',
+    weight: 60,
+    config: {
+      layout: {
+        header: 'top-header',
+        sidebar: 'settings-sidebar',
+        inheritsLayout: true
+      },
+      icon: '/assets/icons/file-clock.svg',
+      widgets: ['activityLog']
     }
   }
 ];

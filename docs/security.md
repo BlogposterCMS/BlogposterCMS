@@ -16,7 +16,8 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
 - **Database privileges** – Create database users with only the permissions they need and restrict remote access where possible.
 - **Monitoring and logs** – Record login attempts and important actions. Reviewing logs helps detect suspicious behavior early.
 
-- **Content sanitization** – Public pages retain `<style>` tags while stripping scripts and unsafe CSS patterns (like `expression` or URLs using `javascript:` or `data:`) so designs render without enabling script injection.
+- **Content sanitization** – Design content is sanitised both when it is saved server-side and again when it is rendered in the browser. Public pages retain `<style>` tags while stripping scripts and unsafe CSS patterns (like `expression` or URLs using `javascript:` or `data:`) so designs render without enabling script injection.
+- **Custom design scripts** – Runtime rendering only executes design-supplied JavaScript when the payload carries an explicit trust flag (such as `allowCustomJs`). Only literal boolean `true`, `1` or the string equivalents `'true'`, `'1'`, `'yes'`, `'y'` or `'on'` are treated as trusted so stringified falsy values remain blocked. Restrict that capability to trusted authors via permissions or workflow reviews and audit designs regularly.
 
 Always review your access logs and keep dependencies up to date. Security patches will continue to harden the platform over time.
 

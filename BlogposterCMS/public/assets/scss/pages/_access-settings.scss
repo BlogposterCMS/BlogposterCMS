@@ -1,0 +1,67 @@
+@use './base' as p;
+
+.access-settings-card {
+  @include p.page-list-card;
+}
+
+.access-settings-title-bar {
+  @include p.page-title-bar;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.access-settings-title {
+  @include p.page-title;
+}
+
+.access-settings-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+
+  &[data-state='pending'] {
+    background: rgba(234, 179, 8, 0.12);
+    color: #b45309;
+  }
+}
+
+.access-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.access-settings-toggle input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+}
+
+.access-settings-status {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: rgba(34, 197, 94, 0.8);
+}
+
+.access-settings-subtitle {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.access-settings-tips {
+  padding-left: 1.25rem;
+  margin: 0;
+  color: rgba(17, 24, 39, 0.8);
+
+  li + li {
+    margin-top: 0.35rem;
+  }
+}

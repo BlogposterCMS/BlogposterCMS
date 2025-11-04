@@ -10,6 +10,9 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Refactored the designer builder renderer into dedicated header, preview, layout, and
+  history helpers so `builderRenderer` now orchestrates imports instead of embedding the
+  full implementation.
 - Align `babel-jest` and `jest-environment-jsdom` with the existing Jest 29 toolchain so runtime sanitization tests install and run without peer dependency conflicts.
 
 ### Security

@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Layout mode now seeds a stable root container and serializes that node instead of the wrapper element, so splits, workarea
+  flags, and design references persist reliably across reloads.
 - Layout name input now retains unsaved text when switching layers by capturing the current value before the header reloads.
 - Builder header reloads when entering layout mode so the back button reflects the correct origin.
 - Header back button now validates the referrer and falls back to the dashboard to avoid redirecting users back to the login screen after authentication.

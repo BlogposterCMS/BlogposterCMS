@@ -203,6 +203,32 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (!codeMap || typeof codeMap !== 'object') codeMap = {};
     return codeMap;
   }
+
+  function getRootLayoutContainer() {
+    if (!layoutRoot) return null;
+    if (layoutRoot.classList.contains('layout-container')) return layoutRoot;
+    return layoutRoot.querySelector(':scope > .layout-container');
+  }
+
+  function ensureLayoutRootContainer() {
+    if (!layoutRoot) return null;
+    layoutRoot.classList.add('layout-root');
+    let rootContainer = getRootLayoutContainer();
+    if (!rootContainer) {
+      layoutRoot.classList.add('layout-container', 'builder-grid', 'canvas-grid');
+      layoutRoot.dataset.emptyHint = STRINGS.splitHint;
+      layoutRoot.dataset.nodeId = layoutRoot.dataset.nodeId || generateNodeId();
+      rootContainer = layoutRoot;
+    } else {
+      if (!rootContainer.dataset.nodeId) {
+        rootContainer.dataset.nodeId = generateNodeId();
+      }
+      if (!rootContainer.dataset.emptyHint) {
+        rootContainer.dataset.emptyHint = STRINGS.splitHint;
+      }
+    }
+    return rootContainer;
+  }
   const state = {
     pageId,
     autosaveEnabled: true,
@@ -456,6 +482,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   layoutRoot = document.getElementById('layoutRoot');
   gridEl = document.getElementById('workspaceMain');
   gridEl.dataset.workarea = 'true';
+  ensureLayoutRootContainer();
   // Ensure the layout root sits inside the viewport so the workspace remains nested
   if (layoutRoot.parentElement !== gridViewportEl) {
     gridViewportEl.appendChild(layoutRoot);
@@ -493,6 +520,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (layoutData) {
       const obj = typeof layoutData === 'string' ? JSON.parse(layoutData) : layoutData;
       deserializeLayout(obj, layoutRoot);
+      ensureLayoutRootContainer();
     }
   } catch (e) {
     console.warn('[Designer] failed to deserialize layout', e);
@@ -528,7 +556,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function pushAndSave() {
-    const layout = serializeLayout(layoutRoot);
+    const rootContainer = ensureLayoutRootContainer();
+    if (!rootContainer) return;
+    const layout = serializeLayout(rootContainer);
     pushLayoutState(layout);
     if (pageId && state.autosaveEnabled) scheduleAutosave();
   }
@@ -537,6 +567,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   function refreshContainerBars() {
     if (!HAS_LAYOUT_STRUCTURE) return;
+    if (!ensureLayoutRootContainer()) return;
     layoutRoot?.querySelectorAll('.layout-container').forEach(el => {
       if (el.dataset.split === 'true') return;
       attachContainerBar(el, layoutCtx);
@@ -547,7 +578,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (!HAS_LAYOUT_STRUCTURE) return;
     const panel = sidebarEl.querySelector('.layout-panel');
     if (!panel) return;
-    renderLayoutTreeSidebar(panel, layoutRoot, el => {
+    const rootContainer = ensureLayoutRootContainer();
+    if (!rootContainer) return;
+    renderLayoutTreeSidebar(panel, rootContainer, el => {
       try {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.classList.add('tree-selected');
@@ -589,6 +622,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         wrapper.style.display = 'flex';
         wrapper.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
         wrapper.dataset.emptyHint = STRINGS.splitHint;
+        wrapper.dataset.nodeId = generateNodeId();
         if (parent) parent.replaceChild(wrapper, targetEl);
         wrapper.appendChild(targetEl);
         targetEl.style.flex = '1 1 0';
@@ -598,6 +632,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     refreshContainerBars();
     pushAndSave();
+    ensureLayoutRootContainer();
     setDefaultWorkarea(layoutRoot);
     refreshLayoutTree();
   }
@@ -638,6 +673,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         parent.replaceWith(only);
       }
     }
+    ensureLayoutRootContainer();
     setDefaultWorkarea(layoutRoot);
     refreshContainerBars();
     pushAndSave();
@@ -677,6 +713,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         wrapper.style.display = 'flex';
         wrapper.style.flexDirection = orientation === 'horizontal' ? 'column' : 'row';
         wrapper.dataset.emptyHint = STRINGS.splitHint;
+        wrapper.dataset.nodeId = generateNodeId();
         if (parent) parent.replaceChild(wrapper, targetEl);
         wrapper.appendChild(targetEl);
         targetEl.style.flex = '1 1 0';
@@ -697,6 +734,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     refreshContainerBars();
     pushAndSave();
+    ensureLayoutRootContainer();
     setDefaultWorkarea(layoutRoot);
     refreshLayoutTree();
   }

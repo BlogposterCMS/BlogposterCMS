@@ -43,14 +43,15 @@ function sanitizeUrl(val) {
 }
 
 function deriveGridSize(gridEl, grid, items = []) {
+  const metrics = measureGridMetrics(gridEl, grid);
   const colWidth = grid?.options?.columnWidth || 1;
   let cols = Number.isFinite(grid?.options?.columns)
     ? grid.options.columns
-    : Math.round((gridEl.getBoundingClientRect().width || 0) / colWidth);
+    : Math.round((metrics.width || 0) / colWidth);
   if (!cols || !Number.isFinite(cols)) cols = 12;
 
   const cellH = grid?.options?.cellHeight || 1;
-  let rows = Math.round((gridEl.getBoundingClientRect().height || 0) / cellH);
+  let rows = Math.round((metrics.height || 0) / cellH);
   if (!rows || !Number.isFinite(rows)) {
     const maxPercent = items.reduce(
       (m, it) => Math.max(m, (it.yPercent ?? 0) + (it.hPercent ?? 0)),
@@ -59,6 +60,28 @@ function deriveGridSize(gridEl, grid, items = []) {
     rows = Math.max(1, Math.round((maxPercent / 100) * cols));
   }
   return { cols, rows };
+}
+
+function measureGridMetrics(gridEl, grid) {
+  if (grid && typeof grid.refreshMetrics === 'function') {
+    return grid.refreshMetrics();
+  }
+  const style = getComputedStyle(gridEl);
+  const paddingLeft = parseFloat(style.paddingLeft) || 0;
+  const paddingRight = parseFloat(style.paddingRight) || 0;
+  const paddingTop = parseFloat(style.paddingTop) || 0;
+  const paddingBottom = parseFloat(style.paddingBottom) || 0;
+  let width = (gridEl.clientWidth || 0) - paddingLeft - paddingRight;
+  let height = (gridEl.clientHeight || 0) - paddingTop - paddingBottom;
+  if (!Number.isFinite(width) || width <= 0) {
+    const rect = gridEl.getBoundingClientRect();
+    width = Math.max(rect.width - paddingLeft - paddingRight, 0);
+  }
+  if (!Number.isFinite(height) || height <= 0) {
+    const rect = gridEl.getBoundingClientRect();
+    height = Math.max(rect.height - paddingTop - paddingBottom, 0);
+  }
+  return { width, height, paddingLeft, paddingTop, paddingRight, paddingBottom };
 }
 
 function createDebouncedEmitter(delay = 150) {
@@ -772,8 +795,10 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       enableZoom: false
     }, gridEl);
     function setColumnWidth() {
-      const gridWidth = gridEl.getBoundingClientRect().width;
-      grid.options.columnWidth = Math.round(gridWidth / columnCount);
+      const metrics = measureGridMetrics(gridEl, grid);
+      const width = metrics.width || gridEl.getBoundingClientRect().width;
+      const nextWidth = Math.max(width, columnCount);
+      grid.options.columnWidth = Math.round(nextWidth / columnCount);
       grid.widgets.forEach(w => grid.update(w));
     }
     setColumnWidth();
@@ -804,8 +829,15 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
       const def = widgets.find(w => w.id === id);
       if (!def || typeof window.addDashboardWidget !== 'function') return;
       const rect = gridEl.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / grid.options.columnWidth);
-      const y = Math.floor((e.clientY - rect.top) / grid.options.cellHeight);
+      const metrics = measureGridMetrics(gridEl, grid);
+      const padLeft = metrics.paddingLeft || 0;
+      const padTop = metrics.paddingTop || 0;
+      const colWidth = grid.options.columnWidth || 1;
+      const rowHeight = grid.options.cellHeight || 1;
+      const rawX = Math.floor((e.clientX - rect.left - padLeft) / colWidth);
+      const rawY = Math.floor((e.clientY - rect.top - padTop) / rowHeight);
+      const x = Math.max(0, rawX);
+      const y = Math.max(0, rawY);
       window.addDashboardWidget(def, { x, y });
     });
 

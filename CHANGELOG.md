@@ -36,6 +36,9 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Designer builder header now renders reliably again thanks to sanitized
+  partial loading with a resilient fallback shell, and all designer panels
+  align to the live header height via CSS variables to prevent layout gaps.
 - Builder bootstrap once again tracks the active global layout name, ensuring
   layout metadata stays available after ESLint cleanups.
 - Admin iframe postMessage whitelist now rejects `null` origins and non-HTTP(S) protocols to block sandboxed pages from spoofing trusted hosts.

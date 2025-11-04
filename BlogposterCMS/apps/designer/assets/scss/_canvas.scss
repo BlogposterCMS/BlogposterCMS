@@ -78,7 +78,7 @@ body.builder-mode #content {
   margin-left: 0;         /* no manual offset */
   width: auto;            /* full width inside flex container */
   min-width: 0;           /* allow flex item to shrink; prevent overflow */
-  height: calc(100vh - 64px); // Updated for new header height
+  height: calc(100vh - var(--builder-header-height, var(--header-height, 64px))); // Updated for dynamic header height
   // Allow vertical overflow so floating toolbars and labels remain visible
   // while suppressing horizontal scrollbars in the main container.
   overflow-x: hidden;
@@ -131,7 +131,7 @@ body.builder-mode #content {
     &::before {
       content: '';
       position: fixed;
-      top: 64px;
+      top: var(--builder-header-height, var(--header-height, 64px));
       left: var(--sidebar-width);
       right: 0;
       bottom: 0;
@@ -201,8 +201,8 @@ body.preview-mode {
   // In preview mode the viewport takes full height
   #builderViewport {
     margin-top: 0;
-    height: calc(100vh - 64px);
-    min-height: calc(100vh - 64px);
+    height: calc(100vh - var(--builder-header-height, var(--header-height, 64px)));
+    min-height: calc(100vh - var(--builder-header-height, var(--header-height, 64px)));
     background: white;
     border-radius: 0;
     box-shadow: none;

@@ -1,9 +1,9 @@
 import { sanitizeHtml } from './sanitizer.js';
-import { isSelectionStyled, restoreSelection, saveSelection, bindActiveElementGetter } from './selection.js';
+import { saveSelection, bindActiveElementGetter } from './selection.js';
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
-  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/core]', ...args); } catch (e) {}
+  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/core]', ...args); } catch {}
 }
 import { recordChange } from './history.js';
 import { initToolbar, showToolbar, hideToolbar } from '../toolbar/toolbar.js';

@@ -2,7 +2,7 @@
 // Pixel-based drag & resize grid for the builder
 import { bindGlobalListeners } from '/plainspace/grid-core/globalEvents.js';
 import { BoundingBoxManager } from '/plainspace/grid-core/bbox/BoundingBoxManager.js';
-import { snapToGrid, elementRect, rectsCollide } from '/plainspace/grid-core/geometry.js';
+import { elementRect, rectsCollide } from '/plainspace/grid-core/geometry.js';
 
 export class PixelGrid {
   constructor(options = {}, el) {

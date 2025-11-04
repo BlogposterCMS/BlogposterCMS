@@ -262,7 +262,7 @@ async function sharePage(page) {
   try {
     await navigator.clipboard.writeText(url);
     await bpDialog.alert('Page link copied to clipboard');
-  } catch (err) {
+  } catch {
     await bpDialog.alert(url);
   }
 }

@@ -42,11 +42,6 @@ export async function initWorkspaceNav() {
     const pages = Array.isArray(res?.pages) ? res.pages : Array.isArray(res) ? res : [];
     const compareWeight = (a, b) => (a.weight ?? 0) - (b.weight ?? 0);
 
-    const inferWorkspace = p => {
-      if (typeof p.meta?.workspace === 'string') return p.meta.workspace;
-      return String(p.slug || '').split('/')[0];
-    };
-
     // Build top workspace navigation
     if (nav) {
       let createBtn = nav.querySelector('#workspace-create');

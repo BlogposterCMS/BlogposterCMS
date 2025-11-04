@@ -26,7 +26,7 @@ module.exports = {
      *   - call "apiCoreRequest"
      *   - trigger "performDbOperation" / "createDatabase"
      */
-    async initialize({ motherEmitter, jwt, nonce }) {
+    async initialize({ motherEmitter, jwt, nonce: _nonce }) {
       if (initialized) {
         console.warn('[DUMMY MODULE] initialize called more than once; skipping.');
         return;

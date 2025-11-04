@@ -308,7 +308,7 @@ export async function render(el) {
         currentPath: 'public',
         newFolderName: HTML_FOLDER
       });
-    } catch (_) {
+    } catch {
       // folder likely exists
     }
     try {
@@ -374,7 +374,7 @@ export async function render(el) {
           currentPath: 'public',
           newFolderName: HTML_FOLDER
         });
-      } catch (_) {}
+      } catch {}
       let savedName = file.name;
       try {
         const res = await meltdownEmit('uploadFileToFolder', {

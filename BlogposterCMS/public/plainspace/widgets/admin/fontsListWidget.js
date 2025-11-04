@@ -20,7 +20,7 @@ export async function render(el) {
         key: 'GOOGLE_FONTS_API_KEY'
       });
       googleFontsKey = String(keyRes || '').trim();
-    } catch (_) {}
+    } catch {}
 
     const card = document.createElement('div');
     card.className = 'fonts-list-card page-list-card';

@@ -5,6 +5,7 @@ async function loadToPng() {
     const mod = await import('html-to-image');
     _toPng = mod.toPng;
   } catch (err) {
+    console.warn('[Designer] Failed to load html-to-image from package', err);
     try {
       const mod = await import('/assets/js/html-to-img.js');
       _toPng = mod.toPng;

@@ -72,7 +72,7 @@ export async function render(el) {
       let perms;
       try {
         perms = JSON.parse(permStr);
-      } catch (e) {
+      } catch {
         alert('Invalid JSON');
         return;
       }
@@ -143,7 +143,7 @@ export async function render(el) {
       let perms;
       try {
         perms = JSON.parse(permStr);
-      } catch (e) {
+      } catch {
         alert('Invalid JSON');
         return;
       }

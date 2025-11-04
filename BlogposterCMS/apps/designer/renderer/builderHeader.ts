@@ -74,7 +74,7 @@ export function createBuilderHeader({
               return;
             }
           }
-        } catch (e) { /* ignore malformed referrer */ }
+        } catch { /* ignore malformed referrer */ }
         window.location.href = '/';
       });
 
@@ -83,7 +83,7 @@ export function createBuilderHeader({
         layoutName = layoutNameParam || pageData?.meta?.layoutTemplate || pageData?.title || nameInput?.placeholder || 'layout-title';
       }
       if (nameInput) {
-        try { nameInput.value = layoutName; } catch (_) {}
+        try { nameInput.value = layoutName; } catch {}
         nameInput.addEventListener('input', () => {
           layoutName = nameInput.value;
         });

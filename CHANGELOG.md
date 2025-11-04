@@ -13,6 +13,9 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Cleared ESLint unused-variable warnings across builder and admin assets by
+  trimming dead imports, renaming unused parameters, and adding targeted error
+  logging where helpful.
 - Migrated designer builder orchestration to TypeScript (`builderRenderer.ts`,
   header/publish renderers) and introduced a shared logger for structured
   diagnostics across builder subsystems.
@@ -30,6 +33,8 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Builder bootstrap once again tracks the active global layout name, ensuring
+  layout metadata stays available after ESLint cleanups.
 - Admin iframe postMessage whitelist now rejects `null` origins and non-HTTP(S) protocols to block sandboxed pages from spoofing trusted hosts.
 - Designer iframe now responds to the origin that delivers init tokens so multi-origin admin hosts receive readiness events reliably.
 - Designer iframe communication now whitelists parent origins and ignores untrusted messages before processing tokens.

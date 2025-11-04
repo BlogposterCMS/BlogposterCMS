@@ -121,7 +121,7 @@ async function isDevAutoLoginAllowed() {
       );
     });
     return Boolean(user);
-  } catch (_) {
+  } catch {
     return false;
   }
 }
@@ -358,6 +358,7 @@ function getModuleTokenForDbManager() {
       const icons = files.filter(f => f.endsWith('.svg'));
       res.json(icons);
     } catch (err) {
+      console.error('[SERVER] Failed to build icon manifest', err);
       res.status(500).json({ error: 'Unable to load icons' });
     }
   });

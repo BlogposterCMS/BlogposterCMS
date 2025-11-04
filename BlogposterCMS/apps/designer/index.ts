@@ -114,7 +114,7 @@ const normalizeOrigin = (value) => {
       return url.origin;
     }
     return null;
-  } catch (_) {
+  } catch {
     return null;
   }
 };

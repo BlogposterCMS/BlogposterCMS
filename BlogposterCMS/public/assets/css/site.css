@@ -101,6 +101,16 @@
   background: transparent;
 }
 
+.field input:not(:-moz-placeholder) + label {
+  top: -8px;
+  left: 12px;
+  font-size: 12px;
+  color: var(--brand);
+  background: var(--color-card);
+  padding: 0 4px;
+  font-weight: 500;
+}
+
 .field input:not(:placeholder-shown) + label,
 .field input:focus + label {
   top: -8px;
@@ -249,6 +259,17 @@
   transition: all 0.2s ease;
 }
 
+.app-scope .field input:not(:-moz-placeholder) + label, .app-scope .field textarea:not(:-moz-placeholder) + label {
+  top: -7px;
+  left: 14px;
+  font-size: 12px;
+  color: var(--user-color);
+  background: #ffffff;
+  padding: 0 4px;
+  font-weight: 500;
+  transition: color 0.2s ease, --user-color 5s;
+}
+
 .app-scope .field input:not(:placeholder-shown) + label,
 .app-scope .field input:focus + label,
 .app-scope .field textarea:not(:placeholder-shown) + label,
@@ -275,7 +296,9 @@
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  appearance: none;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
   position: relative;
 }
 .app-scope input[type=checkbox]:checked {
@@ -441,7 +464,8 @@
   min-height: 300px;
   position: relative;
   background-color: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
   overflow-x: auto;
   overflow-y: visible;
   height: auto;
@@ -464,7 +488,8 @@
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 14px;
-  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
   position: absolute;
@@ -485,7 +510,8 @@
   height: 16px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+          backdrop-filter: blur(4px);
   cursor: move;
   pointer-events: all;
   touch-action: none;
@@ -826,7 +852,9 @@ body:not(.dashboard-edit-mode) .canvas-item::before {
   font-weight: 600;
   line-height: var(--btn-h);
   cursor: pointer;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
   transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
 }
 
@@ -1343,7 +1371,8 @@ body:not(.dashboard-edit-mode) .canvas-item::before {
   align-items: center;
   padding: 24px 25px;
   justify-content: center;
-  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
   background: color-mix(in srgb, var(--color-white), transparent 20%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
 }
@@ -1481,7 +1510,8 @@ body.dashboard-edit-mode #edit-toggle:hover {
   padding: 6px 24px;
   min-height: 40px;
   background: color-mix(in srgb, var(--color-white), transparent 30%);
-  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
 }
 .top-header .left-icons,
@@ -1639,7 +1669,8 @@ body.dashboard-edit-mode #edit-toggle:hover {
   min-height: 48px;
   position: sticky;
   top: 0;
-  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
   z-index: 40;
   transition: box-shadow 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -2226,7 +2257,8 @@ body.dashboard-edit-mode #edit-toggle:hover {
 .favicon-preview {
   width: 32px;
   height: 32px;
-  object-fit: contain;
+  -o-object-fit: contain;
+     object-fit: contain;
   border-radius: 4px;
 }
 
@@ -2710,6 +2742,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
   display: flex;
   gap: 10px;
   margin-bottom: 4px;
+  margin-bottom: 0;
 }
 .layout-filters .filter {
   font-family: var(--font-body);
@@ -2743,9 +2776,6 @@ body.dashboard-edit-mode #edit-toggle:hover {
 }
 .layout-filters .filter.active::after {
   transform: scaleX(1);
-}
-.layout-filters {
-  margin-bottom: 0;
 }
 
 .layout-tabs-wrap {
@@ -2816,7 +2846,8 @@ body.dashboard-edit-mode #edit-toggle:hover {
   height: 70px;
   background: #f6f6f6;
   border-radius: 6px;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .layout-details {
@@ -2974,7 +3005,8 @@ body.dashboard-edit-mode #edit-toggle:hover {
 .layout-gallery-preview {
   width: 100%;
   height: 80px;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   background: #f6f6f6;
   border-radius: 6px;
 }
@@ -3162,7 +3194,8 @@ body.dashboard-edit-mode #edit-toggle:hover {
 .html-preview {
   width: 100%;
   height: 120px;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .html-preview {
@@ -3209,6 +3242,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
   position: fixed;
   top: 0;
   left: 0;
+  width: -moz-max-content;
   width: max-content;
   transform: none;
   display: flex;
@@ -3358,7 +3392,9 @@ body.dashboard-edit-mode #edit-toggle:hover {
   color: #333;
   background-color: #fff;
   outline: none;
-  user-select: text;
+  -webkit-user-select: text;
+     -moz-user-select: text;
+          user-select: text;
   cursor: text;
 }
 .widget-textbox .editable b,
@@ -3784,15 +3820,13 @@ body.dashboard-edit-mode #edit-toggle:hover {
   gap: 4px;
   transition: box-shadow 0.16s;
   border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .widget-list li:hover {
   border: 1px solid var(--user-color);
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
-}
-.widget-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .widget-name {
@@ -4143,6 +4177,4 @@ body.grid-mode .bounding-box.disabled {
 .home-drag-widget {
   text-transform: uppercase;
   font-weight: bold;
-}
-
-/*# sourceMappingURL=site.css.map */
+}/*# sourceMappingURL=site.css.map */

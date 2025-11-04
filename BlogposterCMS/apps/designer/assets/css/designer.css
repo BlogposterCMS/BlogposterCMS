@@ -873,6 +873,7 @@ body.grid-mode .bounding-box.disabled {
 }
 .viewport-slider .viewport-range {
   flex: 1;
+  accent-color: var(--accent-color);
 }
 .viewport-slider .viewport-value {
   font-size: 14px;
@@ -958,6 +959,10 @@ body.preview-mode .builder-header .header-actions {
 
 .builder-sidebar .drag-widget-icon:active {
   cursor: grabbing;
+}
+
+.builder-sidebar .layout-switcher {
+  cursor: pointer;
 }
 
 .builder-panel {
@@ -1307,6 +1312,26 @@ body.preview-mode .builder-header .header-actions {
 
 .color-panel .color-panel-content {
   flex: 1;
+}
+
+.layout-panel {
+  text-align: center;
+}
+.layout-panel .layout-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.layout-panel .layout-actions button {
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: var(--color-white, #fff);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.layout-panel .layout-actions button:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 @media (max-width: 1024px) {
@@ -2521,20 +2546,6 @@ body.builder-mode #builderViewport .canvas-zoom-sizer {
   margin-top: 40px;
 }
 
-body.builder-mode #builderGrid {
-  min-height: 70vh;
-  min-width: 320px;
-  width: 100%;
-  max-width: 100%;
-  max-width: 3840px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
 body.builder-mode .canvas-item-content.builder-themed {
   width: 100%;
   height: 100%;
@@ -2576,7 +2587,7 @@ body.preview-mode #builderViewport {
   border-radius: 0;
   box-shadow: none;
 }
-body.preview-mode #builderGrid {
+body.preview-mode .builder-grid {
   pointer-events: none;
 }
 body.preview-mode #content {
@@ -2858,6 +2869,9 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
 .builder-footer .layout-bar .zoom-controls button:hover {
   background: rgba(0, 0, 0, 0.08);
 }
+.builder-footer .layout-bar .zoom-controls input[type=range] {
+  accent-color: var(--accent-color);
+}
 .builder-footer .layout-bar .zoom-controls .zoom-level {
   min-width: 60px;
   text-align: center;
@@ -2934,6 +2948,213 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
     bottom: 60px;
   }
 }
+#layoutRoot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 100%;
+}
+
+.layout-container {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.layout-container > .builder-grid,
+.layout-container.builder-grid {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+#layoutRoot > .builder-grid {
+  flex: 1 1 0;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+body.builder-mode .layout-container > .builder-grid,
+body.builder-mode .layout-container.builder-grid {
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  box-sizing: border-box;
+  min-height: 120px;
+}
+
+body.builder-mode #builderViewport > .builder-grid {
+  width: 100%;
+  height: 100%;
+}
+
+body.builder-mode .layout-container.builder-grid:empty::after {
+  content: attr(data-empty-hint);
+  color: #777;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+body.builder-mode .layout-container[data-workarea=true] {
+  position: relative;
+  outline: 2px solid #3b82f6;
+}
+
+body.builder-mode .layout-container[data-workarea=true]::after {
+  content: attr(data-workarea-label);
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+body.builder-mode .layout-container.tree-selected {
+  outline: 2px dashed #f97316;
+}
+
+body[data-active-layer="0"] .canvas-item {
+  pointer-events: none;
+}
+
+body[data-active-layer="0"] .layout-bar {
+  display: none;
+}
+
+.layout-placeholder {
+  flex: 1 1 0;
+  min-height: 20px;
+  outline: 2px dashed #9ca3af;
+}
+
+.layout-container.drag-ghost {
+  opacity: 0.5;
+}
+
+.layout-panel {
+  padding: 16px;
+}
+.layout-panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.layout-panel p {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+.layout-panel .arrange-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+body[data-active-layer="0"] .layout-container[data-workarea=true] {
+  position: relative;
+  outline: 2px dashed var(--user-color);
+}
+
+body[data-active-layer="0"] .layout-container[data-workarea=true]::after {
+  content: attr(data-workarea-label);
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: var(--user-color);
+  color: var(--color-primary-contrast);
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.layout-container {
+  position: relative;
+}
+
+.container-actionbar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+.container-actionbar button {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  padding: 2px;
+  line-height: 0;
+  cursor: pointer;
+}
+.container-actionbar button .icon {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+.container-actionbar .bar-host.active {
+  background: #3b82f6;
+  color: #fff;
+}
+.container-actionbar .bar-design.active {
+  background: #10b981;
+  color: #fff;
+}
+
+body[data-active-layer="1"] .container-actionbar {
+  display: none;
+}
+
+.placement-picker {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px;
+  gap: 2px;
+  z-index: 1000;
+}
+.placement-picker button {
+  font-size: 10px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.layout-tree {
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.layout-tree-item {
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.layout-tree-item.selected {
+  background: #e5e7eb;
+}
+
 html, body {
   height: 100%;
 }

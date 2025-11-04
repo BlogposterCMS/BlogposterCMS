@@ -1,0 +1,23 @@
+{
+  "watch": [
+    "app.js",
+    "apps",
+    "config",
+    "library",
+    "modules",
+    "mother",
+    "public",
+    "tests",
+    "widgets"
+  ],
+  "ext": "js,json,mjs,cjs,ts",
+  "ignore": [
+    "data/**/*",
+    "**/*.sqlite",
+    "install.lock",
+    "server.log",
+    "mother/modules/notificationManager/integrationsRegistry.json",
+    "mother/modules/notificationManager/**/*.log",
+    "mother/modules/databaseManager/placeholders/placeholderData.json"
+  ]
+}

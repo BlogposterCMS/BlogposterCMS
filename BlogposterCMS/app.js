@@ -37,6 +37,42 @@ const { DEFAULT_WIDGETS } = require('./mother/modules/plainSpace/config/defaultW
 const { ADMIN_PAGES } = require('./mother/modules/plainSpace/config/adminPages');
 const securityConfig = require('./config/security');
 
+const MIN_ORIGIN_TOKEN_TTL = 60;
+
+function base64UrlEncode(buffer) {
+  return Buffer.from(buffer)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function createOriginToken(origins) {
+  const keyConfig = securityConfig.postMessage?.originToken;
+  if (
+    !keyConfig?.privateKey ||
+    !keyConfig?.publicKey ||
+    !Array.isArray(origins) ||
+    !origins.length
+  ) {
+    return null;
+  }
+  const ttlSeconds = Math.max(Number(keyConfig.ttlSeconds || 0), MIN_ORIGIN_TOKEN_TTL);
+  const now = Date.now();
+  const payload = {
+    origins,
+    issuedAt: now,
+    expiresAt: now + (ttlSeconds * 1000),
+    nonce: crypto.randomBytes(16).toString('hex')
+  };
+  const payloadBuffer = Buffer.from(JSON.stringify(payload), 'utf8');
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(payloadBuffer);
+  signer.end();
+  const signature = signer.sign(keyConfig.privateKey);
+  return `${base64UrlEncode(payloadBuffer)}.${base64UrlEncode(signature)}`;
+}
+
 
 
 
@@ -344,6 +380,15 @@ function getModuleTokenForDbManager() {
   const buildPath = path.join(publicPath, 'build');
   app.use('/admin/assets', express.static(path.join(publicPath, 'assets')));
   app.use('/build', express.static(buildPath));
+  app.get('/apps/designer/origin-public-key.json', (req, res) => {
+    const publicKeyPem = securityConfig.postMessage?.originToken?.publicKey;
+    if (!publicKeyPem) {
+      res.status(503).json({ error: 'Origin public key unavailable' });
+      return;
+    }
+    res.set('Cache-Control', 'no-store');
+    res.json({ publicKey: publicKeyPem });
+  });
   app.use('/apps', express.static(path.join(__dirname, 'apps')));
   app.use('/widgets', express.static(path.join(__dirname, 'widgets')));
   app.use(
@@ -1006,8 +1051,16 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
   } else if (pageId) {
     queryParams.set('pageId', pageId);
   }
+  let originToken = null;
+  const originPublicKeyPem = securityConfig.postMessage?.originToken?.publicKey || '';
+  const originPublicKeyBase64 = originPublicKeyPem
+    ? Buffer.from(originPublicKeyPem, 'utf8').toString('base64')
+    : '';
   if (configuredOrigins.length) {
-    queryParams.set('allowedOrigins', configuredOrigins.join(','));
+    originToken = createOriginToken(configuredOrigins);
+    if (originToken) {
+      queryParams.set('originToken', originToken);
+    }
   }
   const queryString = queryParams.toString();
   const iframeSrc = `/apps/${appName}/index.html${queryString ? `?${queryString}` : ''}`;
@@ -1016,8 +1069,10 @@ app.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
   const adminSafe = escapeHtml(adminJwt);
   const appSafe = escapeHtml(appName);
   const allowedOriginsSafe = escapeHtml(configuredOrigins.join(','));
+  const originPublicKeySafe = escapeHtml(originPublicKeyBase64);
+  const originTokenAttr = originToken ? ` data-origin-token="${escapeHtml(originToken)}"` : '';
 
-  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${csrfSafe}"><meta name="admin-token" content="${adminSafe}"><meta name="app-name" content="${appSafe}"><meta name="app-frame-allowed-origins" content="${allowedOriginsSafe}"><link rel="stylesheet" href="/assets/css/app.css"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" data-allowed-origins="${allowedOriginsSafe}" frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
+  let html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${titleSafe}</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="${csrfSafe}"><meta name="admin-token" content="${adminSafe}"><meta name="app-name" content="${appSafe}"><meta name="app-frame-allowed-origins" content="${allowedOriginsSafe}"><meta name="app-frame-origin-public-key" content="${originPublicKeySafe}"><link rel="stylesheet" href="/assets/css/app.css"><script src="/build/meltdownEmitter.js"></script><script src="/assets/js/appFrameLoader.js" defer></script></head><body class="dashboard-app"><iframe id="app-frame" src="${iframeSrc}" data-allowed-origins="${allowedOriginsSafe}"${originTokenAttr} frameborder="0" style="width:100%;height:100vh;overflow:hidden;"></iframe></body></html>`;
   html = injectDevBanner(html);
   return res.send(html);
 });

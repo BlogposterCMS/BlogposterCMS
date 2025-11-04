@@ -28,6 +28,9 @@ El Psy Kongroo
 - Align `babel-jest` and `jest-environment-jsdom` with the existing Jest 29 toolchain so runtime sanitization tests install and run without peer dependency conflicts.
 
 ### Security
+- Startup now aborts when `APP_FRAME_ORIGIN_TOKEN_PRIVATE_KEY`/`APP_FRAME_ORIGIN_TOKEN_PUBLIC_KEY` are missing so deployments cannot silently rely on development key pairs when minting admin iframe tokens.
+- Designer iframe now fetches the RSA origin-token public key from `/apps/designer/origin-public-key.json`, verifies signed origin tokens, and ignores parent windows that spoof the token or fail referrer/origin checks.
+- Admin iframe loader now forwards the signed origin token to embedded apps, keeping legacy allowed-origin lists for compatibility while granting the designer a tamper-evident bootstrap channel.
 - Installation API now trims usernames and emails before validation so leading whitespace can no longer bypass forbidden-name policies during first admin creation.
 - Runtime page loader now requires explicit truthy trust flag literals (boolean `true`, numeric `1` or the strings `'true'`, `'1'`, `'yes'`, `'y'` or `'on'`) before executing custom design scripts, preventing stringified falsy values from bypassing the trust gate.
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).

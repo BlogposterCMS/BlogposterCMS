@@ -6,6 +6,28 @@ import { initBuilderPanel } from './managers/panelManager.js';
 import { applyUserColor } from '../../public/assets/js/userColor.js';
 import { createLogger } from './utils/logger';
 
+type OriginTokenPayload = {
+  origins: string[];
+  issuedAt: number;
+  expiresAt: number;
+  nonce: string;
+};
+
+type InitTokensMessage = {
+  type: 'init-tokens';
+  csrfToken?: string;
+  adminToken?: string;
+  allowedOrigins?: string[];
+  allowedOrigin?: string;
+  originToken?: string;
+};
+
+type RefreshMessage = {
+  type: 'refresh';
+};
+
+type ParentMessage = InitTokensMessage | RefreshMessage | Record<string, unknown>;
+
 const appLogger = createLogger('builder:app');
 
 const LOADER_VARIANTS = {
@@ -97,12 +119,19 @@ const renderLoadError = ({
   return error;
 };
 
-let bootstrapped = false;
+const bootState = {
+  bootstrapped: false,
+  originPolicyReady: false
+};
+
 const urlParams = new URLSearchParams(window.location.search);
+const originTokenParam = urlParams.get('originToken') ?? '';
 
-const allowedOrigins = new Set();
+const allowedOrigins = new Set<string>();
 
-const normalizeOrigin = (value) => {
+const textDecoder = new TextDecoder();
+
+const normalizeOrigin = (value: unknown): string | null => {
   if (!value) return null;
   const raw = String(value).trim();
   if (!raw || raw.toLowerCase() === 'null') {
@@ -119,14 +148,14 @@ const normalizeOrigin = (value) => {
   }
 };
 
-const getPrimaryAllowedOrigin = () => {
+const getPrimaryAllowedOrigin = (): string => {
   const first = allowedOrigins.values().next();
   return first.done ? window.location.origin : first.value;
 };
 
 let parentPostMessageOrigin = window.location.origin;
 
-const addAllowedOrigins = (origins) => {
+const addAllowedOrigins = (origins: unknown): void => {
   if (!Array.isArray(origins)) return;
   let changed = false;
   origins.forEach((originValue) => {
@@ -141,25 +170,181 @@ const addAllowedOrigins = (origins) => {
   }
 };
 
-const isAllowedOrigin = (origin) => {
+const isAllowedOrigin = (origin: string | null): boolean => {
   const normalized = normalizeOrigin(origin);
   return normalized ? allowedOrigins.has(normalized) : false;
 };
 
-const initialAllowedParam = urlParams.get('allowedOrigins');
-if (initialAllowedParam) {
-  addAllowedOrigins(initialAllowedParam.split(','));
-}
-if (!allowedOrigins.size) {
-  addAllowedOrigins([window.location.origin]);
-} else {
-  parentPostMessageOrigin = getPrimaryAllowedOrigin();
-}
+const base64UrlToUint8 = (value: string): Uint8Array => {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.length % 4 === 0
+    ? normalized
+    : `${normalized}${'='.repeat(4 - (normalized.length % 4))}`;
+  const binary = window.atob(padded);
+  const length = binary.length;
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
+
+const pemToUint8Array = (pem: string): Uint8Array => {
+  const trimmed = pem.replace(/-----BEGIN PUBLIC KEY-----/g, '')
+    .replace(/-----END PUBLIC KEY-----/g, '')
+    .replace(/\s+/g, '');
+  const binary = window.atob(trimmed);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
+
+let cachedPublicKeyPem: string | null = null;
+let originPublicKeyPromise: Promise<string | null> | undefined;
+
+const fetchOriginPublicKey = async (): Promise<string | null> => {
+  if (cachedPublicKeyPem) {
+    return cachedPublicKeyPem;
+  }
+  if (!window.fetch) {
+    appLogger.error('Fetch API unavailable; cannot load origin public key');
+    return null;
+  }
+  if (!originPublicKeyPromise) {
+    originPublicKeyPromise = (async () => {
+      try {
+        const response = await window.fetch('/apps/designer/origin-public-key.json', {
+          credentials: 'same-origin',
+          cache: 'no-store',
+          mode: 'same-origin',
+          redirect: 'error'
+        });
+        if (!response.ok) {
+          appLogger.warn('Failed to load origin public key', response.status, response.statusText);
+          return null;
+        }
+        const data = await response.json();
+        const publicKey = typeof data?.publicKey === 'string' ? data.publicKey.trim() : '';
+        if (!publicKey.startsWith('-----BEGIN PUBLIC KEY-----')) {
+          appLogger.warn('Origin public key response malformed');
+          return null;
+        }
+        cachedPublicKeyPem = publicKey;
+        return cachedPublicKeyPem;
+      } catch (err) {
+        appLogger.warn('Error fetching origin public key', err);
+        return null;
+      } finally {
+        originPublicKeyPromise = undefined;
+      }
+    })();
+  }
+  return originPublicKeyPromise ?? Promise.resolve(null);
+};
+
+const verifyWithSubtle = async (
+  publicKeyPem: string,
+  payload: Uint8Array,
+  signature: Uint8Array
+): Promise<boolean> => {
+  if (!window.crypto?.subtle) {
+    appLogger.error('WebCrypto not available for origin token verification');
+    return false;
+  }
+  const keyData = pemToUint8Array(publicKeyPem);
+  try {
+    const cryptoKey = await window.crypto.subtle.importKey(
+      'spki',
+      keyData,
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: 'SHA-256'
+      },
+      false,
+      ['verify']
+    );
+    return window.crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5',
+      cryptoKey,
+      signature,
+      payload
+    );
+  } catch (err) {
+    appLogger.error('Failed to verify origin token signature', err);
+    return false;
+  }
+};
+
+let tokenPayloadCache: OriginTokenPayload | null = null;
+
+const decodeOriginToken = async (): Promise<OriginTokenPayload | null> => {
+  if (tokenPayloadCache) {
+    return tokenPayloadCache;
+  }
+  if (!originTokenParam) {
+    appLogger.warn('Missing origin token query parameter');
+    return null;
+  }
+  const [payloadPart, signaturePart] = originTokenParam.split('.');
+  if (!payloadPart || !signaturePart) {
+    appLogger.warn('Invalid origin token format');
+    return null;
+  }
+  const publicKeyPem = await fetchOriginPublicKey();
+  if (!publicKeyPem) {
+    appLogger.warn('Unable to resolve origin public key');
+    return null;
+  }
+  const payloadBytes = base64UrlToUint8(payloadPart);
+  const signatureBytes = base64UrlToUint8(signaturePart);
+  const valid = await verifyWithSubtle(publicKeyPem, payloadBytes, signatureBytes);
+  if (!valid) {
+    appLogger.warn('Origin token signature rejected');
+    return null;
+  }
+  try {
+    const payloadText = textDecoder.decode(payloadBytes);
+    const payload = JSON.parse(payloadText) as OriginTokenPayload;
+    if (!Array.isArray(payload.origins) || !payload.origins.length) {
+      appLogger.warn('Origin token payload missing origins');
+      return null;
+    }
+    if (typeof payload.expiresAt === 'number' && payload.expiresAt < Date.now()) {
+      appLogger.warn('Origin token expired');
+      return null;
+    }
+    tokenPayloadCache = payload;
+    return payload;
+  } catch (err) {
+    appLogger.warn('Failed to parse origin token payload', err);
+    return null;
+  }
+};
+
+const ensureOriginPolicy = async (): Promise<boolean> => {
+  const payload = await decodeOriginToken();
+  if (!payload) {
+    return false;
+  }
+  addAllowedOrigins(payload.origins);
+  const referrerOrigin = normalizeOrigin(document.referrer);
+  if (!referrerOrigin || !allowedOrigins.has(referrerOrigin)) {
+    appLogger.warn('Referrer origin is not authorised to bootstrap designer');
+    return false;
+  }
+  parentPostMessageOrigin = referrerOrigin;
+  bootState.originPolicyReady = true;
+  return true;
+};
+
+const readyOriginPolicyPromise = ensureOriginPolicy();
 
 
 async function bootstrap() {
-  if (bootstrapped) return;
-  bootstrapped = true;
+  if (bootState.bootstrapped) return;
+  bootState.bootstrapped = true;
   await applyUserColor(true);
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('builderMain');
@@ -276,18 +461,24 @@ function maybeBootstrap() {
   }
 }
 
-window.addEventListener('message', (e) => {
-  const msg = e.data || {};
-  if (!isAllowedOrigin(e.origin)) {
+window.addEventListener('message', async (event: MessageEvent<ParentMessage>) => {
+  if (event.source !== window.parent) {
     return;
   }
+  const policyReady = bootState.originPolicyReady || await readyOriginPolicyPromise;
+  if (!policyReady) {
+    return;
+  }
+  if (!isAllowedOrigin(event.origin)) {
+    return;
+  }
+  const msg = (event.data ?? {}) as ParentMessage;
   if (msg.type === 'init-tokens') {
-    const respondingOrigin = normalizeOrigin(e.origin);
-    if (Array.isArray(msg.allowedOrigins)) {
-      addAllowedOrigins(msg.allowedOrigins);
-    } else if (typeof msg.allowedOrigin === 'string') {
-      addAllowedOrigins([msg.allowedOrigin]);
+    if (msg.originToken && msg.originToken !== originTokenParam) {
+      appLogger.warn('Rejecting init message with mismatched origin token');
+      return;
     }
+    const respondingOrigin = normalizeOrigin(event.origin);
     window.CSRF_TOKEN = msg.csrfToken;
     window.ADMIN_TOKEN = msg.adminToken;
     if (respondingOrigin && allowedOrigins.has(respondingOrigin)) {
@@ -300,3 +491,11 @@ window.addEventListener('message', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', maybeBootstrap);
+
+readyOriginPolicyPromise.then((isReady) => {
+  if (!isReady) {
+    appLogger.warn('Origin policy initialisation failed; designer will not bootstrap.');
+  }
+}).catch((err) => {
+  appLogger.error('Unexpected error while enforcing origin policy', err);
+});

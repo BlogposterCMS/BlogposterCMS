@@ -1,7 +1,6 @@
 import { createColorPicker } from '/assets/js/colorPicker.js';
 import {
   state,
-  setApplyHandlers,
   applyColor,
   applySize,
   applyFont,
@@ -17,7 +16,7 @@ import { showBuilderPanel, hideBuilderPanel } from '../../managers/panelManager.
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
-  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/toolbar]', ...args); } catch (e) {}
+  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/toolbar]', ...args); } catch {}
 }
 
 function ensureActiveEditable() {
@@ -218,7 +217,7 @@ function applyStyleInternal(prop, value) {
         if (window.DEBUG_TEXT_EDITOR) {
           const prevOutline = targetEl.style.outline;
           targetEl.style.outline = '1px dashed magenta';
-          setTimeout(() => { try { targetEl.style.outline = prevOutline; } catch(e){} }, 600);
+          setTimeout(() => { try { targetEl.style.outline = prevOutline; } catch {} }, 600);
         }
       } catch (e) {}
     } else {

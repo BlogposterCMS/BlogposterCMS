@@ -34,7 +34,7 @@ function onDragStart(e) {
   dragEl = el;
   dragEl.classList.add('drag-ghost');
   e.dataTransfer.effectAllowed = 'move';
-  try { e.dataTransfer.setData('text/plain', ''); } catch (_) {}
+  try { e.dataTransfer.setData('text/plain', ''); } catch {}
 }
 
 function onDragOver(e) {

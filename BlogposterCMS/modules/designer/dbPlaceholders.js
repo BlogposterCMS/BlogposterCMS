@@ -589,7 +589,7 @@ async function handleGetLayoutPlaceholder({ dbClient, params }) {
   }
 }
 
-async function handleListLayoutsPlaceholder({ dbClient, params }) {
+async function handleListLayoutsPlaceholder({ dbClient, params: _params }) {
   const dbType = (process.env.CONTENT_DB_TYPE || "").toLowerCase();
 
   if (dbType === "postgres") {

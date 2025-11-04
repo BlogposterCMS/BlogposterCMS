@@ -42,7 +42,7 @@ async function showLayoutPanel(sidebarEl) {
   if (!layoutPanelHtml) {
     try {
       layoutPanelHtml = sanitizeHtml(await fetchPartial('layout-panel'));
-    } catch (e) {
+    } catch {
       layoutPanelHtml = '<nav class="sidebar-nav layout-panel"></nav>';
     }
   }
@@ -59,8 +59,8 @@ export async function startLayoutMode(ctx) {
   await showLayoutPanel(ctx.sidebarEl);
   ctx.hideToolbar();
   if (ctx.gridEl) ctx.gridEl.style.pointerEvents = 'none';
-  try { ctx.refreshContainerBars?.(); } catch (e) { }
-  try { ctx.refreshLayoutTree?.(); } catch (e) { }
+  try { ctx.refreshContainerBars?.(); } catch { }
+  try { ctx.refreshLayoutTree?.(); } catch { }
 }
 
 export function stopLayoutMode(ctx) {

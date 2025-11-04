@@ -4,15 +4,11 @@ import { designerState } from '../../managers/designerState.js';
 
 let bgToolbar = null;
 let listenersAttached = false;
-const BGLOG = (...args) => { try { console.log('[BG/TB]', ...args); } catch (_) {} };
+const BGLOG = (...args) => { try { console.log('[BG/TB]', ...args); } catch {} };
 
 function getWorkspaceEl() {
   return document.getElementById('workspaceMain');
 }
-function getLayoutRootEl() {
-  return document.getElementById('layoutRoot');
-}
-
 function updateToolbarPosition() {
   if (!bgToolbar) return;
   const header = document.querySelector('.builder-header');
@@ -66,7 +62,7 @@ export function initBackgroundToolbar() {
   imageBtn.title = 'Background image';
   try {
     imageBtn.innerHTML = window.featherIcon ? window.featherIcon('image') : '<img src="/assets/icons/image.svg" alt="Image" />';
-  } catch (e) {
+  } catch {
     imageBtn.textContent = 'Image';
   }
 
@@ -77,7 +73,7 @@ export function initBackgroundToolbar() {
   clearBtn.title = 'Reset background';
   try {
     clearBtn.innerHTML = window.featherIcon ? window.featherIcon('x') : '<img src="/assets/icons/x.svg" alt="Clear" />';
-  } catch (e) {
+  } catch {
     clearBtn.textContent = 'Clear';
   }
 
@@ -124,7 +120,7 @@ export function initBackgroundToolbar() {
   function closeColorPanel() {
     hideBuilderPanel();
     state.colorPicker.el.classList.add('hidden');
-    try { colorBtn.focus(); } catch (e) {}
+    try { colorBtn.focus(); } catch {}
   }
 
   colorBtn.addEventListener('click', async ev => {

@@ -1,9 +1,9 @@
 import { initGlobalEvents, onGlobalEvent } from '/plainspace/grid-core/globalEvents.js';
-import { styleMatches, elementHasStyle } from '../utils/styleUtils.js';
+import { elementHasStyle } from '../utils/styleUtils.js';
 
 // Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
 function DBG(...args) {
-  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/sel]', ...args); } catch (e) {}
+  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/sel]', ...args); } catch {}
 }
 
 const preservedRanges = new WeakMap();

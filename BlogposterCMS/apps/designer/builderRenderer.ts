@@ -1,6 +1,5 @@
 
 import {
-  editElement,
   initTextEditor,
   showToolbar,
   hideToolbar,
@@ -9,10 +8,9 @@ import {
   undoTextCommand,
   redoTextCommand
 } from './editor/editor.js';
-import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar, isBackgroundToolbar } from './editor/toolbar/backgroundToolbar.js';
-import { initGrid, getCurrentLayout, getCurrentLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
-import { applyLayout, getItemData } from './managers/layoutManager.js';
-import { registerDeselect } from './managers/eventManager.js';
+import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar } from './editor/toolbar/backgroundToolbar.js';
+import { initGrid, getCurrentLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
+import { applyLayout } from './managers/layoutManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 import { designerState } from './managers/designerState.js';
 import { deserializeLayout, serializeLayout } from './renderer/layoutSerialize.js';
@@ -25,7 +23,7 @@ import { createLogger } from './utils/logger';
 import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
-import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
+import { getWidgetIcon } from './renderer/renderUtils.js';
 import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
 import { createBuilderHeader } from './renderer/builderHeader';
 import { createPreviewHeader } from './renderer/previewHeader.js';
@@ -114,11 +112,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   document.body.dataset.activeLayer = String(activeLayer);
   const footer = document.getElementById('builderFooter');
   let layoutBar;
-  let globalLayoutName = null;
 
   let layoutRoot;
   let gridEl;
   let codeMap = {};
+  let globalLayoutName: string | null = null;
   // Track when the BG toolbar was just opened to avoid immediate hide by global click
   let bgToolbarOpenedTs = 0;
   // Debug helper for background interactions
@@ -628,6 +626,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     layoutLayers[1].layout = initialLayout;
   } else {
     layoutLayers[0].layout = initialLayout;
+  }
+
+  if (HAS_LAYOUT_STRUCTURE) {
+    if (globalLayoutName) {
+      document.body.dataset.globalLayoutName = globalLayoutName;
+    } else {
+      delete document.body.dataset.globalLayoutName;
+    }
   }
   applyCompositeLayout(activeLayer);
   markInactiveWidgets();

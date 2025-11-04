@@ -18,7 +18,7 @@ function normalizeOrigin(value, base = 'http://localhost:3000') {
   try {
     const url = new URL(String(value), base);
     return url.origin;
-  } catch (_) {
+  } catch {
     return null;
   }
 }

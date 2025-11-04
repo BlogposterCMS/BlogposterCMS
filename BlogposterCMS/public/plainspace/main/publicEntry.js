@@ -12,7 +12,7 @@ async function tryImportLoader(src) {
       const mod = await import(p);
       if (typeof mod.registerLoaders === 'function') mod.registerLoaders(LR.register);
       return true;
-    } catch (_) {
+    } catch {
       // try next path
     }
   }

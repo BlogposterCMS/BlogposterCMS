@@ -56,7 +56,7 @@ export class CanvasGrid {
         this.el.style.left = '0';
         this.el.style.top = '0';
       }
-    } catch (_) { /* non-fatal if DOM structure unexpected */ }
+    } catch { /* non-fatal if DOM structure unexpected */ }
     this.widgets = [];
     this.activeEl = null;
     this.useBoundingBox = this.options.useBoundingBox !== false;
@@ -107,7 +107,7 @@ export class CanvasGrid {
       });
       _ro.observe(this.el);
       this._containerRO = _ro;
-    } catch (_) { /* ResizeObserver not supported */ }
+    } catch { /* ResizeObserver not supported */ }
 
     if (this.options.percentageMode) {
       window.addEventListener('resize', () => {

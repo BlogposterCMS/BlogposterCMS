@@ -63,6 +63,15 @@
   display: flex;
   gap: 12px;
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+#siteForm .actions {
+  width: 100%;
+}
+
+#siteForm .actions .button {
+  flex: 1 1 140px;
 }
 
 .login-form .actions .button.primary {

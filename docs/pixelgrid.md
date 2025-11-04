@@ -21,3 +21,8 @@ const grid = initPixelGrid({}, gridEl);
 ```
 
 PixelGrid is internal to the designer app and does not depend on dashboard scripts.
+
+The CMS now transpiles these designer modules on demand at runtime, so there is
+no need to commit the generated JavaScript alongside the TypeScript sources.
+Run `npm run build:browser` only when you want to precompile the assets for a
+static deployment or integration test bundle.

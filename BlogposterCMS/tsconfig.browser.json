@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": false,
+    "rootDir": ".",
+    "declaration": false,
+    "removeComments": false
+  },
+  "include": [
+    "public/plainspace/main/canvasGrid.ts",
+    "public/plainspace/main/pageRenderer.ts",
+    "public/plainspace/dashboard/pagePicker.ts",
+    "mother/modules/widgetManager/publicLoader.ts",
+    "apps/designer/main/pixelGrid.ts",
+    "apps/designer/managers/gridManager.ts"
+  ]
+}

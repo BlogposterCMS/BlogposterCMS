@@ -1,783 +1,358 @@
+// @ts-nocheck
 import { fetchPartial } from '../dashboard/fetchPartial.js';
 import { init as initCanvasGrid } from './canvasGrid.js';
 import { attachDashboardControls } from '../dashboard/widgetControls.js';
 const { sanitizeHtml } = await import(
-  /* webpackIgnore: true */ '/plainspace/sanitizer.js'
-);
+/* webpackIgnore: true */ '/plainspace/sanitizer.js');
 import { executeJs } from './script-utils.js';
 import { applyWidgetOptions } from './widgetOptions.js';
-
 function normalizeDesignerWidget(widget = {}) {
-  if (!widget || typeof widget !== 'object') return null;
-  const layer = widget.layer ?? widget.zIndex ?? widget.z_index;
-  const rotation = widget.rotationDeg ?? widget.rotation_deg;
-  const opacity = widget.opacity;
-  const parseNumber = val => {
-    if (val === null || val === undefined) return null;
-    const num = typeof val === 'string' ? parseFloat(val) : Number(val);
-    return Number.isFinite(num) ? num : null;
-  };
-  const layerNum = parseNumber(layer);
-  const rotationNum = parseNumber(rotation);
-  const opacityNum = parseNumber(opacity);
-  return {
-    id: widget.instance_id || widget.instanceId,
-    widgetId: widget.widget_id || widget.widgetId,
-    xPercent: widget.x_percent ?? widget.xPercent,
-    yPercent: widget.y_percent ?? widget.yPercent,
-    wPercent: widget.w_percent ?? widget.wPercent,
-    hPercent: widget.h_percent ?? widget.hPercent,
-    layer: layerNum,
-    rotationDeg: rotationNum,
-    opacity: opacityNum,
-    code: {
-      html: widget.html,
-      css: widget.css,
-      js: widget.js,
-      metadata: widget.metadata,
-    },
-  };
+    if (!widget || typeof widget !== 'object')
+        return null;
+    const layer = widget.layer ?? widget.zIndex ?? widget.z_index;
+    const rotation = widget.rotationDeg ?? widget.rotation_deg;
+    const opacity = widget.opacity;
+    const parseNumber = val => {
+        if (val === null || val === undefined)
+            return null;
+        const num = typeof val === 'string' ? parseFloat(val) : Number(val);
+        return Number.isFinite(num) ? num : null;
+    };
+    const layerNum = parseNumber(layer);
+    const rotationNum = parseNumber(rotation);
+    const opacityNum = parseNumber(opacity);
+    return {
+        id: widget.instance_id || widget.instanceId,
+        widgetId: widget.widget_id || widget.widgetId,
+        xPercent: widget.x_percent ?? widget.xPercent,
+        yPercent: widget.y_percent ?? widget.yPercent,
+        wPercent: widget.w_percent ?? widget.wPercent,
+        hPercent: widget.h_percent ?? widget.hPercent,
+        layer: layerNum,
+        rotationDeg: rotationNum,
+        opacity: opacityNum,
+        code: {
+            html: widget.html,
+            css: widget.css,
+            js: widget.js,
+            metadata: widget.metadata,
+        },
+    };
 }
-
 // Default rows for admin widgets (~100px with CanvasGrid)
 // Temporary patch: double the default height for larger widgets
 const DEFAULT_ADMIN_ROWS = 100;
-
 function getGlobalCssUrl(lane) {
-  if (lane === 'admin') return '/assets/css/site.css';
-  const theme = window.ACTIVE_THEME || 'default';
-  return `/themes/${theme}/theme.css`;
+    if (lane === 'admin')
+        return '/assets/css/site.css';
+    const theme = window.ACTIVE_THEME || 'default';
+    return `/themes/${theme}/theme.css`;
 }
-
 function ensureGlobalStyle(lane) {
-  const url = getGlobalCssUrl(lane);
-  if (document.querySelector(`link[data-global-style="${lane}"]`)) return;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = url;
-  link.dataset.globalStyle = lane;
-  document.head.appendChild(link);
+    const url = getGlobalCssUrl(lane);
+    if (document.querySelector(`link[data-global-style="${lane}"]`))
+        return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    link.dataset.globalStyle = lane;
+    document.head.appendChild(link);
 }
-
 async function fetchPartialSafe(name, type) {
-  try {
-    return await fetchPartial(name, type);
-  } catch (err) {
-    console.error(`[Renderer] failed to load partial ${type}/${name}`, err);
-    return '';
-  }
+    try {
+        return await fetchPartial(name, type);
+    }
+    catch (err) {
+        console.error(`[Renderer] failed to load partial ${type}/${name}`, err);
+        return '';
+    }
 }
-
 function sanitizeUrl(val) {
-  return typeof val === 'string' && /^(https?:\/\/|\/)[^\s]*$/.test(val)
-    ? val
-    : '';
+    return typeof val === 'string' && /^(https?:\/\/|\/)[^\s]*$/.test(val)
+        ? val
+        : '';
 }
-
 function deriveGridSize(gridEl, grid, items = []) {
-  const metrics = measureGridMetrics(gridEl, grid);
-  const colWidth = grid?.options?.columnWidth || 1;
-  let cols = Number.isFinite(grid?.options?.columns)
-    ? grid.options.columns
-    : Math.round((metrics.width || 0) / colWidth);
-  if (!cols || !Number.isFinite(cols)) cols = 12;
-
-  const cellH = grid?.options?.cellHeight || 1;
-  let rows = Math.round((metrics.height || 0) / cellH);
-  if (!rows || !Number.isFinite(rows)) {
-    const maxPercent = items.reduce(
-      (m, it) => Math.max(m, (it.yPercent ?? 0) + (it.hPercent ?? 0)),
-      100
-    );
-    rows = Math.max(1, Math.round((maxPercent / 100) * cols));
-  }
-  return { cols, rows };
+    const metrics = measureGridMetrics(gridEl, grid);
+    const colWidth = grid?.options?.columnWidth || 1;
+    let cols = Number.isFinite(grid?.options?.columns)
+        ? grid.options.columns
+        : Math.round((metrics.width || 0) / colWidth);
+    if (!cols || !Number.isFinite(cols))
+        cols = 12;
+    const cellH = grid?.options?.cellHeight || 1;
+    let rows = Math.round((metrics.height || 0) / cellH);
+    if (!rows || !Number.isFinite(rows)) {
+        const maxPercent = items.reduce((m, it) => Math.max(m, (it.yPercent ?? 0) + (it.hPercent ?? 0)), 100);
+        rows = Math.max(1, Math.round((maxPercent / 100) * cols));
+    }
+    return { cols, rows };
 }
-
 function measureGridMetrics(gridEl, grid) {
-  if (grid && typeof grid.refreshMetrics === 'function') {
-    return grid.refreshMetrics();
-  }
-  const style = getComputedStyle(gridEl);
-  const paddingLeft = parseFloat(style.paddingLeft) || 0;
-  const paddingRight = parseFloat(style.paddingRight) || 0;
-  const paddingTop = parseFloat(style.paddingTop) || 0;
-  const paddingBottom = parseFloat(style.paddingBottom) || 0;
-  let width = (gridEl.clientWidth || 0) - paddingLeft - paddingRight;
-  let height = (gridEl.clientHeight || 0) - paddingTop - paddingBottom;
-  if (!Number.isFinite(width) || width <= 0) {
-    const rect = gridEl.getBoundingClientRect();
-    width = Math.max(rect.width - paddingLeft - paddingRight, 0);
-  }
-  if (!Number.isFinite(height) || height <= 0) {
-    const rect = gridEl.getBoundingClientRect();
-    height = Math.max(rect.height - paddingTop - paddingBottom, 0);
-  }
-  return { width, height, paddingLeft, paddingTop, paddingRight, paddingBottom };
+    if (grid && typeof grid.refreshMetrics === 'function') {
+        return grid.refreshMetrics();
+    }
+    const style = getComputedStyle(gridEl);
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    let width = (gridEl.clientWidth || 0) - paddingLeft - paddingRight;
+    let height = (gridEl.clientHeight || 0) - paddingTop - paddingBottom;
+    if (!Number.isFinite(width) || width <= 0) {
+        const rect = gridEl.getBoundingClientRect();
+        width = Math.max(rect.width - paddingLeft - paddingRight, 0);
+    }
+    if (!Number.isFinite(height) || height <= 0) {
+        const rect = gridEl.getBoundingClientRect();
+        height = Math.max(rect.height - paddingTop - paddingBottom, 0);
+    }
+    return { width, height, paddingLeft, paddingTop, paddingRight, paddingBottom };
 }
-
 function createDebouncedEmitter(delay = 150) {
-  let queue = [];
-  let timer = null;
-  return function(eventName, payload = {}) {
-    return new Promise((resolve, reject) => {
-      queue.push({ eventName, payload, resolve, reject });
-      if (!timer) {
-        timer = setTimeout(async () => {
-          const batch = queue.slice();
-          queue = [];
-          timer = null;
-          try {
-            const results = await window.meltdownEmitBatch(
-              batch.map(it => ({ eventName: it.eventName, payload: it.payload }))
-            );
-            batch.forEach((item, idx) => item.resolve(results[idx]));
-          } catch (err) {
-            batch.forEach(item => item.reject(err));
-          }
-        }, delay);
-      }
-    });
-  };
+    let queue = [];
+    let timer = null;
+    return function (eventName, payload = {}) {
+        return new Promise((resolve, reject) => {
+            queue.push({ eventName, payload, resolve, reject });
+            if (!timer) {
+                timer = setTimeout(async () => {
+                    const batch = queue.slice();
+                    queue = [];
+                    timer = null;
+                    try {
+                        const results = await window.meltdownEmitBatch(batch.map(it => ({ eventName: it.eventName, payload: it.payload })));
+                        batch.forEach((item, idx) => item.resolve(results[idx]));
+                    }
+                    catch (err) {
+                        batch.forEach(item => item.reject(err));
+                    }
+                }, delay);
+            }
+        });
+    };
 }
-
 const emitDebounced = createDebouncedEmitter(100);
-
 async function registerWidgetEvents(def, lane) {
-  const raw = def?.metadata?.apiEvents;
-  if (!raw || typeof window.meltdownEmit !== 'function') return;
-  const list = Array.isArray(raw) ? raw : [raw];
-  const events = list.filter(
-    ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev)
-  );
-  if (!events.length) return;
-  const jwt = lane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
-  if (!jwt) return;
-  try {
-    await window.meltdownEmit('registerWidgetUsage', { jwt, events });
-  } catch (err) {
-    console.warn(`[Renderer] registerWidgetUsage failed for ${def.id}`, err);
-  }
+    const raw = def?.metadata?.apiEvents;
+    if (!raw || typeof window.meltdownEmit !== 'function')
+        return;
+    const list = Array.isArray(raw) ? raw : [raw];
+    const events = list.filter(ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev));
+    if (!events.length)
+        return;
+    const jwt = lane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
+    if (!jwt)
+        return;
+    try {
+        await window.meltdownEmit('registerWidgetUsage', { jwt, events });
+    }
+    catch (err) {
+        console.warn(`[Renderer] registerWidgetUsage failed for ${def.id}`, err);
+    }
 }
-
 async function renderWidget(wrapper, def, code = null, lane = 'public') {
-  const root = wrapper.attachShadow({ mode: 'open' });
-  const globalCss = getGlobalCssUrl(lane);
-
-  const style = document.createElement('style');
-  style.textContent = `@import url('${globalCss}');`;
-  root.appendChild(style);
-
-  const container = document.createElement('div');
-  container.className = 'widget-container';
-  if (lane === 'admin') {
-    container.classList.add('admin-widget');
-  }
-  container.style.width = '100%';
-  container.style.height = '100%';
-  // Prevent drag actions when interacting with form controls inside widgets on
-  // admin pages. Attach the handler on both the container and the grid item
-  // content element so events are intercepted before the grid logic runs.
-  const stop = ev => {
-    const t = ev.target.closest('input, textarea, select, label, button');
-    if (t) {
-      ev.stopPropagation();
-      ev.stopImmediatePropagation();
+    const root = wrapper.attachShadow({ mode: 'open' });
+    const globalCss = getGlobalCssUrl(lane);
+    const style = document.createElement('style');
+    style.textContent = `@import url('${globalCss}');`;
+    root.appendChild(style);
+    const container = document.createElement('div');
+    container.className = 'widget-container';
+    if (lane === 'admin') {
+        container.classList.add('admin-widget');
     }
-  };
-  container.addEventListener('pointerdown', stop, true);
-  container.addEventListener('mousedown', stop, true);
-  container.addEventListener(
-    'touchstart',
-    stop,
-    { capture: true, passive: true }
-  );
-  wrapper.addEventListener('pointerdown', stop, true);
-  wrapper.addEventListener('mousedown', stop, true);
-  wrapper.addEventListener(
-    'touchstart',
-    stop,
-    { capture: true, passive: true }
-  );
-  root.appendChild(container);
-  const handleSlot = document.createElement('slot');
-  handleSlot.name = 'resize-handle';
-  root.appendChild(handleSlot);
-
-  await registerWidgetEvents(def, lane);
-
-  const handleSheet = new CSSStyleSheet();
-  handleSheet.replaceSync(`::slotted(.resize-handle){position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--user-color, #333);}`);
-  root.adoptedStyleSheets = [...root.adoptedStyleSheets, handleSheet];
-
-  if (code) {
-    if (code.css) {
-      const customStyle = document.createElement('style');
-      customStyle.textContent = code.css;
-      root.appendChild(customStyle);
+    container.style.width = '100%';
+    container.style.height = '100%';
+    // Prevent drag actions when interacting with form controls inside widgets on
+    // admin pages. Attach the handler on both the container and the grid item
+    // content element so events are intercepted before the grid logic runs.
+    const stop = ev => {
+        const t = ev.target.closest('input, textarea, select, label, button');
+        if (t) {
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+        }
+    };
+    container.addEventListener('pointerdown', stop, true);
+    container.addEventListener('mousedown', stop, true);
+    container.addEventListener('touchstart', stop, { capture: true, passive: true });
+    wrapper.addEventListener('pointerdown', stop, true);
+    wrapper.addEventListener('mousedown', stop, true);
+    wrapper.addEventListener('touchstart', stop, { capture: true, passive: true });
+    root.appendChild(container);
+    const handleSlot = document.createElement('slot');
+    handleSlot.name = 'resize-handle';
+    root.appendChild(handleSlot);
+    await registerWidgetEvents(def, lane);
+    const handleSheet = new CSSStyleSheet();
+    handleSheet.replaceSync(`::slotted(.resize-handle){position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--user-color, #333);}`);
+    root.adoptedStyleSheets = [...root.adoptedStyleSheets, handleSheet];
+    if (code) {
+        if (code.css) {
+            const customStyle = document.createElement('style');
+            customStyle.textContent = code.css;
+            root.appendChild(customStyle);
+        }
+        if (code.html) {
+            container.innerHTML = sanitizeHtml(code.html);
+        }
+        if (code.js) {
+            try {
+                executeJs(code.js, wrapper, root, 'Renderer');
+            }
+            catch (e) {
+                console.error('[Renderer] custom js error', e);
+            }
+        }
+        return;
     }
-    if (code.html) {
-      container.innerHTML = sanitizeHtml(code.html);
+    const host = wrapper.closest('.canvas-item') || wrapper;
+    const ctx = {
+        id: host.dataset.instanceId,
+        widgetId: def.id,
+        metadata: def.metadata
+    };
+    if (lane === 'admin' && window.ADMIN_TOKEN) {
+        ctx.jwt = window.ADMIN_TOKEN;
     }
-    if (code.js) {
-      try { executeJs(code.js, wrapper, root, 'Renderer'); } catch (e) { console.error('[Renderer] custom js error', e); }
-
+    try {
+        const m = await import(/* webpackIgnore: true */ def.codeUrl);
+        m.render?.(container, ctx);
     }
-    return;
-  }
-  const host = wrapper.closest('.canvas-item') || wrapper;
-  const ctx = {
-    id: host.dataset.instanceId,
-    widgetId: def.id,
-    metadata: def.metadata
-  };
-  if (lane === 'admin' && window.ADMIN_TOKEN) {
-    ctx.jwt = window.ADMIN_TOKEN;
-  }
-  try {
-    const m = await import(/* webpackIgnore: true */ def.codeUrl);
-    m.render?.(container, ctx);
-  } catch (err) {
-    console.error(`[Widget ${def.id}] import error:`, err);
-  }
+    catch (err) {
+        console.error(`[Widget ${def.id}] import error:`, err);
+    }
 }
-
 function clearContentKeepHeader(el) {
-  if (!el) return;
-  const header = el.querySelector('#content-header');
-  el.innerHTML = '';
-  if (header) el.appendChild(header);
+    if (!el)
+        return;
+    const header = el.querySelector('#content-header');
+    el.innerHTML = '';
+    if (header)
+        el.appendChild(header);
 }
-
 function ensureLayout(layout = {}, lane = 'public') {
-  let scope = document.querySelector('.app-scope');
-  if (!scope) {
-    scope = document.createElement('div');
-    scope.className = 'app-scope';
-    document.body.prepend(scope);
-  }
-
-  if (lane !== 'admin') {
-    if (!document.getElementById('content')) {
-      const content = document.createElement('section');
-      content.id = 'content';
-      scope.appendChild(content);
+    let scope = document.querySelector('.app-scope');
+    if (!scope) {
+        scope = document.createElement('div');
+        scope.className = 'app-scope';
+        document.body.prepend(scope);
     }
-    return;
-  }
-
-  const inherit = layout.inheritsLayout !== false;
-
-  if (inherit || layout.header) {
-    if (!document.getElementById('top-header')) {
-      const topHeader = document.createElement('header');
-      topHeader.id = 'top-header';
-      scope.appendChild(topHeader);
-    }
-  }
-
-  if (inherit) {
-    if (!document.getElementById('main-header')) {
-      const mainHeader = document.createElement('header');
-      mainHeader.id = 'main-header';
-      scope.appendChild(mainHeader);
-    }
-  }
-
-  let mainContent = document.querySelector('.main-content');
-  if (!mainContent) {
-    mainContent = document.createElement('div');
-    mainContent.className = 'main-content';
-    scope.appendChild(mainContent);
-  }
-
-  if ((inherit || layout.sidebar) && layout.sidebar !== 'empty-sidebar') {
-    if (!document.getElementById('sidebar')) {
-      const sidebar = document.createElement('aside');
-      sidebar.id = 'sidebar';
-      mainContent.appendChild(sidebar);
-    }
-  }
-
-  const sidebarEl = document.getElementById('sidebar');
-  if (sidebarEl) {
-    if (layout.sidebar === 'empty-sidebar') {
-      sidebarEl.style.display = 'none';
-    } else {
-      sidebarEl.style.display = '';
-    }
-  }
-
-  if (!document.getElementById('content')) {
-    const content = document.createElement('section');
-    content.id = 'content';
-    mainContent.appendChild(content);
-  }
-
-  // Ensure global content header inside the content section
-  const contentEl = document.getElementById('content');
-  if (contentEl && !document.getElementById('content-header')) {
-    const header = document.createElement('div');
-    header.id = 'content-header';
-    contentEl.prepend(header);
-  }
-}
-
-function computeStaticGridMetrics(gridEl, layout = []) {
-  const width = gridEl?.getBoundingClientRect()?.width || gridEl?.clientWidth || 1;
-  const maxPercent = layout.reduce(
-    (m, it) => Math.max(m, (Number(it.yPercent) || 0) + (Number(it.hPercent) || 0)),
-    100
-  );
-  const clampedPercent = Math.max(100, Math.min(1000, Math.round(maxPercent)));
-  const height = Math.max(1, (clampedPercent / 100) * width);
-  const scaleX = width / 100;
-  const scaleY = height / 100;
-  return {
-    width,
-    height,
-    scaleX,
-    scaleY,
-  };
-}
-
-async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
-  if (!target) return { gridEl: null, grid: null };
-  let { gridEl, grid, append = false } = opts;
-  if (!append || !gridEl || !grid) {
-    gridEl = document.createElement('div');
-    gridEl.className = 'canvas-grid';
-    target.appendChild(gridEl);
-    const columnWidth = 1;
-    const columns = Infinity;
-    grid = initCanvasGrid(
-      {
-        staticGrid: true,
-        float: true,
-        cellHeight: 1,
-        columnWidth,
-        columns,
-        enableZoom: false,
-      },
-      gridEl
-    );
-  }
-  const pending = [];
-  const metrics = computeStaticGridMetrics(gridEl, layout);
-  grid.options.columnWidth = 1;
-  grid.options.cellHeight = 1;
-  grid.options.columns = Infinity;
-  grid.options.rows = Infinity;
-  gridEl.style.height = `${metrics.height}px`;
-  for (const item of layout) {
-    const def = allWidgets.find(w => w.id === item.widgetId);
-    if (!def) continue;
-    const x =
-      item.xPercent !== undefined
-        ? Math.round((Number(item.xPercent) || 0) * metrics.scaleX)
-        : item.x ?? 0;
-    const y =
-      item.yPercent !== undefined
-        ? Math.round((Number(item.yPercent) || 0) * metrics.scaleY)
-        : item.y ?? 0;
-    const w =
-      item.wPercent !== undefined
-        ? Math.max(1, Math.round((Number(item.wPercent) || 0) * metrics.scaleX))
-        : item.w ?? 8;
-    const h =
-      item.hPercent !== undefined
-        ? Math.max(1, Math.round((Number(item.hPercent) || 0) * metrics.scaleY))
-        : item.h ?? 4;
-    const wrapper = document.createElement('div');
-    wrapper.classList.add('canvas-item', 'loading');
-    wrapper.dataset.x = x;
-    wrapper.dataset.y = y;
-    wrapper.setAttribute('gs-w', w);
-    wrapper.setAttribute('gs-h', h);
-    wrapper.setAttribute('gs-min-w', 4);
-    wrapper.setAttribute('gs-min-h', 4);
-    wrapper.dataset.widgetId = def.id;
-    wrapper.dataset.instanceId = item.id;
-    if (item.xPercent != null) wrapper.dataset.xPercent = String(item.xPercent);
-    if (item.yPercent != null) wrapper.dataset.yPercent = String(item.yPercent);
-    if (item.wPercent != null) wrapper.dataset.wPercent = String(item.wPercent);
-    if (item.hPercent != null) wrapper.dataset.hPercent = String(item.hPercent);
-    if (item.layer != null) {
-      const layerVal = typeof item.layer === 'string' ? parseFloat(item.layer) : Number(item.layer);
-      if (Number.isFinite(layerVal)) {
-        wrapper.dataset.layer = String(layerVal);
-      }
-    } else if (item.zIndex != null || item.z_index != null) {
-      const raw = item.zIndex ?? item.z_index;
-      const layerVal = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
-      if (Number.isFinite(layerVal)) {
-        wrapper.dataset.layer = String(layerVal);
-      }
-    }
-    const rotationRaw = item.rotationDeg ?? item.rotation_deg;
-    if (rotationRaw != null) {
-      const rotationVal = typeof rotationRaw === 'string' ? parseFloat(rotationRaw) : Number(rotationRaw);
-      if (Number.isFinite(rotationVal)) {
-        wrapper.dataset.rotationDeg = String(rotationVal);
-      }
-    }
-    if (item.opacity != null) {
-      const opacityVal = typeof item.opacity === 'string' ? parseFloat(item.opacity) : Number(item.opacity);
-      if (Number.isFinite(opacityVal)) {
-        const clamped = Math.min(1, Math.max(0, opacityVal));
-        wrapper.style.opacity = String(clamped);
-      }
-    }
-    const ph = document.createElement('div');
-    ph.className = 'widget-placeholder';
-    ph.textContent = def.metadata?.label || def.id;
-    wrapper.appendChild(ph);
-    gridEl.appendChild(wrapper);
-    grid.makeWidget(wrapper);
-    pending.push({ wrapper, item, def, placeholder: ph });
-  }
-  for (const { wrapper, item, def, placeholder } of pending) {
-    const content = document.createElement('div');
-    content.className = 'canvas-item-content';
-    if (placeholder && placeholder.parentNode === wrapper) placeholder.remove();
-    wrapper.appendChild(content);
-    try {
-      const res = await emitDebounced('getWidgetInstance', {
-        instanceId: `default.${def.id}`,
-        ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {}) ,
-        moduleName: 'plainspace',
-        moduleType: 'core'
-      });
-      const opts = res?.content ? JSON.parse(res.content) : null;
-      applyWidgetOptions(wrapper, opts, grid);
-    } catch {}
-    await renderWidget(content, def, item.code || null, lane);
-    wrapper.classList.remove('loading');
-  }
-  return { gridEl, grid };
-}
-
-async function renderAttachedContent(page, lane, allWidgets, container) {
-  if (!container) return;
-  try {
-    const childRes = await meltdownEmit('getChildPages', {
-      parentId: page.id,
-      moduleName: 'pagesManager',
-      moduleType: 'core',
-      ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
-    });
-    const items = Array.isArray(childRes) ? childRes : (childRes?.data ?? []);
-    for (const child of items.filter(c => c.is_content)) {
-      const childPageRes = await meltdownEmit('getPageById', {
-        pageId: child.id,
-        lane,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
-      });
-      const childPage = childPageRes?.data ?? childPageRes;
-      if (!childPage) continue;
-      const section = document.createElement('section');
-      section.className = 'attached-content';
-      if (childPage.meta?.designId) {
-        try {
-          const res = await meltdownEmit('designer.getDesign', {
-            id: childPage.meta.designId,
-            moduleName: 'designer',
-            moduleType: 'community',
-            ...(lane === 'admin'
-              ? { jwt: window.ADMIN_TOKEN }
-              : { jwt: window.PUBLIC_TOKEN }),
-          });
-          const layout = Array.isArray(res?.widgets)
-            ? res.widgets.map(normalizeDesignerWidget).filter(Boolean)
-            : [];
-          if (res?.design?.bg_color)
-            section.style.backgroundColor = res.design.bg_color;
-          if (res?.design?.bg_media_url) {
-            const u = sanitizeUrl(res.design.bg_media_url);
-            if (u) section.style.backgroundImage = `url('${u}')`;
-          }
-          await renderStaticGrid(section, layout, allWidgets, lane);
-        } catch (err) {
-          console.warn('[Renderer] failed to load design', err);
-        }
-      } else if (childPage.meta?.layoutTemplate) {
-        let layoutArr = [];
-        try {
-          const res = await meltdownEmit('getLayoutTemplate', {
-            name: childPage.meta.layoutTemplate,
-            moduleName: 'plainspace',
-            moduleType: 'core',
-            ...(lane === 'admin'
-              ? { jwt: window.ADMIN_TOKEN }
-              : { jwt: window.PUBLIC_TOKEN }),
-          });
-          layoutArr = Array.isArray(res?.layout) ? res.layout : [];
-        } catch (err) {
-          console.warn('[Renderer] failed to load layout template', err);
-        }
-        await renderStaticGrid(section, layoutArr, allWidgets, lane);
-      } else if (childPage.html) {
-        const div = document.createElement('div');
-        div.innerHTML = sanitizeHtml(childPage.html);
-        section.appendChild(div);
-      }
-      container.appendChild(section);
-    }
-  } catch (err) {
-    console.warn('[Renderer] failed to load attached content', err);
-  }
-}
-
-(async () => {
-  try {
-    // 1. ROUTE BASICS
-    const pathParts = window.location.pathname.split('/').filter(Boolean);
-    const lane = window.location.pathname.startsWith('/admin') ? 'admin' : 'public';
-    ensureGlobalStyle(lane);
-    let slug;
-    if (window.PAGE_SLUG) {
-      slug = window.PAGE_SLUG;
-    } else {
-      const parts = lane === 'admin' ? pathParts.slice(1) : pathParts;
-      slug = parts.join('-') || 'dashboard';
-    }
-    const DEBUG = window.DEBUG_RENDERER;
-    if (DEBUG) console.debug('[Renderer] boot', { slug, lane });
-
-    // 2. FETCH PAGE META
-    const pageRes = await meltdownEmit('getPageBySlug', {
-      moduleName: 'pagesManager',
-      moduleType: 'core',
-      slug,
-      lane
-    });
-    if (DEBUG) console.debug('[Renderer] pageRes', pageRes);
-
-    const page = pageRes?.data ?? pageRes ?? null;
-    if (!page) {
-      alert('Page not found');
-      return;
-    }
-
-    const config = page.meta || {};
-    if (lane === 'admin' && page.title) {
-      document.title = `${page.title} - Admin`;
-    }
-
-    ensureLayout(config.layout || {}, lane);
-
-    // 3. DOM REFERENCES
-    const topHeaderEl = document.getElementById('top-header');
-    const mainHeaderEl = document.getElementById('main-header');
-    const sidebarEl = document.getElementById('sidebar');
-    const contentEl = document.getElementById('content');
-
-    if (!contentEl) return;
-
-    // 4. LOAD HEADER PARTIALS
-    if (topHeaderEl) {
-      topHeaderEl.innerHTML = sanitizeHtml(
-        await fetchPartialSafe(
-          config.layout?.header || 'top-header'
-        )
-      );
-      document.dispatchEvent(new CustomEvent('top-header-loaded'));
-    }
-    if (mainHeaderEl) {
-      if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
-        mainHeaderEl.innerHTML = '';
-      } else {
-        mainHeaderEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(config.layout?.mainHeader || 'main-header')
-        );
-        document.dispatchEvent(new CustomEvent('main-header-loaded'));
-      }
-    }
-    const contentHeaderEl = document.getElementById('content-header');
-    if (contentHeaderEl) {
-      contentHeaderEl.innerHTML = sanitizeHtml(
-        await fetchPartialSafe(
-          config.layout?.contentHeader || 'content-header'
-        )
-      );
-      document.dispatchEvent(new CustomEvent('content-header-loaded'));
-    }
-
-    // 5. LOAD SIDEBAR PARTIAL
-    const sidebarPartial = (config.layout?.inheritsLayout === false)
-      ? 'empty-sidebar'
-      : (config.layout?.sidebar || 'default-sidebar');
-
-    if (sidebarEl) {
-      if (sidebarPartial !== 'empty-sidebar') {
-        sidebarEl.innerHTML = sanitizeHtml(
-          await fetchPartialSafe(sidebarPartial)
-        );
-        sidebarEl.style.display = '';
-      } else {
-        sidebarEl.innerHTML = '';
-        sidebarEl.style.display = 'none';
-      }
-      document.dispatchEvent(new CustomEvent('sidebar-loaded'));
-    }
-    // 6. FETCH WIDGET REGISTRY
-    let widgetLane = lane === 'admin' ? (config.widgetLane || 'admin') : 'public';
-    // Prevent misconfigured pages from requesting admin widgets on the public lane
-    if (lane !== 'admin' && widgetLane === 'admin') {
-      console.warn('[Renderer] widgetLane="admin" on public page => forcing "public"');
-      widgetLane = 'public';
-    }
-
-    const widgetRes = await meltdownEmit('widget.registry.request.v1', {
-      lane: widgetLane,
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {})
-    });
-    if (DEBUG) console.debug('[Renderer] widgetRes', widgetRes);
-
-    const allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
-    window.availableWidgets = allWidgets;
-
-    let globalLayout = [];
-    try {
-      const glRes = await meltdownEmit('getGlobalLayoutTemplate', {
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN }),
-        lane
-      });
-      globalLayout = Array.isArray(glRes?.layout)
-        ? glRes.layout
-        : [];
-    } catch (err) {
-      console.warn('[Renderer] failed to load global layout', err);
-    }
-
-    // 7. PUBLIC PAGE: render widgets using stored layout in static grid
     if (lane !== 'admin') {
-      if (page.meta?.designId) {
-        try {
-          const res = await meltdownEmit('designer.getDesign', {
-            id: page.meta.designId,
-            moduleName: 'designer',
-            moduleType: 'community',
-            jwt: window.PUBLIC_TOKEN,
-          });
-          const layout = Array.isArray(res?.widgets)
-            ? res.widgets.map(normalizeDesignerWidget).filter(Boolean)
-            : [];
-          const combined = [...globalLayout, ...layout];
-          clearContentKeepHeader(contentEl);
-          if (res?.design?.bg_color)
-            contentEl.style.backgroundColor = res.design.bg_color;
-          if (res?.design?.bg_media_url) {
-            const u = sanitizeUrl(res.design.bg_media_url);
-            if (u) contentEl.style.backgroundImage = `url('${u}')`;
-          }
-          await renderStaticGrid(contentEl, combined, allWidgets, lane);
-          await renderAttachedContent(page, lane, allWidgets, contentEl);
-          return;
-        } catch (err) {
-          console.warn('[Renderer] failed to load design', err);
+        if (!document.getElementById('content')) {
+            const content = document.createElement('section');
+            content.id = 'content';
+            scope.appendChild(content);
         }
-      }
-      if (config.layoutTemplate) {
-        let layoutArr = [];
-        try {
-          const res = await meltdownEmit('getLayoutTemplate', {
-            name: config.layoutTemplate,
-            moduleName: 'plainspace',
-            moduleType: 'core',
-            jwt: window.PUBLIC_TOKEN,
-            lane
-          });
-          layoutArr = Array.isArray(res?.layout) ? res.layout : [];
-        } catch (err) {
-          console.warn('[Renderer] failed to load layout template', err);
+        return;
+    }
+    const inherit = layout.inheritsLayout !== false;
+    if (inherit || layout.header) {
+        if (!document.getElementById('top-header')) {
+            const topHeader = document.createElement('header');
+            topHeader.id = 'top-header';
+            scope.appendChild(topHeader);
         }
-        const combined = [...globalLayout, ...layoutArr];
-        clearContentKeepHeader(contentEl);
-        await renderStaticGrid(contentEl, combined, allWidgets, lane);
-        await renderAttachedContent(page, lane, allWidgets, contentEl);
-        return;
-      }
-      if (page.html) {
-        clearContentKeepHeader(contentEl);
-        const div = document.createElement('div');
-        div.innerHTML = sanitizeHtml(page.html);
-        contentEl.appendChild(div);
-        await renderAttachedContent(page, lane, allWidgets, contentEl);
-        return;
-      }
-
-      const layoutRes = await meltdownEmit('getLayoutForViewport', {
-        moduleName: 'plainspace',
-        moduleType: 'core',
-        pageId: page.id,
-        lane,
-        viewport: 'desktop'
-      });
-      if (DEBUG) console.debug('[Renderer] layoutRes', layoutRes);
-
-      const layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
-
-      // Temporary patch: start widgets larger by default
-      const items = layout.length ? layout : (config.widgets || []).map((id, idx) => ({ id: `w${idx}`, widgetId: id, x:0,y:idx*2,w:8,h:4, code:null }));
-      const combined = [...globalLayout, ...items];
-
-      if (!combined.length) {
-        clearContentKeepHeader(contentEl);
-        const msg = document.createElement('p');
-        msg.className = 'empty-state';
-        msg.textContent = 'No widgets configured.';
-        contentEl.appendChild(msg);
-        return;
-      }
-
-      clearContentKeepHeader(contentEl);
-      const gridEl = document.createElement('div');
-      gridEl.id = 'publicGrid';
-      gridEl.className = 'canvas-grid';
-      contentEl.appendChild(gridEl);
-      // Static mode: public pages should not be directly editable
-      const grid = initCanvasGrid(
-        {
-          staticGrid: true,
-          float: true,
-          cellHeight: 1,
-          columnWidth: 1,
-          enableZoom: false
-        },
-        gridEl
-      );
-
-      const pending = [];
-      const { cols, rows } = deriveGridSize(gridEl, grid, combined);
-      for (const item of combined) {
+    }
+    if (inherit) {
+        if (!document.getElementById('main-header')) {
+            const mainHeader = document.createElement('header');
+            mainHeader.id = 'main-header';
+            scope.appendChild(mainHeader);
+        }
+    }
+    let mainContent = document.querySelector('.main-content');
+    if (!mainContent) {
+        mainContent = document.createElement('div');
+        mainContent.className = 'main-content';
+        scope.appendChild(mainContent);
+    }
+    if ((inherit || layout.sidebar) && layout.sidebar !== 'empty-sidebar') {
+        if (!document.getElementById('sidebar')) {
+            const sidebar = document.createElement('aside');
+            sidebar.id = 'sidebar';
+            mainContent.appendChild(sidebar);
+        }
+    }
+    const sidebarEl = document.getElementById('sidebar');
+    if (sidebarEl) {
+        if (layout.sidebar === 'empty-sidebar') {
+            sidebarEl.style.display = 'none';
+        }
+        else {
+            sidebarEl.style.display = '';
+        }
+    }
+    if (!document.getElementById('content')) {
+        const content = document.createElement('section');
+        content.id = 'content';
+        mainContent.appendChild(content);
+    }
+    // Ensure global content header inside the content section
+    const contentEl = document.getElementById('content');
+    if (contentEl && !document.getElementById('content-header')) {
+        const header = document.createElement('div');
+        header.id = 'content-header';
+        contentEl.prepend(header);
+    }
+}
+function computeStaticGridMetrics(gridEl, layout = []) {
+    const width = gridEl?.getBoundingClientRect()?.width || gridEl?.clientWidth || 1;
+    const maxPercent = layout.reduce((m, it) => Math.max(m, (Number(it.yPercent) || 0) + (Number(it.hPercent) || 0)), 100);
+    const clampedPercent = Math.max(100, Math.min(1000, Math.round(maxPercent)));
+    const height = Math.max(1, (clampedPercent / 100) * width);
+    const scaleX = width / 100;
+    const scaleY = height / 100;
+    return {
+        width,
+        height,
+        scaleX,
+        scaleY,
+    };
+}
+async function renderStaticGrid(target, layout, allWidgets, lane, opts = {}) {
+    if (!target)
+        return { gridEl: null, grid: null };
+    let { gridEl, grid, append = false } = opts;
+    if (!append || !gridEl || !grid) {
+        gridEl = document.createElement('div');
+        gridEl.className = 'canvas-grid';
+        target.appendChild(gridEl);
+        const columnWidth = 1;
+        const columns = Infinity;
+        grid = initCanvasGrid({
+            staticGrid: true,
+            float: true,
+            cellHeight: 1,
+            columnWidth,
+            columns,
+            enableZoom: false,
+        }, gridEl);
+    }
+    const pending = [];
+    const metrics = computeStaticGridMetrics(gridEl, layout);
+    grid.options.columnWidth = 1;
+    grid.options.cellHeight = 1;
+    grid.options.columns = Infinity;
+    grid.options.rows = Infinity;
+    gridEl.style.height = `${metrics.height}px`;
+    for (const item of layout) {
         const def = allWidgets.find(w => w.id === item.widgetId);
-        if (!def) continue;
-        if (DEBUG) console.debug('[Renderer] render widget placeholder', def.id, item.id);
-
-        const x =
-          item.xPercent !== undefined
-            ? Math.round((item.xPercent / 100) * cols)
+        if (!def)
+            continue;
+        const x = item.xPercent !== undefined
+            ? Math.round((Number(item.xPercent) || 0) * metrics.scaleX)
             : item.x ?? 0;
-        const y =
-          item.yPercent !== undefined
-            ? Math.round((item.yPercent / 100) * rows)
+        const y = item.yPercent !== undefined
+            ? Math.round((Number(item.yPercent) || 0) * metrics.scaleY)
             : item.y ?? 0;
-        const w =
-          item.wPercent !== undefined
-            ? Math.max(1, Math.round((item.wPercent / 100) * cols))
+        const w = item.wPercent !== undefined
+            ? Math.max(1, Math.round((Number(item.wPercent) || 0) * metrics.scaleX))
             : item.w ?? 8;
-        const h =
-          item.hPercent !== undefined
-            ? Math.max(1, Math.round((item.hPercent / 100) * rows))
+        const h = item.hPercent !== undefined
+            ? Math.max(1, Math.round((Number(item.hPercent) || 0) * metrics.scaleY))
             : item.h ?? 4;
-
         const wrapper = document.createElement('div');
         wrapper.classList.add('canvas-item', 'loading');
         wrapper.dataset.x = x;
@@ -788,228 +363,589 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         wrapper.setAttribute('gs-min-h', 4);
         wrapper.dataset.widgetId = def.id;
         wrapper.dataset.instanceId = item.id;
-
+        if (item.xPercent != null)
+            wrapper.dataset.xPercent = String(item.xPercent);
+        if (item.yPercent != null)
+            wrapper.dataset.yPercent = String(item.yPercent);
+        if (item.wPercent != null)
+            wrapper.dataset.wPercent = String(item.wPercent);
+        if (item.hPercent != null)
+            wrapper.dataset.hPercent = String(item.hPercent);
+        if (item.layer != null) {
+            const layerVal = typeof item.layer === 'string' ? parseFloat(item.layer) : Number(item.layer);
+            if (Number.isFinite(layerVal)) {
+                wrapper.dataset.layer = String(layerVal);
+            }
+        }
+        else if (item.zIndex != null || item.z_index != null) {
+            const raw = item.zIndex ?? item.z_index;
+            const layerVal = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
+            if (Number.isFinite(layerVal)) {
+                wrapper.dataset.layer = String(layerVal);
+            }
+        }
+        const rotationRaw = item.rotationDeg ?? item.rotation_deg;
+        if (rotationRaw != null) {
+            const rotationVal = typeof rotationRaw === 'string' ? parseFloat(rotationRaw) : Number(rotationRaw);
+            if (Number.isFinite(rotationVal)) {
+                wrapper.dataset.rotationDeg = String(rotationVal);
+            }
+        }
+        if (item.opacity != null) {
+            const opacityVal = typeof item.opacity === 'string' ? parseFloat(item.opacity) : Number(item.opacity);
+            if (Number.isFinite(opacityVal)) {
+                const clamped = Math.min(1, Math.max(0, opacityVal));
+                wrapper.style.opacity = String(clamped);
+            }
+        }
         const ph = document.createElement('div');
         ph.className = 'widget-placeholder';
         ph.textContent = def.metadata?.label || def.id;
         wrapper.appendChild(ph);
-
         gridEl.appendChild(wrapper);
         grid.makeWidget(wrapper);
         pending.push({ wrapper, item, def, placeholder: ph });
-      }
-
-      for (const { wrapper, item, def, placeholder } of pending) {
+    }
+    for (const { wrapper, item, def, placeholder } of pending) {
         const content = document.createElement('div');
         content.className = 'canvas-item-content';
-        if (placeholder && placeholder.parentNode === wrapper) {
-          placeholder.remove();
-        }
+        if (placeholder && placeholder.parentNode === wrapper)
+            placeholder.remove();
         wrapper.appendChild(content);
-
         try {
-          const res = await emitDebounced('getWidgetInstance', {
-            moduleName: 'plainspace',
-            moduleType: 'core',
-            instanceId: `default.${def.id}`
-          });
-          const opts = res?.content ? JSON.parse(res.content) : null;
-          applyWidgetOptions(wrapper, opts, grid);
-        } catch {}
-
+            const res = await emitDebounced('getWidgetInstance', {
+                instanceId: `default.${def.id}`,
+                ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {}),
+                moduleName: 'plainspace',
+                moduleType: 'core'
+            });
+            const opts = res?.content ? JSON.parse(res.content) : null;
+            applyWidgetOptions(wrapper, opts, grid);
+        }
+        catch { }
         await renderWidget(content, def, item.code || null, lane);
         wrapper.classList.remove('loading');
-      }
-      await renderAttachedContent(page, lane, allWidgets, contentEl);
-      return;
     }
-
-    const layoutRes = await meltdownEmit('getLayoutForViewport', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      pageId: page.id,
-      lane,
-      viewport: 'desktop'
-    });
-    if (DEBUG) console.debug('[Renderer] admin layoutRes', layoutRes);
-
-    let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
-    const combinedAdmin = [...globalLayout, ...layout];
-
-    clearContentKeepHeader(contentEl);
-    const gridEl = document.createElement('div');
-    gridEl.id = 'adminGrid';
-    gridEl.className = 'canvas-grid';
-    contentEl.appendChild(gridEl);
-    const columnCount = 12;
-    const grid = initCanvasGrid({
-      cellHeight: 1,
-      columnWidth: 1,
-      columns: columnCount,
-      percentageMode: true,
-      pushOnOverlap: true,
-      useBoundingBox: true,
-      bboxHandles: false,
-      enableZoom: false
-    }, gridEl);
-    function setColumnWidth() {
-      const metrics = measureGridMetrics(gridEl, grid);
-      const width = metrics.width || gridEl.getBoundingClientRect().width;
-      const nextWidth = Math.max(width, columnCount);
-      grid.options.columnWidth = Math.round(nextWidth / columnCount);
-      grid.widgets.forEach(w => grid.update(w));
-    }
-    setColumnWidth();
-    window.addEventListener('resize', setColumnWidth);
-    grid.setStatic(true);
-    document.body.classList.add('grid-mode');
-    grid.on('change', () => {});
-    window.adminGrid = grid;
-    if (typeof grid.on === 'function') {
-      grid.on('dragstart', el => el.classList.add('dragging'));
-      grid.on('dragstop', el => el.classList.remove('dragging'));
-    }
-    window.adminPageContext = { pageId: page.id, lane };
-    window.adminCurrentLayout = layout;
-
-    gridEl.addEventListener('dragover', e => {
-      if (!document.body.classList.contains('dashboard-edit-mode')) return;
-      e.preventDefault();
-    });
-
-    gridEl.addEventListener('drop', e => {
-      if (!document.body.classList.contains('dashboard-edit-mode')) return;
-      e.preventDefault();
-      const id = e.dataTransfer.getData('text/plain');
-      const widgets = Array.isArray(window.availableWidgets)
-        ? window.availableWidgets
-        : [];
-      const def = widgets.find(w => w.id === id);
-      if (!def || typeof window.addDashboardWidget !== 'function') return;
-      const rect = gridEl.getBoundingClientRect();
-      const metrics = measureGridMetrics(gridEl, grid);
-      const padLeft = metrics.paddingLeft || 0;
-      const padTop = metrics.paddingTop || 0;
-      const colWidth = grid.options.columnWidth || 1;
-      const rowHeight = grid.options.cellHeight || 1;
-      const rawX = Math.floor((e.clientX - rect.left - padLeft) / colWidth);
-      const rawY = Math.floor((e.clientY - rect.top - padTop) / rowHeight);
-      const x = Math.max(0, rawX);
-      const y = Math.max(0, rawY);
-      window.addDashboardWidget(def, { x, y });
-    });
-
-    const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));
-    for (const id of (config.widgets || [])) widgetIdSet.add(id);
-    const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
-
-    const pendingAdmin = [];
-    const { cols, rows } = deriveGridSize(gridEl, grid, combinedAdmin);
-    for (const def of matchedWidgets) {
-      if (DEBUG) console.debug('[Renderer] admin render widget placeholder', def.id);
-      const meta = combinedAdmin.find(l => l.widgetId === def.id) || {};
-      const x =
-        meta.xPercent !== undefined
-          ? Math.round((meta.xPercent / 100) * cols)
-          : meta.x ?? 0;
-      const y =
-        meta.yPercent !== undefined
-          ? Math.round((meta.yPercent / 100) * rows)
-          : meta.y ?? 0;
-      const w =
-        meta.wPercent !== undefined
-          ? Math.max(1, Math.round((meta.wPercent / 100) * cols))
-          : meta.w ?? 8;
-      const h =
-        meta.hPercent !== undefined
-          ? Math.max(1, Math.round((meta.hPercent / 100) * rows))
-          : meta.h ?? DEFAULT_ADMIN_ROWS;
-
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('canvas-item', 'loading');
-      wrapper.dataset.x = x;
-      wrapper.dataset.y = y;
-      wrapper.setAttribute('gs-w', w);
-      wrapper.setAttribute('gs-h', h);
-      const minW = 4;
-      const minH = DEFAULT_ADMIN_ROWS;
-      wrapper.setAttribute('gs-min-w', minW);
-      wrapper.setAttribute('gs-min-h', minH);
-      wrapper.dataset.widgetId = def.id;
-      wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2,8)}`;
-
-      const ph = document.createElement('div');
-      ph.className = 'widget-placeholder';
-      ph.textContent = def.metadata?.label || def.id;
-      wrapper.appendChild(ph);
-
-      gridEl.appendChild(wrapper);
-      grid.makeWidget(wrapper);
-      pendingAdmin.push({ wrapper, def, meta, placeholder: ph });
-    }
-
-    for (const { wrapper, def, meta, placeholder } of pendingAdmin) {
-      const content = document.createElement('div');
-      content.className = 'canvas-item-content';
-      if (placeholder && placeholder.parentNode === wrapper) {
-        placeholder.remove();
-      }
-      wrapper.appendChild(content);
-
-      try {
-        const res = await emitDebounced('getWidgetInstance', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core',
-          instanceId: `default.${def.id}`
+    return { gridEl, grid };
+}
+async function renderAttachedContent(page, lane, allWidgets, container) {
+    if (!container)
+        return;
+    try {
+        const childRes = await meltdownEmit('getChildPages', {
+            parentId: page.id,
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
         });
-        const opts = res?.content ? JSON.parse(res.content) : null;
-        applyWidgetOptions(wrapper, opts, grid);
-      } catch {}
-
-      await renderWidget(content, def, meta.code || null, lane);
-      attachDashboardControls(wrapper, grid);
-      wrapper.classList.remove('loading');
+        const items = Array.isArray(childRes) ? childRes : (childRes?.data ?? []);
+        for (const child of items.filter(c => c.is_content)) {
+            const childPageRes = await meltdownEmit('getPageById', {
+                pageId: child.id,
+                lane,
+                moduleName: 'pagesManager',
+                moduleType: 'core',
+                ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN })
+            });
+            const childPage = childPageRes?.data ?? childPageRes;
+            if (!childPage)
+                continue;
+            const section = document.createElement('section');
+            section.className = 'attached-content';
+            if (childPage.meta?.designId) {
+                try {
+                    const res = await meltdownEmit('designer.getDesign', {
+                        id: childPage.meta.designId,
+                        moduleName: 'designer',
+                        moduleType: 'community',
+                        ...(lane === 'admin'
+                            ? { jwt: window.ADMIN_TOKEN }
+                            : { jwt: window.PUBLIC_TOKEN }),
+                    });
+                    const layout = Array.isArray(res?.widgets)
+                        ? res.widgets.map(normalizeDesignerWidget).filter(Boolean)
+                        : [];
+                    if (res?.design?.bg_color)
+                        section.style.backgroundColor = res.design.bg_color;
+                    if (res?.design?.bg_media_url) {
+                        const u = sanitizeUrl(res.design.bg_media_url);
+                        if (u)
+                            section.style.backgroundImage = `url('${u}')`;
+                    }
+                    await renderStaticGrid(section, layout, allWidgets, lane);
+                }
+                catch (err) {
+                    console.warn('[Renderer] failed to load design', err);
+                }
+            }
+            else if (childPage.meta?.layoutTemplate) {
+                let layoutArr = [];
+                try {
+                    const res = await meltdownEmit('getLayoutTemplate', {
+                        name: childPage.meta.layoutTemplate,
+                        moduleName: 'plainspace',
+                        moduleType: 'core',
+                        ...(lane === 'admin'
+                            ? { jwt: window.ADMIN_TOKEN }
+                            : { jwt: window.PUBLIC_TOKEN }),
+                    });
+                    layoutArr = Array.isArray(res?.layout) ? res.layout : [];
+                }
+                catch (err) {
+                    console.warn('[Renderer] failed to load layout template', err);
+                }
+                await renderStaticGrid(section, layoutArr, allWidgets, lane);
+            }
+            else if (childPage.html) {
+                const div = document.createElement('div');
+                div.innerHTML = sanitizeHtml(childPage.html);
+                section.appendChild(div);
+            }
+            container.appendChild(section);
+        }
     }
-
-    await renderAttachedContent(page, lane, allWidgets, contentEl);
-
-    grid.on('change', () => {
-      const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
-      const newLayout = items.map(el => ({
-        id: el.dataset.instanceId,
-        widgetId: el.dataset.widgetId,
-        x: +el.dataset.x || 0,
-        y: +el.dataset.y || 0,
-        w: +el.getAttribute('gs-w'),
-        h: +el.getAttribute('gs-h'),
-        code: layout.find(l => l.id === el.dataset.instanceId)?.code || null
-      }));
-      window.adminCurrentLayout = newLayout;
-    });
-
-    window.saveAdminLayout = async () => {
-      if (!window.adminCurrentLayout) return;
-      try {
-        await meltdownEmit('saveLayoutForViewport', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core',
-          pageId: page.id,
-          lane,
-          viewport: 'desktop',
-          layout: window.adminCurrentLayout
+    catch (err) {
+        console.warn('[Renderer] failed to load attached content', err);
+    }
+}
+(async () => {
+    try {
+        // 1. ROUTE BASICS
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const lane = window.location.pathname.startsWith('/admin') ? 'admin' : 'public';
+        ensureGlobalStyle(lane);
+        let slug;
+        if (window.PAGE_SLUG) {
+            slug = window.PAGE_SLUG;
+        }
+        else {
+            const parts = lane === 'admin' ? pathParts.slice(1) : pathParts;
+            slug = parts.join('-') || 'dashboard';
+        }
+        const DEBUG = window.DEBUG_RENDERER;
+        if (DEBUG)
+            console.debug('[Renderer] boot', { slug, lane });
+        // 2. FETCH PAGE META
+        const pageRes = await meltdownEmit('getPageBySlug', {
+            moduleName: 'pagesManager',
+            moduleType: 'core',
+            slug,
+            lane
         });
-        layout = window.adminCurrentLayout;
-      } catch (e) {
-        console.error('[Admin] Layout save error:', e);
-      }
-    };
-
-  } catch (err) {
-    console.error('[Renderer] Fatal error:', err);
-    alert('Renderer error: ' + err.message);
-  }
+        if (DEBUG)
+            console.debug('[Renderer] pageRes', pageRes);
+        const page = pageRes?.data ?? pageRes ?? null;
+        if (!page) {
+            alert('Page not found');
+            return;
+        }
+        const config = page.meta || {};
+        if (lane === 'admin' && page.title) {
+            document.title = `${page.title} - Admin`;
+        }
+        ensureLayout(config.layout || {}, lane);
+        // 3. DOM REFERENCES
+        const topHeaderEl = document.getElementById('top-header');
+        const mainHeaderEl = document.getElementById('main-header');
+        const sidebarEl = document.getElementById('sidebar');
+        const contentEl = document.getElementById('content');
+        if (!contentEl)
+            return;
+        // 4. LOAD HEADER PARTIALS
+        if (topHeaderEl) {
+            topHeaderEl.innerHTML = sanitizeHtml(await fetchPartialSafe(config.layout?.header || 'top-header'));
+            document.dispatchEvent(new CustomEvent('top-header-loaded'));
+        }
+        if (mainHeaderEl) {
+            if (config.layout?.inheritsLayout === false && !config.layout?.topHeader) {
+                mainHeaderEl.innerHTML = '';
+            }
+            else {
+                mainHeaderEl.innerHTML = sanitizeHtml(await fetchPartialSafe(config.layout?.mainHeader || 'main-header'));
+                document.dispatchEvent(new CustomEvent('main-header-loaded'));
+            }
+        }
+        const contentHeaderEl = document.getElementById('content-header');
+        if (contentHeaderEl) {
+            contentHeaderEl.innerHTML = sanitizeHtml(await fetchPartialSafe(config.layout?.contentHeader || 'content-header'));
+            document.dispatchEvent(new CustomEvent('content-header-loaded'));
+        }
+        // 5. LOAD SIDEBAR PARTIAL
+        const sidebarPartial = (config.layout?.inheritsLayout === false)
+            ? 'empty-sidebar'
+            : (config.layout?.sidebar || 'default-sidebar');
+        if (sidebarEl) {
+            if (sidebarPartial !== 'empty-sidebar') {
+                sidebarEl.innerHTML = sanitizeHtml(await fetchPartialSafe(sidebarPartial));
+                sidebarEl.style.display = '';
+            }
+            else {
+                sidebarEl.innerHTML = '';
+                sidebarEl.style.display = 'none';
+            }
+            document.dispatchEvent(new CustomEvent('sidebar-loaded'));
+        }
+        // 6. FETCH WIDGET REGISTRY
+        let widgetLane = lane === 'admin' ? (config.widgetLane || 'admin') : 'public';
+        // Prevent misconfigured pages from requesting admin widgets on the public lane
+        if (lane !== 'admin' && widgetLane === 'admin') {
+            console.warn('[Renderer] widgetLane="admin" on public page => forcing "public"');
+            widgetLane = 'public';
+        }
+        const widgetRes = await meltdownEmit('widget.registry.request.v1', {
+            lane: widgetLane,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {})
+        });
+        if (DEBUG)
+            console.debug('[Renderer] widgetRes', widgetRes);
+        const allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
+        window.availableWidgets = allWidgets;
+        let globalLayout = [];
+        try {
+            const glRes = await meltdownEmit('getGlobalLayoutTemplate', {
+                moduleName: 'plainspace',
+                moduleType: 'core',
+                ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : { jwt: window.PUBLIC_TOKEN }),
+                lane
+            });
+            globalLayout = Array.isArray(glRes?.layout)
+                ? glRes.layout
+                : [];
+        }
+        catch (err) {
+            console.warn('[Renderer] failed to load global layout', err);
+        }
+        // 7. PUBLIC PAGE: render widgets using stored layout in static grid
+        if (lane !== 'admin') {
+            if (page.meta?.designId) {
+                try {
+                    const res = await meltdownEmit('designer.getDesign', {
+                        id: page.meta.designId,
+                        moduleName: 'designer',
+                        moduleType: 'community',
+                        jwt: window.PUBLIC_TOKEN,
+                    });
+                    const layout = Array.isArray(res?.widgets)
+                        ? res.widgets.map(normalizeDesignerWidget).filter(Boolean)
+                        : [];
+                    const combined = [...globalLayout, ...layout];
+                    clearContentKeepHeader(contentEl);
+                    if (res?.design?.bg_color)
+                        contentEl.style.backgroundColor = res.design.bg_color;
+                    if (res?.design?.bg_media_url) {
+                        const u = sanitizeUrl(res.design.bg_media_url);
+                        if (u)
+                            contentEl.style.backgroundImage = `url('${u}')`;
+                    }
+                    await renderStaticGrid(contentEl, combined, allWidgets, lane);
+                    await renderAttachedContent(page, lane, allWidgets, contentEl);
+                    return;
+                }
+                catch (err) {
+                    console.warn('[Renderer] failed to load design', err);
+                }
+            }
+            if (config.layoutTemplate) {
+                let layoutArr = [];
+                try {
+                    const res = await meltdownEmit('getLayoutTemplate', {
+                        name: config.layoutTemplate,
+                        moduleName: 'plainspace',
+                        moduleType: 'core',
+                        jwt: window.PUBLIC_TOKEN,
+                        lane
+                    });
+                    layoutArr = Array.isArray(res?.layout) ? res.layout : [];
+                }
+                catch (err) {
+                    console.warn('[Renderer] failed to load layout template', err);
+                }
+                const combined = [...globalLayout, ...layoutArr];
+                clearContentKeepHeader(contentEl);
+                await renderStaticGrid(contentEl, combined, allWidgets, lane);
+                await renderAttachedContent(page, lane, allWidgets, contentEl);
+                return;
+            }
+            if (page.html) {
+                clearContentKeepHeader(contentEl);
+                const div = document.createElement('div');
+                div.innerHTML = sanitizeHtml(page.html);
+                contentEl.appendChild(div);
+                await renderAttachedContent(page, lane, allWidgets, contentEl);
+                return;
+            }
+            const layoutRes = await meltdownEmit('getLayoutForViewport', {
+                moduleName: 'plainspace',
+                moduleType: 'core',
+                pageId: page.id,
+                lane,
+                viewport: 'desktop'
+            });
+            if (DEBUG)
+                console.debug('[Renderer] layoutRes', layoutRes);
+            const layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
+            // Temporary patch: start widgets larger by default
+            const items = layout.length ? layout : (config.widgets || []).map((id, idx) => ({ id: `w${idx}`, widgetId: id, x: 0, y: idx * 2, w: 8, h: 4, code: null }));
+            const combined = [...globalLayout, ...items];
+            if (!combined.length) {
+                clearContentKeepHeader(contentEl);
+                const msg = document.createElement('p');
+                msg.className = 'empty-state';
+                msg.textContent = 'No widgets configured.';
+                contentEl.appendChild(msg);
+                return;
+            }
+            clearContentKeepHeader(contentEl);
+            const gridEl = document.createElement('div');
+            gridEl.id = 'publicGrid';
+            gridEl.className = 'canvas-grid';
+            contentEl.appendChild(gridEl);
+            // Static mode: public pages should not be directly editable
+            const grid = initCanvasGrid({
+                staticGrid: true,
+                float: true,
+                cellHeight: 1,
+                columnWidth: 1,
+                enableZoom: false
+            }, gridEl);
+            const pending = [];
+            const { cols, rows } = deriveGridSize(gridEl, grid, combined);
+            for (const item of combined) {
+                const def = allWidgets.find(w => w.id === item.widgetId);
+                if (!def)
+                    continue;
+                if (DEBUG)
+                    console.debug('[Renderer] render widget placeholder', def.id, item.id);
+                const x = item.xPercent !== undefined
+                    ? Math.round((item.xPercent / 100) * cols)
+                    : item.x ?? 0;
+                const y = item.yPercent !== undefined
+                    ? Math.round((item.yPercent / 100) * rows)
+                    : item.y ?? 0;
+                const w = item.wPercent !== undefined
+                    ? Math.max(1, Math.round((item.wPercent / 100) * cols))
+                    : item.w ?? 8;
+                const h = item.hPercent !== undefined
+                    ? Math.max(1, Math.round((item.hPercent / 100) * rows))
+                    : item.h ?? 4;
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('canvas-item', 'loading');
+                wrapper.dataset.x = x;
+                wrapper.dataset.y = y;
+                wrapper.setAttribute('gs-w', w);
+                wrapper.setAttribute('gs-h', h);
+                wrapper.setAttribute('gs-min-w', 4);
+                wrapper.setAttribute('gs-min-h', 4);
+                wrapper.dataset.widgetId = def.id;
+                wrapper.dataset.instanceId = item.id;
+                const ph = document.createElement('div');
+                ph.className = 'widget-placeholder';
+                ph.textContent = def.metadata?.label || def.id;
+                wrapper.appendChild(ph);
+                gridEl.appendChild(wrapper);
+                grid.makeWidget(wrapper);
+                pending.push({ wrapper, item, def, placeholder: ph });
+            }
+            for (const { wrapper, item, def, placeholder } of pending) {
+                const content = document.createElement('div');
+                content.className = 'canvas-item-content';
+                if (placeholder && placeholder.parentNode === wrapper) {
+                    placeholder.remove();
+                }
+                wrapper.appendChild(content);
+                try {
+                    const res = await emitDebounced('getWidgetInstance', {
+                        moduleName: 'plainspace',
+                        moduleType: 'core',
+                        instanceId: `default.${def.id}`
+                    });
+                    const opts = res?.content ? JSON.parse(res.content) : null;
+                    applyWidgetOptions(wrapper, opts, grid);
+                }
+                catch { }
+                await renderWidget(content, def, item.code || null, lane);
+                wrapper.classList.remove('loading');
+            }
+            await renderAttachedContent(page, lane, allWidgets, contentEl);
+            return;
+        }
+        const layoutRes = await meltdownEmit('getLayoutForViewport', {
+            jwt: window.ADMIN_TOKEN,
+            moduleName: 'plainspace',
+            moduleType: 'core',
+            pageId: page.id,
+            lane,
+            viewport: 'desktop'
+        });
+        if (DEBUG)
+            console.debug('[Renderer] admin layoutRes', layoutRes);
+        let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
+        const combinedAdmin = [...globalLayout, ...layout];
+        clearContentKeepHeader(contentEl);
+        const gridEl = document.createElement('div');
+        gridEl.id = 'adminGrid';
+        gridEl.className = 'canvas-grid';
+        contentEl.appendChild(gridEl);
+        const columnCount = 12;
+        const grid = initCanvasGrid({
+            cellHeight: 1,
+            columnWidth: 1,
+            columns: columnCount,
+            percentageMode: true,
+            pushOnOverlap: true,
+            useBoundingBox: true,
+            bboxHandles: false,
+            enableZoom: false
+        }, gridEl);
+        function setColumnWidth() {
+            const metrics = measureGridMetrics(gridEl, grid);
+            const width = metrics.width || gridEl.getBoundingClientRect().width;
+            const nextWidth = Math.max(width, columnCount);
+            grid.options.columnWidth = Math.round(nextWidth / columnCount);
+            grid.widgets.forEach(w => grid.update(w));
+        }
+        setColumnWidth();
+        window.addEventListener('resize', setColumnWidth);
+        grid.setStatic(true);
+        document.body.classList.add('grid-mode');
+        grid.on('change', () => { });
+        window.adminGrid = grid;
+        if (typeof grid.on === 'function') {
+            grid.on('dragstart', el => el.classList.add('dragging'));
+            grid.on('dragstop', el => el.classList.remove('dragging'));
+        }
+        window.adminPageContext = { pageId: page.id, lane };
+        window.adminCurrentLayout = layout;
+        gridEl.addEventListener('dragover', e => {
+            if (!document.body.classList.contains('dashboard-edit-mode'))
+                return;
+            e.preventDefault();
+        });
+        gridEl.addEventListener('drop', e => {
+            if (!document.body.classList.contains('dashboard-edit-mode'))
+                return;
+            e.preventDefault();
+            const id = e.dataTransfer.getData('text/plain');
+            const widgets = Array.isArray(window.availableWidgets)
+                ? window.availableWidgets
+                : [];
+            const def = widgets.find(w => w.id === id);
+            if (!def || typeof window.addDashboardWidget !== 'function')
+                return;
+            const rect = gridEl.getBoundingClientRect();
+            const metrics = measureGridMetrics(gridEl, grid);
+            const padLeft = metrics.paddingLeft || 0;
+            const padTop = metrics.paddingTop || 0;
+            const colWidth = grid.options.columnWidth || 1;
+            const rowHeight = grid.options.cellHeight || 1;
+            const rawX = Math.floor((e.clientX - rect.left - padLeft) / colWidth);
+            const rawY = Math.floor((e.clientY - rect.top - padTop) / rowHeight);
+            const x = Math.max(0, rawX);
+            const y = Math.max(0, rawY);
+            window.addDashboardWidget(def, { x, y });
+        });
+        const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));
+        for (const id of (config.widgets || []))
+            widgetIdSet.add(id);
+        const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
+        const pendingAdmin = [];
+        const { cols, rows } = deriveGridSize(gridEl, grid, combinedAdmin);
+        for (const def of matchedWidgets) {
+            if (DEBUG)
+                console.debug('[Renderer] admin render widget placeholder', def.id);
+            const meta = combinedAdmin.find(l => l.widgetId === def.id) || {};
+            const x = meta.xPercent !== undefined
+                ? Math.round((meta.xPercent / 100) * cols)
+                : meta.x ?? 0;
+            const y = meta.yPercent !== undefined
+                ? Math.round((meta.yPercent / 100) * rows)
+                : meta.y ?? 0;
+            const w = meta.wPercent !== undefined
+                ? Math.max(1, Math.round((meta.wPercent / 100) * cols))
+                : meta.w ?? 8;
+            const h = meta.hPercent !== undefined
+                ? Math.max(1, Math.round((meta.hPercent / 100) * rows))
+                : meta.h ?? DEFAULT_ADMIN_ROWS;
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('canvas-item', 'loading');
+            wrapper.dataset.x = x;
+            wrapper.dataset.y = y;
+            wrapper.setAttribute('gs-w', w);
+            wrapper.setAttribute('gs-h', h);
+            const minW = 4;
+            const minH = DEFAULT_ADMIN_ROWS;
+            wrapper.setAttribute('gs-min-w', minW);
+            wrapper.setAttribute('gs-min-h', minH);
+            wrapper.dataset.widgetId = def.id;
+            wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2, 8)}`;
+            const ph = document.createElement('div');
+            ph.className = 'widget-placeholder';
+            ph.textContent = def.metadata?.label || def.id;
+            wrapper.appendChild(ph);
+            gridEl.appendChild(wrapper);
+            grid.makeWidget(wrapper);
+            pendingAdmin.push({ wrapper, def, meta, placeholder: ph });
+        }
+        for (const { wrapper, def, meta, placeholder } of pendingAdmin) {
+            const content = document.createElement('div');
+            content.className = 'canvas-item-content';
+            if (placeholder && placeholder.parentNode === wrapper) {
+                placeholder.remove();
+            }
+            wrapper.appendChild(content);
+            try {
+                const res = await emitDebounced('getWidgetInstance', {
+                    jwt: window.ADMIN_TOKEN,
+                    moduleName: 'plainspace',
+                    moduleType: 'core',
+                    instanceId: `default.${def.id}`
+                });
+                const opts = res?.content ? JSON.parse(res.content) : null;
+                applyWidgetOptions(wrapper, opts, grid);
+            }
+            catch { }
+            await renderWidget(content, def, meta.code || null, lane);
+            attachDashboardControls(wrapper, grid);
+            wrapper.classList.remove('loading');
+        }
+        await renderAttachedContent(page, lane, allWidgets, contentEl);
+        grid.on('change', () => {
+            const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
+            const newLayout = items.map(el => ({
+                id: el.dataset.instanceId,
+                widgetId: el.dataset.widgetId,
+                x: +el.dataset.x || 0,
+                y: +el.dataset.y || 0,
+                w: +el.getAttribute('gs-w'),
+                h: +el.getAttribute('gs-h'),
+                code: layout.find(l => l.id === el.dataset.instanceId)?.code || null
+            }));
+            window.adminCurrentLayout = newLayout;
+        });
+        window.saveAdminLayout = async () => {
+            if (!window.adminCurrentLayout)
+                return;
+            try {
+                await meltdownEmit('saveLayoutForViewport', {
+                    jwt: window.ADMIN_TOKEN,
+                    moduleName: 'plainspace',
+                    moduleType: 'core',
+                    pageId: page.id,
+                    lane,
+                    viewport: 'desktop',
+                    layout: window.adminCurrentLayout
+                });
+                layout = window.adminCurrentLayout;
+            }
+            catch (e) {
+                console.error('[Admin] Layout save error:', e);
+            }
+        };
+    }
+    catch (err) {
+        console.error('[Renderer] Fatal error:', err);
+        alert('Renderer error: ' + err.message);
+    }
 })();
-

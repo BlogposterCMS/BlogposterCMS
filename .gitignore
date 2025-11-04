@@ -6,6 +6,13 @@
 public/assets/css/site.css
 public/assets/css/site.css.map
 BlogposterCMS/public/build/
+# Browser modules generated from TypeScript at runtime
+BlogposterCMS/apps/designer/main/pixelGrid.js
+BlogposterCMS/apps/designer/managers/gridManager.js
+BlogposterCMS/mother/modules/widgetManager/publicLoader.js
+BlogposterCMS/public/plainspace/dashboard/pagePicker.js
+BlogposterCMS/public/plainspace/main/canvasGrid.js
+BlogposterCMS/public/plainspace/main/pageRenderer.js
 fix.patch
 commit.diff
 placeholderData.json

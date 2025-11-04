@@ -25,6 +25,7 @@ const cookieParser = require('cookie-parser');
 const csrfProtection = require('./mother/utils/csrfProtection');
 const { loginLimiter } = require('./mother/utils/rateLimiters');
 const crypto = require('crypto');
+const ts = require('typescript');
 const { sanitizeCookieName, sanitizeCookiePath } = require('./mother/utils/cookieUtils');
 const { isProduction, features } = require('./config/runtime');
 const renderMode = features?.renderMode || 'client';
@@ -36,6 +37,125 @@ const {
 const { DEFAULT_WIDGETS } = require('./mother/modules/plainSpace/config/defaultWidgets');
 const { ADMIN_PAGES } = require('./mother/modules/plainSpace/config/adminPages');
 const securityConfig = require('./config/security');
+const runtimeTsCache = new Map();
+const BROWSER_TS_OPTIONS = {
+  target: ts.ScriptTarget.ES2022,
+  module: ts.ModuleKind.ES2022,
+  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  esModuleInterop: true,
+  resolveJsonModule: true,
+  allowSyntheticDefaultImports: true,
+  importHelpers: false,
+  sourceMap: false,
+  removeComments: false
+};
+const VALID_RUNTIME_MODULE = /^[A-Za-z0-9_-]+$/;
+
+async function compileBrowserModule(tsPath) {
+  const stat = await fs.promises.stat(tsPath);
+  const cached = runtimeTsCache.get(tsPath);
+  if (cached && cached.mtimeMs === stat.mtimeMs) {
+    if (typeof cached.code === 'string') {
+      return cached.code;
+    }
+    if (cached.promise) {
+      return cached.promise;
+    }
+  }
+
+  const compilePromise = (async () => {
+    const source = await fs.promises.readFile(tsPath, 'utf8');
+    const result = ts.transpileModule(source, {
+      compilerOptions: BROWSER_TS_OPTIONS,
+      fileName: path.basename(tsPath)
+    });
+
+    if (Array.isArray(result.diagnostics) && result.diagnostics.length > 0) {
+      const formatted = result.diagnostics
+        .map(diag => {
+          if (!diag) return '';
+          if (typeof diag.messageText === 'string') return diag.messageText;
+          return diag.messageText?.messageText || '';
+        })
+        .filter(Boolean)
+        .join('; ');
+      if (formatted) {
+        console.warn(`[runtime-ts] Diagnostics while compiling ${tsPath}: ${formatted}`);
+      }
+    }
+
+    const output = result.outputText || '';
+    runtimeTsCache.set(tsPath, { mtimeMs: stat.mtimeMs, code: output });
+    return output;
+  })();
+
+  runtimeTsCache.set(tsPath, { mtimeMs: stat.mtimeMs, promise: compilePromise });
+
+  try {
+    return await compilePromise;
+  } catch (err) {
+    runtimeTsCache.delete(tsPath);
+    throw err;
+  }
+}
+
+function makeParamTsHandler(baseDir, paramName) {
+  const normalizedBase = path.resolve(baseDir);
+  return async (req, res, next) => {
+    const raw = req.params?.[paramName];
+    if (!raw || !VALID_RUNTIME_MODULE.test(raw)) {
+      return next();
+    }
+
+    const tsCandidate = path.resolve(normalizedBase, `${raw}.ts`);
+    if (!tsCandidate.startsWith(normalizedBase + path.sep)) {
+      return next();
+    }
+
+    try {
+      await fs.promises.access(tsCandidate, fs.constants.R_OK);
+    } catch {
+      return next();
+    }
+
+    try {
+      const code = await compileBrowserModule(tsCandidate);
+      res.type('application/javascript');
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(code);
+    } catch (err) {
+      console.error(`[runtime-ts] Failed to compile ${tsCandidate}:`, err);
+      res
+        .status(500)
+        .type('application/javascript')
+        .send("console.error('Failed to compile module');");
+    }
+  };
+}
+
+function makeFixedTsHandler(tsPath) {
+  const normalizedPath = path.resolve(tsPath);
+  return async (req, res, next) => {
+    try {
+      await fs.promises.access(normalizedPath, fs.constants.R_OK);
+    } catch {
+      return next();
+    }
+
+    try {
+      const code = await compileBrowserModule(normalizedPath);
+      res.type('application/javascript');
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(code);
+    } catch (err) {
+      console.error(`[runtime-ts] Failed to compile ${normalizedPath}:`, err);
+      res
+        .status(500)
+        .type('application/javascript')
+        .send("console.error('Failed to compile module');");
+    }
+  };
+}
 
 const MIN_ORIGIN_TOKEN_TTL = 60;
 
@@ -378,6 +498,59 @@ function getModuleTokenForDbManager() {
   const publicPath = path.join(__dirname, 'public');
   const assetsPath = path.join(publicPath, 'assets');
   const buildPath = path.join(publicPath, 'build');
+  const plainspaceMainTs = path.join(publicPath, 'plainspace', 'main');
+  const plainspaceDashboardTs = path.join(publicPath, 'plainspace', 'dashboard');
+  const designerMainTs = path.join(__dirname, 'apps', 'designer', 'main');
+  const designerManagersTs = path.join(__dirname, 'apps', 'designer', 'managers');
+  const widgetManagerLoaderTs = path.join(
+    __dirname,
+    'mother',
+    'modules',
+    'widgetManager',
+    'publicLoader.ts'
+  );
+
+  app.get(
+    '/plainspace/main/:moduleName.js',
+    makeParamTsHandler(plainspaceMainTs, 'moduleName')
+  );
+  app.head(
+    '/plainspace/main/:moduleName.js',
+    makeParamTsHandler(plainspaceMainTs, 'moduleName')
+  );
+  app.get(
+    '/plainspace/dashboard/:moduleName.js',
+    makeParamTsHandler(plainspaceDashboardTs, 'moduleName')
+  );
+  app.head(
+    '/plainspace/dashboard/:moduleName.js',
+    makeParamTsHandler(plainspaceDashboardTs, 'moduleName')
+  );
+  app.get(
+    '/apps/designer/main/:moduleName.js',
+    makeParamTsHandler(designerMainTs, 'moduleName')
+  );
+  app.head(
+    '/apps/designer/main/:moduleName.js',
+    makeParamTsHandler(designerMainTs, 'moduleName')
+  );
+  app.get(
+    '/apps/designer/managers/:moduleName.js',
+    makeParamTsHandler(designerManagersTs, 'moduleName')
+  );
+  app.head(
+    '/apps/designer/managers/:moduleName.js',
+    makeParamTsHandler(designerManagersTs, 'moduleName')
+  );
+  app.get(
+    '/mother/modules/widgetManager/publicLoader.js',
+    makeFixedTsHandler(widgetManagerLoaderTs)
+  );
+  app.head(
+    '/mother/modules/widgetManager/publicLoader.js',
+    makeFixedTsHandler(widgetManagerLoaderTs)
+  );
+
   app.use('/admin/assets', express.static(path.join(publicPath, 'assets')));
   app.use('/build', express.static(buildPath));
   app.get('/apps/designer/origin-public-key.json', (req, res) => {

@@ -9,7 +9,8 @@
     "lint": "eslint --ext .js,.ts,.tsx .",
     "lint:fix": "npm run lint -- --fix",
     "placeholder-parity": "node tests/placeholderParityCheck.js",
-    "build": "webpack --mode production"
+    "build": "npm run build:browser && webpack --mode production",
+    "build:browser": "tsc --project tsconfig.browser.json"
   },
   "dependencies": {
     "axios": "^1.10.0",
@@ -31,7 +32,8 @@
     "sanitize-html": "^2.17.0",
     "sqlite3": "^5.1.7",
     "uuid": "^11.0.3",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "typescript": "^5.7.2"
   },
   "devDependencies": {
     "@babel/core": "^7.28.5",
@@ -50,7 +52,6 @@
     "nodemon": "^3.1.10",
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.4",
-    "typescript": "^5.7.2",
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4"
   }

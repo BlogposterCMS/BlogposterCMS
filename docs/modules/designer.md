@@ -76,8 +76,9 @@ The app loader verifies these events before launching the designer. If any requi
 - If the design save request does not complete within 20 seconds, the client now reports a timeout to the user for clearer error handling.
 
 ## Security Notes
-- Sanitises design titles and widget HTML/CSS before storage.
+- Sanitises design titles and widget HTML/CSS before storage, and the runtime page loader sanitises design HTML again before injecting it into the DOM.
 - HTML sanitization uses the server-side `sanitize-html` library with default tag and attribute allowlists plus inline style filtering for stronger XSS protection.
+- Only designs marked with trust metadata (for example `allowCustomJs`) execute stored JavaScript at runtime. The runtime only treats explicit boolean `true` values or the string/number literals `'1'`, `'true'`, `'yes'`, `'y'` or `'on'` as trusted; ensure this flag is available exclusively to trusted authors and avoid serialising other values.
 - Coordinates are clamped to `[0,100]` server side.
 - Registers a custom transactional placeholder (`DESIGNER_SAVE_DESIGN`) for atomic saves and optimistic locking via a `version` field.
 - Every database call includes the loader issued `jwt` and module information.

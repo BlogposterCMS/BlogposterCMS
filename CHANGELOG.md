@@ -5,6 +5,13 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Maintenance
+- Align `babel-jest` and `jest-environment-jsdom` with the existing Jest 29 toolchain so runtime sanitization tests install and run without peer dependency conflicts.
+
+### Security
+- Runtime page loader now requires explicit truthy trust flag literals (boolean `true`, numeric `1` or the strings `'true'`, `'1'`, `'yes'`, `'y'` or `'on'`) before executing custom design scripts, preventing stringified falsy values from bypassing the trust gate.
+- Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
+
 ### Fixed
 - Layout name input now retains unsaved text when switching layers by capturing the current value before the header reloads.
 - Builder header reloads when entering layout mode so the back button reflects the correct origin.

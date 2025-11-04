@@ -36,6 +36,12 @@ BlogposterCMS separates widgets and pages into **admin** and **public** lanes:
 
 Each lane has its own widget registry so that sensitive admin widgets are never loaded on the public site. If a page is misconfigured and tries to request admin widgets while rendering publicly, the renderer forces the lane back to `public` for security.
 
+## Access Control and Audit Tools
+
+Open **Settings → Access Control** to manage whether visitors may create their own accounts. The toggle updates the `ALLOW_REGISTRATION` key in the Settings Manager so the backend can enforce it across the public registration API. When the switch is off, only administrators can add users from the Users page and the public registration endpoint rejects new accounts once the initial setup is complete. The panel also links to security tips and highlights whether the first installation step has been finished.
+
+An **Audit Log** page now lives alongside other settings tabs. It embeds the Activity Log widget so you can review recent administrative actions without leaving the settings workspace.
+
 ## Widgets Overview
 
 Widgets are small blocks of functionality (text blocks, images, counters, etc.) that you can place on pages. They are stored in the database through the `widgetManager` module.

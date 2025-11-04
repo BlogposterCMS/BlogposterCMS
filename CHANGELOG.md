@@ -47,6 +47,7 @@ El Psy Kongroo
 - Split layout control opens a builder panel instead of a popup for layout selection.
 
 ### Added
+- Admin settings workspace now includes dedicated **Access Control** and **Audit Log** pages. The Access Control widget surfaces the `ALLOW_REGISTRATION` toggle while the Audit page exposes the activity log directly inside settings.
 - Design sidebar includes a leading layout switch bubble to open the layout editor.
 - Container action bar gains a design assignment control that stores a `designRef` on each container.
 - Layout serialization now persists stable `nodeId`s, split sizes and design references for deterministic runtime mapping.

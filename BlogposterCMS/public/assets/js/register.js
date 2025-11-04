@@ -19,32 +19,55 @@ async function meltdownEmit(eventName, payload = {}) {
   return json.data;
 }
 
-// Redirect to login if FIRST_INSTALL_DONE is already true
+const registerForm = document.getElementById('registerForm');
+let firstInstallDone = false;
+let registrationAllowed = true;
+let registrationRole = 'admin';
+
+// Redirect to login if the install is finished and public registration is disabled
 (async () => {
   try {
     const pubTok = await meltdownEmit('issuePublicToken', {
       purpose: 'firstInstallCheck',
       moduleName: 'auth'
     });
-    const val = await meltdownEmit('getPublicSetting', {
+    const installStatus = await meltdownEmit('getPublicSetting', {
       jwt: pubTok,
       moduleName: 'settingsManager',
       moduleType: 'core',
       key: 'FIRST_INSTALL_DONE'
     });
-    if (val === 'true') {
+    firstInstallDone = installStatus === 'true';
+
+    if (firstInstallDone) {
+      const regToggle = await meltdownEmit('getPublicSetting', {
+        jwt: pubTok,
+        moduleName: 'settingsManager',
+        moduleType: 'core',
+        key: 'ALLOW_REGISTRATION'
+      });
+      registrationAllowed = String(regToggle).toLowerCase() === 'true';
+      registrationRole = 'standard';
+    }
+
+    if (!registrationAllowed) {
+      alert('Public registration is disabled. Please use the login page.');
       window.location.href = '/login';
-      return;
     }
   } catch (err) {
-    console.error('[register] FIRST_INSTALL check failed', err);
+    console.error('[register] FIRST_INSTALL/ALLOW_REGISTRATION check failed', err);
   }
 })();
-  
-  document
-    .getElementById('registerForm')
-    .addEventListener('submit', async e => {
+
+if (registerForm) {
+  registerForm.addEventListener('submit', async e => {
       e.preventDefault();
+      if (!registrationAllowed) {
+        alert('Registration is currently disabled.');
+        window.location.href = '/login';
+        return;
+      }
+
       const form = e.target;
       const username = form.username.value.trim();
       const password = form.password.value;
@@ -66,9 +89,9 @@ async function meltdownEmit(eventName, payload = {}) {
           moduleType: 'core',
           username,
           password,
-          role: 'admin'
+          role: registrationRole
         });
-  
+
         alert('Registration successful! Please log in now.');
         window.location.href = '/login';
       } catch (err) {
@@ -76,4 +99,4 @@ async function meltdownEmit(eventName, payload = {}) {
         alert('Registration failed: ' + err.message);
       }
     });
-  
+}

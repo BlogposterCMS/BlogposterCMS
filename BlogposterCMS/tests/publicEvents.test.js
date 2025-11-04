@@ -60,22 +60,54 @@ async function testPublicSetting() {
 }
 
 async function testPublicRegister() {
-  const em = new EventEmitter();
-  loadUserCrud(em);
-  em.on('issueModuleToken', (p, cb) => cb(null, 'hight'));
-  em.on('dbInsert', (p, cb) => { cb(null, [{ id: 1 }]); });
-  em.on('dbSelect', (p, cb) => {
-    if (p.table === 'users') return cb(null, []);
-    cb(null, [{ id: 10, role_name:'standard' }]);
-  });
-  em.on('assignRoleToUser', (p, cb) => cb(null, true));
-  const res = await new Promise((res, rej) => {
+  const createEmitter = (firstInstall, allowRegistration) => {
+    const em = new EventEmitter();
+    loadUserCrud(em);
+    em.on('issueModuleToken', (p, cb) => cb(null, 'hight'));
+    em.on('dbInsert', (p, cb) => { cb(null, [{ id: 1 }]); });
+    em.on('dbSelect', (p, cb) => {
+      if (p.table === 'users') return cb(null, []);
+      cb(null, [{ id: 10, role_name: 'standard' }]);
+    });
+    em.on('assignRoleToUser', (p, cb) => cb(null, true));
+    em.on('getPublicSetting', (payload, cb) => {
+      if (payload.key === 'FIRST_INSTALL_DONE') return cb(null, firstInstall ? 'true' : 'false');
+      if (payload.key === 'ALLOW_REGISTRATION') return cb(null, allowRegistration ? 'true' : 'false');
+      return cb(new Error('Unknown public setting'));
+    });
+    return em;
+  };
+
+  // Allowed when installation finished and registration enabled
+  const allowed = await new Promise((resolve, reject) => {
+    const em = createEmitter(true, true);
     em.emit('publicRegister', {
-      jwt:'pub', moduleName:'userManagement', moduleType:'core',
-      username:'u', password:'p', role:'standard', decodedJWT:{ isPublic:true }
-    }, (e,d)=>e?rej(e):res(d));
+      jwt: 'pub', moduleName: 'userManagement', moduleType: 'core',
+      username: 'u', password: 'p', role: 'standard', decodedJWT: { isPublic: true }
+    }, (err, data) => (err ? reject(err) : resolve(data)));
   });
-  assert(res);
+  assert(allowed);
+
+  // Blocked when installation finished but registration disabled
+  await assert.rejects(async () => {
+    const em = createEmitter(true, false);
+    await new Promise((resolve, reject) => {
+      em.emit('publicRegister', {
+        jwt: 'pub', moduleName: 'userManagement', moduleType: 'core',
+        username: 'u', password: 'p', role: 'standard', decodedJWT: { isPublic: true }
+      }, (err, data) => (err ? reject(err) : resolve(data)));
+    });
+  }, /disabled/);
+
+  // Initial installation can still create the first admin
+  const firstRun = await new Promise((resolve, reject) => {
+    const em = createEmitter(false, false);
+    em.emit('publicRegister', {
+      jwt: 'pub', moduleName: 'userManagement', moduleType: 'core',
+      username: 'admin', password: 'secret', role: 'admin', decodedJWT: { isPublic: true }
+    }, (err, data) => (err ? reject(err) : resolve(data)));
+  });
+  assert(firstRun);
 }
 
 test('public events expose only safe APIs', async () => {

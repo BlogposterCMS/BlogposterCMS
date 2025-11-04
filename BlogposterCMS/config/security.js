@@ -13,6 +13,24 @@
 
 const env = process.env;
 
+function normalizeOrigin(value, base = 'http://localhost:3000') {
+  if (!value) return null;
+  try {
+    const url = new URL(String(value), base);
+    return url.origin;
+  } catch (_) {
+    return null;
+  }
+}
+
+function parseAllowedOrigins(rawList) {
+  return String(rawList || '')
+    .split(',')
+    .map(part => normalizeOrigin(part.trim()))
+    .filter(Boolean)
+    .filter((origin, idx, arr) => arr.indexOf(origin) === idx);
+}
+
 /*─────────────────────────────────────────────────────────────────────*
  *  #1  RATE LIMITER CONFIG
  *─────────────────────────────────────────────────────────────────────*/
@@ -54,13 +72,25 @@ const csrf = {
 };
 
 /*─────────────────────────────────────────────────────────────────────*
- *  #3  EXPORT  – keep the shape tiny & predictable
- *      ⇒  require('config/security').rate.login.*
+ *  #3  postMessage security – iframe communication whitelist
  *─────────────────────────────────────────────────────────────────────*/
-module.exports = { rate, csrf };
+const defaultOrigin = normalizeOrigin(env.PUBLIC_URL) || 'http://localhost:3000';
+const postMessage = {
+  allowedOrigins: parseAllowedOrigins(env.APP_FRAME_ALLOWED_ORIGINS)
+};
+
+if (!postMessage.allowedOrigins.length) {
+  postMessage.allowedOrigins.push(defaultOrigin);
+}
 
 /*─────────────────────────────────────────────────────────────────────*
- *  #4  OPTIONAL LOCAL OVERRIDES
+ *  #4  EXPORT  – keep the shape tiny & predictable
+ *      ⇒  require('config/security').rate.login.*
+ *─────────────────────────────────────────────────────────────────────*/
+module.exports = { rate, csrf, postMessage };
+
+/*─────────────────────────────────────────────────────────────────────*
+ *  #5  OPTIONAL LOCAL OVERRIDES
  *      Just drop a   config/security.local.js   (in .gitignore)
  *      that `module.exports = { … }` and we deep‑merge it.
  *─────────────────────────────────────────────────────────────────────*/

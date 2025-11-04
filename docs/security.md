@@ -21,6 +21,12 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
 
 Always review your access logs and keep dependencies up to date. Security patches will continue to harden the platform over time.
 
+## Admin iframe origin whitelist
+
+The admin dashboard loads apps such as the designer inside an `<iframe>` and exchanges data via `postMessage`. To stop hostile pages from injecting commands, define the set of trusted parent origins in `config/security.js` or via the `APP_FRAME_ALLOWED_ORIGINS` environment variable. Multiple origins can be supplied as a comma-separated list (for example `https://admin.example.com,https://staging-admin.example.com`). The server forwards the whitelist to the iframe, and any message originating from a different origin is ignored.
+
+Origins reported as `null` (from sandboxed or `about:blank` documents) or using non-HTTP(S) schemes are always rejected, even if the local admin origin is part of the whitelist.
+
 ## Troubleshooting Secure Login
 
 When `APP_ENV=production` (or `NODE_ENV=production`) is set, the `admin_jwt` cookie is marked as `secure`.

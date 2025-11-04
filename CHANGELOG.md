@@ -13,6 +13,9 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Admin iframe postMessage whitelist now rejects `null` origins and non-HTTP(S) protocols to block sandboxed pages from spoofing trusted hosts.
+- Designer iframe now responds to the origin that delivers init tokens so multi-origin admin hosts receive readiness events reliably.
+- Designer iframe communication now whitelists parent origins and ignores untrusted messages before processing tokens.
 - Public renderer now converts designer percentages into pixel offsets using the saved canvas footprint so published layouts align pixel-for-pixel with the designer preview.
 - Designer-rendered pages now honor saved widget layering, rotation, and opacity so public layouts match the designer preview.
 - Admin dashboard placement mode now respects the canvas padding when calculating drag and drop positions, keeping the grid anchored on screen and ensuring widgets land exactly where they're dropped.

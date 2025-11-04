@@ -29,10 +29,14 @@ import { setAccentVariables } from './userColor.js';
   }
 })();
 
+const adminForm = document.getElementById('adminForm');
+const siteForm = document.getElementById('siteForm');
+const backToAdminButton = document.getElementById('backToAdmin');
+
 const steps = [
   document.getElementById('step-welcome'),
-  document.getElementById('adminForm'),
-  document.getElementById('siteForm'),
+  adminForm,
+  siteForm,
   document.getElementById('step-finish')
 ];
 const dots = document.querySelectorAll('.install-steps li');
@@ -54,7 +58,7 @@ function passwordStrong(pw) {
   return pw.length >= 12 && /[a-z]/.test(pw) && /[A-Z]/.test(pw) && /\d/.test(pw);
 }
 
-document.getElementById('adminForm').addEventListener('submit', e => {
+adminForm.addEventListener('submit', e => {
   e.preventDefault();
   const form = e.target;
   const username = form.username.value.trim();
@@ -97,7 +101,16 @@ colorContainer.appendChild(picker.el);
 
 document.getElementById('skipSite').addEventListener('click', submitInstall);
 
-document.getElementById('siteForm').addEventListener('submit', e => {
+if (backToAdminButton) {
+  backToAdminButton.addEventListener('click', () => {
+    setStep(1);
+    window.requestAnimationFrame(() => {
+      adminForm.username?.focus();
+    });
+  });
+}
+
+siteForm.addEventListener('submit', e => {
   e.preventDefault();
   data.projectName = e.target.projectName.value.trim();
   submitInstall();

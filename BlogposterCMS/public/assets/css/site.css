@@ -101,16 +101,6 @@
   background: transparent;
 }
 
-.field input:not(:-moz-placeholder) + label {
-  top: -8px;
-  left: 12px;
-  font-size: 12px;
-  color: var(--brand);
-  background: var(--color-card);
-  padding: 0 4px;
-  font-weight: 500;
-}
-
 .field input:not(:placeholder-shown) + label,
 .field input:focus + label {
   top: -8px;
@@ -259,17 +249,6 @@
   transition: all 0.2s ease;
 }
 
-.app-scope .field input:not(:-moz-placeholder) + label, .app-scope .field textarea:not(:-moz-placeholder) + label {
-  top: -7px;
-  left: 14px;
-  font-size: 12px;
-  color: var(--user-color);
-  background: #ffffff;
-  padding: 0 4px;
-  font-weight: 500;
-  transition: color 0.2s ease, --user-color 5s;
-}
-
 .app-scope .field input:not(:placeholder-shown) + label,
 .app-scope .field input:focus + label,
 .app-scope .field textarea:not(:placeholder-shown) + label,
@@ -296,9 +275,7 @@
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  -webkit-appearance: none;
-     -moz-appearance: none;
-          appearance: none;
+  appearance: none;
   position: relative;
 }
 .app-scope input[type=checkbox]:checked {
@@ -376,6 +353,15 @@
   display: flex;
   gap: 12px;
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+#siteForm .actions {
+  width: 100%;
+}
+
+#siteForm .actions .button {
+  flex: 1 1 140px;
 }
 
 .login-form .actions .button.primary {
@@ -415,7 +401,9 @@
 
 #adminGrid {
   min-height: 100vh;
-  padding: 0 20px;
+  padding: clamp(32px, 5vw, 72px) clamp(24px, 4vw, 64px) clamp(56px, 6vw, 96px);
+  scroll-margin-top: clamp(72px, 12vh, 128px);
+  position: relative;
 }
 
 .resize-handle.br {
@@ -453,8 +441,7 @@
   min-height: 300px;
   position: relative;
   background-color: rgba(255, 255, 255, 0.6);
-  -webkit-backdrop-filter: blur(8px);
-          backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   overflow-x: auto;
   overflow-y: visible;
   height: auto;
@@ -477,8 +464,7 @@
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 14px;
-  -webkit-backdrop-filter: blur(10px);
-          backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
   position: absolute;
@@ -499,8 +485,7 @@
   height: 16px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.6);
-  -webkit-backdrop-filter: blur(4px);
-          backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   cursor: move;
   pointer-events: all;
   touch-action: none;
@@ -792,13 +777,11 @@ p {
 body.dashboard-edit-mode .widget-container.admin-widget:hover,
 body.dashboard-edit-mode canvas-item:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  transform: scale(1.02);
 }
 
 body:not(.dashboard-edit-mode) .widget-container.admin-widget:hover,
 body:not(.dashboard-edit-mode) canvas-item:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transform: none;
 }
 
 body.dashboard-edit-mode .widget-container.admin-widget::before {
@@ -843,9 +826,7 @@ body:not(.dashboard-edit-mode) .canvas-item::before {
   font-weight: 600;
   line-height: var(--btn-h);
   cursor: pointer;
-  -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+  user-select: none;
   transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
 }
 
@@ -1362,8 +1343,7 @@ body:not(.dashboard-edit-mode) .canvas-item::before {
   align-items: center;
   padding: 24px 25px;
   justify-content: center;
-  -webkit-backdrop-filter: blur(6px);
-          backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   background: color-mix(in srgb, var(--color-white), transparent 20%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
 }
@@ -1501,8 +1481,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
   padding: 6px 24px;
   min-height: 40px;
   background: color-mix(in srgb, var(--color-white), transparent 30%);
-  -webkit-backdrop-filter: blur(6px);
-          backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
 }
 .top-header .left-icons,
@@ -1660,8 +1639,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
   min-height: 48px;
   position: sticky;
   top: 0;
-  -webkit-backdrop-filter: blur(6px);
-          backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   z-index: 40;
   transition: box-shadow 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -2124,6 +2102,83 @@ body.dashboard-edit-mode #edit-toggle:hover {
   gap: 12px;
 }
 
+.access-settings-card {
+  margin: 0 auto;
+  min-width: 280px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.access-settings-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.access-settings-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.access-settings-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+}
+.access-settings-badge[data-state=pending] {
+  background: rgba(234, 179, 8, 0.12);
+  color: #b45309;
+}
+
+.access-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.access-settings-toggle input[type=checkbox] {
+  width: 1rem;
+  height: 1rem;
+}
+
+.access-settings-status {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: rgba(34, 197, 94, 0.8);
+}
+
+.access-settings-subtitle {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.access-settings-tips {
+  padding-left: 1.25rem;
+  margin: 0;
+  color: rgba(17, 24, 39, 0.8);
+}
+.access-settings-tips li + li {
+  margin-top: 0.35rem;
+}
+
 .system-settings-card {
   margin: 0 auto;
   min-width: 280px;
@@ -2171,8 +2226,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
 .favicon-preview {
   width: 32px;
   height: 32px;
-  -o-object-fit: contain;
-     object-fit: contain;
+  object-fit: contain;
   border-radius: 4px;
 }
 
@@ -2656,7 +2710,6 @@ body.dashboard-edit-mode #edit-toggle:hover {
   display: flex;
   gap: 10px;
   margin-bottom: 4px;
-  margin-bottom: 0;
 }
 .layout-filters .filter {
   font-family: var(--font-body);
@@ -2690,6 +2743,9 @@ body.dashboard-edit-mode #edit-toggle:hover {
 }
 .layout-filters .filter.active::after {
   transform: scaleX(1);
+}
+.layout-filters {
+  margin-bottom: 0;
 }
 
 .layout-tabs-wrap {
@@ -2760,8 +2816,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
   height: 70px;
   background: #f6f6f6;
   border-radius: 6px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .layout-details {
@@ -2919,8 +2974,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
 .layout-gallery-preview {
   width: 100%;
   height: 80px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   background: #f6f6f6;
   border-radius: 6px;
 }
@@ -3108,8 +3162,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
 .html-preview {
   width: 100%;
   height: 120px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .html-preview {
@@ -3156,7 +3209,6 @@ body.dashboard-edit-mode #edit-toggle:hover {
   position: fixed;
   top: 0;
   left: 0;
-  width: -moz-max-content;
   width: max-content;
   transform: none;
   display: flex;
@@ -3306,9 +3358,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
   color: #333;
   background-color: #fff;
   outline: none;
-  -webkit-user-select: text;
-     -moz-user-select: text;
-          user-select: text;
+  user-select: text;
   cursor: text;
 }
 .widget-textbox .editable b,
@@ -3734,13 +3784,15 @@ body.dashboard-edit-mode #edit-toggle:hover {
   gap: 4px;
   transition: box-shadow 0.16s;
   border: 1px solid transparent;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .widget-list li:hover {
   border: 1px solid var(--user-color);
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+}
+.widget-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .widget-name {
@@ -4091,4 +4143,6 @@ body.grid-mode .bounding-box.disabled {
 .home-drag-widget {
   text-transform: uppercase;
   font-weight: bold;
-}/*# sourceMappingURL=site.css.map */
+}
+
+/*# sourceMappingURL=site.css.map */

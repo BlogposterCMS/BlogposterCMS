@@ -5,6 +5,10 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Added
+- Added a back button to the site setup step so installers can quickly return to adjust admin credentials without losing their
+  progress.
+
 ### Maintenance
 - Align `babel-jest` and `jest-environment-jsdom` with the existing Jest 29 toolchain so runtime sanitization tests install and run without peer dependency conflicts.
 

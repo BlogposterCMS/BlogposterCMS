@@ -13,6 +13,9 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Migrated designer builder orchestration to TypeScript (`builderRenderer.ts`,
+  header/publish renderers) and introduced a shared logger for structured
+  diagnostics across builder subsystems.
 - Regenerated the CMS `package-lock.json` so the new TypeScript dev dependency is captured for reproducible installs.
 - Added a project-wide TypeScript configuration enforcing strict type-safety defaults (`strict`, `noUncheckedIndexedAccess`,
   `noImplicitOverride`) to guide all future `.ts` and `.tsx` development.
@@ -1176,4 +1179,3 @@ This release marks a foundational shift to a fully independent and modular build
 ### Changed
 - Updated form input behavior and label interactions.
 - Upgraded Quill editor integration and page list controls.
-

@@ -1,9 +1,12 @@
 import { fetchPartial } from './fetchPartial.js';
-import { initBuilder } from './builderRenderer.js';
+import { initBuilder } from './builderRenderer';
 import { enableAutoEdit } from './editor/editor.js';
 import { sanitizeHtml } from '../../public/plainspace/sanitizer.js';
 import { initBuilderPanel } from './managers/panelManager.js';
 import { applyUserColor } from '../../public/assets/js/userColor.js';
+import { createLogger } from './utils/logger';
+
+const appLogger = createLogger('builder:app');
 
 const LOADER_VARIANTS = {
   sidebar: { className: 'designer-loader--sidebar', lines: 6 },
@@ -162,7 +165,7 @@ async function bootstrap() {
   const contentEl = document.getElementById('builderMain');
   const rowEl = document.getElementById('builderRow');
   if (!sidebarEl || !contentEl || !rowEl) {
-    console.error('[Designer App] Missing required layout containers.');
+    appLogger.error('Missing required layout containers');
     return;
   }
   const sidebarLoader = attachLoader({ container: sidebarEl, variant: 'sidebar' });
@@ -170,7 +173,7 @@ async function bootstrap() {
     const sidebarMarkup = await fetchPartial('sidebar-builder');
     sidebarEl.innerHTML = sanitizeHtml(sidebarMarkup);
   } catch (err) {
-    console.error('[Designer App] Failed to load sidebar:', err);
+    appLogger.error('Failed to load sidebar', err);
     renderLoadError({
       container: sidebarEl,
       message: 'The builder sidebar could not be loaded. Please refresh the page.',
@@ -200,7 +203,7 @@ async function bootstrap() {
         panelContainer.innerHTML = sanitizeHtml(textHtml);
         textPanelLoaded = true;
       } catch (e) {
-        console.error('[Designer App] Failed to load text tools panel:', e);
+        appLogger.error('Failed to load text tools panel', e);
         renderLoadError({
           container: panelContainer,
           message: 'The text tools panel is unavailable right now. Reload the designer to try again.',
@@ -220,7 +223,7 @@ async function bootstrap() {
           const colorPanel = panelContainer.querySelector('.color-panel');
           if (colorPanel) colorPanel.style.display = 'none';
         } catch (e) {
-          console.warn('[Designer App] Failed to load color panel:', e);
+          appLogger.warn('Failed to load color panel', e);
           renderLoadError({
             container: panelContainer,
             message: 'Color controls could not be loaded. Some styling actions may be unavailable.',
@@ -233,7 +236,7 @@ async function bootstrap() {
       }
     }
   } catch (e) {
-    console.error('[Designer App] Failed to load builder panel:', e);
+    appLogger.error('Failed to load builder panel', e);
     panelLoader.remove();
     renderLoadError({
       container: rowEl,

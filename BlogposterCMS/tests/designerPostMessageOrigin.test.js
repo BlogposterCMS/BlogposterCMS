@@ -10,7 +10,7 @@ jest.mock('../apps/designer/fetchPartial.js', () => ({
   fetchPartial: jest.fn(() => Promise.resolve('<div></div>'))
 }));
 
-jest.mock('../apps/designer/builderRenderer.js', () => ({
+jest.mock('../apps/designer/builderRenderer.ts', () => ({
   initBuilder: jest.fn(() => Promise.resolve())
 }));
 
@@ -113,7 +113,7 @@ describe('designer iframe origin handling', () => {
   });
 });
 const loadDesignerApp = () => {
-  const filePath = path.join(__dirname, '..', 'apps', 'designer', 'index.js');
+  const filePath = path.join(__dirname, '..', 'apps', 'designer', 'index.ts');
   const source = fs.readFileSync(filePath, 'utf8');
   const { code } = babel.transformSync(source, {
     filename: filePath,
@@ -122,11 +122,14 @@ const loadDesignerApp = () => {
   const localRequire = (request) => {
     const map = {
       './fetchPartial.js': '../apps/designer/fetchPartial.js',
-      './builderRenderer.js': '../apps/designer/builderRenderer.js',
+      './builderRenderer': '../apps/designer/builderRenderer.ts',
+      './builderRenderer.js': '../apps/designer/builderRenderer.ts',
+      './builderRenderer.ts': '../apps/designer/builderRenderer.ts',
       './editor/editor.js': '../apps/designer/editor/editor.js',
       '../../public/plainspace/sanitizer.js': '../public/plainspace/sanitizer.js',
       './managers/panelManager.js': '../apps/designer/managers/panelManager.js',
-      '../../public/assets/js/userColor.js': '../public/assets/js/userColor.js'
+      '../../public/assets/js/userColor.js': '../public/assets/js/userColor.js',
+      './utils/logger': '../apps/designer/utils/logger.ts'
     };
     const mapped = map[request] || request;
     return require(mapped);

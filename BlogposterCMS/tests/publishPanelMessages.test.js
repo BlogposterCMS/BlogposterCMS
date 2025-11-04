@@ -34,7 +34,7 @@ jest.mock('../apps/designer/utils.js', () => ({
 }));
 
 const { fetchPartial } = require('../apps/designer/fetchPartial.js');
-const { initPublishPanel } = require('../apps/designer/renderer/publishPanel.js');
+const { initPublishPanel } = require('../apps/designer/renderer/publishPanel.ts');
 
 function createBasicContext() {
   document.body.innerHTML = '<aside id="publishPanel"></aside>';
@@ -142,5 +142,24 @@ describe('publish panel messaging', () => {
     expect(warningEl.classList.contains('hidden')).toBe(false);
     expect(warningEl.textContent).toBe('Failed to load page data. Please try again.');
     expect(document.activeElement).toBe(slugInput);
+  });
+
+  test('sets aria-hidden attribute when toggling publish panel visibility', async () => {
+    const { publishBtn } = createBasicContext();
+    await flushPromises();
+    await flushPromises();
+    const panel = document.getElementById('publishPanel');
+
+    expect(panel.getAttribute('aria-hidden')).toBe('true');
+
+    publishBtn.click();
+    await flushPromises();
+    expect(panel.classList.contains('hidden')).toBe(false);
+    expect(panel.getAttribute('aria-hidden')).toBe('false');
+
+    publishBtn.click();
+    await flushPromises();
+    expect(panel.classList.contains('hidden')).toBe(true);
+    expect(panel.getAttribute('aria-hidden')).toBe('true');
   });
 });

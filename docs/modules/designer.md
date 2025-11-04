@@ -40,7 +40,7 @@ inline scripts or unsanitised markup are required.
 The builder renderer now splits major responsibilities into focused helpers so the
 entry point coordinates features instead of re-implementing them inline:
 
-- `apps/designer/renderer/builderHeader.js` loads the header partial, wires save/
+- `apps/designer/renderer/builderHeader.ts` loads the header partial, wires save/
   preview/publish buttons and exposes an autosave toggle.
 - `apps/designer/renderer/previewHeader.js` manages the responsive viewport header shown
   during preview mode.
@@ -52,8 +52,16 @@ entry point coordinates features instead of re-implementing them inline:
 - `apps/designer/managers/historyManager.js` centralises undo/redo stacks so widget edits
   and container changes share a single history implementation.
 
-`apps/designer/builderRenderer.js` now imports these helpers and focuses on orchestration:
+`apps/designer/builderRenderer.ts` now imports these helpers and focuses on orchestration:
 initialising the editor, wiring autosave, switching layers and coordinating widget events.
+
+The renderer entry point delegates specific responsibilities to focused helpers:
+
+- `createAutosavePipeline()` prepares autosave scheduling and history snapshots.
+- `setupWidgetInteractions()` wires selection, drag/resize handling and background toolbar behaviour.
+- `initializeHeaderSection()` loads the header partial and returns a controller for rerendering on layer changes.
+- `preparePublishPanelContainer()` ensures the publish panel host exists and stays hidden until explicitly opened.
+- `apps/designer/renderer/publishPanel.ts` handles publish flow UI, slug suggestions and upload orchestration while sharing the builder logger for consistent diagnostics.
 
 `#layoutRoot` now always acts as the root layout container. When no saved layout tree exists the builder seeds a leaf node,
 assigns it a deterministic `nodeId`, and persists that node instead of the wrapper element. Subsequent splits or container moves

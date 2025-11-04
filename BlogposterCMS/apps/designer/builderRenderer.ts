@@ -20,13 +20,14 @@ import { initLayoutMode, populateWidgetsPanel, startLayoutMode, stopLayoutMode }
 import { attachContainerBar } from './ux/containerActionBar.js';
 import { renderLayoutTreeSidebar } from './renderer/layoutTreeView.js';
 import { activateArrange as enableArrange, deactivateArrange as disableArrange } from './managers/layoutArrange.js';
-import { addHitLayer, applyDesignerTheme, executeJs } from './utils.js';
+import { applyDesignerTheme } from './utils.js';
+import { createLogger } from './utils/logger';
 import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { getWidgetIcon, extractCssProps, makeSelector } from './renderer/renderUtils.js';
 import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
-import { createBuilderHeader } from './renderer/builderHeader.js';
+import { createBuilderHeader } from './renderer/builderHeader';
 import { createPreviewHeader } from './renderer/previewHeader.js';
 import { buildLayoutBar } from './renderer/layoutBar.js';
 import { createLayoutStructureHandlers } from './renderer/layoutStructureHandlers.js';
@@ -46,10 +47,8 @@ import {
   resetDesignHistory
 } from './managers/historyManager.js';
 
-// Debug helper (enable with window.DEBUG_TEXT_EDITOR = true)
-function DBG(...args) {
-  try { if (window.DEBUG_TEXT_EDITOR) console.log('[TE/builder]', ...args); } catch (e) {}
-}
+const builderLogger = createLogger('builder');
+const backgroundLogger = builderLogger.child('background');
 
 // Enable layout structure features by default unless explicitly disabled
 const HAS_LAYOUT_STRUCTURE = window.FEATURE_LAYOUT_STRUCTURE !== false;
@@ -123,7 +122,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // Track when the BG toolbar was just opened to avoid immediate hide by global click
   let bgToolbarOpenedTs = 0;
   // Debug helper for background interactions
-  const BGLOG = (...args) => { try { console.log('[BG]', ...args); } catch (_) {} };
   function ensureCodeMap() {
     if (!codeMap || typeof codeMap !== 'object') codeMap = {};
     return codeMap;
@@ -402,7 +400,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     setActiveElement(editable);
     showToolbar();
-    DBG('selectWidget', { widgetId: el?.id, editableId: editable?.id });
+    builderLogger.debug('selectWidget', { widgetId: el?.id, editableId: editable?.id });
   }
   // When the grid selection changes, either select a widget or show the
   // background toolbar. Previously we only handled the widget case, so
@@ -464,7 +462,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // Show background toolbar when clicking on background (content/grid), not on a widget/UI
   const contentClickHandler = e => {
     const inPreview = document.body.classList.contains('preview-mode');
-    if (inPreview) { BGLOG('skip: preview-mode contentDown'); return; }
+    if (inPreview) { backgroundLogger.debug('skip: preview-mode contentDown'); return; }
     const isUi = e.target.closest('.canvas-item') ||
                  e.target.closest('.widget-action-bar') ||
                  e.target.closest('.text-block-editor-toolbar') ||
@@ -473,22 +471,22 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                  e.target.closest('.builder-header') ||
                  e.target.closest('.layout-bar') ||
                  e.target.closest('.builder-sidebar');
-    BGLOG('contentDown', { target: e.target, isUi: !!isUi });
+    backgroundLogger.debug('content pointerdown', { target: e.target, isUi: !!isUi });
     if (isUi) return;
     hideToolbar();
     showBgToolbar();
     bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
-    BGLOG('bgToolbar show via contentDown', { ts: bgToolbarOpenedTs });
+    backgroundLogger.debug('bgToolbar show via contentDown', { timestamp: bgToolbarOpenedTs });
   };
   // Prefer pointerdown for consistency and to avoid race with global click hide
   gridEl.addEventListener('pointerdown', contentClickHandler);
   const contentRoot = document.getElementById('content');
   if (contentRoot && contentRoot !== gridEl) contentRoot.addEventListener('pointerdown', contentClickHandler);
-  BGLOG('listeners attached: pointerdown on #workspaceMain and #content');
+  backgroundLogger.debug('listeners attached: pointerdown on #workspaceMain and #content');
 
   // Capture-phase handler to catch clicks swallowed by other listeners
   const captureBackgroundIntent = e => {
-    if (document.body.classList.contains('preview-mode')) { BGLOG('skip: preview-mode capture'); return; }
+    if (document.body.classList.contains('preview-mode')) { backgroundLogger.debug('skip: preview-mode capture'); return; }
     let inContent = e.target.closest('#content');
     // If an overlay outside #content captures the event, fall back to hit-testing #workspaceMain bounds
     if (!inContent) {
@@ -498,7 +496,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (gridRect && cx >= gridRect.left && cx <= gridRect.right && cy >= gridRect.top && cy <= gridRect.bottom) {
         inContent = true;
       }
-      BGLOG('capture hit-test', { cx, cy, gridRect, inContent: !!inContent });
+      backgroundLogger.debug('capture hit-test', { cx, cy, gridRect, inContent: !!inContent });
     }
     if (!inContent) return;
     const isUi = e.target.closest('.canvas-item') ||
@@ -509,12 +507,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                  e.target.closest('.builder-header') ||
                  e.target.closest('.layout-bar') ||
                  e.target.closest('.builder-sidebar');
-    BGLOG('capture pointerdown', { target: e.target, isUi: !!isUi });
+    backgroundLogger.debug('capture pointerdown', { target: e.target, isUi: !!isUi });
     if (isUi) return;
     hideToolbar();
     showBgToolbar();
     bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
-    BGLOG('bgToolbar show via capture', { ts: bgToolbarOpenedTs });
+    backgroundLogger.debug('bgToolbar show via capture', { timestamp: bgToolbarOpenedTs });
   };
   document.addEventListener('pointerdown', captureBackgroundIntent, true);
 
@@ -525,14 +523,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const insideGrid = e.target.closest('#workspaceMain');
     const insidePicker = e.target.closest('.color-picker');
     const insideTextTb = e.target.closest('.text-block-editor-toolbar');
-    if (insideBgToolbar || insidePicker || insideTextTb) { BGLOG('global click inside UI, ignore', { insideBgToolbar: !!insideBgToolbar, insidePicker: !!insidePicker, insideTextTb: !!insideTextTb }); return; }
+    if (insideBgToolbar || insidePicker || insideTextTb) { backgroundLogger.debug('global click inside UI, ignore', { insideBgToolbar: !!insideBgToolbar, insidePicker: !!insidePicker, insideTextTb: !!insideTextTb }); return; }
     // If we just opened the BG toolbar on this interaction, skip the immediate hide
     const now = (window.performance?.now?.() || Date.now());
     const delta = now - bgToolbarOpenedTs;
-    if (delta < 250) { BGLOG('global click within suppress window', { delta }); return; }
+    if (delta < 250) { backgroundLogger.debug('global click within suppress window', { delta }); return; }
     const insideViewport = e.target.closest('#builderViewport');
-    if (!insideViewport) { BGLOG('global click outside viewport -> hide bgToolbar'); hideBgToolbar(); }
-    else { BGLOG('global click inside viewport, keep bgToolbar', { insideGrid: !!insideGrid }); }
+    if (!insideViewport) { backgroundLogger.debug('global click outside viewport -> hide bgToolbar'); hideBgToolbar(); }
+    else { backgroundLogger.debug('global click inside viewport, keep bgToolbar', { insideGrid: !!insideGrid }); }
   });
 
   let initialLayout = [];

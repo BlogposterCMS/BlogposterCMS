@@ -1,6 +1,9 @@
 import { fetchPartial } from '../fetchPartial.js';
 import { sanitizeHtml } from '../../../public/plainspace/sanitizer.js';
 import { wrapCss } from '../utils.js';
+import { createLogger } from '../utils/logger';
+
+const publishLogger = createLogger('builder:publish');
 
 let pageService;
 let sanitizeSlug;
@@ -13,7 +16,7 @@ async function loadPageService() {
     pageService = mod.pageService;
     sanitizeSlug = mod.sanitizeSlug;
   } catch (err) {
-    console.warn('[Designer] pageService not available', err);
+    publishLogger.warn('pageService not available', err);
     sanitizeSlug = str => String(str).toLowerCase().replace(/[^a-z0-9\/-]+/g, '-').replace(/^-+|-+$/g, '');
   }
 }
@@ -33,7 +36,12 @@ export function initPublishPanel({
   saveDesign
 }) {
   const publishPanel = document.getElementById('publishPanel');
+  if (!publishPanel) {
+    publishLogger.warn('publish panel container not found');
+    return;
+  }
   publishPanel.classList.add('hidden');
+  publishPanel.setAttribute('aria-hidden', 'true');
   let slugInput,
     suggestionsEl,
     warningEl,
@@ -51,7 +59,7 @@ export function initPublishPanel({
       setupElements();
     })
     .catch(err => {
-      console.warn('[Designer] Failed to load publish panel:', err);
+      publishLogger.warn('Failed to load publish panel', err);
       publishPanel.innerHTML = `
   <button class="publish-close" type="button" aria-label="Close">&times;</button>
   <h2 class="publish-title">Publish this design</h2>
@@ -193,7 +201,7 @@ export function initPublishPanel({
         showSuccessMessage(slug);
       } catch (err) {
         if (err?.isValidationError) return;
-        console.error('[Designer] publish flow error', err);
+        publishLogger.error('publish flow error', err);
         showWarning(`Publish failed: ${err?.message || err}`, { focusEl: confirmBtn });
       }
     });
@@ -201,6 +209,7 @@ export function initPublishPanel({
 
   function showPublishPanel() {
     publishPanel.classList.remove('hidden');
+    publishPanel.setAttribute('aria-hidden', 'false');
     clearWarning();
     clearInfo();
     draftNote.classList.add('hidden');
@@ -210,6 +219,7 @@ export function initPublishPanel({
 
   function hidePublishPanel() {
     publishPanel.classList.add('hidden');
+    publishPanel.setAttribute('aria-hidden', 'true');
     hideSuggestions();
   }
 
@@ -238,7 +248,7 @@ export function initPublishPanel({
       const pagesRaw = Array.isArray(res) ? res : (res.pages || res.rows || []);
       return pagesRaw.filter(p => p.lane === 'public');
     } catch (err) {
-      console.warn('searchPages failed', err);
+      publishLogger.warn('searchPages failed', err);
       return [];
     }
   }
@@ -254,7 +264,7 @@ export function initPublishPanel({
       const page = res?.data ?? res;
       return page && page.lane === 'public' ? page : null;
     } catch (err) {
-      console.warn('getPageById failed', err);
+      publishLogger.warn('getPageById failed', err);
       return null;
     }
   }
@@ -401,7 +411,7 @@ export function initPublishPanel({
         name
       });
     } catch (err) {
-      console.warn('[Designer] getPublishedDesignMeta', err);
+      publishLogger.warn('getPublishedDesignMeta failed', err);
     }
     try {
       await meltdownEmit('deleteLocalItem', {
@@ -412,7 +422,7 @@ export function initPublishPanel({
         itemName: existingMeta?.path ? existingMeta.path.split('/').pop() : safeName
       });
     } catch (err) {
-      console.warn('[Designer] deleteLocalItem', err);
+      publishLogger.warn('deleteLocalItem failed', err);
     }
     for (const f of files) {
       await meltdownEmit('uploadFileToFolder', {
@@ -510,4 +520,3 @@ export function initPublishPanel({
     }
   }
 }
-

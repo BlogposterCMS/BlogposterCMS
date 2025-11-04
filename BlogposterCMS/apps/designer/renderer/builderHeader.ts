@@ -1,5 +1,8 @@
-import { initPublishPanel } from './publishPanel.js';
+import { initPublishPanel } from './publishPanel';
 import { initHeaderControls } from './headerControls.js';
+import { createLogger } from '../utils/logger';
+
+const headerLogger = createLogger('builder:header');
 
 async function loadHeaderPartial() {
   try {
@@ -13,7 +16,7 @@ async function loadHeaderPartial() {
     if (appScope) appScope.prepend(headerEl); else document.body.prepend(headerEl);
     return headerEl;
   } catch (err) {
-    console.warn('[Designer] Failed to load builder-header.html, falling back to JS header shell', err);
+    headerLogger.warn('Failed to load builder-header.html, falling back to JS header shell', err);
     const fallback = document.createElement('header');
     fallback.id = 'builder-header';
     fallback.className = 'builder-header';
@@ -202,7 +205,7 @@ export function createBuilderHeader({
         });
       }
     } catch (err) {
-      console.error('[Designer] failed to render header', err);
+      headerLogger.error('failed to render header', err);
     }
   }
 

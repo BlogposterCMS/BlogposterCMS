@@ -541,6 +541,7 @@ body.grid-mode .bounding-box.disabled {
   --z-toolbar: 190;
   --toolbar-height: 48px;
   --header-height: 64px;
+  --builder-header-height: var(--header-height, 64px);
   --sidebar-width: 72px;
   --panel-width: 280px;
   --duration-fast: 150ms;
@@ -640,7 +641,11 @@ body.grid-mode .bounding-box.disabled {
   display: flex;
   align-items: center;
   gap: 16px;
+  width: 100%;
+  min-height: var(--builder-header-height, 64px);
   padding: 10px 24px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.9);
   background: color-mix(in srgb, var(--color-white), transparent 20%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-text), transparent 90%);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -933,9 +938,9 @@ body.preview-mode .builder-header .header-actions {
 }
 .builder-sidebar {
   position: sticky;
-  top: 64px;
+  top: var(--builder-header-height, var(--header-height, 64px));
   align-self: flex-start;
-  height: calc(100vh - 64px);
+  height: calc(100vh - var(--builder-header-height, var(--header-height, 64px)));
   left: 0;
   width: var(--sidebar-width, 72px);
   padding: 20px 16px 0;
@@ -967,10 +972,10 @@ body.preview-mode .builder-header .header-actions {
 
 .builder-panel {
   position: fixed;
-  top: 64px;
+  top: var(--builder-header-height, var(--header-height, 64px));
   left: calc(var(--sidebar-width, 72px) + 12px);
   width: 280px;
-  height: calc(100% - 64px);
+  height: calc(100% - var(--builder-header-height, var(--header-height, 64px)));
   background: white;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -2477,7 +2482,7 @@ body.builder-mode #content {
   margin-left: 0; /* no manual offset */
   width: auto; /* full width inside flex container */
   min-width: 0; /* allow flex item to shrink; prevent overflow */
-  height: calc(100vh - 64px);
+  height: calc(100vh - var(--builder-header-height, var(--header-height, 64px)));
   overflow-x: hidden;
   overflow-y: visible;
   background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
@@ -2523,7 +2528,7 @@ body.builder-mode #content #builderViewport .viewport-size-display {
 body.builder-mode #content #builderViewport::before {
   content: "";
   position: fixed;
-  top: 64px;
+  top: var(--builder-header-height, var(--header-height, 64px));
   left: var(--sidebar-width);
   right: 0;
   bottom: 0;
@@ -2581,8 +2586,8 @@ body.preview-mode .bg-editor-toolbar {
 }
 body.preview-mode #builderViewport {
   margin-top: 0;
-  height: calc(100vh - 64px);
-  min-height: calc(100vh - 64px);
+  height: calc(100vh - var(--builder-header-height, var(--header-height, 64px)));
+  min-height: calc(100vh - var(--builder-header-height, var(--header-height, 64px)));
   background: white;
   border-radius: 0;
   box-shadow: none;

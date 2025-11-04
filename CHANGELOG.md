@@ -27,6 +27,7 @@ El Psy Kongroo
 - Default workarea selection skips split containers and the layout root, ensuring saved split layouts attach the grid to a leaf container.
 
 ### Changed
+- Publish panel now surfaces validation, success, and error messaging inline with improved focus handling, replacing blocking alerts during design publishing.
 - Removed temporary layout exit button to keep the layout editor distinct; use the back button to leave layout mode.
 - Layout title defaults to "Layout name" when no previous name is provided.
 - Removed the layout editor pill; saving now uses the header control and the publish action is hidden in layout mode.

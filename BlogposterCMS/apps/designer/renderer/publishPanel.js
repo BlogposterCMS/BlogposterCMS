@@ -34,7 +34,16 @@ export function initPublishPanel({
 }) {
   const publishPanel = document.getElementById('publishPanel');
   publishPanel.classList.add('hidden');
-  let slugInput, suggestionsEl, warningEl, draftWrap, draftCb, infoEl, draftNote, confirmBtn, closeBtn, urlEl;
+  let slugInput,
+    suggestionsEl,
+    warningEl,
+    draftWrap,
+    draftCb,
+    infoEl,
+    draftNote,
+    confirmBtn,
+    closeBtn,
+    urlEl;
   let selectedPage = null;
   fetchPartial('publish-panel', 'builder')
     .then(html => {
@@ -105,6 +114,15 @@ export function initPublishPanel({
     closeBtn = publishPanel.querySelector('.publish-close');
     urlEl = publishPanel.querySelector('.publish-url');
 
+    if (warningEl) {
+      warningEl.setAttribute('role', 'alert');
+      warningEl.setAttribute('tabindex', '-1');
+    }
+    if (infoEl) {
+      infoEl.setAttribute('role', 'status');
+      infoEl.setAttribute('tabindex', '-1');
+    }
+
     slugInput.addEventListener('input', onSlugInput);
     suggestionsEl.addEventListener('click', onSuggestionsClick);
     draftCb.addEventListener('change', onDraftToggle);
@@ -119,14 +137,22 @@ export function initPublishPanel({
     confirmBtn.addEventListener('click', async () => {
       await loadPageService();
       const slug = sanitizeSlug(slugInput.value.trim());
-      if (!slug) { alert('Select a slug'); return; }
+      if (!slug) {
+        showWarning('Select a slug.', { focusEl: slugInput });
+        return;
+      }
       try {
         if (!selectedPage) {
           const pages = await lookupPages(slug);
           const existing = pages.find(p => p.slug === slug);
           if (existing) {
             const full = await getPageById(existing.id);
-            if (!full) { alert('Failed to load existing page data.'); return; }
+            if (!full) {
+              showWarning('Failed to load existing page data. Please try again.', {
+                focusEl: slugInput
+              });
+              return;
+            }
             selectedPage = full;
             draftCb.checked = selectedPage.status !== 'published';
           } else {
@@ -164,19 +190,21 @@ export function initPublishPanel({
         };
         await pageService.update(selectedPage, patch);
         await runPublish(slug);
-        hidePublishPanel();
-        if (confirm('Design published successfully. Visit the page now?')) {
-          window.open(`/${slug}`, '_blank');
-        }
+        showSuccessMessage(slug);
       } catch (err) {
+        if (err?.isValidationError) return;
         console.error('[Designer] publish flow error', err);
-        alert('Publish failed: ' + err.message);
+        showWarning(`Publish failed: ${err?.message || err}`, { focusEl: confirmBtn });
       }
     });
   }
 
   function showPublishPanel() {
     publishPanel.classList.remove('hidden');
+    clearWarning();
+    clearInfo();
+    draftNote.classList.add('hidden');
+    draftNote.textContent = '';
     slugInput.focus();
   }
 
@@ -236,8 +264,8 @@ export function initPublishPanel({
     const q = sanitizeSlug(qRaw);
     selectedPage = null;
     suggestionsEl.innerHTML = '';
-    warningEl.classList.add('hidden');
-    infoEl.classList.add('hidden');
+    clearWarning();
+    clearInfo();
     draftWrap.classList.add('hidden');
     draftNote.classList.add('hidden');
     hideSuggestions();
@@ -265,22 +293,19 @@ export function initPublishPanel({
       const full = await getPageById(page.id);
       selectedPage = full || null;
       if (!selectedPage) {
-        warningEl.textContent = 'Failed to load page data. Please try again.';
-        warningEl.classList.remove('hidden');
+        showWarning('Failed to load page data. Please try again.', { focusEl: slugInput });
         return;
       }
       draftWrap.classList.remove('hidden');
       const isDraft = selectedPage.status !== 'published';
       draftCb.checked = isDraft;
       if (isDraft) {
-        warningEl.textContent = 'Selected page is a draft';
-        warningEl.classList.remove('hidden');
+        showWarning('Selected page is a draft');
       } else {
-        warningEl.classList.add('hidden');
+        clearWarning();
       }
     } else {
-      infoEl.textContent = 'Page will be created when published.';
-      infoEl.classList.remove('hidden');
+      setInfo('Page will be created when published.');
     }
   }
 
@@ -293,16 +318,15 @@ export function initPublishPanel({
     const page = await getPageById(Number(el.dataset.id));
     if (!page) return;
     selectedPage = page;
-    infoEl.classList.add('hidden');
+    clearInfo();
     draftWrap.classList.remove('hidden');
     draftNote.classList.add('hidden');
     const isDraft = page.status !== 'published';
     draftCb.checked = isDraft;
     if (isDraft) {
-      warningEl.textContent = 'Selected page is a draft';
-      warningEl.classList.remove('hidden');
+      showWarning('Selected page is a draft');
     } else {
-      warningEl.classList.add('hidden');
+      clearWarning();
     }
   }
 
@@ -318,7 +342,12 @@ export function initPublishPanel({
 
   async function runPublish(subSlug) {
     const name = nameInput.value.trim();
-    if (!name) { alert('Enter a name'); return; }
+    if (!name) {
+      showWarning('Enter a name.', { focusEl: nameInput });
+      const validationError = new Error('Missing design name');
+      validationError.isValidationError = true;
+      throw validationError;
+    }
     updateAllWidgetContents();
     const safeName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '_');
     const normalizedSubPath = subSlug
@@ -411,6 +440,74 @@ export function initPublishPanel({
       path: normalizedSubPath,
       files: files.map(f => f.fileName)
     });
+  }
+  function showWarning(message, { focusEl } = {}) {
+    if (!warningEl) return;
+    if (message) {
+      warningEl.textContent = message;
+      warningEl.classList.remove('hidden');
+      if (focusEl && typeof focusEl.focus === 'function') {
+        focusEl.focus();
+      }
+    } else {
+      warningEl.textContent = '';
+      warningEl.classList.add('hidden');
+    }
+  }
+
+  function clearWarning() {
+    showWarning('');
+  }
+
+  function setInfo(message, options = {}) {
+    if (!infoEl) return;
+    const { link } = options;
+    if (!message) {
+      infoEl.textContent = '';
+      infoEl.classList.add('hidden');
+      infoEl.removeAttribute('data-variant');
+      return;
+    }
+    infoEl.textContent = '';
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = message;
+    infoEl.appendChild(msgSpan);
+    if (link) {
+      const linkEl = document.createElement('a');
+      linkEl.href = link.href;
+      if (link.target) linkEl.target = link.target;
+      if (link.rel) linkEl.rel = link.rel;
+      linkEl.textContent = link.text;
+      linkEl.classList.add('publish-info-link');
+      infoEl.appendChild(document.createTextNode(' '));
+      infoEl.appendChild(linkEl);
+    }
+    if (options.variant) {
+      infoEl.dataset.variant = options.variant;
+    } else {
+      infoEl.removeAttribute('data-variant');
+    }
+    infoEl.classList.remove('hidden');
+  }
+
+  function clearInfo() {
+    setInfo('');
+  }
+
+  function showSuccessMessage(slug) {
+    clearWarning();
+    setInfo('Design published successfully.', {
+      link: {
+        href: `/${slug}`,
+        text: 'Open page in new tab',
+        target: '_blank',
+        rel: 'noopener noreferrer'
+      },
+      variant: 'success'
+    });
+    if (infoEl) {
+      infoEl.focus?.();
+    }
   }
 }
 

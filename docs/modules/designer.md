@@ -26,6 +26,15 @@ new containers split their parent 50/50, the star button designates the sole dyn
 host, updating badges automatically, and the design button stores a `designRef` so
 static content can mount inside the container at runtime.
 
+## Loading feedback & error recovery
+
+The designer iframe now renders accessible skeleton placeholders before each sidebar or
+panel partial resolves. The placeholders prevent layout shift while indicating progress.
+If any partial fails to load, the iframe injects an inline alert inside the affected
+region so authors understand what went wrong and how to recover without opening the
+developer console. The alerts reuse the CMS colour tokens and follow the CSP rules—no
+inline scripts or unsanitised markup are required.
+
 ## Renderer module structure
 
 The builder renderer now splits major responsibilities into focused helpers so the

@@ -6,6 +6,13 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Plainspace admin renderer and CanvasGrid now keep fractional column widths
+  while caching values, preventing gaps and percentage drift after resize
+  events.
+- Rebuilt Plainspace admin bundles so cached column width logic ships to production dashboards.
+- Plainspace admin canvas now caches column width recalculations and disables
+  widget transitions outside edit mode so resize observers no longer trigger
+  repeated reflows or unintended animations while viewing dashboards.
 - Plainspace admin renderer now iterates every layout entry to render duplicate
   widget instances with their own metadata, keeping admin controls and layout
   persistence aligned with the saved configuration.

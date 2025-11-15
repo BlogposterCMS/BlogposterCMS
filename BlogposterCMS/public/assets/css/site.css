@@ -427,6 +427,10 @@
   padding: clamp(32px, 5vw, 72px) clamp(24px, 4vw, 64px) clamp(56px, 6vw, 96px);
   scroll-margin-top: clamp(72px, 12vh, 128px);
   position: relative;
+  /* Soft dotted backdrop so the workspace grid does not feel empty */
+  background-color: var(--color-white);
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--user-color), transparent 70%) 1px, transparent 0);
+  background-size: 20px 20px;
 }
 
 .resize-handle.br {
@@ -463,14 +467,10 @@
 .pixel-grid {
   min-height: 300px;
   position: relative;
-  background-color: rgba(255, 255, 255, 0.6);
-  -webkit-backdrop-filter: blur(8px);
-          backdrop-filter: blur(8px);
+  background-color: #fff;
   overflow-x: auto;
   overflow-y: visible;
   height: auto;
-  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--user-color), transparent 70%) 1px, transparent 0);
-  background-size: 20px 20px;
 }
 
 .canvas-grid {
@@ -484,19 +484,16 @@
   -ms-user-select: none;
   padding: 28px 22px 14px 22px;
   position: relative;
-  background: rgba(255, 255, 255, 0.6);
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background-color: #fff;
   border-radius: 14px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
   -webkit-backdrop-filter: blur(10px);
           backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
   position: absolute;
   overflow: hidden;
   border-radius: 14px;
   border: 2px solid transparent;
-  transition: all 0.2s ease, box-shadow 0.15s ease;
   will-change: transform;
   z-index: 0;
 }
@@ -509,14 +506,10 @@
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.6);
-  -webkit-backdrop-filter: blur(4px);
-          backdrop-filter: blur(4px);
+  background-color: #fff;
   cursor: move;
   pointer-events: all;
   touch-action: none;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
-  background-size: 4px 4px;
 }
 
 .canvas-item.dragging {
@@ -543,6 +536,7 @@ body.dashboard-edit-mode .canvas-item {
   border: 2px solid transparent;
   outline: 2px solid transparent;
   outline-offset: -2px;
+  transition: all 0.2s ease, box-shadow 0.15s ease;
 }
 
 body.dashboard-edit-mode .canvas-item .widget-remove,
@@ -1504,15 +1498,64 @@ body.dashboard-edit-mode #edit-toggle:hover {
    components/_top-header.scss — Clean Header mit Icons und zentriertem Logo
    ============================================================================= */
 .top-header {
+  --maintenance-banner-height: 0px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
   padding: 6px 24px;
   min-height: 40px;
   background: color-mix(in srgb, var(--color-white), transparent 30%);
   -webkit-backdrop-filter: blur(6px);
           backdrop-filter: blur(6px);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
+}
+.top-header .maintenance-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger, #b91c1c) 40%, var(--color-white) 60%);
+  border-radius: 10px;
+  background: color-mix(in srgb, #f43f5e 18%, var(--color-white) 82%);
+  color: color-mix(in srgb, var(--color-text) 70%, #7f1d1d 30%);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+  text-align: center;
+}
+.top-header .maintenance-banner:hover, .top-header .maintenance-banner:focus-visible {
+  background: color-mix(in srgb, #f43f5e 26%, var(--color-white) 74%);
+  border-color: color-mix(in srgb, var(--color-danger, #b91c1c) 55%, var(--color-white) 45%);
+  color: color-mix(in srgb, var(--color-text) 60%, #7f1d1d 40%);
+  transform: translateY(-1px);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #f43f5e 35%, transparent 65%);
+}
+.top-header .maintenance-banner:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+.top-header .maintenance-banner__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.top-header .maintenance-banner__action {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.top-header .top-header__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 .top-header .left-icons,
 .top-header .right-icons {
@@ -1611,7 +1654,7 @@ body.dashboard-edit-mode #edit-toggle:hover {
  */
 .notification-hub {
   position: absolute;
-  top: 56px;
+  top: calc(56px + var(--maintenance-banner-height, 0px));
   right: 16px;
   width: 300px;
   max-height: 50vh;

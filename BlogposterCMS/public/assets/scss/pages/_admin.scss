@@ -13,6 +13,14 @@
   padding: clamp(32px, 5vw, 72px) clamp(24px, 4vw, 64px) clamp(56px, 6vw, 96px);
   scroll-margin-top: clamp(72px, 12vh, 128px);
   position: relative;
+  /* Soft dotted backdrop so the workspace grid does not feel empty */
+  background-color: var(--color-white);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--user-color), transparent 70%) 1px,
+    transparent 0
+  );
+  background-size: 20px 20px;
 }
 
 .resize-handle.br {

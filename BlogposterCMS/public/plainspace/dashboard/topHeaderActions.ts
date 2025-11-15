@@ -138,6 +138,9 @@ async function handleDisableMaintenance(banner: HTMLButtonElement): Promise<void
   try {
     await meltdownEmit('setSetting', buildSettingsPayload({ value: 'false' }));
     hideBanner(banner);
+    // Always re-check maintenance status after toggling to keep the UI honest and
+    // avoid stale state if another admin flips the setting concurrently.
+    await syncMaintenanceBanner();
   } catch (error) {
     console.error('[TopHeader] failed to disable maintenance mode', error);
     const friendly = error instanceof Error && error.message ? error.message : 'Please try again later.';

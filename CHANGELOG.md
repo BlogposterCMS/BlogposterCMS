@@ -46,6 +46,7 @@ El Psy Kongroo
   heights when canvas metrics are temporarily unavailable.
 ### Changed
 - Quickstart instructions now call out the required install wizard steps so new admins unlock the CMS dashboard without guesswork.
+- Highlighted the need to replace environment placeholders with strong secrets in the root README Quickstart instructions.
 - Removed the glassmorphism styling from dashboard widgets so the admin canvas
   renders with opaque white panels and avoids GPU-intensive blur effects.
 - Restored PlainSpace admin workspace navigation fallback when visiting `/admin`

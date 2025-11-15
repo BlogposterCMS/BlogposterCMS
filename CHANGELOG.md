@@ -36,6 +36,8 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Installation flow now relies on a shared helper for lock-file and user checks, preventing login/install redirect loops when a
+  stale `install.lock` remains without any seeded users.
 - Admin home route now shares the admin shell bootstrap script so workspace
   navigation, sidebar data, and authenticated API calls initialize reliably on
   `/admin/home`.

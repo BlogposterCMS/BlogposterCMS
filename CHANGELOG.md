@@ -36,3 +36,11 @@ El Psy Kongroo
 ### Testing & Docs
 - Added jsdom regression suites covering delayed sidebar mounts, `/admin` fallbacks, overlapping Plainspace seeds, and layout hydration so core admin experiences stay covered.
 - CanvasGrid and layout documentation now outline responsive builder settings, seeding guidelines, and grid-core helpers while new developer quickstart sections highlight install wizard requirements and secret rotation.
+
+
+**“Whenever I’m about to do something, I think:
+‘Would an idiot do that?’
+And if they would, I do NOT do that.
+
+…This release is not that.”**
+– Dwight Schrute, Assistant (to the) Regional Developer

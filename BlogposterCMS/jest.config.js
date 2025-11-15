@@ -3,6 +3,7 @@ module.exports = {
   transform: {
     '^.+\\.[tj]sx?$': ['ts-jest', {
       diagnostics: false,
+      babelConfig: false,
       tsconfig: {
         allowJs: true,
         target: 'ES2020',

@@ -6,11 +6,19 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Changed
+- Restored PlainSpace admin workspace navigation fallback when visiting `/admin`
+  without a trailing slash so workspace menus stay populated even when the URL
+  omits the terminal separator.
+- Normalized PlainSpace admin workspace navigation so repeated trailing slashes
+  in `ADMIN_BASE` collapse to a single separator and active workspace detection
+  remains stable when paths include duplicate leading slashes.
 - PlainSpace admin seeding now groups widgets into width-driven rows and saves
   both percent-based and grid coordinates so freshly seeded dashboards render
   without client-side collision fixes.
 
 ### Added
+- Added a jsdom regression test that covers the `/admin` fallback to guard
+  against future workspace navigation regressions.
 - Designer app now shows skeleton placeholders and inline error alerts while
   loading sidebar and panel partials so authors receive immediate feedback when
   partial requests succeed or fail.

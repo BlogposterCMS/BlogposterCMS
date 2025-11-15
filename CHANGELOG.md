@@ -36,6 +36,9 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Admin home route now shares the admin shell bootstrap script so workspace
+  navigation, sidebar data, and authenticated API calls initialize reliably on
+  `/admin/home`.
 - Designer builder header now renders reliably again thanks to sanitized
   partial loading with a resilient fallback shell, and all designer panels
   align to the live header height via CSS variables to prevent layout gaps.

@@ -5,6 +5,11 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Changed
+- PlainSpace admin seeding now groups widgets into width-driven rows and saves
+  both percent-based and grid coordinates so freshly seeded dashboards render
+  without client-side collision fixes.
+
 ### Added
 - Designer app now shows skeleton placeholders and inline error alerts while
   loading sidebar and panel partials so authors receive immediate feedback when

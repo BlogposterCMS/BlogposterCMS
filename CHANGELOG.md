@@ -5,6 +5,11 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Changed
+- PlainSpace admin seeding now groups widgets into width-driven rows and saves
+  both percent-based and grid coordinates so freshly seeded dashboards render
+  without client-side collision fixes.
+
 ### Added
 - Designer app now shows skeleton placeholders and inline error alerts while
   loading sidebar and panel partials so authors receive immediate feedback when
@@ -13,6 +18,8 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Optimized the admin canvas drag pipeline so the bounding-box manager schedules
+  updates once per frame, restoring smooth pointer tracking when moving widgets.
 - Cleared ESLint unused-variable warnings across builder and admin assets by
   trimming dead imports, renaming unused parameters, and adding targeted error
   logging where helpful.
@@ -46,6 +53,8 @@ El Psy Kongroo
   a deterministic vertical baseline, refreshing once metrics are available so
   seeded widgets keep their intended dimensions even when the canvas initially
   reports zero size.
+- Installation flow now relies on a shared helper for lock-file and user checks, preventing login/install redirect loops when a
+  stale `install.lock` remains without any seeded users.
 - Admin home route now shares the admin shell bootstrap script so workspace
   navigation, sidebar data, and authenticated API calls initialize reliably on
   `/admin/home`.

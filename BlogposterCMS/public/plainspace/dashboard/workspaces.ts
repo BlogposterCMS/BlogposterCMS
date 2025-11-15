@@ -37,8 +37,9 @@ let lastRenderSignature: string | null = null;
 let cachedPages: AdminPage[] | null = null;
 
 function getAdminBase(): string {
-  const base = (window.ADMIN_BASE || '/admin/').replace(/\/+$/u, '');
-  return base.endsWith('/') ? base : `${base}/`;
+  const configuredBase = window.ADMIN_BASE || '/admin/';
+  const trimmedBase = configuredBase.replace(/\/+$/u, '');
+  return `${trimmedBase}/`;
 }
 
 function workspaceButton(): HTMLButtonElement {
@@ -171,7 +172,7 @@ function buildWorkspaces(nav: HTMLElement, pages: AdminPage[], adminBase: string
       const href = `${adminBase}${page.slug}`;
       anchor.href = href;
       anchor.textContent = page.title || page.slug;
-      if (window.location.pathname.startsWith(href)) {
+      if (page.slug === workspaceSlug || window.location.pathname.startsWith(href)) {
         anchor.classList.add('active');
       }
 
@@ -513,8 +514,17 @@ async function renderWorkspaceNav(): Promise<void> {
   }
 
   const adminBase = getAdminBase();
-  const relativePath = window.location.pathname.replace(new RegExp(`^${adminBase.replace(/[-/\\^$*+?.()|[\]{}]/gu, '\\$&')}`), '');
-  const workspaceSlug = relativePath.split('/')[0] || '';
+  const pathname = window.location.pathname;
+  const adminBasePattern = new RegExp(`^${adminBase.replace(/[-/\\^$*+?.()|[\]{}]/gu, '\\$&')}`);
+  const adminBaseMatch = pathname.match(adminBasePattern);
+  let relativePath = pathname;
+
+  if (adminBaseMatch) {
+    relativePath = pathname.slice(adminBaseMatch[0].length);
+  }
+
+  const slugSource = adminBaseMatch ? relativePath.replace(/^\/+/u, '') : relativePath;
+  const workspaceSlug = slugSource.split('/')[0] || '';
 
   const pages = await fetchAdminPages();
 

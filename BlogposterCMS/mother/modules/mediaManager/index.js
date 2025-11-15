@@ -229,8 +229,12 @@ function setupMediaManagerEvents(motherEmitter) {
         subPath = '',
         mimeType
       } = payload || {};
-      if (!jwt || !fileName || !fileData) {
+      if (!jwt || !fileName || fileData === undefined || fileData === null) {
         return callback(new Error('[MEDIA MANAGER] uploadFileToFolder => missing parameters.'));
+      }
+
+      if (!Buffer.isBuffer(fileData) && typeof fileData !== 'string') {
+        return callback(new Error('[MEDIA MANAGER] uploadFileToFolder => invalid file data type.'));
       }
 
       const targetDir = path.join(libraryRoot, subPath);

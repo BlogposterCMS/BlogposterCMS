@@ -9,6 +9,8 @@ El Psy Kongroo
 - Designer publish flow now skips uploading empty bundle stubs, updates the
   stored file list accordingly, and logs when optional assets are filtered so
   metadata stays aligned with what was actually published.
+- Media Manager uploads now accept empty file payloads, decoding zero-length
+  base64 data while continuing to enforce the existing extension whitelist.
 - Plainspace grid push handling now prefers vertical adjacency before scanning
   horizontally or falling back to the global search, keeping displaced widgets
   in their original columns when gaps exist elsewhere on the canvas.
@@ -17,11 +19,19 @@ El Psy Kongroo
   widgets keep their intended ordering, while preserving percent-based widget
   heights when canvas metrics are temporarily unavailable.
 ### Changed
+- Restored PlainSpace admin workspace navigation fallback when visiting `/admin`
+  without a trailing slash so workspace menus stay populated even when the URL
+  omits the terminal separator.
+- Normalized PlainSpace admin workspace navigation so repeated trailing slashes
+  in `ADMIN_BASE` collapse to a single separator and active workspace detection
+  remains stable when paths include duplicate leading slashes.
 - PlainSpace admin seeding now groups widgets into width-driven rows and saves
   both percent-based and grid coordinates so freshly seeded dashboards render
   without client-side collision fixes.
 
 ### Added
+- Added a jsdom regression test that covers the `/admin` fallback to guard
+  against future workspace navigation regressions.
 - Added a jsdom-backed regression test that hydrates overlapping Plainspace
   seeds to ensure widget coordinates remain unique and gap-free.
 - Designer app now shows skeleton placeholders and inline error alerts while

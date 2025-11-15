@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- PlainSpace admin workspace navigation now re-renders sidebars when the
+  container mounts after the first pass so delayed sidebar markup still
+  receives its subpage controls.
 - Designer text quick inserts now load with their full widget chrome after
   autosave restores and the builder resolves the text panel manager import so
   the bundle compiles again.
@@ -50,6 +53,8 @@ El Psy Kongroo
   without client-side collision fixes.
 
 ### Added
+- Added a jsdom regression test that covers delayed sidebar mounting in the
+  PlainSpace workspace navigation to guard against missing “add subpage” tiles.
 - Text tools panel now seeds text widgets directly onto the canvas with
   autosave-aware heading, subheading and body presets plus template quick
   inserts.

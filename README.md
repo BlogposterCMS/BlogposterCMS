@@ -84,6 +84,7 @@ cd BlogposterCMS
 npm install
 npm run build
 cp env.sample .env
+> Replace every placeholder in `.env` with a strong, unique secret before booting the stack to avoid deploying with default credentials. See the detailed requirements in [`docs/developer_quickstart.md`](docs/developer_quickstart.md) or [`docs/installation.md`](docs/installation.md).
 npm start
 ```
 

@@ -13,6 +13,12 @@ El Psy Kongroo
 - Plainspace admin canvas now caches column width recalculations and disables
   widget transitions outside edit mode so resize observers no longer trigger
   repeated reflows or unintended animations while viewing dashboards.
+- Plainspace admin renderer now iterates every layout entry to render duplicate
+  widget instances with their own metadata, keeping admin controls and layout
+  persistence aligned with the saved configuration.
+- PlainSpace admin workspace navigation now resolves icon assets against the
+  current `ADMIN_BASE` prefix so nested admin deployments load default and UI
+  icons reliably.
 - Designer publish flow now skips uploading empty bundle stubs, updates the
   stored file list accordingly, and logs when optional assets are filtered so
   metadata stays aligned with what was actually published.

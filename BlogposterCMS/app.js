@@ -1085,6 +1085,52 @@ app.get('/admin', csrfProtection, async (_req, res) => {
   }
 });
 
+async function fetchAdminPageBySlug(adminJwt, slug) {
+  return new Promise((resolve, reject) => {
+    motherEmitter.emit(
+      'getPageBySlug',
+      {
+        jwt: adminJwt,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        slug,
+        lane: 'admin'
+      },
+      (err, result) => (err ? reject(err) : resolve(result))
+    );
+  });
+}
+
+function prepareAdminShellHtml({ csrfToken, adminToken, slug, pageId }) {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  let html = fs.readFileSync(path.join(publicPath, 'admin.html'), 'utf8');
+  if (renderMode === 'server') {
+    html = html.replace(
+      /<script type="module" src="\/assets\/plainspace\/main\/pageRenderer.js"><\/script>\s*/i,
+      ''
+    );
+  }
+
+  const csrfSafe = escapeHtml(csrfToken);
+  const headInjection = `
+      <meta name="csrf-token" content="${csrfSafe}">
+      <script nonce="${nonce}">
+        window.CSRF_TOKEN = ${JSON.stringify(csrfToken)};
+        window.PAGE_ID     = ${JSON.stringify(pageId ?? null)};
+        window.PAGE_SLUG   = ${JSON.stringify(slug)};
+        window.ADMIN_TOKEN = ${JSON.stringify(adminToken)};
+        window.ACTIVE_THEME = ${JSON.stringify(ACTIVE_THEME)};
+        window.PLAINSPACE_VERSION = ${JSON.stringify(PLAINSPACE_VERSION)};
+        window.NONCE       = ${JSON.stringify(nonce)};
+      </script>
+    </head>`;
+
+  html = html.replace('</head>', headInjection);
+  html = injectDevBanner(html);
+
+  return { html, nonce };
+}
+
 // Admin Home Route
 app.get('/admin/home', csrfProtection, async (req, res) => {
   try {
@@ -1096,18 +1142,25 @@ app.get('/admin/home', csrfProtection, async (req, res) => {
     if (req.cookies?.admin_jwt) {
       try {
         await validateAdminToken(req.cookies.admin_jwt);
-        let html = fs.readFileSync(path.join(publicPath, 'admin.html'), 'utf8');
-        if (renderMode === 'server') {
-          html = html.replace(
-            /<script type="module" src="\/assets\/plainspace\/main\/pageRenderer.js"><\/script>\s*/i,
-            ''
-          );
+        const slug = sanitizeSlug('home');
+        let pageId = null;
+        try {
+          const page = await fetchAdminPageBySlug(req.cookies.admin_jwt, slug);
+          if (page?.id) {
+            pageId = page.id;
+          }
+        } catch (pageErr) {
+          console.warn('[GET /admin/home] Failed to load home page context =>', pageErr.message);
         }
-        html = html.replace(
-          '</head>',
-          `<meta name="csrf-token" content="${req.csrfToken()}"></head>`
-        );
-        html = injectDevBanner(html);
+
+        const { html, nonce } = prepareAdminShellHtml({
+          csrfToken: req.csrfToken(),
+          adminToken: req.cookies.admin_jwt,
+          slug,
+          pageId
+        });
+
+        res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
         return res.send(html);
       } catch (err) {
         console.warn('[GET /admin/home] Invalid admin token =>', err.message);
@@ -1333,52 +1386,20 @@ app.get('/admin/*', csrfProtection, async (req, res, next) => {
   const slug = sanitizeSlug(rawSlug);
 
   try {
-    const page = await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'getPageBySlug',
-        {
-          jwt: adminJwt,
-          moduleName: 'pagesManager',
-          moduleType: 'core',
-          slug,
-          lane: 'admin'
-        },
-        (err, result) => (err ? reject(err) : resolve(result))
-      );
-    });
+    const page = await fetchAdminPageBySlug(adminJwt, slug);
 
     if (!page?.id || page.lane !== 'admin') {
       return next();
     }
 
-    const nonce = crypto.randomBytes(16).toString('base64');
     const csrfTok = req.csrfToken();
 
-    let html = fs.readFileSync(
-      path.join(__dirname, 'public', 'admin.html'),
-      'utf8'
-    );
-    if (renderMode === 'server') {
-      html = html.replace(
-        /<script type="module" src="\/assets\/plainspace\/main\/pageRenderer.js"><\/script>\s*/i,
-        ''
-      );
-    }
-
-    const inject = `
-      <meta name="csrf-token" content="${csrfTok}">
-      <script nonce="${nonce}">
-        window.CSRF_TOKEN = ${JSON.stringify(csrfTok)};
-        window.PAGE_ID     = ${JSON.stringify(pageId ?? page.id)};
-        window.PAGE_SLUG   = ${JSON.stringify(slug)};
-        window.ADMIN_TOKEN = ${JSON.stringify(adminJwt)};
-        window.ACTIVE_THEME = ${JSON.stringify(ACTIVE_THEME)};
-        window.PLAINSPACE_VERSION = ${JSON.stringify(PLAINSPACE_VERSION)};
-        window.NONCE       = ${JSON.stringify(nonce)};
-      </script>
-    </head>`;
-    html = html.replace('</head>', inject);
-    html = injectDevBanner(html);
+    const { html, nonce } = prepareAdminShellHtml({
+      csrfToken: csrfTok,
+      adminToken: adminJwt,
+      slug,
+      pageId: pageId ?? page.id
+    });
 
     res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
     res.send(html);

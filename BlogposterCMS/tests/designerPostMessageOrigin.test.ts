@@ -173,6 +173,48 @@ describe('designer iframe origin handling', () => {
     expect((window as any).ADMIN_TOKEN).toBeUndefined();
   });
 
+  test('bootstraps when referrer is missing by falling back to allowed origins', async () => {
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      value: ''
+    });
+
+    document.body.innerHTML = `
+      <div id="builderRow">
+        <div id="sidebar"></div>
+        <div id="content"></div>
+        <div id="builderMain"></div>
+      </div>
+    `;
+
+    await loadDesignerApp();
+    (window.parent.postMessage as jest.Mock).mockClear();
+
+    const currentToken = window.location.search.replace('?originToken=', '');
+    const initEvent = new window.MessageEvent('message', {
+      data: {
+        type: 'init-tokens',
+        csrfToken: 'csrf-token',
+        adminToken: 'admin-token',
+        originToken: currentToken
+      },
+      origin: 'https://admin2.example.com'
+    });
+    Object.defineProperty(initEvent, 'source', { value: window.parent });
+
+    window.dispatchEvent(initEvent);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'designer-ready' },
+      'https://admin2.example.com'
+    );
+    expect((window as any).CSRF_TOKEN).toBe('csrf-token');
+    expect((window as any).ADMIN_TOKEN).toBe('admin-token');
+  });
+
   test('rejects tampered origin token payload even with trusted message origin', async () => {
     const originalToken = window.location.search.replace('?originToken=', '');
     const validTokenParts = originalToken.split('.');
@@ -219,4 +261,5 @@ describe('designer iframe origin handling', () => {
     expect((window as any).CSRF_TOKEN).toBeUndefined();
     expect((window as any).ADMIN_TOKEN).toBeUndefined();
   });
+
 });

@@ -329,12 +329,35 @@ const ensureOriginPolicy = async (): Promise<boolean> => {
     return false;
   }
   addAllowedOrigins(payload.origins);
+
   const referrerOrigin = normalizeOrigin(document.referrer);
-  if (!referrerOrigin || !allowedOrigins.has(referrerOrigin)) {
-    appLogger.warn('Referrer origin is not authorised to bootstrap designer');
-    return false;
+  let bootstrapOrigin: string | null = null;
+
+  if (referrerOrigin) {
+    if (!allowedOrigins.has(referrerOrigin)) {
+      appLogger.warn('Referrer origin is not authorised to bootstrap designer');
+      return false;
+    }
+    bootstrapOrigin = referrerOrigin;
+  } else {
+    const locationOrigin = normalizeOrigin(window.location.origin);
+    if (locationOrigin && allowedOrigins.has(locationOrigin)) {
+      bootstrapOrigin = locationOrigin;
+    } else {
+      const primaryAllowed = getPrimaryAllowedOrigin();
+      if (primaryAllowed && allowedOrigins.has(primaryAllowed)) {
+        bootstrapOrigin = primaryAllowed;
+      }
+    }
+
+    if (!bootstrapOrigin) {
+      appLogger.warn('Unable to determine authorised origin for designer bootstrap');
+      return false;
+    }
+    appLogger.info('Proceeding without referrer; using allowed origin', bootstrapOrigin);
   }
-  parentPostMessageOrigin = referrerOrigin;
+
+  parentPostMessageOrigin = bootstrapOrigin;
   bootState.originPolicyReady = true;
   return true;
 };

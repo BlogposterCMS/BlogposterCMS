@@ -97,6 +97,11 @@ async function fetchAdminPages(): Promise<AdminPage[]> {
     return cachedPages;
   }
 
+  if (!window.ADMIN_TOKEN) {
+    console.warn('[workspaceNav] ADMIN_TOKEN not yet available; deferring page fetch.');
+    return [];
+  }
+
   try {
     const response = await window.meltdownEmit('getPagesByLane', {
       jwt: window.ADMIN_TOKEN,
@@ -110,7 +115,7 @@ async function fetchAdminPages(): Promise<AdminPage[]> {
     return pages;
   } catch (error) {
     console.error('[workspaceNav] failed to fetch pages', error);
-    cachedPages = [];
+    cachedPages = null;
     return [];
   }
 }
@@ -513,22 +518,32 @@ async function renderWorkspaceNav(): Promise<void> {
 
   const pages = await fetchAdminPages();
 
-  const workspaces = pages.filter(page => page.meta?.workspace === page.slug && page.lane === ADMIN_LANE);
-  const sidebarPages = workspaceSlug
-    ? pages.filter(page => page.slug.startsWith(`${workspaceSlug}/`) && page.slug !== workspaceSlug)
+  const adminPages = pages.filter(page => page.lane === ADMIN_LANE);
+
+  const workspaceCandidates = adminPages.filter(page => {
+    const explicitWorkspace = page.meta?.workspace === page.slug;
+    const topLevel = !page.slug.includes('/');
+    return explicitWorkspace || topLevel;
+  });
+
+  const activeWorkspaceSlug = workspaceSlug || workspaceCandidates[0]?.slug || '';
+
+  const workspaces = workspaceCandidates;
+  const sidebarPages = activeWorkspaceSlug
+    ? adminPages.filter(page => page.slug.startsWith(`${activeWorkspaceSlug}/`) && page.slug !== activeWorkspaceSlug)
     : [];
 
-  const signature = computeSignature(workspaces, sidebarPages, workspaceSlug);
+  const signature = computeSignature(workspaces, sidebarPages, activeWorkspaceSlug);
   if (signature === lastRenderSignature) {
     return;
   }
   lastRenderSignature = signature;
 
   if (nav) {
-    buildWorkspaces(nav, pages, adminBase, workspaceSlug);
+    buildWorkspaces(nav, workspaces, adminBase, activeWorkspaceSlug);
   }
-  if (sidebarNav && workspaceSlug) {
-    buildSidebar(sidebarNav, sidebarPages, adminBase, workspaceSlug);
+  if (sidebarNav && activeWorkspaceSlug) {
+    buildSidebar(sidebarNav, sidebarPages, adminBase, activeWorkspaceSlug);
   }
 }
 
@@ -550,10 +565,13 @@ export async function initWorkspaceNav(): Promise<void> {
 }
 
 function scheduleInit(): void {
+  if (!window.ADMIN_TOKEN) {
+    setTimeout(scheduleInit, 250);
+    return;
+  }
   void initWorkspaceNav();
 }
 
 document.addEventListener('DOMContentLoaded', scheduleInit);
 document.addEventListener('main-header-loaded', scheduleInit);
 document.addEventListener('sidebar-loaded', scheduleInit);
-

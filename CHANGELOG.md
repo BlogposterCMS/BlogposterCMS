@@ -38,6 +38,9 @@ El Psy Kongroo
 ### Fixed
 - Installation flow now relies on a shared helper for lock-file and user checks, preventing login/install redirect loops when a
   stale `install.lock` remains without any seeded users.
+- Admin home route now shares the admin shell bootstrap script so workspace
+  navigation, sidebar data, and authenticated API calls initialize reliably on
+  `/admin/home`.
 - Designer builder header now renders reliably again thanks to sanitized
   partial loading with a resilient fallback shell, and all designer panels
   align to the live header height via CSS variables to prevent layout gaps.

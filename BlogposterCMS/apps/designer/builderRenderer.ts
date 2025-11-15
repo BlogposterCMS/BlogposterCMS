@@ -136,6 +136,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     designVersion: 0
   };
 
+  let layoutName = layoutNameParam ? String(layoutNameParam) : '';
   // Pre-seed design identifier and version from data attributes or globals so
   // existing designs update instead of inserting duplicates on first save.
   try {
@@ -148,11 +149,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (!Number.isNaN(ver)) state.designVersion = ver;
     }
     const winDesign = window.DESIGN_DATA || window.INITIAL_DESIGN;
-    if (!state.designId && winDesign?.id) state.designId = String(winDesign.id);
-    if (state.designVersion === 0 && winDesign?.version !== undefined) {
-      const v = parseInt(winDesign.version, 10);
-      if (!Number.isNaN(v)) state.designVersion = v;
-    }
+      if (!state.designId && winDesign?.id) state.designId = String(winDesign.id);
+      if (state.designVersion === 0 && winDesign?.version !== undefined) {
+        const v = parseInt(winDesign.version, 10);
+        if (!Number.isNaN(v)) state.designVersion = v;
+      }
+      if (!layoutName && winDesign?.title) {
+        layoutName = String(winDesign.title).trim();
+      }
   } catch (err) {
     console.warn('[Designer] failed to preload design metadata', err);
   }
@@ -190,6 +194,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
         if (!state.designId && loadedDesign.design.id) {
           state.designId = String(loadedDesign.design.id);
+        }
+        if (!layoutName && loadedDesign.design.title) {
+          layoutName = String(loadedDesign.design.title).trim();
         }
       }
     } catch (err) {
@@ -710,11 +717,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (pageId) scheduleAutosave();
   });
 
-  layoutName =
-    layoutNameParam ||
-    pageData?.meta?.layoutTemplate ||
-    pageData?.title ||
-    'layout-title';
+  if (!layoutName) {
+    layoutName =
+      layoutNameParam ||
+      pageData?.meta?.layoutTemplate ||
+      pageData?.title ||
+      'layout-title';
+  }
 
   currentDesignId = state.designId || layoutName;
   resetDesignHistory(currentDesignId);

@@ -24,6 +24,7 @@ const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
 const csrfProtection = require('./mother/utils/csrfProtection');
 const { loginLimiter } = require('./mother/utils/rateLimiters');
+const { computeInstallationCompletion } = require('./mother/utils/installationState');
 const crypto = require('crypto');
 const ts = require('typescript');
 const { sanitizeCookieName, sanitizeCookiePath } = require('./mother/utils/cookieUtils');
@@ -454,10 +455,11 @@ function getModuleTokenForDbManager() {
     });
   }
 
-  // Helper to check if the system still requires the initial setup
-  async function needsInitialSetup() {
+  async function getInstallationStatus() {
+    const lockExists = fs.existsSync(installLockPath);
+
     try {
-      const pubTok = await new Promise((resolve, reject) => {
+      const publicToken = await new Promise((resolve, reject) => {
         motherEmitter.emit(
           'issuePublicToken',
           { purpose: 'firstInstallCheck', moduleName: 'auth' },
@@ -465,12 +467,12 @@ function getModuleTokenForDbManager() {
         );
       });
 
-      const [installVal, userCount] = await Promise.all([
+      const [firstInstallValue, rawUserCount] = await Promise.all([
         new Promise((resolve, reject) => {
           motherEmitter.emit(
             'getPublicSetting',
             {
-              jwt: pubTok,
+              jwt: publicToken,
               moduleName: 'settingsManager',
               moduleType: 'core',
               key: 'FIRST_INSTALL_DONE'
@@ -481,16 +483,52 @@ function getModuleTokenForDbManager() {
         new Promise((resolve, reject) => {
           motherEmitter.emit(
             'getUserCount',
-            { jwt: pubTok, moduleName: 'userManagement', moduleType: 'core' },
+            { jwt: publicToken, moduleName: 'userManagement', moduleType: 'core' },
             (err, count = 0) => (err ? reject(err) : resolve(count))
           );
         })
       ]);
 
-      return installVal !== 'true' && userCount === 0;
+      const status = computeInstallationCompletion({
+        lockExists,
+        firstInstallDone: firstInstallValue,
+        userCount: rawUserCount
+      });
+
+      if (status.inconsistency === 'lock_without_data') {
+        console.warn('[installation] install.lock present without users or FIRST_INSTALL_DONE flag. Treating as incomplete.');
+      } else if (status.inconsistency === 'data_without_lock') {
+        console.warn('[installation] Users or FIRST_INSTALL_DONE present without install.lock. Treating as complete.');
+      }
+
+      return status;
     } catch (err) {
-      console.error('[needsInitialSetup] Error:', err.message);
-      return true; // default to requiring setup when uncertain
+      console.error('[getInstallationStatus] Error while resolving installation state:', err);
+      return {
+        complete: lockExists,
+        lockExists,
+        firstInstallDone: false,
+        userCount: 0,
+        hasPersistentData: false,
+        inconsistency: lockExists ? 'lock_without_data' : null,
+        error: err
+      };
+    }
+  }
+
+  async function isInstallationComplete() {
+    const status = await getInstallationStatus();
+    return status.complete;
+  }
+
+  // Helper to check if the system still requires the initial setup
+  async function needsInitialSetup() {
+    try {
+      const status = await getInstallationStatus();
+      return !status.complete;
+    } catch (err) {
+      console.error('[needsInitialSetup] Error:', err);
+      return true;
     }
   }
 
@@ -1416,43 +1454,15 @@ app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
   if (error) {
     return res.status(error.status).send(error.message);
   }
-  if (fs.existsSync(installLockPath)) {
-    return res.status(403).send('Already installed');
-  }
+
   const strong = safePassword.length >= 12 && /[a-z]/.test(safePassword) && /[A-Z]/.test(safePassword) && /\d/.test(safePassword);
   if (!strong && (!allowWeak || !isLocal)) {
     return res.status(400).send('Password too weak');
   }
   try {
-    const pubTok = await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'issuePublicToken',
-        { purpose: 'firstInstallCheck', moduleName: 'auth' },
-        (e, d) => (e ? reject(e) : resolve(d))
-      );
-    });
-    const [val, userCount] = await Promise.all([
-      new Promise((r, j) =>
-        motherEmitter.emit(
-          'getPublicSetting',
-          {
-            jwt: pubTok,
-            moduleName: 'settingsManager',
-            moduleType: 'core',
-            key: 'FIRST_INSTALL_DONE'
-          },
-          (e, d) => (e ? j(e) : r(d))
-        )
-      ),
-      new Promise((r, j) =>
-        motherEmitter.emit(
-          'getUserCount',
-          { jwt: pubTok, moduleName: 'userManagement', moduleType: 'core' },
-          (e, d) => (e ? j(e) : r(d))
-        )
-      )
-    ]);
-    if (val === 'true' || userCount > 0) {
+    const installationStatus = await getInstallationStatus();
+
+    if (installationStatus.complete || installationStatus.hasPersistentData) {
       return res.status(403).send('Already installed');
     }
 
@@ -1510,14 +1520,10 @@ app.post('/install', loginLimiter, csrfProtection, async (req, res) => {
 });
 
 app.get('/install', csrfProtection, async (req, res) => {
-  if (fs.existsSync(installLockPath)) {
-    return res.redirect('/login');
-  }
   try {
-    const pubTok = await new Promise((r, j) => motherEmitter.emit('issuePublicToken', { purpose: 'firstInstallCheck', moduleName: 'auth' }, (e, d) => e ? j(e) : r(d)));
-    const val = await new Promise((r, j) => motherEmitter.emit('getPublicSetting', { jwt: pubTok, moduleName: 'settingsManager', moduleType: 'core', key: 'FIRST_INSTALL_DONE' }, (e, d) => e ? j(e) : r(d)));
-    const userCount = await new Promise((r, j) => motherEmitter.emit('getUserCount', { jwt: pubTok, moduleName: 'userManagement', moduleType: 'core' }, (e, d) => e ? j(e) : r(d)));
-    if (val === 'true' || userCount > 0) {
+    const installationStatus = await getInstallationStatus();
+
+    if (installationStatus.complete || installationStatus.hasPersistentData) {
       return res.redirect('/login');
     }
     const devAutoLoginAllowed = await isDevAutoLoginAllowed();

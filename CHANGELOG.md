@@ -36,6 +36,8 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Installation flow now relies on a shared helper for lock-file and user checks, preventing login/install redirect loops when a
+  stale `install.lock` remains without any seeded users.
 - Designer builder header now renders reliably again thanks to sanitized
   partial loading with a resilient fallback shell, and all designer panels
   align to the live header height via CSS variables to prevent layout gaps.

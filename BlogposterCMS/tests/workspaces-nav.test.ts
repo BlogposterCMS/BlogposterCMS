@@ -108,4 +108,49 @@ describe('workspace navigation', () => {
     const addTile = document.querySelector('#subpage-nav .sidebar-add-subpage');
     expect(addTile).not.toBeNull();
   });
+
+  it('queues a follow-up render when init is called during an in-flight render', async () => {
+    document.getElementById('subpage-nav')?.remove();
+
+    const meltdownMock = window.meltdownEmit as jest.Mock;
+    let resolvePages: ((value: unknown) => void) | undefined;
+    const deferredPages = new Promise<unknown>(resolve => {
+      resolvePages = resolve;
+    });
+    meltdownMock.mockReturnValueOnce(deferredPages);
+
+    const { initWorkspaceNav } = await import('../public/plainspace/dashboard/workspaces');
+
+    const firstInit = initWorkspaceNav();
+    const secondInit = initWorkspaceNav();
+
+    const sidebar = document.createElement('nav');
+    sidebar.id = 'subpage-nav';
+    document.body.appendChild(sidebar);
+
+    resolvePages?.([
+      {
+        slug: 'workspace-beta',
+        lane: 'admin',
+        title: 'Beta',
+        meta: { workspace: 'workspace-beta' },
+      },
+      {
+        slug: 'workspace-alpha',
+        lane: 'admin',
+        title: 'Alpha',
+        meta: { workspace: 'workspace-alpha' },
+      },
+      {
+        slug: 'workspace-alpha/settings',
+        lane: 'admin',
+        title: 'Settings',
+      },
+    ]);
+
+    await Promise.all([firstInit, secondInit]);
+
+    const addTile = document.querySelector('#subpage-nav .sidebar-add-subpage');
+    expect(addTile).not.toBeNull();
+  });
 });

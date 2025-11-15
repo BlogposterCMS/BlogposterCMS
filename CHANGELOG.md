@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- PlainSpace admin workspace navigation now queues a follow-up render when
+  `initWorkspaceNav` runs during an in-flight update, ensuring late-mounted
+  sidebar containers still receive their add-subpage control.
 - PlainSpace admin workspace navigation now re-renders sidebars when the
   container mounts after the first pass so delayed sidebar markup still
   receives its subpage controls.

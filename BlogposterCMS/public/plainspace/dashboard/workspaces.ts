@@ -576,20 +576,29 @@ async function renderWorkspaceNav(): Promise<void> {
 }
 
 export async function initWorkspaceNav(): Promise<void> {
-  if (fetchPromise) {
-    await fetchPromise;
-    return;
-  }
+  const previous = fetchPromise ?? Promise.resolve();
 
-  fetchPromise = renderWorkspaceNav()
-    .catch(error => {
-      console.error('[workspaceNav] render failed', error);
+  const renderSequence = previous
+    .catch(() => {
+      // The previous render already logged its error, so continue the chain.
     })
-    .finally(() => {
-      fetchPromise = null;
+    .then(async () => {
+      try {
+        await renderWorkspaceNav();
+      } catch (error) {
+        console.error('[workspaceNav] render failed', error);
+      }
     });
 
-  await fetchPromise;
+  const trackedPromise = renderSequence.finally(() => {
+    if (fetchPromise === trackedPromise) {
+      fetchPromise = null;
+    }
+  });
+
+  fetchPromise = trackedPromise;
+
+  await trackedPromise;
 }
 
 function scheduleInit(): void {

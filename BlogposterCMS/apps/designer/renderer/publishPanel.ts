@@ -402,6 +402,13 @@ export function initPublishPanel({
       { fileName: 'script.js', data: jsContent },
       ...externalScripts.map((src, i) => ({ fileName: `external_${i}.js`, data: `import '${src}';` }))
     ];
+    const filesToUpload = files.filter(file => file.data.trim().length > 0);
+    const skippedFiles = files
+      .filter(file => !filesToUpload.includes(file))
+      .map(file => file.fileName);
+    if (skippedFiles.length) {
+      publishLogger.info('Skipping upload for empty bundles', skippedFiles);
+    }
     let existingMeta = null;
     try {
       existingMeta = await meltdownEmit('getPublishedDesignMeta', {
@@ -424,7 +431,7 @@ export function initPublishPanel({
     } catch (err) {
       publishLogger.warn('deleteLocalItem failed', err);
     }
-    for (const f of files) {
+    for (const f of filesToUpload) {
       await meltdownEmit('uploadFileToFolder', {
         jwt: window.ADMIN_TOKEN,
         moduleName: 'mediaManager',
@@ -448,7 +455,7 @@ export function initPublishPanel({
       moduleType: 'core',
       name,
       path: normalizedSubPath,
-      files: files.map(f => f.fileName)
+      files: filesToUpload.map(f => f.fileName)
     });
   }
   function showWarning(message, { focusEl } = {}) {

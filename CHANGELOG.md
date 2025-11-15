@@ -11,6 +11,24 @@ El Psy Kongroo
   the bundle compiles again.
 - Designer text quick inserts now wire remove buttons to the active grid so
   widgets inserted from the panel can be deleted without runtime errors.
+- Plainspace admin renderer and CanvasGrid now keep fractional column widths
+  while caching values, preventing gaps and percentage drift after resize
+  events.
+- Rebuilt Plainspace admin bundles so cached column width logic ships to production dashboards.
+- Plainspace admin canvas now caches column width recalculations and disables
+  widget transitions outside edit mode so resize observers no longer trigger
+  repeated reflows or unintended animations while viewing dashboards.
+- Plainspace admin renderer now iterates every layout entry to render duplicate
+  widget instances with their own metadata, keeping admin controls and layout
+  persistence aligned with the saved configuration.
+- PlainSpace admin workspace navigation now resolves icon assets against the
+  current `ADMIN_BASE` prefix so nested admin deployments load default and UI
+  icons reliably.
+- Designer publish flow now skips uploading empty bundle stubs, updates the
+  stored file list accordingly, and logs when optional assets are filtered so
+  metadata stays aligned with what was actually published.
+- Media Manager uploads now accept empty file payloads, decoding zero-length
+  base64 data while continuing to enforce the existing extension whitelist.
 - Plainspace grid push handling now prefers vertical adjacency before scanning
   horizontally or falling back to the global search, keeping displaced widgets
   in their original columns when gaps exist elsewhere on the canvas.
@@ -19,6 +37,8 @@ El Psy Kongroo
   widgets keep their intended ordering, while preserving percent-based widget
   heights when canvas metrics are temporarily unavailable.
 ### Changed
+- Removed the glassmorphism styling from dashboard widgets so the admin canvas
+  renders with opaque white panels and avoids GPU-intensive blur effects.
 - Restored PlainSpace admin workspace navigation fallback when visiting `/admin`
   without a trailing slash so workspace menus stay populated even when the URL
   omits the terminal separator.

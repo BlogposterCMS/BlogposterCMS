@@ -5,6 +5,14 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Plainspace grid push handling now prefers vertical adjacency before scanning
+  horizontally or falling back to the global search, keeping displaced widgets
+  in their original columns when gaps exist elsewhere on the canvas.
+- Plainspace renderer now derives grid row counts from saved percentage heights
+  and resolves collisions via a deterministic occupancy search so overlapping
+  widgets keep their intended ordering, while preserving percent-based widget
+  heights when canvas metrics are temporarily unavailable.
 ### Changed
 - Restored PlainSpace admin workspace navigation fallback when visiting `/admin`
   without a trailing slash so workspace menus stay populated even when the URL
@@ -19,6 +27,8 @@ El Psy Kongroo
 ### Added
 - Added a jsdom regression test that covers the `/admin` fallback to guard
   against future workspace navigation regressions.
+- Added a jsdom-backed regression test that hydrates overlapping Plainspace
+  seeds to ensure widget coordinates remain unique and gap-free.
 - Designer app now shows skeleton placeholders and inline error alerts while
   loading sidebar and panel partials so authors receive immediate feedback when
   partial requests succeed or fail.
@@ -51,6 +61,16 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Respected CanvasGrid DOM metrics when column or row counts are unbounded so
+  percent-sized widgets expand to match the rendered grid instead of the
+  default 12-unit fallback.
+- Restored deterministic percent heights for widgets by basing vertical unit
+  conversion on grid rows/columns instead of the requested percentage, and
+  repaired browser module imports so widget options load correctly at runtime.
+- Canvas grid percent sizing now resolves widths via configured columns and
+  a deterministic vertical baseline, refreshing once metrics are available so
+  seeded widgets keep their intended dimensions even when the canvas initially
+  reports zero size.
 - Installation flow now relies on a shared helper for lock-file and user checks, preventing login/install redirect loops when a
   stale `install.lock` remains without any seeded users.
 - Admin home route now shares the admin shell bootstrap script so workspace

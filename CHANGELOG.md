@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Admin maintenance banner now re-queries the maintenance setting after a
+  disable attempt so the header immediately hides when the mode is no longer
+  active.
 - Admin maintenance banner now falls back to the authenticated cookie when the
   inline token is unavailable and retries initialization after the meltdown
   emitter loads, so disabling maintenance from the header works reliably again.

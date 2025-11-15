@@ -734,41 +734,102 @@ export class CanvasGrid {
   }
 
   _determineNextPosition(activeWidget, activeRect, other, otherRect) {
-    const ignore = new Set([other, activeWidget]);
-    const candidates = [];
-    const addCandidate = (x, y, axis, direction) => {
-      if (!this._fitsWithin(x, y, otherRect.w, otherRect.h)) return;
-      const targetRect = { x, y, w: otherRect.w, h: otherRect.h };
-      const collisions = this._countCollisionsForRect(targetRect, ignore);
-      const distance = Math.abs(x - otherRect.x) + Math.abs(y - otherRect.y);
-      candidates.push({ x, y, axis, direction, collisions, distance });
-    };
+    const width = Math.max(1, Math.round(otherRect.w));
+    const height = Math.max(1, Math.round(otherRect.h));
+    const ignore = new Set([other]);
+    const bounds = this._maxOccupiedBounds();
+    const { columns, rows } = this.options;
+    const activeMaxX = Math.max(activeRect.x + activeRect.w, 0);
+    const activeMaxY = Math.max(activeRect.y + activeRect.h, 0);
+    const seedMaxX = Math.max(otherRect.x + otherRect.w, 0);
+    const seedMaxY = Math.max(otherRect.y + otherRect.h, 0);
+    const colLimit = Number.isFinite(columns)
+      ? Math.max(columns, width)
+      : Math.max(bounds.maxX, activeMaxX, seedMaxX) + width + 5;
+    const rowLimit = Number.isFinite(rows)
+      ? Math.max(rows, height)
+      : Math.max(bounds.maxY, activeMaxY, seedMaxY) + height + 5;
+    const gridWidth = Math.max(0, Math.ceil(colLimit));
+    const gridHeight = Math.max(0, Math.ceil(rowLimit));
 
-    addCandidate(activeRect.x + activeRect.w, otherRect.y, 'x', 'right');
-    addCandidate(activeRect.x - otherRect.w, otherRect.y, 'x', 'left');
-    addCandidate(otherRect.x, activeRect.y + activeRect.h, 'y', 'down');
-    addCandidate(otherRect.x, activeRect.y - activeRect.h, 'y', 'up');
-
-    const directionRank = { right: 0, left: 1, down: 2, up: 3 };
-    const sorted = candidates.sort((a, b) => {
-      if (a.collisions !== b.collisions) return a.collisions - b.collisions;
-      if (a.axis !== b.axis) return a.axis === 'x' ? -1 : 1;
-      if (a.distance !== b.distance) return a.distance - b.distance;
-      return (directionRank[a.direction] ?? 0) - (directionRank[b.direction] ?? 0);
+    const occupancy = Array.from({ length: gridHeight }, () => new Uint8Array(gridWidth));
+    this.widgets.forEach(candidate => {
+      if (ignore.has(candidate)) return;
+      const rect = elementRect(candidate);
+      const startX = Math.max(0, Math.floor(rect.x));
+      const endX = Math.min(gridWidth, Math.ceil(rect.x + rect.w));
+      const startY = Math.max(0, Math.floor(rect.y));
+      const endY = Math.min(gridHeight, Math.ceil(rect.y + rect.h));
+      for (let y = startY; y < endY; y += 1) {
+        for (let x = startX; x < endX; x += 1) {
+          occupancy[y][x] = 1;
+        }
+      }
     });
 
-    const collisionFree = sorted.find(c => c.collisions === 0);
-    if (collisionFree) return { x: collisionFree.x, y: collisionFree.y };
-    if (sorted.length) return { x: sorted[0].x, y: sorted[0].y };
+    const fits = (x, y) => {
+      if (!this._fitsWithin(x, y, width, height)) return false;
+      if (y + height > gridHeight || x + width > gridWidth) return false;
+      for (let yy = y; yy < y + height; yy += 1) {
+        for (let xx = x; xx < x + width; xx += 1) {
+          if (occupancy[yy][xx]) return false;
+        }
+      }
+      return true;
+    };
+
+    const snap = value => Math.max(0, Math.round(value));
+    const adjacent = [
+      { x: snap(otherRect.x), y: snap(activeRect.y + activeRect.h) },
+      { x: snap(otherRect.x), y: snap(activeRect.y - height) },
+      { x: snap(activeRect.x + activeRect.w), y: snap(otherRect.y) },
+      { x: snap(activeRect.x - width), y: snap(otherRect.y) }
+    ];
+
+    for (const candidate of adjacent) {
+      if (fits(candidate.x, candidate.y)) {
+        return { x: candidate.x, y: candidate.y };
+      }
+    }
+
+    const maxRowStart = Math.max(0, gridHeight - height);
+    const maxColStart = Math.max(0, gridWidth - width);
+    const originY = Math.max(0, Math.min(activeRect.y, otherRect.y));
+    const originX = Math.max(0, Math.min(activeRect.x, otherRect.x));
+    const startRow = Math.min(Math.floor(originY), maxRowStart);
+    const startCol = Math.min(Math.floor(originX), maxColStart);
+
+    const rowOrder = [];
+    for (let y = startRow; y <= maxRowStart; y += 1) {
+      rowOrder.push(y);
+    }
+    for (let y = 0; y < startRow; y += 1) {
+      rowOrder.push(y);
+    }
+
+    for (const y of rowOrder) {
+      const colOrder = [];
+      for (let x = startCol; x <= maxColStart; x += 1) {
+        colOrder.push(x);
+      }
+      for (let x = 0; x < startCol; x += 1) {
+        colOrder.push(x);
+      }
+      for (const x of colOrder) {
+        if (fits(x, y)) {
+          return { x, y };
+        }
+      }
+    }
 
     const fallbackOrigin = {
-      x: otherRect.x,
+      x: Math.max(0, otherRect.x),
       y: Math.max(0, activeRect.y + activeRect.h)
     };
-    const fallback = this._findNearestSlot(otherRect.w, otherRect.h, fallbackOrigin, ignore);
+    const fallback = this._findNearestSlot(width, height, fallbackOrigin, ignore);
     if (fallback) return fallback;
 
-    return { x: otherRect.x, y: activeRect.y + activeRect.h };
+    return { x: fallbackOrigin.x, y: fallbackOrigin.y };
   }
 
   _pushWidget(widget, moved = new Set()) {

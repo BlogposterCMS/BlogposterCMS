@@ -5,7 +5,7 @@
 This release **will break existing setups**.  
 
 
-# 🚀 BlogposterCMS
+#  BlogposterCMS
 
 **The Composable Sandbox for Building Websites Without Chains**
 
@@ -13,7 +13,7 @@ This release **will break existing setups**.
 
 ---
 
-## 🎯 The Mission
+##  The Mission
 
 BlogposterCMS isn’t just another CMS.
 It’s a **composable platform** built for creators, developers, and teams who want **full control without bloat**.
@@ -22,40 +22,40 @@ A system that’s as **intuitive as a design tool**, as **flexible as a develope
 
 ---
 
-## 📌 Key Features (and why they matter)
+##  Key Features (and why they matter)
 
-* 🧩 **Composable & Modular**
+*  **Composable & Modular**
   Load only what you need. Keep your project lean, your code clean, and your sanity intact.
 
-* 🔐 **Secure by Design**
+*  **Secure by Design**
   Built-in sandboxing, granular permissions, and JWT-secured events.
   Because “ship now, patch later” isn’t a strategy – it’s a lawsuit waiting to happen.
 
-* 🎨 **Visual Builder with CanvasGrid** *(Alpha)*
+*  **Visual Builder with CanvasGrid** *(Alpha)*
   Place responsive widgets exactly where you want them.
   The UX is “usable” now – aiming for Canva-level fluidity.
 
-  * 🗂️ **Workspace-Driven Navigation**
+  *  **Workspace-Driven Navigation**
   Organize pages by workspace with dynamic headers, quick-create panels, and nested subpages for sane site structure.
 
-* 📤 **Static Export & Media Manager** *(Alpha)*
+*  **Static Export & Media Manager** *(Alpha)*
   Publish builder designs as static HTML/CSS/JS and manage assets safely in the media library.
 
-* 📦 **Database Freedom**
+*  **Database Freedom**
   PostgreSQL, MongoDB, SQLite – pick your weapon.
   No “our way or the highway” here.
 
-* 🚀 **AI & Microservice Ready**
+*  **AI & Microservice Ready**
   Extend with your own AI workflows or run modules as microservices.
   Future you will thank present you.
 
-* 🌐 **Performance + SEO**
+*  **Performance + SEO**
   Lightning-fast output with solid SEO.
   No dark rituals required for page speed.
 
 ---
 
-## 📍 Where We’re Going
+##  Where We’re Going
 
 Blogposter is moving towards becoming **the Figma for websites**:
 
@@ -68,7 +68,7 @@ The goal is simple: **own your content, own your stack, own your future**.
 
 ---
 
-## 🚧 Current Status (v0.7 Alpha)
+##  Current Status (v0.7 Alpha)
 
 Yes, it’s early. Yes, things will break. That’s why we call it **alpha**.
 If you like building on the bleeding edge, welcome aboard.
@@ -91,21 +91,21 @@ CLI coming soon to save you from manual setup.
 
 ---
 
-## 📚 Docs & Dev Guide
+##  Docs & Dev Guide
 
 Full docs in [`docs/index.md`](./docs/index.md).
 Sample module: [`modules/dummyModule`](./BlogposterCMS/modules/dummyModule).
 
 ---
 
-## 🤝 Join the Build
+##  Join the Build
 
 Frontend wizards, UI/UX magicians, and module tinkerers –
 BlogposterCMS is an open playground. Help us make it the CMS we all wish existed.
 
 ---
 
-## ☕ Support
+##  Support
 
 If you like the direction, buy me a coffee. It funds both code and caffeine overdoses. [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%23FF813F.svg?style=flat&logo=buy-me-a-coffee&logoColor=white)](https://coff.ee/BlogposterCMS)
 

@@ -70,9 +70,10 @@ The goal is simple: **own your content, own your stack, own your future**.
 
 ##  Current Status (v0.7 Alpha)
 
-Yes, it’s early. Yes, things will break. That’s why we call it **alpha**.
-If you like building on the bleeding edge, welcome aboard.
-If you want stability – give us a few months.
+This is the part of the movie where the lab is still smoking and someone says, “Technically it works.”
+Expect broken layouts, screaming logs and the occasional “Why is this on fire?”.
+If that sounds fun: grab a helmet and jump in.
+If you prefer boring things like “stable” and “predictable”, check back after a few releases
 
 ---
 

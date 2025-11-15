@@ -32,6 +32,8 @@ El Psy Kongroo
   widgets keep their intended ordering, while preserving percent-based widget
   heights when canvas metrics are temporarily unavailable.
 ### Changed
+- Removed the glassmorphism styling from dashboard widgets so the admin canvas
+  renders with opaque white panels and avoids GPU-intensive blur effects.
 - Restored PlainSpace admin workspace navigation fallback when visiting `/admin`
   without a trailing slash so workspace menus stay populated even when the URL
   omits the terminal separator.

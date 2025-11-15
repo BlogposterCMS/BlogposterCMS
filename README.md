@@ -84,8 +84,16 @@ cd BlogposterCMS
 npm install
 npm run build
 cp env.sample .env
+> Replace every placeholder in `.env` with a strong, unique secret before booting the stack to avoid deploying with default credentials. See the detailed requirements in [`docs/developer_quickstart.md`](docs/developer_quickstart.md) or [`docs/installation.md`](docs/installation.md).
 npm start
 ```
+
+After the server boots, complete the mandatory first-run setup to unlock the CMS:
+
+1. Open `http://localhost:3000/install` in your browser and finish the wizard to create the initial admin user.
+2. Once the wizard confirms completion, visit `http://localhost:3000/admin` to access the dashboard.
+
+You must complete this flow before the CMS becomes available. For a more detailed walkthrough, see the [installation guide](./docs/installation.md#run-the-setup-wizard).
 
 CLI coming soon to save you from manual setup.
 

@@ -73,4 +73,22 @@ describe('workspace navigation', () => {
     const sidebarLink = document.querySelector('#subpage-nav a');
     expect(sidebarLink).toBeNull();
   });
+
+  it('prefixes asset paths with the admin base when it includes a nested path', async () => {
+    window.ADMIN_BASE = '/cms/admin/';
+    window.history.replaceState({}, '', '/cms/admin/workspace-alpha/settings');
+
+    const { initWorkspaceNav } = await import('../public/plainspace/dashboard/workspaces');
+
+    await initWorkspaceNav();
+
+    const createIcon = document.querySelector('#workspace-nav button img.icon');
+    expect(createIcon?.getAttribute('src')).toBe('/cms/admin/assets/icons/plus.svg');
+
+    const workspaceIcon = document.querySelector('#workspace-nav a img.icon');
+    expect(workspaceIcon?.getAttribute('src')).toBe('/cms/admin/assets/icons/file-box.svg');
+
+    const sidebarAddIcon = document.querySelector('.sidebar-add-subpage img.icon');
+    expect(sidebarAddIcon?.getAttribute('src')).toBe('/cms/admin/assets/icons/plus.svg');
+  });
 });

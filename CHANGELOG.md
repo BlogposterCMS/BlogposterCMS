@@ -5,12 +5,22 @@ El Psy Kongroo
 
 ## [Unreleased]
 
+### Fixed
+- Plainspace grid push handling now prefers vertical adjacency before scanning
+  horizontally or falling back to the global search, keeping displaced widgets
+  in their original columns when gaps exist elsewhere on the canvas.
+- Plainspace renderer now derives grid row counts from saved percentage heights
+  and resolves collisions via a deterministic occupancy search so overlapping
+  widgets keep their intended ordering, while preserving percent-based widget
+  heights when canvas metrics are temporarily unavailable.
 ### Changed
 - PlainSpace admin seeding now groups widgets into width-driven rows and saves
   both percent-based and grid coordinates so freshly seeded dashboards render
   without client-side collision fixes.
 
 ### Added
+- Added a jsdom-backed regression test that hydrates overlapping Plainspace
+  seeds to ensure widget coordinates remain unique and gap-free.
 - Designer app now shows skeleton placeholders and inline error alerts while
   loading sidebar and panel partials so authors receive immediate feedback when
   partial requests succeed or fail.

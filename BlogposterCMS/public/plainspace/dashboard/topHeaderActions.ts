@@ -1,21 +1,33 @@
 import { bpDialog } from '/assets/js/bpDialog.js';
 
+type MeltdownEmit = (
+  eventName: string,
+  payload?: Record<string, unknown>
+) => Promise<unknown>;
+
+declare global {
+  interface Window {
+    ADMIN_TOKEN?: string;
+    meltdownEmit?: MeltdownEmit;
+  }
+}
+
 const BANNER_ID = 'maintenance-banner';
 const BANNER_HEIGHT_VAR = '--maintenance-banner-height';
 const SETTINGS_META = {
   moduleName: 'settingsManager',
   moduleType: 'core',
   key: 'MAINTENANCE_MODE'
-};
+} as const;
 
-const bannerResizeHandlers = new WeakMap();
+const bannerResizeHandlers = new WeakMap<HTMLButtonElement, () => void>();
 
-function getBannerElement() {
+function getBannerElement(): HTMLButtonElement | null {
   const el = document.getElementById(BANNER_ID);
   return el instanceof HTMLButtonElement ? el : null;
 }
 
-function updateBannerHeightVariable(banner) {
+function updateBannerHeightVariable(banner?: HTMLButtonElement | null): void {
   if (!banner || banner.hidden) {
     document.documentElement.style.setProperty(BANNER_HEIGHT_VAR, '0px');
     return;
@@ -24,7 +36,7 @@ function updateBannerHeightVariable(banner) {
   document.documentElement.style.setProperty(BANNER_HEIGHT_VAR, `${height}px`);
 }
 
-function ensureResizeHandler(banner) {
+function ensureResizeHandler(banner: HTMLButtonElement): void {
   if (!bannerResizeHandlers.has(banner)) {
     bannerResizeHandlers.set(banner, () => {
       if (!banner.hidden) {
@@ -38,14 +50,14 @@ function ensureResizeHandler(banner) {
   }
 }
 
-function detachResizeHandler(banner) {
+function detachResizeHandler(banner: HTMLButtonElement): void {
   const handler = bannerResizeHandlers.get(banner);
   if (handler) {
     window.removeEventListener('resize', handler);
   }
 }
 
-function showBanner(banner) {
+function showBanner(banner: HTMLButtonElement): void {
   if (!banner.hidden) {
     updateBannerHeightVariable(banner);
     return;
@@ -58,7 +70,7 @@ function showBanner(banner) {
   ensureResizeHandler(banner);
 }
 
-function hideBanner(banner) {
+function hideBanner(banner: HTMLButtonElement): void {
   if (!banner.hidden) {
     banner.hidden = true;
   }
@@ -67,7 +79,7 @@ function hideBanner(banner) {
   updateBannerHeightVariable();
 }
 
-function parseMaintenanceValue(value) {
+function parseMaintenanceValue(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
   }
@@ -75,13 +87,13 @@ function parseMaintenanceValue(value) {
     return value.toLowerCase() === 'true';
   }
   if (value && typeof value === 'object' && 'value' in value) {
-    const raw = value.value;
+    const raw = (value as { value?: unknown }).value;
     return typeof raw === 'string' ? raw.toLowerCase() === 'true' : Boolean(raw);
   }
   return false;
 }
 
-function bindBannerClick(banner) {
+function bindBannerClick(banner: HTMLButtonElement): void {
   if (banner.dataset.bound === 'true') return;
   banner.dataset.bound = 'true';
   banner.addEventListener('click', event => {
@@ -90,7 +102,7 @@ function bindBannerClick(banner) {
   });
 }
 
-async function handleDisableMaintenance(banner) {
+async function handleDisableMaintenance(banner: HTMLButtonElement): Promise<void> {
   const { meltdownEmit, ADMIN_TOKEN } = window;
   if (!ADMIN_TOKEN || typeof meltdownEmit !== 'function') {
     await bpDialog.alert('Maintenance mode cannot be toggled right now. Please refresh and try again.');
@@ -122,7 +134,7 @@ async function handleDisableMaintenance(banner) {
   }
 }
 
-async function syncMaintenanceBanner() {
+async function syncMaintenanceBanner(): Promise<void> {
   const banner = getBannerElement();
   if (!banner) {
     updateBannerHeightVariable();
@@ -158,7 +170,7 @@ async function syncMaintenanceBanner() {
   }
 }
 
-function bindUserProfileLink() {
+function bindUserProfileLink(): void {
   const userLink = document.getElementById('user-link');
   if (!(userLink instanceof HTMLAnchorElement)) return;
   if (userLink.dataset.bound === 'true' || !window.ADMIN_TOKEN) return;
@@ -176,7 +188,7 @@ function bindUserProfileLink() {
   }
 }
 
-function bindLogout() {
+function bindLogout(): void {
   const logoutIcon = document.getElementById('logout-icon');
   if (!(logoutIcon instanceof HTMLImageElement)) return;
   if (logoutIcon.dataset.bound === 'true') return;
@@ -187,7 +199,7 @@ function bindLogout() {
   });
 }
 
-function bindSearch() {
+function bindSearch(): void {
   const searchToggle = document.getElementById('search-toggle');
   const searchContainer = document.querySelector('.search-container');
   const searchInput = document.getElementById('admin-search-input');
@@ -223,10 +235,9 @@ function bindSearch() {
   });
 }
 
-function markActiveSidebarLinks() {
-  const sidebarItems = document.querySelectorAll('.sidebar .sidebar-item');
+function markActiveSidebarLinks(): void {
+  const sidebarItems = document.querySelectorAll<HTMLAnchorElement>('.sidebar .sidebar-item');
   sidebarItems.forEach(item => {
-    if (!(item instanceof HTMLAnchorElement)) return;
     if (item.dataset.bound === 'true') return;
     item.dataset.bound = 'true';
     try {
@@ -241,7 +252,7 @@ function markActiveSidebarLinks() {
   });
 }
 
-async function initTopHeader() {
+async function initTopHeader(): Promise<void> {
   bindUserProfileLink();
   bindLogout();
   bindSearch();
@@ -257,3 +268,5 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('top-header-loaded', () => {
   void initTopHeader();
 });
+
+export {};

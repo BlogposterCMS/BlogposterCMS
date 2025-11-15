@@ -1,20 +1,33 @@
 <div class="top-header">
-    <div class="left-icons">
-      <a href="/" id="home-link"><img src="/assets/icons/globe.svg" class="icon" /></a>
-      <div class="search-container">
-        <img src="/assets/icons/search.svg" id="search-toggle" class="icon" />
-        <input type="text" id="admin-search-input" placeholder="Search pages" />
-        <ul id="admin-search-results" class="search-results"></ul>
+    <button
+      id="maintenance-banner"
+      class="maintenance-banner"
+      type="button"
+      hidden
+      aria-live="polite"
+    >
+      <span class="maintenance-banner__label">Maintenance mode is active.</span>
+      <span class="maintenance-banner__action">Disable maintenance mode</span>
+    </button>
+
+    <div class="top-header__content">
+      <div class="left-icons">
+        <a href="/" id="home-link"><img src="/assets/icons/globe.svg" class="icon" /></a>
+        <div class="search-container">
+          <img src="/assets/icons/search.svg" id="search-toggle" class="icon" />
+          <input type="text" id="admin-search-input" placeholder="Search pages" />
+          <ul id="admin-search-results" class="search-results"></ul>
+        </div>
       </div>
-    </div>
-    
-    <div class="logo">
-      <img src="/assets/icons/blogpostercms-logo.svg" class="logo-icon" />
-    </div>
-    
-    <div class="right-icons">
-      <a href="#" id="user-link"><img src="/assets/icons/user.svg" class="icon" /></a>
-      <img id="logout-icon" src="/assets/icons/log-out.svg" class="icon" />
+
+      <div class="logo">
+        <img src="/assets/icons/blogpostercms-logo.svg" class="logo-icon" />
+      </div>
+
+      <div class="right-icons">
+        <a href="#" id="user-link"><img src="/assets/icons/user.svg" class="icon" /></a>
+        <img id="logout-icon" src="/assets/icons/log-out.svg" class="icon" />
+      </div>
     </div>
   </div>
 <div id="notification-hub" class="notification-hub" hidden>

@@ -3,14 +3,70 @@
    ============================================================================= */
 
 .top-header {
+  --maintenance-banner-height: 0px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
   padding: 6px 24px;
   min-height: 40px;
   background: color-mix(in srgb, var(--color-white), transparent 30%);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
+
+  .maintenance-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-danger, #b91c1c) 40%, var(--color-white) 60%);
+    border-radius: 10px;
+    background: color-mix(in srgb, #f43f5e 18%, var(--color-white) 82%);
+    color: color-mix(in srgb, var(--color-text) 70%, #7f1d1d 30%);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+    text-align: center;
+
+    &:hover,
+    &:focus-visible {
+      background: color-mix(in srgb, #f43f5e 26%, var(--color-white) 74%);
+      border-color: color-mix(in srgb, var(--color-danger, #b91c1c) 55%, var(--color-white) 45%);
+      color: color-mix(in srgb, var(--color-text) 60%, #7f1d1d 40%);
+      transform: translateY(-1px);
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, #f43f5e 35%, transparent 65%);
+    }
+
+    &:focus:not(:focus-visible) {
+      outline: none;
+      box-shadow: none;
+    }
+
+    &__label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    &__action {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+
+  .top-header__content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
 
   .left-icons,
   .right-icons {
@@ -31,7 +87,7 @@
       transform: scale(1.12);
     }
   }
-  
+
   .logo {
     display: flex;
     justify-content: center;

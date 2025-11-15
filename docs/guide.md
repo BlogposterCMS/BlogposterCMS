@@ -18,6 +18,10 @@ The login screen cycles through the preset accent colors, softly fading the dott
 
 Elements with `title`, `aria-label`, or `data-label` attributes automatically reveal an animated floating label on hover, mirroring the sidebar tooltip style.
 
+### Maintenance Mode Banner
+
+When maintenance mode is enabled, the admin header surfaces a red maintenance banner above the logo and icon row. The notice spans the full width of the header so it is difficult to miss, and the notification hub automatically offsets itself to drop below the banner while it is visible. Click the banner to confirm that you want to disable maintenance mode—after you confirm, the client requests `setSetting` via the meltdown event bus with your admin token and hides the banner once the backend acknowledges the change.
+
 ## Button System
 
 Use the global `.button` classes for consistent actions across the dashboard. Variants such as `.primary`, `.ghost`, `.outline`, `.text` and `.danger` cover common intents, while size modifiers `.sm` and `.lg` adjust height. Apply `.block` for full‑width buttons and wrap related actions in a `.button-group` to handle spacing and wrapping. Buttons accept optional icons via a child `.icon` element and expose an `.is-loading` state for spinners.

@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Restored the admin top header actions bundle so maintenance banner controls
+  and existing header interactions initialize correctly again.
 - Designer publish flow now skips uploading empty bundle stubs, updates the
   stored file list accordingly, and logs when optional assets are filtered so
   metadata stays aligned with what was actually published.
@@ -30,6 +32,8 @@ El Psy Kongroo
   without client-side collision fixes.
 
 ### Added
+- Admin header now reveals a maintenance-mode banner with a one-click disable
+  flow and notification offsets so dropdowns sit below the alert when active.
 - Added a jsdom regression test that covers the `/admin` fallback to guard
   against future workspace navigation regressions.
 - Added a jsdom-backed regression test that hydrates overlapping Plainspace

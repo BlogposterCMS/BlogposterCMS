@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Plainspace admin renderer now iterates every layout entry to render duplicate
+  widget instances with their own metadata, keeping admin controls and layout
+  persistence aligned with the saved configuration.
 - Designer publish flow now skips uploading empty bundle stubs, updates the
   stored file list accordingly, and logs when optional assets are filtered so
   metadata stays aligned with what was actually published.

@@ -660,7 +660,12 @@ El Psy Kongroo
 - CanvasGrid resize handle now styles correctly within widget shadow roots via adoptedStyleSheets, ensuring consistent positioning.
 
 
+**“Whenever I’m about to do something, I think:
+‘Would an idiot do that?’
+And if they would, I do NOT do that.
 
+…This release is not that.”**
+– Dwight Schrute, Assistant (to the) Regional Developer
 
 ## [0.6.3] – 2025-08-01
 

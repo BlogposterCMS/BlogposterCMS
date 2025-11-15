@@ -91,4 +91,21 @@ describe('workspace navigation', () => {
     const sidebarAddIcon = document.querySelector('.sidebar-add-subpage img.icon');
     expect(sidebarAddIcon?.getAttribute('src')).toBe('/cms/admin/assets/icons/plus.svg');
   });
+
+  it('re-renders the sidebar once the container becomes available', async () => {
+    document.getElementById('subpage-nav')?.remove();
+
+    const { initWorkspaceNav } = await import('../public/plainspace/dashboard/workspaces');
+
+    await initWorkspaceNav();
+
+    const sidebar = document.createElement('nav');
+    sidebar.id = 'subpage-nav';
+    document.body.appendChild(sidebar);
+
+    await initWorkspaceNav();
+
+    const addTile = document.querySelector('#subpage-nav .sidebar-add-subpage');
+    expect(addTile).not.toBeNull();
+  });
 });

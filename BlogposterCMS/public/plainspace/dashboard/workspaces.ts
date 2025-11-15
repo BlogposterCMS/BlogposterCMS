@@ -559,7 +559,10 @@ async function renderWorkspaceNav(): Promise<void> {
     : [];
 
   const signature = computeSignature(workspaces, sidebarPages, activeWorkspaceSlug);
-  if (signature === lastRenderSignature) {
+  const navNeedsRender = !nav || nav.childElementCount === 0;
+  const sidebarNeedsRender = !sidebarNav || sidebarNav.childElementCount === 0;
+
+  if (signature === lastRenderSignature && !navNeedsRender && !sidebarNeedsRender) {
     return;
   }
   lastRenderSignature = signature;

@@ -819,15 +819,31 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
             bboxHandles: false,
             enableZoom: false
         }, gridEl);
+        const COLUMN_EPSILON = 0.01;
+        let lastAppliedColumnUnit = Math.max(1, grid?.options?.columnWidth || 0);
+        let resizeRaf = 0;
         function setColumnWidth() {
             const metrics = measureGridMetrics(gridEl, grid);
             const width = metrics.width || gridEl.getBoundingClientRect().width;
             const nextWidth = Math.max(width, columnCount);
-            grid.options.columnWidth = Math.round(nextWidth / columnCount);
-            grid.widgets.forEach(w => grid.update(w));
+            const nextUnit = Math.max(1, nextWidth / columnCount);
+            if (Math.abs(nextUnit - lastAppliedColumnUnit) < COLUMN_EPSILON) {
+                return;
+            }
+            lastAppliedColumnUnit = nextUnit;
+            grid.options.columnWidth = nextUnit;
+            grid.widgets.forEach(w => grid.update(w, {}, { silent: true }));
         }
+        const handleResize = () => {
+            if (resizeRaf)
+                return;
+            resizeRaf = window.requestAnimationFrame(() => {
+                resizeRaf = 0;
+                setColumnWidth();
+            });
+        };
         setColumnWidth();
-        window.addEventListener('resize', setColumnWidth);
+        window.addEventListener('resize', handleResize);
         grid.setStatic(true);
         document.body.classList.add('grid-mode');
         grid.on('change', () => { });

@@ -5,6 +5,8 @@ import { bindGlobalListeners } from './globalEvents.js';
 import { BoundingBoxManager } from './BoundingBoxManager.js';
 import { snapToGrid, elementRect, rectsCollide } from './grid-utils.js';
 
+const COLUMN_WIDTH_EPSILON = 0.01;
+
 export class CanvasGrid {
   constructor(options = {}, el) {
     this.options = Object.assign(
@@ -80,6 +82,10 @@ export class CanvasGrid {
     this._emitter = new EventTarget();
     bindGlobalListeners(this.el, (evt, e) => this._emit(evt, e));
     this._canvasMetrics = null;
+    this._lastColumnWidth = Math.max(
+      1,
+      this.options.columnWidth || 0
+    );
     this._updateGridHeight();
     this._refreshCanvasMetrics();
     // Observe container size changes (e.g., sidebar open/close) and
@@ -90,11 +96,11 @@ export class CanvasGrid {
         // Use the inner width (minus padding) so column calculations
         // remain accurate even if the canvas has decorative padding.
         const { width: w } = this._refreshCanvasMetrics();
-        const cols = this.options.columns || 1;
-        this.options.columnWidth = w / cols;
-        this.widgets.forEach(wi => this._applyPosition(wi, false));
+        const columnChanged = this._syncColumnWidthFromWidth(w);
         // If something is selected, ensure the bbox follows
-        this._updateBBox();
+        if (columnChanged && this.activeEl) {
+          this._updateBBox();
+        }
         // Keep the zoom sizer in sync with container width changes
         this._syncSizer();
         // Only re-center when width changes and the user is near the origin
@@ -111,9 +117,20 @@ export class CanvasGrid {
     } catch { /* ResizeObserver not supported */ }
 
     if (this.options.percentageMode) {
-      window.addEventListener('resize', () => {
-        this.widgets.forEach(w => this._applyPosition(w, false));
-      });
+      let resizeToken = 0;
+      const handleResize = () => {
+        if (resizeToken) return;
+        resizeToken = requestAnimationFrame(() => {
+          resizeToken = 0;
+          const { width: w } = this._refreshCanvasMetrics();
+          const columnChanged = this._syncColumnWidthFromWidth(w);
+          if (columnChanged && this.activeEl) {
+            this._updateBBox();
+          }
+        });
+      };
+      window.addEventListener('resize', handleResize);
+      this._windowResizeHandler = handleResize;
     }
 
     // Zoom state and handler (Ctrl + wheel). Zoom towards the cursor
@@ -637,6 +654,21 @@ export class CanvasGrid {
 
     el.addEventListener('pointerdown', start);
     el._gridDragStart = startDrag;
+  }
+
+  _syncColumnWidthFromWidth(width) {
+    const cols = this.options.columns;
+    if (!Number.isFinite(width) || width <= 0) return false;
+    if (!Number.isFinite(cols) || cols <= 0) return false;
+    const nextUnit = Math.max(1, width / cols);
+    const prevUnit = Math.max(1, this._lastColumnWidth || 0);
+    if (Math.abs(nextUnit - prevUnit) < COLUMN_WIDTH_EPSILON) {
+      return false;
+    }
+    this.options.columnWidth = nextUnit;
+    this._lastColumnWidth = nextUnit;
+    this.widgets.forEach(wi => this._applyPosition(wi, false));
+    return true;
   }
 
   _refreshCanvasMetrics() {

@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Admin maintenance banner now falls back to the authenticated cookie when the
+  inline token is unavailable and retries initialization after the meltdown
+  emitter loads, so disabling maintenance from the header works reliably again.
 - Restored the admin top header actions bundle so maintenance banner controls
   and existing header interactions initialize correctly again.
 - PlainSpace admin workspace navigation now queues a follow-up render when
@@ -45,6 +48,8 @@ El Psy Kongroo
   widgets keep their intended ordering, while preserving percent-based widget
   heights when canvas metrics are temporarily unavailable.
 ### Changed
+- Restyled the admin maintenance banner to use the shared system font, palette
+  and elevation tokens so it visually aligns with the rest of the dashboard header.
 - Quickstart instructions now call out the required install wizard steps so new admins unlock the CMS dashboard without guesswork.
 - Highlighted the need to replace environment placeholders with strong secrets in the root README Quickstart instructions.
 - Removed the glassmorphism styling from dashboard widgets so the admin canvas

@@ -21,6 +21,24 @@ const SETTINGS_META = {
 } as const;
 
 const bannerResizeHandlers = new WeakMap<HTMLButtonElement, () => void>();
+let bannerSyncRetry: number | null = null;
+
+function buildSettingsPayload(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  const payload: Record<string, unknown> = { ...SETTINGS_META };
+  const token = window.ADMIN_TOKEN;
+  if (token) {
+    payload.jwt = token;
+  }
+  return Object.assign(payload, extra);
+}
+
+function scheduleBannerSyncRetry(delay = 600): void {
+  if (bannerSyncRetry !== null) return;
+  bannerSyncRetry = window.setTimeout(() => {
+    bannerSyncRetry = null;
+    void syncMaintenanceBanner();
+  }, delay);
+}
 
 function getBannerElement(): HTMLButtonElement | null {
   const el = document.getElementById(BANNER_ID);
@@ -103,8 +121,8 @@ function bindBannerClick(banner: HTMLButtonElement): void {
 }
 
 async function handleDisableMaintenance(banner: HTMLButtonElement): Promise<void> {
-  const { meltdownEmit, ADMIN_TOKEN } = window;
-  if (!ADMIN_TOKEN || typeof meltdownEmit !== 'function') {
+  const { meltdownEmit } = window;
+  if (typeof meltdownEmit !== 'function') {
     await bpDialog.alert('Maintenance mode cannot be toggled right now. Please refresh and try again.');
     return;
   }
@@ -118,11 +136,7 @@ async function handleDisableMaintenance(banner: HTMLButtonElement): Promise<void
   banner.setAttribute('aria-busy', 'true');
 
   try {
-    await meltdownEmit('setSetting', {
-      ...SETTINGS_META,
-      jwt: ADMIN_TOKEN,
-      value: 'false'
-    });
+    await meltdownEmit('setSetting', buildSettingsPayload({ value: 'false' }));
     hideBanner(banner);
   } catch (error) {
     console.error('[TopHeader] failed to disable maintenance mode', error);
@@ -143,9 +157,10 @@ async function syncMaintenanceBanner(): Promise<void> {
 
   bindBannerClick(banner);
 
-  const { meltdownEmit, ADMIN_TOKEN } = window;
-  if (!ADMIN_TOKEN || typeof meltdownEmit !== 'function') {
+  const { meltdownEmit } = window;
+  if (typeof meltdownEmit !== 'function') {
     hideBanner(banner);
+    scheduleBannerSyncRetry();
     return;
   }
 
@@ -153,10 +168,7 @@ async function syncMaintenanceBanner(): Promise<void> {
   banner.dataset.loading = 'true';
 
   try {
-    const value = await meltdownEmit('getSetting', {
-      ...SETTINGS_META,
-      jwt: ADMIN_TOKEN
-    });
+    const value = await meltdownEmit('getSetting', buildSettingsPayload());
     if (parseMaintenanceValue(value)) {
       showBanner(banner);
     } else {

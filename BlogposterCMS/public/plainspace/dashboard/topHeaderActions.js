@@ -9,6 +9,24 @@ const SETTINGS_META = {
 };
 
 const bannerResizeHandlers = new WeakMap();
+let bannerSyncRetry = null;
+
+function buildSettingsPayload(extra = {}) {
+  const payload = { ...SETTINGS_META };
+  const token = window.ADMIN_TOKEN;
+  if (token) {
+    payload.jwt = token;
+  }
+  return Object.assign(payload, extra);
+}
+
+function scheduleBannerSyncRetry(delay = 600) {
+  if (bannerSyncRetry !== null) return;
+  bannerSyncRetry = window.setTimeout(() => {
+    bannerSyncRetry = null;
+    void syncMaintenanceBanner();
+  }, delay);
+}
 
 function getBannerElement() {
   const el = document.getElementById(BANNER_ID);
@@ -91,8 +109,8 @@ function bindBannerClick(banner) {
 }
 
 async function handleDisableMaintenance(banner) {
-  const { meltdownEmit, ADMIN_TOKEN } = window;
-  if (!ADMIN_TOKEN || typeof meltdownEmit !== 'function') {
+  const { meltdownEmit } = window;
+  if (typeof meltdownEmit !== 'function') {
     await bpDialog.alert('Maintenance mode cannot be toggled right now. Please refresh and try again.');
     return;
   }
@@ -106,11 +124,7 @@ async function handleDisableMaintenance(banner) {
   banner.setAttribute('aria-busy', 'true');
 
   try {
-    await meltdownEmit('setSetting', {
-      ...SETTINGS_META,
-      jwt: ADMIN_TOKEN,
-      value: 'false'
-    });
+    await meltdownEmit('setSetting', buildSettingsPayload({ value: 'false' }));
     hideBanner(banner);
   } catch (error) {
     console.error('[TopHeader] failed to disable maintenance mode', error);
@@ -131,9 +145,10 @@ async function syncMaintenanceBanner() {
 
   bindBannerClick(banner);
 
-  const { meltdownEmit, ADMIN_TOKEN } = window;
-  if (!ADMIN_TOKEN || typeof meltdownEmit !== 'function') {
+  const { meltdownEmit } = window;
+  if (typeof meltdownEmit !== 'function') {
     hideBanner(banner);
+    scheduleBannerSyncRetry();
     return;
   }
 
@@ -141,10 +156,7 @@ async function syncMaintenanceBanner() {
   banner.dataset.loading = 'true';
 
   try {
-    const value = await meltdownEmit('getSetting', {
-      ...SETTINGS_META,
-      jwt: ADMIN_TOKEN
-    });
+    const value = await meltdownEmit('getSetting', buildSettingsPayload());
     if (parseMaintenanceValue(value)) {
       showBanner(banner);
     } else {

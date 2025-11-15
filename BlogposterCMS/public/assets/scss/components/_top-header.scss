@@ -10,9 +10,11 @@
   align-items: stretch;
   padding: 6px 24px;
   min-height: 40px;
-  background: color-mix(in srgb, var(--color-white), transparent 30%);
+  font-family: var(--font-body);
+  background: var(--gradient-primary);
   backdrop-filter: blur(6px);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-dark), transparent 90%);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-default);
 
   .maintenance-banner {
     position: relative;
@@ -22,24 +24,25 @@
     gap: 0.75rem;
     width: 100%;
     padding: 0.65rem 1rem;
-    border: 1px solid color-mix(in srgb, var(--color-danger, #b91c1c) 40%, var(--color-white) 60%);
     border-radius: 10px;
-    background: color-mix(in srgb, #f43f5e 18%, var(--color-white) 82%);
-    color: color-mix(in srgb, var(--color-text) 70%, #7f1d1d 30%);
-    font-weight: 600;
+    font: inherit;
     font-size: 0.95rem;
+    font-weight: 600;
+    border: 1px solid color-mix(in srgb, var(--color-error) 45%, var(--color-border) 55%);
+    background: color-mix(in srgb, var(--color-card) 80%, var(--color-error) 20%);
+    color: color-mix(in srgb, var(--color-error) 65%, var(--color-text) 35%);
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
     text-align: center;
 
     &:hover,
     &:focus-visible {
-      background: color-mix(in srgb, #f43f5e 26%, var(--color-white) 74%);
-      border-color: color-mix(in srgb, var(--color-danger, #b91c1c) 55%, var(--color-white) 45%);
-      color: color-mix(in srgb, var(--color-text) 60%, #7f1d1d 40%);
+      background: color-mix(in srgb, var(--color-card) 70%, var(--color-error) 30%);
+      border-color: color-mix(in srgb, var(--color-error) 60%, var(--color-border) 40%);
+      color: color-mix(in srgb, var(--color-error) 55%, var(--color-text) 45%);
       transform: translateY(-1px);
       outline: none;
-      box-shadow: 0 0 0 3px color-mix(in srgb, #f43f5e 35%, transparent 65%);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 35%, transparent 65%);
     }
 
     &:focus:not(:focus-visible) {
@@ -56,6 +59,7 @@
     &__action {
       font-size: 0.9rem;
       font-weight: 700;
+      color: color-mix(in srgb, var(--color-error) 70%, var(--color-text) 30%);
       text-decoration: underline;
       text-underline-offset: 3px;
     }

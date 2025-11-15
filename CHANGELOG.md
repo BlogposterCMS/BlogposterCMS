@@ -14,11 +14,19 @@ El Psy Kongroo
   widgets keep their intended ordering, while preserving percent-based widget
   heights when canvas metrics are temporarily unavailable.
 ### Changed
+- Restored PlainSpace admin workspace navigation fallback when visiting `/admin`
+  without a trailing slash so workspace menus stay populated even when the URL
+  omits the terminal separator.
+- Normalized PlainSpace admin workspace navigation so repeated trailing slashes
+  in `ADMIN_BASE` collapse to a single separator and active workspace detection
+  remains stable when paths include duplicate leading slashes.
 - PlainSpace admin seeding now groups widgets into width-driven rows and saves
   both percent-based and grid coordinates so freshly seeded dashboards render
   without client-side collision fixes.
 
 ### Added
+- Added a jsdom regression test that covers the `/admin` fallback to guard
+  against future workspace navigation regressions.
 - Added a jsdom-backed regression test that hydrates overlapping Plainspace
   seeds to ensure widget coordinates remain unique and gap-free.
 - Designer app now shows skeleton placeholders and inline error alerts while

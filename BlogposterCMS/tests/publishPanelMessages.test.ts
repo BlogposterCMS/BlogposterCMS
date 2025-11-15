@@ -1,5 +1,12 @@
 /** @jest-environment jsdom */
 
+const mockPageService = {
+  create: jest.fn(async () => ({ pageId: 'page-1' })),
+  update: jest.fn(async () => undefined)
+};
+
+const mockSanitizeSlug = jest.fn((slug: string) => slug);
+
 jest.mock('../apps/designer/fetchPartial.js', () => ({
   fetchPartial: jest.fn(() =>
     Promise.resolve(`
@@ -26,17 +33,26 @@ jest.mock('../apps/designer/fetchPartial.js', () => ({
 }));
 
 jest.mock('../public/plainspace/sanitizer.js', () => ({
-  sanitizeHtml: jest.fn(html => html)
+  sanitizeHtml: jest.fn((html: string) => html)
 }));
 
 jest.mock('../apps/designer/utils.js', () => ({
-  wrapCss: jest.fn(data => data)
+  wrapCss: jest.fn((data: string) => data)
 }));
 
-const { fetchPartial } = require('../apps/designer/fetchPartial.js');
-const { initPublishPanel } = require('../apps/designer/renderer/publishPanel.ts');
+jest.mock(
+  '/plainspace/widgets/admin/defaultwidgets/pageList/pageService.js',
+  () => ({
+    pageService: mockPageService,
+    sanitizeSlug: mockSanitizeSlug
+  }),
+  { virtual: true }
+);
 
-function createBasicContext() {
+import { fetchPartial } from '../apps/designer/fetchPartial.js';
+import { initPublishPanel } from '../apps/designer/renderer/publishPanel';
+
+function createBasicContext(options: { meltdown?: jest.Mock } = {}) {
   document.body.innerHTML = '<aside id="publishPanel"></aside>';
   const publishBtn = document.createElement('button');
   publishBtn.id = 'publish-toggle';
@@ -47,8 +63,8 @@ function createBasicContext() {
   const gridEl = document.createElement('div');
   const layoutRoot = document.createElement('div');
 
-  window.meltdownEmit = jest.fn(() => Promise.resolve([]));
-  window.ADMIN_TOKEN = 'token';
+  (window as any).meltdownEmit = options.meltdown ?? jest.fn(() => Promise.resolve([]));
+  (window as any).ADMIN_TOKEN = 'token';
 
   initPublishPanel({
     publishBtn,
@@ -73,10 +89,14 @@ function flushPromises() {
 }
 
 describe('publish panel messaging', () => {
-  let warnSpy;
+  let warnSpy: jest.SpyInstance;
+
   beforeEach(() => {
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.clearAllMocks();
+    mockPageService.create.mockClear();
+    mockPageService.update.mockClear();
+    mockSanitizeSlug.mockClear();
   });
 
   afterEach(() => {
@@ -87,10 +107,10 @@ describe('publish panel messaging', () => {
     const { publishBtn } = createBasicContext();
     await flushPromises();
     await flushPromises();
-    const panel = document.getElementById('publishPanel');
-    const slugInput = panel.querySelector('.publish-slug-input');
-    const confirmBtn = panel.querySelector('.publish-confirm');
-    const warningEl = panel.querySelector('.publish-warning');
+    const panel = document.getElementById('publishPanel')!;
+    const slugInput = panel.querySelector<HTMLInputElement>('.publish-slug-input')!;
+    const confirmBtn = panel.querySelector<HTMLButtonElement>('.publish-confirm')!;
+    const warningEl = panel.querySelector<HTMLDivElement>('.publish-warning')!;
 
     publishBtn.click();
     confirmBtn.click();
@@ -108,9 +128,9 @@ describe('publish panel messaging', () => {
   test('renders info message for a new slug suggestion', async () => {
     createBasicContext();
     await flushPromises();
-    const panel = document.getElementById('publishPanel');
-    const slugInput = panel.querySelector('.publish-slug-input');
-    const infoEl = panel.querySelector('.publish-info');
+    const panel = document.getElementById('publishPanel')!;
+    const slugInput = panel.querySelector<HTMLInputElement>('.publish-slug-input')!;
+    const infoEl = panel.querySelector<HTMLDivElement>('.publish-info')!;
 
     slugInput.value = 'new-page';
     slugInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -122,7 +142,7 @@ describe('publish panel messaging', () => {
 
   test('shows warning when existing slug data cannot be loaded', async () => {
     createBasicContext();
-    window.meltdownEmit = jest
+    (window as any).meltdownEmit = jest
       .fn()
       .mockImplementationOnce(() =>
         Promise.resolve([{ lane: 'public', id: 5, slug: 'existing' }])
@@ -130,9 +150,9 @@ describe('publish panel messaging', () => {
       .mockImplementationOnce(() => Promise.resolve(null));
 
     await flushPromises();
-    const panel = document.getElementById('publishPanel');
-    const slugInput = panel.querySelector('.publish-slug-input');
-    const warningEl = panel.querySelector('.publish-warning');
+    const panel = document.getElementById('publishPanel')!;
+    const slugInput = panel.querySelector<HTMLInputElement>('.publish-slug-input')!;
+    const warningEl = panel.querySelector<HTMLDivElement>('.publish-warning')!;
 
     slugInput.value = 'existing';
     slugInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -148,7 +168,7 @@ describe('publish panel messaging', () => {
     const { publishBtn } = createBasicContext();
     await flushPromises();
     await flushPromises();
-    const panel = document.getElementById('publishPanel');
+    const panel = document.getElementById('publishPanel')!;
 
     expect(panel.getAttribute('aria-hidden')).toBe('true');
 
@@ -161,5 +181,63 @@ describe('publish panel messaging', () => {
     await flushPromises();
     expect(panel.classList.contains('hidden')).toBe(true);
     expect(panel.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  test('skips uploading empty bundles and stores filtered metadata', async () => {
+    const uploadSpy = jest.fn();
+    const saveMetaSpy = jest.fn();
+    const makePublicSpy = jest.fn();
+
+    const meltdownMock = jest.fn((action: string, payload: any) => {
+      switch (action) {
+        case 'searchPages':
+          return Promise.resolve([]);
+        case 'getPublishedDesignMeta':
+          return Promise.resolve(null);
+        case 'deleteLocalItem':
+          return Promise.resolve(null);
+        case 'uploadFileToFolder':
+          uploadSpy(payload);
+          return Promise.resolve(null);
+        case 'makeFilePublic':
+          makePublicSpy(payload);
+          return Promise.resolve(null);
+        case 'savePublishedDesignMeta':
+          saveMetaSpy(payload);
+          return Promise.resolve(null);
+        default:
+          return Promise.resolve(null);
+      }
+    });
+
+    const { publishBtn } = createBasicContext({ meltdown: meltdownMock });
+    await flushPromises();
+    await flushPromises();
+
+    const panel = document.getElementById('publishPanel')!;
+    const slugInput = panel.querySelector<HTMLInputElement>('.publish-slug-input')!;
+    const confirmBtn = panel.querySelector<HTMLButtonElement>('.publish-confirm')!;
+
+    slugInput.value = 'fresh-page';
+
+    publishBtn.click();
+    confirmBtn.click();
+
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+
+    expect(mockPageService.create).toHaveBeenCalled();
+    expect(uploadSpy).toHaveBeenCalledTimes(1);
+    expect(uploadSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ fileName: 'index.html' })
+    );
+    expect(saveMetaSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ files: ['index.html'] })
+    );
+    expect(makePublicSpy).toHaveBeenCalled();
   });
 });

@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Designer publish flow now skips uploading empty bundle stubs, updates the
+  stored file list accordingly, and logs when optional assets are filtered so
+  metadata stays aligned with what was actually published.
 - Plainspace grid push handling now prefers vertical adjacency before scanning
   horizontally or falling back to the global search, keeping displaced widgets
   in their original columns when gaps exist elsewhere on the canvas.

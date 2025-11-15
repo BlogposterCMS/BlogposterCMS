@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Media Manager uploads now accept empty file payloads, decoding zero-length
+  base64 data while continuing to enforce the existing extension whitelist.
 - Plainspace grid push handling now prefers vertical adjacency before scanning
   horizontally or falling back to the global search, keeping displaced widgets
   in their original columns when gaps exist elsewhere on the canvas.

@@ -13,6 +13,8 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Optimized the admin canvas drag pipeline so the bounding-box manager schedules
+  updates once per frame, restoring smooth pointer tracking when moving widgets.
 - Cleared ESLint unused-variable warnings across builder and admin assets by
   trimming dead imports, renaming unused parameters, and adding targeted error
   logging where helpful.

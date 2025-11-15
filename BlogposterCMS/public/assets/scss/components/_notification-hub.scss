@@ -5,7 +5,7 @@
 
 .notification-hub {
   position: absolute;
-  top: 56px; // below top-header
+  top: calc(56px + var(--maintenance-banner-height, 0px)); // below top-header + banner
   right: 16px;
   width: 300px;
   max-height: 50vh;

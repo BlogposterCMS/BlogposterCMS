@@ -6,6 +6,8 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Restored the admin top header actions bundle so maintenance banner controls
+  and existing header interactions initialize correctly again.
 - PlainSpace admin workspace navigation now queues a follow-up render when
   `initWorkspaceNav` runs during an in-flight update, ensuring late-mounted
   sidebar containers still receive their add-subpage control.
@@ -56,6 +58,8 @@ El Psy Kongroo
   without client-side collision fixes.
 
 ### Added
+- Admin header now reveals a maintenance-mode banner with a one-click disable
+  flow and notification offsets so dropdowns sit below the alert when active.
 - Added a jsdom regression test that covers delayed sidebar mounting in the
   PlainSpace workspace navigation to guard against missing “add subpage” tiles.
 - Text tools panel now seeds text widgets directly onto the canvas with

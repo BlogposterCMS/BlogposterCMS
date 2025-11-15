@@ -43,12 +43,7 @@ export class BoundingBoxManager extends EventTarget {
 
     this._scheduled = false;
     this._updateHandler = () => {
-      if (this._scheduled) return;
-      this._scheduled = true;
-      requestAnimationFrame(() => {
-        this._scheduled = false;
-        this.update();
-      });
+      this.scheduleUpdate();
     };
     this._ro = new ResizeObserver(this._updateHandler);
     this._onLoad = null;
@@ -83,7 +78,7 @@ export class BoundingBoxManager extends EventTarget {
         widget.addEventListener('animationend', this._updateHandler, true);
         this.update();
         this.show();
-        requestAnimationFrame(() => this.update());
+        this.scheduleUpdate();
       };
       if (document.readyState === 'complete') {
         observe();
@@ -98,6 +93,15 @@ export class BoundingBoxManager extends EventTarget {
       this.hide();
     }
     this.dispatchEvent(new CustomEvent('widgetchange', { detail: widget }));
+  }
+
+  scheduleUpdate() {
+    if (this._scheduled) return;
+    this._scheduled = true;
+    requestAnimationFrame(() => {
+      this._scheduled = false;
+      this.update();
+    });
   }
 
   update() {

@@ -578,8 +578,12 @@ export class CanvasGrid {
       }
       // Drag-Event sofort auslösen…
       el.dispatchEvent(new Event('dragmove', { bubbles: true }));
-      // …und das BBox-Update in den nächsten Frame schieben.
-      requestAnimationFrame(() => this._updateBBox());
+      // …und nur dann direkt auf ein BBox-Update warten, wenn kein Manager aktiv ist.
+      if (this.bboxManager) {
+        this.bboxManager.scheduleUpdate();
+      } else {
+        requestAnimationFrame(() => this._updateBBox());
+      }
     };
 
     const move = e => {

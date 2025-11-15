@@ -19,6 +19,7 @@
   "include": [
     "public/plainspace/main/canvasGrid.ts",
     "public/plainspace/main/pageRenderer.ts",
+    "public/plainspace/main/widgetOptions.ts",
     "public/plainspace/dashboard/pagePicker.ts",
     "mother/modules/widgetManager/publicLoader.ts",
     "apps/designer/main/pixelGrid.ts",

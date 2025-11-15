@@ -13,6 +13,10 @@ El Psy Kongroo
   and resolves collisions via a deterministic occupancy search so overlapping
   widgets keep their intended ordering, while preserving percent-based widget
   heights when canvas metrics are temporarily unavailable.
+### Changed
+- PlainSpace admin seeding now groups widgets into width-driven rows and saves
+  both percent-based and grid coordinates so freshly seeded dashboards render
+  without client-side collision fixes.
 
 ### Added
 - Added a jsdom-backed regression test that hydrates overlapping Plainspace
@@ -24,6 +28,8 @@ El Psy Kongroo
   progress.
 
 ### Maintenance
+- Optimized the admin canvas drag pipeline so the bounding-box manager schedules
+  updates once per frame, restoring smooth pointer tracking when moving widgets.
 - Cleared ESLint unused-variable warnings across builder and admin assets by
   trimming dead imports, renaming unused parameters, and adding targeted error
   logging where helpful.
@@ -47,6 +53,18 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Respected CanvasGrid DOM metrics when column or row counts are unbounded so
+  percent-sized widgets expand to match the rendered grid instead of the
+  default 12-unit fallback.
+- Restored deterministic percent heights for widgets by basing vertical unit
+  conversion on grid rows/columns instead of the requested percentage, and
+  repaired browser module imports so widget options load correctly at runtime.
+- Canvas grid percent sizing now resolves widths via configured columns and
+  a deterministic vertical baseline, refreshing once metrics are available so
+  seeded widgets keep their intended dimensions even when the canvas initially
+  reports zero size.
+- Installation flow now relies on a shared helper for lock-file and user checks, preventing login/install redirect loops when a
+  stale `install.lock` remains without any seeded users.
 - Admin home route now shares the admin shell bootstrap script so workspace
   navigation, sidebar data, and authenticated API calls initialize reliably on
   `/admin/home`.

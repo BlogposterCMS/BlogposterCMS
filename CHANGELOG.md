@@ -36,6 +36,16 @@ El Psy Kongroo
 - Runtime page loader now sanitises design HTML before injection and only executes custom design scripts for entries flagged as trusted (for example `allowCustomJs`).
 
 ### Fixed
+- Respected CanvasGrid DOM metrics when column or row counts are unbounded so
+  percent-sized widgets expand to match the rendered grid instead of the
+  default 12-unit fallback.
+- Restored deterministic percent heights for widgets by basing vertical unit
+  conversion on grid rows/columns instead of the requested percentage, and
+  repaired browser module imports so widget options load correctly at runtime.
+- Canvas grid percent sizing now resolves widths via configured columns and
+  a deterministic vertical baseline, refreshing once metrics are available so
+  seeded widgets keep their intended dimensions even when the canvas initially
+  reports zero size.
 - Admin home route now shares the admin shell bootstrap script so workspace
   navigation, sidebar data, and authenticated API calls initialize reliably on
   `/admin/home`.

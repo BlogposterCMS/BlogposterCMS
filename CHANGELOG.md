@@ -6,6 +6,11 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Designer text quick inserts now load with their full widget chrome after
+  autosave restores and the builder resolves the text panel manager import so
+  the bundle compiles again.
+- Designer text quick inserts now wire remove buttons to the active grid so
+  widgets inserted from the panel can be deleted without runtime errors.
 - Plainspace admin renderer and CanvasGrid now keep fractional column widths
   while caching values, preventing gaps and percentage drift after resize
   events.
@@ -45,6 +50,9 @@ El Psy Kongroo
   without client-side collision fixes.
 
 ### Added
+- Text tools panel now seeds text widgets directly onto the canvas with
+  autosave-aware heading, subheading and body presets plus template quick
+  inserts.
 - Added a jsdom regression test that covers the `/admin` fallback to guard
   against future workspace navigation regressions.
 - Added a jsdom-backed regression test that hydrates overlapping Plainspace

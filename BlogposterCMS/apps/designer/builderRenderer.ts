@@ -23,6 +23,7 @@ import { createLogger } from './utils/logger';
 import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
+import { initTextPanel } from './managers/textPanelManager';
 import { getWidgetIcon } from './renderer/renderUtils.js';
 import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
 import { createBuilderHeader } from './renderer/builderHeader';
@@ -407,6 +408,24 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     showToolbar();
     builderLogger.debug('selectWidget', { widgetId: el?.id, editableId: editable?.id });
   }
+  const shouldAutosaveNow = () => Boolean(pageId && state.autosaveEnabled);
+
+  initTextPanel({
+    grid,
+    gridEl,
+    allWidgets,
+    genId,
+    ensureCodeMap,
+    getActiveLayer: () => activeLayer,
+    selectWidget,
+    markInactiveWidgets,
+    scheduleAutosave,
+    shouldAutosave: shouldAutosaveNow,
+    pageId,
+    defaultRows: DEFAULT_ROWS,
+    iconMap: ICON_MAP,
+    getWidgetIcon
+  });
   // When the grid selection changes, either select a widget or show the
   // background toolbar. Previously we only handled the widget case, so
   // clicking on empty space would not reveal the background toolbar. This

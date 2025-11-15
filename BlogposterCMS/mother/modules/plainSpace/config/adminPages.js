@@ -123,6 +123,22 @@ module.exports.ADMIN_PAGES = [
     }
   },
   {
+    title: 'Designer Layouts',
+    slug: 'designer-layouts',
+    parentSlug: 'content',
+    lane: 'admin',
+    weight: 60,
+    config: {
+      layout: {
+        header: 'top-header',
+        sidebar: 'default-sidebar',
+        inheritsLayout: true
+      },
+      icon: '/assets/icons/layers.svg',
+      widgets: ['designerLayouts']
+    }
+  },
+  {
     title: 'Page Editor',
     slug: 'edit',
     parentSlug: 'pages',

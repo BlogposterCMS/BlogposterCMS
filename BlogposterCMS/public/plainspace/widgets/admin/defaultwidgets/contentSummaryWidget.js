@@ -57,7 +57,70 @@ export async function render(el) {
   addBtn.alt = 'Add design';
   addBtn.title = 'Create new design';
   addBtn.className = 'icon add-layout-btn';
-  addBtn.addEventListener('click', () => {
+
+  function decodeAdminId() {
+    if (!window.ADMIN_TOKEN || typeof window.ADMIN_TOKEN !== 'string') return null;
+    const parts = window.ADMIN_TOKEN.split('.');
+    if (parts.length < 2) return null;
+    try {
+      const json = JSON.parse(atob(parts[1]));
+      return json.userId || json.sub || json.id || json.user?.id || null;
+    } catch {
+      return null;
+    }
+  }
+
+  addBtn.addEventListener('click', async () => {
+    const ownerId = decodeAdminId();
+    addBtn.classList.add('is-loading');
+    addBtn.style.pointerEvents = 'none';
+
+    const timestamp = new Date();
+    const titleStamp = timestamp.toLocaleString(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const defaultTitle = `New Design ${titleStamp}`;
+
+    try {
+      const res = await meltdownEmit('designer.saveDesign', {
+        jwt,
+        moduleName: 'designer',
+        moduleType: 'community',
+        design: {
+          id: null,
+          title: defaultTitle,
+          description: '',
+          thumbnail: '',
+          ownerId: ownerId || '',
+          bgColor: '',
+          bgMediaId: '',
+          bgMediaUrl: '',
+          version: 0,
+          isLayout: false,
+          isGlobal: false,
+          isDraft: true
+        },
+        widgets: [],
+        layout: null
+      }, 20000);
+
+      const newId = res && (res.id || res.designId);
+      if (newId) {
+        window.location.href = `/admin/app/designer/${encodeURIComponent(newId)}`;
+        return;
+      }
+    } catch (err) {
+      console.warn('[ContentSummaryWidget] failed to create design', err);
+      alert('Failed to create a new design. Opening the designer without a template.');
+    } finally {
+      addBtn.classList.remove('is-loading');
+      addBtn.style.pointerEvents = '';
+    }
+
     window.location.href = '/admin/app/designer';
   });
 
@@ -155,4 +218,3 @@ export async function render(el) {
     designList.style.display = 'none';
   });
 }
-

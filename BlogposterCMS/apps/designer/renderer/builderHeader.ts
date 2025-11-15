@@ -140,7 +140,18 @@ function buildFallbackHeader(): HTMLElement {
   return header;
 }
 
-async function loadHeaderPartial() {
+function ensureHeaderMount(): HTMLElement {
+  const existing = document.getElementById('builder-header');
+  if (existing instanceof HTMLElement) {
+    return existing;
+  }
+  const appScope = getAppScope();
+  const fallback = buildFallbackHeader();
+  appScope.prepend(fallback);
+  return fallback;
+}
+
+async function loadHeaderPartial(existing?: HTMLElement) {
   const appScope = getAppScope();
   try {
     const markup = await fetchPartial('builder-header');
@@ -153,13 +164,15 @@ async function loadHeaderPartial() {
     headerEl.id = headerEl.id || 'builder-header';
     headerEl.classList.add('builder-header');
     headerEl.setAttribute('role', 'banner');
-    appScope.prepend(headerEl);
+    if (existing?.isConnected) {
+      existing.replaceWith(headerEl);
+    } else {
+      appScope.prepend(headerEl);
+    }
     return headerEl;
   } catch (err) {
     headerLogger.warn('Failed to load builder-header.html, falling back to JS header shell', err);
-    const fallback = buildFallbackHeader();
-    appScope.prepend(fallback);
-    return fallback;
+    return existing ?? ensureHeaderMount();
   }
 }
 
@@ -212,18 +225,17 @@ export function createBuilderHeader({
 
   async function renderHeader({ reload = false } = {}) {
     try {
+      const mount = ensureHeaderMount();
       if (reload) {
         headerResizeObserver?.disconnect();
         headerResizeObserver = null;
-        const old = document.getElementById('builder-header');
-        if (old) {
-          const oldInput = old.querySelector('#layoutNameInput');
+        if (mount) {
+          const oldInput = mount.querySelector('#layoutNameInput');
           if (oldInput) layoutName = oldInput.value;
-          old.remove();
         }
       }
       setHeaderHeightVariable(DEFAULT_HEADER_HEIGHT);
-      topBar = await loadHeaderPartial();
+      topBar = await loadHeaderPartial(mount);
       if (topBar instanceof HTMLElement) {
         observeHeader(topBar);
       } else {

@@ -196,6 +196,19 @@ module.exports.DEFAULT_WIDGETS = [
     }
   },
   {
+    widgetId: 'designerLayouts',
+    widgetType: ADMIN_LANE,
+    label: 'Designer Layouts',
+    content: '/plainspace/widgets/admin/designerLayoutsWidget.js',
+    category: 'core',
+    options: { height: 150, halfWidth: true },
+    metadata: {
+      apiEvents: [
+        'designer.listDesigns'
+      ]
+    }
+  },
+  {
     widgetId: 'loginStrategies',
     widgetType: ADMIN_LANE,
     label: 'Login Strategies',

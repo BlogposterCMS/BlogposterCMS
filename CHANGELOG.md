@@ -6,6 +6,9 @@ El Psy Kongroo
 ## [Unreleased]
 
 ### Fixed
+- Plainspace admin renderer now iterates every layout entry to render duplicate
+  widget instances with their own metadata, keeping admin controls and layout
+  persistence aligned with the saved configuration.
 - PlainSpace admin workspace navigation now resolves icon assets against the
   current `ADMIN_BASE` prefix so nested admin deployments load default and UI
   icons reliably.

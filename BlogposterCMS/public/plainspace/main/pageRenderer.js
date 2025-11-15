@@ -882,46 +882,84 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
             const y = Math.max(0, rawY);
             window.addDashboardWidget(def, { x, y });
         });
-        const widgetIdSet = new Set(combinedAdmin.map(l => l.widgetId));
-        for (const id of (config.widgets || []))
-            widgetIdSet.add(id);
-        const matchedWidgets = allWidgets.filter(w => widgetIdSet.has(w.id));
         const pendingAdmin = [];
+        const instanceMetaMap = new Map();
         const { cols, rows } = deriveGridSize(gridEl, grid, combinedAdmin);
-        for (const def of matchedWidgets) {
+        for (const entry of combinedAdmin) {
+            const def = allWidgets.find(w => w.id === entry.widgetId);
+            if (!def)
+                continue;
             if (DEBUG)
                 console.debug('[Renderer] admin render widget placeholder', def.id);
-            const meta = combinedAdmin.find(l => l.widgetId === def.id) || {};
+            const meta = { ...entry };
+            const instanceId = meta.id || meta.instance_id || meta.instanceId || `w${Math.random().toString(36).slice(2, 8)}`;
+            meta.id = instanceId;
             const x = meta.xPercent !== undefined
-                ? Math.round((meta.xPercent / 100) * cols)
+                ? Math.round((Number(meta.xPercent) / 100) * cols)
                 : meta.x ?? 0;
             const y = meta.yPercent !== undefined
-                ? Math.round((meta.yPercent / 100) * rows)
+                ? Math.round((Number(meta.yPercent) / 100) * rows)
                 : meta.y ?? 0;
             const w = meta.wPercent !== undefined
-                ? Math.max(1, Math.round((meta.wPercent / 100) * cols))
+                ? Math.max(1, Math.round((Number(meta.wPercent) / 100) * cols))
                 : meta.w ?? 8;
             const h = meta.hPercent !== undefined
-                ? Math.max(1, Math.round((meta.hPercent / 100) * rows))
+                ? Math.max(1, Math.round((Number(meta.hPercent) / 100) * rows))
                 : meta.h ?? DEFAULT_ADMIN_ROWS;
             const wrapper = document.createElement('div');
             wrapper.classList.add('canvas-item', 'loading');
-            wrapper.dataset.x = x;
-            wrapper.dataset.y = y;
-            wrapper.setAttribute('gs-w', w);
-            wrapper.setAttribute('gs-h', h);
+            wrapper.dataset.x = String(x);
+            wrapper.dataset.y = String(y);
+            wrapper.setAttribute('gs-w', String(w));
+            wrapper.setAttribute('gs-h', String(h));
             const minW = 4;
             const minH = DEFAULT_ADMIN_ROWS;
-            wrapper.setAttribute('gs-min-w', minW);
-            wrapper.setAttribute('gs-min-h', minH);
+            wrapper.setAttribute('gs-min-w', String(minW));
+            wrapper.setAttribute('gs-min-h', String(minH));
             wrapper.dataset.widgetId = def.id;
-            wrapper.dataset.instanceId = meta.id || `w${Math.random().toString(36).slice(2, 8)}`;
+            wrapper.dataset.instanceId = instanceId;
+            if (meta.xPercent != null)
+                wrapper.dataset.xPercent = String(meta.xPercent);
+            if (meta.yPercent != null)
+                wrapper.dataset.yPercent = String(meta.yPercent);
+            if (meta.wPercent != null)
+                wrapper.dataset.wPercent = String(meta.wPercent);
+            if (meta.hPercent != null)
+                wrapper.dataset.hPercent = String(meta.hPercent);
+            if (meta.layer != null) {
+                const layerVal = typeof meta.layer === 'string' ? parseFloat(meta.layer) : Number(meta.layer);
+                if (Number.isFinite(layerVal)) {
+                    wrapper.dataset.layer = String(layerVal);
+                }
+            }
+            else if (meta.zIndex != null || meta.z_index != null) {
+                const raw = meta.zIndex ?? meta.z_index;
+                const layerVal = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
+                if (Number.isFinite(layerVal)) {
+                    wrapper.dataset.layer = String(layerVal);
+                }
+            }
+            const rotationRaw = meta.rotationDeg ?? meta.rotation_deg;
+            if (rotationRaw != null) {
+                const rotationVal = typeof rotationRaw === 'string' ? parseFloat(rotationRaw) : Number(rotationRaw);
+                if (Number.isFinite(rotationVal)) {
+                    wrapper.dataset.rotationDeg = String(rotationVal);
+                }
+            }
+            if (meta.opacity != null) {
+                const opacityVal = typeof meta.opacity === 'string' ? parseFloat(meta.opacity) : Number(meta.opacity);
+                if (Number.isFinite(opacityVal)) {
+                    const clamped = Math.min(1, Math.max(0, opacityVal));
+                    wrapper.style.opacity = String(clamped);
+                }
+            }
             const ph = document.createElement('div');
             ph.className = 'widget-placeholder';
             ph.textContent = def.metadata?.label || def.id;
             wrapper.appendChild(ph);
             gridEl.appendChild(wrapper);
             grid.makeWidget(wrapper);
+            instanceMetaMap.set(instanceId, meta);
             pendingAdmin.push({ wrapper, def, meta, placeholder: ph });
         }
         for (const { wrapper, def, meta, placeholder } of pendingAdmin) {
@@ -949,15 +987,19 @@ async function renderAttachedContent(page, lane, allWidgets, container) {
         await renderAttachedContent(page, lane, allWidgets, contentEl);
         grid.on('change', () => {
             const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
-            const newLayout = items.map(el => ({
-                id: el.dataset.instanceId,
-                widgetId: el.dataset.widgetId,
-                x: +el.dataset.x || 0,
-                y: +el.dataset.y || 0,
-                w: +el.getAttribute('gs-w'),
-                h: +el.getAttribute('gs-h'),
-                code: layout.find(l => l.id === el.dataset.instanceId)?.code || null
-            }));
+            const newLayout = items.map(el => {
+                const instanceId = el.dataset.instanceId;
+                const meta = instanceMetaMap.get(instanceId) || layout.find(l => l.id === instanceId) || {};
+                return {
+                    id: instanceId,
+                    widgetId: el.dataset.widgetId,
+                    x: Number(el.dataset.x) || 0,
+                    y: Number(el.dataset.y) || 0,
+                    w: Number(el.getAttribute('gs-w')),
+                    h: Number(el.getAttribute('gs-h')),
+                    code: meta.code || null
+                };
+            });
             window.adminCurrentLayout = newLayout;
         });
         window.saveAdminLayout = async () => {

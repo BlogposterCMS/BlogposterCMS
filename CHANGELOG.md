@@ -8,6 +8,30 @@ El Psy Kongroo
 ### Fixed
 - Restored the admin top header actions bundle so maintenance banner controls
   and existing header interactions initialize correctly again.
+- PlainSpace admin workspace navigation now queues a follow-up render when
+  `initWorkspaceNav` runs during an in-flight update, ensuring late-mounted
+  sidebar containers still receive their add-subpage control.
+- PlainSpace admin workspace navigation now re-renders sidebars when the
+  container mounts after the first pass so delayed sidebar markup still
+  receives its subpage controls.
+- Designer text quick inserts now load with their full widget chrome after
+  autosave restores and the builder resolves the text panel manager import so
+  the bundle compiles again.
+- Designer text quick inserts now wire remove buttons to the active grid so
+  widgets inserted from the panel can be deleted without runtime errors.
+- Plainspace admin renderer and CanvasGrid now keep fractional column widths
+  while caching values, preventing gaps and percentage drift after resize
+  events.
+- Rebuilt Plainspace admin bundles so cached column width logic ships to production dashboards.
+- Plainspace admin canvas now caches column width recalculations and disables
+  widget transitions outside edit mode so resize observers no longer trigger
+  repeated reflows or unintended animations while viewing dashboards.
+- Plainspace admin renderer now iterates every layout entry to render duplicate
+  widget instances with their own metadata, keeping admin controls and layout
+  persistence aligned with the saved configuration.
+- PlainSpace admin workspace navigation now resolves icon assets against the
+  current `ADMIN_BASE` prefix so nested admin deployments load default and UI
+  icons reliably.
 - Designer publish flow now skips uploading empty bundle stubs, updates the
   stored file list accordingly, and logs when optional assets are filtered so
   metadata stays aligned with what was actually published.
@@ -21,6 +45,8 @@ El Psy Kongroo
   widgets keep their intended ordering, while preserving percent-based widget
   heights when canvas metrics are temporarily unavailable.
 ### Changed
+- Removed the glassmorphism styling from dashboard widgets so the admin canvas
+  renders with opaque white panels and avoids GPU-intensive blur effects.
 - Restored PlainSpace admin workspace navigation fallback when visiting `/admin`
   without a trailing slash so workspace menus stay populated even when the URL
   omits the terminal separator.
@@ -34,6 +60,11 @@ El Psy Kongroo
 ### Added
 - Admin header now reveals a maintenance-mode banner with a one-click disable
   flow and notification offsets so dropdowns sit below the alert when active.
+- Added a jsdom regression test that covers delayed sidebar mounting in the
+  PlainSpace workspace navigation to guard against missing “add subpage” tiles.
+- Text tools panel now seeds text widgets directly onto the canvas with
+  autosave-aware heading, subheading and body presets plus template quick
+  inserts.
 - Added a jsdom regression test that covers the `/admin` fallback to guard
   against future workspace navigation regressions.
 - Added a jsdom-backed regression test that hydrates overlapping Plainspace

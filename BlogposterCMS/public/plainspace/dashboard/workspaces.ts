@@ -27,8 +27,23 @@ declare global {
   }
 }
 
-const DEFAULT_WORKSPACE_ICON = '/assets/icons/file-box.svg';
-const DEFAULT_SUBPAGE_ICON = '/assets/icons/file.svg';
+const ASSET_SCHEME_PATTERN = /^(?:[a-z][a-z\d+.-]*:|\/\/)/iu;
+
+function resolveAssetPath(assetPath: string): string {
+  const trimmed = assetPath.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('/') || ASSET_SCHEME_PATTERN.test(trimmed)) {
+    return trimmed;
+  }
+
+  const normalised = trimmed.replace(/^\/+/, '');
+  return `${getAdminBase()}${normalised}`;
+}
+
+const DEFAULT_WORKSPACE_ICON = resolveAssetPath('assets/icons/file-box.svg');
+const DEFAULT_SUBPAGE_ICON = resolveAssetPath('assets/icons/file.svg');
 const ADMIN_LANE = 'admin';
 
 let iconListPromise: Promise<string[]> | null = null;
@@ -51,7 +66,7 @@ function workspaceButton(): HTMLButtonElement {
   button.setAttribute('aria-label', 'Create workspace');
 
   const icon = document.createElement('img');
-  icon.src = '/assets/icons/plus.svg';
+  icon.src = resolveAssetPath('assets/icons/plus.svg');
   icon.className = 'icon';
   icon.alt = '';
   button.append(icon);
@@ -123,7 +138,7 @@ async function fetchAdminPages(): Promise<AdminPage[]> {
 
 async function ensureIconList(): Promise<string[]> {
   if (!iconListPromise) {
-    iconListPromise = fetch('/assets/icon-list.json')
+    iconListPromise = fetch(resolveAssetPath('assets/icon-list.json'))
       .then(async res => {
         if (!res.ok) {
           throw new Error('Failed to load icons');
@@ -223,7 +238,7 @@ function buildSidebar(nav: HTMLElement, pages: AdminPage[], adminBase: string, w
   add.className = 'sidebar-item sidebar-add-subpage';
 
   const addIcon = document.createElement('img');
-  addIcon.src = '/assets/icons/plus.svg';
+  addIcon.src = resolveAssetPath('assets/icons/plus.svg');
   addIcon.className = 'icon';
   addIcon.alt = '';
   add.append(addIcon);
@@ -308,12 +323,12 @@ async function buildInlineField(
         btn.type = 'button';
         const img = document.createElement('img');
         img.loading = 'lazy';
-        img.src = `/assets/icons/${name}`;
+        img.src = resolveAssetPath(`assets/icons/${name}`);
         img.alt = name.replace('.svg', '');
         btn.append(img);
         btn.addEventListener('click', e => {
           e.stopPropagation();
-          selectedIcon = `/assets/icons/${name}`;
+          selectedIcon = resolveAssetPath(`assets/icons/${name}`);
           iconImg.src = selectedIcon;
           closeIconList();
         });
@@ -332,7 +347,7 @@ async function buildInlineField(
   if (iconConfirm) {
     submitBtn.className = 'icon-button confirm-button';
     const confirmImg = document.createElement('img');
-    confirmImg.src = '/assets/icons/corner-down-right.svg';
+    confirmImg.src = resolveAssetPath('assets/icons/corner-down-right.svg');
     confirmImg.alt = 'Create';
     submitBtn.append(confirmImg);
   } else {
@@ -365,7 +380,7 @@ async function showWorkspaceField(): Promise<void> {
       anchor.style.display = '';
     });
     if (icon) {
-      icon.src = '/assets/icons/plus.svg';
+      icon.src = resolveAssetPath('assets/icons/plus.svg');
     }
     return;
   }
@@ -374,7 +389,7 @@ async function showWorkspaceField(): Promise<void> {
     anchor.style.display = 'none';
   });
   if (icon) {
-    icon.src = '/assets/icons/minus.svg';
+    icon.src = resolveAssetPath('assets/icons/minus.svg');
   }
 
   const container = await buildInlineField(
@@ -432,7 +447,7 @@ async function showSubpageField(workspace: string): Promise<void> {
   if (existing) {
     existing.remove();
     if (icon) {
-      icon.src = '/assets/icons/plus.svg';
+      icon.src = resolveAssetPath('assets/icons/plus.svg');
     }
     if (label) {
       label.style.display = '';
@@ -495,7 +510,7 @@ async function showSubpageField(workspace: string): Promise<void> {
   container.style.zIndex = '1000';
 
   if (icon) {
-    icon.src = '/assets/icons/minus.svg';
+    icon.src = resolveAssetPath('assets/icons/minus.svg');
   }
   if (label) {
     label.style.display = 'none';
@@ -544,7 +559,10 @@ async function renderWorkspaceNav(): Promise<void> {
     : [];
 
   const signature = computeSignature(workspaces, sidebarPages, activeWorkspaceSlug);
-  if (signature === lastRenderSignature) {
+  const navNeedsRender = !nav || nav.childElementCount === 0;
+  const sidebarNeedsRender = !sidebarNav || sidebarNav.childElementCount === 0;
+
+  if (signature === lastRenderSignature && !navNeedsRender && !sidebarNeedsRender) {
     return;
   }
   lastRenderSignature = signature;
@@ -558,20 +576,29 @@ async function renderWorkspaceNav(): Promise<void> {
 }
 
 export async function initWorkspaceNav(): Promise<void> {
-  if (fetchPromise) {
-    await fetchPromise;
-    return;
-  }
+  const previous = fetchPromise ?? Promise.resolve();
 
-  fetchPromise = renderWorkspaceNav()
-    .catch(error => {
-      console.error('[workspaceNav] render failed', error);
+  const renderSequence = previous
+    .catch(() => {
+      // The previous render already logged its error, so continue the chain.
     })
-    .finally(() => {
-      fetchPromise = null;
+    .then(async () => {
+      try {
+        await renderWorkspaceNav();
+      } catch (error) {
+        console.error('[workspaceNav] render failed', error);
+      }
     });
 
-  await fetchPromise;
+  const trackedPromise = renderSequence.finally(() => {
+    if (fetchPromise === trackedPromise) {
+      fetchPromise = null;
+    }
+  });
+
+  fetchPromise = trackedPromise;
+
+  await trackedPromise;
 }
 
 function scheduleInit(): void {

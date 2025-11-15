@@ -36,6 +36,34 @@ const PUBLIC_LANE = 'public';
 const ADMIN_LANE  = 'admin';
 // Default height percentage for seeded widgets to avoid initial overlap
 const DEFAULT_WIDGET_HEIGHT = 40;
+const GRID_COLUMNS = 12;
+const PERCENT_PRECISION = 3;
+const ROW_EPSILON = 0.01;
+
+const roundPercent = (value) => {
+  return Number.isFinite(value)
+    ? Math.round(value * (10 ** PERCENT_PRECISION)) / (10 ** PERCENT_PRECISION)
+    : value;
+};
+
+const clampPercent = (value, fallback, { min = 5, max = 100 } = {}) => {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  const capped = max == null ? value : Math.min(max, value);
+  return Math.max(min, capped);
+};
+
+const percentToGridPosition = (percent) => {
+  if (!Number.isFinite(percent)) return 0;
+  return Math.round((percent / 100) * GRID_COLUMNS);
+};
+
+const percentToGridSpan = (percent) => {
+  if (!Number.isFinite(percent)) return 1;
+  const span = Math.round((percent / 100) * GRID_COLUMNS);
+  return Math.max(1, span);
+};
 
 /**
  * seedAdminPages:
@@ -244,18 +272,34 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
                 if (typeof content.height === 'number') hPercent = content.height;
               }
             } catch (_) {}
-            layout.push({
+
+            const widthCandidate = Number(wPercent);
+            const hasWidthHint = wPercent != null && Number.isFinite(widthCandidate);
+            const widthPercent = hasWidthHint
+              ? clampPercent(widthCandidate, 100)
+              : 100;
+            const heightCandidate = Number(hPercent);
+            const heightPercent = Number.isFinite(heightCandidate)
+              ? clampPercent(heightCandidate, DEFAULT_WIDGET_HEIGHT, { max: null })
+              : DEFAULT_WIDGET_HEIGHT;
+            const yPercentValue = roundPercent((y / GRID_COLUMNS) * 100);
+            const gridWidth = Math.max(1, Math.min(percentToGridSpan(widthPercent), GRID_COLUMNS));
+            const gridHeight = percentToGridSpan(heightPercent);
+            const layoutItem = {
               id: `w${layout.length}`,
               widgetId: w,
+              xPercent: 0,
+              yPercent: yPercentValue,
+              ...(hasWidthHint ? { wPercent: roundPercent(widthPercent) } : {}),
+              hPercent: roundPercent(heightPercent),
               x: 0,
               y,
-              w: 8,
-              h: 4,
-              ...(wPercent != null ? { wPercent } : {}),
-              ...(hPercent != null ? { hPercent } : {}),
+              w: gridWidth,
+              h: gridHeight,
               code: null
-            });
-            y += 4;
+            };
+            layout.push(layoutItem);
+            y += layoutItem.h;
           }
           await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
             jwt,
@@ -315,10 +359,57 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       // Build a layout that mirrors what a user save would produce, using
       // percent-based width/height derived from widget instance defaults.
       const layout = [];
+      const pendingRow = [];
+      let rowWidthPercent = 0;
       let yPercentCursor = 0;
+
+      const flushRow = () => {
+        if (!pendingRow.length) {
+          return;
+        }
+        const rowHeightPercent = pendingRow.reduce(
+          (maxHeight, widget) => Math.max(maxHeight, widget.heightPercent),
+          DEFAULT_WIDGET_HEIGHT
+        );
+        let xPercentCursor = 0;
+        for (const widget of pendingRow) {
+          const xPercentValue = roundPercent(xPercentCursor);
+          const yPercentValue = roundPercent(yPercentCursor);
+          const xGrid = Math.min(
+            Math.max(0, percentToGridPosition(xPercentValue)),
+            GRID_COLUMNS - 1
+          );
+          const yGrid = percentToGridPosition(yPercentValue);
+          const gridWidth = Math.max(
+            1,
+            Math.min(percentToGridSpan(widget.widthPercent), GRID_COLUMNS - xGrid)
+          );
+          const gridHeight = percentToGridSpan(widget.heightPercent);
+          const layoutItem = {
+            id: widget.id,
+            widgetId: widget.widgetId,
+            xPercent: xPercentValue,
+            yPercent: yPercentValue,
+            ...(widget.widthHint != null ? { wPercent: roundPercent(widget.widthHint) } : {}),
+            hPercent: roundPercent(widget.heightPercent),
+            x: xGrid,
+            y: yGrid,
+            w: gridWidth,
+            h: gridHeight,
+            code: null
+          };
+          layout.push(layoutItem);
+          xPercentCursor += widget.widthPercent;
+        }
+        yPercentCursor += rowHeightPercent;
+        pendingRow.length = 0;
+        rowWidthPercent = 0;
+      };
+
       for (let idx = 0; idx < page.config.widgets.length; idx++) {
         const wId = page.config.widgets[idx];
-        let wPercent = null, hPercent = null;
+        let wPercent = null;
+        let hPercent = null;
         try {
           const inst = await meltdownEmit(motherEmitter, 'getWidgetInstance', {
             jwt,
@@ -333,24 +424,39 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
             if (typeof content.height === 'number') hPercent = content.height;
           }
         } catch (_) {}
-        if (hPercent == null) hPercent = 40; // sensible default
-        const item = {
+
+        const widthCandidate = Number(wPercent);
+        const hasWidthHint = wPercent != null && Number.isFinite(widthCandidate);
+        const widthPercent = hasWidthHint
+          ? clampPercent(widthCandidate, 100)
+          : 100;
+        const heightCandidate = Number(hPercent);
+        const heightPercent = Number.isFinite(heightCandidate)
+          ? clampPercent(heightCandidate, DEFAULT_WIDGET_HEIGHT, { max: null })
+          : DEFAULT_WIDGET_HEIGHT;
+
+        if (pendingRow.length && rowWidthPercent + widthPercent > 100 + ROW_EPSILON) {
+          flushRow();
+        }
+
+        pendingRow.push({
           id: `w${idx}`,
           widgetId: wId,
-          xPercent: 0,
-          yPercent: yPercentCursor,
-          ...(wPercent != null ? { wPercent } : {}),
-          ...(hPercent != null ? { hPercent } : {}),
-          // keep absolute fallbacks for robustness
-          x: 0,
-          y: Math.round((yPercentCursor / 100) * 12),
-          w: 8,
-          h: 4,
-          code: null
-        };
-        layout.push(item);
-        yPercentCursor += hPercent;
+          widthPercent,
+          heightPercent,
+          widthHint: hasWidthHint ? widthPercent : null
+        });
+        rowWidthPercent += widthPercent;
+
+        if (Math.abs(rowWidthPercent - 100) <= ROW_EPSILON) {
+          flushRow();
+        }
       }
+
+      if (pendingRow.length) {
+        flushRow();
+      }
+
       try {
         await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
           jwt,

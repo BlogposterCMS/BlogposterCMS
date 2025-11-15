@@ -22,7 +22,10 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
 - `seedAdminWidget` can attach width and height options when creating admin widgets.
 - When seeding layout options without a `height`, a default of 40% is applied so
   widgets occupy space without overlap. If no layout options are provided and an
-  instance already exists, its stored size is preserved.
+  instance already exists, its stored size is preserved. Seeded layouts now pack
+  widgets into deterministic rows using the supplied width metadata, so half-width
+  widgets land side-by-side (0% / 50%) and thirds land in columns (0% / 33.333% /
+  66.666%). When no width metadata is present a widget spans the full row.
 - Default admin widgets are seeded with options describing their suggested layout.
 - The Home workspace now seeds widgets that highlight what's coming next and a draggable demo.
 
@@ -48,6 +51,9 @@ admin lane widget if it does not already exist and stores layout options in the
 - `width` – custom width percentage.
 - `height` – custom height percentage. If omitted, a default of 40% is used so
   seeded widgets occupy space.
+- `xPercent`/`yPercent` are automatically derived from the hints above during
+  seeding and saved together with grid `x`/`y`/`w`/`h` so the client can render
+  the layout without running collision correction.
 - `overflow` – when `true` the widget height is fixed and may scroll; when
   `false` the widget expands to fit its content.
 

@@ -1,0 +1,45 @@
+<div class="top-header">
+    <button
+      id="maintenance-banner"
+      class="maintenance-banner"
+      type="button"
+      hidden
+      aria-live="polite"
+    >
+      <span class="maintenance-banner__label">Maintenance mode is active.</span>
+      <span class="maintenance-banner__action">Disable maintenance mode</span>
+    </button>
+
+    <div class="top-header__content">
+      <div class="left-icons">
+        <a href="/" id="home-link" class="project-link" aria-label="Open public site: Blogposter">
+          <img src="/assets/icons/globe-project.svg" class="icon" alt="" />
+          <span id="project-name" class="project-link__name">Blogposter</span>
+        </a>
+        <div class="search-container">
+          <button id="search-toggle" class="top-header__icon-button" type="button" aria-label="Search pages">
+            <img src="/assets/icons/search.svg" class="icon" alt="" />
+          </button>
+          <input type="text" id="admin-search-input" placeholder="Search pages" />
+          <ul id="admin-search-results" class="search-results"></ul>
+        </div>
+      </div>
+
+      <div class="logo">
+        <img src="/assets/icons/blogpostercms-logo.svg" class="logo-icon" />
+      </div>
+
+      <div class="right-icons">
+        <button id="theme-mode-toggle" class="top-header__icon-button" type="button" aria-label="Theme mode">
+          <img src="/assets/icons/sun-moon.svg" class="icon" alt="" />
+        </button>
+        <a href="#" id="user-link" aria-label="Open user profile"><img src="/assets/icons/user.svg" class="icon" alt="" /></a>
+        <button id="logout-icon" class="top-header__icon-button" type="button" aria-label="Log out">
+          <img src="/assets/icons/log-out.svg" class="icon" alt="" />
+        </button>
+      </div>
+    </div>
+  </div>
+<div id="notification-hub" class="notification-hub" hidden>
+  <ul></ul>
+</div>

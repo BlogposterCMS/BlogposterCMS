@@ -1,0 +1,6 @@
+{
+  "moduleName": "metadataManager",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Core metadata and custom fields domain for content, media, users and legacy sources."
+}

@@ -1,0 +1,6 @@
+{
+  "moduleName": "navigationManager",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Core navigation and menu domain for theme locations and structured menu trees."
+}

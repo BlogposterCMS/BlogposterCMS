@@ -1,8 +1,22 @@
 # designer
 
-The `designer` module persists full design definitions for the standalone Designer app using the event bus.
-It demonstrates how community modules provision their own schema and run CRUD operations
-without touching database drivers directly. At startup it registers its transactional
+User-facing surfaces call this app **Design Studio**. The internal module,
+folder and event names intentionally remain `designer` so existing app-loader
+manifests, saved designs, permissions and `designer.*` backend contracts stay
+compatible. `/admin/studio/design` is the preferred user-facing entry and
+redirects to the existing `/admin/app/designer` launcher.
+
+## Boundaries
+
+The legacy `designer` backend is owned by the core `designerManager` adapter.
+Designer UI code runs as an app surface and reaches backend behavior through
+AppLoader and Runtime Manager contracts, not by emitting arbitrary core events
+or receiving the admin token. `designer.*` backend events stay scoped to the
+core designer service and remain compatibility events for the isolated app.
+
+The `designer` backend persists full design definitions for the standalone Designer app using the event bus.
+It is owned by the core `designerManager` service because it provisions schema and
+executes transactional database placeholders for a first-party app. At startup it registers its transactional
 `DESIGNER_SAVE_DESIGN` placeholder via `registerCustomPlaceholder`, allowing the module to be
 removed without leaving database hooks in the core. The placeholder provides code paths for
 PostgreSQL, MongoDB and SQLite so deployments on any supported database can save designs. The
@@ -10,6 +24,25 @@ Designer UI runs inside an iframe (`admin/app/designer`) so its styles and scrip
 from the dashboard.
 It communicates with the dashboard via `window.postMessage`; events are forwarded to the
 server through `appLoader`'s `dispatchAppEvent` handler.
+The iframe runs sandboxed without Same-Origin access to the dashboard. The
+dashboard keeps the admin token parent-side and exposes a request/response
+bridge; Designer `meltdownEmit` calls are forwarded only through AppLoader's
+validated app bridge. The app declares `agentSurface: true`, so the
+AgentManager surface events come from the central AppLoader expansion rather
+than a Designer-only bridge contract.
+
+Designer startup waits for both the signed origin policy and the app-frame init
+tokens before booting the builder. Sandboxed frames can throw when code touches
+browser storage or cross-origin stylesheet rules, so iframe code must use the
+shared app bridge, safe storage guards and the no-preview fallback instead of
+assuming direct same-origin browser APIs are available.
+
+Designer publishes a `studio-builder` surface through
+`ui/designer/app/agentSurface.ts`. The surface snapshot includes sections,
+layers, selection, behavior controls, timeline/range metadata, an optional
+visual stage preview and an action catalog for scene, element and behavior
+commands. Agent controllers enqueue commands through `agentManager`; Designer
+polls and acknowledges them like any other surface.
 
 The builder now separates structure from content with distinct **Layout** and **Design** modes.
 Layout mode swaps the widget sidebar for a layout panel placeholder, disables widget
@@ -26,6 +59,20 @@ new containers split their parent 50/50, the star button designates the sole dyn
 host, updating badges automatically, and the design button stores a `designRef` so
 static content can mount inside the container at runtime.
 
+Layout terminology is explicit:
+
+- `LayoutTree` means structural nodes: sections, splits, leaves, workareas and
+  static `designRef` assignments.
+- `WidgetPlacement` means canvas/grid widget coordinates and widget metadata.
+- `DesignDocument` means the saved runtime contract: `LayoutTree` plus
+  placements, scenes, styles and metadata.
+
+The shared source of truth for this contract lives under `ui/shared/layout/`.
+Designer compatibility modules such as
+`ui/designer/app/renderer/layoutSerialize.js` and
+`ui/designer/app/managers/layoutContainerManager.js` forward to that shared core
+instead of owning separate serialization or container operations.
+
 ## Loading feedback & error recovery
 
 The designer iframe now renders accessible skeleton placeholders before each sidebar or
@@ -40,19 +87,19 @@ inline scripts or unsanitised markup are required.
 The builder renderer now splits major responsibilities into focused helpers so the
 entry point coordinates features instead of re-implementing them inline:
 
-- `apps/designer/renderer/builderHeader.ts` loads the header partial, wires save/
+- `ui/designer/app/renderer/builderHeader.ts` loads the header partial, wires save/
   preview/publish buttons and exposes an autosave toggle.
-- `apps/designer/renderer/previewHeader.js` manages the responsive viewport header shown
+- `ui/designer/app/renderer/previewHeader.js` manages the responsive viewport header shown
   during preview mode.
-- `apps/designer/renderer/layoutBar.js` renders the zoom controls that live in the footer.
-- `apps/designer/renderer/layoutStructureHandlers.js` refreshes container bars and the
+- `ui/designer/app/renderer/layoutBar.js` renders the zoom controls that live in the footer.
+- `ui/designer/app/renderer/layoutStructureHandlers.js` refreshes container bars and the
   layout tree sidebar whenever containers change.
-- `apps/designer/managers/layoutContainerManager.js` owns DOM manipulation for placing,
+- `ui/designer/app/managers/layoutContainerManager.js` owns DOM manipulation for placing,
   moving and deleting layout containers while keeping workarea metadata in sync.
-- `apps/designer/managers/historyManager.js` centralises undo/redo stacks so widget edits
+- `ui/designer/app/managers/historyManager.js` centralises undo/redo stacks so widget edits
   and container changes share a single history implementation.
 
-`apps/designer/builderRenderer.ts` now imports these helpers and focuses on orchestration:
+`ui/designer/app/builderRenderer.ts` now imports these helpers and focuses on orchestration:
 initialising the editor, wiring autosave, switching layers and coordinating widget events.
 
 The renderer entry point delegates specific responsibilities to focused helpers:
@@ -61,7 +108,11 @@ The renderer entry point delegates specific responsibilities to focused helpers:
 - `setupWidgetInteractions()` wires selection, drag/resize handling and background toolbar behaviour.
 - `initializeHeaderSection()` loads the header partial and returns a controller for rerendering on layer changes.
 - `preparePublishPanelContainer()` ensures the publish panel host exists and stays hidden until explicitly opened.
-- `apps/designer/renderer/publishPanel.ts` handles publish flow UI, slug suggestions and upload orchestration while sharing the builder logger for consistent diagnostics.
+- `ui/designer/app/renderer/publishPanel.ts` handles publish flow UI, slug suggestions and upload orchestration while sharing the builder logger for consistent diagnostics.
+
+The legacy `apps/designer/` source files remain as compatibility forwarders and
+static iframe assets. New Designer implementation work belongs under
+`ui/designer/app/`, with bundle entries in `ui/designer/entries/`.
 
 `#layoutRoot` now always acts as the root layout container. When no saved layout tree exists the builder seeds a leaf node,
 assigns it a deterministic `nodeId`, and persists that node instead of the wrapper element. Subsequent splits or container moves
@@ -71,12 +122,15 @@ reuse these stable identifiers so workarea flags and `designRef` assignments sur
  scrolls the canvas to the corresponding container and keeps its action bar in view.
  An arrange toggle enables drag-and-drop container reordering with undo/redo and autosave.
 
-A runtime page loader now renders the resolved layout, mounts any static design references, locates the dynamic host (falling back to the largest leaf), and injects the page design when auto-mount is enabled. All backend requests include the correct JWT and module identifiers to satisfy auth checks.
+A runtime page loader now renders the resolved layout, mounts any static design references, locates the dynamic host (falling back to the largest leaf), and injects the page design when auto-mount is enabled. The public runtime path also reads a saved Design Studio `DesignDocument`; when a design includes a `LayoutTree`, it renders the tree first and mounts widget placements into the primary workarea instead of immediately flattening the design into a single grid. All backend requests include the correct JWT and module identifiers to satisfy auth checks.
 
 Each layout node carries a stable `nodeId` so runtime mapping between the JSON tree and DOM elements remains deterministic.
 
 ## Startup
-- Loaded from `modules/designer` when present.
+- Loaded as core module `mother/modules/designerManager`.
+- Reuses the legacy backend implementation and placeholders from
+  `modules/designer` for compatibility, but the optional module loader skips
+  that folder so it is not treated as a community module.
 - Exports `initialize({ motherEmitter, jwt, nonce })`.
 - On start it:
   - emits `createDatabase` to provision its own database or schema.
@@ -123,9 +177,31 @@ The app loader verifies these events before launching the designer. If any requi
 - Coordinates are clamped to `[0,100]` server side.
 - Registers a custom transactional placeholder (`DESIGNER_SAVE_DESIGN`) for atomic saves and optimistic locking via a `version` field.
 - Every database call includes the loader issued `jwt` and module information.
-- CSRF and admin tokens are delivered via `postMessage` from the dashboard instead of inline scripts to satisfy strict CSP policies.
+- The service emits as `moduleType: "core"`; community modules cannot use these
+  schema or database-operation paths directly.
+- Raw `designer.*` events are not exposed as public `/api/meltdown` bus calls.
+  Legacy admin HTTP calls are translated to Runtime Manager's
+  `cmsAdminApiRequest` Designer resource, while public `designer.getDesign`
+  and `designer.getLayout` reads go through `cmsPublicRuntimeRequest`; layout
+  reads require a public `layoutRef` and return only the renderable grid/items
+  contract.
+- CSRF bootstrap data is delivered via `postMessage`; the admin token remains in
+  the parent dashboard and is never posted into the iframe. Designer backend
+  requests use the AppLoader bridge, which injects the validated admin principal
+  server-side.
 
 ## Grid configuration
-- The builder relies on `PixelGrid` with a 1px baseline and disables push-on-overlap,
-  live snapping and percentage mode for precise positioning without moving
-  neighbouring widgets.
+- The builder uses the shared CanvasGrid with 12 columns, percentage-mode
+  coordinates, disabled push-on-overlap and disabled live snapping. Layout
+  containers are structural nodes; regular widgets should not duplicate
+  sections, rows or columns as widget types.
+
+## Native element presets
+- Quick insert actions for text, media, shape and button resolve through
+  `ui/designer/app/widgets/nativeElementPresets.js`. These presets create
+  first-party widget payloads with versioned metadata and Design Contract v1
+  information, while the Designer renderer only coordinates placement and
+  widget creation.
+- The first required Design Studio widget inventory is documented in
+  `docs/design_studio_widgets.md`. Layout primitives remain part of
+  `DesignDocument.layoutTree` and must not be duplicated as normal widgets.

@@ -1,0 +1,1 @@
+import '../notifications/notificationHub.js';

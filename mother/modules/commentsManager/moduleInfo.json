@@ -1,0 +1,6 @@
+{
+  "moduleName": "commentsManager",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Core comment and moderation domain for content entries."
+}

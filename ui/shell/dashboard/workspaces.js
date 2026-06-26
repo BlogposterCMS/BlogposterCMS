@@ -1,0 +1,488 @@
+import { ADMIN_LANE, createWorkspacePage, createWorkspaceSubpage, fetchAdminPageBySlug, fetchAdminPagesByLane } from './workspacesData.js';
+const ASSET_SCHEME_PATTERN = /^(?:[a-z][a-z\d+.-]*:|\/\/)/iu;
+function resolveAssetPath(assetPath) {
+    const trimmed = assetPath.trim();
+    if (!trimmed) {
+        return trimmed;
+    }
+    if (trimmed.startsWith('/') || ASSET_SCHEME_PATTERN.test(trimmed)) {
+        return trimmed;
+    }
+    const normalised = trimmed.replace(/^\/+/, '');
+    return `${getAdminBase()}${normalised}`;
+}
+const DEFAULT_WORKSPACE_ICON = resolveAssetPath('assets/icons/file-box.svg');
+const DEFAULT_SUBPAGE_ICON = resolveAssetPath('assets/icons/file.svg');
+const DETACHED_WORKSPACE_ACTION_SLUGS = new Set(['settings']);
+let iconListPromise = null;
+let fetchPromise = null;
+let lastRenderSignature = null;
+let cachedPages = null;
+function getAdminBase() {
+    const configuredBase = window.ADMIN_BASE || '/admin/';
+    const trimmedBase = configuredBase.replace(/\/+$/u, '');
+    return `${trimmedBase}/`;
+}
+function workspaceButton() {
+    const button = document.createElement('button');
+    button.id = 'workspace-create';
+    button.className = 'nav-button';
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Create workspace');
+    const icon = document.createElement('img');
+    icon.src = resolveAssetPath('assets/icons/plus.svg');
+    icon.className = 'icon';
+    icon.alt = '';
+    button.append(icon);
+    return button;
+}
+function cloneWithCreateHandler(source) {
+    const clone = source.cloneNode(true);
+    clone.addEventListener('click', () => {
+        void showWorkspaceField();
+    });
+    return clone;
+}
+function compareWeight(a, b) {
+    const aw = typeof a.weight === 'number' ? a.weight : 0;
+    const bw = typeof b.weight === 'number' ? b.weight : 0;
+    return aw - bw;
+}
+function isDetachedWorkspaceAction(page) {
+    return DETACHED_WORKSPACE_ACTION_SLUGS.has(page.slug);
+}
+async function fetchAdminPages() {
+    if (cachedPages) {
+        return cachedPages;
+    }
+    if (!window.ADMIN_TOKEN || typeof window.meltdownEmit !== 'function') {
+        console.warn('[workspaceNav] ADMIN_TOKEN or meltdownEmit not yet available; deferring page fetch.');
+        return [];
+    }
+    try {
+        const pages = await fetchAdminPagesByLane(window.meltdownEmit, window.ADMIN_TOKEN);
+        cachedPages = pages;
+        return pages;
+    }
+    catch (error) {
+        console.error('[workspaceNav] failed to fetch pages', error);
+        cachedPages = null;
+        return [];
+    }
+}
+async function ensureIconList() {
+    if (!iconListPromise) {
+        iconListPromise = fetch(resolveAssetPath('assets/icon-list.json'))
+            .then(async (res) => {
+            if (!res.ok) {
+                throw new Error('Failed to load icons');
+            }
+            const names = await res.json();
+            return Array.isArray(names) ? names : [];
+        })
+            .catch(err => {
+            console.error('Failed to load icons', err);
+            return [];
+        });
+    }
+    return iconListPromise;
+}
+function normaliseIcon(page, fallback) {
+    const metaIcon = page.meta?.icon;
+    if (typeof metaIcon === 'string' && metaIcon) {
+        return metaIcon;
+    }
+    const configIcon = page.config?.icon;
+    if (typeof configIcon === 'string' && configIcon) {
+        return configIcon;
+    }
+    return fallback;
+}
+function computeSignature(workspaces, subpages, workspaceSlug, activePath) {
+    const simpleTop = workspaces.map(p => `${p.slug}|${p.title ?? ''}|${p.meta?.icon ?? ''}`).join('||');
+    const simpleSub = subpages.map(p => `${p.slug}|${p.title ?? ''}|${p.meta?.icon ?? ''}`).join('||');
+    return `${workspaceSlug}::${activePath}::${simpleTop}::${simpleSub}`;
+}
+function buildWorkspaces(nav, pages, adminBase, workspaceSlug) {
+    const existingCreate = nav.querySelector('#workspace-create');
+    const createBtn = cloneWithCreateHandler(existingCreate ?? workspaceButton());
+    const fragment = document.createDocumentFragment();
+    fragment.append(createBtn);
+    pages
+        .filter(page => page.lane === ADMIN_LANE && page.meta?.workspace === page.slug)
+        .filter(page => !isDetachedWorkspaceAction(page))
+        .sort(compareWeight)
+        .forEach(page => {
+        const anchor = document.createElement('a');
+        const href = `${adminBase}${page.slug}`;
+        anchor.href = href;
+        const title = page.title || page.slug;
+        anchor.setAttribute('aria-label', title);
+        if (page.slug === workspaceSlug || window.location.pathname.startsWith(href)) {
+            anchor.classList.add('active');
+        }
+        const icon = document.createElement('img');
+        icon.src = normaliseIcon(page, DEFAULT_WORKSPACE_ICON);
+        icon.className = 'icon';
+        icon.alt = '';
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = title;
+        anchor.append(icon, label);
+        fragment.append(anchor);
+    });
+    nav.replaceChildren(fragment);
+}
+function buildWorkspaceActions(nav, pages, adminBase, workspaceSlug) {
+    const fragment = document.createDocumentFragment();
+    pages
+        .filter(page => page.lane === ADMIN_LANE && page.meta?.workspace === page.slug)
+        .filter(isDetachedWorkspaceAction)
+        .sort(compareWeight)
+        .forEach(page => {
+        const anchor = document.createElement('a');
+        const href = `${adminBase}${page.slug}`;
+        anchor.href = href;
+        const title = page.title || page.slug;
+        anchor.setAttribute('aria-label', title);
+        if (page.slug === workspaceSlug || window.location.pathname.startsWith(href)) {
+            anchor.classList.add('active');
+        }
+        const icon = document.createElement('img');
+        icon.src = normaliseIcon(page, DEFAULT_WORKSPACE_ICON);
+        icon.className = 'icon';
+        icon.alt = '';
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = title;
+        anchor.append(icon, label);
+        fragment.append(anchor);
+    });
+    nav.replaceChildren(fragment);
+}
+function buildSidebar(nav, pages, adminBase, workspaceSlug) {
+    const fragment = document.createDocumentFragment();
+    pages
+        .filter(page => page.slug.startsWith(`${workspaceSlug}/`) && page.slug !== workspaceSlug)
+        .sort(compareWeight)
+        .forEach(page => {
+        const title = page.title || page.slug.split('/').pop() || page.slug;
+        const linkHref = `${adminBase}${page.slug}`;
+        const anchor = document.createElement('a');
+        anchor.href = linkHref;
+        anchor.className = 'sidebar-item';
+        if (window.location.pathname.startsWith(linkHref)) {
+            anchor.classList.add('active');
+        }
+        const icon = document.createElement('img');
+        icon.src = normaliseIcon(page, DEFAULT_SUBPAGE_ICON);
+        icon.className = 'icon';
+        icon.alt = '';
+        anchor.append(icon);
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = title;
+        anchor.append(label);
+        fragment.append(anchor);
+    });
+    const add = document.createElement('div');
+    add.className = 'sidebar-item sidebar-add-subpage';
+    const addIcon = document.createElement('img');
+    addIcon.src = resolveAssetPath('assets/icons/plus.svg');
+    addIcon.className = 'icon';
+    addIcon.alt = '';
+    add.append(addIcon);
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = 'Add';
+    add.append(label);
+    add.addEventListener('click', () => {
+        void showSubpageField(workspaceSlug);
+    });
+    fragment.append(add);
+    nav.replaceChildren(fragment);
+}
+function slugify(value) {
+    return value
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/gu, '')
+        .replace(/[^a-z0-9]+/gu, '-')
+        .replace(/^-+|-+$/gu, '');
+}
+async function buildInlineField(id, placeholder, submitHandler, iconConfirm = false) {
+    const container = document.createElement('div');
+    container.id = id;
+    container.className = 'inline-create-field';
+    let selectedIcon = DEFAULT_WORKSPACE_ICON;
+    const iconButton = document.createElement('button');
+    iconButton.type = 'button';
+    iconButton.className = 'icon-button';
+    const iconImg = document.createElement('img');
+    iconImg.src = selectedIcon;
+    iconImg.alt = 'Select icon';
+    iconButton.append(iconImg);
+    const iconList = document.createElement('div');
+    iconList.className = 'icon-list';
+    function closeIconList() {
+        iconList.classList.remove('open');
+        document.removeEventListener('click', handleOutsideClick);
+    }
+    function handleOutsideClick(event) {
+        if (!container.contains(event.target)) {
+            closeIconList();
+        }
+    }
+    iconButton.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        if (iconList.classList.contains('open')) {
+            closeIconList();
+            return;
+        }
+        iconList.classList.add('open');
+        document.addEventListener('click', handleOutsideClick);
+        if (!iconList.hasChildNodes()) {
+            const iconNames = await ensureIconList();
+            iconNames.forEach(name => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const img = document.createElement('img');
+                img.loading = 'lazy';
+                img.src = resolveAssetPath(`assets/icons/${name}`);
+                img.alt = name.replace('.svg', '');
+                btn.append(img);
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    selectedIcon = resolveAssetPath(`assets/icons/${name}`);
+                    iconImg.src = selectedIcon;
+                    closeIconList();
+                });
+                iconList.append(btn);
+            });
+        }
+    });
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = placeholder;
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'button';
+    if (iconConfirm) {
+        submitBtn.className = 'icon-button confirm-button';
+        const confirmImg = document.createElement('img');
+        confirmImg.src = resolveAssetPath('assets/icons/corner-down-right.svg');
+        confirmImg.alt = 'Create';
+        submitBtn.append(confirmImg);
+    }
+    else {
+        submitBtn.textContent = 'Create';
+    }
+    submitBtn.addEventListener('click', async () => {
+        closeIconList();
+        await submitHandler({ name: input.value.trim(), icon: selectedIcon });
+        container.remove();
+    });
+    container.append(iconButton, iconList, input, submitBtn);
+    return container;
+}
+async function showWorkspaceField() {
+    const nav = document.getElementById('workspace-nav');
+    const button = nav?.querySelector('#workspace-create');
+    if (!nav || !button) {
+        return;
+    }
+    const icon = button.querySelector('img.icon');
+    const existing = document.getElementById('workspace-floating-field');
+    if (existing) {
+        existing.remove();
+        nav.querySelectorAll('a').forEach(anchor => {
+            anchor.style.display = '';
+        });
+        if (icon) {
+            icon.src = resolveAssetPath('assets/icons/plus.svg');
+        }
+        return;
+    }
+    nav.querySelectorAll('a').forEach(anchor => {
+        anchor.style.display = 'none';
+    });
+    if (icon) {
+        icon.src = resolveAssetPath('assets/icons/minus.svg');
+    }
+    const container = await buildInlineField('workspace-floating-field', 'Workspace name', async (detail) => {
+        const slug = slugify(detail.name);
+        if (!slug) {
+            return;
+        }
+        const emit = window.meltdownEmit;
+        if (typeof emit !== 'function') {
+            console.error('Cannot create workspace: meltdownEmit is not available.');
+            return;
+        }
+        try {
+            await createWorkspacePage(emit, window.ADMIN_TOKEN, {
+                title: detail.name,
+                slug,
+                icon: detail.icon
+            });
+            cachedPages = null;
+            const base = getAdminBase();
+            window.location.href = `${base}${slug}`;
+        }
+        catch (error) {
+            console.error('Failed to create workspace', error);
+        }
+    }, true);
+    document.body.append(container);
+    const rect = button.getBoundingClientRect();
+    container.style.left = `${rect.right + window.scrollX + 8}px`;
+    container.style.top = `${rect.top + window.scrollY + rect.height / 2}px`;
+    container.style.zIndex = '1000';
+    requestAnimationFrame(() => {
+        container.classList.add('open');
+    });
+}
+async function showSubpageField(workspace) {
+    const addBtn = document.querySelector('.sidebar-add-subpage');
+    if (!addBtn) {
+        return;
+    }
+    const icon = addBtn.querySelector('img.icon');
+    const label = addBtn.querySelector('.label');
+    const existing = document.getElementById('subpage-floating-field');
+    if (existing) {
+        existing.remove();
+        if (icon) {
+            icon.src = resolveAssetPath('assets/icons/plus.svg');
+        }
+        if (label) {
+            label.style.display = '';
+        }
+        return;
+    }
+    const container = await buildInlineField('subpage-floating-field', 'Page name', async (detail) => {
+        const slug = slugify(detail.name);
+        if (!slug) {
+            return;
+        }
+        const emit = window.meltdownEmit;
+        if (typeof emit !== 'function') {
+            console.error('Cannot create subpage: meltdownEmit is not available.');
+            return;
+        }
+        try {
+            let parentId = null;
+            try {
+                const parent = await fetchAdminPageBySlug(emit, window.ADMIN_TOKEN, workspace);
+                parentId = parent?.id ?? null;
+            }
+            catch (error) {
+                console.error('Failed to fetch parent page', error);
+            }
+            await createWorkspaceSubpage(emit, window.ADMIN_TOKEN, {
+                title: detail.name,
+                slug,
+                workspace,
+                parentId,
+                icon: detail.icon
+            });
+            cachedPages = null;
+            window.location.reload();
+        }
+        catch (error) {
+            console.error('Failed to create subpage', error);
+        }
+    }, true);
+    document.body.append(container);
+    const rect = addBtn.getBoundingClientRect();
+    container.style.left = `${rect.right + window.scrollX + 8}px`;
+    container.style.top = `${rect.top + window.scrollY + rect.height / 2}px`;
+    container.style.zIndex = '1000';
+    if (icon) {
+        icon.src = resolveAssetPath('assets/icons/minus.svg');
+    }
+    if (label) {
+        label.style.display = 'none';
+    }
+    requestAnimationFrame(() => {
+        container.classList.add('open');
+    });
+}
+async function renderWorkspaceNav() {
+    const nav = document.getElementById('workspace-nav');
+    const actionNav = document.getElementById('workspace-actions');
+    const sidebarNav = document.getElementById('subpage-nav');
+    if (!nav && !actionNav && !sidebarNav) {
+        return;
+    }
+    const adminBase = getAdminBase();
+    const pathname = window.location.pathname;
+    const adminBasePattern = new RegExp(`^${adminBase.replace(/[-/\\^$*+?.()|[\]{}]/gu, '\\$&')}`);
+    const adminBaseMatch = pathname.match(adminBasePattern);
+    let relativePath = pathname;
+    if (adminBaseMatch) {
+        relativePath = pathname.slice(adminBaseMatch[0].length);
+    }
+    const slugSource = adminBaseMatch ? relativePath.replace(/^\/+/u, '') : relativePath;
+    const workspaceSlug = slugSource.split('/')[0] || '';
+    const pages = await fetchAdminPages();
+    const adminPages = pages.filter(page => page.lane === ADMIN_LANE);
+    const workspaceCandidates = adminPages.filter(page => {
+        const explicitWorkspace = page.meta?.workspace === page.slug;
+        const topLevel = !page.slug.includes('/');
+        return explicitWorkspace || topLevel;
+    });
+    const activeWorkspaceSlug = workspaceSlug || workspaceCandidates[0]?.slug || '';
+    const workspaces = workspaceCandidates;
+    const sidebarPages = activeWorkspaceSlug
+        ? adminPages.filter(page => page.slug.startsWith(`${activeWorkspaceSlug}/`) && page.slug !== activeWorkspaceSlug)
+        : [];
+    const signature = computeSignature(workspaces, sidebarPages, activeWorkspaceSlug, pathname);
+    const navNeedsRender = Boolean(nav && nav.childElementCount === 0);
+    const actionNavNeedsRender = Boolean(actionNav && actionNav.childElementCount === 0);
+    const sidebarNeedsRender = Boolean(sidebarNav && sidebarNav.childElementCount === 0);
+    if (signature === lastRenderSignature && !navNeedsRender && !actionNavNeedsRender && !sidebarNeedsRender) {
+        return;
+    }
+    lastRenderSignature = signature;
+    if (nav) {
+        buildWorkspaces(nav, workspaces, adminBase, activeWorkspaceSlug);
+    }
+    if (actionNav) {
+        buildWorkspaceActions(actionNav, workspaces, adminBase, activeWorkspaceSlug);
+    }
+    if (sidebarNav && activeWorkspaceSlug) {
+        buildSidebar(sidebarNav, sidebarPages, adminBase, activeWorkspaceSlug);
+    }
+}
+export async function initWorkspaceNav() {
+    const previous = fetchPromise ?? Promise.resolve();
+    const renderSequence = previous
+        .catch(() => {
+        // The previous render already logged its error, so continue the chain.
+    })
+        .then(async () => {
+        try {
+            await renderWorkspaceNav();
+        }
+        catch (error) {
+            console.error('[workspaceNav] render failed', error);
+        }
+    });
+    const trackedPromise = renderSequence.finally(() => {
+        if (fetchPromise === trackedPromise) {
+            fetchPromise = null;
+        }
+    });
+    fetchPromise = trackedPromise;
+    await trackedPromise;
+}
+function scheduleInit() {
+    if (!window.ADMIN_TOKEN) {
+        setTimeout(scheduleInit, 250);
+        return;
+    }
+    void initWorkspaceNav();
+}
+document.addEventListener('DOMContentLoaded', scheduleInit);
+document.addEventListener('main-header-loaded', scheduleInit);
+document.addEventListener('sidebar-loaded', scheduleInit);

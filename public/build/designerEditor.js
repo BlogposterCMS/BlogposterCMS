@@ -1,0 +1,2 @@
+(()=>{"use strict";new EventTarget,new WeakMap;let t=null;!function(){const t=function(){try{return globalThis.localStorage||null}catch{return null}}();if(!t)return 1;try{const e=parseFloat(t.getItem("builder.defaultOpacity"));return Number.isFinite(e)?e:1}catch{return 1}}();const e=null;t=()=>e,new WeakMap})();
+//# sourceMappingURL=designerEditor.js.map

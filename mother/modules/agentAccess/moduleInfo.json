@@ -1,0 +1,6 @@
+{
+  "moduleName": "agentAccess",
+  "version": "0.1.0",
+  "developer": "Blogposter Team",
+  "description": "Local/admin agent login exchange for short-lived AgentManager bearer tokens."
+}

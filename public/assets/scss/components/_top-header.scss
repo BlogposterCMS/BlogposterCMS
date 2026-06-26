@@ -1,0 +1,319 @@
+/* =============================================================================
+   components/_top-header.scss — Clean Header mit Icons und zentriertem Logo
+   ============================================================================= */
+
+.top-header {
+  --maintenance-banner-height: 0px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  padding: 8px clamp(20px, 4vw, 48px);
+  min-height: 48px;
+  font-family: var(--font-body);
+  background: color-mix(in srgb, var(--studio-surface-solid) 86%, transparent);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--studio-border);
+  box-shadow: none;
+
+  .maintenance-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border-radius: var(--studio-radius-panel);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: 1px solid color-mix(in srgb, var(--color-error) 45%, var(--color-border) 55%);
+    background: color-mix(in srgb, var(--studio-surface-solid) 80%, var(--color-error) 20%);
+    color: color-mix(in srgb, var(--color-error) 65%, var(--color-text) 35%);
+    cursor: pointer;
+    transition:
+      background-color var(--motion-duration-base) var(--motion-ease-standard),
+      color var(--motion-duration-base) var(--motion-ease-standard),
+      border-color var(--motion-duration-base) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+    text-align: center;
+
+    &:hover,
+    &:focus-visible {
+      background: color-mix(in srgb, var(--studio-surface-solid) 70%, var(--color-error) 30%);
+      border-color: color-mix(in srgb, var(--color-error) 60%, var(--color-border) 40%);
+      color: color-mix(in srgb, var(--color-error) 55%, var(--color-text) 45%);
+      transform: translateY(-1px);
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 35%, transparent 65%);
+    }
+
+    &:focus:not(:focus-visible) {
+      outline: none;
+      box-shadow: none;
+    }
+
+    &__label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    &__action {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: color-mix(in srgb, var(--color-error) 70%, var(--color-text) 30%);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+
+  .top-header__content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+
+  .left-icons,
+  .right-icons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .left-icons {
+    justify-self: start;
+  }
+
+  .right-icons {
+    justify-self: end;
+  }
+
+  .top-header__icon-button,
+  .left-icons a,
+  .right-icons a {
+    width: var(--studio-control-size);
+    height: var(--studio-control-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--studio-radius-control);
+    background: transparent;
+    color: var(--studio-text);
+    cursor: pointer;
+    transition:
+      background var(--motion-duration-base) var(--motion-ease-standard),
+      border-color var(--motion-duration-base) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  .top-header__icon-button {
+    padding: 0;
+    appearance: none;
+    font: inherit;
+  }
+
+  .left-icons a.project-link {
+    width: auto;
+    min-width: var(--studio-control-size);
+    max-width: min(220px, 44vw);
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 0 10px;
+    text-decoration: none;
+    transform-origin: center;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .project-link__name {
+    min-width: 0;
+    max-width: 160px;
+    overflow: hidden;
+    color: var(--studio-text);
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .left-icons a.project-link .icon {
+    width: 17px;
+    height: 17px;
+    opacity: 0.68;
+  }
+
+  .top-header__icon-button:hover,
+  .top-header__icon-button:focus-visible,
+  .left-icons a:hover,
+  .left-icons a:focus-visible,
+  .right-icons a:hover,
+  .right-icons a:focus-visible {
+    background: var(--studio-surface-muted);
+    border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+    outline: none;
+    transform: translateY(-1px);
+  }
+
+  .left-icons a.project-link:hover,
+  .left-icons a.project-link:focus-visible {
+    background: var(--studio-surface-solid);
+    border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+    transform: scale(1.015);
+  }
+
+  .icon {
+    width: 18px;
+    height: 18px;
+    fill: var(--studio-text);
+    opacity: 0.72;
+    cursor: pointer;
+    transition:
+      fill var(--motion-duration-base) var(--motion-ease-standard),
+      opacity var(--motion-duration-base) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+    &:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+  }
+
+  .logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    margin: 0;
+    min-width: 80px;
+    overflow: visible;
+    .logo-icon {
+      width: auto;
+      height: 26px;
+      display: block;
+      opacity: 0.82;
+    }
+  }
+
+  .search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: var(--studio-control-size);
+    min-width: var(--studio-control-size);
+    height: var(--studio-control-size);
+    border: 1px solid transparent;
+    border-radius: var(--studio-radius-control);
+    background: transparent;
+    box-shadow: none;
+    transform-origin: left center;
+    transition:
+      width var(--motion-duration-base) var(--motion-ease-standard),
+      border-color var(--motion-duration-base) var(--motion-ease-standard),
+      background var(--motion-duration-base) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+      background: var(--studio-surface-solid);
+      transform: scale(1.015);
+    }
+
+    &:focus-within,
+    &.open,
+    &.is-expanded {
+      width: var(--studio-header-search-open-width);
+      max-width: calc(100vw - 128px);
+      border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+      background: var(--studio-surface-solid);
+    }
+
+    #search-toggle {
+      width: calc(var(--studio-control-size) - 2px);
+      min-width: calc(var(--studio-control-size) - 2px);
+      height: calc(var(--studio-control-size) - 2px);
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+
+      &:hover,
+      &:focus-visible {
+        border-color: transparent;
+        background: transparent;
+        transform: none;
+      }
+    }
+
+    input {
+      position: static;
+      min-width: 0;
+      width: 0;
+      flex: 1 1 auto;
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        width var(--motion-duration-base) var(--motion-ease-standard),
+        opacity var(--motion-duration-base) var(--motion-ease-standard),
+        padding var(--motion-duration-base) var(--motion-ease-standard);
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      font-size: 0.9rem;
+      line-height: 1;
+      background: transparent;
+      font-family: var(--font-body);
+      color: var(--studio-text);
+
+      &:focus {
+        outline: none;
+      }
+    }
+
+    &.open input,
+    &.is-expanded input,
+    &:focus-within input {
+      width: 100%;
+      opacity: 1;
+      padding-right: 12px;
+      pointer-events: auto;
+    }
+
+    .search-results {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      min-width: 220px;
+      top: calc(100% + 8px);
+      background: var(--studio-surface-solid);
+      border: 1px solid var(--studio-border);
+      border-radius: var(--studio-radius-panel);
+      box-shadow: var(--studio-shadow-soft);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      z-index: 20;
+
+      li {
+        padding: 4px 8px;
+        cursor: pointer;
+
+        &:hover {
+          background: var(--studio-surface-muted);
+        }
+      }
+    }
+
+    &.active .search-results {
+      display: block;
+    }
+  }
+}

@@ -1,5 +1,13 @@
 # Fonts Manager
 
+## Boundaries
+
+Fonts Manager owns font-provider registration and catalog mutation. Provider
+code can register only through the module secret and a scoped core payload.
+Apps, widgets and community modules consume the exposed font catalog through
+documented UI/runtime contracts and cannot install providers or fetch external
+font catalogs by calling this manager directly.
+
 Registers font providers such as Google Fonts or Adobe Fonts and allows enabling
 or disabling them via the admin settings.
 
@@ -36,3 +44,11 @@ or disabling them via the admin settings.
 - `setFontProviderEnabled`
 - `registerFontProvider`
   - Must include a valid JWT, module information and the `FONTS_MODULE_INTERNAL_SECRET`. Providers use this during startup to register.
+- `listFonts`
+- `addFont`
+
+All event payloads must be scoped as `moduleName: "fontsManager"` and
+`moduleType: "core"` with a valid JWT. Apps, widgets and community modules use
+the runtime/admin facade for font queries or mutations; they should not emit
+these manager events directly. Provider registration additionally requires
+`FONTS_MODULE_INTERNAL_SECRET`.

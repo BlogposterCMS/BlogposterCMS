@@ -14,7 +14,7 @@ The builder now uses `CanvasGrid` for responsive layouts, but PixelGrid remains 
 ## Usage
 
 ```js
-import { init as initPixelGrid } from '/apps/designer/main/pixelGrid.js';
+import { init as initPixelGrid } from '/ui/designer/app/main/pixelGrid.js';
 
 const gridEl = document.getElementById('workspaceMain');
 const grid = initPixelGrid({}, gridEl);
@@ -22,7 +22,6 @@ const grid = initPixelGrid({}, gridEl);
 
 PixelGrid is internal to the designer app and does not depend on dashboard scripts.
 
-The CMS now transpiles these designer modules on demand at runtime, so there is
-no need to commit the generated JavaScript alongside the TypeScript sources.
-Run `npm run build:browser` only when you want to precompile the assets for a
-static deployment or integration test bundle.
+Legacy `/apps/designer/main/*.js` URLs are still available as compatibility
+shims, but new Designer code should import from `ui/designer/app/*` or through
+the bundled `/build/designer.js` entry.

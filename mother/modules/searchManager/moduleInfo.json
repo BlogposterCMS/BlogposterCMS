@@ -1,0 +1,6 @@
+{
+  "moduleName": "searchManager",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Core search indexing and query domain for content and legacy sources."
+}

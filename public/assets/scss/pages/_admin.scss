@@ -1,0 +1,27 @@
+.main-content {
+  display: flex;
+  flex-direction: row;
+  min-height: 100vh;
+  background: var(--studio-canvas);
+}
+
+#adminGrid {
+  min-height: 100vh;
+  // CanvasGrid positions widgets from its own origin. Keep decorative gutters
+  // outside the placement surface so x=0/y=0 is reachable in edit mode.
+  padding: 0 0 clamp(56px, 6vw, 96px);
+  scroll-margin-top: clamp(72px, 12vh, 128px);
+  position: relative;
+  background: var(--studio-canvas);
+}
+
+.resize-handle.br {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+
+  background: url('/assets/icons/move-diagonal-2.svg') no-repeat center;
+}

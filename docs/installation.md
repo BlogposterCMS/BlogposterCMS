@@ -4,7 +4,7 @@ This guide describes how to set up BlogposterCMS for local development. Producti
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/m41130/BlogposterCMS
+   git clone https://github.com/BlogposterCMS/BlogposterCMS
    cd BlogposterCMS
    ```
 2. **Install dependencies**
@@ -17,7 +17,7 @@ This guide describes how to set up BlogposterCMS for local development. Producti
    ```
 
 4. **Create your environment file**
-   Copy `env.sample` to `.env` and fill in the required values. Use strong, unique strings for all secrets.
+   Copy `env.sample` to `.env` and fill in the required values. The sample uses SQLite by default (`CONTENT_DB_TYPE=sqlite`) so local setup can run without PostgreSQL or MongoDB. Use strong, unique strings for all secrets and add the required admin iframe RSA key pair described in [Security Notes](security.md#admin-iframe-origin-whitelist).
    ```bash
    cp env.sample .env
    # edit .env

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Panel</title>
+
+  <!-- ── Styles ───────────────────────────────────────────── -->
+  <link rel="stylesheet" href="/assets/css/site.css" />
+</head>
+
+<body>
+  <div class="app-scope admin-panel">
+    <header id="top-header"></header>
+    <header id="main-header"></header>
+
+    <div class="main-content">
+      <aside   id="sidebar"></aside>
+
+      <section id="content">
+        <!-- Admin widgets are injected into the builder grid -->
+        <div id="adminGrid" class="canvas-grid"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ── JavaScript  (order matters!) ─────────────────────── -->
+  <!-- Meltdown-Emitter wrapper (ES-module) -->
+  <script type="module" src="/build/meltdownEmitter.js"></script>
+  <script type="module" src="/build/faviconLoader.js"></script>
+  <script type="module" src="/build/fontsLoader.js"></script>
+  <script type="module" src="/build/customSelect.js"></script>
+  <script src="/build/openExplorer.js"></script>
+
+  <!-- Quill rich text editor -->
+
+  <!-- 3) Token loader (stores window.ADMIN_TOKEN / PUBLIC_TOKEN) -->
+  <script type="module" src="/build/tokenLoader.js"></script>
+  <script type="module" src="/build/agentConsole.js"></script>
+  <script type="module" src="/build/userColor.js"></script>
+
+  <!-- Preload page data for editor widgets -->
+  <script type="module" src="/build/pageDataLoader.js"></script>
+
+  
+  <script src="/build/icons.js"></script>
+
+  <!-- 4) Generic page renderer (builds header, sidebar, widgets)    -->
+  <script type="module" src="/build/pageRenderer.js"></script>
+
+  <!-- Collapsible widgets panel -->
+  <script type="module" src="/build/widgetsPanel.js"></script>
+
+  <!-- Search functionality for admin top bar -->
+  <script type="module" src="/build/adminSearch.js"></script>
+
+  <!-- Top header icon actions -->
+  <script type="module" src="/build/topHeaderActions.js"></script>
+  <script type="module" src="/build/notificationHub.js"></script>
+  <script type="module" src="/build/pageActions.js"></script>
+  <!-- Content header actions -->
+  <script type="module" src="/build/contentHeaderActions.js"></script>
+  <script type="module" src="/build/workspaces.js"></script>
+
+
+</body>
+</html>

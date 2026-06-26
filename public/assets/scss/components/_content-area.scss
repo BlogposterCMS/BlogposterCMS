@@ -1,0 +1,240 @@
+#content {
+  overflow: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  background: var(--studio-canvas);
+  box-shadow: none;
+  border-radius: 0;
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+#content.is-content-refreshing {
+  opacity: 0.78;
+  transform: translateY(2px);
+}
+
+#content.is-content-ready {
+  animation: studio-content-ready var(--motion-duration-slow) var(--motion-ease-standard);
+}
+
+@keyframes studio-content-ready {
+  from {
+    opacity: 0.86;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #content,
+  #content.is-content-refreshing,
+  #content.is-content-ready {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+  .canvas-grid,
+  .canvas-grid *,
+  .pixel-grid,
+  .pixel-grid * {
+    box-sizing: content-box;
+  }
+
+
+.canvas-grid,
+.pixel-grid {
+  min-height: 300px;
+  position: relative;
+  background: transparent;
+  overflow-x: auto;
+  overflow-y: visible;
+  height: auto;
+}
+
+
+.canvas-grid {
+  // Do not use paint containment here: dashboard widget shadows need to bleed
+  // to the grid edge so the floating sidebar does not visually cut them off.
+  contain: layout size;
+}
+
+.canvas-item {
+
+
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  padding: 28px 22px 14px 22px;
+  position: relative;
+  background: var(--studio-surface);
+  border-radius: var(--studio-radius-panel);
+  transition:
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-base) var(--motion-ease-standard);
+
+  backdrop-filter: blur(18px);
+  box-shadow: var(--studio-shadow-lift);
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid var(--studio-border);
+  will-change: transform;
+  z-index: 0; // baseline layer for widgets
+}
+
+#adminGrid .canvas-item {
+  box-sizing: border-box;
+}
+.canvas-item:before{
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--studio-radius-control);
+  background-color: color-mix(in srgb, var(--studio-text) 14%, transparent);
+  cursor: move;
+  opacity: 0;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.canvas-item.dragging {
+  transition: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  will-change: transform;
+
+}
+
+.canvas-item-content{
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-item .widget-remove,
+.canvas-item .widget-resize,
+.canvas-item .widget-menu {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+// Dashboard editing styles
+body.dashboard-edit-mode .canvas-item {
+  border-color: var(--studio-border);
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+  transition:
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    outline-color var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+body.dashboard-edit-mode .canvas-item:before {
+  opacity: 0.45;
+  pointer-events: all;
+}
+
+body.dashboard-edit-mode .canvas-item .widget-remove,
+body.dashboard-edit-mode .canvas-item .widget-resize,
+body.dashboard-edit-mode .canvas-item .widget-menu {
+  display: block;
+}
+
+body.dashboard-edit-mode .canvas-item-content {
+  pointer-events: none;
+}
+
+// Allow interactive content and scrolling when a widget explicitly enables
+// overflow. This restores pointer events so scrollbars and inner UI work.
+body.dashboard-edit-mode .canvas-item.overflow .canvas-item-content,
+body.dashboard-edit-mode .canvas-item .canvas-item-content.overflow {
+  pointer-events: auto;
+}
+
+// When overflow is enabled, allow scrollbars inside the widget wrapper too.
+.canvas-item.overflow {
+  overflow: auto;
+}
+
+body.dashboard-edit-mode .canvas-item .widget-remove {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+body.dashboard-edit-mode .canvas-item .widget-resize {
+  position: absolute;
+  top: 2px;
+  right: 26px;
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+body.dashboard-edit-mode .canvas-item.dragging .widget-remove,
+body.dashboard-edit-mode .canvas-item.selected .widget-remove,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-remove,
+body.dashboard-edit-mode .canvas-item.dragging .widget-resize,
+body.dashboard-edit-mode .canvas-item.selected .widget-resize,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-resize,
+body.dashboard-edit-mode .canvas-item.dragging .widget-menu,
+body.dashboard-edit-mode .canvas-item.selected .widget-menu,
+body.dashboard-edit-mode .canvas-item.is-dragging .widget-menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover .widget-remove,
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover .widget-resize,
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover .widget-menu {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.dashboard-edit-mode .canvas-item.selected {
+  outline-color: var(--studio-border-strong);
+  box-shadow: var(--studio-shadow-soft);
+}
+
+body.dashboard-edit-mode .canvas-item[data-global="true"].dragging,
+body.dashboard-edit-mode .canvas-item[data-global="true"].selected {
+  outline-color: var(--shared-widget-color, #d4af37);
+}
+
+body.dashboard-edit-mode .canvas-item.dragging,
+body.dashboard-edit-mode .canvas-item.is-dragging {
+  outline-color: var(--studio-border-strong);
+  box-shadow: var(--studio-shadow-lift);
+}
+
+body.dashboard-edit-mode .canvas-item:not(.dragging):not(.selected):not(.is-dragging):hover {
+  border-color: var(--studio-border-strong);
+  outline-color: var(--studio-border-strong);
+  box-shadow: var(--studio-shadow-soft);
+}

@@ -1,0 +1,103 @@
+/**
+ * @jest-environment jsdom
+ */
+
+import {
+  errorMessage,
+  fetchModuleLists,
+  installModuleZip,
+  renderModuleMeta,
+  toggleModuleRegistryActivation,
+  toModules,
+  zipDataFromDataUrl
+} from '../ui/widgets/plainspace/admin/modulesListData';
+
+describe('modulesListData', () => {
+  it('normalizes module payloads and renders module metadata text', () => {
+    expect(toModules({
+      data: [
+        { module_name: 'pagesManager' },
+        null,
+        'bad'
+      ]
+    })).toEqual([{ module_name: 'pagesManager' }]);
+    expect(toModules([{ module_name: 'plainSpace' }])).toEqual([{ module_name: 'plainSpace' }]);
+    expect(renderModuleMeta({
+      version: '1.2.3',
+      developer: 'Blogposter',
+      description: 'CMS module'
+    })).toBe('v1.2.3 \u2022 Blogposter \u2022 CMS module');
+    expect(renderModuleMeta({})).toBe('Unknown Developer');
+    expect(errorMessage(new Error('boom'))).toBe('boom');
+    expect(errorMessage('nope')).toBe('nope');
+    expect(zipDataFromDataUrl('data:application/zip;base64,UEsDBAo=')).toBe('UEsDBAo=');
+    expect(() => zipDataFromDataUrl('bad')).toThrow('PLAINSPACE_MODULES_ZIP_DATA_UNAVAILABLE');
+  });
+
+  it('fetches installed and system module lists through meltdown', async () => {
+    const emit = jest.fn(async eventName => (
+      eventName === 'getModuleRegistry'
+        ? { data: [{ module_name: 'installed' }] }
+        : [{ module_name: 'system' }]
+    ));
+
+    await expect(fetchModuleLists(emit, 'admin-token')).resolves.toEqual({
+      installed: [{ module_name: 'installed' }],
+      system: [{ module_name: 'system' }]
+    });
+    expect(emit).toHaveBeenCalledWith('getModuleRegistry', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core'
+    });
+    expect(emit).toHaveBeenCalledWith('listSystemModules', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core'
+    });
+  });
+
+  it('toggles module activation through the registry events', async () => {
+    const emit = jest.fn().mockResolvedValue(undefined);
+
+    await expect(toggleModuleRegistryActivation(emit, 'admin-token', {
+      module_name: 'comments',
+      is_active: false
+    })).resolves.toBe(true);
+    expect(emit).toHaveBeenCalledWith('activateModuleInRegistry', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core',
+      targetModuleName: 'comments'
+    });
+
+    await expect(toggleModuleRegistryActivation(emit, 'admin-token', {
+      module_name: 'comments',
+      is_active: true
+    })).resolves.toBe(false);
+    expect(emit).toHaveBeenCalledWith('deactivateModuleInRegistry', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core',
+      targetModuleName: 'comments'
+    });
+  });
+
+  it('installs uploaded module ZIP data through moduleLoader', async () => {
+    const emit = jest.fn().mockResolvedValue(undefined);
+
+    await installModuleZip(emit, 'admin-token', 'UEsDBAo=');
+
+    expect(emit).toHaveBeenCalledWith('installModuleFromZip', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core',
+      zipData: 'UEsDBAo='
+    });
+  });
+
+  it('fails with a searchable error code when the emitter is missing', async () => {
+    await expect(installModuleZip(undefined as never, 'admin-token', 'UEsDBAo='))
+      .rejects.toThrow('PLAINSPACE_MODULES_EMITTER_UNAVAILABLE');
+  });
+});

@@ -1,0 +1,2 @@
+(()=>{"use strict";!async function(){if("function"==typeof window.meltdownEmit)try{const e=await window.meltdownEmit("issuePublicToken",{purpose:"favicon",moduleName:"auth"}),t=await window.meltdownEmit("getPublicSetting",{jwt:e,moduleName:"settingsManager",moduleType:"core",key:"FAVICON_URL"});if("string"==typeof t&&t){let e=document.querySelector('link[rel="icon"]');e||(e=document.createElement("link"),e.rel="icon",document.head.appendChild(e)),e.href=t}}catch(e){console.error("[faviconLoader] Failed to load favicon",e)}}()})();
+//# sourceMappingURL=faviconLoader.js.map

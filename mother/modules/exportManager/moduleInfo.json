@@ -1,0 +1,6 @@
+{
+  "moduleName": "exportManager",
+  "version": "0.1.0",
+  "description": "Builds portable site exports from core CMS events.",
+  "developer": "Blogposter Team"
+}

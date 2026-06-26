@@ -1,5 +1,9 @@
 # Security Notes
 
+Agent access codes are one-time, short-lived and exchanged for least-privilege
+`agent` tokens. The localhost dev-session helper is disabled in production and
+can be disabled locally with `DEV_AGENT_LOGIN=false`.
+
 BlogposterCMS was designed with multiple layers of security in mind. While no system is entirely foolproof, following these guidelines will help keep your installation safe.
 
 - **Environment secrets** – Never commit real secret values to version control. Copy `env.sample` to `.env` and provide strong random strings for all salts and tokens.

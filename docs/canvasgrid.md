@@ -27,7 +27,7 @@ CanvasGrid powers the drag‑and‑drop page builder using a lightweight module 
 Initialize the grid in your admin scripts:
 
 ```js
-import { init as initCanvasGrid } from '/plainspace/main/canvasGrid.js';
+import { init as initCanvasGrid } from '/ui/runtime/main/canvasGrid.js';
 
 const gridEl = document.querySelector('#workspaceMain');
 const grid = initCanvasGrid({
@@ -89,8 +89,25 @@ grid.on('change', ({ el, width, contentOnly }) => {
 });
 ```
 
-When `percentageMode` is enabled, the grid keeps `data-*Percent` attributes (`xPercent`, `yPercent`, `wPercent`, `hPercent`) in sync so you can store layouts in relative units.
+When `percentageMode` is enabled, the grid keeps `data-*Percent` attributes (`xPercent`, `yPercent`, `wPercent`, `hPercent`) in sync so you can store layouts in relative units. Programmatic refreshes preserve existing percent metadata, and partial updates only rewrite the affected axis; for example, `grid.update(widget, { w })` must not change `hPercent`.
 
-Grid calculations are shared through `grid-utils.js`. Import helpers like
-`snapToGrid`, `elementRect` and `rectsCollide` to keep widget logic
-consistent across modules.
+Admin dashboards can pass `renderPercentLayoutAsPixels: true` with
+`percentageMode` so stored percentage positions remain portable while the
+current widget boxes render against the measured grid pixels. Keep decorative
+spacing outside an editable grid instead of using top or left padding on the
+grid element, otherwise the reachable `x=0`/`y=0` placement origin moves away
+from the visible canvas edge.
+
+Dashboard grids intentionally omit CSS paint containment. Widget cards use
+soft shadows, and those shadows must be able to render up to the grid edge
+beside the floating sidebar without being clipped by the placement surface.
+
+Canvas items marked with `data-widget-size-slot="full"` reserve the full row
+for collision checks, even if an old layout stores a smaller grid width. This
+keeps full-area dashboard widgets from sharing the same vertical area with
+other widgets.
+
+Grid calculations are shared through `ui/runtime/main/grid-utils.js`. Import
+helpers like `snapToGrid`, `elementRect` and `rectsCollide` to keep widget logic
+consistent across modules. Legacy `/plainspace/main/*.js` URLs remain as
+compatibility shims for older browser code.

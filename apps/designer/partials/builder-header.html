@@ -1,0 +1,82 @@
+<header id="builder-header" class="builder-header">
+  <div class="builder-header-brand">
+    <button class="builder-back-btn" aria-label="Back">
+      <img src="/assets/icons/panel-left.svg" alt="" class="icon" />
+    </button>
+    <label class="layout-name-shell">
+      <span class="layout-name-label">Studio</span>
+      <input
+        id="layoutNameInput"
+        type="text"
+        class="layout-name-input"
+        placeholder="Scene builder"
+        required
+      />
+      <img src="/assets/icons/chevron-down.svg" alt="" class="icon layout-name-chevron" />
+    </label>
+  </div>
+
+  <nav class="builder-tool-strip" aria-label="Builder tools">
+    <button type="button" class="builder-tool" data-tool="insert">
+      <img src="/assets/icons/plus.svg" class="icon" alt="" />
+      <span>Insert</span>
+    </button>
+    <button type="button" class="builder-tool" data-tool="layout">
+      <img src="/assets/icons/panels-top-left.svg" class="icon" alt="" />
+      <span>Layout</span>
+    </button>
+    <button type="button" class="builder-tool" data-tool="text">
+      <img src="/assets/icons/type.svg" class="icon" alt="" />
+      <span>Text</span>
+    </button>
+    <button type="button" class="builder-tool" data-tool="media">
+      <img src="/assets/icons/image.svg" class="icon" alt="" />
+      <span>Media</span>
+    </button>
+    <button type="button" class="builder-tool" data-tool="shape">
+      <img src="/assets/icons/diamond.svg" class="icon" alt="" />
+      <span>Shape</span>
+    </button>
+    <button type="button" class="builder-tool builder-tool--active" data-tool="scroll">
+      <img src="/assets/icons/scroll.svg" class="icon" alt="" />
+      <span>Scroll</span>
+    </button>
+    <button type="button" class="builder-tool" data-tool="action">
+      <img src="/assets/icons/mouse-pointer-click.svg" class="icon" alt="" />
+      <span>Action</span>
+    </button>
+  </nav>
+
+  <div class="header-actions">
+    <button class="button header-icon-btn menu-undo" type="button" aria-label="Undo" title="Undo">
+      <img src="/assets/icons/undo-2.svg" class="icon" alt="" />
+    </button>
+    <button class="button header-icon-btn menu-redo" type="button" aria-label="Redo" title="Redo">
+      <img src="/assets/icons/redo-2.svg" class="icon" alt="" />
+    </button>
+    <button id="previewLayoutBtn" class="button header-icon-btn builder-preview-btn" type="button" aria-label="Preview" title="Preview">
+      <img src="/assets/icons/play.svg" class="icon" alt="" />
+    </button>
+    <button id="viewportControlBtn" class="button header-icon-btn builder-viewport-btn" type="button" aria-label="Viewport" title="Viewport">
+      <img src="/assets/icons/monitor.svg" class="icon" alt="" />
+    </button>
+    <button id="saveLayoutBtn" class="button header-icon-btn builder-save-btn" type="button" aria-label="Save" title="Save">
+      <img src="/assets/icons/save.svg" class="icon" alt="" />
+    </button>
+    <button id="publishLayoutBtn" class="button builder-publish-btn" type="button">
+      Publish
+    </button>
+    <button class="button header-icon-btn builder-menu-btn" type="button" aria-label="More actions" title="More actions">
+      <img src="/assets/icons/ellipsis.svg" class="icon" alt="" />
+    </button>
+  </div>
+  <div class="viewport-slider">
+    <input type="range" class="viewport-range" min="320" max="3840" step="10" />
+    <span class="viewport-value"></span>
+  </div>
+  <div class="builder-options-menu">
+    <button class="menu-undo"><img src="/assets/icons/rotate-ccw.svg" class="icon" alt="undo" /> Undo</button>
+    <button class="menu-redo"><img src="/assets/icons/rotate-cw.svg" class="icon" alt="redo" /> Redo</button>
+    <label class="menu-pro"><input type="checkbox" class="pro-toggle" checked /> Pro Mode</label>
+  </div>
+</header>

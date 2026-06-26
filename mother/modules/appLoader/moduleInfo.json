@@ -1,0 +1,6 @@
+{
+  "moduleName": "appLoader",
+  "version": "0.1.0",
+  "description": "Builds app registry from manifests at startup.",
+  "developer": "Blogposter Team"
+}

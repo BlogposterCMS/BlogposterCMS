@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="brandGradient">
+      <stop offset="0%" stop-color="#008080"/>
+      <stop offset="50%" stop-color="#FF00FF"/>
+      <stop offset="100%" stop-color="#FFA500"/>
+    </linearGradient>
+    <filter id="softShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+
+  <rect width="400" height="300" fill="transparent"/>
+
+  <!-- Sehr dezente, reduzierte Balken (unteres rechtes Drittel) -->
+  <rect x="120" y="260" width="300" height="30" fill="url(#brandGradient)" opacity="0.4" transform="rotate(12 250 280)" filter="url(#softShadow)"/>
+  <rect x="200" y="220" width="150" height="20" fill="url(#brandGradient)" opacity="0.3" transform="rotate(15 300 230)" filter="url(#softShadow)"/>
+</svg>

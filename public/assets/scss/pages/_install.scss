@@ -1,0 +1,106 @@
+.app-scope.install-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--user-color), transparent 70%) 1px,
+      transparent 0
+    );
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+.install-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+
+  li {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-border);
+    opacity: .7;
+
+    &.active {
+      background: var(--brand);
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+}
+
+.app-scope .step {
+  display: none;
+}
+
+.app-scope form.step.active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+
+.app-scope .step.active:not(form) {
+  display: block;
+}
+
+.login-form .actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#siteForm .actions {
+  width: 100%;
+}
+
+#siteForm .actions .button {
+  flex: 1 1 140px;
+}
+
+.login-form .actions .button.primary {
+  min-width: 140px;
+}
+
+.app-scope.install-page .button.primary {
+  --bg: var(--color-border);
+  --fg: var(--color-text);
+  --bd: var(--color-border);
+}
+
+
+.color-picker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-family: var(--font-body);
+    font-weight: 500;
+    color: #888;
+    font-size: 14px;
+  }
+}
+
+.app-scope form.step.active {
+  display: flex;
+  flex-direction: column; 
+  gap: 12px;              
+  width: 100%;            
+}

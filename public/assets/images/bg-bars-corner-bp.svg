@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
+  <defs>
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#008080"/>
+      <stop offset="50%" stop-color="#FF00FF"/>
+      <stop offset="100%" stop-color="#FFA500"/>
+    </linearGradient>
+    <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="15" flood-color="#000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#ffffff"/>
+
+  <!-- Unten rechts schwebende Balken -->
+  <rect x="1420" y="950" width="700" height="80" fill="url(#brandGradient)" opacity="0.7" transform="rotate(12,1720,980)" filter="url(#softShadow)"/>
+  <rect x="1500" y="870" width="500" height="50" fill="url(#brandGradient)" opacity="0.5" transform="rotate(15,1750,900)" filter="url(#softShadow)"/>
+
+  <!-- Schriftzug "Blogposter" oben links -->
+  <text x="60" y="100" font-family="Avenir Next, Arial, sans-serif" font-size="48" font-weight="bold" fill="#333333" opacity="0.2">
+    Blogposter
+  </text>
+</svg>

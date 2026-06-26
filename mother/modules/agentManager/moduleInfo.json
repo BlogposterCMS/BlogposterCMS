@@ -1,0 +1,6 @@
+{
+  "moduleName": "agentManager",
+  "version": "0.1.0",
+  "developer": "Blogposter Team",
+  "description": "Central agent surface and control contract for apps, studio surfaces and automation clients."
+}

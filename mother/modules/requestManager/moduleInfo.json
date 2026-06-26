@@ -1,0 +1,6 @@
+{
+  "moduleName": "requestManager",
+  "version": "0.1.0",
+  "description": "Centralized handler for outgoing HTTP requests.",
+  "developer": "Blogposter Team"
+}

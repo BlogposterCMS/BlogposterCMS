@@ -1,0 +1,122 @@
+/* =============================================================================
+   components/_inline-add.scss — Inline sliding form for quick adds
+   ============================================================================= */
+
+.inline-create-field {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  gap: var(--studio-inline-create-gap);
+  overflow: visible;
+
+  width: 0;
+  opacity: 0;
+  transition:
+    width var(--motion-duration-slow) var(--motion-ease-standard),
+    opacity var(--motion-duration-slow) var(--motion-ease-standard);
+}
+
+.inline-create-field.open {
+  width: min(var(--studio-inline-create-width), calc(100vw - 128px));
+  opacity: 1;
+}
+
+.inline-create-field input {
+  flex: 1;
+  min-width: 0;
+  height: var(--studio-control-size);
+  padding: 0 18px;
+  border: 1px solid var(--studio-inline-create-border);
+  border-radius: var(--studio-radius-control);
+  background-color: var(--studio-inline-create-input-surface);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--studio-text);
+  box-shadow: var(--studio-inline-create-shadow);
+}
+
+.inline-create-field input::placeholder {
+  color: var(--studio-text-muted);
+}
+
+.inline-create-field input:focus {
+  outline: none;
+  box-shadow: var(--studio-focus-ring);
+  background-color: var(--studio-inline-create-surface);
+}
+
+.inline-create-field button {
+  padding: 0;
+}
+
+.inline-create-field .icon-button {
+  width: var(--studio-control-size);
+  min-width: var(--studio-control-size);
+  height: var(--studio-control-size);
+  padding: 0;
+  background: var(--studio-inline-create-surface);
+  border: 1px solid var(--studio-inline-create-border);
+  border-radius: var(--studio-radius-control);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--studio-inline-create-shadow);
+  cursor: pointer;
+}
+
+.inline-create-field .icon-button img {
+  width: 20px;
+  height: 20px;
+}
+
+.inline-create-field .icon-list {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + var(--studio-inline-create-gap));
+  background: var(--studio-inline-create-surface);
+  border: 1px solid var(--studio-inline-create-border);
+  border-radius: var(--studio-radius-panel);
+  padding: 8px;
+  gap: 8px;
+  z-index: 10;
+  width: min(var(--studio-inline-create-width), calc(100vw - 128px));
+  max-height: 200px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
+}
+
+.inline-create-field .icon-list.open {
+  display: grid;
+}
+
+.inline-create-field .icon-list button {
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.inline-create-field .icon-list button img {
+  width: 24px;
+  height: 24px;
+}
+
+#subpage-floating-field,
+#workspace-floating-field {
+  background: transparent;
+  padding: var(--studio-inline-create-padding);
+  border: 0;
+  border-radius: var(--studio-radius-panel);
+  box-shadow: var(--studio-inline-create-panel-shadow);
+  box-sizing: border-box;
+}

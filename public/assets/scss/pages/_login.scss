@@ -1,0 +1,222 @@
+/* =============================================================================
+   Login Page Styles
+   ============================================================================= */
+
+@property --user-color {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #FF0000;
+}
+
+
+.app-scope.login-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: --user-color 5s;
+}
+
+
+.app-scope.login-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--user-color), transparent 70%) 1px,
+    transparent 0
+  );
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: -1;
+  transition: --user-color 5s;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  background-color: var(--color-card);
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* No border on the card itself; border moves to inner form */
+  transition: --user-color 5s;
+}
+
+.login-form .cms-title {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  color: var(--color-text);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.login-form .logo {
+  width: 100px;
+  margin-bottom: 1rem;
+}
+
+.login-form form {
+  width: 100%;
+}
+
+/* =============================================================================
+   Input Fields Styling
+   ============================================================================= */
+
+.field {
+  width: 100%;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary-light);
+  font-size: 14px;
+  color: var(--color-text);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, --user-color 5s;
+}
+
+.password-field input {
+  padding-right: 56px;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--user-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--user-color) 40%, transparent);
+}
+
+.field label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  font-size: 14px;
+  color: #aaa;
+  pointer-events: none;
+  transition: all 0.15s ease;
+  background: transparent;
+}
+
+.field input:not(:placeholder-shown) + label,
+.field input:focus + label {
+  top: -8px;
+  left: 12px;
+  font-size: 12px;
+  color: var(--brand);
+  background: var(--color-card);
+  padding: 0 4px;
+  font-weight: 500;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: color 0.18s ease;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.error-message {
+  width: 100%;
+  color: var(--color-error);
+  font-size: 14px;
+  margin-top: 0.25rem;
+  min-height: 1rem;
+}
+
+.secondary-actions {
+  margin-top: 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 14px;
+}
+
+.secondary-actions a {
+  color: var(--color-text);
+  opacity: 0.8;
+  text-decoration: none;
+  transition: opacity 0.18s ease;
+}
+
+.secondary-actions a:hover,
+.secondary-actions a:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Keep original gradient button on login page */
+.app-scope.login-page .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #3acfd5,
+    #3a4ed5,
+    #c93ad5,
+    #ff3a79,
+    #ffbc3a
+  );
+  background-size: 200%;
+  background-position: left center;
+}
+
+.app-scope.login-page .button:hover {
+  background-position: right center;
+}
+
+.app-scope.login-page .button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  height: 100%;
+  width: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: skewX(-45deg);
+  transition: left 0.5s ease;
+}
+
+.app-scope.login-page .button:hover::before {
+  left: 150%;
+}
+

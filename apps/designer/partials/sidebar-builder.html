@@ -1,0 +1,76 @@
+<nav class="sidebar-nav builder-sidebar-nav" aria-label="Scene builder sidebar">
+  <section class="scene-sidebar-section scene-map" aria-label="Sections">
+    <div class="scene-sidebar-heading">
+      <span>Sections</span>
+      <button type="button" class="scene-add-section" aria-label="Add section">
+        <img src="/assets/icons/plus.svg" alt="" class="icon" />
+      </button>
+    </div>
+    <div class="scene-section-list" role="listbox" aria-label="Page sections"></div>
+  </section>
+
+  <section class="scene-sidebar-section element-library" aria-label="Elements">
+    <div class="scene-sidebar-heading">
+      <span>Elements</span>
+    </div>
+    <div class="scene-native-elements" aria-label="Native elements">
+      <button type="button" class="scene-native-element" draggable="true" data-native-element="text">
+        <img src="/assets/icons/type.svg" alt="" class="icon" />
+        <span>Text</span>
+      </button>
+      <button type="button" class="scene-native-element" draggable="true" data-native-element="media">
+        <img src="/assets/icons/image.svg" alt="" class="icon" />
+        <span>Media</span>
+      </button>
+      <button type="button" class="scene-native-element" draggable="true" data-native-element="shape">
+        <img src="/assets/icons/shapes.svg" alt="" class="icon" />
+        <span>Shape</span>
+      </button>
+      <button type="button" class="scene-native-element" draggable="true" data-native-element="button">
+        <img src="/assets/icons/mouse-pointer-click.svg" alt="" class="icon" />
+        <span>Button</span>
+      </button>
+      <button type="button" class="scene-native-element scene-native-element--wide" draggable="true" data-native-element="background">
+        <img src="/assets/icons/wallpaper.svg" alt="" class="icon" />
+        <span>Background</span>
+      </button>
+    </div>
+    <div class="drag-icons">
+      <!-- Widgets are dynamically loaded here -->
+    </div>
+  </section>
+
+  <section class="scene-sidebar-section layer-preview" aria-label="Layers">
+    <div class="scene-sidebar-heading">
+      <span>Layers</span>
+    </div>
+    <button type="button" class="scene-layer-item scene-layer-item--active">
+      <img src="/assets/icons/type.svg" alt="" class="icon" />
+      <span>Headline</span>
+    </button>
+    <button type="button" class="scene-layer-item">
+      <img src="/assets/icons/text.svg" alt="" class="icon" />
+      <span>Subheadline</span>
+    </button>
+    <button type="button" class="scene-layer-item">
+      <img src="/assets/icons/image.svg" alt="" class="icon" />
+      <span>Image</span>
+    </button>
+    <button type="button" class="scene-layer-item">
+      <img src="/assets/icons/mouse-pointer-click.svg" alt="" class="icon" />
+      <span>Button</span>
+    </button>
+  </section>
+
+  <div class="scene-device-switcher" aria-label="Viewport presets">
+    <button type="button" class="active" aria-label="Desktop">
+      <img src="/assets/icons/monitor.svg" alt="" class="icon" />
+    </button>
+    <button type="button" aria-label="Tablet">
+      <img src="/assets/icons/tablet.svg" alt="" class="icon" />
+    </button>
+    <button type="button" aria-label="Mobile">
+      <img src="/assets/icons/smartphone.svg" alt="" class="icon" />
+    </button>
+  </div>
+</nav>

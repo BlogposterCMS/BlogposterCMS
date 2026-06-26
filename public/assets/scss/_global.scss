@@ -1,0 +1,132 @@
+/* =============================================================================
+   Global Styles (ohne Login-spezifischen Kram)
+   ============================================================================= */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+/* Default font for all body text */
+body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+}
+
+// Prevent accidental text selection when dragging widgets
+// Styles apply to admin widgets and canvas items to avoid shadow DOM overrides
+
+
+.widget-container.admin-widget.loading,
+canvas-item.loading {
+  opacity: 0;
+}
+
+.widget-container.admin-widget:hover,
+canvas-item:hover {
+
+}
+
+.widget-container.admin-widget::before,
+canvas-item::before {
+
+}
+
+
+
+.widget-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--color-text);
+  background: var(--color-secondary-light);
+  opacity: 0.6;
+}
+
+.canvas-item.loading {
+  background: var(--color-secondary-light);
+}
+
+    /* Canvas grid relies on content-box sizing. Reset inside its container */
+
+
+
+  /* Basic Text Styles */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    margin: 0 0 16px;
+    color: var(--color-text);
+  }
+  
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+  }
+  
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+  }
+  
+  h3 {
+    font-size: 24px;
+    font-weight: 600;
+  }
+  
+  p {
+    margin: 0 0 16px;
+  }
+
+/* Remove default focus outline for better custom focus styles */
+  *:focus-visible {
+  outline: none;
+}
+
+// Development mode banner
+.dev-mode-banner {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(255, 0, 0, 0.1);
+  color: #c00;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+body.has-content-footer .dev-mode-banner {
+  bottom: calc(var(--studio-content-footer-height, 60px) + 8px);
+}
+
+/* Restrict admin widget hover and drag handle to dashboard edit mode */
+body.dashboard-edit-mode .widget-container.admin-widget:hover,
+body.dashboard-edit-mode canvas-item:hover {
+  box-shadow: var(--studio-shadow-soft);
+}
+
+body:not(.dashboard-edit-mode) .widget-container.admin-widget:hover,
+body:not(.dashboard-edit-mode) canvas-item:hover {
+  box-shadow: var(--studio-shadow-soft);
+}
+
+body.dashboard-edit-mode .widget-container.admin-widget::before {
+  display: block;
+}
+
+body.dashboard-edit-mode canvas-item::before,
+body.dashboard-edit-mode .canvas-item::before {
+  display: none !important;
+}
+
+body:not(.dashboard-edit-mode) .widget-container.admin-widget::before,
+body:not(.dashboard-edit-mode) canvas-item::before,
+body:not(.dashboard-edit-mode) .canvas-item::before {
+  display: none;
+}

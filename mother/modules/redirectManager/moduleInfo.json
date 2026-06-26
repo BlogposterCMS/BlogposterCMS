@@ -1,0 +1,6 @@
+{
+  "moduleName": "redirectManager",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Core redirect rules, permalink migrations and redirect hit tracking."
+}

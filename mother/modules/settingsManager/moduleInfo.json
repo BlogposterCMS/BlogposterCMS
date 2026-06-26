@@ -1,0 +1,6 @@
+{
+  "moduleName": "settingsManager",
+  "version": "0.5.0",
+  "description": "Centralized CMS settings service.",
+  "developer": "Blogposter Team"
+}

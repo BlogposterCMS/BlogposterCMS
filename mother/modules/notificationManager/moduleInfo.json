@@ -1,0 +1,6 @@
+{
+  "moduleName": "notificationManager",
+  "version": "0.6.0",
+  "description": "Sends notifications to integrations.",
+  "developer": "Blogposter Team"
+}

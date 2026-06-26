@@ -1,0 +1,6 @@
+{
+  "moduleName": "contentEngine",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Core content domain for content types, entries, revisions and metadata."
+}

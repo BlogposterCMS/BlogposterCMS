@@ -1,0 +1,41 @@
+.layout-container {
+  position: relative;
+}
+
+.container-actionbar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+
+  button {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    padding: 2px;
+    line-height: 0;
+    cursor: pointer;
+
+    .icon {
+      width: 12px;
+      height: 12px;
+      display: block;
+    }
+  }
+
+  .bar-host.active {
+    background: #3b82f6;
+    color: #fff;
+  }
+
+  .bar-design.active {
+    background: #10b981;
+    color: #fff;
+  }
+}
+
+body[data-active-layer='1'] .container-actionbar {
+  display: none;
+}

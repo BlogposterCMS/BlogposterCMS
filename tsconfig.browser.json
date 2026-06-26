@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": ["ui/*"],
+      "/ui/*": ["ui/*"]
+    },
+    "sourceMap": false,
+    "rootDir": ".",
+    "declaration": false,
+    "removeComments": false
+  },
+  "include": [
+    "ui/**/*.d.ts",
+    "ui/**/*.ts",
+    "ui/**/*.tsx",
+    "mother/modules/**/publicLoader.ts"
+  ]
+}

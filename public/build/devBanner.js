@@ -1,0 +1,2 @@
+(()=>{"use strict";!function(){if(document.getElementById("dev-mode-banner"))return;const e=document.createElement("div");e.id="dev-mode-banner",e.className="dev-mode-banner",e.textContent="Development mode",document.addEventListener("DOMContentLoaded",()=>{document.body.appendChild(e)})}()})();
+//# sourceMappingURL=devBanner.js.map

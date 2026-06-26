@@ -1,0 +1,165 @@
+# CMS Usage Guide
+
+This guide describes how to operate BlogposterCMS once the server is running. It covers the dashboard, the two widget lanes, and the JWT event bus that modules use.
+
+## Accessing the Dashboard
+
+1. Start the server using `npm start`.
+2. Open `http://localhost:3000/` in your browser.
+3. The admin interface lives under `/admin`.
+4. If you are accessing for the first time, register or create an admin user via the command line utilities.
+5. Log in with your credentials to see the dashboard.
+
+The dashboard allows you to manage pages, users and settings. Only authenticated users with the appropriate role can access it. Always use HTTPS in production so credentials are transmitted securely.
+
+The admin dashboard uses the shared Studio tokens in `public/assets/scss/_variables.scss` and `ui/shared/design-system/tokens.ts` for quiet white or dark-mode surfaces, rounded controls, shadows, focus rings and motion. The Designer app imports the same global variables before its own compatibility layer, mapping legacy builder names such as `--bg-primary`, `--border-color` and `--shadow-card` onto `--studio-*` tokens so Light, Dark and System modes resolve consistently in the app frame as well as the dashboard shell. Typography is token-driven as well: `--font-body` starts with the locally hosted, unmodified HarmonyOS Sans files and falls back to Noto Sans Variable, so dashboard and Designer chrome text keep the calmer Studio tone without component-level font overrides. Sidebar icon controls are borderless floating circles that use the Studio control-shadow token: a compact two-layer shadow tuned for small round controls on an unclipped sidebar layer. Dashboard chrome icons render white in dark mode, including SVG images that need the shared dashboard icon filter. Hover stays neutral, without accent tint, and uses only a very small scale-up, not a vertical lift. The top header shows the public-site globe together with the current project/site name from `SITE_TITLE`, falling back to `Blogposter` until a future Organization/Tenant switcher exists; the project chip and search chip stay borderless at rest and only draw their full outline on hover/focus, with the search input expanding inside the same control when active. Header and sidebar icon bubbles keep accessible `aria-label` names but opt out of duplicate native or floating visual labels. The top workspace navigation itself is transparent so only the floating controls remain visible; active links stay transparent so no tinted background bubble appears behind the current workspace, regular workspace links show their icon and name, while Create remains icon-only. Workspace and subpage inline creation prompts use `--studio-inline-create-*` tokens for width, gaps, control surfaces and shadows so they stay aligned with the floating dashboard controls. The Settings workspace is rendered in the separate right-side `workspace-actions` nav as a lone icon, and the root Home/Settings workspaces are protected from dashboard deletion. The content action bar is fixed to the bottom of the dashboard content area; when development mode is visible, its badge is offset above that bar. The top bar theme button cycles between system, dark and light modes by setting `data-theme` on the document. Designer bootstrap applies the saved theme mode directly and listens for same-origin `blogposter.themeMode` storage changes, so an open Designer iframe follows dashboard theme toggles. Page-to-page navigation inside the admin lane keeps the header and main navigation mounted; the content region updates in place, and the sidebar is only rehydrated when the target page requests a different sidebar or `empty-sidebar`. Dashboard-wide alerts, confirms, custom modal content and text prompts should use `bpDialog` from `ui/shared/dialogs/bpDialog.ts` instead of native `alert`, `confirm` or `prompt` so focus handling, dark mode, reduced motion and buttons stay consistent.
+
+![Login screen](screenshots/Clean%20Login%20Interface.png)
+
+The login screen cycles through the preset accent colors, softly fading the dotted background and form border between each hue.
+
+Elements with `title`, `aria-label`, or `data-label` attributes automatically reveal an animated floating label on hover, mirroring the sidebar tooltip style.
+
+### Maintenance Mode Banner
+
+When maintenance mode is enabled, the admin header surfaces a red maintenance banner above the logo and icon row. The notice spans the full width of the header so it is difficult to miss, and the notification hub automatically offsets itself to drop below the banner while it is visible. Click the banner to confirm that you want to disable maintenance mode—after you confirm, the client requests `setSetting` via the meltdown event bus with your admin token and hides the banner once the backend acknowledges the change.
+
+## Button System
+
+Use the global `.button` classes for consistent actions across the dashboard. Variants such as `.primary`, `.ghost`, `.outline`, `.text` and `.danger` cover common intents, while size modifiers `.sm` and `.lg` adjust height. Apply `.block` for full‑width buttons and wrap related actions in a `.button-group` to handle spacing and wrapping. Buttons accept optional icons via a child `.icon` element and expose an `.is-loading` state for spinners.
+
+Dashboard chrome and floating tools should use the same Studio control tokens instead of bespoke button radii, shadows or transition timings. Edit-mode selection frames, CanvasGrid bounding boxes and resize handles are dashboard chrome too, so keep them on `--studio-border-strong` and `--studio-shadow-*` rather than direct `--user-color` rails. Respect `prefers-color-scheme` and `prefers-reduced-motion` by relying on the existing CSS custom properties rather than hard-coding light colors or animation durations.
+
+Modal actions are standard `.button` instances inside `.bp-dialog__actions`. Use `.primary` for the main action, `.ghost` for cancel/secondary actions and `.danger` only for destructive confirmations.
+
+## Dropdown System
+
+Use normal single-select `<select>` elements for forms and admin widgets. The shared `customSelect` entry enhances them globally into Studio dropdowns, preserving the native select for form submission while rendering the tokenized control, popover, keyboard handling and dark-mode styling. The enhancer also watches dashboard content that is inserted after page changes, so widget-level selects do not need bespoke setup code.
+
+Use `data-native-select="true"` or `data-enhance="native"` only when the browser-native control is required. Multi-selects and selects with `size` greater than one stay native automatically.
+
+## Creating Workspaces and Subpages
+
+  The admin interface includes two "+" buttons for quickly adding content. Clicking either reveals a sliding panel where you pick an icon and enter a name before submitting. The button on the left side of the header creates a workspace and the "+" button at the bottom of the sidebar adds a subpage to the current workspace. When the workspace field is open, existing workspace links are hidden and the "+" icon switches to a "-" so you can click it again to close the panel. The subpage button behaves the same way, hiding its label while the field is open. Each inline field now slides out beside its trigger button and overlays surrounding content with a high z-index. The panel includes an icon chooser on the left, a centered text input, and a corner-down-right confirmation button on the right.
+  The icon chooser loads the complete list of available icons from `/assets/icons` on demand and displays them in a floating grid. After selecting an icon the grid closes automatically and it also collapses when you confirm, which immediately creates the workspace or subpage.
+  Built-in admin seed pages can still opt out of the sidebar through their saved `meta.layout`. Detail pages such as `/admin/pages/edit/:id` use this path so the editor receives the full content area while the top dashboard chrome stays available.
+
+## Admin Lane vs Public Lane
+
+BlogposterCMS separates widgets and pages into **admin** and **public** lanes:
+
+- **Public lane** pages are visible to regular visitors.
+- **Admin lane** pages are only accessible in the dashboard for editing and management tasks.
+
+Each lane has its own widget registry so that sensitive admin widgets are never loaded on the public site. If a page is misconfigured and tries to request admin widgets while rendering publicly, the renderer forces the lane back to `public` for security.
+
+## Access Control and Audit Tools
+
+Open **Settings → Security** (or **Settings → Users & Access**) to manage whether visitors may create their own accounts. The toggle updates the `ALLOW_REGISTRATION` key in the Settings Manager so the backend can enforce it across the public registration API. When the switch is off, only administrators can add users from the Users page and the public registration endpoint rejects new accounts once the initial setup is complete. The panel also links to security tips and highlights whether the first installation step has been finished.
+
+An **Audit Log** page now lives alongside other settings tabs. It embeds the Activity Log widget so you can review recent administrative actions without leaving the settings workspace.
+
+## Widgets Overview
+
+Widgets are small blocks of functionality (text blocks, images, counters, etc.) that you can place on pages. They are stored in the database through the `widgetManager` module.
+
+- Widgets registered for the **public** lane render on live pages.
+- Widgets registered for the **admin** lane appear in the dashboard for building pages or showing statistics.
+
+Layouts and widgets are edited via drag and drop in the admin dashboard. While in edit mode, open the widget drawer and drag widgets onto the grid to place them. The widget manager ensures only users with the appropriate permissions can create or modify widgets.
+When edit mode is active, the content header shows quick action buttons on the right. Use the grid icon to toggle the widgets panel and the X icon to delete the current admin page.
+
+Widgets can provide layout hints when seeded. Administrators may specify width
+and height options such as `halfWidth`, `maxHeight` or `overflow` so the initial
+layout matches the desired size. All built-in admin widgets ship with sensible
+defaults for their width and height so a freshly seeded dashboard is usable
+immediately. Height values above 100 are treated as fixed grid-pixel rows, which
+keeps compact admin widgets from scaling to the full dashboard viewport.
+
+Widgets are arranged with a CanvasGrid drag-and-drop layout. Its twelve columns automatically resize to fill the available space, preventing dead zones at the edges. The admin dashboard grid keeps decorative spacing outside the placement surface so a widget at `x=0` and `y=0` is actually reachable at the top-left of the canvas. The sequence below demonstrates arranging widgets from an empty grid to a customized dashboard.
+
+Each widget now includes a resize toggle to switch between a small four-column width and a large eight-column width, making layout adjustments quick and intuitive.
+
+![Initial grid view](screenshots/Arrange%20Your%20Dashboard%20Freely.png)
+![Adding widgets](screenshots/Perfectly%20Adaptive%20Widgets.png)
+![Final layout](screenshots/Your%20Dashboard,%20Your%20Way.png)
+
+## Module System and JWT Event Bus
+
+All features communicate through the *meltdown* event bus. Events are signed with JSON Web Tokens (JWTs) to enforce permissions. The `motherEmitter` verifies each token before allowing a module to perform an action. Core modules receive high-trust tokens while optional modules run with lower trust levels.
+
+Example event call:
+
+```js
+motherEmitter.emit('dbSelect', {
+  jwt,
+  moduleName: 'myModule',
+  moduleType: 'community',
+  table: 'posts',
+  where: { id: 1 }
+}, callback);
+```
+
+The callback receives results only if the token has the `db.read` permission. This design prevents rogue modules from executing unauthorized database actions.
+
+## Building a Module
+
+1. Create a new folder under `modules/`.
+2. Add an `index.js` that exports an `initialize({ motherEmitter, jwt, isCore })` function.
+3. Inside `initialize`, register any meltdown event listeners your module needs.
+4. Include a `moduleInfo.json` file describing your module. It must define `moduleName`, `version`, `developer` and `description`; other properties like permissions are optional.
+5. Restart the server. The Module Loader will automatically attempt to load the new module inside its sandbox.
+
+Modules should only interact with the rest of the CMS through meltdown events. Refer to existing core modules for practical examples.
+
+
+## Page Hierarchy (No PostType)
+
+BlogposterCMS does not use a traditional `post.type` column. Instead content is organized by nesting pages. When creating a page you may supply `parent_id` to specify its parent. For example, create a page called `Blog` and then create "How to create a page in BlogposterCMS" with `parent_id` set to the Blog page's ID. The second page becomes a subpage. A future update will allow attaching custom fields to the parent; all subpages will automatically inherit values from those fields.
+
+The PlainSpace admin `Content > Collections` page lists public parent pages as collections when they either have public child pages or their page metadata contains `isCollection: true`. The list is derived from `pagesManager.getPagesByLane` and intentionally stays separate from Content Engine taxonomies. The Collections table and the main Pages table can expand parent rows to inspect child pages without introducing a separate taxonomy layer.
+
+## Page Builder and Lightweight UI
+
+
+The admin lane provides a drag‑and‑drop page builder at `/admin/builder`. The builder retrieves the widget registry via `widget.registry.request.v1` and loads widgets dynamically. Because it relies on minimal JavaScript and CSS, the interface remains lightweight and quick to load even on modest devices.
+
+Each design maintains its own undo and redo history so switching between layouts preserves the edits made within each design.
+
+Text and colour tools open in a fixed column between the sidebar and canvas so the layout shifts naturally without overlaying the design. The panel markup is still served from `apps/designer/partials/builder-panel.html`, while the active controller lives in `ui/designer/app/managers/panelManager.js` to keep the renderer lean.
+The text editor toolbar provides buttons for bold, italic, underline, font selection, size adjustments and a single alignment toggle cycling through left, center, right and justified states while showing the current alignment.
+It also offers a global transparency slider that applies the chosen opacity to all existing and future widgets.
+
+A dropdown attached to the Save button lets you enable or disable autosave without leaving the toolbar.
+
+The canvas opens centered in the viewport at a 100% zoom level and can expand up to 4K widths, with the scroll container resizing as the canvas grows so horizontal and vertical scrollbars appear when layouts overflow. Even when zoomed out, the zoom sizer keeps the canvas centered so it no longer drifts to the side.
+
+### Publishing layouts
+
+Clicking **Publish** in the builder opens a side panel beneath the Publish button on the right where you can search existing public pages by slug. Suggestions are limited to the public lane. If the entered path doesn't match an existing public page, the builder will automatically create the page when you publish. A preview below the slug field shows the full URL so you know where the page will live. A checkbox lets you set the page to draft, and a red notice reminds you that draft pages aren't publicly accessible.
+When publishing to an existing page, its current metadata is preserved and the draft toggle reflects the page's status.
+Publishing first saves your current layout template, then creates the page if necessary and attaches the design using the same logic as the Page Content widget so changes show up immediately. After publishing, the builder congratulates you and offers to open the page in a new tab.
+Click **Publish** again or use the panel's close button to dismiss it.
+
+### Widget CSS Layers
+
+Each widget is rendered inside a Shadow DOM to isolate its styles. The builder injects three CSS layers in this order:
+
+1. **Admin styles** – `/assets/css/site.css` provides baseline rules for the dashboard and is imported first.
+2. **Widget styles** – any custom CSS defined for the widget itself is added next inside the shadow root.
+3. **Active theme** – the current theme’s `theme.css` is imported last so themes can override previous layers.
+
+This layering keeps widgets secure from style collisions while allowing themes to customize their appearance. When using the page builder, the active theme is scoped to the preview grid so you can see changes live without the builder interface inheriting those styles.
+
+Themes are intentionally limited to presentation. Feature behavior belongs in widgets, modules or apps, not in theme packages. See the [Theme Contract](theme_contract.md) for the responsibility boundary.
+
+### Color Picker
+
+The builder's colour picker now scans only the active builder grid, listing colours actually used in your layout instead of the whole page. Your most recent selection always appears first in the **Custom colours** row and is pre‑selected when reopening the picker. Clicking the “plus” button opens a pop‑in hue editor directly beneath the chosen swatch, where you can fine‑tune the hex value or pick a new shade. Adjustments update the swatch live; closing the editor and opening it again spawns a new swatch for the next colour. A search field still accepts hex or common colour names to jump straight to a specific value.
+
+## New Features in v0.5.0
+
+- **Permission Groups** – manage permissions using reusable groups in the Users settings. The old Permissions page has been removed.
+- **Layouts Page** – create layout templates under `/admin/layouts` and apply them when building pages.
+- **Notification Hub** – click the Blogposter logo in the header to view recent system notifications.
+- **Widget Templates** – save widget configurations for later reuse from the Templates tab in the widget list.

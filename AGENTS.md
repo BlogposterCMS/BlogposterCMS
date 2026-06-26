@@ -1,0 +1,67 @@
+# Agent Working Guidelines
+
+These rules apply to all automated agents and contributors working in this
+repository. Treat them as project-level defaults unless a more specific
+instruction in a subdirectory says otherwise.
+
+## Working Style
+
+- Understand the existing structure before changing code.
+- Search for similar code, helpers, tests, and documentation before adding new
+  patterns.
+- Prefer reusing existing modules, contracts, components, and design language.
+- Do not introduce new features, new product behavior, or new visual designs
+  unless the task explicitly asks for them.
+- Keep changes focused on the requested problem. Avoid unrelated refactors,
+  formatting churn, or metadata changes.
+- Preserve user or collaborator changes already present in the worktree.
+
+## Code Quality
+
+- Keep code modular, maintainable, and easy for humans to read.
+- Use clear names and small helpers when they reduce real complexity.
+- Add comments where they explain non-obvious decisions, invariants, security
+  boundaries, or tricky flows. Avoid comments that merely restate the code.
+- Prefer typed/structured APIs and parsers over ad-hoc string manipulation when
+  the project already has suitable tools.
+- Use explicit error messages or searchable error codes where they help
+  debugging, especially at boundaries, validation points, transport layers, and
+  user-facing operations.
+- Keep UI logic, data access, transport payloads, and domain logic separated
+  where the existing architecture supports that separation.
+
+## Tests
+
+- Add or update tests for every meaningful behavior change.
+- Prefer focused regression tests near the changed behavior.
+- Add boundary tests when a change protects architecture, module ownership, or
+  public contracts.
+- If tests cannot be run, explain why and name the residual risk.
+
+## Documentation And Changelog
+
+- Update `CHANGELOG.md` for meaningful user-visible, architectural, or
+  operational changes.
+- Update docs when changing public contracts, architecture, setup steps,
+  workflows, module boundaries, or behavior that future contributors need to
+  understand.
+- Keep documentation concise and practical.
+
+## UI And Design
+
+- Preserve the existing UI language unless the task explicitly asks for a
+  redesign.
+- Reuse existing components, controls, tokens, and layout patterns.
+- Do not add decorative UI, marketing-style surfaces, or new interaction models
+  when a smaller refinement fits the request.
+- Verify that changed UI remains usable across expected viewport sizes when
+  practical.
+
+## Safety
+
+- Do not remove or rewrite unrelated files.
+- Do not bypass security, permission, token, or sandbox boundaries.
+- Prefer failing closed for auth, transport, sanitization, and permission
+  checks.
+- Keep generated or build artifacts consistent with the repository's existing
+  workflow.

@@ -1,0 +1,13 @@
+// Styles for login strategy edit page
+
+.login-strategy-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 400px;
+}
+
+.login-strategy-edit input,
+.login-strategy-edit select {
+  padding: 0.4rem 0.6rem;
+}

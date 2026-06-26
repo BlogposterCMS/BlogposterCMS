@@ -1,0 +1,123 @@
+// Styles for Modules List widget
+@use './base' as p;
+
+.modules-list-card {
+  @include p.page-list-card;
+}
+
+.modules-title-bar {
+  @include p.page-title-bar;
+}
+
+.modules-title {
+  @include p.page-title;
+}
+
+.modules-list {
+  @include p.page-list;
+}
+
+.modules-list .empty-state {
+  @include p.page-list-empty-state;
+}
+
+.modules-list li {
+  @include p.page-list-item;
+}
+
+.modules-tabs {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.modules-tab {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  position: relative;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 3px;
+    background: var(--user-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &.active {
+    opacity: 1;
+    font-weight: 600;
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+}
+
+.module-details {
+  @include p.page-details;
+}
+
+.module-name-row {
+  @include p.page-name-row;
+}
+
+.module-name {
+  @include p.page-name;
+}
+
+.module-actions {
+  @include p.page-actions;
+}
+
+.module-meta {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.module-toggle-btn {
+  background: #f6f6f6;
+  border: none;
+  border-radius: 5px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.module-upload-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.module-upload-box {
+  background: white;
+  padding: 20px;
+  border-radius: 6px;
+  text-align: center;
+  width: 300px;
+}
+
+.module-upload-box.dragover {
+  border: 2px dashed #888;
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
+  <defs>
+    <linearGradient id="gradientBrand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#008080"/>
+      <stop offset="50%" stop-color="#FF00FF"/>
+      <stop offset="100%" stop-color="#FFA500"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+  
+  <!-- Subtile, geschwungene Linien -->
+  <path d="M0,200 C500,400 1420,-100 1920,200" stroke="url(#gradientBrand)" stroke-width="2" fill="none" opacity="0.2"/>
+  <path d="M0,400 C500,600 1420,100 1920,400" stroke="url(#gradientBrand)" stroke-width="3" fill="none" opacity="0.15"/>
+  <path d="M0,600 C500,800 1420,300 1920,600" stroke="url(#gradientBrand)" stroke-width="2" fill="none" opacity="0.1"/>
+  <path d="M0,800 C500,1000 1420,500 1920,800" stroke="url(#gradientBrand)" stroke-width="3" fill="none" opacity="0.05"/>
+</svg>

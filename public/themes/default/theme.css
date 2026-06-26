@@ -1,0 +1,11 @@
+:root {
+  --bp-font: Arial, sans-serif;
+  --bp-primary: #333;
+  --bp-background: #fff;
+}
+
+body {
+  font-family: var(--bp-font);
+  color: var(--bp-primary);
+  background: var(--bp-background);
+}

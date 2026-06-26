@@ -1,0 +1,118 @@
+/* ===== Global Buttons ===== */
+:root{
+  --btn-radius: var(--studio-radius-control);
+  --btn-h: var(--studio-control-size);
+  --btn-gap: 8px;
+  --btn-shadow: var(--studio-shadow-soft);
+}
+
+/* Base */
+.app-scope .button{
+  --bg: var(--color-card);
+  --fg: var(--color-text);
+  --bd: var(--color-border);
+  display:inline-flex; align-items:center; justify-content:center;
+  gap: var(--btn-gap);
+  height: var(--btn-h); padding: 0 16px;
+  border-radius: var(--btn-radius);
+  border:1px solid var(--bd);
+  min-width:120px;
+  background: var(--bg); color: var(--fg);
+  font-weight:600; line-height: var(--btn-h);
+  cursor:pointer; user-select:none;
+  transition:
+    filter var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.app-scope .button:disabled,
+.app-scope .button[aria-disabled="true"]{
+  opacity:.6; filter:saturate(.8) brightness(.96); cursor:not-allowed;
+  box-shadow:none; transform:none;
+}
+
+/* Focus */
+.app-scope .button:focus-visible{
+  outline:2px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset:2px;
+}
+.app-scope .button.ghost:focus-visible,
+.app-scope .button.outline:focus-visible{
+  outline-color: color-mix(in srgb, var(--brand) 60%, transparent);
+}
+
+/* Variants */
+.app-scope .button.primary{
+  --bg: var(--color-primary);
+  --fg: var(--color-primary-contrast); --bd: transparent;
+  border-color: var(--bd); box-shadow: var(--btn-shadow);
+}
+.app-scope .button.primary:disabled{
+  filter: saturate(.85) brightness(.95);
+  opacity: .75;
+  box-shadow: none;
+}
+.app-scope .button.ghost{
+  --bg: var(--studio-surface-solid);
+  --fg: var(--studio-text);
+  --bd: var(--studio-border);
+  box-shadow: var(--studio-shadow-soft);
+}
+.app-scope .button.outline{
+  --bg: transparent; --fg: var(--color-text); --bd: var(--brand);
+}
+.app-scope .button.text{
+  --bg: transparent; --fg: var(--brand); --bd: transparent;
+  height:auto; line-height:normal; padding:4px 6px; border:none;
+}
+
+/* Danger */
+.app-scope .button.danger{
+  --bg: linear-gradient(180deg,#ff5a5a,#e33a3a);
+  --fg:#fff; --bd: transparent;
+  box-shadow: var(--btn-shadow);
+}
+.app-scope .button.danger:not(:disabled):hover{ filter: brightness(.97) saturate(1.05); }
+
+/* Hover (keine Kirmes) */
+.app-scope .button:not(:disabled):hover{ filter: brightness(.98); }
+.app-scope .button:not(:disabled):active{ transform: translateY(1px); }
+
+/* Sizes */
+.app-scope .button.sm{ --btn-h: 34px; padding:0 12px; font-weight:600; }
+.app-scope .button.lg{ --btn-h: 48px; padding:0 20px; }
+.app-scope .button.block{ width:100%; min-width:0; }
+
+/* Icon support */
+.app-scope .button .icon{ display:inline-flex; width:1.1em; height:1.1em; line-height:0; }
+.app-scope .button .icon+span,
+.app-scope .button span+.icon{ margin-left:6px; }
+
+/* Loading state */
+.app-scope .button.is-loading{
+  pointer-events:none; position:relative; color:transparent;
+}
+.app-scope .button.is-loading::after{
+  content:""; position:absolute; width:16px; height:16px; border-radius:50%;
+  border:2px solid color-mix(in srgb, var(--fg) 30%, transparent);
+  border-top-color: var(--fg); animation: spin 700ms linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg);} }
+
+/* Button group */
+.app-scope .button-group{
+  display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .app-scope .button{ transition:none; }
+  .app-scope .button.is-loading::after{ animation:none; }
+}
+
+/* Dark mode tweaks */
+[data-theme="dark"] .app-scope .button.ghost{
+  --bd: color-mix(in srgb, var(--color-border) 80%, #000 20%);
+}
+

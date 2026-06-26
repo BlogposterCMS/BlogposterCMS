@@ -1,0 +1,166 @@
+import { applyItemAppearance, applySceneMetadata, normalizeRuntimeOpacity } from './sceneRuntime.js';
+import { hasSceneMotion, registerSceneEffects, requestSceneEffectUpdate } from './runtimeSceneEffects.js';
+import { getRuntimeWidgetSizeContract } from './runtimeWidgetTypes.js';
+import { markRuntimeWidgetShell } from './runtimeWidgetHydration.js';
+const FULL_WIDGET_SIZE_SLOT = 'full';
+function parseFiniteNumber(value) {
+    if (value === null || value === undefined || value === '')
+        return null;
+    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+    return Number.isFinite(num) ? num : null;
+}
+function copyPercentDataset(wrapper, item, key) {
+    if (item[key] != null)
+        wrapper.dataset[key] = String(item[key]);
+}
+function projectPercent(value, scale, divisor, minOne = false) {
+    const raw = Number(value) || 0;
+    const projected = Math.round((raw / divisor) * scale);
+    return minOne ? Math.max(1, projected) : projected;
+}
+function projectRuntimeHeight(value, scale, divisor, mode = 'percent') {
+    const raw = Number(value);
+    if (mode === 'legacyAdminPixels' && Number.isFinite(raw) && raw > 100) {
+        return Math.max(1, Math.round(raw));
+    }
+    return projectPercent(value, scale, divisor, true);
+}
+function projectRuntimeVerticalPosition(value, scale, divisor, mode = 'percent') {
+    const raw = Number(value);
+    if (mode === 'legacyAdminPixels' && Number.isFinite(raw) && raw > 100) {
+        return Math.max(0, Math.round(raw));
+    }
+    return projectPercent(value, scale, divisor);
+}
+function numberFitsSlot(value, min, max) {
+    if (value === null)
+        return true;
+    if (Number.isFinite(min) && value < Number(min))
+        return false;
+    if (Number.isFinite(max) && value > Number(max))
+        return false;
+    return true;
+}
+function slotMatchesRect(slot, width, height) {
+    return (numberFitsSlot(width, slot.minCols, slot.maxCols) &&
+        numberFitsSlot(height, slot.minRows, slot.maxRows));
+}
+function pickRuntimeWidgetSlot(contract, width, height) {
+    const slots = Array.isArray(contract.supportedSlots)
+        ? contract.supportedSlots
+        : [];
+    return slots.find(slot => (slot &&
+        typeof slot.name === 'string' &&
+        slotMatchesRect(slot, width, height))) || null;
+}
+function isFullOnlyWidgetContract(contract) {
+    const slots = Array.isArray(contract?.supportedSlots)
+        ? contract.supportedSlots
+        : [];
+    return slots.length > 0 && slots.every(slot => slot?.name === FULL_WIDGET_SIZE_SLOT);
+}
+function applyRuntimeWidgetSizeContract(wrapper, def, width, height) {
+    const contract = getRuntimeWidgetSizeContract(def);
+    if (!contract)
+        return;
+    if (contract.heightMode) {
+        wrapper.dataset.widgetHeightMode = String(contract.heightMode);
+    }
+    const slot = pickRuntimeWidgetSlot(contract, parseFiniteNumber(width), parseFiniteNumber(height));
+    if (slot) {
+        wrapper.dataset.widgetSizeSlot = slot.name;
+        if (slot.name === FULL_WIDGET_SIZE_SLOT) {
+            wrapper.dataset.widgetHeightMode = 'auto';
+        }
+        delete wrapper.dataset.widgetSizeError;
+        return;
+    }
+    if (Array.isArray(contract.supportedSlots) && contract.supportedSlots.length) {
+        wrapper.dataset.widgetSizeSlot = 'unsupported';
+        wrapper.dataset.widgetSizeError = 'WIDGET_SIZE_UNSUPPORTED';
+    }
+}
+export function resolveRuntimeCanvasRect(item, { scaleX, scaleY, percentDivisor = 100, defaultW = 8, defaultH = 4, def, heightProjectionMode = 'percent' }) {
+    const rect = {
+        x: item.xPercent !== undefined
+            ? projectPercent(item.xPercent, scaleX, percentDivisor)
+            : item.x ?? 0,
+        y: item.yPercent !== undefined
+            ? projectRuntimeVerticalPosition(item.yPercent, scaleY, percentDivisor, heightProjectionMode)
+            : item.y ?? 0,
+        w: item.wPercent !== undefined
+            ? projectPercent(item.wPercent, scaleX, percentDivisor, true)
+            : item.w ?? defaultW,
+        h: item.hPercent !== undefined
+            ? projectRuntimeHeight(item.hPercent, scaleY, percentDivisor, heightProjectionMode)
+            : item.h ?? defaultH
+    };
+    const contract = def ? getRuntimeWidgetSizeContract(def) : null;
+    if (!isFullOnlyWidgetContract(contract) || !Number.isFinite(scaleX) || scaleX <= 0) {
+        return rect;
+    }
+    return {
+        ...rect,
+        x: 0,
+        w: scaleX
+    };
+}
+export function applyRuntimeLayoutMetadata(wrapper, item) {
+    copyPercentDataset(wrapper, item, 'xPercent');
+    copyPercentDataset(wrapper, item, 'yPercent');
+    copyPercentDataset(wrapper, item, 'wPercent');
+    copyPercentDataset(wrapper, item, 'hPercent');
+    const layerRaw = item.layer != null
+        ? item.layer
+        : item.zIndex ?? item.z_index;
+    const layerVal = parseFiniteNumber(layerRaw);
+    if (layerVal !== null)
+        wrapper.dataset.layer = String(layerVal);
+    const rotationVal = parseFiniteNumber(item.rotationDeg ?? item.rotation_deg);
+    if (rotationVal !== null)
+        wrapper.dataset.rotationDeg = String(rotationVal);
+    if (item.opacity != null) {
+        const opacityVal = normalizeRuntimeOpacity(item.opacity);
+        if (opacityVal !== null)
+            wrapper.style.opacity = String(opacityVal);
+    }
+}
+export function createWidgetPlaceholder(def) {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'widget-placeholder';
+    placeholder.textContent = def.metadata?.label || def.id;
+    return placeholder;
+}
+export function createRuntimeCanvasItem({ def, item, x, y, w, h, minW = 4, minH = 4, instanceId = item.id, includeLayoutMetadata = false }) {
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('canvas-item', 'loading');
+    wrapper.dataset.x = String(x);
+    wrapper.dataset.y = String(y);
+    wrapper.setAttribute('gs-w', String(w));
+    wrapper.setAttribute('gs-h', String(h));
+    wrapper.setAttribute('gs-min-w', String(minW));
+    wrapper.setAttribute('gs-min-h', String(minH));
+    wrapper.dataset.widgetId = def.id;
+    wrapper.dataset.instanceId = String(instanceId);
+    applySceneMetadata(wrapper, item);
+    registerSceneEffects(wrapper);
+    if (includeLayoutMetadata)
+        applyRuntimeLayoutMetadata(wrapper, item);
+    applyRuntimeWidgetSizeContract(wrapper, def, w, h);
+    const placeholder = createWidgetPlaceholder(def);
+    wrapper.appendChild(placeholder);
+    markRuntimeWidgetShell(wrapper, placeholder);
+    return { wrapper, placeholder };
+}
+export function mountRuntimeCanvasContent(wrapper, placeholder) {
+    const content = document.createElement('div');
+    content.className = 'canvas-item-content';
+    if (placeholder && placeholder.parentNode === wrapper) {
+        placeholder.remove();
+    }
+    wrapper.appendChild(content);
+    applyItemAppearance(wrapper);
+    if (hasSceneMotion(wrapper))
+        requestSceneEffectUpdate();
+    return content;
+}

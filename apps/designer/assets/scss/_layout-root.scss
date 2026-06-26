@@ -1,0 +1,98 @@
+#layoutRoot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 100%;
+}
+
+.layout-container {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.layout-container > .builder-grid,
+.layout-container.builder-grid {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+#layoutRoot > .builder-grid {
+  flex: 1 1 0;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+body.builder-mode .layout-container > .builder-grid,
+body.builder-mode .layout-container.builder-grid {
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  box-sizing: border-box;
+  min-height: 120px;
+}
+
+body.builder-mode #builderViewport > .builder-grid {
+  width: 100%;
+  height: 100%;
+}
+
+body.builder-mode .layout-container.builder-grid:empty::after {
+  content: attr(data-empty-hint);
+  color: #777;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+body.builder-mode .layout-container[data-workarea='true'] {
+  position: relative;
+  outline: 2px solid #3b82f6;
+}
+
+body.builder-mode .layout-container[data-workarea='true']::after {
+  content: attr(data-workarea-label);
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+body.builder-mode .layout-container.tree-selected {
+  outline: 2px dashed #f97316;
+}
+
+body[data-active-layer='0'] .canvas-item {
+  pointer-events: none;
+}
+
+body[data-active-layer='0'] .layout-bar {
+  display: none;
+}
+
+.layout-placeholder {
+  flex: 1 1 0;
+  min-height: 20px;
+  outline: 2px dashed #9ca3af;
+}
+
+.layout-container.drag-ghost {
+  opacity: 0.5;
+}

@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  security-events: write
+  packages: write
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run vulnerability audit
+        run: npm audit --audit-level=high
+      - name: Build
+        run: npm run build
+      - name: Verify placeholder parity
+        run: npm run placeholder-parity
+      - name: Run test suite
+        run: npm test
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+      - name: Zip Build Artifacts
+        run: zip -r blogposter_cms_build.zip public/build/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blogposter_cms_build
+          path: blogposter_cms_build.zip
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: blogposter_cms_build
+          path: ./release-assets
+
+      - name: Read CHANGELOG.md
+        id: changelog
+        run: |
+          RELEASE_NOTES=$(awk '/^## /{flag=1;next}/^$/{if(flag) exit}flag' CHANGELOG.md)
+          echo "notes<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          body: ${{ env.notes }}
+          artifacts: "./release-assets/blogposter_cms_build.zip"

@@ -1,0 +1,6 @@
+{
+  "moduleName": "workflowManager",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Core editorial workflow domain for content locks, autosaves and review queues."
+}

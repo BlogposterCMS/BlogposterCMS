@@ -1,0 +1,6 @@
+{
+  "moduleName": "translationManager",
+  "version": "0.5.0",
+  "description": "Stores translations for content strings.",
+  "developer": "Blogposter Team"
+}

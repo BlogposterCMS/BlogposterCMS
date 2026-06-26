@@ -1,0 +1,116 @@
+/* =============================================================================
+   components/_designer-loader.scss — Shared skeleton loaders & error states
+   ============================================================================= */
+
+.designer-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.designer-loader {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 45%, rgba(255, 255, 255, 0) 100%);
+    transform: translateX(-100%);
+    animation: designer-loader-shimmer 1.6s infinite;
+  }
+
+  &__bar {
+    position: relative;
+    display: block;
+    height: 0.875rem;
+    width: var(--loader-bar-width, 100%);
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(226, 232, 240, 0.7), rgba(148, 163, 184, 0.25), rgba(226, 232, 240, 0.7));
+    background-size: 200% 100%;
+    animation: designer-loader-bar 1.2s ease-in-out infinite;
+    animation-delay: var(--loader-bar-delay, 0s);
+    mix-blend-mode: plus-lighter;
+  }
+
+  &--sidebar {
+    min-height: 28rem;
+  }
+
+  &--panel {
+    min-height: 20rem;
+  }
+
+  &--section {
+    min-height: 8rem;
+  }
+}
+
+@keyframes designer-loader-shimmer {
+  0% { transform: translateX(-100%); }
+  60% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes designer-loader-bar {
+  0% { background-position: 200% 0; opacity: 0.6; }
+  50% { background-position: 0 0; opacity: 1; }
+  100% { background-position: -200% 0; opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .designer-loader::before,
+  .designer-loader__bar {
+    animation-duration: 3.2s;
+  }
+}
+
+.designer-load-error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.25rem;
+  border-radius: 16px;
+  border: 1px solid rgba(217, 48, 37, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-error) 55%, transparent);
+  background: rgba(217, 48, 37, 0.08);
+  background: color-mix(in srgb, var(--color-error) 8%, var(--color-card));
+  box-shadow: 0 6px 18px rgba(217, 48, 37, 0.08);
+
+  &__title {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-error);
+  }
+
+  &__message {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+
+  &--sidebar {
+    min-height: 12rem;
+  }
+
+  &--panel {
+    min-height: 10rem;
+  }
+}
+

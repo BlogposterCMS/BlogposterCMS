@@ -1,0 +1,6 @@
+{
+  "moduleName": "importer",
+  "version": "0.5.0",
+  "description": "Handles content importers from other platforms.",
+  "developer": "Blogposter Team"
+}

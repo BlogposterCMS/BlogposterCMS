@@ -1,0 +1,94 @@
+@use './base' as p;
+
+.user-list-card {
+  @include p.page-list-card;
+}
+
+.user-title-bar {
+  @include p.page-title-bar;
+}
+
+.user-title {
+  @include p.page-title;
+}
+
+.add-user-btn {
+  @include p.add-page-btn;
+}
+
+.add-group-btn {
+  @include p.add-page-btn;
+}
+
+.users-list {
+  @include p.page-list;
+}
+
+.users-list .empty-state {
+  @include p.page-list-empty-state;
+}
+
+.users-list li {
+  @include p.page-list-item;
+}
+
+.roles-list {
+  @include p.page-list;
+}
+
+.roles-list .empty-state {
+  @include p.page-list-empty-state;
+}
+
+.roles-list li {
+  @include p.page-list-item;
+}
+
+.roles-list .page-name-row {
+  @include p.page-name-row;
+}
+
+.roles-list .page-actions {
+  @include p.page-actions;
+}
+
+.users-tabs {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.users-tab {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  position: relative;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 3px;
+    background: var(--user-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &.active {
+    opacity: 1;
+    font-weight: 600;
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+}

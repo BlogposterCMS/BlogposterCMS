@@ -1,0 +1,6 @@
+{
+  "moduleName": "dummyModule",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Example community module used for testing."
+}

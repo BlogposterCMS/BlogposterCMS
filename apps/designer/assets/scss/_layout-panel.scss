@@ -1,0 +1,21 @@
+  .layout-panel {
+    padding: 16px;
+    h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    p {
+      margin: 0;
+      font-size: 12px;
+      color: #666;
+    }
+    .arrange-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+  }
+

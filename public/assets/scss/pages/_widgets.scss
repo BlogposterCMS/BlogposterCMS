@@ -1,0 +1,78 @@
+@use './base' as p;
+
+.widget-list-card {
+  @include p.page-list-card;
+}
+
+.widget-title-bar {
+  @include p.page-title-bar;
+}
+
+.widget-title {
+  @include p.page-title;
+}
+
+.widget-list {
+  @include p.page-list;
+}
+
+.widget-list .empty-state {
+  @include p.page-list-empty-state;
+}
+
+.widget-list li {
+  @include p.page-list-item;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.widget-name {
+  flex: 1;
+}
+
+.widget-tabs {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.widget-tab {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  position: relative;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 3px;
+    background: var(--user-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &.active {
+    opacity: 1;
+    font-weight: 600;
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+}
+
+.global-widget:hover,
+.template-widget:hover {
+  box-shadow: 0 0 0 2px var(--user-color);
+}

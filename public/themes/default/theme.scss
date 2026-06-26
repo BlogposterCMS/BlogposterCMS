@@ -1,0 +1,19 @@
+/**
+ * Default theme stylesheet.
+ * Provides minimal styling so the builder renders with basic design.
+ */
+$font-stack: Arial, sans-serif;
+$primary: #333;
+$background: #fff;
+
+:root {
+  --bp-font: #{$font-stack};
+  --bp-primary: #{$primary};
+  --bp-background: #{$background};
+}
+
+body {
+  font-family: var(--bp-font);
+  color: var(--bp-primary);
+  background: var(--bp-background);
+}

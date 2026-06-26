@@ -1,0 +1,56 @@
+@use '../../../../public/assets/scss/variables' as *;
+@use '../../../../public/assets/scss/fonts';
+@use '../../../../public/assets/scss/components/grid-mode';
+@use '../../../../public/assets/scss/components/sidebar-bubble';
+@use 'publish-panel';
+@use 'variables';
+@use 'header';
+@use 'sidebar';
+@use 'toolbar';
+@use 'widget-controls';
+@use 'widget-options-menu';
+@use 'widget-action-bar';
+@use 'widget-code-editor';
+@use 'color-picker';
+@use 'canvas';
+@use 'layout-root';
+@use 'layout-panel';
+@use 'workarea';
+@use 'actionbar';
+@use 'place-picker';
+@use 'layout-tree';
+@use 'scene-builder';
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+  color: var(--designer-text);
+  background: var(--designer-canvas);
+  color-scheme: light dark;
+}
+
+// Flex row wrapper for sidebar, content, and publish panel
+  .builder-row {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    min-height: 0;
+  min-width: 0; /* allow children to shrink and not overflow */
+  align-items: stretch;
+    
+  /* Make sure the fixed-width sidebar doesn't shrink */
+  #sidebar { flex-shrink: 0; width: var(--sidebar-width, 72px); }
+
+  /* Builder panel column */
+  #builderPanel { flex-shrink: 0; }
+
+  /* Content should take the remaining space */
+  #content { flex: 1; min-width: 0; }
+  }

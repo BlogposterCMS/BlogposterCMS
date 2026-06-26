@@ -1,0 +1,319 @@
+{
+  "moduleName": "agentManager",
+  "moduleType": "core",
+  "version": "0.1.0",
+  "schemaVersion": "2026-06-17",
+  "description": "Central agent surface and control contract for apps, studio surfaces and automation clients.",
+  "http": {
+    "basePath": "/admin/api/agent",
+    "auth": "admin_jwt cookie or Authorization bearer token",
+    "endpoints": [
+      "GET /capabilities",
+      "GET /definition",
+      "GET /context",
+      "GET /activity",
+      "GET /surfaces",
+      "GET /surfaces/:appName/:surfaceId",
+      "GET /surfaces/:appName/:surfaceId/context",
+      "GET /surfaces/:appName/:surfaceId/inspect",
+      "GET /surfaces/:appName/:surfaceId/preview",
+      "GET /surfaces/:appName/:surfaceId/preview/image",
+      "GET /surfaces/:appName/:surfaceId/actions",
+      "GET /surfaces/:appName/:surfaceId/actions/:action",
+      "GET /surfaces/:appName/:surfaceId/commands",
+      "GET /surfaces/:appName/:surfaceId/commands/:commandId",
+      "POST /surfaces/:appName/:surfaceId/commands",
+      "POST /surfaces/:appName/:surfaceId/commands/observe",
+      "POST /surfaces/:appName/:surfaceId/commands/validate",
+      "POST /surfaces/:appName/:surfaceId/commands/:commandId/wait",
+      "POST /surfaces/:appName/:surfaceId/refresh",
+      "POST /surfaces/:appName/:surfaceId/workflows/validate",
+      "POST /surfaces/:appName/:surfaceId/workflows"
+    ]
+  },
+  "services": [],
+  "permissions": {
+    "read": ["agent.view", "agent.control", "builder.use", "builder.manage"],
+    "surfaceWrite": ["agent.surface.write", "agent.control", "builder.use", "builder.manage"],
+    "control": ["agent.control", "builder.manage", "builder.use"]
+  },
+  "events": [
+    {
+      "eventName": "agent.getCapabilities",
+      "access": "read",
+      "description": "Returns the agent manager capability map and surface contract.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType"]
+      },
+      "returns": "AgentCapabilities"
+    },
+    {
+      "eventName": "agent.getApiDefinition",
+      "access": "read",
+      "description": "Returns the full machine-readable agent manager API definition.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType"]
+      },
+      "returns": "AgentApiDefinition"
+    },
+    {
+      "eventName": "agent.getSystemContext",
+      "access": "read",
+      "description": "Returns compact context for all known agent surfaces, optionally filtered by app, surface type or surface id.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType"],
+        "optional": ["filterAppName", "surfaceType", "surfaceIdFilter", "activeOnly", "staleOnly", "includeActions", "includeControls", "includePreview", "limit"]
+      },
+      "returns": "AgentSystemContext"
+    },
+    {
+      "eventName": "agent.listSurfaceSnapshots",
+      "access": "read",
+      "description": "Lists known surface snapshots as summaries by default.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType"],
+        "optional": ["appName", "surfaceType", "includeTree", "limit"]
+      },
+      "returns": "AgentSurfaceSnapshotSummary[]"
+    },
+    {
+      "eventName": "agent.getSurfaceSnapshot",
+      "access": "read",
+      "description": "Returns the latest full snapshot for one app surface.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"]
+      },
+      "returns": "AgentSurfaceSnapshot"
+    },
+    {
+      "eventName": "agent.getSurfaceContext",
+      "access": "read",
+      "description": "Returns compact state, selection, actions, controls, visual metadata and recent commands for one surface.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["includeTree", "includePreview", "includeCommands", "includeControls", "includeActions", "commandLimit"]
+      },
+      "returns": "AgentSurfaceContext"
+    },
+    {
+      "eventName": "agent.getSurfacePreview",
+      "access": "read",
+      "description": "Returns the latest compact visual preview envelope for one surface without requiring the full snapshot or context.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["includeData", "includePreview"]
+      },
+      "returns": "AgentSurfacePreview"
+    },
+    {
+      "eventName": "agent.inspectSurface",
+      "access": "read",
+      "description": "Returns one agent-ready inspection bundle for a surface: compact context, preview metadata, advertised actions and recent activity.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["includeTree", "includePreview", "includeData", "includeCommands", "includeControls", "includeActions", "includeActivity", "commandLimit", "activityLimit", "category"]
+      },
+      "returns": "AgentSurfaceInspection"
+    },
+    {
+      "eventName": "agent.listSurfaceActions",
+      "access": "read",
+      "description": "Lists the action catalog advertised by the latest surface snapshot.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["category"]
+      },
+      "returns": "AgentSurfaceAction[]"
+    },
+    {
+      "eventName": "agent.getSurfaceAction",
+      "access": "read",
+      "description": "Returns one advertised surface action definition by id or action name.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "action"]
+      },
+      "returns": "AgentSurfaceAction"
+    },
+    {
+      "eventName": "agent.listActivity",
+      "access": "read",
+      "description": "Lists recent central AgentManager activity such as surface snapshots, queued commands, deliveries and acknowledgements.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType"],
+        "optional": ["appName", "surfaceId", "surfaceIdFilter", "type", "commandId", "since", "limit"]
+      },
+      "returns": "AgentActivityEvent[]"
+    },
+    {
+      "eventName": "agent.validateSurfaceCommand",
+      "access": "read",
+      "description": "Validates a command against the latest advertised action catalog without queueing it.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "command.action"],
+        "optional": ["command.target", "command.params", "command.value", "command.reason"]
+      },
+      "returns": "AgentSurfaceCommandValidation"
+    },
+    {
+      "eventName": "agent.validateSurfaceWorkflow",
+      "access": "read",
+      "description": "Validates a bounded command sequence against the latest advertised action catalog without executing it.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "steps[].action"],
+        "optional": ["steps", "commands", "haltOnFailure"]
+      },
+      "returns": "AgentSurfaceWorkflowValidation"
+    },
+    {
+      "eventName": "agent.pollSurfaceCommands",
+      "access": "read",
+      "description": "Delivers queued commands to the owning surface and marks them as delivered.",
+      "permissions": "surfaceWrite",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["limit"]
+      },
+      "returns": "AgentSurfaceCommand[]"
+    },
+    {
+      "eventName": "agent.listSurfaceCommands",
+      "access": "read",
+      "description": "Lists recent commands for a surface.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["limit"]
+      },
+      "returns": "AgentSurfaceCommand[]"
+    },
+    {
+      "eventName": "agent.getSurfaceCommand",
+      "access": "read",
+      "description": "Returns one command by id for a surface.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "commandId"]
+      },
+      "returns": "AgentSurfaceCommand"
+    },
+    {
+      "eventName": "agent.waitForSurfaceCommand",
+      "access": "read",
+      "description": "Waits centrally until a command reaches a final state or the timeout expires.",
+      "permissions": "read",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "commandId"],
+        "optional": ["timeoutMs", "intervalMs"]
+      },
+      "returns": "AgentSurfaceCommand"
+    },
+    {
+      "eventName": "agent.publishSurfaceSnapshot",
+      "access": "write",
+      "description": "Publishes the current state, controls, action catalog and optional visual preview of an app surface.",
+      "permissions": "surfaceWrite",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["surfaceType", "title", "route", "url", "status", "summary", "state", "selection", "tree", "controls", "actions", "visual", "metrics", "meta", "appContext"]
+      },
+      "returns": "AgentSurfaceSnapshot"
+    },
+    {
+      "eventName": "agent.enqueueSurfaceCommand",
+      "access": "write",
+      "description": "Queues a validated command for a surface based on its latest advertised action catalog.",
+      "permissions": "control",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "command.action"],
+        "optional": ["command.target", "command.params", "command.value", "command.reason"]
+      },
+      "returns": "AgentSurfaceCommand"
+    },
+    {
+      "eventName": "agent.invokeSurfaceCommand",
+      "access": "write",
+      "description": "Queues a validated command and optionally waits for the surface to acknowledge or fail it.",
+      "permissions": "control",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "command.action"],
+        "optional": ["command.target", "command.params", "command.value", "command.reason", "wait", "waitForResult", "timeoutMs", "intervalMs"]
+      },
+      "returns": "AgentSurfaceCommand"
+    },
+    {
+      "eventName": "agent.invokeSurfaceCommandAndObserve",
+      "access": "write",
+      "description": "Queues a validated command, waits by default, then returns the command, compact surface context and related activity.",
+      "permissions": "control",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "command.action"],
+        "optional": ["command.target", "command.params", "command.value", "command.reason", "wait", "waitForResult", "timeoutMs", "intervalMs", "observeDelayMs", "waitForFreshSnapshot", "snapshotTimeoutMs", "snapshotIntervalMs", "includeContext", "includeActivity", "includeTree", "includePreview", "includeCommands", "includeControls", "includeActions", "commandLimit", "activityLimit"]
+      },
+      "returns": "AgentCommandObservation"
+    },
+    {
+      "eventName": "agent.refreshSurface",
+      "access": "write",
+      "description": "Requests the standard surface.refresh action and returns an observed fresh surface context when the surface supports it.",
+      "permissions": "control",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId"],
+        "optional": ["reason", "wait", "waitForResult", "timeoutMs", "intervalMs", "observeDelayMs", "waitForFreshSnapshot", "snapshotTimeoutMs", "snapshotIntervalMs", "includeContext", "includeActivity", "includeTree", "includePreview", "includeCommands", "includeControls", "includeActions", "commandLimit", "activityLimit"]
+      },
+      "returns": "AgentCommandObservation"
+    },
+    {
+      "eventName": "agent.invokeSurfaceWorkflow",
+      "access": "write",
+      "description": "Runs a bounded sequence of validated surface commands, observing each step through the central manager.",
+      "permissions": "control",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "steps[].action"],
+        "optional": ["steps", "commands", "haltOnFailure", "wait", "waitForResult", "timeoutMs", "intervalMs", "observeDelayMs", "waitForFreshSnapshot", "snapshotTimeoutMs", "snapshotIntervalMs", "includeContext", "includeActivity", "includeTree", "includePreview", "includeCommands", "includeControls", "includeActions", "commandLimit", "activityLimit"]
+      },
+      "returns": "AgentSurfaceWorkflow"
+    },
+    {
+      "eventName": "agent.ackSurfaceCommand",
+      "access": "write",
+      "description": "Acknowledges or fails a delivered command from the owning surface.",
+      "permissions": "surfaceWrite",
+      "payload": {
+        "required": ["jwt", "moduleName", "moduleType", "appName", "surfaceId", "commandId"],
+        "optional": ["status", "result", "error"]
+      },
+      "returns": "AgentSurfaceCommand"
+    }
+  ],
+  "surfaceContract": {
+    "required": ["surfaceId", "appName"],
+    "snapshotFields": ["title", "surfaceType", "route", "url", "summary", "state", "selection", "tree", "controls", "actions", "visual"],
+    "actionFields": ["action", "label", "category", "description", "params", "requiresSelection"],
+    "commandFields": ["action", "target", "params", "value", "reason", "waitForResult", "timeoutMs", "waitForFreshSnapshot", "snapshotTimeoutMs"],
+    "standardActions": [
+      {
+        "action": "surface.refresh",
+        "label": "Refresh surface snapshot",
+        "category": "surface",
+        "description": "Asks the surface to publish a fresh agent-visible snapshot without changing domain state."
+      }
+    ]
+  },
+  "commandLifecycle": {
+    "states": ["queued", "delivered", "acked", "failed", "cancelled"],
+    "finalStates": ["acked", "failed", "cancelled"]
+  }
+}

@@ -56,7 +56,8 @@ is configured to allow it.
 
 Version 0.5.0 uses the Blogposter logo in the admin header. Clicking the logo opens the
 Notification Hub, which lists recent events fetched via the
-`getRecentNotifications` meltdown event. This provides quick visibility into
-errors or status messages without checking server logs.
+`runtimeManager.cmsAdminApiRequest` facade (`notifications.recent`). This
+provides quick visibility into errors or status messages without checking
+server logs while keeping the raw notification event behind the core contract.
 
 For a deeper look at the implementation, see the [Notification Manager](modules/notificationManager.md) documentation.

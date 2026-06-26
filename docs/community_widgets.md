@@ -1,43 +1,73 @@
 # Community Widgets
 
-This document outlines a safe approach for loading widgets created by third‑party developers.
+Community widgets are public UI assets, not backend capabilities.
+They follow the [Widget Design Contract](widget_design_contract.md) in
+advisory mode: design drift is reported as warnings, while security and
+capability-boundary violations still block registration.
 
-## Folder structure
+## Folder Structure
 
-Community widgets should live under `widgets/{folderName}`.
-Each widget has its own subfolder containing:
+Community widgets live under `widgets/{folderName}`. Folder names may contain
+only letters, numbers, underscores and dashes. Each widget folder contains:
 
-- `widget.js` – the client-side widget code.
-- `widgetInfo.json` – metadata used for registration. It may declare an `apiEvents`
-  array listing the meltdown events the widget plans to call so the client can
-  pre-register those endpoints before `widget.js` executes.
+- `widget.js`: client-side rendering code.
+- `widgetInfo.json`: registration metadata with `widgetId`,
+  `widgetType: "public"`, `label` and `category`. It must not declare
+  `moduleType`; widgets are UI assets, not modules.
 
-System and Blogposter widgets remain in `public/plainspace/widgets/admin` or `public/plainspace/widgets/public`.
-Keeping community code separate avoids accidental mixing of trusted and unknown code.
+System and Blogposter widgets live under `ui/widgets/plainspace/`.
+The old `/plainspace/widgets/*` browser URLs remain as compatibility shims that
+forward into `ui/widgets/plainspace`. The runtime resolver canonicalizes those
+legacy shim URLs before importing so saved dashboard layouts keep working
+without widening the widget import guard. Keeping community code separate avoids
+mixing trusted admin UI with unknown widget code.
+The server exposes `widgets/` at `/widgets/` as static browser assets with
+TypeScript source requests blocked; community widgets should ship JavaScript
+browser modules only.
+Widget folders must not include `app.json`, `moduleInfo.json`, nested
+`widgetInfo.json`, `.env*`, package-manager config files, package
+manifests/lockfiles or `node_modules`. A community widget is a browser asset
+package, not an app, module or Node runtime.
 
-## Registration process
+## Registration
 
-The Widget Manager automatically scans the community folder during startup:
+The Widget Manager scans the community folder during startup:
 
-1. Read `widgetInfo.json` for each widget and verify required fields (`widgetId`, `widgetType`, `label`, `category`).
-2. Pre-register any `apiEvents` declared in the metadata. Event names are sanitized
-   and sent with a JWT so the server can prepare the endpoints ahead of time.
-3. Run a short health check by executing `widget.js` in a Node `vm` context to ensure it does not access restricted globals.
-4. Use the existing `createWidget` event from `widgetManager` to insert or update the widget entry in the database. The `content` field should store the public path to `widget.js`.
-5. Mark widgets in the database so they can be disabled or removed later from the admin interface.
+1. Read `widgetInfo.json` and validate the required fields.
+2. Read `widget.js` and run the static security scanner.
+3. Validate the folder shape and register the widget through the core
+   `createWidget` event with `content` pointing at
+   `/widgets/{folderName}/widget.js`.
 
-This process mirrors the security model of the community `moduleLoader` and keeps untrusted code isolated.
+Community metadata does not declare backend events. Community widgets are
+registered as assets only; they do not gain direct `motherEmitter`, Meltdown,
+raw database, token or module access, and they cannot claim a core module role.
 
-## Deleting widgets
+## Security Rules
 
-Because each community widget is registered in the database with its own `widgetId`, administrators can remove widgets by deleting the folder and issuing a `deleteWidget` event. Keeping the metadata in `widgetInfo.json` makes cleanup straightforward.
+- Community widgets must render UI and may query public read APIs.
+- Community widgets must be public widgets. Admin widgets are trusted UI modules
+  under `ui/widgets/plainspace/`, not files loaded from
+  `widgets/`.
+- They must not call `/api/meltdown`, `meltdownEmit`, raw core events, admin
+  tokens, CSRF token metadata, cookies, authenticated fetches, browser storage,
+  remote fetch/import URLs, WebSocket/EventSource/sendBeacon, `eval`, the
+  `Function` constructor, Node `require`, `process`, or filesystem APIs.
+- Administrators can remove a community widget by deleting its folder and using
+  the trusted admin UI to delete the database row.
 
-## Security considerations
+This keeps custom widgets useful for presentation while preserving the
+architecture boundary: modules own backend behavior, apps use the read-only app
+bridge, and community widgets stay as isolated UI assets.
 
-- Run the health check in a minimal sandbox and restrict available modules using the `dependencyLoader` rules.
-- Serve community widget scripts with a strict `Content-Security-Policy` so they cannot fetch remote code.
-- Never give community widgets admin permissions. They should only manipulate the page DOM.
-- Declaring `apiEvents` limits widgets to approved meltdown events; unlisted
-  events are rejected, reducing the risk of privilege escalation.
+## Design Contract
 
-Following these guidelines keeps potentially malicious widgets isolated while still allowing user customization.
+Community widgets should use Blogposter design tokens with `var(--...)`, keep
+styles scoped to their own widget root, and avoid raw color literals or global
+document styling. The Widget Manager reports `BP_WIDGET_CONTRACT_*` warnings
+for design-only drift but does not block community registration unless the
+existing security scanner also finds a hard violation.
+
+Bundled, admin, core, and generated widgets are stricter: those must satisfy
+the v1 design contract before registration so first-party surfaces stay aligned
+with the Designer and shell tokens.

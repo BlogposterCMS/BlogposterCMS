@@ -1,0 +1,73 @@
+/* =============================================================================
+   components/_floating-labels.scss — Global floating labels using sidebar style
+   ============================================================================= */
+
+%floating-label-base {
+
+  &::after {
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%) translateX(0) scale(0.8);
+    transform-origin: left center;
+    background: var(--color-white);
+    padding: 4px 8px;
+    border-radius: 4px;
+    box-shadow: var(--shadow-card);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-text);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  &:hover::after,
+  &:focus::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(8px) scale(1);
+  }
+}
+
+[data-label] {
+  @extend %floating-label-base;
+  &::after { content: attr(data-label); }
+}
+
+[aria-label] {
+  @extend %floating-label-base;
+  &::after { content: attr(aria-label); }
+}
+
+[title] {
+  @extend %floating-label-base;
+  &::after { content: attr(title); }
+}
+
+[alt] {
+  @extend %floating-label-base;
+  &::after { content: attr(alt); }
+}
+
+/* Header controls use their own visible labels/icon layout. Keep aria-labels
+   for assistive tech without drawing duplicate floating labels in the chrome. */
+:where(.top-header, .main-header, .content-header, .sidebar) {
+  [data-label],
+  [aria-label],
+  [title],
+  [alt] {
+    &::after {
+      content: none;
+      display: none;
+    }
+
+    &:hover::after,
+    &:focus::after {
+      opacity: 0;
+      transform: none;
+    }
+  }
+}
+

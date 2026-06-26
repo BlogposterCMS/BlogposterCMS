@@ -1,0 +1,23 @@
+/* =============================================================================
+   Cards (optional)
+   ============================================================================= */
+
+   .app-scope {
+    .card {
+      background-color: var(--studio-surface-solid);
+      border: 1px solid var(--studio-border);
+      border-radius: var(--studio-radius-panel);
+      box-shadow: var(--studio-shadow-soft);
+      padding: 16px;
+      position: relative;
+  
+      &--paragraph {
+        background-color: #F3E8FF;
+      }
+  
+      &--quote,
+      &--image {
+        border: 2px solid var(--gradient-primary);
+      }
+    }
+  }

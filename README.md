@@ -1,8 +1,8 @@
-[![Tests](https://github.com/m41130/BlogposterCMS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/m41130/BlogposterCMS/actions/workflows/ci.yml)  
+[![Tests](https://github.com/BlogposterCMS/BlogposterCMS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/BlogposterCMS/BlogposterCMS/actions/workflows/ci.yml)
 ![ALPHA status](https://img.shields.io/badge/status-alpha-red)
 
-⚠️ **Version 0.7 – Breaking Changes Ahead**  
-This release **will break existing setups**.  
+⚠️ **Version 0.7 – Breaking Changes Ahead**
+This release **will break existing setups**.
 
 
 #  BlogposterCMS
@@ -103,7 +103,7 @@ CLI coming soon to save you from manual setup.
 ##  Docs & Dev Guide
 
 Full docs in [`docs/index.md`](./docs/index.md).
-Sample module: [`modules/dummyModule`](./BlogposterCMS/modules/dummyModule).
+Sample module: [`modules/dummyModule`](./modules/dummyModule).
 
 ---
 

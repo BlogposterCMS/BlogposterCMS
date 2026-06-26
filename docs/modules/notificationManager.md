@@ -1,5 +1,14 @@
 # Notification Manager
 
+## Boundaries
+
+Notification Manager bridges internal system notifications to configured
+integrations. Apps, widgets and community modules do not instantiate
+integrations or read notification history directly. Recent notification reads
+go through Runtime Manager or the scoped `getRecentNotifications` event with
+`moduleName: "notificationManager"`, `moduleType: "core"` and
+`notifications.read` when a user principal is present.
+
 Dispatches system notifications to configured integrations such as email, Slack or
 custom web hooks.
 
@@ -11,7 +20,16 @@ custom web hooks.
 - Listens to the internal `notificationEmitter` and forwards messages to active integrations.
 
 ## Listened Events
-- The manager primarily listens on `notificationEmitter` for `notify` events. It also exposes a meltdown event `getRecentNotifications` to fetch log entries for the admin UI.
+- The manager primarily listens on `notificationEmitter` for `notify` events.
+- It exposes the core event `getRecentNotifications`; browser/admin callers
+  reach it through `runtimeManager.cmsAdminApiRequest` resource
+  `notifications`, action `recent`.
+- The runtime facade requires the `notifications.read` permission for recent
+  notification reads.
+- Direct `getRecentNotifications` event payloads must be scoped as
+  `moduleName: "notificationManager"` and `moduleType: "core"` with a valid
+  JWT. If a decoded user JWT is present, it must include
+  `notifications.read`.
 
 Each integration can perform its own security checks before sending data
 externally. If an integration exposes a `verify` function, the manager calls it

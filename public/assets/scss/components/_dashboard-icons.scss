@@ -1,0 +1,32 @@
+/* =============================================================================
+   components/_dashboard-icons.scss - Shared dashboard icon color handling
+   ============================================================================= */
+
+@mixin dark-dashboard-icons {
+  .sidebar .sidebar-nav .sidebar-item .icon,
+  .sidebar .sidebar-nav .sidebar-add-subpage .icon,
+  .main-header .nav-icons a .icon,
+  .main-header .nav-icons .nav-button .icon,
+  .top-header .top-header__icon-button .icon,
+  .top-header .left-icons a .icon,
+  .top-header .right-icons a .icon,
+  .content-header .icon,
+  .icon-btn img,
+  .icon-btn svg {
+    color: #fff;
+    fill: #fff;
+    stroke: #fff;
+    filter: brightness(0) invert(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @include dark-dashboard-icons;
+  }
+}
+
+:root[data-theme="dark"] {
+  @include dark-dashboard-icons;
+}

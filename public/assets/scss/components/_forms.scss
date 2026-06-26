@@ -1,0 +1,98 @@
+.app-scope form:not(.step) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* optimaler Abstand zwischen Feldern */
+  position: relative;
+}
+
+.app-scope .field {
+  position: relative;
+  width: 100%;
+}
+
+.app-scope .field input,
+.app-scope .field textarea {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--studio-radius-panel);
+  border: 1px solid var(--studio-border);
+  background-color: var(--studio-surface-muted);
+  font-size: 15px;
+  color: var(--studio-text);
+  transition:
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow 0.2s ease,
+    --user-color 5s;
+  box-shadow: none;
+}
+
+.app-scope .field input:focus,
+.app-scope .field textarea:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: var(--studio-focus-ring);
+  background-color: var(--studio-surface-solid);
+}
+
+.app-scope .field label {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--studio-text-muted);
+  pointer-events: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.app-scope .field input:not(:placeholder-shown) + label,
+.app-scope .field input:focus + label,
+.app-scope .field textarea:not(:placeholder-shown) + label,
+.app-scope .field textarea:focus + label {
+  top: -7px;
+  left: 14px;
+  font-size: 12px;
+  color: var(--user-color);
+  background: var(--studio-surface-solid);
+  padding: 0 4px;
+  font-weight: 500;
+  transition: color 0.2s ease, --user-color 5s;
+}
+
+.app-scope form .button {
+  margin-top: 14px;
+}
+
+// Dashboard checkbox styling
+.app-scope input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 4px;
+  background: var(--studio-surface-solid);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  position: relative;
+
+  &:checked {
+    background: var(--user-color, #007bff);
+    border-color: var(--user-color, #007bff);
+
+    &::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+    }
+  }
+
+  &:hover {
+    border-color: var(--user-color, #007bff);
+  }
+}

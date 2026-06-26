@@ -50,7 +50,7 @@ module.exports = {
 - Disable a compromised strategy with the `setLoginStrategyEnabled` event.
 
 ## Enabling or Disabling Strategies
-Use `setLoginStrategyEnabled` with a core JWT to toggle a strategy:
+Use `setLoginStrategyEnabled` with a core JWT from an admin principal that has `auth.strategies.manage` to toggle a strategy:
 ```js
 motherEmitter.emit(
   'setLoginStrategyEnabled',
@@ -64,4 +64,7 @@ motherEmitter.emit(
   callback
 );
 ```
-List current strategies with `listActiveLoginStrategies`.
+List the admin strategy configuration through `runtimeManager.cmsAdminApiRequest`
+resource `auth`, action `loginStrategies`; it requires
+`auth.strategies.view` or `auth.strategies.manage`. Public login discovery uses
+the read-only `listActiveLoginStrategies` public-token contract.

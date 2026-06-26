@@ -15,9 +15,6 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: BlogposterCMS
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -25,7 +22,7 @@ jobs:
         with:
           node-version: "20"
           cache: 'npm'
-          cache-dependency-path: BlogposterCMS/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: Run vulnerability audit
@@ -40,7 +37,6 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
-          source-root: BlogposterCMS
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
       - name: Zip Build Artifacts
@@ -50,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: blogposter_cms_build
-          path: BlogposterCMS/blogposter_cms_build.zip
+          path: blogposter_cms_build.zip
 
   release:
     needs: validate

@@ -1,0 +1,171 @@
+.custom-select__native {
+  display: none !important;
+}
+
+.custom-select {
+  --custom-select-control-h: var(--studio-control-size, 40px);
+  --custom-select-radius: var(--studio-radius-control, 999px);
+  --custom-select-source-width: auto;
+
+  position: relative;
+  display: inline-grid;
+  width: var(--custom-select-source-width);
+  min-width: min(220px, 100%);
+  max-width: 100%;
+  color: var(--studio-text, var(--color-text));
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+}
+
+.app-scope .field .custom-select,
+.app-scope .custom-select[data-full-width="true"] {
+  width: 100%;
+}
+
+.custom-select .display {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--custom-select-control-h);
+  padding: 0 14px 0 18px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--custom-select-radius);
+  background: var(--studio-surface-solid);
+  color: inherit;
+  box-shadow: var(--studio-shadow-control);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-base) var(--motion-ease-standard),
+    background-color var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.custom-select .display:hover,
+.custom-select.open .display {
+  background: var(--studio-surface-solid);
+  border-color: var(--studio-border-strong);
+  transform: scale(1.012);
+}
+
+.custom-select .display:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: var(--studio-focus-ring), var(--studio-shadow-control);
+}
+
+.custom-select.is-disabled {
+  opacity: 0.6;
+}
+
+.custom-select.is-disabled .display {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.custom-select__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select__chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  background: currentColor;
+  opacity: 0.7;
+  mask: url('/assets/icons/chevron-down.svg') center / contain no-repeat;
+  transform-origin: center;
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.custom-select.open .custom-select__chevron {
+  opacity: 0.9;
+  transform: rotate(180deg);
+}
+
+.custom-select .options {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 100%;
+  max-height: min(280px, 48vh);
+  padding: 6px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-shadow-lift);
+  opacity: 0;
+  pointer-events: none;
+  overflow: auto;
+  transform: translateY(-4px) scale(0.985);
+  transform-origin: top center;
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.custom-select.open .options {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.custom-select .option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.custom-select .option:hover,
+.custom-select .option:focus-visible,
+.custom-select .option[aria-selected="true"] {
+  outline: none;
+  background: var(--studio-surface-muted);
+}
+
+.custom-select .option:disabled,
+.custom-select .option.disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .custom-select .display,
+  .custom-select__chevron,
+  .custom-select .options,
+  .custom-select .option {
+    transition: none;
+  }
+
+  .custom-select .display:hover,
+  .custom-select.open .display,
+  .custom-select .options,
+  .custom-select.open .options {
+    transform: none;
+  }
+}

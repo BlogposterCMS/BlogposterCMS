@@ -1,0 +1,6 @@
+{
+  "moduleName": "mediaManager",
+  "version": "0.7.0",
+  "description": "Manages media library files, folders, attachments, variants and content relations.",
+  "developer": "Blogposter Team"
+}

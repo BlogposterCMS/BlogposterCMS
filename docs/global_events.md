@@ -3,7 +3,7 @@
 The frontend exposes a small helper, `bindGlobalListeners`, that attaches a unified set of event listeners to any element. It forwards both element and window events through a callback so modules can react without wiring up dozens of handlers.
 
 ```js
-import { bindGlobalListeners } from '/plainspace/grid-core/globalEvents.js';
+import { bindGlobalListeners } from '/ui/runtime/grid-core/globalEvents.js';
 
 bindGlobalListeners(rootElement, (eventName, event) => {
   // handle event
@@ -41,7 +41,7 @@ Calling `bindGlobalListeners` automatically registers all of the above. Events t
 
 ### Are they implemented?
 
-Yes. The source lives in [`public/plainspace/grid-core/globalEvents.js`](../BlogposterCMS/public/plainspace/grid-core/globalEvents.js). The tests exercise public event handling in `tests/publicEvents.test.js`, ensuring the bindings work.
+Yes. The source lives in [`ui/runtime/grid-core/globalEvents.js`](../ui/runtime/grid-core/globalEvents.js). The legacy `/plainspace/grid-core/globalEvents.js` URL remains available as a compatibility shim. The tests exercise public event handling in `tests/publicEvents.test.js`, ensuring the bindings work.
 
 ### Example Usage
 

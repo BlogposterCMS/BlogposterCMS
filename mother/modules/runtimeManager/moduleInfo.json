@@ -1,0 +1,6 @@
+{
+  "moduleName": "runtimeManager",
+  "version": "0.1.0",
+  "description": "Connects public HTTP runtime routes to core content, SEO and redirect events.",
+  "developer": "Blogposter Team"
+}

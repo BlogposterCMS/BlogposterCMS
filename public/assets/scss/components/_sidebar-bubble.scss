@@ -1,0 +1,115 @@
+/* =============================================================================
+   components/_sidebar-bubble.scss — Bubble-Style Sidebar
+   ============================================================================= */
+.sidebar {
+
+  // Keep bubble shadows painted above the adjacent dashboard content plane.
+  position: relative;
+  left: 0;
+  height: 100vh;
+  width: 88px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 18px 0;
+  overflow: visible;
+  z-index: 10;
+
+    .sidebar-nav {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: visible;
+
+      .sidebar-item {
+        position: relative;
+        z-index: 1;
+        width: var(--studio-control-size);
+        height: var(--studio-control-size);
+        margin: 7px 0;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--studio-surface-solid);
+        border: 0;
+        border-radius: var(--studio-radius-control);
+        box-shadow: var(--studio-shadow-control);
+        transform-origin: center;
+        transition:
+          background var(--motion-duration-base) var(--motion-ease-standard),
+          box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+          transform var(--motion-duration-base) var(--motion-ease-standard);
+
+        .icon {
+          width: 20px;
+          height: 20px;
+          display: block;
+          margin: auto;
+          fill: var(--studio-text);
+          opacity: 0.68;
+          transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+        }
+
+        .label {
+          position: absolute;
+          top: 50%;
+          left: 100%;
+          transform: translateY(-50%) translateX(0) scale(0.8);
+          transform-origin: left center;
+          background: var(--studio-surface-solid);
+          padding: 6px 10px;
+          border: 1px solid var(--studio-border);
+          border-radius: var(--studio-radius-control);
+          box-shadow: var(--studio-shadow-soft);
+          font-family: var(--font-body);
+          font-size: 13px;
+          color: var(--studio-text);
+          white-space: nowrap;
+          opacity: 0;
+          transition:
+            opacity var(--motion-duration-base) var(--motion-ease-standard),
+            transform var(--motion-duration-base) var(--motion-ease-standard);
+          pointer-events: none;
+          z-index: 1000;
+        }
+
+        &:hover {
+          background: var(--studio-surface-solid);
+          box-shadow: var(--studio-shadow-control);
+          transform: scale(1.045);
+          .label {
+            opacity: 1;
+            transform: translateY(-50%) translateX(8px) scale(1);
+          }
+        }
+
+        &.active {
+          background: color-mix(in srgb, var(--user-color) 10%, var(--studio-surface-solid));
+          box-shadow: var(--studio-shadow-control);
+          .icon {
+            opacity: 0.96;
+          }
+        }
+      }
+
+      .sidebar-add-subpage {
+        @extend .sidebar-item;
+        margin-top: 8px;
+      }
+    }
+  }
+
+@media (max-width: 700px) {
+  .sidebar {
+    width: 64px;
+    padding: 16px 10px 0;
+  }
+  .sidebar .sidebar-nav .sidebar-item {
+    margin: 4px 0;
+  }
+}

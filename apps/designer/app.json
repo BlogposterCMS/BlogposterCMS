@@ -1,0 +1,29 @@
+{
+  "name": "designer",
+  "title": "Design Studio",
+  "icon": "layout",
+  "entry": "designer",
+  "permissions": ["builder.use"],
+  "requiredEvents": [
+    "designer.saveDesign",
+    "designer.listDesigns",
+    "designer.getDesign"
+  ],
+  "agentSurface": true,
+  "allowedEvents": [
+    { "eventName": "deleteLocalItem", "moduleName": "mediaManager", "moduleType": "core", "access": "write" },
+    { "eventName": "designer.getDesign", "moduleName": "designer", "moduleType": "core", "access": "read" },
+    { "eventName": "designer.saveDesign", "moduleName": "designer", "moduleType": "core", "access": "write" },
+    { "eventName": "getGlobalLayoutTemplate", "moduleName": "plainspace", "moduleType": "core", "access": "read" },
+    { "eventName": "getLayoutForViewport", "moduleName": "plainspace", "moduleType": "core", "access": "read" },
+    { "eventName": "getLayoutTemplate", "moduleName": "plainspace", "moduleType": "core", "access": "read" },
+    { "eventName": "getPublishedDesignMeta", "moduleName": "plainspace", "moduleType": "core", "access": "read" },
+    { "eventName": "makeFilePublic", "moduleName": "mediaManager", "moduleType": "core", "access": "write" },
+    { "eventName": "saveLayoutForViewport", "moduleName": "plainspace", "moduleType": "core", "access": "write" },
+    { "eventName": "savePublishedDesignMeta", "moduleName": "plainspace", "moduleType": "core", "access": "write" },
+    { "eventName": "uploadFileToFolder", "moduleName": "mediaManager", "moduleType": "core", "access": "write" },
+    { "eventName": "widget.registry.request.v1", "moduleName": "plainspace", "moduleType": "core", "access": "read" }
+  ],
+  "launchable": true,
+  "tags": ["builder", "studio", "design"]
+}

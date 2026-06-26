@@ -1,0 +1,202 @@
+/* =============================================================================
+   components/_header-main.scss — Icon‐Style Header Nav
+   ============================================================================= */
+
+.main-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px clamp(24px, 4vw, 52px) 12px;
+  justify-content: space-between;
+  backdrop-filter: none;
+  background: transparent;
+  border-bottom: 0;
+
+  .site-title {
+    flex-grow: 1;
+    font-family: var(--font-heading);
+    font-size: 30px;
+    margin: 0;
+    color: var(--color-text);
+  }
+
+    .nav-icons {
+      display: flex;
+      gap: 10px;
+      flex: 1 1 auto;
+      align-items: center;
+      min-width: 0;
+
+      &--end {
+        flex: 0 0 auto;
+        justify-content: flex-end;
+        margin-left: auto;
+      }
+
+      a,
+      .nav-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex: 0 0 auto;
+        width: auto;
+        min-width: var(--studio-control-size);
+        height: var(--studio-control-size);
+        padding: 0 12px;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+        font-family: var(--font-body);
+        font-size: 0.86rem;
+        line-height: 1;
+        color: var(--studio-text);
+        opacity: 0.72;
+        transition:
+          opacity var(--motion-duration-base) var(--motion-ease-standard),
+          background var(--motion-duration-base) var(--motion-ease-standard),
+          border-color var(--motion-duration-base) var(--motion-ease-standard),
+          box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+          transform var(--motion-duration-fast) var(--motion-ease-standard);
+        background: var(--studio-surface-solid);
+        border: 1px solid var(--studio-border);
+        border-radius: var(--studio-radius-control);
+        box-shadow: var(--studio-shadow-soft);
+        cursor: pointer;
+
+        .icon {
+          width: 18px;
+          height: 18px;
+          flex: 0 0 auto;
+          fill: currentColor;
+          transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+        }
+
+        .label {
+          position: static;
+          width: auto;
+          height: auto;
+          margin: 0;
+          padding: 0;
+          overflow: visible;
+          white-space: nowrap;
+          border: 0;
+          clip: auto;
+          clip-path: none;
+          color: currentColor;
+          font-weight: 400;
+        }
+
+        &::after {
+          display: none;
+        }
+
+        &:hover {
+          opacity: 1;
+          transform: scale(1.035);
+          border-color: var(--studio-border);
+          background: var(--studio-surface-solid);
+        }
+
+        &.active {
+          opacity: 1;
+          border-color: transparent;
+          background: transparent;
+          box-shadow: none;
+        }
+      }
+
+      #workspace-create {
+        width: var(--studio-control-size);
+        min-width: var(--studio-control-size);
+        padding: 0;
+        gap: 0;
+        font-size: 0;
+        line-height: 0;
+      }
+
+      &--end a,
+      &--end .nav-button {
+        width: var(--studio-control-size);
+        min-width: var(--studio-control-size);
+        padding: 0;
+        gap: 0;
+        font-size: 0;
+        line-height: 0;
+      }
+
+      &--end a .label,
+      &--end .nav-button .label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+      }
+    }
+  }
+
+.editor-quick-actions {
+  display: flex;
+  gap: .5rem;
+  margin-left: 12px;
+  align-items: center;
+}
+
+#widgets-toggle-inline,
+#admin-delete-page {
+  display: none;
+}
+
+body.dashboard-edit-mode #widgets-toggle-inline,
+body.dashboard-edit-mode #admin-delete-page {
+  display: inline-flex;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--studio-control-size);
+  height: var(--studio-control-size);
+  border-radius: var(--studio-radius-control);
+  border: 1px solid var(--studio-border);
+  background: var(--bg, var(--studio-surface-solid));
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-soft);
+  cursor: pointer;
+  transition:
+    background var(--motion-duration-base) var(--motion-ease-standard),
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.icon-btn img,
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.icon-btn:hover {
+  background: var(--hover, var(--studio-surface-muted));
+  border-color: color-mix(in srgb, var(--user-color) 24%, var(--studio-border));
+  transform: translateY(-1px);
+}
+.icon-btn.danger {
+  border-color: color-mix(in srgb, var(--color-error) 28%, var(--studio-border));
+}
+.icon-btn.danger svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
+.icon-btn.danger:hover {
+  background: color-mix(in srgb, var(--color-error) 10%, var(--studio-surface-solid));
+  color: #dc2626;
+}
+
+body.dashboard-edit-mode #edit-toggle:hover {
+  background: color-mix(in srgb, var(--user-color) 10%, var(--studio-surface-solid));
+  border-color: color-mix(in srgb, var(--user-color) 30%, var(--studio-border));
+  color: var(--studio-text);
+}

@@ -1,31 +1,42 @@
 # dummyModule
 
-The `dummyModule` is a minimal no‑UI module used as a learning template.
-It demonstrates how community modules interact with BlogposterCMS using the meltdown event bus.
-The module's `apiDefinition.json` shows how to declare external services and actions.
+## Boundaries
+
+`dummyModule` is intentionally a community module. It runs through Module
+Loader's scoped `moduleHost`, receives no raw Express app and cannot reach raw
+database, filesystem, network or process APIs. It may emit only allowed,
+module-scoped events, and payload identity is stamped by the host rather than
+trusted from module code.
+
+The `dummyModule` is a minimal no-UI community module used as a learning
+template. It demonstrates the current add-on boundary: modules add backend
+capability contracts, widgets render UI blocks and apps provide isolated admin
+or tool surfaces.
 
 ## Startup
 - Loaded from `modules/dummyModule` when present.
-- Exports `initialize({ motherEmitter, jwt, nonce })`.
-  - `jwt` is issued by the Module Loader and must be included in every non‑public event payload.
-  - `nonce` helps prevent replay attacks and can be ignored if unused.
+- Exports `initialize({ motherEmitter, moduleHost, jwt, nonce })`.
+- Receives a scoped event bus from Module Loader; emitted payloads are stamped
+  with the module identity and token by the host.
 
 ## Purpose
-- Logs whenever a page is published using a fictional external service.
-- Shows how to perform simple database operations.
-- Demonstrates SQLite-friendly table creation for cross-database compatibility.
-- Listens for a custom `dummyAction` event that inserts data into a table.
+- Emits a safe `dummyModule.ready` event during startup so health checks can
+  verify that the module uses the scoped event bus.
+- Listens for `dummyModule.pagePublished` and logs sanitized page metadata.
+- Listens for the module-owned `dummyModule.dummyAction` event and returns a
+  simple response.
 
 ## Listened Events
-- `pagePublished`
-- `dummyAction`
+- `dummyModule.pagePublished`
+- `dummyModule.dummyAction`
 
 ## Security Notes
-- Sanitises page titles and IDs before logging.
-- Each `motherEmitter.emit()` call includes the provided `jwt`, `moduleName` and `moduleType`.
-- Never store real API tokens in `apiDefinition.json`—use environment variables instead.
+- Does not call raw database events, raw SQL placeholders, registry events or
+  direct system mutation events.
+- Does not receive the raw Express app.
+- Does not declare external services by default; add them deliberately in
+  `apiDefinition.json` only when a real module contract needs them.
 
-Use this module as a starting point for your own experiments. Copy the folder,
-update the service definitions and event names in `apiDefinition.json`, and wire
-your own handlers to the events you care about. Environment variables are the
-preferred way to inject API tokens or other secrets.
+Use this module as a starting point for backend capability experiments. Keep
+state changes behind core contracts instead of reaching into database or system
+events directly.

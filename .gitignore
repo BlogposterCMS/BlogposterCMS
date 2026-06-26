@@ -79,6 +79,7 @@ web_modules/
 
 # TypeScript cache
 *.tsbuildinfo
+BlogposterCMS/.ts-jest/
 
 # Optional npm cache directory
 .npm

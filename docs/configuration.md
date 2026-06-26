@@ -17,9 +17,10 @@ Key variables to review:
 | `TOKEN_SALT_HIGH` etc. | Additional salts used to derive secrets per trust level. |
 | `ENABLE_API` | Enables a lightweight REST API on `API_PORT` when set to `true`. |
 | `ALLOW_REGISTRATION` | If `true`, users may self-register via the public event. |
-| `DEV_AUTOLOGIN` | When `true`, localhost requests auto-login using `DEV_USER` if that user exists. |
+| `DEV_AUTOLOGIN` | Local development auto-login for loopback dashboard and API requests. Defaults on outside production; set to `false` to force the login form. |
 | `DEV_USER` | Username used for development auto-login. |
-| `ALLOW_WEAK_CREDS` | Set to `I_KNOW_THIS_IS_LOCAL` to permit short passwords in dev. |
+| `DEV_AGENT_LOGIN` | Localhost-only agent token helper for Codex/automation clients. Defaults on outside production; set to `false` to disable it. |
+| `ALLOW_WEAK_CREDS` | Set to `I_KNOW_THIS_IS_LOCAL` to permit the local `admin`/`123` dev bootstrap. Never use it in production. |
 
 > **Note:** When `CONTENT_DB_TYPE` is `postgres` the database manager will
 > create a `databasemanager` schema inside the main Postgres database. This step

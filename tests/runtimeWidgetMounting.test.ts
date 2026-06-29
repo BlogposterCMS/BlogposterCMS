@@ -70,7 +70,8 @@ describe('runtimeWidgetMounting', () => {
           sceneId: 'scene-hero'
         }
       },
-      'public'
+      'public',
+      { emit }
     );
     expect(wrapper.classList.contains('loading')).toBe(false);
     expect(wrapper.classList.contains('loaded')).toBe(true);

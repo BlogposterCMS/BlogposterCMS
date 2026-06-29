@@ -42,11 +42,15 @@ import {
   getInsertToolItem,
   getNativeElementSize
 } from './widgets/nativeElementPresets.js';
+import { applyWidgetStyleSources } from './widgets/styleSourceSync.js';
 import {
   setDefaultWorkarea,
   ensureLayoutRootContainer,
   setDynamicHost as setDynamicHostContainer,
   setDesignRef as setContainerDesignRef,
+  setContainerLayoutMode as setContainerLayoutModeNode,
+  setContainerSettings as setContainerSettingsNode,
+  toggleContainerStyleSource as toggleContainerStyleSourceNode,
   placeContainer as placeContainerNode,
   deleteContainer as deleteContainerNode,
   moveContainer as moveContainerNode
@@ -63,6 +67,19 @@ const backgroundLogger = builderLogger.child('background');
 
 // Enable layout structure features by default unless explicitly disabled
 const HAS_LAYOUT_STRUCTURE = window.FEATURE_LAYOUT_STRUCTURE !== false;
+
+function containerDebugInfo(el, extra = {}) {
+  return {
+    nodeId: el?.dataset?.nodeId || null,
+    mode: el?.dataset?.layoutMode || null,
+    split: el?.dataset?.split || null,
+    ...extra
+  };
+}
+
+function warnDesignerContainerError(code, err, detail = {}) {
+  console.warn(`[Designer] ${code}`, detail, err);
+}
 
 function getAdminUserId() {
   try {
@@ -116,7 +133,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     buttonLink: 'mouse-pointer-click',
     navigationMenu: 'menu',
     breadcrumb: 'chevrons-right',
-    gallery: 'images'
+    gallery: 'images',
+    collectionArchive: 'archive'
   };
 
   const { showPreviewHeader, hidePreviewHeader } = createPreviewHeader(displayPorts);
@@ -134,6 +152,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   let layoutRoot;
   let gridEl;
+  let grid = null;
   let codeMap = {};
   let globalLayoutName: string | null = null;
   // Track when the BG toolbar was just opened to avoid immediate hide by global click
@@ -675,6 +694,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     };
   }
 
+  function syncWidgetStyleFollowers(sourceEl) {
+    return applyWidgetStyleSources(gridEl, sourceEl, {
+      onFollower: follower => {
+        gridEl?.__grid?.update?.(follower, {}, { silent: true });
+        renderEffectCue(follower, getElementEffects(follower));
+        renderStageEffectGuides(follower, getElementEffects(follower));
+        updateBehaviorPresentation(follower, getElementEffects(follower));
+        gridEl?.__grid?.emitChange?.(follower, { contentOnly: true });
+      }
+    });
+  }
+
   function applyElementAppearance(el, appearance = {}, persist = true) {
     if (!el) return;
     const opacity = normalizeOpacity(appearance.opacity ?? el.dataset.opacity ?? el.style.opacity ?? 100);
@@ -689,6 +720,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (content) content.style.borderRadius = `${radius}px`;
     if (persist) {
       gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
+      syncWidgetStyleFollowers(el);
       if (pageId && state.autosaveEnabled) scheduleAutosave();
     }
   }
@@ -788,6 +820,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     return code?.meta && typeof code.meta === 'object' ? code.meta : {};
   }
 
+  function getCollectionArchiveMeta(el) {
+    const code = getWidgetInstanceCode(el);
+    return code?.meta && typeof code.meta === 'object' ? code.meta : {};
+  }
+
   function parseGalleryNumber(value, min, max, fallback) {
     const parsed = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
     const num = Number.isFinite(parsed) ? parsed : fallback;
@@ -807,6 +844,72 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function normalizeGalleryChoice(value, allowed, fallback) {
     const normalized = String(value || '').trim().toLowerCase();
     return allowed.includes(normalized) ? normalized : fallback;
+  }
+
+  function collectionArchiveDefaults(widgetDef = null) {
+    const defaults = widgetDef?.metadata?.defaults && typeof widgetDef.metadata.defaults === 'object'
+      ? widgetDef.metadata.defaults
+      : {};
+    return {
+      collectionId: String(defaults.collectionId || defaults.parentId || ''),
+      columns: parseGalleryNumber(defaults.columns, 1, 6, 3),
+      buttonLabel: String(defaults.buttonLabel || 'Read more')
+    };
+  }
+
+  function collectionArchiveSettings(el, widgetDef = null) {
+    const defaults = collectionArchiveDefaults(widgetDef);
+    const meta = getCollectionArchiveMeta(el);
+    const nested = meta.settings && typeof meta.settings === 'object' ? meta.settings : {};
+    const raw = { ...defaults, ...nested, ...meta };
+    return {
+      collectionId: String(raw.collectionId || raw.parentId || raw.pageId || defaults.collectionId || ''),
+      columns: parseGalleryNumber(raw.columns, 1, 6, defaults.columns),
+      buttonLabel: String(raw.buttonLabel || raw.ctaLabel || defaults.buttonLabel || 'Read more')
+    };
+  }
+
+  function isCollectionArchiveWidget(el, widgetDef = null) {
+    return Boolean(el && (el.dataset.widgetId === 'collectionArchive' || widgetDef?.id === 'collectionArchive'));
+  }
+
+  function applyCollectionArchiveSettings(el, widgetDef, patch = {}, persist = true) {
+    if (!isCollectionArchiveWidget(el, widgetDef)) return;
+    const next = {
+      ...collectionArchiveSettings(el, widgetDef),
+      ...patch
+    };
+    const code = getWidgetInstanceCode(el, true);
+    if (!code) return;
+    const existingMeta = code.meta && typeof code.meta === 'object' ? code.meta : {};
+    code.meta = {
+      ...existingMeta,
+      ...next
+    };
+    void renderWidget(el, widgetDef, ensureCodeMap());
+    gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
+    if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
+  }
+
+  function collectionArchiveFieldValue(target) {
+    if (target.type === 'number') return Number.parseFloat(target.value);
+    return target.value;
+  }
+
+  function updateCollectionArchiveField(target) {
+    if (!state.activeWidgetEl) return;
+    const widgetDef = allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId);
+    if (!isCollectionArchiveWidget(state.activeWidgetEl, widgetDef)) return;
+    const field = target.dataset.collectionArchiveField;
+    if (!field) return;
+    applyCollectionArchiveSettings(state.activeWidgetEl, widgetDef, { [field]: collectionArchiveFieldValue(target) });
+    syncInspectorCollectionArchive(state.activeWidgetEl, widgetDef);
+  }
+
+  function setCollectionArchiveFieldValue(name, value) {
+    const field = sceneInspector?.querySelector(`[data-collection-archive-field="${name}"]`);
+    if (!field) return;
+    field.value = String(value);
   }
 
   function normalizeGalleryItem(raw = {}, defaults = {}) {
@@ -1038,6 +1141,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     setGalleryFieldValue('slidesToScroll', settings.slidesToScroll);
     if (sliderGroup) sliderGroup.hidden = settings.mode !== 'carousel';
     if (!options.keepItems) renderGalleryItems(settings.items);
+  }
+
+  function syncInspectorCollectionArchive(el, widgetDef = null) {
+    if (!sceneInspector) return;
+    const group = sceneInspector.querySelector('.scene-collection-archive-settings');
+    const isArchive = isCollectionArchiveWidget(el, widgetDef);
+    if (group) group.hidden = !isArchive;
+    if (!isArchive) return;
+    const settings = collectionArchiveSettings(el, widgetDef);
+    setCollectionArchiveFieldValue('collectionId', settings.collectionId);
+    setCollectionArchiveFieldValue('columns', settings.columns);
+    setCollectionArchiveFieldValue('buttonLabel', settings.buttonLabel);
   }
 
   function syncInspectorAppearance(el, widgetDef = null) {
@@ -1314,7 +1429,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     syncInspectorEffects(effects);
     if (state.activeWidgetEl) {
       applyEffectsToElement(state.activeWidgetEl, effects);
-      if (persist) gridEl?.__grid?.emitChange?.(state.activeWidgetEl, { contentOnly: true });
+      if (persist) {
+        gridEl?.__grid?.emitChange?.(state.activeWidgetEl, { contentOnly: true });
+        syncWidgetStyleFollowers(state.activeWidgetEl);
+      }
       if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
     }
   }
@@ -1388,6 +1506,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         <h3>Button</h3>
         <label class="scene-select-field"><span>Label</span><input class="scene-button-label" value="" /></label>
         <label class="scene-select-field"><span>Link</span><input class="scene-button-href" value="#" inputmode="url" /></label>
+      </section>
+
+      <section class="scene-inspector-group scene-collection-archive-settings" data-inspector-panel="content" hidden>
+        <h3>Collection Archive</h3>
+        <label class="scene-select-field"><span>Collection ID</span><input data-collection-archive-field="collectionId" value="" /></label>
+        <div class="scene-field-grid">
+          <label><span>Columns</span><input data-collection-archive-field="columns" type="number" min="1" max="6" step="1" value="3" inputmode="numeric" /></label>
+        </div>
+        <label class="scene-select-field"><span>Button label</span><input data-collection-archive-field="buttonLabel" value="Read more" /></label>
       </section>
 
       <section class="scene-inspector-group scene-gallery-settings" data-inspector-panel="content" hidden>
@@ -1636,6 +1763,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         updateGalleryField(galleryField);
         return;
       }
+      const collectionArchiveField = event.target.closest?.('[data-collection-archive-field]');
+      if (collectionArchiveField) {
+        updateCollectionArchiveField(collectionArchiveField);
+        return;
+      }
       const galleryItemField = event.target.closest?.('[data-gallery-item-field]');
       if (galleryItemField) {
         updateGalleryItemField(galleryItemField);
@@ -1701,6 +1833,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         updateGalleryField(galleryField);
         return;
       }
+      const collectionArchiveField = event.target.closest?.('[data-collection-archive-field]');
+      if (collectionArchiveField) {
+        updateCollectionArchiveField(collectionArchiveField);
+        return;
+      }
       const galleryItemField = event.target.closest?.('[data-gallery-item-field]');
       if (galleryItemField) {
         updateGalleryItemField(galleryItemField);
@@ -1734,6 +1871,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     syncInspectorBehaviorPreview(behavior, range, effects);
     syncInspectorAppearance(el, widgetDef);
     syncInspectorButton(el);
+    syncInspectorCollectionArchive(el, widgetDef);
     syncInspectorGallery(el, widgetDef);
     if (el) {
       const label = el.dataset.elementName || widgetDef?.metadata?.label || el.dataset.widgetId || 'Element';
@@ -2530,6 +2668,36 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (pageId && state.autosaveEnabled) scheduleAutosave();
   }
 
+  function getActiveWorkareaContainer() {
+    const rootContainer = ensureLayoutRootContainer(layoutRoot);
+    if (!rootContainer) return null;
+    return layoutRoot.querySelector('.layout-container[data-workarea="true"]')
+      || (rootContainer.dataset.workarea === 'true' ? rootContainer : null)
+      || rootContainer;
+  }
+
+  function syncWorkspaceToWorkarea() {
+    try {
+      const workarea = getActiveWorkareaContainer();
+      if (!workarea || !gridEl) return;
+      if (gridEl.parentElement !== workarea) {
+        workarea.appendChild(gridEl);
+      }
+      grid?.refreshMetrics?.();
+      grid?.widgets?.forEach?.(widget => {
+        try {
+          grid.update?.(widget, {}, { silent: true });
+        } catch (err) {
+          warnDesignerContainerError('DESIGNER_WORKAREA_WIDGET_SYNC_FAILED', err, {
+            widgetId: widget?.id || widget?.dataset?.widgetId || null
+          });
+        }
+      });
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_WORKAREA_SYNC_FAILED', err);
+    }
+  }
+
   const { refreshContainerBars, refreshLayoutTree, handleContainerChange } = createLayoutStructureHandlers({
     layoutRootRef: () => layoutRoot,
     sidebarEl,
@@ -2540,29 +2708,91 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     layoutCtxProvider: () => layoutCtx
   });
 
+  function handleContainerMutation() {
+    try {
+      handleContainerChange();
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_MUTATION_FAILED', err);
+    }
+    syncWorkspaceToWorkarea();
+  }
+
   function placeContainer(targetEl, pos) {
-    placeContainerNode(targetEl, pos, {
-      layoutRoot,
-      onAfterChange: handleContainerChange
-    });
+    try {
+      placeContainerNode(targetEl, pos, {
+        layoutRoot,
+        onAfterChange: handleContainerMutation
+      });
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_PLACE_FAILED', err, containerDebugInfo(targetEl, { position: pos }));
+    }
   }
 
   function setDynamicHost(el) {
-    setDynamicHostContainer(layoutRoot, el);
-    handleContainerChange();
+    try {
+      setDynamicHostContainer(layoutRoot, el);
+      handleContainerMutation();
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_WORKAREA_FAILED', err, containerDebugInfo(el));
+    }
   }
 
   function setDesignRef(el, designId) {
-    setContainerDesignRef(el, designId);
-    handleContainerChange();
+    try {
+      setContainerDesignRef(el, designId);
+      handleContainerMutation();
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_DESIGN_REF_FAILED', err, containerDebugInfo(el));
+    }
+  }
+
+  function setContainerLayoutMode(el, mode) {
+    try {
+      setContainerLayoutModeNode(el, mode);
+      handleContainerMutation();
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_MODE_FAILED', err, containerDebugInfo(el, { mode }));
+    }
+  }
+
+  function setContainerSettings(el, settings) {
+    try {
+      setContainerSettingsNode(el, settings);
+      handleContainerMutation();
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_SETTINGS_FAILED', err, containerDebugInfo(el, {
+        keys: settings && typeof settings === 'object' ? Object.keys(settings) : []
+      }));
+    }
+  }
+
+  function toggleContainerStyleSource(el) {
+    try {
+      toggleContainerStyleSourceNode(layoutRoot, el);
+      handleContainerMutation();
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_STYLE_SOURCE_FAILED', err, containerDebugInfo(el));
+    }
   }
 
   function deleteContainer(el) {
-    deleteContainerNode(el, { onAfterChange: handleContainerChange });
+    try {
+      deleteContainerNode(el, { onAfterChange: handleContainerMutation });
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_DELETE_FAILED', err, containerDebugInfo(el));
+    }
   }
 
   function moveContainer(srcEl, targetEl, pos) {
-    moveContainerNode(srcEl, targetEl, pos, { onAfterChange: handleContainerChange });
+    try {
+      moveContainerNode(srcEl, targetEl, pos, { onAfterChange: handleContainerMutation });
+    } catch (err) {
+      warnDesignerContainerError('DESIGNER_CONTAINER_MOVE_FAILED', err, {
+        from: containerDebugInfo(srcEl),
+        to: containerDebugInfo(targetEl),
+        position: pos
+      });
+    }
   }
 
   function activateArrange() {
@@ -2602,6 +2832,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     placeContainer,
     setDynamicHost,
     setDesignRef,
+    setContainerLayoutMode,
+    setContainerSettings,
+    toggleContainerStyleSource,
     deleteContainer,
     refreshContainerBars,
     refreshLayoutTree,
@@ -2617,20 +2850,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   await applyDesignerTheme();
   // Allow overlapping widgets for layered layouts
-  const grid = initGrid(gridEl, state, selectWidget, {
+  grid = initGrid(gridEl, state, selectWidget, {
     scrollContainer: gridViewportEl,
     enableZoom: true
   });
   const sizer = grid?.sizer;
   if (sizer && layoutRoot) {
     sizer.appendChild(layoutRoot);
-    layoutRoot.appendChild(gridEl);
   }
   setDefaultWorkarea(layoutRoot);
+  syncWorkspaceToWorkarea();
   layoutCtx.refreshContainerBars();
   layoutCtx.refreshLayoutTree();
   window.addEventListener('resize', () => {
     setDefaultWorkarea(layoutRoot);
+    syncWorkspaceToWorkarea();
   });
   const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
   function selectWidget(el) {
@@ -3314,6 +3548,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     syncInspectorEffects(nextEffects);
     applyEffectsToElement(el, nextEffects);
+    syncWidgetStyleFollowers(el);
     updateSceneInspector(el, allWidgets.find(w => w.id === el.dataset.widgetId));
     renderSceneLayers();
     gridEl?.__grid?.emitChange?.(el, { contentOnly: true });

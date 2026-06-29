@@ -18,13 +18,15 @@ export type RuntimeWidgetContext = LooseRecord & {
     effects: LooseRecord[];
   };
   jwt?: string;
+  emit?: (...args: any[]) => Promise<any>;
 };
 
 export function createRuntimeWidgetContext(
   wrapper: HTMLElement,
   def: RuntimeWidgetDefinition,
   lane: string,
-  instanceMetadata: LooseRecord = {}
+  instanceMetadata: LooseRecord = {},
+  options: { emit?: (...args: any[]) => Promise<any> } = {}
 ): RuntimeWidgetContext {
   const host = (wrapper.closest('.canvas-item') || wrapper) as HTMLElement;
   const ctx: RuntimeWidgetContext = {
@@ -44,6 +46,9 @@ export function createRuntimeWidgetContext(
   };
   if (lane === 'admin' && window.ADMIN_TOKEN) {
     ctx.jwt = window.ADMIN_TOKEN;
+  }
+  if (typeof options.emit === 'function') {
+    ctx.emit = options.emit;
   }
   return ctx;
 }

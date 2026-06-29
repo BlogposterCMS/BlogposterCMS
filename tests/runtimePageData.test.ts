@@ -39,7 +39,7 @@ describe('runtimePageData', () => {
     );
   });
 
-  it('fetches page and child-page data through canonical runtime events', async () => {
+  it('fetches page and child-page data through runtime facades', async () => {
     const emit = jest.fn()
       .mockResolvedValueOnce({ data: { id: 'page-1' } })
       .mockResolvedValueOnce([{ id: 'child-1' }])
@@ -52,24 +52,26 @@ describe('runtimePageData', () => {
       html: '<p>x</p>'
     });
 
-    expect(emit).toHaveBeenNthCalledWith(1, 'getPageBySlug', {
-      moduleName: 'pagesManager',
+    expect(emit).toHaveBeenNthCalledWith(1, 'cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      slug: 'home',
-      lane: 'public'
+      resource: 'pages',
+      action: 'getBySlug',
+      params: { slug: 'home', lane: 'public' }
     });
-    expect(emit).toHaveBeenNthCalledWith(2, 'getChildPages', {
-      parentId: 'page-1',
-      moduleName: 'pagesManager',
+    expect(emit).toHaveBeenNthCalledWith(2, 'cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      jwt: 'public-token'
+      resource: 'pages',
+      action: 'children',
+      params: { parentId: 'page-1', lane: 'public' }
     });
-    expect(emit).toHaveBeenNthCalledWith(3, 'getPageById', {
-      pageId: 'child-1',
-      lane: 'public',
-      moduleName: 'pagesManager',
+    expect(emit).toHaveBeenNthCalledWith(3, 'cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      jwt: 'public-token'
+      resource: 'pages',
+      action: 'get',
+      params: { pageId: 'child-1', lane: 'public' }
     });
   });
 
@@ -85,31 +87,35 @@ describe('runtimePageData', () => {
     await expect(loadRuntimeLayoutTemplate(emit, 'landing', 'public')).resolves.toEqual([{ id: 'template' }]);
     await expect(loadRuntimeLayoutForViewport(emit, 'page-1', 'public')).resolves.toEqual([{ id: 'viewport' }]);
 
-    expect(emit).toHaveBeenNthCalledWith(1, 'widget.registry.request.v1', {
-      lane: 'admin',
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      jwt: 'admin-token'
-    });
-    expect(emit).toHaveBeenNthCalledWith(2, 'getGlobalLayoutTemplate', {
-      moduleName: 'plainspace',
-      moduleType: 'core',
+    expect(emit).toHaveBeenNthCalledWith(1, 'cmsAdminApiRequest', {
       jwt: 'admin-token',
-      lane: 'admin'
-    });
-    expect(emit).toHaveBeenNthCalledWith(3, 'getLayoutTemplate', {
-      name: 'landing',
-      moduleName: 'plainspace',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      jwt: 'public-token',
-      lane: 'public'
+      resource: 'plainSpace',
+      action: 'widgetRegistry',
+      params: { lane: 'admin' }
     });
-    expect(emit).toHaveBeenNthCalledWith(4, 'getLayoutForViewport', {
-      moduleName: 'plainspace',
+    expect(emit).toHaveBeenNthCalledWith(2, 'cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1',
-      lane: 'public',
-      viewport: 'desktop'
+      resource: 'plainSpace',
+      action: 'globalLayoutTemplate',
+      params: { lane: 'admin' }
+    });
+    expect(emit).toHaveBeenNthCalledWith(3, 'cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'plainSpace',
+      action: 'layoutTemplate',
+      params: { name: 'landing', lane: 'public' }
+    });
+    expect(emit).toHaveBeenNthCalledWith(4, 'cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'plainSpace',
+      action: 'layoutForViewport',
+      params: { pageId: 'page-1', lane: 'public', viewport: 'desktop' }
     });
   });
 
@@ -122,20 +128,25 @@ describe('runtimePageData', () => {
     await fetchRuntimeDesign(emit, 'design-1', 'public');
     await saveRuntimeLayoutForViewport(emit, 'page-1', 'admin', layout);
 
-    expect(emit).toHaveBeenNthCalledWith(1, 'designer.getDesign', {
-      id: 'design-1',
-      moduleName: 'designer',
-      moduleType: 'community',
-      jwt: 'public-token'
-    });
-    expect(emit).toHaveBeenNthCalledWith(2, 'saveLayoutForViewport', {
-      jwt: 'admin-token',
-      moduleName: 'plainspace',
+    expect(emit).toHaveBeenNthCalledWith(1, 'cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1',
-      lane: 'admin',
-      viewport: 'desktop',
-      layout
+      resource: 'designer',
+      action: 'get',
+      params: { id: 'design-1', lane: 'public' }
+    });
+    expect(emit).toHaveBeenNthCalledWith(2, 'cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'plainSpace',
+      action: 'saveLayoutForViewport',
+      params: {
+        pageId: 'page-1',
+        lane: 'admin',
+        viewport: 'desktop',
+        layout
+      }
     });
   });
 });

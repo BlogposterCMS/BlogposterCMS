@@ -30,6 +30,20 @@ instruction in a subdirectory says otherwise.
 - Keep UI logic, data access, transport payloads, and domain logic separated
   where the existing architecture supports that separation.
 
+## Agent-Ready Architecture
+
+- Shape meaningful user-facing and admin workflows so they can be controlled by
+  an agent later without making DOM scraping the only path.
+- Prefer existing AgentManager, AppLoader, module event and shared-client
+  contracts when exposing agent-readable snapshots, stable actions or command
+  handlers.
+- Do not expose every internal function as an agent action. Keep domain logic
+  behind the existing module, service, permission, validation and transport
+  boundaries.
+- When an area's agent architecture is not clear yet, preserve separation,
+  stable identifiers, typed payloads and searchable error codes, then document
+  the missing adapter instead of creating a parallel agent-only API.
+
 ## Tests
 
 - Add or update tests for every meaningful behavior change.

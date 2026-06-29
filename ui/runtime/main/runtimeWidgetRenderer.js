@@ -16,7 +16,7 @@ function instanceMetadataFromCode(code) {
         ...parseMetadata(code.meta)
     };
 }
-export async function renderWidget(wrapper, def, code = null, lane = 'public') {
+export async function renderWidget(wrapper, def, code = null, lane = 'public', options = {}) {
     const { root, container } = createRuntimeWidgetShell(wrapper, lane);
     const instanceMetadata = instanceMetadataFromCode(code);
     await registerRuntimeWidgetEvents(def, lane);
@@ -24,5 +24,7 @@ export async function renderWidget(wrapper, def, code = null, lane = 'public') {
         renderInlineWidgetCode(wrapper, root, container, code);
         return;
     }
-    await renderRuntimeWidgetModule(wrapper, container, def, lane, instanceMetadata);
+    await renderRuntimeWidgetModule(wrapper, container, def, lane, instanceMetadata, {
+        emit: options.emit
+    });
 }

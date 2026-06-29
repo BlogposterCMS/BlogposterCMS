@@ -71,6 +71,8 @@ export function getCurrentLayoutForLayer(gridEl, idx, codeMap) {
 
 function serializeCanvasItem(el, codeMap) {
   const instanceId = el.dataset.instanceId;
+  const workareaEl = el.closest('.layout-container');
+  const workareaId = workareaEl?.dataset?.nodeId || '';
   const existingCode = instanceId ? codeMap[instanceId] : null;
   const code = existingCode && typeof existingCode === 'object'
     ? { ...existingCode }
@@ -87,12 +89,16 @@ function serializeCanvasItem(el, codeMap) {
   if (el.dataset.elementName) meta.elementName = el.dataset.elementName;
   if (el.dataset.opacity) meta.opacity = el.dataset.opacity;
   if (el.dataset.radius) meta.radius = el.dataset.radius;
+  if (workareaId) meta.workareaId = workareaId;
+  const styleSource = readStyleSourceMeta(el);
+  if (styleSource) meta.styleSource = styleSource;
   const effects = parseEffectsDataset(el.dataset.effects);
   if (effects.length) meta.effects = effects;
   if (Object.keys(meta).length) code.meta = meta;
   return {
     id: instanceId,
     widgetId: el.dataset.widgetId,
+    workareaId,
     global: el.dataset.global === 'true',
     xPercent: +el.dataset.xPercent || 0,
     yPercent: +el.dataset.yPercent || 0,
@@ -111,6 +117,16 @@ function serializeCanvasItem(el, codeMap) {
     effects: effects.length ? effects : (Array.isArray(meta.effects) ? meta.effects : []),
     code: Object.keys(code).length ? code : null
   };
+}
+
+function readStyleSourceMeta(el) {
+  const meta = {};
+  if (el.dataset.styleSourceEnabled) meta.enabled = el.dataset.styleSourceEnabled !== 'false';
+  if (el.dataset.styleSourceRole) meta.role = el.dataset.styleSourceRole;
+  if (el.dataset.styleSourceId) meta.sourceId = el.dataset.styleSourceId;
+  if (el.dataset.styleSyncLayout) meta.syncLayout = el.dataset.styleSyncLayout !== 'false';
+  if (el.dataset.styleSyncDesign) meta.syncDesign = el.dataset.styleSyncDesign !== 'false';
+  return Object.keys(meta).length ? meta : null;
 }
 
 function parseEffectsDataset(value) {

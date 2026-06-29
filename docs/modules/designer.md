@@ -52,18 +52,34 @@ or falling back to the dashboard.
 Switching back to design mode restores the widget sidebar and re‑enables normal editing.
 Both editors share a footer with zoom controls, and the design sidebar now features a leading layout switch bubble for jumping to the layout editor.
 Layouts without an explicit title initialise the header input to "Layout name" instead of a generic "default" tag.
-Layout mode now exposes a container action bar above each layout leaf with controls to
-add new containers, toggle the design surface, assign static designs and remove containers. The add control
-opens a placement picker offering top, right, bottom, left or inside insertion points;
-new containers split their parent 50/50, the star button designates the sole dynamic
-host, updating badges automatically, and the design button stores a `designRef` so
-static content can mount inside the container at runtime.
+Layout mode now exposes a floating container toolbar above the active page or
+container surface. It can add a container using the parent rule, open the manual
+placement picker, switch stack/row/free mode, adjust gap, padding and
+background, follow or unlink a Style Source, toggle the design surface, assign
+static designs and remove containers. Automatic container inserts follow the
+selected parent mode:
+`stack` creates vertical flow, `row` creates horizontal flow and `free` keeps
+CanvasGrid-style absolute placement inside the active workarea. The star button
+designates the sole dynamic host, moving the free-placement canvas into that
+workarea, and the design button stores a `designRef` so static content can
+mount inside the container at runtime.
+When a new sibling container is created, the first sibling becomes the Style
+Source and later siblings can follow its layout/design properties without
+copying its content. Each follower can be unlinked from the toolbar.
+Toolbar actions, container refreshes and shared layout callbacks are guarded:
+unexpected failures are logged with `DESIGNER_CONTAINER_*` or
+`LAYOUT_CONTAINER_AFTER_CHANGE_FAILED` codes and must not break the surrounding
+Studio shell.
 
 Layout terminology is explicit:
 
 - `LayoutTree` means structural nodes: sections, splits, leaves, workareas and
   static `designRef` assignments.
 - `WidgetPlacement` means canvas/grid widget coordinates and widget metadata.
+  Placements include the nearest `workareaId` when a layout container owns the
+  active design surface.
+- `StyleSource` means reusable style/layout metadata shared by containers or
+  widget placements. Followers copy source properties, not content.
 - `DesignDocument` means the saved runtime contract: `LayoutTree` plus
   placements, scenes, styles and metadata.
 
@@ -114,9 +130,12 @@ The legacy `apps/designer/` source files remain as compatibility forwarders and
 static iframe assets. New Designer implementation work belongs under
 `ui/designer/app/`, with bundle entries in `ui/designer/entries/`.
 
-`#layoutRoot` now always acts as the root layout container. When no saved layout tree exists the builder seeds a leaf node,
-assigns it a deterministic `nodeId`, and persists that node instead of the wrapper element. Subsequent splits or container moves
-reuse these stable identifiers so workarea flags and `designRef` assignments survive reloads and publishing.
+`#layoutRoot` now always acts as the root layout container. When no saved
+layout tree exists the builder seeds a leaf node, assigns it a deterministic
+`nodeId`, treats it as the default free-placement workarea and persists that
+node instead of the wrapper element. Subsequent splits or container moves reuse
+these stable identifiers so workarea flags, container settings and `designRef`
+assignments survive reloads and publishing.
 
  The sidebar layout panel now lists the current container tree. Selecting an entry
  scrolls the canvas to the corresponding container and keeps its action bar in view.
@@ -203,11 +222,11 @@ The app loader verifies these events before launching the designer. If any requi
   layout tree expand into their own panels instead of replacing the whole
   sidebar.
 - The Widgets panel now renders grouped insert circles for Text, Media, Shape,
-  Button and Navigation. Clicking a circle expands only that group into a
+  Button, Navigation and Content. Clicking a circle expands only that group into a
   preset panel. The raw public widget registry is no longer dumped into the
   default sidebar, so `textBox`, `mediaBlock`, `buttonLink`, `gallery`,
-  `navigationMenu` and `breadcrumb` stay technical renderers while authors pick
-  task-focused presets.
+  `navigationMenu`, `breadcrumb` and `collectionArchive` stay technical
+  renderers while authors pick task-focused presets.
 - `ui/designer/app/renderer/layoutMode.js` may load the Layout partial into
   `.layout-panel-host`, but it must not rebuild the rail shell when leaving
   Layout mode. The shell owns the active panel state so rendered section and
@@ -223,14 +242,20 @@ The app loader verifies these events before launching the designer. If any requi
   public widgets. `htmlBlock` remains available as an advanced/importer
   fallback but is hidden from normal catalogs.
 - The initial bundled public widget set now covers `textBox` as Rich Text plus
-  `mediaBlock`, `buttonLink`, `navigationMenu`, `breadcrumb`, and `gallery`.
+  `mediaBlock`, `buttonLink`, `navigationMenu`, `breadcrumb`, `gallery`, and
+  `collectionArchive`.
   Quick-insert media and button presets prefer those concrete public widgets
-  before falling back to `htmlBlock`. A public Page List / Collection Teaser is
-  not part of this pass.
+  before falling back to `htmlBlock`. The Content insert group exposes
+  `collectionArchive` for selected parent/child page collections instead of
+  reusing the admin dashboard page-list widget.
 - Gallery widgets store layout mode, rows/columns, height strategy, default
   object fit/focus, per-image fit/focus and carousel animation controls in
   `code.meta`. The Designer renderer treats metadata-only widget data as module
   settings so these controls do not force a custom HTML/CSS/JS override.
+- Collection Archive widgets store `collectionId`, columns and button text in
+  `code.meta`; the public renderer loads child pages through
+  `pagesManager.getChildPages` and renders cards with image, title, SEO
+  description and link action.
 - The first required Design Studio widget inventory is documented in
   `docs/design_studio_widgets.md`. Layout primitives remain part of
   `DesignDocument.layoutTree` and must not be duplicated as normal widgets.

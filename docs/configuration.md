@@ -15,7 +15,7 @@ Key variables to review:
 | `PG_*` / `MONGODB_URI` / `SQLITE_*` | Database connection settings. |
 | `AUTH_MODULE_INTERNAL_SECRET` | Shared secret used by the auth module when issuing tokens. |
 | `TOKEN_SALT_HIGH` etc. | Additional salts used to derive secrets per trust level. |
-| `ENABLE_API` | Enables a lightweight REST API on `API_PORT` when set to `true`. |
+| `ENABLE_API` | Reserved legacy API flag. The current server exposes HTTP through the event/facade routes documented in [Event-First Transport Boundary](event_first_transport.md), not through a separate REST API on `API_PORT`. |
 | `ALLOW_REGISTRATION` | If `true`, users may self-register via the public event. |
 | `DEV_AUTOLOGIN` | Local development auto-login for loopback dashboard and API requests. Defaults on outside production; set to `false` to force the login form and strict first-install credentials. |
 | `DEV_USER` | Username used for development auto-login. Defaults to `admin` when omitted. |

@@ -60,7 +60,8 @@ export async function renderRuntimeWidgetModule(
   container: HTMLElement,
   def: RuntimeWidgetDefinition,
   lane = 'public',
-  instanceMetadata: Record<string, any> = {}
+  instanceMetadata: Record<string, any> = {},
+  options: { emit?: (...args: any[]) => Promise<any> } = {}
 ): Promise<void> {
   if (!def.codeUrl) {
     console.warn(`[Widget ${def.id}] WIDGET_RUNTIME_MISSING_CODE_URL: missing codeUrl`);
@@ -106,7 +107,9 @@ export async function renderRuntimeWidgetModule(
   }
 
   try {
-    await mod.render(container, createRuntimeWidgetContext(wrapper, def, lane, instanceMetadata));
+    await mod.render(container, createRuntimeWidgetContext(wrapper, def, lane, instanceMetadata, {
+      emit: options.emit
+    }));
   } catch (err) {
     console.error(`[Widget ${def.id}] WIDGET_RUNTIME_RENDER_FAILED render error:`, err);
     renderRuntimeWidgetError(container, {

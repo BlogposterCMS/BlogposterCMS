@@ -3176,6 +3176,19 @@ body.builder-mode .canvas-item.inactive-layer:hover::after {
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  box-sizing: border-box;
+}
+
+.layout-container[data-layout-mode=stack] {
+  align-items: stretch;
+}
+
+.layout-container[data-layout-mode=row] {
+  align-items: stretch;
+}
+
+.layout-container[data-layout-mode=free] {
+  justify-content: stretch;
 }
 
 .layout-container > .builder-grid,
@@ -3227,6 +3240,11 @@ body.builder-mode .layout-container.builder-grid:empty::after {
 body.builder-mode .layout-container[data-workarea=true] {
   position: relative;
   outline: 2px solid #3b82f6;
+}
+
+body.builder-mode .layout-container.layout-container--active {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
 }
 
 body.builder-mode .layout-container[data-workarea=true]::after {
@@ -3307,32 +3325,97 @@ body[data-active-layer="0"] .layout-container[data-workarea=true]::after {
 
 .container-actionbar {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  display: flex;
-  gap: 4px;
-  z-index: 10;
+  top: 10px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 30;
+  padding: 4px;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity 140ms ease, transform 140ms ease;
 }
 .container-actionbar button {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #ccc;
-  border-radius: 2px;
-  padding: 2px;
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0;
   line-height: 0;
+  color: #fff;
   cursor: pointer;
 }
 .container-actionbar button .icon {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   display: block;
+  filter: invert(1);
 }
-.container-actionbar .bar-host.active {
-  background: #3b82f6;
+.container-actionbar button:hover, .container-actionbar button.active {
+  background: rgba(59, 130, 246, 0.95);
+  border-color: rgba(147, 197, 253, 0.9);
+}
+.container-actionbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+.container-actionbar .bar-field {
+  height: 26px;
+  display: inline-grid;
+  grid-template-columns: 14px 34px;
+  align-items: center;
+  gap: 3px;
+  padding: 0 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+.container-actionbar .bar-field .icon {
+  width: 13px;
+  height: 13px;
+  filter: invert(1);
+  opacity: 0.82;
+}
+.container-actionbar .bar-field input {
+  width: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #fff;
+  font-size: 11px;
+  text-align: right;
+  outline: none;
 }
+.container-actionbar .bar-color {
+  width: 26px;
+  height: 26px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.container-actionbar .bar-host.active,
 .container-actionbar .bar-design.active {
-  background: #10b981;
-  color: #fff;
+  background: #3b82f6;
+  border-color: rgba(147, 197, 253, 0.9);
+}
+
+body.builder-mode .layout-container:hover > .container-actionbar,
+body.builder-mode .layout-container.layout-container--active > .container-actionbar,
+body.builder-mode .container-actionbar:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
 }
 
 body[data-active-layer="1"] .container-actionbar {

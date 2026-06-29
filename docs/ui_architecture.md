@@ -267,7 +267,11 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
 - `ui/shared/layout/*`: shared Design Studio layout contract. It owns
   `LayoutTree`, `WidgetPlacement` and `DesignDocument` normalization plus DOM
   serialization, rendering and container operations used by Designer adapters
-  and the public runtime.
+  and the public runtime. Container mode and surface settings live on
+  `LayoutTree` nodes, while free-positioned widgets keep percent geometry and
+  point back to their owning container through `workareaId`. Shared
+  `styleSource` metadata lives here as well so containers and widget
+  placements can reuse layout/design properties without copying content.
 - `ui/widgets/entries/*`: widget-panel and future widget runtime bundles.
 - `ui/widgets/options/*` and `ui/widgets/rendering/*`: reusable widget sizing
   and rendering helpers. Runtime and Shell may consume these; Widgets must not
@@ -303,7 +307,7 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `ui/widgets/plainspace/admin/settings/settingsPanelsData.ts`.
   Basic public widgets `htmlWidget`, `textBoxWidget`, `mediaWidget`,
   `buttonWidget`, `navigationMenuWidget`, `breadcrumbWidget`, `galleryWidget`
-  and their shared `publicWidgetHelpers` plus the admin widgets
+  `collectionArchiveWidget` and their shared `publicWidgetHelpers` plus the admin widgets
   `accessSettingsWidget`, `activityLogWidget`, `designerLayoutsWidget`,
   `dragInfoWidget`, `fontsListWidget`, `layoutTemplatesWidget`,
   `loginStrategiesWidget`, `loginStrategyEditWidget`, `mediaExplorerWidget`,

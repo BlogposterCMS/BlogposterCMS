@@ -1,5 +1,12 @@
 import { renderWidget } from './widgetRenderer.js';
 import * as widgetActions from '../renderer/widgetActions.js';
+import {
+  applyWidgetStyleSources,
+  followWidgetStyleSource,
+  markWidgetStyleSource,
+  unlinkWidgetStyleSource,
+  widgetStyleSourceId
+} from './styleSourceSync.js';
 
 export function attachOptionsMenu(el, widgetDef, editBtn, {
   grid,
@@ -20,6 +27,8 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   menu.innerHTML = `
         <button class="menu-edit"><img src="/assets/icons/pencil-line.svg" class="icon" alt="edit" /> Edit Code</button>
       <button class="menu-copy"><img src="/assets/icons/copy.svg" class="icon" alt="duplicate" /> Duplicate</button>
+      <button class="menu-style-source"><img src="/assets/icons/link.svg" class="icon" alt="style source" /> Set as Style Source</button>
+      <button class="menu-style-follow"><img src="/assets/icons/link-2.svg" class="icon" alt="follow style source" /> Follow Style Source</button>
       <button class="menu-template"><img src="/assets/icons/package.svg" class="icon" alt="template" /> Save as Template</button>
       <button class="menu-lock"><img src="/assets/icons/lock.svg" class="icon" alt="lock" /> Lock Position</button>
       <button class="menu-snap"><img src="/assets/icons/layout-grid.svg" class="icon" alt="snap" /> Snap to Grid</button>
@@ -61,6 +70,45 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   menu.show = showMenu;
   menu.hide = hideMenu;
 
+  function firstStyleSourceCandidate() {
+    const parent = el.parentElement;
+    if (!parent) return null;
+    const widgets = Array.from(parent.querySelectorAll('.canvas-item'));
+    const explicit = widgets.find(item => (
+      item !== el &&
+      item.dataset.styleSourceRole === 'source' &&
+      item.dataset.styleSourceEnabled !== 'false'
+    ));
+    return explicit || widgets.find(item => item !== el && item.dataset.styleSourceEnabled !== 'false') || null;
+  }
+
+  function emitStyleSourceChange(target = el) {
+    grid?.__grid?.emitChange?.(target, { contentOnly: true });
+    if (target.dataset.styleSourceRole === 'source') {
+      applyWidgetStyleSources(grid, target, {
+        onFollower: follower => {
+          grid?.__grid?.update?.(follower, {}, { silent: true });
+          grid?.__grid?.emitChange?.(follower, { contentOnly: true });
+        }
+      });
+    }
+    if (pageId) scheduleAutosave();
+  }
+
+  function updateStyleSourceButtons() {
+    const setBtn = menu.querySelector('.menu-style-source');
+    const followBtn = menu.querySelector('.menu-style-follow');
+    const isSource = el.dataset.styleSourceRole === 'source' && el.dataset.styleSourceEnabled !== 'false';
+    const isFollower = Boolean(el.dataset.styleSourceId) && el.dataset.styleSourceEnabled !== 'false';
+    if (setBtn) {
+      setBtn.innerHTML = `<img src="/assets/icons/link.svg" class="icon" alt="style source" /> ${isSource ? 'Style Source' : 'Set as Style Source'}`;
+      setBtn.disabled = isSource;
+    }
+    if (followBtn) {
+      followBtn.innerHTML = `<img src="/assets/icons/${isFollower ? 'unlink' : 'link-2'}.svg" class="icon" alt="follow style source" /> ${isFollower ? 'Unlink Style Source' : 'Follow Style Source'}`;
+    }
+  }
+
   menuBtn.addEventListener('click', e => {
     e.stopPropagation();
     if (menu.style.display === 'block' && menu.currentTrigger === menuBtn) {
@@ -71,6 +119,34 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   });
 
   menu.querySelector('.menu-edit').onclick = () => { editBtn.click(); menu.style.display = 'none'; };
+  menu.querySelector('.menu-style-source').onclick = () => {
+    markWidgetStyleSource(el);
+    updateStyleSourceButtons();
+    emitStyleSourceChange();
+    menu.style.display = 'none';
+  };
+  menu.querySelector('.menu-style-follow').onclick = () => {
+    const isFollower = Boolean(el.dataset.styleSourceId) && el.dataset.styleSourceEnabled !== 'false';
+    if (isFollower) {
+      unlinkWidgetStyleSource(el);
+      updateStyleSourceButtons();
+      emitStyleSourceChange();
+      menu.style.display = 'none';
+      return;
+    }
+    const source = firstStyleSourceCandidate();
+    const sourceId = widgetStyleSourceId(source);
+    if (!source || !sourceId) {
+      menu.style.display = 'none';
+      return;
+    }
+    followWidgetStyleSource(el, source);
+    grid?.__grid?.update?.(el, {}, { silent: true });
+    grid?.__grid?.emitChange?.(source, { contentOnly: true });
+    updateStyleSourceButtons();
+    emitStyleSourceChange();
+    menu.style.display = 'none';
+  };
   menu.querySelector('.menu-copy').onclick = () => {
     const clone = el.cloneNode(true);
     const cloneId = genId();
@@ -114,6 +190,7 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   };
   const sharedBtn = menu.querySelector('.menu-shared');
   function updateSharedBtn() {
+    updateStyleSourceButtons();
     const isShared = el.dataset.global === 'true';
     sharedBtn.innerHTML = `<img src="/assets/icons/globe.svg" class="icon" alt="shared" /> ${isShared ? 'Unset Shared Widget' : 'Set as Shared Widget'}`;
   }

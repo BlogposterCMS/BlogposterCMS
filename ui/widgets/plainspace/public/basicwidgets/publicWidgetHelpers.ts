@@ -8,6 +8,7 @@ export type PublicWidgetContext = {
   metadata?: LooseRecord;
   instanceMetadata?: LooseRecord;
   scene?: LooseRecord;
+  emit?: (eventName: string, payload?: LooseRecord) => Promise<unknown>;
 };
 
 export type MediaItem = {

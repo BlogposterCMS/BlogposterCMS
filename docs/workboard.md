@@ -176,6 +176,30 @@ instead of stuffing everything into a theme.
 Blogposter should grow by extending existing module contracts, not by creating a
 second product or bypassing the event-driven architecture.
 
+#### Event-first transport hardening
+
+- Status: Ready
+- Type: architecture, security, migration
+- Area: `runtimeManager`, `meltdownHttpPolicy`, browser clients, app bridge
+- Context: Blogposter already uses module events internally, but browser,
+  runtime, app and widget callers still have compatibility paths that know raw
+  event names. The next hardening pass should make resource/action facades the
+  normal edge contract without introducing a parallel REST product.
+- Acceptance: Add a shared browser facade client for `cmsAdminApiRequest` and
+  `cmsPublicRuntimeRequest`, keep legacy event translation working, classify all
+  `/api/*` and `/admin/api/*` routes by transport responsibility, preserve
+  stable error codes across module -> facade -> HTTP -> UI helper paths, and
+  document `ENABLE_API` / `API_PORT` as reserved or remove them.
+- Tests: Meltdown HTTP policy translation tests, Runtime Manager facade tests,
+  AppLoader bridge tests, UI boundary tests for raw event construction, and
+  focused HTTP integration tests for `/api/meltdown` and
+  `/api/meltdown/batch` when transport behavior changes.
+- Docs: `docs/event_first_transport.md`, Runtime Manager reference, UI
+  architecture and configuration notes.
+- Risks: Moving too much UI at once could break Designer and public rendering;
+  leaving the legacy paths undocumented could make future features add new
+  domain REST controllers or bypass facade permissions.
+
 #### Platform Core v1 scope
 
 - Status: Ready

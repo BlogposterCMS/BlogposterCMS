@@ -76,13 +76,19 @@ Widgets are small blocks of functionality (text blocks, images, counters, etc.) 
 
 The bundled Design Studio public lane includes `textBox` as the compatible
 Rich Text widget plus `mediaBlock`, `buttonLink`, `navigationMenu`,
-`breadcrumb` and `gallery`. Page-list and collection teaser rendering stays out
-of this public widget set until it can be built directly on the parent/child
-page model.
+`breadcrumb`, `gallery` and `collectionArchive`. Collection Archive renders
+child pages from a selected parent page as public cards and stays separate from
+the admin dashboard page-list widget.
 
 In Design Studio the left insert sidebar groups these technical widgets into
-Text, Media, Shape, Button and Navigation presets. Authors pick presets; the
-registry keeps the underlying widget IDs stable for runtime compatibility.
+Text, Media, Shape, Button, Navigation and Content presets. Authors pick
+presets; the registry keeps the underlying widget IDs stable for runtime
+compatibility.
+
+Design Studio containers and normal widgets can use Style Source metadata when
+multiple objects should share layout/design properties. The first source object
+acts as the template, followers copy those properties without copying content,
+and each follower can be unlinked when it needs its own styling.
 
 Layouts and widgets are edited through the admin dashboard raster grid. While in edit mode, open the widget drawer and drag widgets onto the dashboard; the drop position chooses a raster column and flow order, while the widget contract chooses the allowed size. The widget manager ensures only users with the appropriate permissions can create or modify widgets.
 When edit mode is active, the content header shows quick action buttons on the right. Use the grid icon to toggle the widgets panel and the X icon to delete the current admin page.

@@ -1,5 +1,5 @@
 import { normalizeEffects } from './sceneRuntime.js';
-export function createRuntimeWidgetContext(wrapper, def, lane, instanceMetadata = {}) {
+export function createRuntimeWidgetContext(wrapper, def, lane, instanceMetadata = {}, options = {}) {
     const host = (wrapper.closest('.canvas-item') || wrapper);
     const ctx = {
         id: host.dataset.instanceId,
@@ -18,6 +18,9 @@ export function createRuntimeWidgetContext(wrapper, def, lane, instanceMetadata 
     };
     if (lane === 'admin' && window.ADMIN_TOKEN) {
         ctx.jwt = window.ADMIN_TOKEN;
+    }
+    if (typeof options.emit === 'function') {
+        ctx.emit = options.emit;
     }
     return ctx;
 }

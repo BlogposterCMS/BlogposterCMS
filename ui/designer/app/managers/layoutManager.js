@@ -38,6 +38,29 @@ function normalizeRadius(value) {
   return Number.isFinite(raw) ? Math.max(0, Math.round(raw)) : null;
 }
 
+function readStyleSourceMetaFromItem(item, meta) {
+  const raw = item.styleSource || item.style_source || meta.styleSource || meta.style_source;
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+}
+
+function applyStyleSourceDataset(el, styleSource = {}) {
+  if (styleSource.enabled !== undefined) el.dataset.styleSourceEnabled = String(styleSource.enabled);
+  if (styleSource.role) el.dataset.styleSourceRole = String(styleSource.role);
+  if (styleSource.sourceId) el.dataset.styleSourceId = String(styleSource.sourceId);
+  if (styleSource.syncLayout !== undefined) el.dataset.styleSyncLayout = String(styleSource.syncLayout);
+  if (styleSource.syncDesign !== undefined) el.dataset.styleSyncDesign = String(styleSource.syncDesign);
+}
+
+function readStyleSourceDataset(el) {
+  const styleSource = {};
+  if (el.dataset.styleSourceEnabled) styleSource.enabled = el.dataset.styleSourceEnabled !== 'false';
+  if (el.dataset.styleSourceRole) styleSource.role = el.dataset.styleSourceRole;
+  if (el.dataset.styleSourceId) styleSource.sourceId = el.dataset.styleSourceId;
+  if (el.dataset.styleSyncLayout) styleSource.syncLayout = el.dataset.styleSyncLayout !== 'false';
+  if (el.dataset.styleSyncDesign) styleSource.syncDesign = el.dataset.styleSyncDesign !== 'false';
+  return Object.keys(styleSource).length ? styleSource : null;
+}
+
 export function applyLayout(layout, {
   gridEl,
   grid,
@@ -78,6 +101,7 @@ export function applyLayout(layout, {
       }
     }
     const behavior = item.behavior || itemMeta.behavior || 'scroll';
+    const workareaId = item.workareaId || item.workarea_id || itemMeta.workareaId || itemMeta.workarea_id || '';
     const sceneId = item.sceneId || itemMeta.sceneId || '';
     const sceneTitle = item.sceneTitle || itemMeta.sceneTitle || '';
     const sceneBackground = item.sceneBackground || itemMeta.sceneBackground || '';
@@ -86,6 +110,7 @@ export function applyLayout(layout, {
     const elementName = readAppearanceValue(item, itemMeta, ['elementName', 'element_name', 'name']);
     const opacity = readAppearanceValue(item, itemMeta, ['opacity']);
     const radius = readAppearanceValue(item, itemMeta, ['radius', 'cornerRadius', 'corner_radius']);
+    const styleSource = readStyleSourceMetaFromItem(item, itemMeta);
     const effects = parseEffects(item.effects || itemMeta.effects);
     if (item.code) {
       codeMap[instId] = {
@@ -93,6 +118,7 @@ export function applyLayout(layout, {
         meta: {
           ...itemMeta,
           ...(behavior ? { behavior } : {}),
+          ...(workareaId ? { workareaId } : {}),
           ...(sceneId ? { sceneId } : {}),
           ...(sceneTitle ? { sceneTitle } : {}),
           ...(sceneBackground ? { sceneBackground } : {}),
@@ -113,6 +139,7 @@ export function applyLayout(layout, {
     wrapper.dataset.global = isGlobal ? 'true' : 'false';
     wrapper.dataset.layer = String(layerIndex);
     wrapper.dataset.behavior = behavior;
+    if (workareaId) wrapper.dataset.workareaId = workareaId;
     if (sceneId) wrapper.dataset.sceneId = sceneId;
     if (sceneTitle) wrapper.dataset.sceneTitle = sceneTitle;
     if (sceneBackground) wrapper.dataset.sceneBackground = sceneBackground;
@@ -125,6 +152,7 @@ export function applyLayout(layout, {
       if (opacityValue !== null) wrapper.style.opacity = String(opacityValue);
     }
     if (radius !== '') wrapper.dataset.radius = String(radius);
+    applyStyleSourceDataset(wrapper, styleSource);
     if (effects.length) wrapper.dataset.effects = JSON.stringify(effects);
     const cols = grid?.options?.columns || 12;
     const cellH = grid?.options?.cellHeight || 1;
@@ -160,6 +188,8 @@ export function applyLayout(layout, {
 
 export function getItemData(el, codeMap) {
   const instanceId = el.dataset.instanceId;
+  const workareaEl = el.closest('.layout-container');
+  const workareaId = workareaEl?.dataset?.nodeId || el.dataset.workareaId || '';
   const existingCode = instanceId ? codeMap[instanceId] : null;
   const code = existingCode && typeof existingCode === 'object'
     ? { ...existingCode }
@@ -176,11 +206,15 @@ export function getItemData(el, codeMap) {
   if (el.dataset.elementName) meta.elementName = el.dataset.elementName;
   if (el.dataset.opacity) meta.opacity = el.dataset.opacity;
   if (el.dataset.radius) meta.radius = el.dataset.radius;
+  if (workareaId) meta.workareaId = workareaId;
+  const styleSource = readStyleSourceDataset(el);
+  if (styleSource) meta.styleSource = styleSource;
   const effects = parseEffects(el.dataset.effects);
   if (effects.length) meta.effects = effects;
   if (Object.keys(meta).length) code.meta = meta;
   return {
     widgetId: el.dataset.widgetId,
+    workareaId,
     global: el.dataset.global === 'true',
     behavior: el.dataset.behavior || meta.behavior || 'scroll',
     sceneId: el.dataset.sceneId || meta.sceneId || '',
@@ -191,6 +225,7 @@ export function getItemData(el, codeMap) {
     elementName: el.dataset.elementName || meta.elementName || '',
     opacity: el.dataset.opacity || meta.opacity || '',
     radius: el.dataset.radius || meta.radius || '',
+    styleSource: styleSource || meta.styleSource || null,
     effects: effects.length ? effects : (Array.isArray(meta.effects) ? meta.effects : []),
     w: +el.getAttribute('gs-w'),
     h: +el.getAttribute('gs-h'),

@@ -7,6 +7,32 @@ tag.
 
 ## [Unreleased]
 
+- Documented the Event-First Transport Boundary decision: Blogposter keeps an
+  event-first core, treats HTTP as adapter/facade infrastructure, and should
+  migrate new browser/app/widget work toward resource/action runtime facades
+  instead of adding domain REST controllers.
+- Added a Design Studio `collectionArchive` public widget and Content insert
+  preset that renders child pages from a selected collection parent as cards
+  with image, title, SEO description and link action through the existing
+  public `pagesManager.getChildPages` contract.
+- Added reusable Style Source metadata for Design Studio containers and widget
+  placements so followers can copy layout/design properties from a source
+  object without copying content, with per-object unlink controls.
+- Clarified contributor guidance for agent-ready architecture: workflows should
+  be designed for future agent control through existing contracts without
+  exposing every internal function as an agent action.
+- Reworked the README into a clearer technical project introduction that
+  explains BlogposterCMS, its module/widget/app boundaries and the public
+  runtime performance model without generic marketing language.
+- Added Design Studio container authoring rules: the root page surface now acts
+  as the default free workarea, layout containers expose a floating top-center
+  toolbar for auto-add, placement, stack/row/free mode, gap, padding,
+  background, workarea and `designRef` controls, and widget placements now carry
+  the nearest `workareaId` for runtime-safe container mounting.
+- Hardened Design Studio container authoring so toolbar actions, container
+  refreshes and layout mutation callbacks fail in isolation with searchable
+  `DESIGNER_CONTAINER_*` / `LAYOUT_CONTAINER_AFTER_CHANGE_FAILED` diagnostics
+  instead of breaking the Studio UI.
 - Added an already-installed modal for stale first-install submissions with a
   direct dashboard-entry action instead of leaving users on the raw
   `SHELL_INSTALL_SUBMIT_FAILED: Already installed` alert.

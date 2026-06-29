@@ -65,6 +65,15 @@ export const INSERT_TOOL_ITEMS = [
       { id: 'navigation.menu', title: 'Menu', icon: 'menu', widgetId: 'navigationMenu', description: 'Public menu renderer', size: { w: 8, h: 64 }, settings: { locationKey: 'primary', orientation: 'horizontal', maxDepth: 2 } },
       { id: 'navigation.breadcrumb', title: 'Breadcrumb', icon: 'chevrons-right', widgetId: 'breadcrumb', description: 'Page path trail', size: { w: 8, h: 48 }, settings: { homeLabel: 'Home', separator: '/' } }
     ]
+  },
+  {
+    id: 'content',
+    title: 'Content',
+    icon: 'archive',
+    description: 'Page and collection lists',
+    presets: [
+      { id: 'content.collectionArchive', title: 'Collection Archive', icon: 'archive', widgetId: 'collectionArchive', description: 'Cards from a selected collection', size: { w: 12, h: 180 }, settings: { collectionId: '', columns: 3, buttonLabel: 'Read more' } }
+    ]
   }
 ];
 

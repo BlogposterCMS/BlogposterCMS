@@ -13,6 +13,7 @@ This folder provides additional information on installing, configuring and exten
 - [Architecture Overview](architecture.md)
 - [Server Composition](server_composition.md)
 - [UI Architecture](ui_architecture.md)
+- [Event-First Transport Boundary](event_first_transport.md)
 - [Workboard](workboard.md)
 - [Security Notes](security.md)
 - [CMS Usage Guide](guide.md)

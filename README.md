@@ -1,83 +1,119 @@
 [![Tests](https://github.com/BlogposterCMS/BlogposterCMS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/BlogposterCMS/BlogposterCMS/actions/workflows/ci.yml)
-![ALPHA status](https://img.shields.io/badge/status-alpha-red)
+![Alpha status](https://img.shields.io/badge/status-alpha-red)
 
-⚠️ **Version 0.7 – Breaking Changes Ahead**
-This release **will break existing setups**.
+# BlogposterCMS
 
+BlogposterCMS is an open-source CMS and website runtime for people who want
+WordPress-like ownership of content without inheriting a monolithic add-on
+stack. It combines a modular backend, a visual Design Studio, structured page
+data, widgets, apps and import tooling into one self-hostable Node.js project.
 
-#  BlogposterCMS
+The goal is simple: editors should be able to build pages visually, while
+developers still get clear contracts, readable code and strict extension
+boundaries.
 
-**The Composable Sandbox for Building Websites Without Chains**
+## Current Status
 
-> Forget monolithic CMS. Think modular freedom – with a builder that will one day make Canva jealous.
+BlogposterCMS is currently `v0.7` alpha software. It is usable for development,
+experimentation and architecture work, but the data model, builder behavior and
+extension contracts can still change between releases.
 
----
+Existing setups may break during alpha updates. Do not treat this as a stable
+drop-in production CMS yet.
 
-##  The Mission
+## What Makes It Different
 
-BlogposterCMS isn’t just another CMS.
-It’s a **composable platform** built for creators, developers, and teams who want **full control without bloat**.
-The endgame?
-A system that’s as **intuitive as a design tool**, as **flexible as a developer’s sandbox**, and as **future-proof as microservices** – all without the lock-in nonsense.
+BlogposterCMS is not built around one giant "do everything" extension type.
+It separates responsibilities:
 
----
+- **Modules** own backend capability and run through a permission-checked event
+  system.
+- **Widgets** render public or admin UI blocks.
+- **Apps** provide larger admin/tool surfaces in isolated frames.
+- **Themes** control presentation and must not become executable backend code.
 
-##  Key Features (and why they matter)
+That separation matters because it keeps authority visible. A widget cannot
+quietly become a backend module, a theme cannot mutate users, and a community
+module does not receive the raw Express app.
 
-*  **Composable & Modular**
-  Load only what you need. Keep your project lean, your code clean, and your sanity intact.
+The core communicates through `motherEmitter`, a JWT-secured event bus.
+Community modules use a scoped `moduleHost` facade and run outside the CMS host
+process. They can request access to core events, but those requests are
+declared in `moduleInfo.json`, reviewed by the admin, and stored as explicit
+grants.
 
-*  **Secure by Design**
-  Process-isolated community modules, granular permissions, and JWT-secured events.
-  Because “ship now, patch later” isn’t a strategy – it’s a lawsuit waiting to happen.
+## Why Public Pages Feel Fast
 
-*  **Visual Builder with CanvasGrid** *(Alpha)*
-  Place responsive widgets exactly where you want them.
-  The UX is “usable” now – aiming for Canva-level fluidity.
+BlogposterCMS is designed so public page delivery stays thin.
 
-  *  **Workspace-Driven Navigation**
-  Organize pages by workspace with dynamic headers, quick-create panels, and nested subpages for sane site structure.
+The public route serves a small HTML shell and injects only the runtime facts a
+page needs: page id, slug, lane, public token, active theme and nonce. Static
+assets are served directly from guarded `/assets`, `/build`, `/themes`,
+`/widgets` and `/apps` routes. The browser runtime then composes the page from
+structured page, layout and widget data.
 
-*  **Static Export & Media Manager** *(Alpha)*
-  Publish builder designs as static HTML/CSS/JS and manage assets safely in the media library.
+This avoids running the full admin/editor environment for every public page
+request. The heavy surfaces, such as Design Studio and admin widgets, stay on
+the admin side. Public rendering uses the smaller page renderer bundle and
+loads only the widget/runtime contracts it needs.
 
-*  **Database Freedom**
-  PostgreSQL, MongoDB, SQLite – pick your weapon.
-  No “our way or the highway” here.
+Several smaller decisions add up:
 
-*  **AI & Microservice Ready**
-  Extend with your own AI workflows or run modules as microservices.
-  Future you will thank present you.
+- Static files are served directly instead of being rebuilt per request.
+- Runtime browser modules are compiled with an mtime-based cache during
+  development.
+- Meltdown supports `/api/meltdown/batch`, so browser code can group event
+  calls instead of creating avoidable round trips.
+- Page, layout and widget transport payloads are normalized in focused runtime
+  helpers instead of being rebuilt ad hoc in each UI surface.
+- Import and builder data are stored as structured content, layout and widget
+  metadata, so the renderer can work from known contracts instead of scraping a
+  whole CMS page builder on every request.
 
-*  **Performance + SEO**
-  Lightning-fast output with solid SEO.
-  No dark rituals required for page speed.
+There is no public benchmark claim here yet. The point is architectural:
+BlogposterCMS keeps the public hot path small, static-friendly and separate
+from the admin builder.
 
----
+## Main Capabilities
 
-##  Where We’re Going
+- Visual page building through Design Studio and the shared runtime layout
+  system.
+- Nested pages, content entries, media, comments, navigation, SEO, workflow,
+  revisions, previews, themes and translations.
+- First-party public widgets such as text, media, buttons, navigation menus,
+  breadcrumbs and galleries.
+- WordPress WXR import plus a visual site-package importer/exporter path for
+  rendered pages, normalized HTML, local assets, menus, redirects, SEO metadata
+  and Design Studio mapping hints.
+- SQLite, PostgreSQL and MongoDB support through the database manager layer.
+- Admin/runtime transport through explicit module events instead of direct
+  cross-module calls.
+- Process-isolated community module loading with declared permissions,
+  requested access and module-owned storage.
 
-Blogposter is moving towards becoming **the Figma for websites**:
+## Architecture At A Glance
 
-* A drag-and-drop builder that’s fast, fluid, and fun.
-* A secure, extensible backend that doesn’t choke under scale.
-* A marketplace for widgets, templates, and full site kits.
-* Deployment options from self-hosted to fully managed.
+`app.js` is intentionally small. It loads configuration, attaches process
+handlers and delegates server setup to `mother/server/createBlogposterApp.js`.
 
-The goal is simple: **own your content, own your stack, own your future**.
+The server composition layer mounts static assets, security middleware, core
+module bootstrap, Meltdown HTTP transport, auth, app management, agent APIs,
+the admin shell, installation routes, maintenance checks and public page
+rendering in a fixed order.
 
----
+Core product behavior remains in `mother/modules/*`. Server files are
+transport and composition code, not a second business-logic layer.
 
-##  Current Status (v0.7 Alpha)
+Useful docs:
 
-This is the part of the movie where the lab is still smoking and someone says, “Technically it works.”
-Expect broken layouts, screaming logs and the occasional “Why is this on fire?”.
-If that sounds fun: grab a helmet and jump in.
-If you prefer boring things like “stable” and “predictable”, check back after a few releases
+- [Architecture overview](docs/architecture.md)
+- [Server composition](docs/server_composition.md)
+- [Module architecture](docs/modules.md)
+- [Permission system](docs/permission_system.md)
+- [Community module guide](docs/community_module_guide.md)
+- [UI architecture](docs/ui_architecture.md)
 
----
-
-## 🛠 Quickstart
+## Quickstart
 
 ```bash
 git clone https://github.com/BlogposterCMS/BlogposterCMS
@@ -85,43 +121,59 @@ cd BlogposterCMS
 npm install
 npm run build
 cp env.sample .env
-> Replace every placeholder in `.env` with a strong, unique secret before booting the stack to avoid deploying with default credentials. See the detailed requirements in [`docs/developer_quickstart.md`](docs/developer_quickstart.md) or [`docs/installation.md`](docs/installation.md).
 npm start
 ```
 
-After the server boots, complete the mandatory first-run setup to unlock the CMS:
+On Windows PowerShell, use:
 
-1. Open `http://localhost:3000/install` in your browser and finish the wizard to create the initial admin user.
-2. Once the wizard confirms completion, visit `http://localhost:3000/admin` to access the dashboard.
+```powershell
+Copy-Item env.sample .env
+```
 
-You must complete this flow before the CMS becomes available. For a more detailed walkthrough, see the [installation guide](./docs/installation.md#run-the-setup-wizard).
+Before starting a real environment, replace every placeholder in `.env` with a
+strong unique secret. Do not deploy with sample secrets.
 
-CLI coming soon to save you from manual setup.
+After the server boots:
 
----
+1. Open `http://localhost:3000/install`.
+2. Complete the setup wizard and create the first admin user.
+3. Open `http://localhost:3000/admin`.
 
-##  Docs & Dev Guide
+More detail is available in the [developer quickstart](docs/developer_quickstart.md)
+and the [installation guide](docs/installation.md).
 
-Full docs in [`docs/index.md`](./docs/index.md).
-Sample module: [`modules/dummyModule`](./modules/dummyModule).
+## Development
 
----
+Common commands:
 
-##  Join the Build
+```bash
+npm test
+npm run build
+npm run dev
+```
 
-Frontend wizards, UI/UX magicians, and module tinkerers –
-BlogposterCMS is an open playground. Help us make it the CMS we all wish existed.
+The default runtime entrypoint is `node app.js`. The development command uses
+`nodemon app.js`.
 
----
+## Documentation
 
-##  Support
+Start with [docs/index.md](docs/index.md). The docs cover installation,
+configuration, modules, widgets, permissions, UI architecture, security and the
+current workboard.
 
-If you like the direction, buy me a coffee. It funds both code and caffeine overdoses. [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%23FF813F.svg?style=flat&logo=buy-me-a-coffee&logoColor=white)](https://coff.ee/BlogposterCMS)
+## Contributing
 
----
+Contributions are welcome while the project is in alpha, especially focused
+fixes, tests, docs and module/widget work that follows the existing boundaries.
+Please keep new behavior explicit and update the relevant tests and docs with
+meaningful changes.
 
-## 📝 License
+## Support
 
-MIT – use at your own risk. [`LICENSE`](LICENSE)
+If you like the direction and want to support the project:
 
----
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%23FF813F.svg?style=flat&logo=buy-me-a-coffee&logoColor=white)](https://coff.ee/BlogposterCMS)
+
+## License
+
+MIT. See [LICENSE](LICENSE).

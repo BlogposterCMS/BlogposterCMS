@@ -43,7 +43,7 @@ export async function renderRuntimeCanvasWidget({
 
   try {
     await applyDefaultWidgetInstanceOptions(wrapper, def, grid, emit, lane);
-    await renderWidget(content, def, mergeSceneMetaIntoCode(item.code || null, item), lane);
+    await renderWidget(content, def, mergeSceneMetaIntoCode(item.code || null, item), lane, { emit });
     if (afterRender) await afterRender(wrapper, grid);
     markRuntimeWidgetHydrationState(wrapper, 'ready');
     return content;

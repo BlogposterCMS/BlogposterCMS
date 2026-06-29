@@ -14,14 +14,29 @@ Widgets are content or behavior units that mount into a layout leaf. They must
 use versioned metadata, follow the Design Contract, and keep data access behind
 the existing AppLoader/runtime contracts.
 
+The page surface itself is the default free-placement workarea. Authors can add
+layout containers from the floating container toolbar; the parent container's
+mode decides how automatic inserts behave: `stack` appends vertically, `row`
+appends horizontally, and `free` keeps absolute CanvasGrid placement inside the
+active workarea. Container settings such as gap, padding and background are
+stored on the `LayoutTree`; widget placements store `workareaId` so runtime
+mounting can target the correct container without turning containers into
+widgets. Container authoring failures are isolated at the toolbar and shared
+layout adapter boundaries, with searchable `DESIGNER_CONTAINER_*` diagnostics
+instead of allowing a single bad action to break the Studio UI.
+Containers and widget placements may also carry optional `styleSource`
+metadata. The first source object owns reusable layout/design properties, while
+followers copy those properties without copying content. Authors can unlink a
+follower per object when a container or widget needs to diverge.
+
 ## Foundation Set
 
 ### Insert Palette
 
 The Design Studio insert sidebar shows grouped presets instead of every
 technical widget as a first-level choice. The visible groups are Text, Media,
-Shape, Button and Navigation. Selecting a group opens its preset panel; dragging
-a group still keeps the fast insert path.
+Shape, Button, Navigation and Content. Selecting a group opens its preset panel;
+dragging a group still keeps the fast insert path.
 
 - Text presets resolve to the compatible `textBox` widget id and store rich
   text settings in widget metadata.
@@ -30,6 +45,8 @@ a group still keeps the fast insert path.
 - Button presets use `buttonLink` with primary, secondary and plain-link
   variants.
 - Navigation presets use `navigationMenu` and `breadcrumb`.
+- Content presets use `collectionArchive` for manually selected page
+  collections.
 - Shape, Divider and Spacer remain lightweight `htmlBlock` fallbacks until a
   dedicated public shape widget is introduced.
 
@@ -51,10 +68,10 @@ is marked as advanced and hidden from normal catalogs.
 - `breadcrumb`: current-path or manually supplied breadcrumb trail.
 - `gallery`: ordered media gallery with grid, masonry and carousel modes plus
   per-image fit/focus metadata.
-
-The Page List / Collection Teaser widget remains intentionally unimplemented in
-this pass. It must stay separate from the admin dashboard page-list widget and
-should be built later on top of the existing parent/child page model.
+- `collectionArchive`: renders public child pages from a manually selected
+  collection parent as left-to-right cards with image, title, SEO description
+  and a link action. It uses the existing `pagesManager.getChildPages` public
+  event contract and remains separate from the admin dashboard page-list widget.
 
 ### P0 Authoring Basics
 
@@ -71,8 +88,8 @@ should be built later on top of the existing parent/child page model.
   structure is curated in Navigation Studio; the public widget renders theme
   defaults and exposes optional Mega Menu metadata.
 - Breadcrumb: shows the current page path for nested content.
-- Page List: renders public child pages or selected page collections. This is
-  separate from the admin dashboard page-list widget.
+- Collection Archive: renders public child pages from a selected collection
+  parent. This is separate from the admin dashboard page-list widget.
 
 ### Navigation Studio Boundary
 
@@ -91,7 +108,9 @@ should be built later on top of the existing parent/child page model.
 ### P1 Content Blocks
 
 - Card / Teaser: reusable card for pages, posts or manual content.
-- Collection / Repeater: renders multiple records from a selected source.
+- Collection / Repeater: future generalized record repeaters should reuse the
+  `collectionArchive` source-selection and card-style-source contract where it
+  fits instead of inventing a parallel listing system.
 - Gallery: ordered media set with grid, masonry or carousel presentation,
   configurable rows/columns, height strategy, per-image fit/focus metadata and
   slider animation settings.

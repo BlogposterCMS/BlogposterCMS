@@ -6,6 +6,12 @@ export function renderLayoutTreeSidebar(panelEl, rootEl, onSelect) {
   if (!treeEl) return;
   treeEl.innerHTML = '';
 
+  function containerModeLabel(node) {
+    if (node.dataset.layoutMode) return node.dataset.layoutMode;
+    if (node.dataset.split === 'true') return node.dataset.orientation === 'vertical' ? 'row' : 'stack';
+    return 'free';
+  }
+
   function walk(node, depth) {
     if (!node.classList.contains('layout-container')) return;
     const item = document.createElement('div');
@@ -13,9 +19,9 @@ export function renderLayoutTreeSidebar(panelEl, rootEl, onSelect) {
     item.style.paddingLeft = `${depth * 12}px`;
     if (node.dataset.split === 'true') {
       const isRow = node.dataset.orientation === 'horizontal';
-      item.textContent = isRow ? STRINGS.layoutTreeRow : STRINGS.layoutTreeColumn;
+      item.textContent = `${isRow ? STRINGS.layoutTreeRow : STRINGS.layoutTreeColumn} - ${containerModeLabel(node)}`;
     } else {
-      item.textContent = STRINGS.layoutTreeContainer;
+      item.textContent = `${STRINGS.layoutTreeContainer} - ${containerModeLabel(node)}`;
       item.addEventListener('click', () => {
         treeEl.querySelectorAll('.layout-tree-item.selected').forEach(el => el.classList.remove('selected'));
         item.classList.add('selected');

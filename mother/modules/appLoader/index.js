@@ -11,9 +11,7 @@ const {
 const { hasPermission } = require('../userManagement/permissionUtils');
 const {
   APP_FORBIDDEN_DIRECT_EVENTS,
-  hasRawPlaceholderPayload,
-  legacyHttpFacadeAction,
-  translateLegacyHttpFacadeEvent
+  hasRawPlaceholderPayload
 } = require('../../utils/meltdownHttpPolicy');
 const notificationEmitter = require('../../emitters/notificationEmitter');
 
@@ -381,25 +379,6 @@ function getAllowedAppEventDescriptor(manifest, eventName) {
   return normalizeAllowedAppEvents(manifest).get(eventName) || null;
 }
 
-function translateAppBridgeFacadeEvent(eventName, params = {}) {
-  const definition = legacyHttpFacadeAction(eventName);
-  if (definition) {
-    return {
-      originalEventName: eventName,
-      eventName: 'cmsAdminApiRequest',
-      unwrapData: true,
-      payload: {
-        moduleName: 'runtimeManager',
-        moduleType: 'core',
-        resource: definition.resource,
-        action: definition.action,
-        params
-      }
-    };
-  }
-  return translateLegacyHttpFacadeEvent(eventName, params);
-}
-
 function assertDirectAppBridgeAllowed(appName = '') {
   if (!isCoreOwnedApp(appName)) {
     throw new Error('[APP LOADER] Direct app meltdown bridge is reserved for core-owned apps. Apps must use cms-admin-request runtime contracts.');
@@ -720,12 +699,9 @@ async function dispatchAllowedAppMeltdownEvent(motherEmitter, payload, manifest,
     throw new Error('[APP LOADER] Raw database placeholders cannot be called by apps.');
   }
 
-  const translated = AGENT_SURFACE_EVENT_NAMES.has(eventName)
-    ? null
-    : translateAppBridgeFacadeEvent(eventName, forwarded);
-  if (translated) {
+  if (eventName === 'cmsAdminApiRequest' || eventName === 'cmsPublicRuntimeRequest') {
     const runtimePayload = {
-      ...translated.payload,
+      ...forwarded,
       jwt: payload.jwt,
       decodedJWT: payload.decodedJWT,
       appContext: {
@@ -735,10 +711,7 @@ async function dispatchAllowedAppMeltdownEvent(motherEmitter, payload, manifest,
         coreOwned: isCoreOwnedApp(payload.appName)
       }
     };
-    const result = await emitAsync(motherEmitter, translated.eventName, runtimePayload);
-    return translated.unwrapData && result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, 'data')
-      ? result.data
-      : result;
+    return emitAsync(motherEmitter, eventName, runtimePayload);
   }
   if (!AGENT_SURFACE_EVENT_NAMES.has(eventName)) {
     throw new Error(`[APP LOADER] App event "${eventName}" must use a runtime facade contract.`);

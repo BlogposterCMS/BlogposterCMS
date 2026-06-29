@@ -446,5 +446,25 @@ module.exports.DEFAULT_WIDGETS = [
         slidesToScroll: 1
       }
     }
+  },
+  {
+    widgetId: 'collectionArchive',
+    widgetType: PUBLIC_LANE,
+    label: 'Collection Archive',
+    content: '/ui/widgets/plainspace/public/basicwidgets/collectionArchiveWidget.js',
+    category: 'content',
+    metadata: {
+      layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
+      apiEvents: [
+        'getChildPages'
+      ],
+      icon: 'archive',
+      defaults: {
+        collectionId: '',
+        columns: 3,
+        gap: '18px',
+        buttonLabel: 'Read more'
+      }
+    }
   }
 ];

@@ -22,17 +22,37 @@ export type RuntimeEmitter = (
   payload?: LooseRecord
 ) => Promise<any>;
 
+function cmsPublicRuntimePayload(resource: string, action: string, params: LooseRecord = {}): LooseRecord {
+  return {
+    moduleName: 'runtimeManager',
+    moduleType: 'core',
+    resource,
+    action,
+    params
+  };
+}
+
+function cmsAdminPayload(resource: string, action: string, params: LooseRecord = {}): LooseRecord {
+  return {
+    jwt: window.ADMIN_TOKEN,
+    moduleName: 'runtimeManager',
+    moduleType: 'core',
+    resource,
+    action,
+    params
+  };
+}
+
 export async function fetchRuntimePageBySlug(
   emit: RuntimeEmitter,
   slug: string,
   lane: string
 ): Promise<any> {
-  return unwrapData(await emit('getPageBySlug', {
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    slug,
-    lane
-  }));
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('pages', 'getBySlug', { slug, lane })
+    : cmsPublicRuntimePayload('pages', 'getBySlug', { slug, lane });
+  return unwrapData(await emit(eventName, payload));
 }
 
 export async function fetchRuntimePageById(
@@ -40,13 +60,11 @@ export async function fetchRuntimePageById(
   pageId: unknown,
   lane: string
 ): Promise<any> {
-  return unwrapData(await emit('getPageById', {
-    pageId,
-    lane,
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    ...laneAuthPayload(lane)
-  }));
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('pages', 'get', { pageId, lane })
+    : cmsPublicRuntimePayload('pages', 'get', { pageId, lane });
+  return unwrapData(await emit(eventName, payload));
 }
 
 export async function fetchRuntimeChildPages(
@@ -54,12 +72,11 @@ export async function fetchRuntimeChildPages(
   parentId: unknown,
   lane: string
 ): Promise<LooseRecord[]> {
-  return normalizeDataList(await emit('getChildPages', {
-    parentId,
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    ...laneAuthPayload(lane)
-  }));
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('pages', 'children', { parentId, lane })
+    : cmsPublicRuntimePayload('pages', 'children', { parentId, lane });
+  return normalizeDataList(await emit(eventName, payload));
 }
 
 export async function fetchRuntimeWidgetRegistry(
@@ -67,14 +84,13 @@ export async function fetchRuntimeWidgetRegistry(
   lane: string,
   widgetLane: string
 ): Promise<LooseRecord[]> {
-  const response = await emit('widget.registry.request.v1', {
-    lane: widgetLane,
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    ...adminLaneAuthPayload(lane)
-  });
-  return response && typeof response === 'object' && Array.isArray(response.widgets)
-    ? response.widgets
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('plainSpace', 'widgetRegistry', { lane: widgetLane })
+    : cmsPublicRuntimePayload('plainSpace', 'widgetRegistry', { lane: widgetLane });
+  const data = unwrapData(await emit(eventName, payload));
+  return data && typeof data === 'object' && Array.isArray(data.widgets)
+    ? data.widgets
     : [];
 }
 
@@ -82,12 +98,11 @@ export async function loadRuntimeGlobalLayout(
   emit: RuntimeEmitter,
   lane: string
 ): Promise<LooseRecord[]> {
-  return normalizeLayoutResponse(await emit('getGlobalLayoutTemplate', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    ...laneAuthPayload(lane),
-    lane
-  }));
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('plainSpace', 'globalLayoutTemplate', { lane })
+    : cmsPublicRuntimePayload('plainSpace', 'globalLayoutTemplate', { lane });
+  return normalizeLayoutResponse(unwrapData(await emit(eventName, payload)));
 }
 
 export async function loadRuntimeLayoutTemplate(
@@ -95,13 +110,11 @@ export async function loadRuntimeLayoutTemplate(
   name: string,
   lane: string
 ): Promise<LooseRecord[]> {
-  return normalizeLayoutResponse(await emit('getLayoutTemplate', {
-    name,
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    ...laneAuthPayload(lane),
-    lane
-  }));
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('plainSpace', 'layoutTemplate', { name, lane })
+    : cmsPublicRuntimePayload('plainSpace', 'layoutTemplate', { name, lane });
+  return normalizeLayoutResponse(unwrapData(await emit(eventName, payload)));
 }
 
 export async function loadRuntimeLayoutForViewport(
@@ -110,14 +123,11 @@ export async function loadRuntimeLayoutForViewport(
   lane: string,
   viewport = 'desktop'
 ): Promise<LooseRecord[]> {
-  return normalizeLayoutResponse(await emit('getLayoutForViewport', {
-    ...adminLaneAuthPayload(lane),
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    pageId,
-    lane,
-    viewport
-  }));
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('plainSpace', 'layoutForViewport', { pageId, lane, viewport })
+    : cmsPublicRuntimePayload('plainSpace', 'layoutForViewport', { pageId, lane, viewport });
+  return normalizeLayoutResponse(unwrapData(await emit(eventName, payload)));
 }
 
 export async function fetchRuntimeDesign(
@@ -125,12 +135,11 @@ export async function fetchRuntimeDesign(
   designId: unknown,
   lane: string
 ): Promise<any> {
-  return emit('designer.getDesign', {
-    id: designId,
-    moduleName: 'designer',
-    moduleType: 'community',
-    ...laneAuthPayload(lane)
-  });
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('designer', 'get', { id: designId, lane })
+    : cmsPublicRuntimePayload('designer', 'get', { id: designId, lane });
+  return unwrapData(await emit(eventName, payload));
 }
 
 export async function saveRuntimeLayoutForViewport(
@@ -140,13 +149,10 @@ export async function saveRuntimeLayoutForViewport(
   layout: LooseRecord[],
   viewport = 'desktop'
 ): Promise<any> {
-  return emit('saveLayoutForViewport', {
-    jwt: window.ADMIN_TOKEN,
-    moduleName: 'plainspace',
-    moduleType: 'core',
+  return unwrapData(await emit('cmsAdminApiRequest', cmsAdminPayload('plainSpace', 'saveLayoutForViewport', {
     pageId,
     lane,
     viewport,
     layout
-  });
+  })));
 }

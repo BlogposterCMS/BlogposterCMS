@@ -72,6 +72,16 @@ function copyPercentDataset(
   if (item[key] != null) wrapper.dataset[key] = String(item[key]);
 }
 
+function applyRuntimeStyleSourceMetadata(wrapper: HTMLElement, item: RuntimeCanvasItemMeta): void {
+  const styleSource = item.styleSource || item.style_source || item.code?.meta?.styleSource || item.code?.meta?.style_source;
+  if (!styleSource || typeof styleSource !== 'object' || Array.isArray(styleSource)) return;
+  if (styleSource.enabled !== undefined) wrapper.dataset.styleSourceEnabled = String(styleSource.enabled);
+  if (styleSource.role) wrapper.dataset.styleSourceRole = String(styleSource.role);
+  if (styleSource.sourceId) wrapper.dataset.styleSourceId = String(styleSource.sourceId);
+  if (styleSource.syncLayout !== undefined) wrapper.dataset.styleSyncLayout = String(styleSource.syncLayout);
+  if (styleSource.syncDesign !== undefined) wrapper.dataset.styleSyncDesign = String(styleSource.syncDesign);
+}
+
 function projectPercent(
   value: unknown,
   scale: number,
@@ -277,6 +287,7 @@ export function createRuntimeCanvasItem({
   wrapper.setAttribute('gs-min-h', String(minH));
   wrapper.dataset.widgetId = def.id;
   wrapper.dataset.instanceId = String(instanceId);
+  applyRuntimeStyleSourceMetadata(wrapper, item);
 
   applySceneMetadata(wrapper, item);
   registerSceneEffects(wrapper);

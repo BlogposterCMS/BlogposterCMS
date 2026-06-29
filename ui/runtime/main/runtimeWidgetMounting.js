@@ -8,7 +8,7 @@ export async function renderRuntimeCanvasWidget({ wrapper, placeholder, item, de
     const content = mountRuntimeCanvasContent(wrapper, placeholder);
     try {
         await applyDefaultWidgetInstanceOptions(wrapper, def, grid, emit, lane);
-        await renderWidget(content, def, mergeSceneMetaIntoCode(item.code || null, item), lane);
+        await renderWidget(content, def, mergeSceneMetaIntoCode(item.code || null, item), lane, { emit });
         if (afterRender)
             await afterRender(wrapper, grid);
         markRuntimeWidgetHydrationState(wrapper, 'ready');

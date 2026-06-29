@@ -30,7 +30,8 @@ export async function renderWidget(
   wrapper: HTMLElement,
   def: RuntimeWidgetDefinition,
   code: RuntimeRenderCode = null,
-  lane = 'public'
+  lane = 'public',
+  options: { emit?: (...args: any[]) => Promise<any> } = {}
 ): Promise<void> {
   const { root, container } = createRuntimeWidgetShell(wrapper, lane);
   const instanceMetadata = instanceMetadataFromCode(code);
@@ -42,5 +43,7 @@ export async function renderWidget(
     return;
   }
 
-  await renderRuntimeWidgetModule(wrapper, container, def, lane, instanceMetadata);
+  await renderRuntimeWidgetModule(wrapper, container, def, lane, instanceMetadata, {
+    emit: options.emit
+  });
 }

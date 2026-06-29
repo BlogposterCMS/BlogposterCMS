@@ -658,100 +658,12 @@ function normalizeEventName(eventName) {
   return String(eventName || '').trim();
 }
 
-function legacyHttpFacadeAction(eventName) {
-  return HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS[normalizeEventName(eventName)] || null;
-}
-
-function legacyPublicRuntimeFacadeAction(eventName) {
-  return HTTP_LEGACY_PUBLIC_RUNTIME_EVENT_FACADE_ACTIONS[normalizeEventName(eventName)] || null;
-}
-
-function isPublicLaneValue(value) {
-  return String(value || '').trim().toLowerCase() === 'public';
-}
-
-function shouldUsePublicRuntimeFacade(eventName, payload = {}) {
-  const normalized = normalizeEventName(eventName);
-  const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
-
-  if (normalized === 'getStartPage' || normalized === 'getEnvelope') return true;
-  if (normalized === 'designer.getDesign') {
-    return !source.lane || isPublicLaneValue(source.lane);
-  }
-  if (normalized === 'designer.getLayout') {
-    return isPublicLaneValue(source.lane);
-  }
-  if (normalized === 'getWidgets') return isPublicLaneValue(source.widgetType || source.lane);
-  if (normalized === 'widget.registry.request.v1') return isPublicLaneValue(source.lane);
-  if (normalized === 'getChildPages') return !source.lane || isPublicLaneValue(source.lane);
-  if (normalized === 'getWidgetInstance') return /^default\.[A-Za-z0-9_.:-]{1,160}$/.test(String(source.instanceId || ''));
-
-  if ([
-    'getPageBySlug',
-    'getPageById',
-    'getGlobalLayoutTemplate',
-    'getLayoutTemplate',
-    'getLayoutForViewport'
-  ].includes(normalized)) {
-    return isPublicLaneValue(source.lane);
-  }
-
-  return false;
-}
-
-function stripLegacyPayloadMeta(payload = {}) {
-  const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
-  const params = {};
-  for (const [key, value] of Object.entries(source)) {
-    if (!LEGACY_HTTP_PAYLOAD_META_KEYS.has(key)) {
-      params[key] = value;
-    }
-  }
-  return params;
-}
-
 function stripHttpPayloadAuthMeta(payload = {}) {
   const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
   const clean = { ...source };
   delete clean.jwt;
   delete clean.decodedJWT;
   return clean;
-}
-
-function translateLegacyHttpFacadeEvent(eventName, payload = {}) {
-  const normalized = normalizeEventName(eventName);
-  const publicDefinition = shouldUsePublicRuntimeFacade(normalized, payload)
-    ? legacyPublicRuntimeFacadeAction(normalized)
-    : null;
-  if (publicDefinition) {
-    return {
-      originalEventName: normalized,
-      eventName: 'cmsPublicRuntimeRequest',
-      unwrapData: true,
-      payload: {
-        moduleName: 'runtimeManager',
-        moduleType: 'core',
-        resource: publicDefinition.resource,
-        action: publicDefinition.action,
-        params: stripLegacyPayloadMeta(payload)
-      }
-    };
-  }
-
-  const definition = legacyHttpFacadeAction(normalized);
-  if (!definition) return null;
-  return {
-    originalEventName: normalized,
-    eventName: 'cmsAdminApiRequest',
-    unwrapData: true,
-    payload: {
-      moduleName: 'runtimeManager',
-      moduleType: 'core',
-      resource: definition.resource,
-      action: definition.action,
-      params: stripLegacyPayloadMeta(payload)
-    }
-  };
 }
 
 function isHttpPublicEvent(eventName) {
@@ -800,8 +712,6 @@ module.exports = {
   COMMUNITY_FORBIDDEN_DIRECT_EVENTS,
   HTTP_DIRECT_CONTRACT_EVENTS,
   HTTP_FORBIDDEN_EXTERNAL_EVENTS,
-  HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS,
-  HTTP_LEGACY_PUBLIC_RUNTIME_EVENT_FACADE_ACTIONS,
   HTTP_PUBLIC_EVENTS,
   HTTP_PUBLIC_TOKEN_EVENTS,
   SENSITIVE_SYSTEM_QUERY_EVENTS,
@@ -810,8 +720,5 @@ module.exports = {
   isHttpDirectContractEvent,
   isHttpPublicEvent,
   isHttpPublicTokenEvent,
-  legacyHttpFacadeAction,
-  legacyPublicRuntimeFacadeAction,
-  stripHttpPayloadAuthMeta,
-  translateLegacyHttpFacadeEvent
+  stripHttpPayloadAuthMeta
 };

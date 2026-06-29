@@ -4,6 +4,9 @@ import {
   ensureLayoutRootContainer as ensureSharedLayoutRootContainer,
   moveContainer as moveSharedContainer,
   placeContainer as placeSharedContainer,
+  toggleContainerStyleSource as toggleSharedContainerStyleSource,
+  setContainerLayoutMode as setSharedContainerLayoutMode,
+  setContainerSettings as setSharedContainerSettings,
   setDefaultWorkarea as setSharedDefaultWorkarea,
   setDesignRef as setSharedDesignRef,
   setDynamicHost as setSharedDynamicHost
@@ -34,6 +37,18 @@ export function setDynamicHost(layoutRoot, el) {
 
 export function setDesignRef(el, designId) {
   return setSharedDesignRef(el, designId);
+}
+
+export function setContainerLayoutMode(el, mode) {
+  return setSharedContainerLayoutMode(el, mode);
+}
+
+export function setContainerSettings(el, settings) {
+  return setSharedContainerSettings(el, settings);
+}
+
+export function toggleContainerStyleSource(layoutRoot, el) {
+  return toggleSharedContainerStyleSource(layoutRoot, el);
 }
 
 export function placeContainer(targetEl, position, options = {}) {

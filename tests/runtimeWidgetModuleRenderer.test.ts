@@ -87,7 +87,9 @@ describe('runtimeWidgetModuleRenderer', () => {
     await renderRuntimeWidgetModule(wrapper, container, def, 'admin');
 
     expect(loadWidgetModule).toHaveBeenCalledWith('/widgets/community_test/widget.js');
-    expect(createRuntimeWidgetContext).toHaveBeenCalledWith(wrapper, def, 'admin', {});
+    expect(createRuntimeWidgetContext).toHaveBeenCalledWith(wrapper, def, 'admin', {}, {
+      emit: undefined
+    });
     expect(render).toHaveBeenCalledWith(container, context);
     expect(asyncRenderCompleted).toBe(true);
     expect(container.textContent).toBe('Loaded widget');

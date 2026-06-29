@@ -1,3 +1,4 @@
+import { hasStyleSourceSettings, normalizeStyleSourceSettings } from './styleSource.js';
 export const DESIGN_DOCUMENT_VERSION = 1;
 function isRecord(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -32,6 +33,73 @@ function normalizeBoolean(value) {
     }
     return undefined;
 }
+function normalizeContainerMode(value) {
+    const mode = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (mode === 'free' || mode === 'stack' || mode === 'row' || mode === 'grid') {
+        return mode;
+    }
+    return undefined;
+}
+function normalizeCssLength(value) {
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+        return `${Math.round(value)}px`;
+    }
+    if (typeof value !== 'string')
+        return undefined;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 80 || /[;{}]/.test(trimmed))
+        return undefined;
+    if (/^\d+(?:\.\d+)?(?:px|rem|em|vh|vw|%)$/i.test(trimmed))
+        return trimmed;
+    if (/^(?:auto|min-content|max-content|fit-content)$/i.test(trimmed))
+        return trimmed;
+    return undefined;
+}
+function normalizeColor(value) {
+    if (typeof value !== 'string')
+        return undefined;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 80 || /[;{}]/.test(trimmed))
+        return undefined;
+    if (/^#[0-9a-f]{3,8}$/i.test(trimmed))
+        return trimmed;
+    if (/^(?:transparent|currentcolor)$/i.test(trimmed))
+        return trimmed.toLowerCase();
+    if (/^(?:rgb|rgba|hsl|hsla)\([0-9%.,\s-]+\)$/i.test(trimmed))
+        return trimmed;
+    return undefined;
+}
+function normalizeOverflow(value) {
+    return value === 'visible' || value === 'hidden' || value === 'auto'
+        ? value
+        : undefined;
+}
+export function normalizeLayoutContainerSettings(value) {
+    const source = isRecord(value) ? value : {};
+    const settings = {};
+    const mode = normalizeContainerMode(source.mode ?? source.layoutMode ?? source.layout_mode);
+    const gap = normalizeCssLength(source.gap ?? source.layoutGap ?? source.layout_gap);
+    const padding = normalizeCssLength(source.padding ?? source.layoutPadding ?? source.layout_padding);
+    const background = normalizeColor(source.background ?? source.bg ?? source.backgroundColor ?? source.background_color);
+    const maxWidth = normalizeCssLength(source.maxWidth ?? source.max_width);
+    const minHeight = normalizeCssLength(source.minHeight ?? source.min_height);
+    const overflow = normalizeOverflow(source.overflow);
+    if (mode)
+        settings.mode = mode;
+    if (gap)
+        settings.gap = gap;
+    if (padding)
+        settings.padding = padding;
+    if (background)
+        settings.background = background;
+    if (maxWidth)
+        settings.maxWidth = maxWidth;
+    if (minHeight)
+        settings.minHeight = minHeight;
+    if (overflow)
+        settings.overflow = overflow;
+    return settings;
+}
 export function normalizeSceneSections(value) {
     return Array.isArray(value)
         ? value
@@ -63,12 +131,16 @@ export function normalizeLayoutTree(value) {
     const common = {
         workarea: normalizeBoolean(source.workarea ?? source.isDynamicHost),
         nodeId: normalizeNodeId(source.nodeId ?? source.node_id),
-        scenes: normalizeSceneSections(source.scenes)
+        scenes: normalizeSceneSections(source.scenes),
+        settings: normalizeLayoutContainerSettings(source.settings ?? source.container ?? source),
+        styleSource: normalizeStyleSourceSettings(source.styleSource ?? source.style_source ?? source.styleLink ?? source.style_link)
     };
     const commonFields = {
         ...(common.workarea ? { workarea: true } : {}),
         ...(common.nodeId ? { nodeId: common.nodeId } : {}),
-        ...(common.scenes.length ? { scenes: common.scenes } : {})
+        ...(common.scenes.length ? { scenes: common.scenes } : {}),
+        ...(Object.keys(common.settings).length ? { settings: common.settings } : {}),
+        ...(hasStyleSourceSettings(common.styleSource) ? { styleSource: common.styleSource } : {})
     };
     if (inferredSplit) {
         const children = rawChildren
@@ -99,7 +171,18 @@ export function normalizeLayoutTree(value) {
 }
 export function normalizeWidgetPlacements(value) {
     return Array.isArray(value)
-        ? value.filter(isRecord).map(item => ({ ...item }))
+        ? value.filter(isRecord).map(item => {
+            const styleSource = normalizeStyleSourceSettings(item.styleSource ?? item.style_source ?? item.styleLink ?? item.style_link);
+            const placement = { ...item };
+            delete placement.styleSource;
+            delete placement.style_source;
+            delete placement.styleLink;
+            delete placement.style_link;
+            return {
+                ...placement,
+                ...(hasStyleSourceSettings(styleSource) ? { styleSource } : {})
+            };
+        })
         : [];
 }
 function pickLayoutSource(source) {

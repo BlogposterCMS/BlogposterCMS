@@ -13,14 +13,33 @@ export function createLayoutStructureHandlers({
     return typeof layoutRootRef === 'function' ? layoutRootRef() : layoutRootRef?.current || layoutRootRef;
   }
 
+  function warnLayoutStructure(code, err, detail = {}) {
+    console.warn(`[Designer] ${code}`, detail, err);
+  }
+
   function refreshContainerBars() {
     if (!hasLayoutStructure) return;
     const layoutRoot = getLayoutRoot();
-    const rootContainer = ensureLayoutRootContainer(layoutRoot);
+    let rootContainer = null;
+    try {
+      rootContainer = ensureLayoutRootContainer(layoutRoot);
+    } catch (err) {
+      warnLayoutStructure('DESIGNER_LAYOUT_ROOT_ENSURE_FAILED', err);
+      return;
+    }
     if (!rootContainer) return;
-    rootContainer.querySelectorAll('.layout-container').forEach(el => {
-      if (el.dataset.split === 'true') return;
-      attachContainerBar(el, layoutCtxProvider());
+    const containers = [
+      rootContainer,
+      ...Array.from(rootContainer.querySelectorAll('.layout-container'))
+    ];
+    containers.forEach(el => {
+      try {
+        attachContainerBar(el, layoutCtxProvider());
+      } catch (err) {
+        warnLayoutStructure('DESIGNER_CONTAINER_BAR_ATTACH_FAILED', err, {
+          nodeId: el?.dataset?.nodeId || null
+        });
+      }
     });
   }
 
@@ -29,27 +48,47 @@ export function createLayoutStructureHandlers({
     const panel = sidebarEl?.querySelector?.('.layout-panel');
     if (!panel) return;
     const layoutRoot = getLayoutRoot();
-    const rootContainer = ensureLayoutRootContainer(layoutRoot);
+    let rootContainer = null;
+    try {
+      rootContainer = ensureLayoutRootContainer(layoutRoot);
+    } catch (err) {
+      warnLayoutStructure('DESIGNER_LAYOUT_ROOT_ENSURE_FAILED', err);
+      return;
+    }
     if (!rootContainer) return;
-    renderLayoutTreeSidebar(panel, rootContainer, el => {
-      try {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('tree-selected');
-        setTimeout(() => el.classList.remove('tree-selected'), 1000);
-      } catch (err) {
-        console.warn('[Designer] failed to focus layout tree node', err);
-      }
-    });
+    try {
+      renderLayoutTreeSidebar(panel, rootContainer, el => {
+        try {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('tree-selected');
+          setTimeout(() => el.classList.remove('tree-selected'), 1000);
+        } catch (err) {
+          warnLayoutStructure('DESIGNER_LAYOUT_TREE_FOCUS_FAILED', err);
+        }
+      });
+    } catch (err) {
+      warnLayoutStructure('DESIGNER_LAYOUT_TREE_RENDER_FAILED', err);
+    }
   }
 
   function handleContainerChange() {
     const layoutRoot = getLayoutRoot();
-    ensureLayoutRootContainer(layoutRoot);
-    setDefaultWorkarea(layoutRoot);
+    let normalized = true;
+    try {
+      ensureLayoutRootContainer(layoutRoot);
+      setDefaultWorkarea(layoutRoot);
+    } catch (err) {
+      normalized = false;
+      warnLayoutStructure('DESIGNER_CONTAINER_CHANGE_NORMALIZE_FAILED', err);
+    }
     refreshContainerBars();
     refreshLayoutTree();
-    if (typeof pushAndSave === 'function') {
-      pushAndSave();
+    if (normalized && typeof pushAndSave === 'function') {
+      try {
+        pushAndSave();
+      } catch (err) {
+        warnLayoutStructure('DESIGNER_CONTAINER_CHANGE_SAVE_FAILED', err);
+      }
     }
   }
 

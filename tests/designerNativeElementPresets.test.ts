@@ -44,7 +44,8 @@ describe('designer native element presets', () => {
       'media',
       'shape',
       'button',
-      'navigation'
+      'navigation',
+      'content'
     ]);
     expect(getInsertPreset('gallery')).toEqual(expect.objectContaining({
       id: 'media.gallery',
@@ -52,6 +53,13 @@ describe('designer native element presets', () => {
     }));
     expect(getInsertPreset('navigation.menu')).toEqual(expect.objectContaining({
       widgetId: 'navigationMenu'
+    }));
+    expect(getInsertPreset('content.collectionArchive')).toEqual(expect.objectContaining({
+      widgetId: 'collectionArchive',
+      settings: expect.objectContaining({
+        columns: 3,
+        buttonLabel: 'Read more'
+      })
     }));
   });
 

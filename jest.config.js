@@ -24,6 +24,7 @@ module.exports = {
     '^\\./widgetControls\\.js$': '<rootDir>/ui/widgets/panel/widgetControls.ts',
     '^\\./layoutDocument\\.js$': '<rootDir>/ui/shared/layout/layoutDocument.ts',
     '^\\./layoutDom\\.js$': '<rootDir>/ui/shared/layout/layoutDom.ts',
+    '^\\./styleSource\\.js$': '<rootDir>/ui/shared/layout/styleSource.ts',
     '^\\./publicLoaderPaths\\.js$': '<rootDir>/ui/runtime/publicLoaderPaths.ts',
     '^\\./envelope/(loaderRegistry|orchestrator)\\.js$': '<rootDir>/ui/runtime/envelope/$1.ts',
     '^\\./sceneRuntime\\.js$': '<rootDir>/ui/runtime/main/sceneRuntime.ts',

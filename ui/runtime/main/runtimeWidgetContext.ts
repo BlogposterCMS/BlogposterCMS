@@ -7,6 +7,7 @@ export type RuntimeWidgetContext = LooseRecord & {
   id?: string;
   widgetId: string;
   metadata?: LooseRecord;
+  instanceMetadata?: LooseRecord;
   scene: {
     behavior: string;
     sceneId: string;
@@ -22,13 +23,15 @@ export type RuntimeWidgetContext = LooseRecord & {
 export function createRuntimeWidgetContext(
   wrapper: HTMLElement,
   def: RuntimeWidgetDefinition,
-  lane: string
+  lane: string,
+  instanceMetadata: LooseRecord = {}
 ): RuntimeWidgetContext {
   const host = (wrapper.closest('.canvas-item') || wrapper) as HTMLElement;
   const ctx: RuntimeWidgetContext = {
     id: host.dataset.instanceId,
     widgetId: def.id,
     metadata: def.metadata,
+    instanceMetadata,
     scene: {
       behavior: host.dataset.behavior || '',
       sceneId: host.dataset.sceneId || '',

@@ -8,10 +8,22 @@ const {
   SENSITIVE_SYSTEM_QUERY_EVENTS
 } = require('../../utils/meltdownHttpPolicy');
 const {
-  cloneSandboxData,
-  createSandboxFunction,
-  createSandboxObject
-} = require('./moduleSandbox');
+  cloneRuntimeData,
+  createBoundaryFunction,
+  createBoundaryObject
+} = require('./moduleRuntimeUtils');
+const {
+  markCommunityStorageCall
+} = require('../databaseManager/meltdownBridging/databaseEventBoundary');
+const {
+  describeCoreAccessEvent,
+  isCommunityAccessGranted
+} = require('./moduleAccessPolicy');
+const {
+  _internals: {
+    adminApiDefinition
+  }
+} = require('../runtimeManager');
 
 const VALID_MODULE_NAME = /^[A-Za-z0-9_-]+$/;
 const COMMON_EXPRESS_METHODS = [
@@ -36,8 +48,10 @@ const SENSITIVE_COMMUNITY_QUERY_EVENTS = SENSITIVE_SYSTEM_QUERY_EVENTS;
 const MUTATING_EVENT_PREFIX = /^(set|create|update|delete|remove|clear|reset|save|publish|unpublish|install|uninstall|activate|deactivate|register|issue|validate|finalize|sync|import|export|upload|write|apply|perform|mutate)/i;
 const QUERY_EVENT_PREFIX = /^(get|list|find|search|query|read|count|has|is|can|check|lookup|resolve)/i;
 const SAFE_EVENT_NAME = /^[A-Za-z][A-Za-z0-9:._-]*$/;
+const SAFE_STORAGE_TABLE = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 const MODULE_LIFECYCLE_EVENT_SUFFIX = /^(ready|loaded|health|status|ping)$/i;
 const PUBLIC_COMMUNITY_QUERY_EVENTS = new Set([]);
+const STORAGE_REQUEST_TIMEOUT_MS = 10000;
 const STATIC_BLOCKED_FILENAMES = new Set([
   '.npmrc',
   '.yarnrc',
@@ -262,11 +276,11 @@ function createDeniedAppFacade(moduleName) {
   const message = `[MODULE HOST] Community module "${moduleName}" cannot access the raw Express app. Use moduleHost.registerStaticAssets() or a core API contract.`;
   const facade = {};
   for (const method of COMMON_EXPRESS_METHODS) {
-    facade[method] = createSandboxFunction(() => {
+    facade[method] = createBoundaryFunction(() => {
       throw new Error(message);
     });
   }
-  return createSandboxObject(facade);
+  return createBoundaryObject(facade);
 }
 
 function normalizeCommunityPayload({ moduleName, jwt, nonce }, payload = {}) {
@@ -303,6 +317,218 @@ function moduleTablePrefix(moduleName) {
   return String(moduleName || '')
     .trim()
     .replace(/[^A-Za-z0-9_]/g, '_');
+}
+
+function createModuleHostError(code, message) {
+  const err = new Error(`[${code}] ${message}`);
+  err.code = code;
+  return err;
+}
+
+function stripCommunityEventMeta(payload = {}) {
+  const source = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload
+    : {};
+  const clean = {};
+  for (const [key, item] of Object.entries(source)) {
+    if (
+      key !== 'jwt' &&
+      key !== 'decodedJWT' &&
+      key !== 'moduleName' &&
+      key !== 'moduleType' &&
+      key !== 'nonce'
+    ) {
+      clean[key] = cloneRuntimeData(item);
+    }
+  }
+  return clean;
+}
+
+function adminDefinitionForCommunityEvent(eventName) {
+  const facade = describeCoreAccessEvent(eventName);
+  const { definition } = adminApiDefinition(facade.resource, facade.action);
+  if (!definition || definition.eventName !== facade.event) {
+    throw createModuleHostError(
+      'E_MODULE_ACCESS_CORE_DEFINITION',
+      `Community event "${facade.event}" is not routed through the admin facade.`
+    );
+  }
+  return { ...facade, definition };
+}
+
+function createCoreEventPayload({
+  eventName,
+  scopedPayload,
+  moduleName,
+  jwt,
+  decodedJWT = null
+}) {
+  const { definition } = adminDefinitionForCommunityEvent(eventName);
+  const payload = {
+    ...stripCommunityEventMeta(scopedPayload),
+    jwt,
+    moduleName: definition.moduleName,
+    moduleType: definition.moduleType || 'core',
+    requestedByModule: moduleName
+  };
+  if (decodedJWT) payload.decodedJWT = decodedJWT;
+  return payload;
+}
+
+function normalizeCommunityStorageTable(moduleName, tableName) {
+  const logicalTable = String(tableName || '').trim();
+  if (!SAFE_STORAGE_TABLE.test(logicalTable) || logicalTable === '__rawSQL__') {
+    throw createModuleHostError(
+      'E_MODULE_STORAGE_INVALID_TABLE',
+      `Community storage table "${tableName}" must be a logical identifier like "items".`
+    );
+  }
+
+  const owner = moduleTablePrefix(moduleName).toLowerCase();
+  if (!owner) {
+    throw createModuleHostError(
+      'E_MODULE_STORAGE_INVALID_OWNER',
+      `Community storage cannot resolve an owner for module "${moduleName}".`
+    );
+  }
+
+  return `community_${owner}_${logicalTable.toLowerCase()}`;
+}
+
+function assertStoragePlainObject(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw createModuleHostError(
+      'E_MODULE_STORAGE_INVALID_PAYLOAD',
+      `Community storage ${label} must be a plain object.`
+    );
+  }
+}
+
+function assertNoStorageRawMarkers(value, label) {
+  if (!value || typeof value !== 'object') return;
+  if (
+    Object.prototype.hasOwnProperty.call(value, 'rawSQL') ||
+    Object.prototype.hasOwnProperty.call(value, '__raw_expr')
+  ) {
+    throw createModuleHostError(
+      'E_MODULE_STORAGE_RAW_MARKER',
+      `Community storage ${label} cannot contain raw SQL markers.`
+    );
+  }
+  for (const [key, item] of Object.entries(value)) {
+    assertNoStorageRawMarkers(item, `${label}.${key}`);
+  }
+}
+
+function normalizeStorageObject(value, label, { allowEmpty = true } = {}) {
+  const normalized = value === undefined || value === null ? {} : value;
+  assertStoragePlainObject(normalized, label);
+  assertNoStorageRawMarkers(normalized, label);
+  if (!allowEmpty && Object.keys(normalized).length === 0) {
+    throw createModuleHostError(
+      'E_MODULE_STORAGE_EMPTY_PAYLOAD',
+      `Community storage ${label} cannot be empty.`
+    );
+  }
+  return cloneRuntimeData(normalized);
+}
+
+function emitStorageEvent(motherEmitter, eventName, payload) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(createModuleHostError(
+        'E_MODULE_STORAGE_CALLBACK_TIMEOUT',
+        `Storage event "${eventName}" did not call back for module "${payload.moduleName}".`
+      ));
+    }, STORAGE_REQUEST_TIMEOUT_MS);
+    timer.unref?.();
+
+    const callback = (err, result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(result);
+    };
+
+    const emitted = motherEmitter.emit(eventName, payload, callback);
+    if (emitted === false && !settled) {
+      settled = true;
+      clearTimeout(timer);
+      reject(createModuleHostError(
+        'E_MODULE_STORAGE_EVENT_NOT_HANDLED',
+        `Storage event "${eventName}" is not registered.`
+      ));
+    }
+  });
+}
+
+function createCommunityStorageFacade({
+  motherEmitter,
+  moduleName,
+  jwt,
+  nonce,
+  dryRun = false,
+  markEvent = () => {}
+}) {
+  function buildPayload(operationKind, tableName, parts = {}) {
+    const payload = normalizeCommunityPayload({ moduleName, jwt, nonce }, {
+      table: normalizeCommunityStorageTable(moduleName, tableName)
+    });
+    if (Object.prototype.hasOwnProperty.call(parts, 'where')) {
+      payload.where = normalizeStorageObject(parts.where, 'where');
+    }
+    if (Object.prototype.hasOwnProperty.call(parts, 'data')) {
+      payload.data = normalizeStorageObject(parts.data, 'data', { allowEmpty: false });
+    }
+    return markCommunityStorageCall(payload, operationKind);
+  }
+
+  function run(eventName, operationKind, tableName, parts = {}) {
+    const payload = buildPayload(operationKind, tableName, parts);
+    if (dryRun) {
+      markEvent(`storage.${operationKind}`);
+      return Promise.resolve(operationKind === 'select' ? [] : { dryRun: true });
+    }
+    return emitStorageEvent(motherEmitter, eventName, payload);
+  }
+
+  return createBoundaryObject({
+    select: createBoundaryFunction(function select(tableName, options = {}) {
+      const where = options && typeof options === 'object' && !Array.isArray(options) && 'where' in options
+        ? options.where
+        : options;
+      return run('dbSelect', 'select', tableName, { where });
+    }),
+
+    insert: createBoundaryFunction(function insert(tableName, data = {}) {
+      return run('dbInsert', 'insert', tableName, { data });
+    }),
+
+    update: createBoundaryFunction(function update(tableName, where = {}, data) {
+      const hasObjectPayload = data === undefined &&
+        where &&
+        typeof where === 'object' &&
+        !Array.isArray(where) &&
+        ('where' in where || 'data' in where);
+      const finalWhere = hasObjectPayload ? where.where : where;
+      const finalData = hasObjectPayload ? where.data : data;
+      return run('dbUpdate', 'update', tableName, { where: finalWhere, data: finalData });
+    }),
+
+    delete: createBoundaryFunction(function remove(tableName, where = {}) {
+      const finalWhere = where && typeof where === 'object' && !Array.isArray(where) && 'where' in where
+        ? where.where
+        : where;
+      return run('dbDelete', 'delete', tableName, { where: finalWhere });
+    })
+  });
 }
 
 function isCommunityOwnedTable(moduleName, tableName) {
@@ -350,7 +576,11 @@ function isCommunityOwnedEvent(eventName, moduleName) {
   return name.startsWith(`${owner}.`);
 }
 
-function assertCommunityEventAllowed(eventName, payload = {}, moduleName = '') {
+function assertCommunityEventAllowed(eventName, payload = {}, moduleName = '', accessGrants = []) {
+  if (isCommunityAccessGranted(eventName, accessGrants)) {
+    return;
+  }
+
   if (FORBIDDEN_COMMUNITY_EVENTS.has(eventName)) {
     throw new Error(`[MODULE HOST] Community module events cannot call system event "${eventName}". Use a core module contract instead.`);
   }
@@ -397,7 +627,7 @@ function stripCommunityListenerPrivatePayload(payload) {
   const publicPayload = Object.create(null);
   for (const [key, item] of Object.entries(payload)) {
     if (!COMMUNITY_LISTENER_PRIVATE_PAYLOAD_KEYS.has(key)) {
-      publicPayload[key] = cloneSandboxData(item);
+      publicPayload[key] = cloneRuntimeData(item);
     }
   }
   return Object.freeze(publicPayload);
@@ -405,7 +635,7 @@ function stripCommunityListenerPrivatePayload(payload) {
 
 function toCommunityListenerValue(value, index = -1) {
   if (typeof value === 'function') {
-    return createSandboxFunction(function communityListenerCallback(...args) {
+    return createBoundaryFunction(function communityListenerCallback(...args) {
       return value(...args);
     });
   }
@@ -413,7 +643,7 @@ function toCommunityListenerValue(value, index = -1) {
     return stripCommunityListenerPrivatePayload(value);
   }
   if (value && typeof value === 'object') {
-    return cloneSandboxData(value);
+    return cloneRuntimeData(value);
   }
   return value;
 }
@@ -443,11 +673,77 @@ function createEmitterListener(moduleName, handler, once = false) {
   return listener;
 }
 
-function createScopedEventBus({ motherEmitter, moduleName, jwt, nonce }) {
+function prepareCommunityEventEmission({
+  eventName,
+  scopedPayload,
+  moduleName,
+  moduleInfo,
+  jwt,
+  accessGrants = [],
+  accessConsentManager = null
+}) {
+  if (isCommunityAccessGranted(eventName, accessGrants)) {
+    return {
+      eventName,
+      payload: createCoreEventPayload({ eventName, scopedPayload, moduleName, jwt })
+    };
+  }
+
+  try {
+    assertCommunityEventAllowed(eventName, scopedPayload, moduleName, []);
+    return { eventName, payload: scopedPayload };
+  } catch (originalError) {
+    if (!accessConsentManager || typeof accessConsentManager.requestAccess !== 'function') {
+      throw originalError;
+    }
+
+    let accessRequest;
+    try {
+      accessRequest = accessConsentManager.requestAccess({
+        moduleName,
+        moduleInfo,
+        eventName,
+        eventPayload: scopedPayload
+      });
+    } catch {
+      throw originalError;
+    }
+
+    return accessRequest.promise.then(decision => {
+      if (!decision?.approved) {
+        throw decision?.error || createModuleHostError(
+          'E_MODULE_ACCESS_CONSENT_DENIED',
+          `Module access request for "${eventName}" was denied.`
+        );
+      }
+
+      if (
+        decision.mode === 'always' &&
+        accessRequest.request.allowPermanent &&
+        !isCommunityAccessGranted(eventName, accessGrants)
+      ) {
+        accessGrants.push(eventName);
+      }
+
+      return {
+        eventName,
+        payload: createCoreEventPayload({
+          eventName,
+          scopedPayload,
+          moduleName,
+          jwt: decision.jwt || jwt,
+          decodedJWT: decision.decodedJWT || null
+        })
+      };
+    });
+  }
+}
+
+function createScopedEventBus({ motherEmitter, moduleName, moduleInfo = {}, jwt, nonce, accessGrants = [], accessConsentManager = null }) {
   const listenerMap = new WeakMap();
 
-  return createSandboxObject({
-    emit: createSandboxFunction(function emit(eventName, payload, callback) {
+  return createBoundaryObject({
+    emit: createBoundaryFunction(function emit(eventName, payload, callback) {
       let finalPayload = payload;
       let finalCallback = callback;
 
@@ -457,16 +753,32 @@ function createScopedEventBus({ motherEmitter, moduleName, jwt, nonce }) {
       }
 
       const scopedPayload = normalizeCommunityPayload({ moduleName, jwt, nonce }, finalPayload);
-      assertCommunityEventAllowed(eventName, scopedPayload, moduleName);
-
-      return motherEmitter.emit(
+      const prepared = prepareCommunityEventEmission({
         eventName,
         scopedPayload,
+        moduleName,
+        moduleInfo,
+        jwt,
+        accessGrants,
+        accessConsentManager
+      });
+
+      if (prepared && typeof prepared.then === 'function') {
+        return prepared.then(result => motherEmitter.emit(
+          result.eventName,
+          result.payload,
+          finalCallback
+        ));
+      }
+
+      return motherEmitter.emit(
+        prepared.eventName,
+        prepared.payload,
         finalCallback
       );
     }),
 
-    on: createSandboxFunction(function on(eventName, handler) {
+    on: createBoundaryFunction(function on(eventName, handler) {
       if (typeof handler !== 'function') {
         throw new Error(`[MODULE HOST] Listener for "${eventName}" must be a function.`);
       }
@@ -479,7 +791,7 @@ function createScopedEventBus({ motherEmitter, moduleName, jwt, nonce }) {
       return undefined;
     }),
 
-    once: createSandboxFunction(function once(eventName, handler) {
+    once: createBoundaryFunction(function once(eventName, handler) {
       if (typeof handler !== 'function') {
         throw new Error(`[MODULE HOST] Listener for "${eventName}" must be a function.`);
       }
@@ -492,7 +804,7 @@ function createScopedEventBus({ motherEmitter, moduleName, jwt, nonce }) {
       return undefined;
     }),
 
-    off: createSandboxFunction(function off(eventName, handler) {
+    off: createBoundaryFunction(function off(eventName, handler) {
       assertCommunityListenerAllowed(eventName, moduleName);
       const wrapped = listenerMap.get(handler) || handler;
       motherEmitter.off(eventName, wrapped);
@@ -500,51 +812,51 @@ function createScopedEventBus({ motherEmitter, moduleName, jwt, nonce }) {
       return this;
     }),
 
-    removeListener: createSandboxFunction(function removeListener(eventName, handler) {
+    removeListener: createBoundaryFunction(function removeListener(eventName, handler) {
       return this.off(eventName, handler);
     }),
 
-    listenerCount: createSandboxFunction(function listenerCount(eventName) {
+    listenerCount: createBoundaryFunction(function listenerCount(eventName) {
       assertCommunityListenerAllowed(eventName, moduleName);
       return motherEmitter.listenerCount(eventName);
     }),
 
-    registerModuleType: createSandboxFunction(function registerModuleType() {
+    registerModuleType: createBoundaryFunction(function registerModuleType() {
       return undefined;
     })
   });
 }
 
-function createHealthCheckEventBus({ moduleName, jwt, nonce, markEvent }) {
-  return createSandboxObject({
-    emit: createSandboxFunction(function emit(eventName, payload, callback) {
+function createHealthCheckEventBus({ moduleName, jwt, nonce, markEvent, accessGrants = [] }) {
+  return createBoundaryObject({
+    emit: createBoundaryFunction(function emit(eventName, payload, callback) {
       if (typeof callback !== 'function') {
         throw new Error('HealthCheck-Emitter: A callback is required in emitter events.');
       }
       const scopedPayload = normalizeCommunityPayload({ moduleName, jwt, nonce }, payload);
-      assertCommunityEventAllowed(eventName, scopedPayload, moduleName);
+      assertCommunityEventAllowed(eventName, scopedPayload, moduleName, accessGrants);
       markEvent(eventName);
       callback(null);
       return true;
     }),
-    on: createSandboxFunction(function on(eventName) {
+    on: createBoundaryFunction(function on(eventName) {
       assertCommunityListenerAllowed(eventName, moduleName);
       return undefined;
     }),
-    once: createSandboxFunction(function once(eventName) {
+    once: createBoundaryFunction(function once(eventName) {
       assertCommunityListenerAllowed(eventName, moduleName);
       return undefined;
     }),
-    off: createSandboxFunction(function off() {
+    off: createBoundaryFunction(function off() {
       return this;
     }),
-    removeListener: createSandboxFunction(function removeListener() {
+    removeListener: createBoundaryFunction(function removeListener() {
       return this;
     }),
-    listenerCount: createSandboxFunction(function listenerCount() {
+    listenerCount: createBoundaryFunction(function listenerCount() {
       return 0;
     }),
-    registerModuleType: createSandboxFunction(function registerModuleType() {
+    registerModuleType: createBoundaryFunction(function registerModuleType() {
       return undefined;
     })
   });
@@ -557,20 +869,24 @@ function createCommunityModuleHost({
   moduleInfo = {},
   moduleDir,
   jwt,
-  nonce
+  nonce,
+  accessGrants = [],
+  accessConsentManager = null
 }) {
   assertValidModuleName(moduleName);
   const normalizedModuleDir = path.resolve(moduleDir);
-  const events = createScopedEventBus({ motherEmitter, moduleName, jwt, nonce });
+  const events = createScopedEventBus({ motherEmitter, moduleName, moduleInfo, jwt, nonce, accessGrants, accessConsentManager });
+  const storage = createCommunityStorageFacade({ motherEmitter, moduleName, jwt, nonce });
   const staticMounts = [];
 
-  const host = createSandboxObject({
+  const host = createBoundaryObject({
     apiVersion: 1,
     moduleName,
     moduleType: 'community',
-    moduleInfo: cloneSandboxData(moduleInfo || {}),
-    capabilities: createSandboxObject({
+    moduleInfo: cloneRuntimeData(moduleInfo || {}),
+    capabilities: createBoundaryObject({
       events: true,
+      moduleStorage: true,
       staticAssets: true,
       rawExpressApp: false,
       rawSql: false,
@@ -578,8 +894,9 @@ function createCommunityModuleHost({
     }),
     events,
     eventBus: events,
+    storage,
 
-    registerStaticAssets: createSandboxFunction(function registerStaticAssets({ dir = 'frontend', mountPath = '/', options = {} } = {}) {
+    registerStaticAssets: createBoundaryFunction(function registerStaticAssets({ dir = 'frontend', mountPath = '/', options = {} } = {}) {
       if (!app) {
         throw new Error('[MODULE HOST] Static assets can only be registered during runtime initialization.');
       }
@@ -589,29 +906,38 @@ function createCommunityModuleHost({
       const staticOptions = createCommunityStaticAssetOptions(options);
       app.use(normalizedMountPath, blockCommunityStaticAssetFiles, express.static(root, staticOptions));
       staticMounts.push({ mountPath: normalizedMountPath, dir: root });
-      return cloneSandboxData({ mountPath: normalizedMountPath, dir: root });
+      return cloneRuntimeData({ mountPath: normalizedMountPath, dir: root });
     }),
 
-    getStaticMounts: createSandboxFunction(function getStaticMounts() {
-      return cloneSandboxData(staticMounts);
+    getStaticMounts: createBoundaryFunction(function getStaticMounts() {
+      return cloneRuntimeData(staticMounts);
     })
   });
 
   return host;
 }
 
-function createCommunityHealthCheckHost({ moduleName, moduleInfo = {}, moduleDir, jwt, nonce, markEvent }) {
+function createCommunityHealthCheckHost({ moduleName, moduleInfo = {}, moduleDir, jwt, nonce, markEvent, accessGrants = [] }) {
   assertValidModuleName(moduleName);
   const normalizedModuleDir = path.resolve(moduleDir);
-  const events = createHealthCheckEventBus({ moduleName, jwt, nonce, markEvent });
+  const events = createHealthCheckEventBus({ moduleName, jwt, nonce, markEvent, accessGrants });
+  const storage = createCommunityStorageFacade({
+    motherEmitter: null,
+    moduleName,
+    jwt,
+    nonce,
+    dryRun: true,
+    markEvent
+  });
 
-  return createSandboxObject({
+  return createBoundaryObject({
     apiVersion: 1,
     moduleName,
     moduleType: 'community',
-    moduleInfo: cloneSandboxData(moduleInfo || {}),
-    capabilities: createSandboxObject({
+    moduleInfo: cloneRuntimeData(moduleInfo || {}),
+    capabilities: createBoundaryObject({
       events: true,
+      moduleStorage: true,
       staticAssets: true,
       rawExpressApp: false,
       rawSql: false,
@@ -619,16 +945,17 @@ function createCommunityHealthCheckHost({ moduleName, moduleInfo = {}, moduleDir
     }),
     events,
     eventBus: events,
-    registerStaticAssets: createSandboxFunction(function registerStaticAssets({ dir = 'frontend', mountPath = '/' } = {}) {
+    storage,
+    registerStaticAssets: createBoundaryFunction(function registerStaticAssets({ dir = 'frontend', mountPath = '/' } = {}) {
       markEvent('registerStaticAssets');
       const root = resolveStaticAssetDir(normalizedModuleDir, dir);
-      return cloneSandboxData({
+      return cloneRuntimeData({
         mountPath: normalizeMountPath(moduleName, mountPath),
         dir: root
       });
     }),
-    getStaticMounts: createSandboxFunction(function getStaticMounts() {
-      return cloneSandboxData([]);
+    getStaticMounts: createBoundaryFunction(function getStaticMounts() {
+      return cloneRuntimeData([]);
     })
   });
 }
@@ -644,6 +971,7 @@ module.exports = {
   isCommunityOwnedQueryEvent,
   isCommunityLifecycleEvent,
   isCommunityQueryEvent,
+  normalizeCommunityStorageTable,
   normalizeMountPath,
   resolveStaticAssetDir,
   isBlockedCommunityStaticAssetPath,

@@ -35,5 +35,17 @@ describe('validateInstallInput', () => {
 
     expect(error).toEqual({ status: 400, message: 'Username not allowed' });
   });
-});
 
+  test('allows the default local dev admin bootstrap when weak credentials are explicitly allowed', () => {
+    const { error } = validateInstallInput(
+      {
+        username: 'admin',
+        email: 'admin@localhost.test',
+        password: '123'
+      },
+      { forbidden: ['admin', 'root', 'test'], allowWeak: true, isLocal: true }
+    );
+
+    expect(error).toBeNull();
+  });
+});

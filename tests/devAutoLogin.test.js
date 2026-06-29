@@ -1,6 +1,7 @@
 const {
   AUTH_DEV_AUTOLOGIN_ERRORS,
   canUseDevAutologin,
+  canUseWeakLocalDevCredentials,
   isLoopbackAddress,
   resolveDevAutologinUser,
 } = require('../mother/modules/auth/devAutoLogin');
@@ -42,6 +43,41 @@ describe('devAutoLogin service', () => {
 
     process.env.NODE_ENV = 'production';
     expect(canUseDevAutologin({
+      ip: '127.0.0.1',
+      hostname: 'localhost',
+    })).toBe(false);
+  });
+
+  test('allows weak setup credentials for local non-production dev shortcuts only', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.APP_ENV = 'development';
+    process.env.DEV_AUTOLOGIN = 'true';
+    delete process.env.ALLOW_WEAK_CREDS;
+
+    expect(canUseWeakLocalDevCredentials({
+      ip: '127.0.0.1',
+      hostname: 'localhost',
+    })).toBe(true);
+
+    expect(canUseWeakLocalDevCredentials({
+      ip: '203.0.113.4',
+      hostname: 'example.test',
+    })).toBe(false);
+
+    process.env.DEV_AUTOLOGIN = 'false';
+    expect(canUseWeakLocalDevCredentials({
+      ip: '127.0.0.1',
+      hostname: 'localhost',
+    })).toBe(false);
+
+    process.env.ALLOW_WEAK_CREDS = 'I_KNOW_THIS_IS_LOCAL';
+    expect(canUseWeakLocalDevCredentials({
+      ip: '127.0.0.1',
+      hostname: 'localhost',
+    })).toBe(true);
+
+    process.env.NODE_ENV = 'production';
+    expect(canUseWeakLocalDevCredentials({
       ip: '127.0.0.1',
       hostname: 'localhost',
     })).toBe(false);

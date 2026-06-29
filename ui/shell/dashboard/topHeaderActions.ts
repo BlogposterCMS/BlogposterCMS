@@ -1,5 +1,7 @@
 import { bpDialog } from '../../shared/dialogs/bpDialog.js';
+import './moduleAccessConsent.js';
 import { setSearchExpanded } from '../search/searchExpansion.js';
+import { bindAccountMenu } from './topHeaderAccountMenu.js';
 import {
   disableMaintenanceMode,
   errorMessage,
@@ -295,6 +297,7 @@ function markActiveSidebarLinks(): void {
 
 async function initTopHeader(): Promise<void> {
   void syncProjectName();
+  bindAccountMenu();
   bindUserProfileLink();
   bindLogout();
   bindSearch();

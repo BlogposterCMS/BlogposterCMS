@@ -1,30 +1,52 @@
 # Module Loader
 
 Loads optional community modules from the top-level `modules/` directory. Each
-module is loaded, health-checked and registry-activated through the same
-sandbox to prevent crashes or unsafe behaviour. The sandbox uses Node's `vm`
-module and exposes only a few built-ins (`path`, scoped read-only `fs`,
-`crypto`) plus `__dirname` and `__filename`.
+community module is validated, health-checked in a short-lived runner process,
+then started in a fresh runtime runner process if the health check succeeds.
+Community module code is never required into the CMS host process.
 
-During sandbox execution `process.env` is empty by default. A module only
-receives service-specific environment values when it declares the matching
-service in `apiDefinition.json`: `openai` maps to `OPENAI_API_KEY`, `grok` to
+The runner boundary is intentionally process-based and language-neutral. The
+CMS host owns the event bus, static mounts, tokens, permissions and database
+contracts; the module process can only ask for those capabilities through the
+IPC protocol behind `moduleHost` and `eventBus`. This is the migration path for
+moving the host from Node to Go later.
+
+During runner execution `process.env` is minimal. A module only receives
+service-specific environment values when it declares the matching service in
+`apiDefinition.json`: `openai` maps to `OPENAI_API_KEY`, `grok` to
 `GROK_API_KEY`, `xai` to `XAI_API_KEY`, `brave` to `BRAVE_API_KEY` and `news`
-to `NEWS_MODEL`.
+to `NEWS_MODEL`. Windows process basics such as `SystemRoot`, `WINDIR`, `TEMP`
+and `TMP` may also be passed so the child process can start.
 
 ## Startup
+
 - Core module executed after the initial core modules are ready.
 - Requires a valid JWT to register modules in the database registry.
 
 ## Purpose
+
 - Maintains a registry of installed modules.
 - Loads modules and retries failed ones automatically.
-- Passes community modules a scoped `moduleHost` and event bus instead of the
-  raw Express app.
+- Starts every community module in a separate process via
+  `moduleRunnerProcess.js`.
+- Runs health checks in a short-lived process, then starts a fresh runtime
+  process after success.
+- Passes community modules a scoped `moduleHost` and event bus over IPC instead
+  of the raw Express app or host objects.
 - Allows community modules to emit only module-owned query/lifecycle signals,
-  `dbSelect` reads against module-owned tables, or documented public query
-  contracts. A query-looking name such as `getContentEntry` is not enough to
-  reach into a core module.
+  limited `dbSelect` reads against module-owned tables, documented public query
+  contracts, or `moduleHost.storage` calls for module-owned CRUD. A
+  query-looking name such as `getContentEntry` is not enough to reach into a
+  core module.
+- Allows documented core events when the module declared them in
+  `moduleInfo.requestedAccess` and an administrator approved the exact event
+  during install or activation. The permanent grant is stored as trusted
+  registry data, not read from the module folder. At runtime, unapproved core
+  calls open a one-time admin prompt for that exact call. Protected user, role,
+  permission, module, settings, auth and app-management events cannot become
+  permanent grants; they require one-time approval by an admin with
+  `modules.manageAccess` and the target permission. Raw database, token, HTTP
+  and consent-management events remain hard-denied.
 - Blocks sensitive read/query events such as users, roles, permissions, global
   settings, module/app registries, login strategies, importers and exporters.
   Community modules should use public runtime contracts or module-owned data
@@ -34,25 +56,12 @@ to `NEWS_MODEL`.
   counting their listeners, overriding the loader-issued token/nonce, using raw
   SQL placeholders, or querying tables that do not belong to the module.
 - The database boundary repeats the same policy: community modules cannot write
-  through `dbInsert`, `dbUpdate`, `dbDelete`, cannot call `performDbOperation`
-  directly, cannot use raw SQL reads, and cannot turn themselves into
-  `moduleType: "core"` through the payload.
-- Runs local module `require("./...")` files inside the same sandbox and exposes
-  a scoped read-only `fs` facade, so module code can read its own files but
-  cannot read or write host files outside the module folder.
-- Denies host process imports such as `child_process`, raw `http`/`https`
-  clients and arbitrary npm packages. `ALLOW_INDIVIDUAL_SANDBOX=false` is
-  ignored; community modules always execute through the sandbox and must ask
-  audited core contracts for system actions.
-- Disables dynamic code generation and blocks common VM escape patterns such as
-  `eval`, `Function`, dynamic `import()` and `constructor.constructor`.
-  Runtime facades such as `moduleHost`, `eventBus`, `app`, `path`, `fs`,
-  `crypto`, timers and `console` are hardened so community code cannot climb
-  from a facade method back to host `process`.
-- The scoped `fs` facade is intentionally text/read-only. Binary reads,
-  streams and `fs.promises` are unavailable because they would expose host
-  objects; modules should read their own text/JSON assets with an explicit
-  encoding and use core contracts for everything else.
+  directly through `dbInsert`, `dbUpdate`, `dbDelete`, cannot call
+  `performDbOperation` directly, cannot use raw SQL reads, cannot receive the
+  host `dbClient` through custom placeholders, and cannot turn themselves into
+  `moduleType: "core"` through the payload. Host-marked
+  `moduleHost.storage` requests are the supported write path for module-owned
+  data.
 - Static asset registration is bounded by both URL and filesystem checks:
   mount paths always stay under `/modules/<moduleName>`, traversal segments are
   rejected, the target directory must exist, real paths must remain inside the
@@ -65,7 +74,7 @@ to `NEWS_MODEL`.
   checks as `moduleHost.registerStaticAssets()`: module names are sanitized,
   the module folder shape is revalidated, and `frontend/` must resolve inside
   the module folder.
-- Skips core-owned legacy folders such as `modules/designer`; those backends are
+- Skips core-owned folders such as `modules/designer`; those backends are
   initialized by their core service instead of as community modules.
 - Core-owned module names are shared ownership policy. They cannot be installed,
   activated, deactivated or uninstalled through module management APIs; they are
@@ -76,29 +85,29 @@ to `NEWS_MODEL`.
   belong under `apps/`, widgets belong under `widgets/`, and each module folder
   owns exactly one module manifest even if somebody copies files directly into
   `modules/`.
-- Uses a fresh module instance for runtime initialization after the health check
-  succeeds.
-- Uses the same sandbox, scoped `moduleHost` and event bus when a module is
-  activated immediately through `activateModuleInRegistry`, so registry
-  activation cannot bypass runtime boundaries.
-- `deactivateModuleInRegistry` removes runtime listeners and clears
-  `global.loadedModules` for the module, so inactive modules cannot keep
-  handling events after the registry flag changes.
-- Module uninstall uses the same runtime cleanup and sanitizes the module name
-  before registry, database or filesystem changes. Folder deletion is bounded to
-  the configured `modules/` root.
-- Serves front-end assets for legacy GrapesJS modules when present, without
-  bypassing module static-asset boundaries.
+- `activateModuleInRegistry` uses the same process health check and runtime
+  process path as startup, so registry activation cannot bypass runtime
+  boundaries.
+- `deactivateModuleInRegistry` and module uninstall stop the runner process,
+  remove runtime listeners and clear `global.loadedModules` for the module, so
+  inactive modules cannot keep handling events after the registry flag changes.
 - Emits system notifications via a safe wrapper that falls back to
   `console.error` if the emitter is unavailable and deactivates modules when
   initialization fails, so broken modules never appear as loaded.
-- Registers each successfully loaded module in `global.loadedModules` so
-  database placeholders can invoke module-defined transactions.
+- Registers each successfully loaded community module in `global.loadedModules`
+  as a process runtime record, not as raw module exports.
 
 ## Listened Events
+
 - `getModuleRegistry`
 - `listActiveGrapesModules`
+- `listSystemModules`
+- `inspectModuleZipAccess`
+- `installModuleFromZip`
 - `activateModuleInRegistry`
+- `deactivateModuleInRegistry`
+- `listPendingModuleAccessRequests`
+- `resolveModuleAccessRequest`
 
 Every module folder must export an `initialize` function and include
 `moduleInfo.json` with metadata. Directly copied module folders are validated
@@ -109,24 +118,49 @@ malformed `moduleInfo.json` keeps the module inactive.
 Community module metadata cannot declare app identity fields (`appName`,
 `appType`) or widget identity fields (`widgetId`, `widgetType`); apps and
 widgets use their own loaders and registries.
+Community module metadata may declare `permissions`, but each key must belong
+to the module namespace, such as `shopSync.read`. The loader rejects wildcard
+permission keys and core namespaces such as `users.*`, `modules.*`,
+`userManagement.*`, `settings.*`, `auth.*`, `agent.*` and `apps.*`.
 
 At runtime, `initialize` receives `{ motherEmitter, eventBus, moduleHost,
-moduleInfo }`. For community modules, `motherEmitter` and `eventBus` are scoped
-facades that keep the loader token/nonce internal, inject the module identity
+moduleInfo, app, isCore }`. `motherEmitter` and `eventBus` are IPC-backed
+facades. They keep the loader token/nonce internal, inject the module identity
 into outbound events, prevent emitting as another module, refuse
 `moduleType: "core"`, allow only module-owned query names such as
 `<moduleName>.getItems`, module-owned lifecycle signals and `dbSelect` against
 owned tables, allow listeners only for module-owned event names, block
 listener-count introspection for system/foreign events, deny token/nonce
 overrides, hide injected token fields from community listener callbacks, deny
-raw SQL placeholders and restrict `dbSelect` to
-module-owned table prefixes such as
-`<moduleName>_*` or `community_<moduleName>_*`.
-They also block direct `requestDependency` emissions; dependency loading remains
-behind the registered `dependencyLoader` contract.
-`moduleHost.registerStaticAssets({ dir, mountPath })` is the supported way to
-publish module-owned static files. The `dir` must resolve to a real directory
-inside the module folder, including after symlink resolution.
+raw SQL placeholders and restrict `dbSelect` to module-owned table prefixes
+such as `<moduleName>_*` or `community_<moduleName>_*`.
+
+`moduleHost.storage` is the supported database facade for Marketplace-style
+community modules. Use logical table names and await the returned promises:
+
+```js
+const rows = await moduleHost.storage.select('items', {
+  where: { status: 'open' }
+});
+
+await moduleHost.storage.insert('items', {
+  title: 'Hello',
+  status: 'open'
+});
+```
+
+The host maps `items` to an isolated physical table such as
+`community_<module>_items`, injects the module identity, rejects raw SQL markers
+and sends an internally marked CRUD request to the Database Manager. The facade
+does not grant access to core CMS tables; those still require documented core
+contracts.
+
+`moduleHost.registerStaticAssets({ dir, mountPath, options })` is the supported
+way to publish module-owned static files. Because it crosses process IPC it is
+asynchronous; modules should `await` the returned promise when they need the
+mount result. Event emission and listener registration are also IPC-backed, so
+new modules should treat host-facing calls as asynchronous even when the facade
+keeps EventEmitter-style callbacks for convenience.
 
 Direct Express access is not available to community modules. The
 `ALLOW_COMMUNITY_APP_ACCESS` environment variable is ignored if present; use
@@ -143,6 +177,12 @@ The intended add-on vocabulary is strict:
 
 Widgets and apps should query the CMS through public APIs, shared UI clients or
 the `runtimeManager` admin facade instead of reaching into server internals.
+
+The process runner is a host-process boundary, not a complete OS sandbox. It
+keeps untrusted code out of the CMS process, prevents direct access to host
+objects and prepares the module API for a future Go host. Real Marketplace
+hardening should still add OS-level restrictions such as a dedicated user,
+container, microVM, filesystem policy and network policy around the runner.
 
 If a module folder lacks `index.js`, the loader emits a system-level error
 notification and disables the module so it cannot be activated accidentally.
@@ -174,5 +214,12 @@ top-level host folders such as `apps/`, `widgets/`, `ui/`, `mother/` or
 use their own loaders, not be bundled inside modules, and community modules
 cannot bring their own package-manager runtime.
 
-Uploaded modules run in a sandbox and lack network access unless explicitly
-allowed. Always review third-party code before installing it.
+Uploaded modules run in a separate process and lack CMS host access unless the
+host IPC contract grants it. Before installation the admin UI inspects the ZIP
+manifest, shows declared module permissions and requested core-event access,
+and sends only explicitly approved events as registry grants. Installing a
+module with no approved requested access still registers the module's own
+permission keys. The health check still fails closed for unapproved core
+events, while later runtime attempts use the one-time admin approval queue.
+Always review third-party code before installing it, and add OS/container
+isolation before treating Marketplace code as fully untrusted production input.

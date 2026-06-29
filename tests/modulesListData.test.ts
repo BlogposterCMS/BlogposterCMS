@@ -5,9 +5,14 @@
 import {
   errorMessage,
   fetchModuleLists,
+  fetchPendingModuleAccessRequests,
+  inspectModuleZip,
   installModuleZip,
+  resolveModuleAccessRequest,
   renderModuleMeta,
+  toModuleAccessRuntimeRequests,
   toggleModuleRegistryActivation,
+  toModuleZipInspection,
   toModules,
   zipDataFromDataUrl
 } from '../ui/widgets/plainspace/admin/modulesListData';
@@ -21,7 +26,29 @@ describe('modulesListData', () => {
         'bad'
       ]
     })).toEqual([{ module_name: 'pagesManager' }]);
+    expect(toModuleAccessRuntimeRequests({
+      data: [
+        { id: 'req-1', moduleName: 'shopSync', event: 'deleteUser', resource: 'users', action: 'delete' },
+        null
+      ]
+    })).toEqual([
+      { id: 'req-1', moduleName: 'shopSync', event: 'deleteUser', resource: 'users', action: 'delete' }
+    ]);
     expect(toModules([{ module_name: 'plainSpace' }])).toEqual([{ module_name: 'plainSpace' }]);
+    expect(toModuleZipInspection({
+      moduleInfo: {
+        moduleName: 'shopSync',
+        requestedAccess: [{ event: 'listContentEntries' }]
+      }
+    })).toEqual({
+      moduleName: 'shopSync',
+      moduleInfo: {
+        moduleName: 'shopSync',
+        requestedAccess: [{ event: 'listContentEntries' }]
+      },
+      permissions: [],
+      requestedAccess: [{ event: 'listContentEntries' }]
+    });
     expect(renderModuleMeta({
       version: '1.2.3',
       developer: 'Blogposter',
@@ -86,13 +113,49 @@ describe('modulesListData', () => {
   it('installs uploaded module ZIP data through moduleLoader', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
-    await installModuleZip(emit, 'admin-token', 'UEsDBAo=');
+    await inspectModuleZip(emit, 'admin-token', 'UEsDBAo=');
+    await installModuleZip(emit, 'admin-token', 'UEsDBAo=', [{ event: 'listContentEntries' }]);
 
-    expect(emit).toHaveBeenCalledWith('installModuleFromZip', {
+    expect(emit).toHaveBeenCalledWith('inspectModuleZipAccess', {
       jwt: 'admin-token',
       moduleName: 'moduleLoader',
       moduleType: 'core',
       zipData: 'UEsDBAo='
+    });
+    expect(emit).toHaveBeenCalledWith('installModuleFromZip', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core',
+      zipData: 'UEsDBAo=',
+      approvedAccess: [{ event: 'listContentEntries' }]
+    });
+  });
+
+  it('lists and resolves pending runtime module access requests', async () => {
+    const emit = jest.fn(async eventName => (
+      eventName === 'listPendingModuleAccessRequests'
+        ? [{ id: 'req-1', moduleName: 'shopSync', event: 'deleteUser', resource: 'users', action: 'delete' }]
+        : undefined
+    ));
+
+    await expect(fetchPendingModuleAccessRequests(emit, 'admin-token', 'shopSync')).resolves.toEqual([
+      { id: 'req-1', moduleName: 'shopSync', event: 'deleteUser', resource: 'users', action: 'delete' }
+    ]);
+    await resolveModuleAccessRequest(emit, 'admin-token', 'req-1', 'approve', 'once');
+
+    expect(emit).toHaveBeenCalledWith('listPendingModuleAccessRequests', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core',
+      targetModuleName: 'shopSync'
+    });
+    expect(emit).toHaveBeenCalledWith('resolveModuleAccessRequest', {
+      jwt: 'admin-token',
+      moduleName: 'moduleLoader',
+      moduleType: 'core',
+      requestId: 'req-1',
+      decision: 'approve',
+      mode: 'once'
     });
   });
 

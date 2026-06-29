@@ -57,4 +57,22 @@ describe('runtimeWidgetContext', () => {
     expect(createRuntimeWidgetContext(wrapper, { id: 'hero' }, 'public').jwt)
       .toBeUndefined();
   });
+
+  it('carries instance metadata separately from registry metadata', () => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'canvas-item';
+    wrapper.dataset.instanceId = 'instance-2';
+
+    expect(createRuntimeWidgetContext(
+      wrapper,
+      { id: 'mediaBlock', metadata: { label: 'Media' } },
+      'public',
+      { src: '/media/hero.jpg', alt: 'Hero' }
+    )).toMatchObject({
+      id: 'instance-2',
+      widgetId: 'mediaBlock',
+      metadata: { label: 'Media' },
+      instanceMetadata: { src: '/media/hero.jpg', alt: 'Hero' }
+    });
+  });
 });

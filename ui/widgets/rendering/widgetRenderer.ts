@@ -13,6 +13,36 @@ type WidgetDefinition = WidgetModuleDefinition;
 
 type WidgetCodeMap = Record<string, WidgetRenderData | null | undefined>;
 
+function hasInlineWidgetCode(data: WidgetRenderData | null | undefined): data is WidgetRenderData {
+  return Boolean(data && (
+    typeof data.html === 'string' && data.html.trim() ||
+    typeof data.css === 'string' && data.css.trim() ||
+    typeof data.js === 'string' && data.js.trim()
+  ));
+}
+
+function parseMetadata(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, any>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function instanceMetadataFromCode(data: WidgetRenderData | null | undefined): Record<string, any> {
+  if (!data) return {};
+  return {
+    ...parseMetadata(data.metadata),
+    ...parseMetadata(data.meta)
+  };
+}
+
 export async function renderWidget(
   wrapper: HTMLElement,
   widgetDef: WidgetDefinition,
@@ -33,10 +63,10 @@ export async function renderWidget(
 
   await registerWidgetEvents(widgetDef);
 
-  if (data) {
+  if (hasInlineWidgetCode(data)) {
     renderWidgetInlineCode(wrapper, content, container, data, context);
     return;
   }
 
-  await renderWidgetModule(container, widgetDef, instanceId);
+  await renderWidgetModule(container, widgetDef, instanceId, instanceMetadataFromCode(data));
 }

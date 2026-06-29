@@ -41,19 +41,71 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('setInspectorMode(activeInspectorMode, inspector);');
   });
 
-  it('exposes native element chips in the builder sidebar', () => {
+  it('renders grouped insert placeholders in the builder sidebar', () => {
     const sidebarHtml = fs.readFileSync(
       path.join(__dirname, '../apps/designer/partials/sidebar-builder.html'),
       'utf8'
     );
+    const presetSource = fs.readFileSync(
+      path.join(__dirname, '../ui/designer/app/widgets/nativeElementPresets.js'),
+      'utf8'
+    );
 
     expect(sidebarHtml).toContain('class="scene-native-elements"');
-    expect(sidebarHtml).toContain('data-native-element="text"');
-    expect(sidebarHtml).toContain('data-native-element="media"');
-    expect(sidebarHtml).toContain('data-native-element="shape"');
-    expect(sidebarHtml).toContain('data-native-element="button"');
-    expect(sidebarHtml).toContain('data-native-element="background"');
-    expect(sidebarHtml).toContain('wallpaper.svg');
+    expect(sidebarHtml).toContain('class="scene-insert-panels"');
+    expect(presetSource).toContain("id: 'text.heading'");
+    expect(presetSource).toContain("id: 'media.gallery'");
+    expect(presetSource).toContain("id: 'navigation.menu'");
+    expect(presetSource).toContain("nativeType: 'background'");
+  });
+
+  it('keeps the builder sidebar as a rail-routed panel shell', () => {
+    const sidebarHtml = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/partials/sidebar-builder.html'),
+      'utf8'
+    );
+    const rendererSource = fs.readFileSync(
+      path.join(__dirname, '../ui/designer/app/builderRenderer.ts'),
+      'utf8'
+    );
+    const layoutModeSource = fs.readFileSync(
+      path.join(__dirname, '../ui/designer/app/renderer/layoutMode.js'),
+      'utf8'
+    );
+    const sceneBuilderCss = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/assets/css/designer.css'),
+      'utf8'
+    );
+
+    expect(sidebarHtml).toContain('class="sidebar-nav builder-sidebar-nav scene-panel-shell"');
+    expect(sidebarHtml).toContain('class="scene-sidebar-rail"');
+    expect(sidebarHtml).toContain('class="scene-sidebar-panels scene-sidebar-flyout"');
+    expect(sidebarHtml).toContain('data-sidebar-panel-target="insert"');
+    expect(sidebarHtml).toContain('data-sidebar-panel-target="sections"');
+    expect(sidebarHtml).toContain('data-sidebar-panel-target="layers"');
+    expect(sidebarHtml).toContain('data-sidebar-panel-target="layout"');
+    expect(sidebarHtml).toContain('data-sidebar-panel="insert"');
+    expect(sidebarHtml).toContain('data-sidebar-panel="sections"');
+    expect(sidebarHtml).toContain('data-sidebar-panel="layers"');
+    expect(sidebarHtml).toContain('class="layout-panel-host"');
+    expect(rendererSource).toContain('function setSidebarPanel(panelName = \'insert\', options = {})');
+    expect(rendererSource).toContain('async function activateSidebarPanel(panelName = \'insert\')');
+    expect(rendererSource).toContain("builder-sidebar--compact");
+    expect(rendererSource).toContain('data-sidebar-panel-target');
+    expect(rendererSource).toContain('setSidebarPanel(sidebarEl.dataset.activeSidebarPanel || \'insert\')');
+    expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('layout')");
+    expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('insert')");
+    expect(sceneBuilderCss).toContain('.scene-sidebar-rail');
+    expect(sceneBuilderCss).toContain('--scene-sidebar-flyout-width');
+    expect(sceneBuilderCss).toContain('.scene-sidebar-flyout');
+    expect(sceneBuilderCss).toContain('left: calc(var(--scene-sidebar-rail-width');
+    expect(sceneBuilderCss).toContain('@keyframes scene-sidebar-flyout-in');
+    expect(sceneBuilderCss).toContain('.scene-rail-button.active');
+    expect(sceneBuilderCss).toContain('.builder-sidebar--compact');
+    expect(sceneBuilderCss).toContain('.builder-sidebar--insert-expanded');
+    expect(sceneBuilderCss).toContain('.scene-sidebar-panel[hidden]');
+    expect(sceneBuilderCss).toContain('.element-library .drag-widget-icon');
+    expect(sceneBuilderCss).toContain('.scene-insert-preset');
   });
 
   it('keeps native background as a section-level tool', () => {
@@ -170,7 +222,7 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('await insertQuickButton();');
   });
 
-  it('keeps the Insert topbar tool as a compact direct-insert palette', () => {
+  it('keeps the Insert topbar tool as a compact grouped palette opener', () => {
     const rendererSource = fs.readFileSync(
       path.join(__dirname, '../ui/designer/app/builderRenderer.ts'),
       'utf8'
@@ -188,8 +240,8 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('INSERT_TOOL_ITEMS,');
     expect(rendererSource).toContain('function openInsertPopover');
     expect(rendererSource).toContain('className = \'scene-tool-popover\'');
-    expect(rendererSource).toContain('data-tool-insert="${escapeAttribute(item.id)}"');
-    expect(rendererSource).toContain('await insertNativeElement(type);');
+    expect(rendererSource).toContain('data-tool-insert-group="${escapeAttribute(item.id)}"');
+    expect(rendererSource).toContain('setInsertGroup(group);');
     expect(sceneBuilderCss).toContain('.scene-tool-popover');
     expect(sceneBuilderCss).toContain('.scene-tool-popover button');
   });

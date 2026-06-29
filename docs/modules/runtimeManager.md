@@ -61,6 +61,15 @@ Public content responses only expose entries with `status: "published"`.
 Runtime also filters private-looking metadata keys such as underscore-prefixed
 fields, token/password/secret/private/permission/role fields and hidden
 navigation items.
+
+Public page rendering follows the page hierarchy for presentation fallback:
+when a page has no own `meta.designId` or `meta.layoutTemplate`, the runtime
+walks up `parentId` and uses the nearest ancestor design or layout template. A
+page can opt out with `meta.inheritParentDesign: false`,
+`meta.inheritPresentation: false` or `meta.inheritDesign: false`. If inherited
+presentation wraps a page that still has stored HTML, the sanitized page HTML is
+mounted into the inherited design workarea so imported child pages keep their
+content visible.
 Public comment responses omit emails, IP hashes and user agents, and public
 comment submissions are forced to `pending` moderation.
 
@@ -155,7 +164,7 @@ Allowed resources:
 - `roles`: list/create/update/delete/assign/remove/forUser/incrementToken
 - `permissions`: list/create
 - `modules`: registry/system/activeGrapes/activate/deactivate/installZip
-- `apps`: list/get/builderList/launchInfo/rescan/installFromDirectory/uninstall
+- `apps`: list/get/builderList/launchInfo/rescan
 - `fonts`: listProviders/list/add/setProviderEnabled
 - `notifications`: recent
 - `importers`: list/run

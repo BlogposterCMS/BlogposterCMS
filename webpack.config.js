@@ -42,6 +42,7 @@ const entry = {
   designerEditor: resolveSource(__dirname, './ui/designer/entries/designerEditor'),
   widgetsPanel: resolveSource(__dirname, './ui/widgets/entries/widgetsPanel'),
   customSelect: resolveSource(__dirname, './ui/shared/entries/customSelect'),
+  externalLinks: resolveSource(__dirname, './ui/shared/entries/externalLinks'),
   devBanner: resolveSource(__dirname, './ui/shared/entries/devBanner'),
   faviconLoader: resolveSource(__dirname, './ui/shared/entries/faviconLoader'),
   fontsLoader: resolveSource(__dirname, './ui/shared/entries/fontsLoader'),

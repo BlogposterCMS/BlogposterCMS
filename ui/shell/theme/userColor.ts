@@ -170,6 +170,11 @@ function updateThemeModeToggle(mode: ThemeMode): void {
     icon.src = modeIcon(mode);
     icon.alt = '';
   }
+
+  const visibleLabel = button.querySelector<HTMLElement>('[data-theme-mode-label]');
+  if (visibleLabel) {
+    visibleLabel.textContent = `Theme: ${mode}`;
+  }
 }
 
 export function applyThemeMode(mode: unknown = readStoredThemeMode()): ThemeMode {

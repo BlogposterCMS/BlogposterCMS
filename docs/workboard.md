@@ -115,8 +115,9 @@ instead of stuffing everything into a theme.
   include rendered pages, global styles, content records, media, menus, SEO and
   mapping reports.
 - Acceptance: Manifest fields are documented, responsibilities are split
-  between theme assets, content import, media import and widget/module mapping,
-  and unsafe executable theme behavior is excluded by default.
+  between theme assets, content import, full local asset inventory, media
+  import and widget/module mapping, and unsafe executable theme behavior is
+  excluded by default.
 - Tests: `tests/themeImporter.test.js`
 - Docs: Importer module reference.
 - Risks: If the package format is too vague, Elementor/Divi/Gutenberg imports
@@ -130,39 +131,43 @@ instead of stuffing everything into a theme.
 - Context: Add `wordpressSitePackage` beside `wordpress` and `htmlTheme` for
   full WordPress-exporter packages.
 - Acceptance: Dry-run first, then import media and rendered page fallbacks
-  through existing events, report page scripts as blocked behavior, and block
-  packages that try to put scripts into the theme layer.
-- Tests: Importer unit tests for dry-run, blocked theme scripts, media events
-  and rendered page fallback events.
+  through existing events, publish captured local assets, report page scripts as
+  blocked behavior, and block packages that try to put scripts into the theme
+  layer.
+- Tests: Importer unit tests for dry-run, blocked theme scripts, asset/media
+  events and rendered page fallback events.
 - Docs: Importer module reference and migration guide.
 - Risks: WXR/page duplicate handling and richer widget mapping still need
   dedicated follow-up work.
 
 #### WordPress-side exporter prototype
 
-- Status: Inbox
+- Status: Review
 - Type: feature, migration
 - Area: external WordPress exporter
 - Context: Build a WordPress-side exporter that exports rendered HTML/CSS/JS, database
   content, media, menus, SEO metadata and builder-specific data.
 - Acceptance: Export package can be generated from a local WordPress site and
   inspected without importing.
-- Tests: Fixture WordPress sites for Gutenberg, Elementor and classic themes.
-- Docs: Exporter setup guide.
+- Tests: `tests/wordpressVisualExporter.test.js`; future fixture WordPress sites
+  for Gutenberg, Elementor and classic themes.
+- Docs: `tools/wordpress-visual-exporter/README.md` and Importer module
+  reference.
 - Risks: WordPress builders vary widely; the exporter must prefer honest fallback
   reports over fake perfect conversion.
 
 #### Import confidence report
 
-- Status: Inbox
+- Status: Review
 - Type: feature, migration
 - Area: importers, admin UX
 - Context: Imported pages should report what was mapped natively, what was kept
   as sanitized HTML fallback, and what was skipped.
 - Acceptance: Dry-run output includes per-page confidence, warnings and
   recommended follow-up work.
-- Tests: Import plan tests with known unsupported blocks.
-- Docs: Migration troubleshooting guide.
+- Tests: `tests/wordpressVisualMapper.test.js` and `tests/themeImporter.test.js`
+  cover native widget hints, normalized HTML and fallback widgets.
+- Docs: Importer module reference; future migration troubleshooting guide.
 - Risks: Without clear reports, users may trust a migration that silently lost
   behavior.
 

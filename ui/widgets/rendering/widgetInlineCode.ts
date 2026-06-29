@@ -5,6 +5,8 @@ export type WidgetRenderData = {
   html?: string;
   css?: string;
   js?: string;
+  meta?: Record<string, any> | string;
+  metadata?: Record<string, any> | string;
 };
 
 export function renderWidgetInlineCode(

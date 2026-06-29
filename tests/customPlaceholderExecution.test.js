@@ -16,6 +16,7 @@ const { performSqliteOperation } = require('../mother/modules/databaseManager/en
 const { registerCustomPlaceholder } = require('../mother/modules/databaseManager/placeholders/placeholderRegistry');
 
 test('performSqliteOperation executes custom placeholder', async () => {
+  fs.mkdirSync(tmpDir, { recursive: true });
   let called = false;
   global.loadedModules = global.loadedModules || {};
   global.loadedModules.dummyModule = {
@@ -33,6 +34,28 @@ test('performSqliteOperation executes custom placeholder', async () => {
   expect(called).toBe(true);
 
   delete global.loadedModules.dummyModule;
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+  if (fs.existsSync(placeholderFile)) fs.unlinkSync(placeholderFile);
+});
+
+test('performSqliteOperation refuses custom placeholders owned by process modules', async () => {
+  fs.mkdirSync(tmpDir, { recursive: true });
+  global.loadedModules = global.loadedModules || {};
+  global.loadedModules.externalModule = {
+    moduleType: 'community',
+    runtime: 'process'
+  };
+
+  registerCustomPlaceholder('PROCESS_PLACEHOLDER', {
+    moduleName: 'externalModule',
+    functionName: 'testHandler'
+  });
+
+  await expect(
+    performSqliteOperation('externalModule', 'PROCESS_PLACEHOLDER', [], false)
+  ).rejects.toThrow(/E_PLACEHOLDER_PROCESS_MODULE_UNSUPPORTED/);
+
+  delete global.loadedModules.externalModule;
   fs.rmSync(tmpDir, { recursive: true, force: true });
   if (fs.existsSync(placeholderFile)) fs.unlinkSync(placeholderFile);
 });

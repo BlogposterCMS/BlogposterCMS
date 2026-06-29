@@ -8,7 +8,8 @@ export function getAvailableWidgetDefinitions(input: unknown = window.availableW
     ? input.filter((item): item is WidgetDefinition => (
       Boolean(item) &&
       typeof item === 'object' &&
-      typeof (item as WidgetDefinition).id === 'string'
+      typeof (item as WidgetDefinition).id === 'string' &&
+      (item as WidgetDefinition).metadata?.hiddenFromCatalog !== true
     ))
     : [];
 }
@@ -43,8 +44,14 @@ function createWidgetCard(def: WidgetDefinition): HTMLElement {
     void addDashboardWidget(def);
   });
   card.addEventListener('dragstart', ev => {
+    window.__dashboardDraggingWidgetId = def.id;
     ev.dataTransfer?.setData('text/plain', def.id);
     if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copy';
+  });
+  card.addEventListener('dragend', () => {
+    if (window.__dashboardDraggingWidgetId === def.id) {
+      delete window.__dashboardDraggingWidgetId;
+    }
   });
 
   return card;

@@ -22,6 +22,7 @@ describe('widgetPanelCatalog', () => {
 
   afterEach(() => {
     delete window.availableWidgets;
+    delete window.__dashboardDraggingWidgetId;
     document.body.innerHTML = '';
     jest.restoreAllMocks();
   });
@@ -31,7 +32,8 @@ describe('widgetPanelCatalog', () => {
       { id: 'hero', metadata: { category: 'Content' } },
       { id: 12 },
       null,
-      { id: 'stats' }
+      { id: 'stats' },
+      { id: 'htmlBlock', metadata: { hiddenFromCatalog: true } }
     ]);
 
     expect(widgets).toEqual([
@@ -87,6 +89,10 @@ describe('widgetPanelCatalog', () => {
 
     expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'stats');
     expect(dataTransfer.effectAllowed).toBe('copy');
+    expect(window.__dashboardDraggingWidgetId).toBe('stats');
+
+    card.dispatchEvent(new Event('dragend', { bubbles: true }));
+    expect(window.__dashboardDraggingWidgetId).toBeUndefined();
   });
 });
 

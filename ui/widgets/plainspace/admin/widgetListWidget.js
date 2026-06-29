@@ -8,7 +8,13 @@ const ICON_MAP = {
     pageStats: 'bar-chart-2',
     pageEditorWidget: 'file-text',
     contentSummary: 'activity',
-    textBox: 'type'
+    navigationStudio: 'menu',
+    textBox: 'type',
+    mediaBlock: 'image',
+    buttonLink: 'mouse-pointer-click',
+    navigationMenu: 'menu',
+    breadcrumb: 'chevrons-right',
+    gallery: 'images'
 };
 function getIcon(id, meta) {
     const name = meta?.icon || ICON_MAP[id] || id;

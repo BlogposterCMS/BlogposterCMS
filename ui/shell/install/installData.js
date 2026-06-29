@@ -1,4 +1,9 @@
 import { fetchShellPublicSetting, issueShellPublicToken, publicSettingEnabled } from '../data/publicMeltdownClient.js';
+export function isAlreadyInstalledSubmitError(err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // The install POST intentionally returns a tiny plain-text boundary error.
+    return message.includes('SHELL_INSTALL_SUBMIT_FAILED') && /\bAlready installed\b/i.test(message);
+}
 function installFetch(win) {
     if (typeof win.fetchWithTimeout === 'function') {
         return (resource, options) => win.fetchWithTimeout?.(resource, options) ?? Promise.reject(new Error('SHELL_INSTALL_FETCH_UNAVAILABLE: fetchWithTimeout unavailable'));

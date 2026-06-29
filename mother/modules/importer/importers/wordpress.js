@@ -63,6 +63,16 @@ function normalizeWpTermDomain(raw) {
   return key;
 }
 
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch] || ch));
+}
+
 function normalizeStatus(raw) {
   switch (String(raw || '').toLowerCase()) {
     case 'publish':
@@ -111,6 +121,86 @@ function metaPairs(rawMeta) {
     }
   }
   return result;
+}
+
+const WORDPRESS_LANGUAGE_META_KEYS = [
+  '_wpml_language',
+  'wpml_language',
+  'wpml_language_code',
+  '_icl_lang',
+  'icl_language_code',
+  '_language',
+  'language',
+  'lang',
+  'locale',
+  '_locale',
+  'pll_language',
+  '_pll_language'
+];
+
+const WORDPRESS_TRANSLATION_GROUP_META_KEYS = [
+  '_wpml_trid',
+  'wpml_trid',
+  'trid',
+  '_translation_group',
+  'translation_group',
+  'pll_translation_group'
+];
+
+const WORDPRESS_TRANSLATION_SOURCE_META_KEYS = [
+  '_icl_lang_duplicate_of',
+  '_icl_translation_of',
+  '_translation_source',
+  'translation_source'
+];
+
+function firstMetaValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(firstMetaValue).find(Boolean) || '';
+  }
+  return String(value ?? '').trim();
+}
+
+function normalizeLanguageCode(value) {
+  const raw = firstMetaValue(value).replace(/_/g, '-').toLowerCase();
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/.test(raw) ? raw : '';
+}
+
+function languageFromTerms(terms = []) {
+  for (const term of asArray(terms)) {
+    const domain = String(term?.wpDomain || term?.sourceDomain || '').toLowerCase();
+    if (!domain.includes('language') && !domain.includes('translation')) continue;
+    const language = normalizeLanguageCode(term.slug || term.name);
+    if (language) return language;
+  }
+  return '';
+}
+
+function detectWordPressLanguage(metadata = {}, terms = []) {
+  for (const key of WORDPRESS_LANGUAGE_META_KEYS) {
+    const language = normalizeLanguageCode(metadata[key]);
+    if (language) return language;
+  }
+  return languageFromTerms(terms) || 'en';
+}
+
+function firstExistingMeta(metadata = {}, keys = []) {
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(metadata, key)) continue;
+    const value = firstMetaValue(metadata[key]);
+    if (value) return value;
+  }
+  return '';
+}
+
+function detectWordPressTranslationHints(metadata = {}) {
+  const groupId = firstExistingMeta(metadata, WORDPRESS_TRANSLATION_GROUP_META_KEYS);
+  const sourceId = firstExistingMeta(metadata, WORDPRESS_TRANSLATION_SOURCE_META_KEYS);
+  if (!groupId && !sourceId) return null;
+  return {
+    ...(groupId ? { groupId } : {}),
+    ...(sourceId ? { sourceId } : {})
+  };
 }
 
 function fileNameFromUrl(rawUrl, fallback = 'attachment') {
@@ -253,6 +343,8 @@ function normalizeContentItem(item) {
   const status = normalizeStatus(text(item['wp:status']));
   const metadata = metaPairs(item['wp:postmeta']);
   const wordpressTerms = asArray(item.category).map(normalizeItemTerm).filter(Boolean);
+  const language = detectWordPressLanguage(metadata, wordpressTerms);
+  const translation = detectWordPressTranslationHints(metadata);
   const publishedAt = normalizeWpDate(item['wp:post_date_gmt'] || item.pubDate);
   const slug = normalizeSlug(text(item['wp:post_name']) || title, sourceId ? `${postType}-${sourceId}` : postType);
 
@@ -263,6 +355,7 @@ function normalizeContentItem(item) {
     slug,
     permalink: text(item.link).trim(),
     status,
+    language,
     publishedAt,
     scheduledAt: status === 'scheduled' ? publishedAt : null,
     parentSourceId: text(item['wp:post_parent']).trim(),
@@ -283,7 +376,9 @@ function normalizeContentItem(item) {
         guid: text(item.guid).trim(),
         link: text(item.link).trim(),
         menuOrder: Number(text(item['wp:menu_order'])) || 0,
-        terms: wordpressTerms
+        terms: wordpressTerms,
+        language,
+        ...(translation ? { translation } : {})
       }
     }
   };
@@ -297,6 +392,95 @@ function addUniqueWordPressTerm(map, term) {
   }
 }
 
+function isCollectionTerm(term) {
+  return term?.wpDomain === 'category' && Boolean(term.slug);
+}
+
+function collectionDepth(collection, bySlug, seen = new Set()) {
+  if (!collection?.parentSlug || seen.has(collection.slug)) return 0;
+  const parent = bySlug.get(collection.parentSlug);
+  if (!parent) return 0;
+  seen.add(collection.slug);
+  return 1 + collectionDepth(parent, bySlug, seen);
+}
+
+function buildCollectionPlans(terms = [], entries = []) {
+  const categories = new Map();
+  for (const term of terms) {
+    if (!isCollectionTerm(term)) continue;
+    categories.set(term.slug, {
+      sourceId: term.sourceId || `category:${term.slug}`,
+      slug: term.slug,
+      title: term.name || term.slug,
+      description: term.description || '',
+      parentSlug: term.parentSlug || '',
+      wpDomain: term.wpDomain,
+      term: { ...term },
+      entrySourceIds: []
+    });
+  }
+
+  for (const entry of entries) {
+    const seenForEntry = new Set();
+    for (const term of asArray(entry.metadata?.wordpress?.terms)) {
+      if (!isCollectionTerm(term)) continue;
+      if (!categories.has(term.slug)) {
+        categories.set(term.slug, {
+          sourceId: term.sourceId || `category:${term.slug}`,
+          slug: term.slug,
+          title: term.name || term.slug,
+          description: '',
+          parentSlug: '',
+          wpDomain: term.wpDomain,
+          term: { ...term },
+          entrySourceIds: []
+        });
+      }
+      if (!seenForEntry.has(term.slug)) {
+        categories.get(term.slug).entrySourceIds.push(entry.sourceId);
+        seenForEntry.add(term.slug);
+      }
+    }
+  }
+
+  const collections = Array.from(categories.values());
+  const bySlug = new Map(collections.map(collection => [collection.slug, collection]));
+  return collections.sort((left, right) => {
+    const depthDiff = collectionDepth(left, bySlug) - collectionDepth(right, bySlug);
+    return depthDiff || left.title.localeCompare(right.title);
+  });
+}
+
+function primaryCollectionForEntry(entry, collections = []) {
+  const bySlug = new Map(collections.map(collection => [collection.slug, collection]));
+  return asArray(entry.metadata?.wordpress?.terms)
+    .filter(isCollectionTerm)
+    .map(term => bySlug.get(term.slug))
+    .find(Boolean) || null;
+}
+
+function entryPageStatus(status) {
+  return status === 'published' ? 'published' : status === 'deleted' ? 'deleted' : 'draft';
+}
+
+function collectionChildSlug(entry, collection) {
+  const entrySlug = normalizeSlug(entry.slug || entry.title || entry.sourceId, entry.sourceId || 'entry');
+  if (!collection?.slug) return entrySlug;
+  if (entrySlug === collection.slug || entrySlug.startsWith(`${collection.slug}/`)) return entrySlug;
+  return `${collection.slug}/${entrySlug}`;
+}
+
+function entryTranslation(entry, language = entry.language || 'en') {
+  return {
+    language,
+    title: entry.title,
+    html: entry.content?.html || entry.content?.raw || '',
+    metaDesc: entry.excerpt || '',
+    seoTitle: entry.title,
+    seoKeywords: asArray(entry.metadata?.wordpress?.terms).map(term => term.name).filter(Boolean).join(', ')
+  };
+}
+
 function emptyPlan(warnings = []) {
   return {
     source: 'wordpress',
@@ -304,6 +488,7 @@ function emptyPlan(warnings = []) {
     site: {},
     authors: [],
     legacyWordPressTerms: [],
+    collections: [],
     entries: [],
     attachments: [],
     comments: [],
@@ -311,6 +496,7 @@ function emptyPlan(warnings = []) {
     totals: {
       authors: 0,
       legacyWordPressTerms: 0,
+      collections: 0,
       entries: 0,
       attachments: 0,
       comments: 0,
@@ -389,6 +575,7 @@ async function buildImportPlan(options = {}) {
   const legacyWordPressTerms = Array.from(wordpressTermMap.values()).sort((a, b) =>
     `${a.wpDomain}:${a.slug}`.localeCompare(`${b.wpDomain}:${b.slug}`)
   );
+  const collections = buildCollectionPlans(legacyWordPressTerms, entries);
   const authors = asArray(channel['wp:author']).map(normalizeAuthor).filter(Boolean);
   const plan = {
     source: 'wordpress',
@@ -403,6 +590,7 @@ async function buildImportPlan(options = {}) {
     },
     authors,
     legacyWordPressTerms,
+    collections,
     entries,
     attachments,
     comments,
@@ -410,6 +598,7 @@ async function buildImportPlan(options = {}) {
     totals: {
       authors: authors.length,
       legacyWordPressTerms: legacyWordPressTerms.length,
+      collections: collections.length,
       entries: entries.length,
       attachments: attachments.length,
       comments: comments.length,
@@ -442,6 +631,120 @@ function resultId(result, keys, fallback) {
   return fallback;
 }
 
+function canEmit(motherEmitter, eventName) {
+  if (!motherEmitter) return false;
+  if (typeof motherEmitter.listenerCount !== 'function') return true;
+  return motherEmitter.listenerCount(eventName) > 0;
+}
+
+async function createCollectionPages(plan, options, decodedJWT) {
+  const { motherEmitter, jwt } = options;
+  const collectionPageIds = new Map();
+  const applied = [];
+  const warnings = [];
+  if (!plan.collections.length) return { collectionPageIds, applied, warnings };
+  if (options.createPages === false) {
+    warnings.push('WORDPRESS_COLLECTION_PAGES_DISABLED: category collections were planned but page creation was disabled.');
+    return { collectionPageIds, applied, warnings };
+  }
+  if (!canEmit(motherEmitter, 'createPage')) {
+    warnings.push('WORDPRESS_COLLECTION_PAGES_UNAVAILABLE: pagesManager.createPage was unavailable, so category collections stayed as metadata.');
+    return { collectionPageIds, applied, warnings };
+  }
+
+  const pageBase = { jwt, moduleName: 'pagesManager', moduleType: 'core', decodedJWT };
+  for (const collection of plan.collections) {
+    const parentId = collection.parentSlug ? collectionPageIds.get(collection.parentSlug) || null : null;
+    const result = await emitAsync(motherEmitter, 'createPage', {
+      ...pageBase,
+      title: collection.title,
+      slug: collection.slug,
+      status: 'published',
+      lane: 'public',
+      language: 'en',
+      parent_id: parentId,
+      is_content: false,
+      translations: [{
+        language: 'en',
+        title: collection.title,
+        html: collection.description ? `<p>${escapeHtml(collection.description)}</p>` : '',
+        metaDesc: collection.description || '',
+        seoTitle: collection.title
+      }],
+      meta: {
+        isCollection: true,
+        source: 'wordpress',
+        wordpress: {
+          term: collection.term,
+          wpDomain: collection.wpDomain,
+          sourceId: collection.sourceId,
+          entrySourceIds: collection.entrySourceIds
+        }
+      },
+      autoSuffixSlug: true,
+      skipContentMirror: true
+    });
+    const pageId = resultId(result, ['pageId', 'id', 'insertedId'], collection.slug);
+    collectionPageIds.set(collection.slug, pageId);
+    applied.push({ slug: collection.slug, sourceId: collection.sourceId, pageId, result });
+  }
+
+  return { collectionPageIds, applied, warnings };
+}
+
+async function createEntryPageProjection(entry, context) {
+  const { motherEmitter, jwt, decodedJWT, entryId, collections, collectionPageIds, entryPageIds, options } = context;
+  if (options.createPages === false || !canEmit(motherEmitter, 'createPage')) return null;
+
+  const language = entry.language || 'en';
+  const primaryCollection = primaryCollectionForEntry(entry, collections);
+  const parentId = entry.parentSourceId
+    ? entryPageIds.get(entry.parentSourceId) || null
+    : primaryCollection
+      ? collectionPageIds.get(primaryCollection.slug) || null
+      : null;
+  const pageSlug = collectionChildSlug(entry, primaryCollection);
+  const wordpressMeta = entry.metadata?.wordpress || {};
+  const result = await emitAsync(motherEmitter, 'createPage', {
+    jwt,
+    moduleName: 'pagesManager',
+    moduleType: 'core',
+    decodedJWT,
+    title: entry.title,
+    slug: pageSlug,
+    status: entryPageStatus(entry.status),
+    lane: 'public',
+    language,
+    parent_id: parentId,
+    is_content: true,
+    translations: [entryTranslation(entry, language)],
+    meta: {
+      source: 'wordpress',
+      sourceModule: 'wordpress',
+      sourceId: entry.sourceId,
+      contentEntryId: entryId,
+      isCollectionChild: Boolean(parentId),
+      primaryCollection: primaryCollection
+        ? {
+          slug: primaryCollection.slug,
+          title: primaryCollection.title,
+          sourceId: primaryCollection.sourceId
+        }
+        : null,
+      wordpress: {
+        postId: wordpressMeta.postId || entry.sourceId,
+        postType: wordpressMeta.postType || entry.contentType,
+        terms: wordpressMeta.terms || []
+      }
+    },
+    autoSuffixSlug: true,
+    skipContentMirror: true
+  });
+  const pageId = resultId(result, ['pageId', 'id', 'insertedId'], pageSlug);
+  entryPageIds.set(entry.sourceId, pageId);
+  return { sourceId: entry.sourceId, slug: pageSlug, parentId, pageId, result };
+}
+
 async function applyImportPlan(plan, options = {}) {
   const { motherEmitter, jwt } = options;
   if (!motherEmitter) {
@@ -457,11 +760,19 @@ async function applyImportPlan(plan, options = {}) {
   const commentBase = { jwt, moduleName: 'commentsManager', moduleType: 'core', decodedJWT };
   const applied = {
     contentTypes: [],
+    collections: [],
+    pageEntries: [],
     entries: [],
     attachments: [],
-    comments: []
+    comments: [],
+    warnings: []
   };
   const entryIds = new Map();
+  const entryPageIds = new Map();
+
+  const collectionPages = await createCollectionPages(plan, options, decodedJWT);
+  applied.collections.push(...collectionPages.applied);
+  applied.warnings.push(...collectionPages.warnings);
 
   const contentTypes = new Set(plan.entries.map(entry => entry.contentType));
   for (const contentType of contentTypes) {
@@ -508,16 +819,43 @@ async function applyImportPlan(plan, options = {}) {
       permalink: entry.permalink,
       status: entry.status,
       publishedAt: entry.publishedAt,
+      language: entry.language || 'en',
       parentId: entry.parentSourceId ? entryIds.get(entry.parentSourceId) || null : null,
       sourceModule: 'wordpress',
       sourceId: entry.sourceId,
       excerpt: entry.excerpt,
       content: entry.content,
-      meta: entry.metadata
+      meta: {
+        ...entry.metadata,
+        blogposter: {
+          ...(entry.metadata.blogposter || {}),
+          primaryCollection: (() => {
+            const collection = primaryCollectionForEntry(entry, plan.collections);
+            return collection
+              ? { slug: collection.slug, title: collection.title, sourceId: collection.sourceId }
+              : null;
+          })()
+        }
+      }
     });
     const entryId = resultId(result, ['entryId', 'id'], entry.sourceId);
     entryIds.set(entry.sourceId, entryId);
     applied.entries.push({ sourceId: entry.sourceId, result });
+    try {
+      const pageProjection = await createEntryPageProjection(entry, {
+        motherEmitter,
+        jwt,
+        decodedJWT,
+        entryId,
+        collections: plan.collections,
+        collectionPageIds: collectionPages.collectionPageIds,
+        entryPageIds,
+        options
+      });
+      if (pageProjection) applied.pageEntries.push(pageProjection);
+    } catch (err) {
+      applied.warnings.push(`WORDPRESS_ENTRY_PAGE_CREATE_FAILED: ${entry.sourceId} - ${err.message}`);
+    }
   }
 
   for (const comment of plan.comments) {
@@ -562,9 +900,13 @@ module.exports = {
 
   _internals: {
     asArray,
+    buildCollectionPlans,
     buildImportPlan,
+    primaryCollectionForEntry,
     normalizeAttachment,
     normalizeContentItem,
+    detectWordPressLanguage,
+    detectWordPressTranslationHints,
     normalizeStatus,
     normalizeWpDate,
     text

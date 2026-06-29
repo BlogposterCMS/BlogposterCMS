@@ -22,8 +22,9 @@ The Database Manager acts as the gateway between modules and the persistence lay
 - Can forward requests to remote services when `REMOTE_URL_<module>` is defined.
 - Enforces backend boundaries for community modules: direct database writes,
   raw SQL and direct `performDbOperation` calls are core-only. Community
-  modules may only read through high-level `dbSelect`, and remote database
-  forwarding is disabled for them.
+  modules may only read through high-level `dbSelect` or use host-marked
+  `moduleHost.storage` calls for module-owned CRUD. Remote database forwarding
+  is disabled for them.
 - Keeps database lifecycle operations (`createDatabase`, `applySchemaFile`,
   `applySchemaDefinition`) behind core contracts. Community modules cannot run
   schema or database creation during runtime.
@@ -44,6 +45,20 @@ The Database Manager acts as the gateway between modules and the persistence lay
 The manager also emits `deactivateModule` if a module triggers a fatal error. Every call is validated against the provided JWT before any database operation is executed. Registered module type wins over the payload: a community module cannot set `moduleType: "core"` to gain database access.
 
 `applySchemaFile` and `applySchemaDefinition` allow core modules to create tables or MongoDB collections from a JSON schema at runtime. Tables may specify a `schema` property; when using PostgreSQL the parser creates the schema if needed and prefixes table and index statements with it. Supported column types include `id`, `text`, `string`, `int`, `boolean`, `timestamp`, and `float`.
+
+## Community Module Storage
+
+Community modules should not call `dbInsert`, `dbUpdate`, `dbDelete` or
+`performDbOperation` directly. Their supported persistence path is
+`moduleHost.storage`, which runs in the Module Loader host boundary and sends
+internally marked CRUD requests to the Database Manager.
+
+The storage facade accepts logical table names such as `items`, normalizes them
+to physical names such as `community_<module>_items`, injects the community
+module identity and rejects raw SQL markers before the Database Manager sees the
+request. Direct community mutations without that internal marker remain blocked.
+This keeps the contract language-neutral for the future Go host while still
+using the existing Database Manager events underneath.
 
 ## Lifecycle Boundaries
 
@@ -72,9 +87,13 @@ switch (operation) {
 }
 ```
 
-Modules can register custom placeholders using the `registerCustomPlaceholder` helper.
+Core services can register custom placeholders using the `registerCustomPlaceholder` helper.
 
-The module loader exposes loaded modules on `global.loadedModules`; `handlePlaceholder` uses this registry to resolve the module and function for each custom placeholder.
+Community modules run in external processes, so custom placeholders cannot call
+their exports with the host `dbClient`. If a process-isolated module owns a
+database operation, expose it as a module-owned event or add an audited core
+database contract instead. `handlePlaceholder` rejects process-owned custom
+placeholders with `E_PLACEHOLDER_PROCESS_MODULE_UNSUPPORTED`.
 
 For development safety, a parity check script ensures every placeholder case in
 MongoDB and SQLite matches the Postgres implementation. Run it with

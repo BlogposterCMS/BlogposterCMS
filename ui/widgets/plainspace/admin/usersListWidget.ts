@@ -3,16 +3,190 @@ import {
   createUserRecord,
   deleteRoleRecord,
   errorMessage,
+  fetchPermissions,
   fetchRoles,
   fetchUsers,
+  permissionBlobFromKeys,
+  permissionGroupForKey,
+  permissionKey,
   permissionsPromptDefault,
   updateRoleRecord,
+  visiblePermissionGroups,
+  type PermissionRecord,
   type RoleRecord,
   type UserRecord
 } from './usersListData.js';
 
 function icon(name: string, className: string): string {
   return typeof window.featherIcon === 'function' ? window.featherIcon(name, className) : '';
+}
+
+interface DialogResult {
+  action?: string;
+}
+
+interface DialogApi {
+  alert?: (message: string, options?: { title?: string }) => Promise<DialogResult>;
+  confirm?: (message: string, options?: { title?: string; confirmLabel?: string; cancelLabel?: string }) => Promise<boolean>;
+  open?: (options: {
+    title: string;
+    message?: string;
+    body?: Node;
+    kind?: string;
+    actions?: Array<{ id: string; label: string; variant?: string }>;
+    dismissable?: boolean;
+  }) => Promise<DialogResult>;
+}
+
+function dialogApi(): DialogApi | null {
+  return (window as Window & { bpDialog?: DialogApi }).bpDialog || null;
+}
+
+function createInput(id: string, labelText: string, type = 'text'): HTMLDivElement {
+  const row = document.createElement('div');
+  row.className = 'field user-field-row';
+
+  const input = document.createElement('input');
+  input.id = id;
+  input.type = type;
+  input.placeholder = ' ';
+
+  const label = document.createElement('label');
+  label.setAttribute('for', id);
+  label.textContent = labelText;
+
+  row.appendChild(input);
+  row.appendChild(label);
+  return row;
+}
+
+function buildRoleCheckboxes(container: HTMLElement, roles: RoleRecord[]): void {
+  visiblePermissionGroups(roles).forEach(role => {
+    const id = `role-${String(role.id)}`;
+    const label = document.createElement('label');
+    label.className = 'permission-checkbox';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = id;
+    input.value = String(role.id ?? '');
+    input.dataset.roleId = input.value;
+    const text = document.createElement('span');
+    text.textContent = role.role_name || input.value;
+    label.appendChild(input);
+    label.appendChild(text);
+    container.appendChild(label);
+  });
+}
+
+function buildPermissionCheckboxes(container: HTMLElement, permissions: PermissionRecord[]): void {
+  const groups = new Map<string, PermissionRecord[]>();
+  permissions.forEach(permission => {
+    const key = permissionKey(permission);
+    if (!key || key === '*' || key === 'canAccessEverything') return;
+    const group = permissionGroupForKey(key);
+    groups.set(group, [...(groups.get(group) || []), permission]);
+  });
+
+  Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b)).forEach(([group, records]) => {
+    const section = document.createElement('div');
+    section.className = 'permission-group-section';
+    const title = document.createElement('strong');
+    title.textContent = group;
+    section.appendChild(title);
+
+    records
+      .sort((a, b) => permissionKey(a).localeCompare(permissionKey(b)))
+      .forEach(permission => {
+        const key = permissionKey(permission);
+        const label = document.createElement('label');
+        label.className = 'permission-checkbox';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = key;
+        input.dataset.permissionKey = key;
+        const text = document.createElement('span');
+        text.textContent = key;
+        label.title = permission.description || key;
+        label.appendChild(input);
+        label.appendChild(text);
+        section.appendChild(label);
+      });
+    container.appendChild(section);
+  });
+}
+
+async function openCreateUserDialog(roles: RoleRecord[], permissions: PermissionRecord[]): Promise<{
+  username: string;
+  password: string;
+  email: string;
+  roleIds: string[];
+  directPermissions: Record<string, unknown>;
+} | null> {
+  const dialog = dialogApi();
+  if (!dialog?.open) {
+    const username = prompt('Username:');
+    if (!username) return null;
+    const password = prompt('Password:');
+    if (!password) return null;
+    const email = prompt('Email (optional):') || '';
+    return { username, password, email, roleIds: [], directPermissions: {} };
+  }
+
+  const body = document.createElement('div');
+  body.className = 'user-create-dialog';
+  body.appendChild(createInput('new-user-username', 'Username'));
+  body.appendChild(createInput('new-user-password', 'Password', 'password'));
+  body.appendChild(createInput('new-user-email', 'Email'));
+
+  const roleSection = document.createElement('div');
+  roleSection.className = 'permission-group-section';
+  const roleTitle = document.createElement('strong');
+  roleTitle.textContent = 'Permission groups';
+  roleSection.appendChild(roleTitle);
+  buildRoleCheckboxes(roleSection, roles);
+  body.appendChild(roleSection);
+
+  const advanced = document.createElement('details');
+  advanced.className = 'permission-advanced-section';
+  const summary = document.createElement('summary');
+  summary.textContent = 'Advanced rights';
+  advanced.appendChild(summary);
+  buildPermissionCheckboxes(advanced, permissions);
+  body.appendChild(advanced);
+
+  const result = await dialog.open({
+    title: 'Create user',
+    body,
+    dismissable: true,
+    actions: [
+      { id: 'cancel', label: 'Cancel' },
+      { id: 'create', label: 'Create', variant: 'primary' }
+    ]
+  });
+  if (result.action !== 'create') return null;
+
+  const username = (body.querySelector<HTMLInputElement>('#new-user-username')?.value || '').trim();
+  const password = body.querySelector<HTMLInputElement>('#new-user-password')?.value || '';
+  const email = (body.querySelector<HTMLInputElement>('#new-user-email')?.value || '').trim();
+  if (!username || !password) {
+    await dialog.alert?.('Username and password are required.', { title: 'Create user' });
+    return null;
+  }
+
+  const roleIds = Array.from(body.querySelectorAll<HTMLInputElement>('input[data-role-id]'))
+    .filter(input => input.checked)
+    .map(input => input.value);
+  const permissionKeys = Array.from(body.querySelectorAll<HTMLInputElement>('input[data-permission-key]'))
+    .filter(input => input.checked)
+    .map(input => input.value);
+
+  return {
+    username,
+    password,
+    email,
+    roleIds,
+    directPermissions: permissionBlobFromKeys(permissionKeys)
+  };
 }
 
 export async function render(el: HTMLElement | null): Promise<void> {
@@ -26,6 +200,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
 
   let users: UserRecord[] = [];
   let roles: RoleRecord[] = [];
+  let permissions: PermissionRecord[] = [];
   let userList: HTMLUListElement;
   let roleList: HTMLUListElement;
 
@@ -60,17 +235,16 @@ export async function render(el: HTMLElement | null): Promise<void> {
     addUserBtn.title = 'Add new user';
     addUserBtn.className = 'icon add-user-btn';
     addUserBtn.addEventListener('click', async () => {
-      const username = prompt('Username:');
-      if (!username) return;
-      const password = prompt('Password:');
-      if (!password) return;
-      const email = prompt('Email (optional):') || '';
+      const values = await openCreateUserDialog(roles, permissions);
+      if (!values) return;
       try {
-        await createUserRecord(meltdownEmit, jwt, { username, password, email });
+        await createUserRecord(meltdownEmit, jwt, values);
         users = await fetchUsers(meltdownEmit, jwt);
         renderUsers();
       } catch (err) {
-        alert(`Error: ${errorMessage(err)}`);
+        const dialog = dialogApi();
+        if (dialog?.alert) await dialog.alert(`Error: ${errorMessage(err)}`, { title: 'Create user' });
+        else alert(`Error: ${errorMessage(err)}`);
       }
     });
 
@@ -198,7 +372,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
       empty.textContent = 'No permission groups found.';
       roleList.appendChild(empty);
     } else {
-      roles.forEach(role => {
+      visiblePermissionGroups(roles).forEach(role => {
         const li = document.createElement('li');
         const row = document.createElement('div');
         row.className = 'page-name-row';
@@ -227,9 +401,10 @@ export async function render(el: HTMLElement | null): Promise<void> {
   }
 
   try {
-    [users, roles] = await Promise.all([
+    [users, roles, permissions] = await Promise.all([
       fetchUsers(meltdownEmit, jwt),
-      fetchRoles(meltdownEmit, jwt)
+      fetchRoles(meltdownEmit, jwt),
+      fetchPermissions(meltdownEmit, jwt).catch(() => [])
     ]);
     const built = buildCard();
     userList = built.usersListEl;

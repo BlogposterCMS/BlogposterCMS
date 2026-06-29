@@ -14,11 +14,15 @@ const {
   isCommunityOwnedTable,
   isCommunityQueryEvent,
   isBlockedCommunityStaticAssetPath,
+  normalizeCommunityStorageTable,
   normalizeMountPath,
   resolveStaticAssetDir,
   createCommunityStaticAssetOptions,
   stripCommunityListenerPrivatePayload
 } = require('../mother/modules/moduleLoader/moduleHost');
+const {
+  isCommunityStorageCall
+} = require('../mother/modules/databaseManager/meltdownBridging/databaseEventBoundary');
 
 test('community event bus scopes emitted payloads to the owning module', () => {
   const motherEmitter = new EventEmitter();
@@ -201,6 +205,110 @@ test('community event bus refuses arbitrary core query events', () => {
   }
 });
 
+test('community event bus allows explicitly granted core events only', () => {
+  const motherEmitter = new EventEmitter();
+  const calls = [];
+  motherEmitter.on('listContentEntries', (payload, cb) => {
+    calls.push(payload);
+    cb(null, []);
+  });
+
+  const moduleHost = createCommunityModuleHost({
+    app: express(),
+    motherEmitter,
+    moduleName: 'demoModule',
+    moduleDir: __dirname,
+    jwt: 'token',
+    nonce: 'nonce-1',
+    accessGrants: [{ event: 'listContentEntries' }]
+  });
+
+  moduleHost.eventBus.emit('listContentEntries', { limit: 5 }, () => {});
+  expect(calls[0]).toEqual({
+    limit: 5,
+    jwt: 'token',
+    moduleName: 'contentEngine',
+    moduleType: 'core',
+    requestedByModule: 'demoModule'
+  });
+
+  expect(() => {
+    createCommunityModuleHost({
+      app: express(),
+      motherEmitter: new EventEmitter(),
+      moduleName: 'demoModule',
+      moduleDir: __dirname,
+      jwt: 'token',
+      nonce: 'nonce-1',
+      accessGrants: [{ event: 'deleteUser' }]
+    }).eventBus.emit('deleteUser', { userId: 1 }, () => {});
+  }).toThrow(/protected resource "users"/);
+});
+
+test('community event bus can run a protected core event after one-time admin consent', async () => {
+  const motherEmitter = new EventEmitter();
+  const calls = [];
+  motherEmitter.on('deleteUser', (payload, cb) => {
+    calls.push(payload);
+    cb(null, { deleted: true });
+  });
+
+  const accessConsentManager = {
+    requestAccess(input) {
+      return {
+        request: {
+          id: 'request-1',
+          allowPermanent: false
+        },
+        promise: Promise.resolve({
+          approved: true,
+          mode: 'once',
+          jwt: 'admin-token',
+          decodedJWT: {
+            userId: 'admin-1',
+            permissions: {
+              modules: { manageAccess: true },
+              users: { delete: true }
+            }
+          }
+        })
+      };
+    }
+  };
+  const moduleHost = createCommunityModuleHost({
+    app: express(),
+    motherEmitter,
+    moduleName: 'demoModule',
+    moduleInfo: { moduleName: 'demoModule' },
+    moduleDir: __dirname,
+    jwt: 'module-token',
+    nonce: 'nonce-1',
+    accessConsentManager
+  });
+
+  let callbackResult = null;
+  const emitted = await moduleHost.eventBus.emit('deleteUser', { userId: 'user-1' }, (err, result) => {
+    callbackResult = { err, result };
+  });
+
+  expect(emitted).toBe(true);
+  expect(calls[0]).toEqual({
+    userId: 'user-1',
+    jwt: 'admin-token',
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    requestedByModule: 'demoModule',
+    decodedJWT: {
+      userId: 'admin-1',
+      permissions: {
+        modules: { manageAccess: true },
+        users: { delete: true }
+      }
+    }
+  });
+  expect(callbackResult).toEqual({ err: null, result: { deleted: true } });
+});
+
 test('community event bus refuses raw SQL reads', () => {
   expect(() => {
     assertCommunityEventAllowed('dbSelect', {
@@ -227,6 +335,68 @@ test('community event bus restricts dbSelect to module-owned tables', () => {
   expect(() => {
     moduleHost.eventBus.emit('dbSelect', { table: 'users' }, () => {});
   }).toThrow(/module-owned tables/);
+});
+
+test('community storage facade maps logical tables to host-owned physical tables', async () => {
+  const motherEmitter = new EventEmitter();
+  let capturedPayload = null;
+  motherEmitter.on('dbSelect', (payload, callback) => {
+    capturedPayload = payload;
+    callback(null, [{ id: 1, title: 'Stored' }]);
+  });
+
+  const moduleHost = createCommunityModuleHost({
+    app: express(),
+    motherEmitter,
+    moduleName: 'demoModule',
+    moduleDir: __dirname,
+    jwt: 'token',
+    nonce: 'nonce-1'
+  });
+
+  const rows = await moduleHost.storage.select('items', { where: { status: 'open' } });
+
+  expect(rows).toEqual([{ id: 1, title: 'Stored' }]);
+  expect(capturedPayload.table).toBe('community_demomodule_items');
+  expect({ ...capturedPayload.where }).toEqual({ status: 'open' });
+  expect(capturedPayload.jwt).toBe('token');
+  expect(capturedPayload.moduleName).toBe('demoModule');
+  expect(capturedPayload.moduleType).toBe('community');
+  expect(capturedPayload.nonce).toBe('nonce-1');
+  expect(isCommunityStorageCall(capturedPayload)).toBe(true);
+});
+
+test('community storage facade exposes host-marked writes without raw SQL markers', async () => {
+  const motherEmitter = new EventEmitter();
+  let capturedPayload = null;
+  motherEmitter.on('dbInsert', (payload, callback) => {
+    capturedPayload = payload;
+    callback(null, [{ id: 2, title: payload.data.title }]);
+  });
+
+  const moduleHost = createCommunityModuleHost({
+    app: express(),
+    motherEmitter,
+    moduleName: 'demoModule',
+    moduleDir: __dirname,
+    jwt: 'token',
+    nonce: 'nonce-1'
+  });
+
+  const rows = await moduleHost.storage.insert('items', { title: 'Write' });
+
+  expect(rows).toEqual([{ id: 2, title: 'Write' }]);
+  expect(capturedPayload.table).toBe('community_demomodule_items');
+  expect({ ...capturedPayload.data }).toEqual({ title: 'Write' });
+  expect(isCommunityStorageCall(capturedPayload)).toBe(true);
+  expect(() => moduleHost.storage.insert('__rawSQL__', { title: 'Nope' })).toThrow(/E_MODULE_STORAGE_INVALID_TABLE/);
+  expect(() => moduleHost.storage.update('items', { id: 1 }, { count: { __raw_expr: 'count + 1' } })).toThrow(/raw SQL markers/);
+});
+
+test('normalizes community storage table names', () => {
+  expect(normalizeCommunityStorageTable('demoModule', 'items')).toBe('community_demomodule_items');
+  expect(normalizeCommunityStorageTable('demo-module', 'page_views')).toBe('community_demo_module_page_views');
+  expect(() => normalizeCommunityStorageTable('demoModule', 'items;DROP')).toThrow(/E_MODULE_STORAGE_INVALID_TABLE/);
 });
 
 test('community listeners are tagged with moduleName for cleanup', () => {
@@ -389,12 +559,12 @@ test('static assets are constrained to the module URL and folder', () => {
   });
 
   const mount = moduleHost.registerStaticAssets({
-    dir: 'sandboxModule',
+    dir: 'moduleStaticAssets',
     mountPath: 'assets'
   });
 
   expect(mount.mountPath).toBe('/modules/demoModule/assets');
-  expect(mount.dir).toBe(path.join(__dirname, 'sandboxModule'));
+  expect(mount.dir).toBe(path.join(__dirname, 'moduleStaticAssets'));
   expect(() => {
     moduleHost.registerStaticAssets({ dir: '..', mountPath: 'bad' });
   }).toThrow(/inside the module folder/);
@@ -518,6 +688,7 @@ test('module host capabilities expose read-only system boundaries', () => {
 
   expect(moduleHost.capabilities.rawSql).toBe(false);
   expect(moduleHost.capabilities.systemWrites).toBe(false);
+  expect(moduleHost.capabilities.moduleStorage).toBe(true);
 });
 
 test('normalizes community static mount paths', () => {

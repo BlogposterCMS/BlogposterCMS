@@ -7,9 +7,13 @@ import {
   createUserRecord,
   deleteRoleRecord,
   errorMessage,
+  fetchPermissions,
   fetchRoles,
   fetchUsers,
+  permissionBlobFromKeys,
+  permissionKeysFromBlob,
   permissionsPromptDefault,
+  visiblePermissionGroups,
   toRoles,
   toUsers,
   updateRoleRecord
@@ -34,6 +38,16 @@ describe('usersListData', () => {
     })).toEqual([{ id: 'admin', role_name: 'Admin' }]);
     expect(permissionsPromptDefault('{"pages":true}')).toBe('{"pages":true}');
     expect(permissionsPromptDefault({ pages: true })).toBe('{"pages":true}');
+    expect(permissionBlobFromKeys(['pages.read', 'widgets.create'])).toEqual({
+      pages: { read: true },
+      widgets: { create: true }
+    });
+    expect(permissionKeysFromBlob({ pages: { read: true }, widgets: { create: true } }).sort())
+      .toEqual(['pages.read', 'widgets.create']);
+    expect(visiblePermissionGroups([
+      { id: '1', role_name: 'Editors' },
+      { id: '2', role_name: '__user_direct_5' }
+    ])).toEqual([{ id: '1', role_name: 'Editors' }]);
     expect(errorMessage(new Error('boom'))).toBe('boom');
     expect(errorMessage('nope')).toBe('nope');
   });
@@ -47,12 +61,18 @@ describe('usersListData', () => {
 
     await expect(fetchUsers(emit, 'admin-token')).resolves.toEqual([{ id: '1', username: 'ada' }]);
     await expect(fetchRoles(emit, 'admin-token')).resolves.toEqual([{ id: 'admin', role_name: 'Admin' }]);
+    await expect(fetchPermissions(emit, 'admin-token')).resolves.toEqual([{ id: 'admin', role_name: 'Admin' }]);
     expect(emit).toHaveBeenCalledWith('getAllUsers', {
       jwt: 'admin-token',
       moduleName: 'userManagement',
       moduleType: 'core'
     });
     expect(emit).toHaveBeenCalledWith('getAllRoles', {
+      jwt: 'admin-token',
+      moduleName: 'userManagement',
+      moduleType: 'core'
+    });
+    expect(emit).toHaveBeenCalledWith('getAllPermissions', {
       jwt: 'admin-token',
       moduleName: 'userManagement',
       moduleType: 'core'
@@ -65,7 +85,9 @@ describe('usersListData', () => {
     await createUserRecord(emit, 'admin-token', {
       username: 'ada',
       password: 'secret',
-      email: 'ada@example.test'
+      email: 'ada@example.test',
+      roleIds: ['editor'],
+      directPermissions: { pages: { read: true } }
     });
     await createRoleRecord(emit, 'admin-token', {
       roleName: 'Editors',
@@ -78,7 +100,9 @@ describe('usersListData', () => {
       moduleType: 'core',
       username: 'ada',
       password: 'secret',
-      email: 'ada@example.test'
+      email: 'ada@example.test',
+      roleIds: ['editor'],
+      directPermissions: { pages: { read: true } }
     });
     expect(emit).toHaveBeenCalledWith('createRole', {
       jwt: 'admin-token',

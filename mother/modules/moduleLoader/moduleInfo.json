@@ -1,6 +1,6 @@
 {
   "moduleName": "moduleLoader",
   "version": "0.6.4",
-  "description": "Loads optional modules with sandboxing.",
+  "description": "Loads optional modules through process-isolated runners.",
   "developer": "Blogposter Team"
 }

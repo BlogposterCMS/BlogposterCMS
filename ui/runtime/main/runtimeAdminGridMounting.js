@@ -1,115 +1,89 @@
-import { createRuntimeCanvasItem, resolveRuntimeCanvasRect } from './runtimeCanvasItems.js';
-import { DEFAULT_ADMIN_ROWS, deriveGridSize } from './runtimeGridMetrics.js';
+import { createWidgetPlaceholder } from './runtimeCanvasItems.js';
 import { renderRuntimeCanvasWidget } from './runtimeWidgetMounting.js';
 import { waitForRuntimeWidgetShellPaint } from './runtimeWidgetHydration.js';
+import { markRuntimeWidgetShell } from './runtimeWidgetHydration.js';
 import { attachAdminDashboardControls } from './widgetRuntimeGateway.js';
-const LEGACY_OVERSIZED_ADMIN_ROWS = 1000;
-const RECOVERED_ADMIN_WIDGET_ROWS = 160;
+import { applyDashboardHeightPolicyToElement, applyDashboardSlotToElement, getDefaultDashboardSlot, getSupportedDashboardSlots, resolveDashboardSlotForWidget } from '../../shared/layout/dashboardSlots.js';
 function toFiniteNumber(value) {
     const num = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
     return Number.isFinite(num) ? num : null;
 }
-function getSeedOptions(def) {
-    const seedOptions = def?.metadata?.seedOptions;
-    return seedOptions && typeof seedOptions === 'object' && !Array.isArray(seedOptions)
-        ? seedOptions
-        : {};
+function findWidgetDefinition(allWidgets, widgetId) {
+    return allWidgets.find(widget => widget.id === widgetId) || null;
 }
-function seedWidthToColumns(options, cols) {
-    const width = toFiniteNumber(options.width);
-    const widthPercent = Number.isFinite(width)
-        ? width
-        : options.halfWidth
-            ? 50
-            : options.thirdWidth
-                ? 33.333
-                : null;
-    if (!Number.isFinite(widthPercent))
-        return null;
-    return Math.max(1, Math.min(cols, Math.round((widthPercent / 100) * cols)));
-}
-function slotWidthToColumns(def, cols) {
-    const contract = def?.metadata?.layout || def?.metadata?.sizeContract || def?.layout;
-    const slots = Array.isArray(contract?.supportedSlots) ? contract.supportedSlots : [];
-    const nonFullWidths = slots
-        .filter((slot) => slot?.name !== 'full')
-        .map((slot) => toFiniteNumber(slot.minCols))
-        .filter((value) => value !== null && value > 0);
-    if (nonFullWidths.length) {
-        return Math.max(1, Math.min(cols, Math.min(...nonFullWidths)));
-    }
-    return slots.some((slot) => slot?.name === 'full')
-        ? cols
-        : null;
-}
-function seedHeightToRows(options) {
-    const height = toFiniteNumber(options.height);
-    return height !== null && height > 100
-        ? Math.max(1, Math.round(height))
-        : null;
-}
-function normalizeLegacyAdminRect(rect, meta, def, cols) {
-    const h = toFiniteNumber(rect.h);
-    const hPercent = toFiniteNumber(meta.hPercent);
-    const hasLegacyAbsolutePercent = hPercent !== null && hPercent > 100;
-    const hasOversizedStoredRows = h !== null && h > LEGACY_OVERSIZED_ADMIN_ROWS;
-    if (!hasLegacyAbsolutePercent && !hasOversizedStoredRows) {
-        return rect;
-    }
-    const seedOptions = getSeedOptions(def);
-    const seedHeight = seedHeightToRows(seedOptions);
-    const seedWidth = seedWidthToColumns(seedOptions, cols) ?? slotWidthToColumns(def, cols);
-    const x = toFiniteNumber(rect.x);
-    const clampedX = seedWidth !== null && x !== null && x + seedWidth > cols
-        ? Math.max(0, cols - seedWidth)
-        : null;
-    return {
-        ...rect,
-        ...(clampedX !== null ? { x: clampedX } : {}),
-        ...(seedWidth !== null ? { w: seedWidth } : {}),
-        h: seedHeight ?? RECOVERED_ADMIN_WIDGET_ROWS
-    };
-}
-function createAdminInstanceMeta(entry) {
+function createAdminInstanceMeta(entry, index, def) {
     const meta = { ...entry };
     const instanceId = meta.id
         || meta.instance_id
         || meta.instanceId
         || `w${Math.random().toString(36).slice(2, 8)}`;
     meta.id = instanceId;
+    meta.widgetId = meta.widgetId || def.id;
+    meta.order = toFiniteNumber(meta.order) ?? index * 10;
+    meta.slot = resolveDashboardSlotForWidget(def, meta.slot);
+    meta.column = toFiniteNumber(meta.column) ?? undefined;
     return { instanceId: String(instanceId), meta };
+}
+function normalizeDashboardEntries(layout, allWidgets) {
+    const entries = layout
+        .map((entry, index) => ({
+        entry,
+        index,
+        def: findWidgetDefinition(allWidgets, entry.widgetId)
+    }))
+        .filter((item) => Boolean(item.def))
+        .sort((a, b) => {
+        const aOrder = toFiniteNumber(a.entry.order) ?? a.index * 10;
+        const bOrder = toFiniteNumber(b.entry.order) ?? b.index * 10;
+        return aOrder - bOrder;
+    });
+    const pageEntry = entries.find(item => (resolveDashboardSlotForWidget(item.def, item.entry.slot) === 'page'));
+    return pageEntry ? [pageEntry] : entries;
+}
+function createAdminDashboardItem(def, meta, instanceId) {
+    const wrapper = document.createElement('article');
+    wrapper.classList.add('canvas-item', 'dashboard-widget', 'loading');
+    wrapper.dataset.widgetId = def.id;
+    wrapper.dataset.instanceId = instanceId;
+    wrapper.dataset.dashboardOrder = String(meta.order ?? 0);
+    wrapper.style.order = String(meta.order ?? 0);
+    applyDashboardSlotToElement(wrapper, resolveDashboardSlotForWidget(def, meta.slot), getSupportedDashboardSlots(def), meta.column);
+    applyDashboardHeightPolicyToElement(wrapper, def);
+    const placeholder = createWidgetPlaceholder(def);
+    wrapper.appendChild(placeholder);
+    markRuntimeWidgetShell(wrapper, placeholder);
+    return { wrapper, placeholder };
+}
+export function createAdminDashboardWidgetElement(def, meta = {}, index = 0) {
+    const normalizedMeta = {
+        ...meta,
+        widgetId: meta.widgetId || def.id,
+        slot: resolveDashboardSlotForWidget(def, meta.slot || getDefaultDashboardSlot(def)),
+        column: toFiniteNumber(meta.column) ?? undefined,
+        order: toFiniteNumber(meta.order) ?? index * 10
+    };
+    const instanceId = String(normalizedMeta.id
+        || normalizedMeta.instance_id
+        || normalizedMeta.instanceId
+        || `w${Math.random().toString(36).slice(2, 8)}`);
+    normalizedMeta.id = instanceId;
+    const { wrapper, placeholder } = createAdminDashboardItem(def, normalizedMeta, instanceId);
+    return { wrapper, placeholder, meta: normalizedMeta, instanceId };
 }
 export async function mountAdminGridWidgets({ gridEl, grid, layout, allWidgets, lane, widgetEmit, instanceMetaMap, deferHydration = true, debug = false }) {
     const pendingAdmin = [];
-    const { cols, rows } = deriveGridSize(gridEl, grid, layout);
-    for (const entry of layout) {
-        const def = allWidgets.find(widget => widget.id === entry.widgetId);
-        if (!def)
-            continue;
+    normalizeDashboardEntries(layout, allWidgets).forEach(({ entry, index, def }) => {
         if (debug)
-            console.debug('[Renderer] admin render widget placeholder', def.id);
-        const { instanceId, meta } = createAdminInstanceMeta(entry);
-        const rect = normalizeLegacyAdminRect(resolveRuntimeCanvasRect(meta, {
-            scaleX: cols,
-            scaleY: rows,
-            defaultH: DEFAULT_ADMIN_ROWS,
-            def,
-            heightProjectionMode: 'legacyAdminPixels'
-        }), meta, def, cols);
-        const { wrapper, placeholder } = createRuntimeCanvasItem({
-            def,
-            item: meta,
-            ...rect,
-            minW: 4,
-            minH: DEFAULT_ADMIN_ROWS,
-            instanceId,
-            includeLayoutMetadata: true
-        });
+            console.debug('[Renderer] admin render dashboard widget placeholder', def.id);
+        const { instanceId, meta } = createAdminInstanceMeta(entry, index, def);
+        const { wrapper, placeholder } = createAdminDashboardItem(def, meta, instanceId);
         gridEl.appendChild(wrapper);
-        grid.makeWidget(wrapper);
+        if (typeof grid?.registerWidget === 'function') {
+            grid.registerWidget(wrapper);
+        }
         instanceMetaMap.set(instanceId, meta);
         pendingAdmin.push({ wrapper, def, meta, placeholder });
-    }
+    });
     if (pendingAdmin.length && deferHydration) {
         await waitForRuntimeWidgetShellPaint();
     }

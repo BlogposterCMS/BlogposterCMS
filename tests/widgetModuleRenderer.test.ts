@@ -38,6 +38,27 @@ describe('widgetModuleRenderer', () => {
       id: 'instance-1',
       widgetId: 'hero',
       metadata: { tone: 'quiet' },
+      instanceMetadata: {},
+      jwt: 'admin-token'
+    });
+  });
+
+  it('passes metadata-only widget settings to module renderers', async () => {
+    const container = document.createElement('div');
+    const render = jest.fn();
+    (loadWidgetModule as jest.Mock).mockResolvedValue({ render });
+
+    await renderWidgetModule(container, {
+      id: 'gallery',
+      metadata: { label: 'Gallery' },
+      codeUrl: '/ui/widgets/plainspace/public/basicwidgets/galleryWidget.js'
+    }, 'gallery-1', { mode: 'masonry', rows: 2 });
+
+    expect(render).toHaveBeenCalledWith(container, {
+      id: 'gallery-1',
+      widgetId: 'gallery',
+      metadata: { label: 'Gallery' },
+      instanceMetadata: { mode: 'masonry', rows: 2 },
       jwt: 'admin-token'
     });
   });

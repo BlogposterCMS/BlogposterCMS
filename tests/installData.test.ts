@@ -5,6 +5,7 @@
 import {
   fetchFirstInstallState,
   fetchPublicUserCount,
+  isAlreadyInstalledSubmitError,
   submitInstallRequest
 } from '../ui/shell/install/installData';
 
@@ -92,5 +93,14 @@ describe('installData', () => {
     await expect(submitInstallRequest(window, 'csrf-token', {
       favoriteColor: '#008080'
     })).rejects.toThrow('SHELL_INSTALL_SUBMIT_FAILED: bad setup');
+  });
+
+  it('identifies already-installed submit failures without matching unrelated install errors', () => {
+    expect(isAlreadyInstalledSubmitError(new Error('SHELL_INSTALL_SUBMIT_FAILED: Already installed')))
+      .toBe(true);
+    expect(isAlreadyInstalledSubmitError(new Error('SHELL_INSTALL_SUBMIT_FAILED: Password too weak')))
+      .toBe(false);
+    expect(isAlreadyInstalledSubmitError('Already installed'))
+      .toBe(false);
   });
 });

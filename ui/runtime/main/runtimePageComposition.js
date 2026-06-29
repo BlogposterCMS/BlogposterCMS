@@ -4,12 +4,39 @@ import { renderAttachedRuntimeContent } from './runtimeAttachedContent.js';
 import { clearContentKeepHeader } from './runtimePageShell.js';
 import { appendRuntimeEmptyState, appendRuntimeHtmlContent } from './runtimeContentFallbacks.js';
 import { fetchRuntimeDesign, loadRuntimeLayoutForViewport, loadRuntimeLayoutTemplate } from './runtimePageData.js';
+import { resolveRuntimePresentationCascade } from './runtimePresentationCascade.js';
 import { renderPublicRuntimeGrid, renderStaticRuntimeGrid } from './runtimeStaticGrid.js';
 const noopWidgetEmit = async () => undefined;
+function mergedPresentationPage(page, config = {}) {
+    const pageMeta = page.meta && typeof page.meta === 'object' && !Array.isArray(page.meta)
+        ? page.meta
+        : {};
+    const configMeta = config && typeof config === 'object' && !Array.isArray(config)
+        ? config
+        : {};
+    return {
+        ...page,
+        meta: {
+            ...pageMeta,
+            ...configMeta
+        }
+    };
+}
+function inheritedContentMount(contentEl) {
+    return contentEl.querySelector('.runtime-design-document [data-workarea="true"]')
+        || contentEl.querySelector('.runtime-design-document .runtime-layout-container:not([data-split="true"])')
+        || contentEl;
+}
+function appendInheritedPageHtml(contentEl, page, presentation) {
+    if (!presentation.inherited || !page.html)
+        return;
+    appendRuntimeHtmlContent(inheritedContentMount(contentEl), page.html);
+}
 export async function renderPublicRuntimePageContent({ page, config = page.meta || {}, contentEl, globalLayout = [], allWidgets, lane, emit, widgetEmit = noopWidgetEmit, debug = false }) {
-    if (page.meta?.designId) {
+    const presentation = await resolveRuntimePresentationCascade(mergedPresentationPage(page, config), emit, lane);
+    if (presentation?.designId) {
         try {
-            const res = await fetchRuntimeDesign(emit, page.meta.designId, lane);
+            const res = await fetchRuntimeDesign(emit, presentation.designId, lane);
             const layout = getRuntimeDesignLayout(res);
             const combined = [...globalLayout, ...layout];
             clearContentKeepHeader(contentEl);
@@ -26,6 +53,7 @@ export async function renderPublicRuntimePageContent({ page, config = page.meta 
             if (!renderedDocument) {
                 await renderStaticRuntimeGrid(contentEl, combined, allWidgets, lane, { widgetEmit });
             }
+            appendInheritedPageHtml(contentEl, page, presentation);
             await renderAttachedRuntimeContent({ page, lane, allWidgets, container: contentEl, emit, widgetEmit });
             return;
         }
@@ -33,10 +61,10 @@ export async function renderPublicRuntimePageContent({ page, config = page.meta 
             console.warn('[Renderer] failed to load design', err);
         }
     }
-    if (config.layoutTemplate) {
+    if (presentation?.layoutTemplate) {
         let layoutArr = [];
         try {
-            layoutArr = await loadRuntimeLayoutTemplate(emit, config.layoutTemplate, lane);
+            layoutArr = await loadRuntimeLayoutTemplate(emit, presentation.layoutTemplate, lane);
         }
         catch (err) {
             console.warn('[Renderer] failed to load layout template', err);
@@ -44,6 +72,7 @@ export async function renderPublicRuntimePageContent({ page, config = page.meta 
         const combined = [...globalLayout, ...layoutArr];
         clearContentKeepHeader(contentEl);
         await renderStaticRuntimeGrid(contentEl, combined, allWidgets, lane, { widgetEmit });
+        appendInheritedPageHtml(contentEl, page, presentation);
         await renderAttachedRuntimeContent({ page, lane, allWidgets, container: contentEl, emit, widgetEmit });
         return;
     }

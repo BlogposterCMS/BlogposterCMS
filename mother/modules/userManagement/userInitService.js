@@ -82,10 +82,9 @@ const DEFAULT_PERMISSION_DEFINITIONS = Object.freeze([
   { permission_key: 'modules.listActive', description: 'List active modules' },
   { permission_key: 'modules.activate', description: 'Activate modules' },
   { permission_key: 'modules.deactivate', description: 'Deactivate modules' },
+  { permission_key: 'modules.manageAccess', description: 'Approve module access requests' },
 
   { permission_key: 'apps.list', description: 'List installed apps' },
-  { permission_key: 'apps.install', description: 'Install apps from prepared app folders' },
-  { permission_key: 'apps.delete', description: 'Delete apps and deactivate their registry entries' },
   { permission_key: 'apps.rescan', description: 'Rescan app manifests and rebuild the app registry' },
 
   { permission_key: 'importers.list', description: 'List available content importers' },

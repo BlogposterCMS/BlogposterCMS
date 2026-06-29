@@ -1,10 +1,11 @@
 import { normalizeEffects } from './sceneRuntime.js';
-export function createRuntimeWidgetContext(wrapper, def, lane) {
+export function createRuntimeWidgetContext(wrapper, def, lane, instanceMetadata = {}) {
     const host = (wrapper.closest('.canvas-item') || wrapper);
     const ctx = {
         id: host.dataset.instanceId,
         widgetId: def.id,
         metadata: def.metadata,
+        instanceMetadata,
         scene: {
             behavior: host.dataset.behavior || '',
             sceneId: host.dataset.sceneId || '',

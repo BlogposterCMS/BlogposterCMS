@@ -120,3 +120,26 @@ test('createPage maps database unique violations to DUPLICATE_SLUG', async () =>
 
   assert.strictEqual(err.code, 'DUPLICATE_SLUG');
 });
+
+test('createPage can skip Content Engine mirroring for importer page projections', async () => {
+  const setup = loadSetupFunction(async () => null);
+  const emitter = new EventEmitter();
+  let mirrored = false;
+
+  emitter.on('dbUpdate', (_payload, cb) => {
+    cb(null, { insertedId: 9 });
+  });
+  emitter.on('getContentEntryBySource', (_payload, cb) => {
+    cb(null, null);
+  });
+  emitter.on('createContentEntry', (_payload, cb) => {
+    mirrored = true;
+    cb(null, { entryId: 99 });
+  });
+
+  const { err, res } = await emitCreate(setup, emitter, { skipContentMirror: true });
+
+  assert.ifError(err);
+  assert.strictEqual(res.pageId, 9);
+  assert.strictEqual(mirrored, false);
+});

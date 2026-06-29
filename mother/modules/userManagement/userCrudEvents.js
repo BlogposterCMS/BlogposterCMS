@@ -21,6 +21,10 @@ const TIMEOUT_DURATION = 5000;
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('./permissionUtils');
 const { getDbType } = require('../databaseManager/helpers/dbTypeHelpers');
+const {
+  hasPermissionBlobEntries,
+  setUserAccess
+} = require('./userAccessService');
 
 function sanitizePayload(payload, hide = []) {
   const sanitized = { ...(payload || {}) };
@@ -56,8 +60,12 @@ function setupUserCrudEvents(motherEmitter) {
       avatarUrl,
       bio,
       uiColor,
-      role
+      role,
+      roleIds,
+      directPermissions
     } = payload || {};
+    const requestedRoleIds = Array.isArray(roleIds) ? roleIds : [];
+    const hasAccessSelection = requestedRoleIds.length > 0 || hasPermissionBlobEntries(directPermissions);
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
       console.error('[USER MGMT] createUser => Invalid meltdown payload.');
@@ -70,6 +78,10 @@ function setupUserCrudEvents(motherEmitter) {
 
     if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'users.create')) {
       return callback(new Error('Forbidden – missing permission: users.create'));
+    }
+
+    if (payload.decodedJWT && hasAccessSelection && !hasPermission(payload.decodedJWT, 'userManagement.editUser')) {
+      return callback(new Error('[E_USER_ACCESS_EDIT_PERMISSION] Missing permission: userManagement.editUser'));
     }
 
     const timeout = setTimeout(() => {
@@ -160,6 +172,19 @@ function setupUserCrudEvents(motherEmitter) {
         const userLog = { ...newUser };
         if (userLog && userLog.password) userLog.password = '***';
         console.log('[USER MGMT] createUser => User inserted:', userLog);
+
+        if (hasAccessSelection) {
+          setUserAccess(motherEmitter, jwt, newUser.id, requestedRoleIds, directPermissions)
+            .then(() => {
+              clearTimeout(timeout);
+              callback(null, newUser);
+            })
+            .catch(accessErr => {
+              clearTimeout(timeout);
+              callback(accessErr);
+            });
+          return;
+        }
       
         if (!role) {
           clearTimeout(timeout);

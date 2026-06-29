@@ -24,7 +24,7 @@ import { createPreviewHeader } from './renderer/previewHeader.js';
 import { buildLayoutBar } from './renderer/layoutBar.js';
 import { normalizeSceneRange, rangeFromPointer } from './renderer/sceneRangeControls';
 import { createLayoutStructureHandlers } from './renderer/layoutStructureHandlers.js';
-import { INSERT_TOOL_ITEMS, NATIVE_ELEMENT_PREFIX, NATIVE_ELEMENT_TYPES, createNativeElementPreset, getNativeElementSize } from './widgets/nativeElementPresets.js';
+import { INSERT_TOOL_ITEMS, INSERT_PRESET_PREFIX, NATIVE_ELEMENT_PREFIX, NATIVE_ELEMENT_TYPES, createNativeElementPreset, getInsertPreset, getInsertToolItem, getNativeElementSize } from './widgets/nativeElementPresets.js';
 import { setDefaultWorkarea, ensureLayoutRootContainer, setDynamicHost as setDynamicHostContainer, setDesignRef as setContainerDesignRef, placeContainer as placeContainerNode, deleteContainer as deleteContainerNode, moveContainer as moveContainerNode } from './managers/layoutContainerManager.js';
 import { pushLayoutSnapshot, undoDesign, redoDesign, resetDesignHistory } from './managers/historyManager.js';
 const builderLogger = createLogger('builder');
@@ -78,7 +78,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         pageEditorWidget: 'file-text',
         contentSummary: 'activity',
         htmlBlock: 'code',
-        textBox: 'type'
+        textBox: 'type',
+        mediaBlock: 'image',
+        buttonLink: 'mouse-pointer-click',
+        navigationMenu: 'menu',
+        breadcrumb: 'chevrons-right',
+        gallery: 'images'
     };
     const { showPreviewHeader, hidePreviewHeader } = createPreviewHeader(displayPorts);
     const layoutLayers = HAS_LAYOUT_STRUCTURE
@@ -91,6 +96,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     document.body.dataset.activeLayer = String(activeLayer);
     const footer = document.getElementById('builderFooter');
     let layoutBar;
+    let layoutCtx;
     let layoutRoot;
     let gridEl;
     let codeMap = {};
@@ -138,7 +144,118 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         { id: 'fadeOut', title: 'Fade Out', icon: 'eye-off', start: 40, end: 60 },
         { id: 'moveY', title: 'Move Y', icon: 'move-down', start: 20, end: 80 }
     ];
+    const GALLERY_LAYOUTS = [
+        { id: 'grid', title: 'Gallery' },
+        { id: 'masonry', title: 'Masonry' },
+        { id: 'carousel', title: 'Slider' }
+    ];
+    const GALLERY_FITS = ['cover', 'contain', 'fill', 'none', 'scale-down'];
+    const GALLERY_HEIGHT_MODES = [
+        { id: 'ratio', title: 'Fixed ratio' },
+        { id: 'natural', title: 'Natural images' },
+        { id: 'smallest', title: 'Smallest image' },
+        { id: 'largest', title: 'Largest image' }
+    ];
+    const GALLERY_ANIMATIONS = [
+        { id: 'slide', title: 'Slide' },
+        { id: 'fade', title: 'Fade' },
+        { id: 'instant', title: 'Instant' }
+    ];
     const sceneInspector = ensureSceneInspector();
+    const SIDEBAR_PANEL_NAMES = new Set(['insert', 'sections', 'layers', 'layout']);
+    const SIDEBAR_PANEL_BY_SELECTOR = [
+        { selector: 'layout-panel', panel: 'layout' },
+        { selector: 'layer-preview', panel: 'layers' },
+        { selector: 'scene-map', panel: 'sections' },
+        { selector: 'element-library', panel: 'insert' },
+        { selector: 'scene-insert-group', panel: 'insert' },
+        { selector: 'scene-insert-preset', panel: 'insert' },
+        { selector: 'drag-widget-icon', panel: 'insert' }
+    ];
+    function normalizeSidebarPanel(value, fallback = 'insert') {
+        const name = String(value || fallback);
+        return SIDEBAR_PANEL_NAMES.has(name) ? name : fallback;
+    }
+    function collapseInsertGroup() {
+        sidebarEl.classList.remove('builder-sidebar--insert-expanded');
+        sidebarEl.querySelectorAll('[data-insert-group]').forEach(button => {
+            button.classList.remove('active');
+            button.setAttribute('aria-expanded', 'false');
+        });
+        sidebarEl.querySelectorAll('[data-insert-group-panel]').forEach(panel => {
+            panel.classList.remove('is-active');
+            panel.hidden = true;
+        });
+    }
+    function setInsertGroup(groupId) {
+        const item = getInsertToolItem(groupId);
+        if (!item) {
+            collapseInsertGroup();
+            return null;
+        }
+        setSidebarPanel('insert', { preserveInsertGroup: true });
+        sidebarEl.classList.add('builder-sidebar--insert-expanded');
+        sidebarEl.querySelectorAll('[data-insert-group]').forEach(button => {
+            const active = button.dataset.insertGroup === item.id;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-expanded', active ? 'true' : 'false');
+        });
+        sidebarEl.querySelectorAll('[data-insert-group-panel]').forEach(panel => {
+            const active = panel.dataset.insertGroupPanel === item.id;
+            panel.classList.toggle('is-active', active);
+            panel.hidden = !active;
+        });
+        return item;
+    }
+    function setSidebarPanel(panelName = 'insert', options = {}) {
+        const activePanel = normalizeSidebarPanel(panelName);
+        const shell = sidebarEl.querySelector('.scene-panel-shell');
+        sidebarEl.dataset.activeSidebarPanel = activePanel;
+        sidebarEl.classList.toggle('builder-sidebar--compact', activePanel === 'insert');
+        if (activePanel !== 'insert' || !options.preserveInsertGroup)
+            collapseInsertGroup();
+        if (shell)
+            shell.dataset.activeSidebarPanel = activePanel;
+        sidebarEl.querySelectorAll('[data-sidebar-panel]').forEach(panel => {
+            const active = panel.dataset.sidebarPanel === activePanel;
+            panel.classList.toggle('is-active', active);
+            panel.hidden = !active;
+        });
+        sidebarEl.querySelectorAll('[data-sidebar-panel-target]').forEach(button => {
+            const active = button.dataset.sidebarPanelTarget === activePanel;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        return activePanel;
+    }
+    async function activateSidebarPanel(panelName = 'insert') {
+        const activePanel = normalizeSidebarPanel(panelName);
+        if (!layoutCtx) {
+            setSidebarPanel(activePanel);
+            return activePanel;
+        }
+        if (activePanel === 'layout' && HAS_LAYOUT_STRUCTURE) {
+            if (activeLayer === 0) {
+                await startLayoutMode(layoutCtx);
+                wireArrangeToggle();
+            }
+            else {
+                await switchLayer(0);
+            }
+            setSidebarPanel('layout');
+            return activePanel;
+        }
+        if (HAS_LAYOUT_STRUCTURE && activeLayer === 0) {
+            await ensureDesignLayerForTool();
+        }
+        setSidebarPanel(activePanel);
+        return activePanel;
+    }
+    function sidebarPanelForSelector(selector = '') {
+        const rawSelector = String(selector);
+        const match = SIDEBAR_PANEL_BY_SELECTOR.find(item => rawSelector.includes(item.selector));
+        return match?.panel || null;
+    }
     function clampPercent(value, fallback) {
         const parsed = typeof value === 'string'
             ? parseFloat(value.replace('%', '').trim())
@@ -588,13 +705,20 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             }
             const code = localCodeMap[instanceId];
             const meta = code.meta && typeof code.meta === 'object' ? { ...code.meta } : {};
-            code.html = buildNativeButtonHtml(label, href);
+            if (el.dataset.widgetId === 'htmlBlock' || code.html) {
+                code.html = buildNativeButtonHtml(label, href);
+            }
             code.meta = {
                 ...meta,
                 kind: 'button',
                 label,
                 href
             };
+        }
+        if (!button && el.dataset.widgetId === 'buttonLink') {
+            const widgetDef = allWidgets.find(w => w.id === el.dataset.widgetId);
+            if (widgetDef)
+                void renderWidget(el, widgetDef, ensureCodeMap());
         }
         if (!el.dataset.elementName)
             el.dataset.elementName = 'Button';
@@ -603,6 +727,284 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             if (pageId && state.autosaveEnabled)
                 scheduleAutosave();
         }
+    }
+    function getWidgetInstanceCode(el, create = false) {
+        const instanceId = el?.dataset?.instanceId;
+        if (!instanceId)
+            return null;
+        const localCodeMap = ensureCodeMap();
+        if (create && (!localCodeMap[instanceId] || typeof localCodeMap[instanceId] !== 'object')) {
+            localCodeMap[instanceId] = {};
+        }
+        return localCodeMap[instanceId] && typeof localCodeMap[instanceId] === 'object'
+            ? localCodeMap[instanceId]
+            : null;
+    }
+    function getGalleryMeta(el) {
+        const code = getWidgetInstanceCode(el);
+        return code?.meta && typeof code.meta === 'object' ? code.meta : {};
+    }
+    function parseGalleryNumber(value, min, max, fallback) {
+        const parsed = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
+        const num = Number.isFinite(parsed) ? parsed : fallback;
+        return Math.max(min, Math.min(max, Math.round(num)));
+    }
+    function parseGalleryBoolean(value, fallback = false) {
+        if (typeof value === 'boolean')
+            return value;
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            if (['1', 'true', 'yes', 'on'].includes(normalized))
+                return true;
+            if (['0', 'false', 'no', 'off'].includes(normalized))
+                return false;
+        }
+        return fallback;
+    }
+    function normalizeGalleryChoice(value, allowed, fallback) {
+        const normalized = String(value || '').trim().toLowerCase();
+        return allowed.includes(normalized) ? normalized : fallback;
+    }
+    function normalizeGalleryItem(raw = {}, defaults = {}) {
+        const item = typeof raw === 'string' ? { src: raw } : (raw && typeof raw === 'object' ? raw : {});
+        return {
+            src: String(item.src || item.url || item.mediaUrl || item.image || '').trim(),
+            alt: String(item.alt || item.altText || item.title || '').trim(),
+            caption: String(item.caption || item.description || '').trim(),
+            href: String(item.href || item.link || item.urlTarget || '').trim(),
+            fit: normalizeGalleryChoice(item.fit || item.objectFit || defaults.fit, GALLERY_FITS, defaults.fit || 'cover'),
+            focalX: parseGalleryNumber(item.focalX ?? item.objectX ?? item.positionX, 0, 100, defaults.focalX ?? 50),
+            focalY: parseGalleryNumber(item.focalY ?? item.objectY ?? item.positionY, 0, 100, defaults.focalY ?? 50)
+        };
+    }
+    function normalizeGalleryItems(value, defaults = {}) {
+        return Array.isArray(value)
+            ? value.map(item => normalizeGalleryItem(item, defaults))
+            : [];
+    }
+    function galleryDefaults(widgetDef = null) {
+        const defaults = widgetDef?.metadata?.defaults && typeof widgetDef.metadata.defaults === 'object'
+            ? widgetDef.metadata.defaults
+            : {};
+        const mode = String(defaults.mode || defaults.layout || 'grid').toLowerCase();
+        return {
+            mode: mode === 'slider' ? 'carousel' : normalizeGalleryChoice(mode, GALLERY_LAYOUTS.map(item => item.id), 'grid'),
+            columns: parseGalleryNumber(defaults.columns, 1, 8, 3),
+            rows: parseGalleryNumber(defaults.rows ?? defaults.rowCount, 0, 12, 0),
+            aspectRatio: String(defaults.aspectRatio || defaults.ratio || 'square'),
+            heightMode: normalizeGalleryChoice(defaults.heightMode || defaults.heightStrategy, GALLERY_HEIGHT_MODES.map(item => item.id), 'ratio'),
+            fit: normalizeGalleryChoice(defaults.fit || defaults.objectFit, GALLERY_FITS, 'cover'),
+            focalX: parseGalleryNumber(defaults.focalX ?? defaults.objectX ?? defaults.positionX, 0, 100, 50),
+            focalY: parseGalleryNumber(defaults.focalY ?? defaults.objectY ?? defaults.positionY, 0, 100, 50),
+            sliderAnimation: normalizeGalleryChoice(defaults.sliderAnimation || defaults.animation || defaults.effect, GALLERY_ANIMATIONS.map(item => item.id), 'slide'),
+            animationSpeed: parseGalleryNumber(defaults.animationSpeed ?? defaults.duration ?? defaults.speed, 0, 5000, 360),
+            autoplay: parseGalleryBoolean(defaults.autoplay, false),
+            autoplayDelay: parseGalleryNumber(defaults.autoplayDelay ?? defaults.autoplaySpeed, 500, 30000, 4000),
+            loop: parseGalleryBoolean(defaults.loop, true),
+            showControls: parseGalleryBoolean(defaults.showControls ?? defaults.controls, true),
+            showDots: parseGalleryBoolean(defaults.showDots ?? defaults.dots, true),
+            pauseOnHover: parseGalleryBoolean(defaults.pauseOnHover, true),
+            slidesToShow: parseGalleryNumber(defaults.slidesToShow ?? defaults.slidesPerView, 1, 4, 1),
+            slidesToScroll: parseGalleryNumber(defaults.slidesToScroll, 1, 4, 1),
+            items: normalizeGalleryItems(defaults.items || defaults.images || defaults.media, defaults)
+        };
+    }
+    function gallerySettings(el, widgetDef = null) {
+        const defaults = galleryDefaults(widgetDef);
+        const meta = getGalleryMeta(el);
+        const nested = meta.settings && typeof meta.settings === 'object' ? meta.settings : {};
+        const raw = { ...defaults, ...nested, ...meta };
+        const mode = String(raw.mode || raw.layout || defaults.mode).toLowerCase();
+        const normalized = {
+            ...defaults,
+            mode: mode === 'slider' ? 'carousel' : normalizeGalleryChoice(mode, GALLERY_LAYOUTS.map(item => item.id), defaults.mode),
+            columns: parseGalleryNumber(raw.columns, 1, 8, defaults.columns),
+            rows: parseGalleryNumber(raw.rows ?? raw.rowCount, 0, 12, defaults.rows),
+            aspectRatio: String(raw.aspectRatio || raw.ratio || defaults.aspectRatio),
+            heightMode: normalizeGalleryChoice(raw.heightMode || raw.heightStrategy, GALLERY_HEIGHT_MODES.map(item => item.id), defaults.heightMode),
+            fit: normalizeGalleryChoice(raw.fit || raw.objectFit, GALLERY_FITS, defaults.fit),
+            focalX: parseGalleryNumber(raw.focalX ?? raw.objectX ?? raw.positionX, 0, 100, defaults.focalX),
+            focalY: parseGalleryNumber(raw.focalY ?? raw.objectY ?? raw.positionY, 0, 100, defaults.focalY),
+            sliderAnimation: normalizeGalleryChoice(raw.sliderAnimation || raw.animation || raw.effect, GALLERY_ANIMATIONS.map(item => item.id), defaults.sliderAnimation),
+            animationSpeed: parseGalleryNumber(raw.animationSpeed ?? raw.duration ?? raw.speed, 0, 5000, defaults.animationSpeed),
+            autoplay: parseGalleryBoolean(raw.autoplay, defaults.autoplay),
+            autoplayDelay: parseGalleryNumber(raw.autoplayDelay ?? raw.autoplaySpeed, 500, 30000, defaults.autoplayDelay),
+            loop: parseGalleryBoolean(raw.loop, defaults.loop),
+            showControls: parseGalleryBoolean(raw.showControls ?? raw.controls, defaults.showControls),
+            showDots: parseGalleryBoolean(raw.showDots ?? raw.dots, defaults.showDots),
+            pauseOnHover: parseGalleryBoolean(raw.pauseOnHover, defaults.pauseOnHover),
+            slidesToShow: parseGalleryNumber(raw.slidesToShow ?? raw.slidesPerView, 1, 4, defaults.slidesToShow),
+            slidesToScroll: parseGalleryNumber(raw.slidesToScroll, 1, 4, defaults.slidesToScroll)
+        };
+        normalized.items = normalizeGalleryItems(raw.items || raw.images || raw.media, normalized);
+        return normalized;
+    }
+    function isGalleryWidget(el, widgetDef = null) {
+        return Boolean(el && (el.dataset.widgetId === 'gallery' || widgetDef?.id === 'gallery'));
+    }
+    function applyGallerySettings(el, widgetDef, patch = {}, persist = true) {
+        if (!isGalleryWidget(el, widgetDef))
+            return;
+        const next = gallerySettings(el, widgetDef);
+        Object.assign(next, patch);
+        next.items = normalizeGalleryItems(next.items, next);
+        const code = getWidgetInstanceCode(el, true);
+        if (!code)
+            return;
+        const existingMeta = code.meta && typeof code.meta === 'object' ? code.meta : {};
+        code.meta = {
+            ...existingMeta,
+            ...next
+        };
+        void renderWidget(el, widgetDef, ensureCodeMap());
+        gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
+        if (persist && pageId && state.autosaveEnabled)
+            scheduleAutosave();
+    }
+    function galleryFieldValue(target) {
+        if (target.type === 'checkbox')
+            return target.checked;
+        if (target.type === 'number' || target.type === 'range')
+            return Number.parseFloat(target.value);
+        return target.value;
+    }
+    function updateGalleryField(target) {
+        if (!state.activeWidgetEl)
+            return;
+        const widgetDef = allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId);
+        if (!isGalleryWidget(state.activeWidgetEl, widgetDef))
+            return;
+        const field = target.dataset.galleryField;
+        if (!field)
+            return;
+        applyGallerySettings(state.activeWidgetEl, widgetDef, { [field]: galleryFieldValue(target) });
+        syncInspectorGallery(state.activeWidgetEl, widgetDef, { keepItems: true });
+    }
+    function updateGalleryItemField(target) {
+        if (!state.activeWidgetEl)
+            return;
+        const widgetDef = allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId);
+        if (!isGalleryWidget(state.activeWidgetEl, widgetDef))
+            return;
+        const index = Number.parseInt(target.dataset.galleryItemIndex || '-1', 10);
+        const field = target.dataset.galleryItemField;
+        if (!field || index < 0)
+            return;
+        const settings = gallerySettings(state.activeWidgetEl, widgetDef);
+        const items = settings.items.slice();
+        const item = { ...(items[index] || normalizeGalleryItem({}, settings)) };
+        item[field] = galleryFieldValue(target);
+        items[index] = normalizeGalleryItem(item, settings);
+        applyGallerySettings(state.activeWidgetEl, widgetDef, { items });
+    }
+    function addGalleryItem() {
+        if (!state.activeWidgetEl)
+            return;
+        const widgetDef = allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId);
+        if (!isGalleryWidget(state.activeWidgetEl, widgetDef))
+            return;
+        const settings = gallerySettings(state.activeWidgetEl, widgetDef);
+        const items = settings.items.concat(normalizeGalleryItem({}, settings));
+        applyGallerySettings(state.activeWidgetEl, widgetDef, { items });
+        syncInspectorGallery(state.activeWidgetEl, widgetDef);
+    }
+    function removeGalleryItem(index) {
+        if (!state.activeWidgetEl)
+            return;
+        const widgetDef = allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId);
+        if (!isGalleryWidget(state.activeWidgetEl, widgetDef))
+            return;
+        const settings = gallerySettings(state.activeWidgetEl, widgetDef);
+        const items = settings.items.filter((_, itemIndex) => itemIndex !== index);
+        applyGallerySettings(state.activeWidgetEl, widgetDef, { items });
+        syncInspectorGallery(state.activeWidgetEl, widgetDef);
+    }
+    function setGalleryFieldValue(name, value) {
+        const field = sceneInspector?.querySelector(`[data-gallery-field="${name}"]`);
+        if (!field)
+            return;
+        if (field.type === 'checkbox')
+            field.checked = Boolean(value);
+        else
+            field.value = String(value);
+    }
+    function renderGalleryItems(items) {
+        const list = sceneInspector?.querySelector('.scene-gallery-items');
+        if (!list)
+            return;
+        list.innerHTML = '';
+        if (!items.length) {
+            const empty = document.createElement('p');
+            empty.className = 'scene-gallery-empty';
+            empty.textContent = 'No images';
+            list.appendChild(empty);
+            return;
+        }
+        items.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'scene-gallery-item';
+            row.innerHTML = `
+        <div class="scene-gallery-item-head">
+          <strong>Image ${index + 1}</strong>
+          <button type="button" data-gallery-remove-image="${index}" aria-label="Remove image ${index + 1}">
+            <img src="/assets/icons/trash-2.svg" alt="" class="icon" />
+          </button>
+        </div>
+        <label class="scene-select-field"><span>URL</span><input data-gallery-item-index="${index}" data-gallery-item-field="src" value="${escapeAttribute(item.src)}" inputmode="url" /></label>
+        <label class="scene-select-field"><span>Alt</span><input data-gallery-item-index="${index}" data-gallery-item-field="alt" value="${escapeAttribute(item.alt)}" /></label>
+        <label class="scene-select-field"><span>Caption</span><input data-gallery-item-index="${index}" data-gallery-item-field="caption" value="${escapeAttribute(item.caption)}" /></label>
+        <label class="scene-select-field"><span>Link</span><input data-gallery-item-index="${index}" data-gallery-item-field="href" value="${escapeAttribute(item.href)}" inputmode="url" /></label>
+        <label class="scene-select-field">
+          <span>Fit</span>
+          <select data-gallery-item-index="${index}" data-gallery-item-field="fit">
+            ${GALLERY_FITS.map(fit => `<option value="${fit}"${fit === item.fit ? ' selected' : ''}>${fit}</option>`).join('')}
+          </select>
+        </label>
+        <div class="scene-field-grid">
+          <label><span>X</span><input data-gallery-item-index="${index}" data-gallery-item-field="focalX" type="number" min="0" max="100" step="1" value="${escapeAttribute(item.focalX)}" inputmode="numeric" /></label>
+          <label><span>Y</span><input data-gallery-item-index="${index}" data-gallery-item-field="focalY" type="number" min="0" max="100" step="1" value="${escapeAttribute(item.focalY)}" inputmode="numeric" /></label>
+        </div>
+      `;
+            list.appendChild(row);
+        });
+    }
+    function syncInspectorGallery(el, widgetDef = null, options = {}) {
+        if (!sceneInspector)
+            return;
+        const group = sceneInspector.querySelector('.scene-gallery-settings');
+        const sliderGroup = sceneInspector.querySelector('.scene-gallery-slider-settings');
+        const isGallery = isGalleryWidget(el, widgetDef);
+        if (group)
+            group.hidden = !isGallery;
+        if (!isGallery) {
+            const list = sceneInspector.querySelector('.scene-gallery-items');
+            if (list)
+                list.innerHTML = '';
+            return;
+        }
+        const settings = gallerySettings(el, widgetDef);
+        setGalleryFieldValue('mode', settings.mode);
+        setGalleryFieldValue('columns', settings.columns);
+        setGalleryFieldValue('rows', settings.rows);
+        setGalleryFieldValue('aspectRatio', settings.aspectRatio);
+        setGalleryFieldValue('heightMode', settings.heightMode);
+        setGalleryFieldValue('fit', settings.fit);
+        setGalleryFieldValue('focalX', settings.focalX);
+        setGalleryFieldValue('focalY', settings.focalY);
+        setGalleryFieldValue('sliderAnimation', settings.sliderAnimation);
+        setGalleryFieldValue('animationSpeed', settings.animationSpeed);
+        setGalleryFieldValue('autoplay', settings.autoplay);
+        setGalleryFieldValue('autoplayDelay', settings.autoplayDelay);
+        setGalleryFieldValue('loop', settings.loop);
+        setGalleryFieldValue('showControls', settings.showControls);
+        setGalleryFieldValue('showDots', settings.showDots);
+        setGalleryFieldValue('pauseOnHover', settings.pauseOnHover);
+        setGalleryFieldValue('slidesToShow', settings.slidesToShow);
+        setGalleryFieldValue('slidesToScroll', settings.slidesToScroll);
+        if (sliderGroup)
+            sliderGroup.hidden = settings.mode !== 'carousel';
+        if (!options.keepItems)
+            renderGalleryItems(settings.items);
     }
     function syncInspectorAppearance(el, widgetDef = null) {
         if (!sceneInspector)
@@ -963,6 +1365,76 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         <label class="scene-select-field"><span>Link</span><input class="scene-button-href" value="#" inputmode="url" /></label>
       </section>
 
+      <section class="scene-inspector-group scene-gallery-settings" data-inspector-panel="content" hidden>
+        <h3>Gallery</h3>
+        <label class="scene-select-field">
+          <span>Layout</span>
+          <select data-gallery-field="mode">
+            ${GALLERY_LAYOUTS.map(layout => `<option value="${layout.id}">${layout.title}</option>`).join('')}
+          </select>
+        </label>
+        <div class="scene-field-grid">
+          <label><span>Columns</span><input data-gallery-field="columns" type="number" min="1" max="8" step="1" value="3" inputmode="numeric" /></label>
+          <label><span>Rows</span><input data-gallery-field="rows" type="number" min="0" max="12" step="1" value="0" inputmode="numeric" /></label>
+        </div>
+        <label class="scene-select-field">
+          <span>Ratio</span>
+          <select data-gallery-field="aspectRatio">
+            <option value="square">Square</option>
+            <option value="video">Video</option>
+            <option value="portrait">Portrait</option>
+            <option value="">Natural</option>
+          </select>
+        </label>
+        <label class="scene-select-field">
+          <span>Height</span>
+          <select data-gallery-field="heightMode">
+            ${GALLERY_HEIGHT_MODES.map(mode => `<option value="${mode.id}">${mode.title}</option>`).join('')}
+          </select>
+        </label>
+        <label class="scene-select-field">
+          <span>Default fit</span>
+          <select data-gallery-field="fit">
+            ${GALLERY_FITS.map(fit => `<option value="${fit}">${fit}</option>`).join('')}
+          </select>
+        </label>
+        <div class="scene-field-grid">
+          <label><span>Focus X</span><input data-gallery-field="focalX" type="number" min="0" max="100" step="1" value="50" inputmode="numeric" /></label>
+          <label><span>Focus Y</span><input data-gallery-field="focalY" type="number" min="0" max="100" step="1" value="50" inputmode="numeric" /></label>
+        </div>
+
+        <div class="scene-gallery-slider-settings">
+          <h4>Slider</h4>
+          <label class="scene-select-field">
+            <span>Animation</span>
+            <select data-gallery-field="sliderAnimation">
+              ${GALLERY_ANIMATIONS.map(animation => `<option value="${animation.id}">${animation.title}</option>`).join('')}
+            </select>
+          </label>
+          <div class="scene-field-grid">
+            <label><span>Speed</span><input data-gallery-field="animationSpeed" type="number" min="0" max="5000" step="50" value="360" inputmode="numeric" /></label>
+            <label><span>Delay</span><input data-gallery-field="autoplayDelay" type="number" min="500" max="30000" step="100" value="4000" inputmode="numeric" /></label>
+            <label><span>Show</span><input data-gallery-field="slidesToShow" type="number" min="1" max="4" step="1" value="1" inputmode="numeric" /></label>
+            <label><span>Scroll</span><input data-gallery-field="slidesToScroll" type="number" min="1" max="4" step="1" value="1" inputmode="numeric" /></label>
+          </div>
+          <div class="scene-toggle-grid">
+            <label class="scene-toggle-field"><input data-gallery-field="autoplay" type="checkbox" /><span>Autoplay</span></label>
+            <label class="scene-toggle-field"><input data-gallery-field="loop" type="checkbox" /><span>Loop</span></label>
+            <label class="scene-toggle-field"><input data-gallery-field="showControls" type="checkbox" /><span>Arrows</span></label>
+            <label class="scene-toggle-field"><input data-gallery-field="showDots" type="checkbox" /><span>Dots</span></label>
+            <label class="scene-toggle-field"><input data-gallery-field="pauseOnHover" type="checkbox" /><span>Pause</span></label>
+          </div>
+        </div>
+
+        <div class="scene-gallery-items-head">
+          <h4>Images</h4>
+          <button type="button" data-gallery-add-image aria-label="Add image">
+            <img src="/assets/icons/plus.svg" alt="" class="icon" />
+          </button>
+        </div>
+        <div class="scene-gallery-items"></div>
+      </section>
+
       <section class="scene-inspector-group" data-inspector-panel="behavior">
         <div class="scene-behavior-preview" data-behavior="scroll" data-effects="0" style="--scene-range-start:10%;--scene-range-end:60%;--scene-range-mid:35%">
           <div class="scene-behavior-preview-head">
@@ -1075,6 +1547,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 updateSceneInspector(state.activeWidgetEl);
                 return;
             }
+            const galleryAddBtn = event.target.closest('[data-gallery-add-image]');
+            if (galleryAddBtn) {
+                addGalleryItem();
+                return;
+            }
+            const galleryRemoveBtn = event.target.closest('[data-gallery-remove-image]');
+            if (galleryRemoveBtn) {
+                removeGalleryItem(Number.parseInt(galleryRemoveBtn.dataset.galleryRemoveImage || '-1', 10));
+                return;
+            }
             const behaviorBtn = event.target.closest('[data-behavior-value]');
             if (!behaviorBtn)
                 return;
@@ -1116,6 +1598,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                     syncInspectorButton(state.activeWidgetEl);
                     renderSceneLayers();
                 }
+                return;
+            }
+            const galleryField = event.target.closest?.('[data-gallery-field]');
+            if (galleryField) {
+                updateGalleryField(galleryField);
+                return;
+            }
+            const galleryItemField = event.target.closest?.('[data-gallery-item-field]');
+            if (galleryItemField) {
+                updateGalleryItemField(galleryItemField);
                 return;
             }
             const opacityInput = event.target.closest?.('.scene-opacity-range, .scene-opacity-value');
@@ -1179,6 +1671,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 renderSceneNavigation();
                 return;
             }
+            const galleryField = event.target.closest?.('[data-gallery-field]');
+            if (galleryField) {
+                updateGalleryField(galleryField);
+                return;
+            }
+            const galleryItemField = event.target.closest?.('[data-gallery-item-field]');
+            if (galleryItemField) {
+                updateGalleryItemField(galleryItemField);
+                return;
+            }
             const effectToggle = event.target.closest?.('[data-effect-toggle]');
             if (effectToggle)
                 updateEffectsFromInspector();
@@ -1209,6 +1711,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         syncInspectorBehaviorPreview(behavior, range, effects);
         syncInspectorAppearance(el, widgetDef);
         syncInspectorButton(el);
+        syncInspectorGallery(el, widgetDef);
         if (el) {
             const label = el.dataset.elementName || widgetDef?.metadata?.label || el.dataset.widgetId || 'Element';
             applyBehaviorRange(el, range.start, range.end);
@@ -1311,11 +1814,22 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     function nativeElementSize(type) {
         return getNativeElementSize(normalizeNativeElementType(type), DEFAULT_ROWS);
     }
+    function normalizeInsertPresetId(value) {
+        const preset = getInsertPreset(String(value || '').replace(INSERT_PRESET_PREFIX, ''));
+        return preset?.id || '';
+    }
     function setNativeDragData(event, type) {
         const nativeType = normalizeNativeElementType(type);
         if (!nativeType || !event.dataTransfer)
             return;
         event.dataTransfer.setData('text/plain', `${NATIVE_ELEMENT_PREFIX}${nativeType}`);
+        event.dataTransfer.effectAllowed = 'copy';
+    }
+    function setPresetDragData(event, presetId) {
+        const normalized = normalizeInsertPresetId(presetId);
+        if (!normalized || !event.dataTransfer)
+            return;
+        event.dataTransfer.setData('text/plain', `${INSERT_PRESET_PREFIX}${normalized}`);
         event.dataTransfer.effectAllowed = 'copy';
     }
     function updateSceneTitleReferences(sceneId, title) {
@@ -1657,6 +2171,24 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
     }
     sidebarEl.addEventListener('click', event => {
+        const panelButton = event.target.closest?.('[data-sidebar-panel-target]');
+        if (panelButton) {
+            event.preventDefault();
+            void activateSidebarPanel(panelButton.dataset.sidebarPanelTarget);
+            return;
+        }
+        const insertGroupButton = event.target.closest?.('[data-insert-group]');
+        if (insertGroupButton) {
+            event.preventDefault();
+            setInsertGroup(insertGroupButton.dataset.insertGroup);
+            return;
+        }
+        const insertPresetButton = event.target.closest?.('[data-insert-preset]');
+        if (insertPresetButton) {
+            event.preventDefault();
+            void insertPresetElement(insertPresetButton.dataset.insertPreset);
+            return;
+        }
         const nativeElementButton = event.target.closest?.('[data-native-element]');
         if (nativeElementButton) {
             event.preventDefault();
@@ -1719,6 +2251,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
     });
     sidebarEl.addEventListener('dragstart', event => {
+        const insertPreset = event.target.closest?.('[data-insert-preset]');
+        if (insertPreset) {
+            setPresetDragData(event, insertPreset.dataset.insertPreset);
+            return;
+        }
         const nativeElement = event.target.closest?.('[data-native-element]');
         if (nativeElement) {
             setNativeDragData(event, nativeElement.dataset.nativeElement);
@@ -1986,7 +2523,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (pageId && state.autosaveEnabled)
             scheduleAutosave();
     }
-    let layoutCtx;
     const { refreshContainerBars, refreshLayoutTree, handleContainerChange } = createLayoutStructureHandlers({
         layoutRootRef: () => layoutRoot,
         sidebarEl,
@@ -2057,9 +2593,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         refreshContainerBars,
         refreshLayoutTree,
         activateArrange,
-        deactivateArrange
+        deactivateArrange,
+        setSidebarPanel,
+        INSERT_TOOL_ITEMS
     };
-    populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP, HAS_LAYOUT_STRUCTURE ? () => switchLayer(0) : null);
+    populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP, HAS_LAYOUT_STRUCTURE ? () => switchLayer(0) : null, INSERT_TOOL_ITEMS);
+    setSidebarPanel(sidebarEl.dataset.activeSidebarPanel || 'insert');
     renderSceneNavigation();
     await applyDesignerTheme();
     // Allow overlapping widgets for layered layouts
@@ -2168,6 +2707,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         window.setTimeout(() => el.classList.remove('scene-focus-pulse'), 850);
     }
     function focusSidebarSection(selector) {
+        const panelName = sidebarPanelForSelector(selector);
+        if (panelName) {
+            setSidebarPanel(panelName, {
+                preserveInsertGroup: panelName === 'insert' && sidebarEl.classList.contains('builder-sidebar--insert-expanded')
+            });
+        }
         const section = sidebarEl.querySelector(selector);
         if (!section)
             return null;
@@ -2183,6 +2728,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         return section;
     }
     function focusWidgetIcon(keywords = []) {
+        setSidebarPanel('insert');
         const normalized = keywords.map(item => String(item || '').toLowerCase());
         const icons = Array.from(sidebarEl.querySelectorAll('.drag-widget-icon'));
         const match = icons.find(icon => {
@@ -2194,6 +2740,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             match.focus?.();
             pulseElement(match);
             return match;
+        }
+        const group = INSERT_TOOL_ITEMS.find(item => {
+            const haystack = `${item.id || ''} ${item.title || ''} ${item.description || ''} ${(item.presets || []).map(preset => `${preset.id} ${preset.title} ${preset.widgetId || ''}`).join(' ')}`.toLowerCase();
+            return normalized.some(keyword => haystack.includes(keyword));
+        });
+        if (group) {
+            setInsertGroup(group.id);
+            return focusSidebarSection(`[data-insert-group-panel="${cssEscape(group.id)}"]`);
         }
         return focusSidebarSection('.element-library');
     }
@@ -2316,11 +2870,58 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             scheduleAutosave();
         return wrapper;
     }
-    async function insertQuickText(position = null) {
-        const preset = createNativeElementPreset('text', {
+    function activeScenePresetContext(extra = {}) {
+        return {
             sceneId: activeSceneId,
             sceneTitle: getActiveScene()?.title || '',
-            sceneBackground: getSceneBackground()
+            sceneBackground: getSceneBackground(),
+            ...extra
+        };
+    }
+    function createPublicWidgetPresetCode(preset) {
+        const settings = preset?.settings && typeof preset.settings === 'object'
+            ? { ...preset.settings }
+            : {};
+        return {
+            meta: {
+                kind: preset.widgetId || preset.nativeType || 'widget',
+                presetId: preset.id,
+                presetVersion: 1,
+                designContract: {
+                    version: 1,
+                    source: 'design-studio-preset'
+                },
+                settings,
+                sceneId: activeSceneId,
+                sceneTitle: getActiveScene()?.title || '',
+                sceneBackground: getSceneBackground()
+            }
+        };
+    }
+    async function insertWidgetPreset(preset, position = null) {
+        const widgetDef = findWidgetForQuickInsert([preset.widgetId], [preset.title, preset.description, preset.widgetId]);
+        if (!widgetDef) {
+            focusWidgetIcon([preset.widgetId, preset.title]);
+            return null;
+        }
+        await ensureDesignLayerForTool();
+        const size = preset.size || { w: 4, h: DEFAULT_ROWS };
+        const pos = position || nextSceneInsertPosition(size.w, size.h);
+        return createSceneWidget(widgetDef, {
+            x: pos.x,
+            y: pos.y,
+            w: size.w,
+            h: size.h,
+            code: createPublicWidgetPresetCode(preset),
+            label: preset.title,
+            elementName: preset.title
+        });
+    }
+    async function insertQuickText(position = null, presetOptions = {}) {
+        const preset = createNativeElementPreset('text', {
+            ...activeScenePresetContext(),
+            presetId: presetOptions.id,
+            variant: presetOptions.variant
         });
         const widgetDef = findWidgetForQuickInsert(preset.preferredWidgetIds, preset.keywords);
         if (!widgetDef) {
@@ -2339,11 +2940,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             elementName: preset.elementName
         });
     }
-    async function insertQuickShape(position = null) {
+    async function insertQuickShape(position = null, presetOptions = {}) {
         const preset = createNativeElementPreset('shape', {
-            sceneId: activeSceneId,
-            sceneTitle: getActiveScene()?.title || '',
-            sceneBackground: getSceneBackground()
+            ...activeScenePresetContext(),
+            presetId: presetOptions.id,
+            variant: presetOptions.variant
         });
         const widgetDef = findWidgetForQuickInsert(preset.preferredWidgetIds, preset.keywords);
         if (!widgetDef) {
@@ -2362,7 +2963,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             elementName: preset.elementName
         });
     }
-    async function insertQuickMedia(position = null) {
+    async function insertQuickMedia(position = null, presetOptions = {}) {
         let shareURL = '';
         try {
             const media = await window.meltdownEmit?.('openMediaExplorer', { jwt: window.ADMIN_TOKEN });
@@ -2373,9 +2974,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
         const preset = createNativeElementPreset('media', {
             mediaUrl: shareURL,
-            sceneId: activeSceneId,
-            sceneTitle: getActiveScene()?.title || '',
-            sceneBackground: getSceneBackground()
+            ...activeScenePresetContext(),
+            presetId: presetOptions.id,
+            variant: presetOptions.variant
         });
         const widgetDef = findWidgetForQuickInsert(preset.preferredWidgetIds, preset.keywords);
         if (!widgetDef) {
@@ -2394,11 +2995,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             elementName: preset.elementName
         });
     }
-    async function insertQuickButton(position = null) {
+    async function insertQuickButton(position = null, presetOptions = {}) {
         const preset = createNativeElementPreset('button', {
-            sceneId: activeSceneId,
-            sceneTitle: getActiveScene()?.title || '',
-            sceneBackground: getSceneBackground()
+            ...activeScenePresetContext(),
+            presetId: presetOptions.id,
+            variant: presetOptions.variant
         });
         const widgetDef = findWidgetForQuickInsert(preset.preferredWidgetIds, preset.keywords);
         if (!widgetDef) {
@@ -2436,7 +3037,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         requestSceneChangePersist();
         return { sceneId: scene.id, background };
     }
-    async function insertNativeElement(type, position = null) {
+    async function insertNativeElement(type, position = null, presetOptions = {}) {
         const nativeType = normalizeNativeElementType(type);
         if (!nativeType)
             return null;
@@ -2444,14 +3045,30 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return insertQuickBackground();
         await ensureDesignLayerForTool();
         if (nativeType === 'text')
-            return insertQuickText(position);
+            return insertQuickText(position, presetOptions);
         if (nativeType === 'media')
-            return insertQuickMedia(position);
+            return insertQuickMedia(position, presetOptions);
         if (nativeType === 'shape')
-            return insertQuickShape(position);
+            return insertQuickShape(position, presetOptions);
         if (nativeType === 'button')
-            return insertQuickButton(position);
+            return insertQuickButton(position, presetOptions);
         return null;
+    }
+    async function insertPresetElement(presetId, position = null) {
+        const preset = getInsertPreset(presetId);
+        if (!preset)
+            return null;
+        if (preset.widgetId)
+            return insertWidgetPreset(preset, position);
+        if (preset.nativeType)
+            return insertNativeElement(preset.nativeType, position, preset);
+        return null;
+    }
+    async function insertByTypeOrPreset(value, position = null) {
+        const preset = getInsertPreset(value);
+        if (preset)
+            return insertPresetElement(preset.id, position);
+        return insertNativeElement(value, position);
     }
     async function ensureDesignLayerForTool() {
         if (HAS_LAYOUT_STRUCTURE && activeLayer === 0) {
@@ -2493,9 +3110,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const popover = document.createElement('div');
         popover.className = 'scene-tool-popover';
         popover.setAttribute('role', 'menu');
-        popover.setAttribute('aria-label', 'Insert element');
+        popover.setAttribute('aria-label', 'Insert group');
         popover.innerHTML = INSERT_TOOL_ITEMS.map(item => `
-      <button type="button" data-tool-insert="${escapeAttribute(item.id)}" role="menuitem">
+      <button type="button" data-tool-insert-group="${escapeAttribute(item.id)}" role="menuitem">
         <img src="/assets/icons/${escapeAttribute(item.icon)}.svg" alt="" class="icon" />
         <span>${escapeHtml(item.title)}</span>
       </button>
@@ -2504,16 +3121,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         activeToolPopover = popover;
         positionToolPopover(popover, anchor);
         popover.addEventListener('click', async (event) => {
-            const insertButton = event.target.closest?.('[data-tool-insert]');
+            const insertButton = event.target.closest?.('[data-tool-insert-group]');
             if (!insertButton)
                 return;
             event.preventDefault();
             event.stopPropagation();
-            const type = insertButton.dataset.toolInsert;
+            const group = insertButton.dataset.toolInsertGroup;
             closeToolPopover();
-            hideBuilderPanel();
-            setHeaderActiveTool(type === 'background' ? 'insert' : type);
-            await insertNativeElement(type);
+            setHeaderActiveTool('insert');
+            setInsertGroup(group);
+            focusSidebarSection('.element-library');
         });
         const onPointerDown = event => {
             if (popover.contains(event.target) || anchor.contains(event.target))
@@ -2727,7 +3344,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return updateSceneFromCommand(command);
         if (action === 'insert' || action === 'insert.element') {
             const type = commandValue(command, 'type', command.value || command.target);
-            const inserted = await insertNativeElement(type);
+            const inserted = await insertByTypeOrPreset(type);
             const insertedEl = inserted instanceof HTMLElement ? inserted : state.activeWidgetEl;
             return { handled: Boolean(inserted), type, result: inserted, selection: selectedElementSummary(insertedEl) };
         }
@@ -2774,6 +3391,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         setHeaderActiveTool(tool);
         if (tool === 'insert') {
             hideBuilderPanel();
+            setSidebarPanel('insert');
             openInsertPopover();
             return;
         }
@@ -3093,6 +3711,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         e.preventDefault();
         gridEl.classList.remove('drag-over');
         const dragData = e.dataTransfer?.getData('text/plain') || '';
+        const presetId = dragData.startsWith(INSERT_PRESET_PREFIX)
+            ? normalizeInsertPresetId(dragData)
+            : '';
+        if (presetId) {
+            const preset = getInsertPreset(presetId);
+            const baseSize = preset?.size || (preset?.nativeType ? nativeElementSize(preset.nativeType) : { w: 4, h: DEFAULT_ROWS });
+            await insertPresetElement(presetId, dropSceneInsertPosition(e, baseSize.w, baseSize.h));
+            return;
+        }
         const nativeType = dragData.startsWith(NATIVE_ELEMENT_PREFIX)
             ? normalizeNativeElementType(dragData)
             : '';
@@ -3121,7 +3748,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     layoutBar = buildLayoutBar({ footer, grid, gridEl });
     if (HAS_LAYOUT_STRUCTURE) {
         if (activeLayer === 0) {
-            startLayoutMode(layoutCtx);
+            await startLayoutMode(layoutCtx);
             wireArrangeToggle();
         }
         else {
@@ -3267,7 +3894,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (HAS_LAYOUT_STRUCTURE) {
             if (activeLayer === 0) {
                 await headerController.renderHeader({ reload: true });
-                startLayoutMode(layoutCtx);
+                await startLayoutMode(layoutCtx);
                 wireArrangeToggle();
             }
             else {

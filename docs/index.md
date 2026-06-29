@@ -5,10 +5,13 @@ This folder provides additional information on installing, configuring and exten
 
 - [Installation](installation.md)
 - [Module Architecture](modules.md)
+- [Community Module Guide](community_module_guide.md)
+- [Permission System](permission_system.md)
 - [Per-module Reference](modules)
 - [Agent Access](modules/agentAccess.md)
 - [Agent Manager](modules/agentManager.md)
 - [Architecture Overview](architecture.md)
+- [Server Composition](server_composition.md)
 - [UI Architecture](ui_architecture.md)
 - [Workboard](workboard.md)
 - [Security Notes](security.md)

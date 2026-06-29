@@ -70,6 +70,11 @@
   contain: layout size;
 }
 
+#adminGrid.canvas-grid {
+  contain: none;
+  overflow: visible;
+}
+
 .canvas-item {
 
 
@@ -97,6 +102,33 @@
 
 #adminGrid .canvas-item {
   box-sizing: border-box;
+  width: auto !important;
+  min-height: var(--dashboard-min-height, 0);
+  height: var(--dashboard-height, auto);
+  max-height: var(--dashboard-max-height, none);
+  position: relative;
+  transform: none !important;
+  will-change: auto;
+}
+
+#adminGrid .canvas-item[data-dashboard-height-mode='dynamic'],
+#adminGrid .canvas-item[data-dashboard-height-mode='auto'] {
+  height: auto;
+}
+
+#adminGrid .canvas-item[data-dashboard-height-mode='scroll'] .canvas-item-content {
+  overflow: auto;
+}
+
+#adminGrid.is-dashboard-dragging {
+  cursor: grabbing;
+}
+
+#adminGrid.is-dashboard-dragging .dashboard-widget:not(.is-dragging) {
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
 }
 .canvas-item:before{
   content: '';
@@ -124,6 +156,10 @@
 .canvas-item-content{
   width: 100%;
   height: 100%;
+}
+
+#adminGrid .canvas-item-content {
+  min-height: 100%;
 }
 
 .canvas-item .widget-remove,

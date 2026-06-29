@@ -4,20 +4,26 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: clamp(24px, 5vw, 56px) 16px;
+  background: var(--studio-canvas);
+  color: var(--studio-text);
+}
 
-  &::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background-image: radial-gradient(
-      circle at 1px 1px,
-      color-mix(in srgb, var(--user-color), transparent 70%) 1px,
-      transparent 0
-    );
-    background-size: 20px 20px;
-    pointer-events: none;
-    z-index: -1;
-  }
+.app-scope.install-page .login-form {
+  max-width: 420px;
+  background: var(--studio-surface-solid);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  box-shadow: var(--studio-shadow-soft);
+}
+
+.app-scope.install-page .cms-title {
+  color: var(--studio-text);
+}
+
+.app-scope.install-page p {
+  color: var(--studio-text-muted);
+  text-align: center;
 }
 
 .install-steps {
@@ -32,11 +38,11 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--color-border);
+    background: var(--studio-border-strong);
     opacity: .7;
 
     &.active {
-      background: var(--brand);
+      background: var(--user-color);
       opacity: 1;
       transform: scale(1.1);
     }
@@ -78,13 +84,6 @@
   min-width: 140px;
 }
 
-.app-scope.install-page .button.primary {
-  --bg: var(--color-border);
-  --fg: var(--color-text);
-  --bd: var(--color-border);
-}
-
-
 .color-picker-field {
   display: flex;
   flex-direction: column;
@@ -93,7 +92,7 @@
   label {
     font-family: var(--font-body);
     font-weight: 500;
-    color: #888;
+    color: var(--studio-text-muted);
     font-size: 14px;
   }
 }

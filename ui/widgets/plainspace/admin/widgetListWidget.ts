@@ -16,7 +16,13 @@ const ICON_MAP: Record<string, string> = {
   pageStats: 'bar-chart-2',
   pageEditorWidget: 'file-text',
   contentSummary: 'activity',
-  textBox: 'type'
+  navigationStudio: 'menu',
+  textBox: 'type',
+  mediaBlock: 'image',
+  buttonLink: 'mouse-pointer-click',
+  navigationMenu: 'menu',
+  breadcrumb: 'chevrons-right',
+  gallery: 'images'
 };
 
 function getIcon(id: string, meta?: WidgetMetadata): string {

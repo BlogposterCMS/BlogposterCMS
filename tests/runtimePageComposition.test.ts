@@ -5,6 +5,7 @@
 import { init as initCanvasGrid } from '../ui/runtime/main/canvasGrid';
 import {
   fetchRuntimeDesign,
+  fetchRuntimePageById,
   loadRuntimeLayoutForViewport
 } from '../ui/runtime/main/runtimePageData';
 import { renderAttachedRuntimeContent } from '../ui/runtime/main/runtimeAttachedContent';
@@ -50,6 +51,7 @@ describe('runtimePageComposition', () => {
     (renderRuntimeCanvasWidget as jest.Mock).mockResolvedValue(undefined);
     (renderAttachedRuntimeContent as jest.Mock).mockResolvedValue(undefined);
     (loadRuntimeLayoutForViewport as jest.Mock).mockResolvedValue([]);
+    (fetchRuntimePageById as jest.Mock).mockResolvedValue(null);
     (fetchRuntimeDesign as jest.Mock).mockResolvedValue(null);
   });
 
@@ -128,5 +130,47 @@ describe('runtimePageComposition', () => {
       lane: 'public',
       emit
     }));
+  });
+
+  it('inherits the nearest parent design and keeps child page html visible', async () => {
+    const contentEl = document.createElement('main');
+    const emit = jest.fn().mockResolvedValue(undefined);
+    (fetchRuntimePageById as jest.Mock).mockResolvedValueOnce({
+      id: 'collection',
+      parentId: null,
+      meta: { designId: 'collection-design' }
+    });
+    (fetchRuntimeDesign as jest.Mock).mockResolvedValue({
+      design: {
+        bg_color: '#ffffff',
+        layout: {
+          type: 'leaf',
+          nodeId: 'collection-workarea',
+          workarea: true
+        }
+      },
+      widgets: []
+    });
+
+    await renderPublicRuntimePageContent({
+      page: {
+        id: 'child-page',
+        parentId: 'collection',
+        html: '<article><h1>Nivea</h1><script>bad()</script></article>',
+        meta: {}
+      },
+      contentEl,
+      globalLayout: [],
+      allWidgets: [],
+      lane: 'public',
+      emit,
+      widgetEmit: emit
+    });
+
+    expect(fetchRuntimePageById).toHaveBeenCalledWith(emit, 'collection', 'public');
+    expect(fetchRuntimeDesign).toHaveBeenCalledWith(emit, 'collection-design', 'public');
+    const workarea = contentEl.querySelector('[data-node-id="collection-workarea"]');
+    expect(workarea?.innerHTML).toContain('<h1>Nivea</h1>');
+    expect(workarea?.innerHTML).not.toContain('<script>');
   });
 });

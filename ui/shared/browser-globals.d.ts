@@ -30,7 +30,8 @@ interface Window {
   adminGrid?: any;
   adminPageContext?: any;
   adminCurrentLayout?: any[];
-  addDashboardWidget?: (definition: any, position: Record<string, unknown>) => unknown;
+  __dashboardDraggingWidgetId?: string;
+  addDashboardWidget?: (definition: any, position?: Record<string, unknown>) => unknown;
   saveAdminLayout?: () => Promise<void>;
   blogposterApi?: import('./api-client/meltdownClient').MeltdownClient;
   blogposterAgentConsole?: import('./agent/agentConsole').AgentConsole;

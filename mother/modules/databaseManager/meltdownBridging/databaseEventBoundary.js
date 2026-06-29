@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const INTERNAL_DATABASE_CALL = Symbol('databaseManager.internalDatabaseCall');
+const INTERNAL_COMMUNITY_STORAGE_CALL = Symbol('databaseManager.internalCommunityStorageCall');
 const COMMUNITY_MUTATION_EVENTS = new Set(['dbInsert', 'dbUpdate', 'dbDelete']);
 const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const SAFE_MODULE_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
@@ -51,15 +52,19 @@ function assertHighLevelCrudAllowed(motherEmitter, eventName, payload = {}) {
     return;
   }
 
-  if (COMMUNITY_MUTATION_EVENTS.has(eventName)) {
+  if (hasRawSqlPayload(payload)) {
     throw new Error(
-      `[databaseManager] Community module "${payload.moduleName}" cannot call ${eventName}; use a core module contract instead.`
+      `[databaseManager] Community module "${payload.moduleName}" cannot use raw SQL database operations.`
     );
   }
 
-  if (eventName === 'dbSelect' && hasRawSqlPayload(payload)) {
+  if (isCommunityStorageCall(payload)) {
+    return;
+  }
+
+  if (COMMUNITY_MUTATION_EVENTS.has(eventName)) {
     throw new Error(
-      `[databaseManager] Community module "${payload.moduleName}" cannot use raw SQL database reads.`
+      `[databaseManager] Community module "${payload.moduleName}" cannot call ${eventName}; use a core module contract instead.`
     );
   }
 }
@@ -125,8 +130,28 @@ function markInternalDatabaseCall(payload, operationKind) {
   return payload;
 }
 
+function markCommunityStorageCall(payload, operationKind) {
+  Object.defineProperty(payload, INTERNAL_COMMUNITY_STORAGE_CALL, {
+    configurable: false,
+    enumerable: false,
+    value: true
+  });
+  if (operationKind) {
+    Object.defineProperty(payload, 'databaseOperationKind', {
+      configurable: false,
+      enumerable: false,
+      value: operationKind
+    });
+  }
+  return payload;
+}
+
 function isInternalDatabaseCall(payload = {}) {
   return Boolean(payload[INTERNAL_DATABASE_CALL]);
+}
+
+function isCommunityStorageCall(payload = {}) {
+  return Boolean(payload[INTERNAL_COMMUNITY_STORAGE_CALL]);
 }
 
 function isCommunityReadOperation(payload = {}) {
@@ -234,6 +259,8 @@ module.exports = {
   assertHighLevelCrudAllowed,
   assertPerformDbOperationAllowed,
   canUseRemoteDatabaseBridge,
+  isCommunityStorageCall,
+  markCommunityStorageCall,
   markInternalDatabaseCall,
   normalizeSafeRawExpressionForColumn,
   resolveModuleFilePath,
@@ -244,6 +271,7 @@ module.exports = {
     hasRawSqlPayload,
     isCommunityDatabasePayload,
     isCommunityReadOperation,
+    isCommunityStorageCall,
     isInternalDatabaseCall,
     isPathInside,
     resolveModuleType

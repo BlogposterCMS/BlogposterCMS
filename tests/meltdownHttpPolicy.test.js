@@ -872,21 +872,22 @@ test('meltdown HTTP policy translates legacy admin events through runtime facade
 });
 
 test('app meltdown route uses the shared HTTP policy', () => {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  assert.match(appJs, /meltdownHttpPolicy/);
-  assert.match(appJs, /translateLegacyHttpFacadeEvent\(eventName, payload\)/);
-  assert.match(appJs, /jwt:\s*token,\s*\r?\n\s*moduleName: 'auth'/);
-  assert.match(appJs, /tokenToValidate:\s*token/);
-  assert.match(appJs, /stripHttpPayloadAuthMeta\(legacyFacade\?\.payload \|\| payload\)/);
-  assert.match(appJs, /explainExternalEventRejection\(targetEventName, targetPayload\)/);
-  assert.match(appJs, /isHttpPublicEvent\(targetEventName\)/);
-  assert.match(appJs, /isHttpPublicTokenEvent\(targetEventName\)/);
-  assert.match(appJs, /isHttpAdminPrincipal\(decoded\)/);
-  assert.match(appJs, /const jwt = globalJwt;/);
-  assert.doesNotMatch(appJs, /targetPayload\.jwt\s*\|\|\s*globalJwt/);
-  assert.match(appJs, /listenerCount\(targetEventName\) === 0/);
-  assert.match(appJs, /motherEmitter\.emit\(targetEventName, targetPayload/);
-  assert.match(appJs, /legacyFacade\?\.unwrapData \? data\?\.data : data/);
+  const routerSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/meltdownRouter.js'), 'utf8');
+  const authSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/auth/adminAuth.js'), 'utf8');
+  assert.match(routerSource, /meltdownHttpPolicy/);
+  assert.match(routerSource, /translateLegacyHttpFacadeEvent\(eventName, payload\)/);
+  assert.match(authSource, /jwt:\s*token,\s*\r?\n\s*moduleName: 'auth'/);
+  assert.match(authSource, /tokenToValidate:\s*token/);
+  assert.match(routerSource, /stripHttpPayloadAuthMeta\(legacyFacade\?\.payload \|\| payload\)/);
+  assert.match(routerSource, /explainExternalEventRejection\(targetEventName, targetPayload\)/);
+  assert.match(routerSource, /isHttpPublicEvent\(targetEventName\)/);
+  assert.match(routerSource, /isHttpPublicTokenEvent\(targetEventName\)/);
+  assert.match(routerSource, /isHttpAdminPrincipal\(decoded\)/);
+  assert.match(routerSource, /const jwt = globalJwt;/);
+  assert.doesNotMatch(routerSource, /targetPayload\.jwt\s*\|\|\s*globalJwt/);
+  assert.match(routerSource, /listenerCount\(targetEventName\) === 0/);
+  assert.match(routerSource, /motherEmitter\.emit\(targetEventName, targetPayload/);
+  assert.match(routerSource, /legacyFacade\?\.unwrapData \? data\?\.data : data/);
 });
 
 test('app bridge policy blocks sensitive system query contracts', () => {

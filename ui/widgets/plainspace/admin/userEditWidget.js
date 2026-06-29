@@ -1,5 +1,77 @@
 import { createColorPicker } from '/ui/shared/controls/colorPicker.js';
-import { deleteUserRecord, errorMessage, fetchUserDetails, updateUserProfile, userEditTextFields as textFields, userValue } from './userEditData.js';
+import { deleteUserRecord, errorMessage, fetchPermissions, fetchRoles, fetchUserAccess, fetchUserDetails, updateUserAccess, updateUserProfile, userEditTextFields as textFields, userValue } from './userEditData.js';
+import { permissionBlobFromKeys, permissionGroupForKey, permissionKey, permissionKeysFromBlob, visiblePermissionGroups } from './usersListData.js';
+function dialogApi() {
+    return window.bpDialog || null;
+}
+async function showAlert(message, title = 'User') {
+    const dialog = dialogApi();
+    if (dialog?.alert) {
+        await dialog.alert(message, { title });
+        return;
+    }
+    alert(message);
+}
+async function showConfirm(message, title, confirmLabel) {
+    const dialog = dialogApi();
+    if (dialog?.confirm) {
+        return await dialog.confirm(message, { title, confirmLabel, cancelLabel: 'Cancel' });
+    }
+    return confirm(message);
+}
+function buildRoleCheckboxes(container, roles, selectedRoleIds) {
+    visiblePermissionGroups(roles).forEach(role => {
+        const id = String(role.id ?? '');
+        if (!id)
+            return;
+        const label = document.createElement('label');
+        label.className = 'permission-checkbox';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = id;
+        input.dataset.roleId = id;
+        input.checked = selectedRoleIds.has(id);
+        const text = document.createElement('span');
+        text.textContent = role.role_name || id;
+        label.appendChild(input);
+        label.appendChild(text);
+        container.appendChild(label);
+    });
+}
+function buildPermissionCheckboxes(container, permissions, selectedKeys) {
+    const groups = new Map();
+    permissions.forEach(permission => {
+        const key = permissionKey(permission);
+        if (!key || key === '*' || key === 'canAccessEverything')
+            return;
+        const group = permissionGroupForKey(key);
+        groups.set(group, [...(groups.get(group) || []), permission]);
+    });
+    Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b)).forEach(([group, records]) => {
+        const section = document.createElement('div');
+        section.className = 'permission-group-section';
+        const title = document.createElement('strong');
+        title.textContent = group;
+        section.appendChild(title);
+        records.sort((a, b) => permissionKey(a).localeCompare(permissionKey(b))).forEach(permission => {
+            const key = permissionKey(permission);
+            const label = document.createElement('label');
+            label.className = 'permission-checkbox';
+            label.title = permission.description || key;
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = key;
+            input.dataset.permissionKey = key;
+            input.checked = selectedKeys.has(key);
+            const text = document.createElement('span');
+            text.textContent = key;
+            label.appendChild(input);
+            label.appendChild(text);
+            section.appendChild(label);
+        });
+        container.appendChild(section);
+    });
+}
 export async function render(el) {
     const meltdownEmit = window.meltdownEmit;
     const jwt = window.ADMIN_TOKEN;
@@ -11,7 +83,12 @@ export async function render(el) {
         return;
     }
     try {
-        const user = await fetchUserDetails(meltdownEmit, jwt, userId);
+        const [user, roles, permissions, access] = await Promise.all([
+            fetchUserDetails(meltdownEmit, jwt, userId),
+            fetchRoles(meltdownEmit, jwt).catch(() => []),
+            fetchPermissions(meltdownEmit, jwt).catch(() => []),
+            fetchUserAccess(meltdownEmit, jwt, userId).catch(() => ({ roleIds: [], directPermissions: {} }))
+        ]);
         if (!user) {
             el.innerHTML = '<p>User not found.</p>';
             return;
@@ -33,15 +110,15 @@ export async function render(el) {
         headerDelete.title = 'Delete user';
         headerDelete.style.alignSelf = 'flex-end';
         headerDelete.addEventListener('click', async () => {
-            if (!confirm('Delete this user?'))
+            if (!await showConfirm('Delete this user?', 'Delete user', 'Delete'))
                 return;
             try {
                 await deleteUserRecord(meltdownEmit, jwt, userRecord.id);
-                alert('User deleted');
+                await showAlert('User deleted', 'Delete user');
                 window.location.href = '/admin/settings/users';
             }
             catch (err) {
-                alert(`Error: ${errorMessage(err)}`);
+                await showAlert(`Error: ${errorMessage(err)}`, 'Delete user');
             }
         });
         container.appendChild(headerDelete);
@@ -114,6 +191,22 @@ export async function render(el) {
         passField.appendChild(passInput);
         passField.appendChild(passLabel);
         container.appendChild(passField);
+        const selectedRoleIds = new Set((access.roleIds || []).map(String));
+        const selectedPermissionKeys = new Set(permissionKeysFromBlob(access.directPermissions));
+        const roleSection = document.createElement('div');
+        roleSection.className = 'permission-group-section';
+        const roleTitle = document.createElement('strong');
+        roleTitle.textContent = 'Permission groups';
+        roleSection.appendChild(roleTitle);
+        buildRoleCheckboxes(roleSection, roles, selectedRoleIds);
+        container.appendChild(roleSection);
+        const advanced = document.createElement('details');
+        advanced.className = 'permission-advanced-section';
+        const advancedSummary = document.createElement('summary');
+        advancedSummary.textContent = 'Advanced rights';
+        advanced.appendChild(advancedSummary);
+        buildPermissionCheckboxes(advanced, permissions, selectedPermissionKeys);
+        container.appendChild(advanced);
         const saveBtn = document.createElement('button');
         saveBtn.textContent = 'Save';
         container.appendChild(saveBtn);
@@ -130,12 +223,22 @@ export async function render(el) {
                     uiColor: selectedColor,
                     password: passInput.value
                 });
+                const roleIds = Array.from(container.querySelectorAll('input[data-role-id]'))
+                    .filter(input => input.checked)
+                    .map(input => input.value);
+                const permissionKeys = Array.from(container.querySelectorAll('input[data-permission-key]'))
+                    .filter(input => input.checked)
+                    .map(input => input.value);
+                await updateUserAccess(meltdownEmit, jwt, userRecord.id, {
+                    roleIds,
+                    directPermissions: permissionBlobFromKeys(permissionKeys)
+                });
                 window.USER_COLOR = selectedColor;
                 document.documentElement.style.setProperty('--user-color', selectedColor);
-                alert('Saved');
+                await showAlert('Saved', 'User');
             }
             catch (err) {
-                alert(`Error: ${errorMessage(err)}`);
+                await showAlert(`Error: ${errorMessage(err)}`, 'User');
             }
         }
         window.saveUserChanges = saveUser;

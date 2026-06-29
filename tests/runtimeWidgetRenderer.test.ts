@@ -137,4 +137,28 @@ describe('runtimeWidgetRenderer', () => {
     );
   });
 
+  it('renders module widgets when saved code contains only metadata', async () => {
+    const wrapper = makeWrapper();
+    const render = jest.fn();
+    const moduleUrl = '/widgets/community_meta/widget.js';
+
+    jest.doMock(moduleUrl, () => ({ render }), { virtual: true });
+
+    await renderWidget(
+      wrapper,
+      { id: 'mediaBlock', metadata: { label: 'Media' }, codeUrl: moduleUrl },
+      { meta: { src: '/media/hero.jpg', alt: 'Hero' } },
+      'public'
+    );
+
+    expect(render).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({
+        widgetId: 'mediaBlock',
+        metadata: { label: 'Media' },
+        instanceMetadata: { src: '/media/hero.jpg', alt: 'Hero' }
+      })
+    );
+  });
+
 });

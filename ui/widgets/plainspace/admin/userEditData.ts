@@ -13,6 +13,25 @@ export interface UserEditRecord {
   ui_color?: string;
 }
 
+export interface UserAccessRecord {
+  roleIds?: string[];
+  directPermissions?: unknown;
+}
+
+export interface RoleRecord {
+  id?: string | number;
+  role_name?: string;
+  description?: string;
+  permissions?: unknown;
+  is_system_role?: boolean;
+}
+
+export interface PermissionRecord {
+  permission_key?: string;
+  key?: string;
+  description?: string;
+}
+
 export const userEditTextFields = [
   'username',
   'email',
@@ -60,6 +79,29 @@ export function toUser(value: unknown): UserEditRecord | null {
   return candidate && typeof candidate === 'object' ? candidate as UserEditRecord : null;
 }
 
+function toArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object' && Array.isArray((value as { data?: unknown }).data)) {
+    return (value as { data: unknown[] }).data;
+  }
+  return [];
+}
+
+export function toRoles(value: unknown): RoleRecord[] {
+  return toArray(value).filter((item): item is RoleRecord => Boolean(item) && typeof item === 'object');
+}
+
+export function toPermissions(value: unknown): PermissionRecord[] {
+  return toArray(value).filter((item): item is PermissionRecord => Boolean(item) && typeof item === 'object');
+}
+
+export function toUserAccess(value: unknown): UserAccessRecord {
+  const source = value && typeof value === 'object' && 'data' in value
+    ? (value as { data?: unknown }).data
+    : value;
+  return source && typeof source === 'object' ? source as UserAccessRecord : {};
+}
+
 export function userValue(user: UserEditRecord, field: UserEditTextField): string {
   return user[field] == null ? '' : String(user[field]);
 }
@@ -104,6 +146,60 @@ export async function fetchUserDetails(
     userId
   });
   return toUser(res);
+}
+
+export async function fetchRoles(
+  emit: UserEditEmitter,
+  jwt: string | null | undefined
+): Promise<RoleRecord[]> {
+  const meltdownEmit = requireEmitter(emit);
+  const res = await meltdownEmit('getAllRoles', {
+    jwt,
+    ...USER_MANAGEMENT_MODULE
+  });
+  return toRoles(res);
+}
+
+export async function fetchPermissions(
+  emit: UserEditEmitter,
+  jwt: string | null | undefined
+): Promise<PermissionRecord[]> {
+  const meltdownEmit = requireEmitter(emit);
+  const res = await meltdownEmit('getAllPermissions', {
+    jwt,
+    ...USER_MANAGEMENT_MODULE
+  });
+  return toPermissions(res);
+}
+
+export async function fetchUserAccess(
+  emit: UserEditEmitter,
+  jwt: string | null | undefined,
+  userId: string | number | null | undefined
+): Promise<UserAccessRecord> {
+  const meltdownEmit = requireEmitter(emit);
+  const res = await meltdownEmit('getUserAccess', {
+    jwt,
+    ...USER_MANAGEMENT_MODULE,
+    userId
+  });
+  return toUserAccess(res);
+}
+
+export async function updateUserAccess(
+  emit: UserEditEmitter,
+  jwt: string | null | undefined,
+  userId: string | number | undefined,
+  values: { roleIds: string[]; directPermissions: unknown }
+): Promise<void> {
+  const meltdownEmit = requireEmitter(emit);
+  await meltdownEmit('setUserAccess', {
+    jwt,
+    ...USER_MANAGEMENT_MODULE,
+    userId,
+    roleIds: values.roleIds,
+    directPermissions: values.directPermissions || {}
+  });
 }
 
 export async function updateUserProfile(

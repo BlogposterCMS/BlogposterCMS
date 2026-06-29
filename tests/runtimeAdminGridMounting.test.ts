@@ -14,28 +14,36 @@ jest.mock('../ui/runtime/main/widgetRuntimeGateway', () => ({
   attachAdminDashboardControls: jest.fn()
 }));
 
+const HALF_WIDGET = {
+  id: 'hero',
+  metadata: {
+    layout: {
+      defaultSlot: 'half',
+      supportedSlots: [
+        { name: 'half', minCols: 6, maxCols: 6 },
+        { name: 'full', minCols: 12, maxCols: 12 }
+      ],
+      breakpoints: {
+        mobile: ['full'],
+        tablet: ['half', 'full'],
+        desktop: ['half', 'full']
+      },
+      heightMode: 'dynamic',
+      height: {
+        minHeight: { mobile: 160, tablet: 180, desktop: 220 }
+      }
+    }
+  }
+};
+
 describe('runtimeAdminGridMounting', () => {
   function createGrid() {
-    const grid = {
-      options: {
-        columnWidth: 1,
-        cellHeight: 1,
-        columns: 12
-      },
+    return {
       widgets: [] as HTMLElement[],
-      makeWidget: jest.fn((el: HTMLElement) => {
-        grid.widgets.push(el);
-      }),
-      refreshMetrics: jest.fn(() => ({
-        width: 120,
-        height: 100,
-        paddingLeft: 0,
-        paddingTop: 0,
-        paddingRight: 0,
-        paddingBottom: 0
-      }))
+      registerWidget: jest.fn(function registerWidget(el: HTMLElement) {
+        this.widgets.push(el);
+      })
     };
-    return grid;
   }
 
   beforeEach(() => {
@@ -44,7 +52,7 @@ describe('runtimeAdminGridMounting', () => {
     (renderRuntimeCanvasWidget as jest.Mock).mockResolvedValue(undefined);
   });
 
-  it('projects admin layout items, records instance metadata, and mounts widgets', async () => {
+  it('mounts dashboard slot items, records instance metadata, and renders widgets', async () => {
     const gridEl = document.createElement('section');
     const grid = createGrid();
     const emit = jest.fn().mockResolvedValue(undefined);
@@ -57,36 +65,40 @@ describe('runtimeAdminGridMounting', () => {
         {
           id: 'hero-1',
           widgetId: 'hero',
-          xPercent: 25,
-          yPercent: 10,
-          wPercent: 50,
-          hPercent: 20
+          slot: 'half',
+          column: 4,
+          order: 10
         },
         {
           id: 'missing-1',
           widgetId: 'missing'
         }
       ],
-      allWidgets: [{ id: 'hero', metadata: { label: 'Hero' } }],
+      allWidgets: [HALF_WIDGET],
       lane: 'admin',
       widgetEmit: emit,
       instanceMetaMap,
       deferHydration: false
     });
 
-    const wrapper = gridEl.querySelector<HTMLElement>('.canvas-item');
-    expect(grid.makeWidget).toHaveBeenCalledTimes(1);
+    const wrapper = gridEl.querySelector<HTMLElement>('.dashboard-widget');
+    expect(grid.registerWidget).toHaveBeenCalledTimes(1);
     expect(wrapper?.dataset.widgetId).toBe('hero');
     expect(wrapper?.dataset.instanceId).toBe('hero-1');
-    expect(wrapper?.dataset.x).toBe('3');
-    expect(wrapper?.dataset.y).toBe('10');
-    expect(wrapper?.getAttribute('gs-w')).toBe('6');
-    expect(wrapper?.getAttribute('gs-h')).toBe('20');
-    expect(wrapper?.getAttribute('gs-min-h')).toBe('100');
+    expect(wrapper?.dataset.dashboardSlot).toBe('half');
+    expect(wrapper?.dataset.dashboardColumns).toBe('6');
+    expect(wrapper?.dataset.dashboardColumn).toBe('4');
+    expect(wrapper?.dataset.dashboardHeightMode).toBe('dynamic');
+    expect(wrapper?.style.getPropertyValue('--dashboard-min-height')).toBe('180px');
+    expect(wrapper?.style.order).toBe('10');
+    expect(wrapper?.dataset.x).toBeUndefined();
+    expect(wrapper?.getAttribute('gs-w')).toBeNull();
     expect(instanceMetaMap.get('hero-1')).toMatchObject({
       id: 'hero-1',
       widgetId: 'hero',
-      xPercent: 25
+      slot: 'half',
+      column: 4,
+      order: 10
     });
     expect(renderRuntimeCanvasWidget).toHaveBeenCalledWith(expect.objectContaining({
       wrapper,
@@ -96,90 +108,7 @@ describe('runtimeAdminGridMounting', () => {
     }));
   });
 
-  it('mounts legacy oversized admin percent heights as compact row heights', async () => {
-    const gridEl = document.createElement('section');
-    const grid = createGrid();
-    const instanceMetaMap = new Map<string, Record<string, any>>();
-
-    grid.refreshMetrics.mockReturnValue({
-      width: 120,
-      height: 900,
-      paddingLeft: 0,
-      paddingTop: 0,
-      paddingRight: 0,
-      paddingBottom: 0
-    });
-
-    await mountAdminGridWidgets({
-      gridEl,
-      grid,
-      layout: [
-        {
-          id: 'stats-1',
-          widgetId: 'stats',
-          xPercent: 50,
-          yPercent: 160,
-          wPercent: 50,
-          hPercent: 160
-        }
-      ],
-      allWidgets: [{ id: 'stats' }],
-      lane: 'admin',
-      widgetEmit: jest.fn().mockResolvedValue(undefined),
-      instanceMetaMap,
-      deferHydration: false
-    });
-
-    const wrapper = gridEl.querySelector<HTMLElement>('.canvas-item');
-    expect(wrapper?.dataset.x).toBe('6');
-    expect(wrapper?.dataset.y).toBe('160');
-    expect(wrapper?.getAttribute('gs-w')).toBe('6');
-    expect(wrapper?.getAttribute('gs-h')).toBe('160');
-  });
-
-  it('recovers old saved admin grid rows from seed sizing metadata', async () => {
-    const gridEl = document.createElement('section');
-    const grid = createGrid();
-    const instanceMetaMap = new Map<string, Record<string, any>>();
-
-    await mountAdminGridWidgets({
-      gridEl,
-      grid,
-      layout: [
-        {
-          id: 'stats-1',
-          widgetId: 'stats',
-          x: 8,
-          y: 0,
-          w: 4,
-          h: 2022
-        }
-      ],
-      allWidgets: [
-        {
-          id: 'stats',
-          metadata: {
-            seedOptions: {
-              halfWidth: true,
-              height: 160,
-              overflow: true
-            }
-          }
-        }
-      ],
-      lane: 'admin',
-      widgetEmit: jest.fn().mockResolvedValue(undefined),
-      instanceMetaMap,
-      deferHydration: false
-    });
-
-    const wrapper = gridEl.querySelector<HTMLElement>('.canvas-item');
-    expect(wrapper?.dataset.x).toBe('6');
-    expect(wrapper?.getAttribute('gs-w')).toBe('6');
-    expect(wrapper?.getAttribute('gs-h')).toBe('160');
-  });
-
-  it('uses widget size slots as a width fallback for old saved admin rows', async () => {
+  it('ignores old saved free grid coordinates and falls back to the widget default slot', async () => {
     const gridEl = document.createElement('section');
     const grid = createGrid();
     const instanceMetaMap = new Map<string, Record<string, any>>();
@@ -202,10 +131,16 @@ describe('runtimeAdminGridMounting', () => {
           id: 'stats',
           metadata: {
             layout: {
+              defaultSlot: 'third',
               supportedSlots: [
-                { name: 'full', minCols: 12, maxCols: 12 },
-                { name: 'wide', minCols: 6 }
-              ]
+                { name: 'third', minCols: 4, maxCols: 4 },
+                { name: 'full', minCols: 12, maxCols: 12 }
+              ],
+              breakpoints: {
+                mobile: ['full'],
+                tablet: ['full'],
+                desktop: ['third', 'full']
+              }
             }
           }
         }
@@ -216,9 +151,58 @@ describe('runtimeAdminGridMounting', () => {
       deferHydration: false
     });
 
-    const wrapper = gridEl.querySelector<HTMLElement>('.canvas-item');
-    expect(wrapper?.dataset.x).toBe('6');
-    expect(wrapper?.getAttribute('gs-w')).toBe('6');
-    expect(wrapper?.getAttribute('gs-h')).toBe('160');
+    const wrapper = gridEl.querySelector<HTMLElement>('.dashboard-widget');
+    expect(wrapper?.dataset.dashboardSlot).toBe('full');
+    expect(wrapper?.dataset.x).toBeUndefined();
+    expect(wrapper?.getAttribute('gs-h')).toBeNull();
+  });
+
+  it('mounts page-sized widgets alone', async () => {
+    const gridEl = document.createElement('section');
+    const grid = createGrid();
+    const instanceMetaMap = new Map<string, Record<string, any>>();
+
+    await mountAdminGridWidgets({
+      gridEl,
+      grid,
+      layout: [
+        {
+          id: 'stats-1',
+          widgetId: 'stats',
+          slot: 'half'
+        },
+        {
+          id: 'media-1',
+          widgetId: 'mediaExplorer',
+          slot: 'page'
+        }
+      ],
+      allWidgets: [
+        HALF_WIDGET,
+        {
+          id: 'mediaExplorer',
+          metadata: {
+            layout: {
+              defaultSlot: 'page',
+              supportedSlots: [{ name: 'page', minCols: 12, maxCols: 12 }],
+              breakpoints: {
+                mobile: ['page'],
+                tablet: ['page'],
+                desktop: ['page']
+              }
+            }
+          }
+        }
+      ],
+      lane: 'admin',
+      widgetEmit: jest.fn().mockResolvedValue(undefined),
+      instanceMetaMap,
+      deferHydration: false
+    });
+
+    const widgets = Array.from(gridEl.querySelectorAll<HTMLElement>('.dashboard-widget'));
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0].dataset.widgetId).toBe('mediaExplorer');
+    expect(widgets[0].dataset.dashboardSlot).toBe('page');
   });
 });

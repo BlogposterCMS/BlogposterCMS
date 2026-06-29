@@ -82,6 +82,27 @@ canvas-item::before {
     margin: 0 0 16px;
   }
 
+/* External links are marked by the shared link enhancer after origin checks. */
+.app-scope a[data-external-link="true"] {
+  text-decoration: none;
+}
+
+.app-scope a[data-external-link="true"]::after {
+  content: "\2197";
+  display: inline-block;
+  margin-left: 0.28em;
+  font-size: 0.78em;
+  line-height: 1;
+  opacity: 0.7;
+  transform: translateY(-0.08em);
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.app-scope a[data-external-link="true"]:hover::after,
+.app-scope a[data-external-link="true"]:focus-visible::after {
+  opacity: 1;
+}
+
 /* Remove default focus outline for better custom focus styles */
   *:focus-visible {
   outline: none;

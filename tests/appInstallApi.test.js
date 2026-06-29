@@ -1,41 +1,41 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 
-test('install and uninstall app copies and removes folder', async () => {
-  const root = fs.mkdtempSync(path.join(__dirname, 'tmp-app-'));
-  const sourceDir = path.join(root, 'src');
-  fs.mkdirSync(sourceDir, { recursive: true });
-  fs.writeFileSync(path.join(sourceDir, 'app.json'), '{}');
-  fs.writeFileSync(path.join(sourceDir, 'index.html'), '<!doctype html>');
-  const appsDir = path.join(root, 'apps');
-  fs.mkdirSync(appsDir);
+const { createAppManagementRoutes } = require('../mother/server/http/appManagementRoutes');
 
+function startApp(app) {
+  return new Promise(resolve => {
+    const server = app.listen(0, '127.0.0.1', () => resolve(server));
+  });
+}
+
+test('app install and delete HTTP routes are not mounted', async () => {
   const app = express();
-  app.use(bodyParser.json());
-  app.post('/admin/api/apps/install', (req, res) => {
-    const dest = path.join(appsDir, req.body.appName);
-    fs.rmSync(dest, { recursive: true, force: true });
-    fs.cpSync(sourceDir, dest, { recursive: true });
-    res.status(201).json({ installed: req.body.appName });
-  });
-  app.delete('/admin/api/apps/:name', (req, res) => {
-    const dest = path.join(appsDir, req.params.name);
-    fs.rmSync(dest, { recursive: true, force: true });
-    res.json({ removed: req.params.name });
-  });
+  app.use(express.json());
+  app.use(createAppManagementRoutes({
+    csrfProtection: (_req, _res, next) => next(),
+    motherEmitter: {},
+    validateAdminToken: async () => ({ permissions: { '*': true } })
+  }));
 
-  const server = await new Promise(r => { const s = app.listen(0, () => r(s)); });
+  const server = await startApp(app);
   const port = server.address().port;
+  const client = axios.create({
+    baseURL: `http://127.0.0.1:${port}`,
+    proxy: false,
+    validateStatus: () => true
+  });
 
-  await axios.post(`http://localhost:${port}/admin/api/apps/install`, { appName: 'foo' });
-  expect(fs.existsSync(path.join(appsDir, 'foo', 'index.html'))).toBe(true);
+  try {
+    const install = await client.post('/admin/api/apps/install', {
+      appName: 'designer',
+      sourceDir: 'C:/tmp/designer'
+    });
+    const remove = await client.delete('/admin/api/apps/designer');
 
-  await axios.delete(`http://localhost:${port}/admin/api/apps/foo`);
-  expect(fs.existsSync(path.join(appsDir, 'foo'))).toBe(false);
-
-  server.close();
-  fs.rmSync(root, { recursive: true, force: true });
+    expect(install.status).toBe(404);
+    expect(remove.status).toBe(404);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
 });

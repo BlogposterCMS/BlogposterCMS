@@ -1,5 +1,7 @@
 import { bpDialog } from '../../shared/dialogs/bpDialog.js';
+import './moduleAccessConsent.js';
 import { setSearchExpanded } from '../search/searchExpansion.js';
+import { bindAccountMenu } from './topHeaderAccountMenu.js';
 import { disableMaintenanceMode, errorMessage, fetchMaintenanceMode, fetchProjectName, PROJECT_NAME_FALLBACK } from './topHeaderActionsData.js';
 const BANNER_ID = 'maintenance-banner';
 const BANNER_HEIGHT_VAR = '--maintenance-banner-height';
@@ -273,6 +275,7 @@ function markActiveSidebarLinks() {
 }
 async function initTopHeader() {
     void syncProjectName();
+    bindAccountMenu();
     bindUserProfileLink();
     bindLogout();
     bindSearch();

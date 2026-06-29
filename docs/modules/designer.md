@@ -196,12 +196,41 @@ The app loader verifies these events before launching the designer. If any requi
   containers are structural nodes; regular widgets should not duplicate
   sections, rows or columns as widget types.
 
+## Sidebar panels
+- The Design Studio sidebar uses one stable rail shell with circular panel
+  buttons for Widgets, Sections, Layers and Layout. Widgets are the compact
+  default state and render as icon circles; the section list, layer list and
+  layout tree expand into their own panels instead of replacing the whole
+  sidebar.
+- The Widgets panel now renders grouped insert circles for Text, Media, Shape,
+  Button and Navigation. Clicking a circle expands only that group into a
+  preset panel. The raw public widget registry is no longer dumped into the
+  default sidebar, so `textBox`, `mediaBlock`, `buttonLink`, `gallery`,
+  `navigationMenu` and `breadcrumb` stay technical renderers while authors pick
+  task-focused presets.
+- `ui/designer/app/renderer/layoutMode.js` may load the Layout partial into
+  `.layout-panel-host`, but it must not rebuild the rail shell when leaving
+  Layout mode. The shell owns the active panel state so rendered section and
+  layer lists remain intact across Layout/Design layer switches.
+
 ## Native element presets
 - Quick insert actions for text, media, shape and button resolve through
   `ui/designer/app/widgets/nativeElementPresets.js`. These presets create
   first-party widget payloads with versioned metadata and Design Contract v1
   information, while the Designer renderer only coordinates placement and
   widget creation.
+- Text, media and button presets prefer metadata-only payloads for first-party
+  public widgets. `htmlBlock` remains available as an advanced/importer
+  fallback but is hidden from normal catalogs.
+- The initial bundled public widget set now covers `textBox` as Rich Text plus
+  `mediaBlock`, `buttonLink`, `navigationMenu`, `breadcrumb`, and `gallery`.
+  Quick-insert media and button presets prefer those concrete public widgets
+  before falling back to `htmlBlock`. A public Page List / Collection Teaser is
+  not part of this pass.
+- Gallery widgets store layout mode, rows/columns, height strategy, default
+  object fit/focus, per-image fit/focus and carousel animation controls in
+  `code.meta`. The Designer renderer treats metadata-only widget data as module
+  settings so these controls do not force a custom HTML/CSS/JS override.
 - The first required Design Studio widget inventory is documented in
   `docs/design_studio_widgets.md`. Layout primitives remain part of
   `DesignDocument.layoutTree` and must not be duplicated as normal widgets.

@@ -431,10 +431,10 @@ test('widget manager scans every community widget script file', () => {
 });
 
 test('server widgets static route is guarded before serving files', () => {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  assert.match(appJs, /guardWidgetStaticRoot/);
+  const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/staticAssets.js'), 'utf8');
+  assert.match(source, /guardWidgetStaticRoot/);
   assert.match(
-    appJs,
+    source,
     /app\.use\(\s*['"]\/widgets['"]\s*,\s*setStaticCorsHeaders\s*,\s*guardWidgetStaticRoot\s*,\s*blockBrowserSourceFiles\s*,\s*express\.static\(widgetsPath\)/
   );
 });

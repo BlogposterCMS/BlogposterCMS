@@ -9,7 +9,8 @@ navigation permission and a scoped `navigationManager` core payload. Public
 runtime responses are filtered to active navigation items.
 
 Core navigation and menu domain for theme locations and structured menu trees.
-It is backend-only and does not add UI screens by itself.
+The core module stays backend-only. The admin-facing editing surface is the
+PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
 
 ## Startup
 - Core module loaded after `contentEngine` and `commentsManager`.
@@ -47,6 +48,24 @@ It is backend-only and does not add UI screens by itself.
 - The route requests `status: "active"` and performs an additional runtime
   filter so hidden or draft items are not returned even if a lower layer sends
   them back.
+- Public menu widgets receive safe `meta` values. Theme code owns the normal
+  header/footer/mobile menu styling, while Mega Menu items can carry
+  `meta.mega.layoutId` as an optional Design Studio panel reference and still
+  fall back to child links when no loader or theme support is present.
+
+## Navigation Studio
+- The admin widget reuses Navigation Manager events for all writes:
+  `upsertNavigationMenu`, `addNavigationMenuItem`,
+  `updateNavigationMenuItem`, `deleteNavigationMenuItem` and
+  `getNavigationTree`.
+- It seeds practical editing defaults when they are missing: Header Main,
+  Mobile Menu, Footer Menu, Legal Menu and Sidebar / Blog.
+- `Generate from pages` builds a curated starting menu from public
+  parent/child pages, capped at three levels by default. After generation, the
+  menu is independent and can be manually curated.
+- Item `meta` carries UI-layer details such as icon, desktop/mobile
+  visibility, and optional Mega Menu references. These fields do not make the
+  menu a page or move menu design ownership away from the theme.
 
 ## Notes
 - Navigation URLs must be internal paths/fragments/queries, plain relative paths

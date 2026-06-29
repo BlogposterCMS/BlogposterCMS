@@ -1,11 +1,12 @@
 import { loadWidgetModule } from './widgetModuleLoader.js';
-export async function renderWidgetModule(container, widgetDef, instanceId) {
+export async function renderWidgetModule(container, widgetDef, instanceId, instanceMetadata = {}) {
     if (!widgetDef.codeUrl)
         return;
     const ctx = {
         id: instanceId,
         widgetId: widgetDef.id,
-        metadata: widgetDef.metadata
+        metadata: widgetDef.metadata,
+        instanceMetadata
     };
     if (window.ADMIN_TOKEN)
         ctx.jwt = window.ADMIN_TOKEN;

@@ -41,6 +41,19 @@ function isDevAutologinEnabled() {
       && process.env.DEV_AUTOLOGIN !== 'false';
 }
 
+function isWeakCredentialOverrideEnabled() {
+  return process.env.ALLOW_WEAK_CREDS === 'I_KNOW_THIS_IS_LOCAL';
+}
+
+function canUseWeakLocalDevCredentials(req) {
+  const localDevMode = process.env.NODE_ENV !== 'production'
+      && process.env.APP_ENV !== 'production';
+  if (!localDevMode || !isLocalDevRequest(req)) return false;
+
+  // Local setup uses admin/123 for speed, but production must never inherit it.
+  return isDevAutologinEnabled() || isWeakCredentialOverrideEnabled();
+}
+
 function canUseDevAutologin(req) {
   return isDevAutologinEnabled()
       && isLocalDevRequest(req)
@@ -106,8 +119,10 @@ async function resolveDevAutologinUser({
 module.exports = {
   AUTH_DEV_AUTOLOGIN_ERRORS,
   canUseDevAutologin,
+  canUseWeakLocalDevCredentials,
   isDevAutologinEnabled,
   isLocalDevRequest,
   isLoopbackAddress,
+  isWeakCredentialOverrideEnabled,
   resolveDevAutologinUser,
 };

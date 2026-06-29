@@ -33,6 +33,8 @@ Provides CRUD operations for users and roles and handles login sessions.
 - `updateRole`
 - `deleteRole`
 - `assignRoleToUser`
+- `getUserAccess`
+- `setUserAccess`
 - `getRolesForUser`
 - `removeRoleFromUser`
 - `incrementUserTokenVersion`
@@ -66,6 +68,26 @@ Existing admin roles are self-healed during startup. If an older installation on
 - builder and publishing
 - content types, entries, publishing and trash/restore
 - comments, navigation, SEO, search, redirects, media and metadata
-- pages, PlainSpace, widgets, modules, apps, importers, exporters, themes, users, roles, server locations, sharing and translations
+- pages, PlainSpace, widgets, modules, app discovery, importers, exporters, themes, users, roles, server locations, sharing and translations
 
 The seed step is idempotent: existing permission records are not inserted again, so custom labels or role assignments remain untouched.
+
+For the full permission lifecycle from catalog to groups, users, login tokens
+and runtime checks, read the [Permission System](../permission_system.md)
+guide.
+
+## User Access Editing
+
+The admin user form assigns access in two layers:
+
+- selected permission groups from the existing role list
+- optional advanced rights selected from `getAllPermissions`
+
+Advanced rights are not stored as free-form JSON on the user record. User
+Management creates or updates an internally managed role named for that user
+and assigns it through `user_roles`. This keeps `finalizeUserLogin` and token
+permission merging on the existing role path.
+
+`setUserAccess` rejects unknown permission keys, wildcard keys and legacy admin
+bypass names for direct user rights. Broad administrator access should be
+handled through reviewed permission groups such as the built-in `admin` role.

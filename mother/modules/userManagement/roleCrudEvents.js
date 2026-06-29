@@ -19,6 +19,10 @@ const TIMEOUT_DURATION = 5000;
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('./permissionUtils');
 const { getDbType } = require('../databaseManager/helpers/dbTypeHelpers');
+const {
+  getUserAccess,
+  setUserAccess
+} = require('./userAccessService');
 
 function sanitizePayload(payload, hide = []) {
   const sanitized = { ...(payload || {}) };
@@ -102,6 +106,58 @@ function setupRoleCrudEvents(motherEmitter) {
       rows.sort((a, b) => (a.role_name || '').localeCompare(b.role_name || ''));
       callback(null, rows);
     });
+  });
+
+  // =============== getUserAccess ===============
+  motherEmitter.on('getUserAccess', async (payload, originalCb) => {
+    const callback = onceCallback(originalCb);
+
+    console.log('[USER MGMT] "getUserAccess" event triggered. Payload:', sanitizePayload(payload));
+    const { jwt, moduleName, moduleType, userId } = payload || {};
+
+    if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
+      return callback(new Error('[USER MGMT] getUserAccess => invalid meltdown payload.'));
+    }
+    if (!userId) {
+      return callback(new Error('[E_USER_ACCESS_USER_ID_MISSING] userId is required.'));
+    }
+    if (
+      payload.decodedJWT &&
+      !hasPermission(payload.decodedJWT, 'userManagement.listRoles') &&
+      !hasPermission(payload.decodedJWT, 'users.read')
+    ) {
+      return callback(new Error('Forbidden â€“ missing permission: userManagement.listRoles'));
+    }
+
+    try {
+      callback(null, await getUserAccess(motherEmitter, jwt, userId));
+    } catch (err) {
+      callback(err);
+    }
+  });
+
+  // =============== setUserAccess ===============
+  motherEmitter.on('setUserAccess', async (payload, originalCb) => {
+    const callback = onceCallback(originalCb);
+
+    console.log('[USER MGMT] "setUserAccess" event triggered. Payload:', sanitizePayload(payload));
+    const { jwt, moduleName, moduleType, userId, roleIds, directPermissions } = payload || {};
+
+    if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
+      return callback(new Error('[USER MGMT] setUserAccess => invalid meltdown payload.'));
+    }
+    if (!userId) {
+      return callback(new Error('[E_USER_ACCESS_USER_ID_MISSING] userId is required.'));
+    }
+    if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'userManagement.editUser')) {
+      return callback(new Error('Forbidden â€“ missing permission: userManagement.editUser'));
+    }
+
+    try {
+      callback(null, await setUserAccess(motherEmitter, jwt, userId, roleIds, directPermissions));
+    } catch (err) {
+      callback(err);
+    }
   });
 
   // =============== updateRole ===============

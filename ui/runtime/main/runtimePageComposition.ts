@@ -18,6 +18,10 @@ import {
   loadRuntimeLayoutTemplate,
   type RuntimeEmitter as RuntimeDataEmitter
 } from './runtimePageData.js';
+import {
+  resolveRuntimePresentationCascade,
+  type RuntimePresentationSource
+} from './runtimePresentationCascade.js';
 import type { RuntimeWidgetDefinition } from './runtimeWidgetRenderer.js';
 import {
   renderPublicRuntimeGrid,
@@ -29,6 +33,37 @@ type LooseRecord = Record<string, any>;
 type LayoutItem = LooseRecord;
 
 const noopWidgetEmit: RuntimeWidgetEmitter = async () => undefined;
+
+function mergedPresentationPage(page: LooseRecord, config: LooseRecord = {}): LooseRecord {
+  const pageMeta = page.meta && typeof page.meta === 'object' && !Array.isArray(page.meta)
+    ? page.meta
+    : {};
+  const configMeta = config && typeof config === 'object' && !Array.isArray(config)
+    ? config
+    : {};
+  return {
+    ...page,
+    meta: {
+      ...pageMeta,
+      ...configMeta
+    }
+  };
+}
+
+function inheritedContentMount(contentEl: HTMLElement): HTMLElement {
+  return contentEl.querySelector<HTMLElement>('.runtime-design-document [data-workarea="true"]')
+    || contentEl.querySelector<HTMLElement>('.runtime-design-document .runtime-layout-container:not([data-split="true"])')
+    || contentEl;
+}
+
+function appendInheritedPageHtml(
+  contentEl: HTMLElement,
+  page: LooseRecord,
+  presentation: RuntimePresentationSource
+): void {
+  if (!presentation.inherited || !page.html) return;
+  appendRuntimeHtmlContent(inheritedContentMount(contentEl), page.html);
+}
 
 export type RuntimePublicPageContentOptions = {
   page: LooseRecord;
@@ -53,9 +88,15 @@ export async function renderPublicRuntimePageContent({
   widgetEmit = noopWidgetEmit,
   debug = false
 }: RuntimePublicPageContentOptions): Promise<void> {
-  if (page.meta?.designId) {
+  const presentation = await resolveRuntimePresentationCascade(
+    mergedPresentationPage(page, config),
+    emit,
+    lane
+  );
+
+  if (presentation?.designId) {
     try {
-      const res = await fetchRuntimeDesign(emit, page.meta.designId, lane);
+      const res = await fetchRuntimeDesign(emit, presentation.designId, lane);
       const layout = getRuntimeDesignLayout(res);
       const combined = [...globalLayout, ...layout];
       clearContentKeepHeader(contentEl);
@@ -72,6 +113,7 @@ export async function renderPublicRuntimePageContent({
       if (!renderedDocument) {
         await renderStaticRuntimeGrid(contentEl, combined, allWidgets, lane, { widgetEmit });
       }
+      appendInheritedPageHtml(contentEl, page, presentation);
       await renderAttachedRuntimeContent({ page, lane, allWidgets, container: contentEl, emit, widgetEmit });
       return;
     } catch (err) {
@@ -79,16 +121,17 @@ export async function renderPublicRuntimePageContent({
     }
   }
 
-  if (config.layoutTemplate) {
+  if (presentation?.layoutTemplate) {
     let layoutArr: LayoutItem[] = [];
     try {
-      layoutArr = await loadRuntimeLayoutTemplate(emit, config.layoutTemplate, lane);
+      layoutArr = await loadRuntimeLayoutTemplate(emit, presentation.layoutTemplate, lane);
     } catch (err) {
       console.warn('[Renderer] failed to load layout template', err);
     }
     const combined = [...globalLayout, ...layoutArr];
     clearContentKeepHeader(contentEl);
     await renderStaticRuntimeGrid(contentEl, combined, allWidgets, lane, { widgetEmit });
+    appendInheritedPageHtml(contentEl, page, presentation);
     await renderAttachedRuntimeContent({ page, lane, allWidgets, container: contentEl, emit, widgetEmit });
     return;
   }

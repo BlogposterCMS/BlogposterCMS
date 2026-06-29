@@ -6,13 +6,231 @@
 }
 
 #adminGrid {
+  --dashboard-columns: 12;
+  --dashboard-grid-gap: clamp(14px, 2vw, 24px);
+  --dashboard-snap-column: 1;
+  --dashboard-snap-span: 12;
   min-height: 100vh;
-  // CanvasGrid positions widgets from its own origin. Keep decorative gutters
-  // outside the placement surface so x=0/y=0 is reachable in edit mode.
+  display: grid;
+  grid-template-columns: repeat(var(--dashboard-columns), minmax(0, 1fr));
+  grid-auto-flow: row dense;
+  gap: var(--dashboard-grid-gap);
+  align-items: start;
   padding: 0 0 clamp(56px, 6vw, 96px);
   scroll-margin-top: clamp(72px, 12vh, 128px);
   position: relative;
   background: var(--studio-canvas);
+  overflow: visible;
+}
+
+#adminGrid::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: calc((var(--dashboard-snap-column) - 1) * 100% / var(--dashboard-columns));
+  width: calc(var(--dashboard-snap-span) * 100% / var(--dashboard-columns));
+  border-radius: var(--studio-radius-panel);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--studio-border-strong) 12%, transparent),
+      color-mix(in srgb, var(--studio-surface-solid) 20%, transparent)
+    );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--studio-border-strong) 26%, transparent),
+    0 10px 30px color-mix(in srgb, var(--studio-border-strong) 12%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    left var(--motion-duration-fast) var(--motion-ease-standard),
+    width var(--motion-duration-fast) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+#adminGrid.is-dashboard-snap-active::after {
+  opacity: 0.34;
+}
+
+#adminGrid.is-dashboard-snap-pulse::after {
+  animation: dashboard-snap-pulse 240ms var(--motion-ease-standard);
+}
+
+#adminGrid > .dashboard-widget,
+#adminGrid > .dashboard-drop-placeholder {
+  position: relative;
+  z-index: 1;
+}
+
+#adminGrid .dashboard-widget,
+#adminGrid .dashboard-drop-placeholder {
+  grid-column: 1 / -1;
+  min-height: var(--dashboard-min-height, 140px);
+  height: var(--dashboard-height, auto);
+  max-height: var(--dashboard-max-height, none);
+}
+
+#adminGrid .dashboard-drop-placeholder {
+  min-height: var(--dashboard-placeholder-height, var(--dashboard-min-height, 140px));
+  border: 1px dashed color-mix(in srgb, var(--studio-border-strong) 72%, transparent);
+  border-radius: var(--studio-radius-panel);
+  background: color-mix(in srgb, var(--studio-surface-solid) 72%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--studio-text) 7%, transparent),
+    var(--studio-shadow-soft);
+  pointer-events: none;
+  transition:
+    min-height var(--motion-duration-fast) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.dashboard-drag-preview {
+  position: fixed;
+  z-index: 2200;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: min(var(--dashboard-preview-width, min(320px, 48vw)), calc(100vw - 24px));
+  min-height: min(var(--dashboard-preview-height, 92px), 64vh);
+  max-height: min(var(--dashboard-preview-height, 260px), 64vh);
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--studio-border-strong) 45%, transparent);
+  border-radius: var(--studio-radius-panel);
+  background: color-mix(in srgb, var(--studio-surface-solid) 92%, transparent);
+  box-shadow:
+    0 18px 46px color-mix(in srgb, var(--studio-text) 13%, transparent),
+    0 8px 18px color-mix(in srgb, var(--studio-border-strong) 18%, transparent);
+  color: var(--studio-text);
+  font: inherit;
+  pointer-events: none;
+  opacity: 0.94;
+  transform: translate3d(-9999px, -9999px, 0);
+  transition:
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard);
+  backdrop-filter: blur(18px);
+}
+
+.dashboard-drag-preview > * {
+  min-width: 0;
+  width: 100%;
+}
+
+.dashboard-drag-preview .widget-remove,
+.dashboard-drag-preview .widget-resize,
+.dashboard-drag-preview .widget-menu,
+.dashboard-drag-preview .resize-handle {
+  display: none !important;
+}
+
+.dashboard-drag-preview__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+#adminGrid .dashboard-widget.is-dragging {
+  opacity: 0.52;
+}
+
+@keyframes dashboard-snap-pulse {
+  0% {
+    opacity: 0.12;
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--studio-border-strong) 12%, transparent),
+      0 0 0 color-mix(in srgb, var(--studio-border-strong) 0%, transparent);
+  }
+  45% {
+    opacity: 0.5;
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--studio-border-strong) 34%, transparent),
+      0 12px 32px color-mix(in srgb, var(--studio-border-strong) 16%, transparent);
+  }
+  100% {
+    opacity: 0.34;
+  }
+}
+
+#adminGrid .dashboard-widget[data-dashboard-height-mode='dynamic'],
+#adminGrid .dashboard-widget[data-dashboard-height-mode='auto'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-height-mode='dynamic'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-height-mode='auto'] {
+  height: auto;
+}
+
+#adminGrid .dashboard-widget[data-dashboard-height-mode='scroll'] .canvas-item-content {
+  overflow: auto;
+}
+
+#adminGrid .dashboard-widget[data-dashboard-slot='third'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-slot='third'] {
+  grid-column: span 4;
+}
+
+#adminGrid .dashboard-widget[data-dashboard-slot='half'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-slot='half'] {
+  grid-column: span 6;
+}
+
+#adminGrid .dashboard-widget[data-dashboard-slot='twoThird'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-slot='twoThird'] {
+  grid-column: span 8;
+}
+
+#adminGrid .dashboard-widget[data-dashboard-column],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-column] {
+  grid-column: var(--dashboard-column-start, auto) / span var(--dashboard-column-span, 12);
+}
+
+#adminGrid .dashboard-widget[data-dashboard-slot='full'],
+#adminGrid .dashboard-widget[data-dashboard-slot='page'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-slot='full'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-slot='page'] {
+  grid-column: 1 / -1;
+}
+
+#adminGrid .dashboard-widget[data-dashboard-slot='page'],
+#adminGrid .dashboard-drop-placeholder[data-dashboard-slot='page'] {
+  min-height: var(--dashboard-min-height, calc(100vh - clamp(120px, 16vh, 180px)));
+}
+
+@media (max-width: 1179px) {
+  #adminGrid {
+    --dashboard-columns: 6;
+  }
+
+  #adminGrid .dashboard-widget[data-dashboard-slot='third'],
+  #adminGrid .dashboard-widget[data-dashboard-slot='half'],
+  #adminGrid .dashboard-drop-placeholder[data-dashboard-slot='third'],
+  #adminGrid .dashboard-drop-placeholder[data-dashboard-slot='half'] {
+    grid-column: span 3;
+  }
+
+  #adminGrid .dashboard-widget[data-dashboard-slot='twoThird'],
+  #adminGrid .dashboard-widget[data-dashboard-slot='full'],
+  #adminGrid .dashboard-widget[data-dashboard-slot='page'],
+  #adminGrid .dashboard-drop-placeholder[data-dashboard-slot='twoThird'],
+  #adminGrid .dashboard-drop-placeholder[data-dashboard-slot='full'],
+  #adminGrid .dashboard-drop-placeholder[data-dashboard-slot='page'] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  #adminGrid {
+    --dashboard-columns: 1;
+  }
+
+  #adminGrid .dashboard-widget,
+  #adminGrid .dashboard-drop-placeholder {
+    grid-column: 1 / -1;
+  }
 }
 
 .resize-handle.br {

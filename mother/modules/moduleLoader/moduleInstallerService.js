@@ -21,6 +21,9 @@ const {
   assertCommunityModuleFolderShape,
   assertCommunityModuleInfoRole
 } = require('./moduleFolderPolicy');
+const {
+  normalizeModuleInfoAccess
+} = require('./moduleAccessPolicy');
 
 const REQUIRED_MODULE_INFO_FIELDS = ['moduleName', 'version', 'developer', 'description'];
 const FORBIDDEN_TOP_LEVEL_ARCHIVE_SEGMENTS = new Set([
@@ -136,13 +139,54 @@ function validateModuleInfo(moduleInfo = {}) {
   }
   assertCommunityModuleInfoRole(moduleInfo, moduleName);
 
-  return {
+  return normalizeModuleInfoAccess({
     ...moduleInfo,
     moduleName,
     version: String(moduleInfo.version).trim(),
     developer: String(moduleInfo.developer).trim(),
     description: String(moduleInfo.description).trim()
-  };
+  }, moduleName);
+}
+
+function emitAsync(motherEmitter, eventName, payload) {
+  return new Promise((resolve, reject) => {
+    motherEmitter.emit(eventName, payload, (err, result) => {
+      if (err) reject(err);
+      else resolve(result);
+    });
+  });
+}
+
+async function ensureModulePermissionDeclarations(motherEmitter, jwt, moduleInfo = {}) {
+  const declarations = Array.isArray(moduleInfo.permissions) ? moduleInfo.permissions : [];
+  if (!declarations.length) return;
+
+  const existingRows = await emitAsync(motherEmitter, 'dbSelect', {
+    jwt,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    table: 'permissions'
+  });
+  const existing = new Set((Array.isArray(existingRows) ? existingRows : [])
+    .map(row => String(row.permission_key || '')));
+
+  for (const declaration of declarations) {
+    const key = declaration.permission_key || declaration.key;
+    if (!key || existing.has(key)) continue;
+    await emitAsync(motherEmitter, 'dbInsert', {
+      jwt,
+      moduleName: 'userManagement',
+      moduleType: 'core',
+      table: 'permissions',
+      data: {
+        permission_key: key,
+        description: declaration.description || key,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    });
+    existing.add(key);
+  }
 }
 
 function validateModuleDirectory(foundModuleDir, moduleInfo, extractedRoot) {
@@ -195,7 +239,15 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
     if (!foundModuleDir || !moduleInfo) {
       throw new Error('No moduleInfo.json found in the uploaded ZIP.');
     }
-    const normalizedModuleInfo = validateModuleInfo(moduleInfo);
+    const baseModuleInfo = validateModuleInfo(moduleInfo);
+    const normalizedModuleInfo = normalizeModuleInfoAccess(
+      baseModuleInfo,
+      baseModuleInfo.moduleName,
+      {
+        approvedAccess: options.approvedAccess || [],
+        grantedBy: options.grantedBy
+      }
+    );
     const moduleSourceDir = validateModuleDirectory(foundModuleDir, normalizedModuleInfo, extractedTemp);
 
     // 3) Move to final /modules folder
@@ -216,6 +268,7 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
       .catch(err => {
         throw new Error(`DB Insert Registry failed: ${err.message}`);
       });
+    await ensureModulePermissionDeclarations(motherEmitter, jwt, normalizedModuleInfo);
 
     if (options.notifyAdmin) {
       motherEmitter.emit('log', {
@@ -237,6 +290,27 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
       fs.rmSync(extractedTemp, { recursive: true, force: true });
     }
   }
+}
+
+function inspectModuleZipBuffer(uploadedZipBuffer) {
+  const zip = new AdmZip(uploadedZipBuffer);
+  const entries = validateZipEntries(zip);
+  const matches = entries.filter(entry => {
+    const normalized = normalizeArchiveEntryName(entry.entryName);
+    return path.posix.basename(normalized).toLowerCase() === 'moduleinfo.json';
+  });
+  if (matches.length !== 1) {
+    throw new Error('[E_MODULE_INSPECT_MANIFEST_COUNT] Uploaded ZIP must contain exactly one moduleInfo.json.');
+  }
+
+  const parsed = JSON.parse(matches[0].getData().toString('utf8'));
+  const moduleInfo = validateModuleInfo(parsed);
+  return {
+    moduleName: moduleInfo.moduleName,
+    moduleInfo,
+    permissions: moduleInfo.permissions || [],
+    requestedAccess: moduleInfo.requestedAccess || []
+  };
 }
 
 function findModuleInfo(extractedDir) {
@@ -266,11 +340,14 @@ function findModuleInfo(extractedDir) {
 
 module.exports = {
   installModuleFromZip,
+  inspectModuleZipBuffer,
+  ensureModulePermissionDeclarations,
   _internals: {
     assertSafeArchiveEntry,
     findModuleInfo,
     isForbiddenArchiveFilename,
     normalizeArchiveEntryName,
+    inspectModuleZipBuffer,
     validateModuleDirectory,
     validateModuleInfo,
     validateZipEntries

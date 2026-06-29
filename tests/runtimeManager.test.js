@@ -1182,6 +1182,22 @@ test('runtime CMS admin facade dispatches identity, module, import and export ac
   assert.strictEqual(apps.data[0].appName, 'designer');
   assert.strictEqual(routed[4].payload.moduleName, 'appLoader');
 
+  for (const action of ['installFromDirectory', 'uninstall']) {
+    const blockedAppWrite = await new Promise(resolve => {
+      emitter.emit('cmsAdminApiRequest', {
+        jwt: 'admin-token',
+        moduleName: 'runtimeManager',
+        moduleType: 'core',
+        decodedJWT,
+        resource: 'apps',
+        action,
+        params: { appName: 'designer', sourceDir: 'C:/tmp/designer' }
+      }, (err, result) => resolve({ err, result }));
+    });
+    assert(blockedAppWrite.err);
+    assert.match(blockedAppWrite.err.message, new RegExp(`Unknown CMS admin API action: apps\\.${action}`));
+  }
+
   const importers = await new Promise((resolve, reject) => {
     emitter.emit('cmsAdminApiRequest', {
       jwt: 'admin-token',
@@ -1786,7 +1802,7 @@ test('runtime CMS admin facade limits app-origin requests to query actions', asy
     }, (err, result) => resolve({ err, result }));
   });
   assert(deniedUninstall.err);
-  assert.match(deniedUninstall.err.message, /apps can only query/);
+  assert.match(deniedUninstall.err.message, /Unknown CMS admin API action: apps\.uninstall/);
   assert.deepStrictEqual(routed.map(entry => entry.eventName), ['listContentEntries', 'getPublicSettings', 'getPageById', 'getLayoutForViewport']);
 });
 

@@ -1,14 +1,34 @@
+import {
+  getNextDashboardSlot,
+  normalizeDashboardSlotName,
+  type DashboardSlotName,
+  type DashboardWidgetDefinition
+} from '../../shared/layout/dashboardSlots.js';
+
 interface DashboardGrid {
   removeWidget: (el: HTMLElement) => void;
-  update: (el: HTMLElement, opts: { w: number }) => void;
-  _updateGridHeight?: () => void;
-  emitChange?: (el: HTMLElement) => void;
+  cycleSlot?: (el: HTMLElement, def?: DashboardWidgetDefinition | null) => DashboardSlotName;
+  emitChange?: (el?: HTMLElement | null) => void;
 }
 
 function renderIcon(name: string, fallback: string): string {
   return typeof window.featherIcon === 'function'
     ? window.featherIcon(name)
     : fallback;
+}
+
+function findWidgetDefinition(el: HTMLElement): DashboardWidgetDefinition | null {
+  const widgetId = el.dataset.widgetId;
+  if (!widgetId || !Array.isArray(window.availableWidgets)) return null;
+  return window.availableWidgets.find(widget => widget?.id === widgetId) || null;
+}
+
+function updateSlotIcon(button: HTMLButtonElement, slot: DashboardSlotName): void {
+  const iconName = slot === 'page' || slot === 'full'
+    ? 'minimize'
+    : 'maximize';
+  button.innerHTML = renderIcon(iconName, slot === 'page' || slot === 'full' ? '-' : '+');
+  button.dataset.state = slot;
 }
 
 export function attachDashboardControls(el: HTMLElement | null, grid: DashboardGrid | null): void {
@@ -24,34 +44,22 @@ export function attachDashboardControls(el: HTMLElement | null, grid: DashboardG
   });
   el.appendChild(removeBtn);
 
-  const resizeBtn = document.createElement('button');
-  resizeBtn.className = 'widget-resize';
-  resizeBtn.dataset.state = 'small';
+  const slotBtn = document.createElement('button');
+  slotBtn.className = 'widget-resize';
+  updateSlotIcon(slotBtn, normalizeDashboardSlotName(el.dataset.dashboardSlot));
 
-  const updateIcon = () => {
-    if (resizeBtn.dataset.state === 'small') {
-      resizeBtn.innerHTML = renderIcon('maximize', '+');
-    } else {
-      resizeBtn.innerHTML = renderIcon('minimize', '-');
-    }
-  };
-  updateIcon();
-
-  resizeBtn.addEventListener('click', e => {
+  slotBtn.addEventListener('click', e => {
     e.stopPropagation();
-    const currentW = parseInt(el.getAttribute('gs-w') || '', 10) || 4;
-    const newW = currentW <= 4 ? 8 : 4;
-    grid.update(el, { w: newW });
-    resizeBtn.dataset.state = newW <= 4 ? 'small' : 'large';
-    updateIcon();
-    if (typeof grid._updateGridHeight === 'function') {
-      grid._updateGridHeight();
-    }
+    const def = findWidgetDefinition(el);
+    const nextSlot = typeof grid.cycleSlot === 'function'
+      ? grid.cycleSlot(el, def)
+      : getNextDashboardSlot(def || { id: el.dataset.widgetId || '' }, el.dataset.dashboardSlot);
+    updateSlotIcon(slotBtn, nextSlot);
     if (typeof grid.emitChange === 'function') {
       grid.emitChange(el);
     }
   });
-  el.appendChild(resizeBtn);
+  el.appendChild(slotBtn);
 
   el.addEventListener('dragstart', () => el.classList.add('is-dragging'));
   el.addEventListener('dragend', () => el.classList.remove('is-dragging'));

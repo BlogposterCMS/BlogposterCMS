@@ -38,12 +38,27 @@
         background: var(--studio-surface-solid);
         border: 0;
         border-radius: var(--studio-radius-control);
-        box-shadow: var(--studio-shadow-control);
-        transform-origin: center;
+        box-shadow: none;
+        isolation: isolate;
         transition:
-          background var(--motion-duration-base) var(--motion-ease-standard),
-          box-shadow var(--motion-duration-base) var(--motion-ease-standard),
-          transform var(--motion-duration-base) var(--motion-ease-standard);
+          background var(--motion-duration-base) var(--motion-ease-standard);
+
+        // Scale the chrome layer only; scaling icons/text causes subpixel blur during hover.
+        &::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          border-radius: inherit;
+          background: var(--studio-surface-solid);
+          box-shadow: var(--studio-shadow-control);
+          transform: scale(1);
+          transform-origin: center;
+          transition:
+            background var(--motion-duration-base) var(--motion-ease-standard),
+            box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+            transform var(--motion-duration-base) var(--motion-ease-standard);
+        }
 
         .icon {
           width: 20px;
@@ -79,9 +94,13 @@
         }
 
         &:hover {
-          background: var(--studio-surface-solid);
-          box-shadow: var(--studio-shadow-control);
-          transform: scale(1.045);
+          background: transparent;
+          transform: none;
+          &::before {
+            background: var(--studio-surface-solid);
+            box-shadow: var(--studio-shadow-control);
+            transform: scale(1.045);
+          }
           .label {
             opacity: 1;
             transform: translateY(-50%) translateX(8px) scale(1);
@@ -89,8 +108,12 @@
         }
 
         &.active {
-          background: color-mix(in srgb, var(--user-color) 10%, var(--studio-surface-solid));
-          box-shadow: var(--studio-shadow-control);
+          background: transparent;
+          box-shadow: none;
+          &::before {
+            background: color-mix(in srgb, var(--user-color) 10%, var(--studio-surface-solid));
+            box-shadow: var(--studio-shadow-control);
+          }
           .icon {
             opacity: 0.96;
           }

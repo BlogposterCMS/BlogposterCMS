@@ -34,6 +34,7 @@ describe('theme mode controls', () => {
     document.body.innerHTML = `
       <button id="theme-mode-toggle" type="button">
         <img src="/assets/icons/sun-moon.svg" alt="" />
+        <span data-theme-mode-label>Theme mode</span>
       </button>
     `;
 
@@ -41,14 +42,17 @@ describe('theme mode controls', () => {
     expect(document.getElementById('theme-mode-toggle')?.dataset.themeModeBound).toBe('true');
     expect(document.getElementById('theme-mode-toggle')?.getAttribute('title')).toBeNull();
     expect(document.documentElement.dataset.themeMode).toBe('system');
+    expect(document.querySelector('[data-theme-mode-label]')?.textContent).toBe('Theme: system');
 
     document.getElementById('theme-mode-toggle')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(window.localStorage.getItem('blogposter.themeMode')).toBe('dark');
     expect(document.querySelector<HTMLImageElement>('#theme-mode-toggle img')?.src).toContain('/assets/icons/moon.svg');
+    expect(document.querySelector('[data-theme-mode-label]')?.textContent).toBe('Theme: dark');
 
     expect(cycleThemeMode()).toBe('light');
     expect(document.documentElement.dataset.theme).toBe('light');
+    expect(document.querySelector('[data-theme-mode-label]')?.textContent).toBe('Theme: light');
   });
 
   it('syncs document theme tokens when another same-origin frame changes storage', () => {

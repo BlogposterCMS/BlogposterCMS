@@ -111,6 +111,18 @@ describe('mediaManager uploadFileToFolder', () => {
     expect(stats.size).toBe(0);
   });
 
+  it('allows packaged webfont assets by extension', async () => {
+    const result = await emitUpload(mediaPayload({
+      fileName: 'brand.woff2',
+      fileData: Buffer.from([0, 1, 0, 2]).toString('base64'),
+      subPath: 'builder/imports/wordpressSitePackage/fonts'
+    })) as { success: boolean; fileName: string; mimeType: string };
+
+    expect(result.success).toBe(true);
+    expect(result.mimeType).toBe('font/woff2');
+    expect(fs.existsSync(path.join(process.cwd(), 'library', 'builder', 'imports', 'wordpressSitePackage', 'fonts', result.fileName))).toBe(true);
+  });
+
   it('rejects uploads when the extension is not allowed', async () => {
     await expect(emitUpload(mediaPayload({
       fileName: 'notes.txt',

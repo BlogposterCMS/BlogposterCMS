@@ -25,6 +25,9 @@ Handles file and folder operations under the media library. It verifies permissi
   stable ordering.
 
 Uploads performed through meltdown events accept empty payloads. Supplying `fileData` as an empty string or zero-length `Buffer` writes the decoded content to disk while preserving the strict MIME/type whitelist enforced by the module.
+The whitelist includes common web presentation assets used by imported themes
+and visual packages: images (`jpg`, `png`, `gif`, `webp`, `avif`, `svg`, `ico`),
+HTML, CSS, JavaScript and webfonts (`woff`, `woff2`, `ttf`, `otf`, `eot`).
 
 ## Listened Events
 - `listLocalFolder`

@@ -46,7 +46,7 @@ describe('runtimeWidgetInstances', () => {
     );
   });
 
-  it('includes admin jwt when applying admin lane defaults', async () => {
+  it('skips widget instance layout options in the admin dashboard lane', async () => {
     const wrapper = document.createElement('div');
     const grid = { options: {} };
     const emit = jest.fn().mockResolvedValue({
@@ -62,13 +62,8 @@ describe('runtimeWidgetInstances', () => {
       'admin'
     );
 
-    expect(emit).toHaveBeenCalledWith('getWidgetInstance', {
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      instanceId: 'default.users',
-      jwt: 'admin-token'
-    });
-    expect(applyWidgetOptions).toHaveBeenCalledWith(wrapper, { width: 50 }, grid);
+    expect(emit).not.toHaveBeenCalled();
+    expect(applyWidgetOptions).not.toHaveBeenCalled();
   });
 
   it('swallows missing or malformed default options like the renderer path', async () => {

@@ -239,7 +239,7 @@ describe('UI architecture boundaries', () => {
   });
 
   test('module public loaders are served through an explicit app allowlist', () => {
-    const source = fs.readFileSync(path.join(rootDir, 'app.js'), 'utf8');
+    const source = fs.readFileSync(path.join(rootDir, 'mother/server/http/staticAssets.js'), 'utf8');
     const moduleNames = modulePublicLoaderTsFiles()
       .map(filePath => path.basename(path.dirname(filePath)));
 
@@ -248,7 +248,7 @@ describe('UI architecture boundaries', () => {
     expect(source).not.toMatch(/app\.use\(\s*['"]\/mother/);
     expect(moduleNames.length).toBeGreaterThan(0);
     moduleNames.forEach(moduleName => {
-      expect(source).toContain(`${moduleName}: path.join(__dirname, 'mother', 'modules', '${moduleName}', 'publicLoader.ts')`);
+      expect(source).toContain(`${moduleName}: path.join(rootDir, 'mother', 'modules', '${moduleName}', 'publicLoader.ts')`);
     });
   });
 
@@ -583,10 +583,11 @@ describe('UI architecture boundaries', () => {
     expect(panelSource).not.toContain('grid.addWidget');
     expect(panelSource).not.toContain('DEFAULT_ADMIN_ROWS');
     expect(addSource).toContain('export async function addDashboardWidget');
-    expect(addSource).toContain("from '../options/widgetOptions.js'");
+    expect(addSource).toContain("from '../../shared/layout/dashboardSlots.js'");
     expect(addSource).toContain("from '../rendering/widgetRenderer.js'");
     expect(addSource).toContain("from './widgetControls.js'");
-    expect(addSource).toContain('grid.addWidget');
+    expect(addSource).not.toContain('grid.addWidget');
+    expect(addSource).toContain('registerWidget?.(wrapper)');
     expect(addSource).toContain('getWidgetInstance');
     expect(addSource).toContain('ui:widget:add');
   });
@@ -1584,6 +1585,8 @@ describe('UI architecture boundaries', () => {
     expect(firstCheckSource).not.toContain('moduleType');
     expect(installSource).toContain("from './installData.js'");
     expect(installSource).toContain("from '../data/publicMeltdownClient.js'");
+    expect(installSource).toContain("from '../theme/userColor.js'");
+    expect(installSource).toContain('applyThemeMode();');
     expect(installSource).not.toContain('/api/meltdown');
     expect(installSource).not.toContain("'/install'");
     expect(installSource).not.toContain('FIRST_INSTALL_DONE');
@@ -1934,7 +1937,7 @@ describe('UI architecture boundaries', () => {
   });
 
   test('browser static routes do not serve TypeScript source files', () => {
-    const source = fs.readFileSync(path.join(rootDir, 'app.js'), 'utf8');
+    const source = fs.readFileSync(path.join(rootDir, 'mother/server/http/staticAssets.js'), 'utf8');
     expect(source).toContain('blockBrowserSourceFiles');
     expect(source).toContain('(?:ts|tsx)');
 
@@ -1956,8 +1959,8 @@ describe('UI architecture boundaries', () => {
   });
 
   test('maintenance mode allows browser asset roots through unchanged', () => {
-    const source = fs.readFileSync(path.join(rootDir, 'app.js'), 'utf8');
-    const match = source.match(/const allowedPrefixes = \[([\s\S]*?)\];/);
+    const source = fs.readFileSync(path.join(rootDir, 'mother/server/http/maintenanceMiddleware.js'), 'utf8');
+    const match = source.match(/const MAINTENANCE_ALLOWED_PREFIXES = \[([\s\S]*?)\];/);
     expect(match).not.toBeNull();
     const allowedBlock = match ? match[1] : '';
 
@@ -1977,7 +1980,11 @@ describe('UI architecture boundaries', () => {
   });
 
   test('PlainSpace compatibility URLs are static shims, not runtime TypeScript routes', () => {
-    const source = fs.readFileSync(path.join(rootDir, 'app.js'), 'utf8');
+    const source = [
+      fs.readFileSync(path.join(rootDir, 'mother/server/http/staticAssets.js'), 'utf8'),
+      fs.readFileSync(path.join(rootDir, 'mother/server/http/adminShellRoutes.js'), 'utf8'),
+      fs.readFileSync(path.join(rootDir, 'mother/server/http/publicPageRoutes.js'), 'utf8')
+    ].join('\n');
     expect(source).not.toContain('plainspaceMainTs');
     expect(source).not.toContain('plainspaceDashboardTs');
     expect(source).not.toContain("'/plainspace/main/:moduleName.js'");
@@ -2133,13 +2140,13 @@ describe('UI architecture boundaries', () => {
     expect(rendererSource).not.toContain('function deriveGridSize');
     expect(rendererSource).not.toContain('function measureGridMetrics');
     expect(rendererSource).not.toContain('function computeStaticGridMetrics');
-    expect(adminGridSource).toContain("from './runtimeGridMetrics.js'");
+    expect(adminGridSource).not.toContain("from './runtimeGridMetrics.js'");
     expect(adminGridSource).not.toContain('deriveGridSize(');
     expect(adminGridSource).not.toContain('measureGridMetrics(');
-    expect(adminMountingSource).toContain("from './runtimeGridMetrics.js'");
-    expect(adminMountingSource).toContain('deriveGridSize(');
+    expect(adminMountingSource).not.toContain("from './runtimeGridMetrics.js'");
+    expect(adminMountingSource).not.toContain('deriveGridSize(');
     expect(adminInteractionsSource).toContain("from './runtimeGridMetrics.js'");
-    expect(adminInteractionsSource).toContain('measureGridMetrics(');
+    expect(adminInteractionsSource).not.toContain('measureGridMetrics(');
     expect(compositionSource).not.toContain("from './runtimeGridMetrics.js'");
     expect(staticGridSource).toContain("from './runtimeGridMetrics.js'");
     expect(staticGridSource).toContain('deriveGridSize(');
@@ -2204,11 +2211,13 @@ describe('UI architecture boundaries', () => {
     expect(adminGridSource).not.toContain('resolveRuntimeCanvasRect(');
     expect(adminGridSource).not.toContain('serializeRuntimeCanvasLayout(');
     expect(adminMountingSource).toContain("from './runtimeCanvasItems.js'");
-    expect(adminMountingSource).toContain('createRuntimeCanvasItem({');
-    expect(adminMountingSource).toContain('resolveRuntimeCanvasRect(');
+    expect(adminMountingSource).toContain('createWidgetPlaceholder');
+    expect(adminMountingSource).not.toContain('createRuntimeCanvasItem({');
+    expect(adminMountingSource).not.toContain('resolveRuntimeCanvasRect(');
     expect(adminMountingSource).not.toContain('serializeRuntimeCanvasLayout(');
-    expect(adminInteractionsSource).toContain("from './runtimeCanvasSerialization.js'");
-    expect(adminInteractionsSource).toContain('serializeRuntimeCanvasLayout(');
+    expect(adminInteractionsSource).not.toContain("from './runtimeCanvasSerialization.js'");
+    expect(adminInteractionsSource).not.toContain('serializeRuntimeCanvasLayout(');
+    expect(adminInteractionsSource).toContain('serializeAdminDashboardLayout');
     expect(compositionSource).not.toContain("from './runtimeCanvasItems.js'");
     expect(compositionSource).not.toContain('createRuntimeCanvasItem({');
     expect(compositionSource).not.toContain('resolveRuntimeCanvasRect(');
@@ -2371,11 +2380,16 @@ describe('UI architecture boundaries', () => {
     expect(adminGridSource).not.toContain('dashboard-edit-mode');
     expect(adminGridSource).toContain('bindAdminLayoutPersistence({');
     expect(adminMountingSource).toContain('export async function mountAdminGridWidgets');
-    expect(adminMountingSource).toContain('createRuntimeCanvasItem({');
+    expect(adminMountingSource).toContain('createWidgetPlaceholder');
+    expect(adminMountingSource).not.toContain('createRuntimeCanvasItem({');
     expect(adminMountingSource).toContain('renderRuntimeCanvasWidget({');
     expect(adminInteractionsSource).toContain('window.adminGrid');
     expect(adminInteractionsSource).toContain('window.saveAdminLayout');
     expect(adminInteractionsSource).toContain('dashboard-edit-mode');
+    expect(adminInteractionsSource).toContain('dashboard-drop-placeholder');
+    expect(adminInteractionsSource).toContain('dashboard-drag-preview');
+    expect(adminInteractionsSource).toContain('is-dashboard-snap-active');
+    expect(adminInteractionsSource).toContain('beforeInstanceId');
   });
 
   test('page renderer delegates public page composition to a runtime helper', () => {
@@ -2584,7 +2598,10 @@ describe('UI architecture boundaries', () => {
     expect(mountSource).toContain('await applyDefaultWidgetInstanceOptions');
     expect(instanceSource).toContain('export async function applyDefaultWidgetInstanceOptions');
     expect(instanceSource).toContain("emit('getWidgetInstance'");
+    expect(instanceSource).toContain("lane === 'admin'");
     expect(instanceSource).toContain("from './widgetRuntimeGateway.js'");
+    expect(instanceSource).not.toContain('DASHBOARD_LAYOUT_OPTION_KEYS');
+    expect(instanceSource).not.toContain('stripDashboardLayoutOptions');
   });
 
   test('public runtime imports module public loaders through a gateway', () => {
@@ -2667,7 +2684,7 @@ describe('UI architecture boundaries', () => {
   test('jest module aliases do not resolve retired browser implementation paths', () => {
     const source = fs.readFileSync(path.join(rootDir, 'jest.config.js'), 'utf8');
     expect(source).toContain("'^/ui/(.*)$': '<rootDir>/ui/$1'");
-    expect(source).toContain('controls|dev|dialogs|grid|icons|layout|loaders|media|sanitize|utils');
+    expect(source).toContain('controls|dev|dialogs|grid|icons|layout|loaders|media|module-access|sanitize|utils');
     expect(source).not.toMatch(/\^\/plainspace\//);
     expect(source).not.toMatch(/\^\/assets\//);
   });
@@ -2710,7 +2727,10 @@ describe('UI architecture boundaries', () => {
   });
 
   test('server-rendered UI shells load build bundles instead of legacy browser shims', () => {
-    const source = fs.readFileSync(path.join(rootDir, 'app.js'), 'utf8');
+    const source = [
+      fs.readFileSync(path.join(rootDir, 'mother/server/http/adminShellRoutes.js'), 'utf8'),
+      fs.readFileSync(path.join(rootDir, 'mother/server/http/publicPageRoutes.js'), 'utf8')
+    ].join('\n');
     const violations = [];
     const scriptSrcPattern = /<script\b[^>]*\bsrc=["']([^"']+)["']/gi;
     let match;

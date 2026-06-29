@@ -10,6 +10,10 @@ const fs = require('fs');
 const path = require('path');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
+const {
+  preserveTrustedAccess,
+  stripTrustedAccess
+} = require('./moduleAccessPolicy');
 
 async function ensureModuleRegistrySchema(motherEmitter, jwt) {
   // meltdown => dbUpdate => 'INIT_MODULE_REGISTRY_TABLE'
@@ -64,9 +68,10 @@ function initGetModuleRegistryEvent(motherEmitter) {
           ? safelyParseJSON(row.module_info) || {}
           : row.module_info || {};
 
-        const fsInfo = readFsModuleInfo(row.module_name);
-        const dbString = JSON.stringify(dbInfo);
-        const fsString = fsInfo ? JSON.stringify(fsInfo) : null;
+        const fsInfoRaw = readFsModuleInfo(row.module_name);
+        const fsInfo = fsInfoRaw ? preserveTrustedAccess(fsInfoRaw, dbInfo) : null;
+        const dbString = JSON.stringify(stripTrustedAccess(dbInfo));
+        const fsString = fsInfo ? JSON.stringify(stripTrustedAccess(fsInfo)) : null;
 
         if (fsInfo && fsString !== dbString) {
           console.log(`[MODULE LOADER] Detected changed moduleInfo.json for "${row.module_name}". Updating DB...`);
@@ -233,6 +238,20 @@ function getModuleRegistry(motherEmitter, jwt) {
   });
 }
 
+async function getRegisteredModuleInfo(motherEmitter, jwt, moduleName) {
+  const rows = await runDbSelectPlaceholder(
+    motherEmitter,
+    jwt,
+    'SELECT_MODULE_BY_NAME',
+    { moduleName }
+  );
+  const row = rows[0];
+  if (!row) return {};
+  return (typeof row.module_info === 'string')
+    ? safelyParseJSON(row.module_info) || {}
+    : row.module_info || {};
+}
+
 /**
  * meltdown => 'dbInsert' => insert into module_registry
  */
@@ -353,8 +372,8 @@ async function registerOrUpdateModule(motherEmitter, jwt, moduleName, moduleInfo
   } else {
     // Compare existing module_info
     const existingInfo = existingModules[0].module_info;
-    const existingInfoString = JSON.stringify(existingInfo);
-    const newInfoString = JSON.stringify(moduleInfo);
+    const existingInfoString = JSON.stringify(stripTrustedAccess(existingInfo));
+    const newInfoString = JSON.stringify(stripTrustedAccess(moduleInfo));
 
     if (existingInfoString !== newInfoString) {
       await updateModuleInfo(motherEmitter, jwt, moduleName, moduleInfo);
@@ -440,6 +459,7 @@ module.exports = {
   readFsModuleInfo,
   updateModuleInfo,
   getModuleRegistry,
+  getRegisteredModuleInfo,
   insertModuleRegistryEntry,
   updateModuleLastError,
   deactivateModule,

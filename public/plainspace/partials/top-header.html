@@ -30,13 +30,33 @@
       </div>
 
       <div class="right-icons">
-        <button id="theme-mode-toggle" class="top-header__icon-button" type="button" aria-label="Theme mode">
-          <img src="/assets/icons/sun-moon.svg" class="icon" alt="" />
-        </button>
-        <a href="#" id="user-link" aria-label="Open user profile"><img src="/assets/icons/user.svg" class="icon" alt="" /></a>
-        <button id="logout-icon" class="top-header__icon-button" type="button" aria-label="Log out">
-          <img src="/assets/icons/log-out.svg" class="icon" alt="" />
-        </button>
+        <div id="account-menu" class="account-menu">
+          <button
+            id="account-menu-toggle"
+            class="top-header__icon-button account-menu__toggle"
+            type="button"
+            aria-label="Open account menu"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="account-menu-dropdown"
+          >
+            <img src="/assets/icons/user-round-cog.svg" class="icon" alt="" />
+          </button>
+          <div id="account-menu-dropdown" class="account-menu__dropdown" role="menu" hidden>
+            <button id="theme-mode-toggle" class="account-menu__item" type="button" role="menuitem">
+              <img src="/assets/icons/sun-moon.svg" class="icon" alt="" />
+              <span class="account-menu__label" data-theme-mode-label>Theme mode</span>
+            </button>
+            <a href="#" id="user-link" class="account-menu__item" role="menuitem">
+              <img src="/assets/icons/user.svg" class="icon" alt="" />
+              <span class="account-menu__label">Profile</span>
+            </a>
+            <button id="logout-icon" class="account-menu__item" type="button" role="menuitem">
+              <img src="/assets/icons/log-out.svg" class="icon" alt="" />
+              <span class="account-menu__label">Log out</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

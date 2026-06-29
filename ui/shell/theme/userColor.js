@@ -158,6 +158,10 @@ function updateThemeModeToggle(mode) {
         icon.src = modeIcon(mode);
         icon.alt = '';
     }
+    const visibleLabel = button.querySelector('[data-theme-mode-label]');
+    if (visibleLabel) {
+        visibleLabel.textContent = `Theme: ${mode}`;
+    }
 }
 export function applyThemeMode(mode = readStoredThemeMode()) {
     bindThemeModeStorageSync();

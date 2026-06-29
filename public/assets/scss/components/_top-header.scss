@@ -92,6 +92,11 @@
     justify-self: end;
   }
 
+  .account-menu {
+    position: relative;
+    display: inline-flex;
+  }
+
   .top-header__icon-button,
   .left-icons a,
   .right-icons a {
@@ -129,9 +134,32 @@
     background: transparent;
     border-color: transparent;
     box-shadow: none;
+    isolation: isolate;
+    position: relative;
+
+    // Scale the hover shell instead of the project label to avoid transient blur.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border: 1px solid transparent;
+      border-radius: inherit;
+      background: transparent;
+      box-shadow: none;
+      transform: scale(1);
+      transform-origin: center;
+      transition:
+        background var(--motion-duration-base) var(--motion-ease-standard),
+        border-color var(--motion-duration-base) var(--motion-ease-standard),
+        box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+        transform var(--motion-duration-fast) var(--motion-ease-standard);
+    }
   }
 
   .project-link__name {
+    position: relative;
+    z-index: 1;
     min-width: 0;
     max-width: 160px;
     overflow: hidden;
@@ -145,6 +173,8 @@
   }
 
   .left-icons a.project-link .icon {
+    position: relative;
+    z-index: 1;
     width: 17px;
     height: 17px;
     opacity: 0.68;
@@ -164,9 +194,86 @@
 
   .left-icons a.project-link:hover,
   .left-icons a.project-link:focus-visible {
+    background: transparent;
+    border-color: transparent;
+    transform: none;
+    // Keep the input and icon unscaled; only the shell grows on hover.
+    &::before {
+      background: var(--studio-surface-solid);
+      border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+      transform: scale(1.015);
+    }
+  }
+
+  .account-menu__dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 120;
+    display: grid;
+    gap: 4px;
+    width: min(220px, calc(100vw - 32px));
+    padding: 6px;
+    border: 1px solid var(--studio-border);
+    border-radius: var(--studio-radius-panel);
     background: var(--studio-surface-solid);
-    border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
-    transform: scale(1.015);
+    box-shadow: var(--studio-shadow-lift);
+  }
+
+  .account-menu__dropdown[hidden] {
+    display: none;
+  }
+
+  .account-menu__item,
+  .right-icons a.account-menu__item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    height: auto;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--studio-radius-control);
+    background: transparent;
+    color: var(--studio-text);
+    box-shadow: none;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    text-align: left;
+    text-decoration: none;
+    transform: none;
+    transition:
+      background var(--motion-duration-fast) var(--motion-ease-standard),
+      color var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  .account-menu__item:hover,
+  .account-menu__item:focus-visible,
+  .right-icons a.account-menu__item:hover,
+  .right-icons a.account-menu__item:focus-visible {
+    background: var(--studio-surface-muted);
+    border-color: transparent;
+    outline: none;
+    transform: none;
+  }
+
+  .account-menu__item .icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    opacity: 0.72;
+  }
+
+  .account-menu__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .icon {
@@ -213,16 +320,37 @@
     background: transparent;
     box-shadow: none;
     transform-origin: left center;
+    isolation: isolate;
     transition:
       width var(--motion-duration-base) var(--motion-ease-standard),
       border-color var(--motion-duration-base) var(--motion-ease-standard),
-      background var(--motion-duration-base) var(--motion-ease-standard),
-      transform var(--motion-duration-fast) var(--motion-ease-standard);
+      background var(--motion-duration-base) var(--motion-ease-standard);
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border: 1px solid transparent;
+      border-radius: inherit;
+      background: transparent;
+      transform: scale(1);
+      transform-origin: left center;
+      transition:
+        background var(--motion-duration-base) var(--motion-ease-standard),
+        border-color var(--motion-duration-base) var(--motion-ease-standard),
+        transform var(--motion-duration-fast) var(--motion-ease-standard);
+    }
 
     &:hover {
-      border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
-      background: var(--studio-surface-solid);
-      transform: scale(1.015);
+      border-color: transparent;
+      background: transparent;
+      transform: none;
+      &::before {
+        border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+        background: var(--studio-surface-solid);
+        transform: scale(1.015);
+      }
     }
 
     &:focus-within,
@@ -230,11 +358,18 @@
     &.is-expanded {
       width: var(--studio-header-search-open-width);
       max-width: calc(100vw - 128px);
-      border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
-      background: var(--studio-surface-solid);
+      border-color: transparent;
+      background: transparent;
+      &::before {
+        border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+        background: var(--studio-surface-solid);
+        transform: none;
+      }
     }
 
     #search-toggle {
+      position: relative;
+      z-index: 1;
       width: calc(var(--studio-control-size) - 2px);
       min-width: calc(var(--studio-control-size) - 2px);
       height: calc(var(--studio-control-size) - 2px);
@@ -252,6 +387,7 @@
 
     input {
       position: static;
+      z-index: 1;
       min-width: 0;
       width: 0;
       flex: 1 1 auto;

@@ -17,7 +17,7 @@ points are known ahead of time.
 
 ## Purpose
 - Maintains the persistent registry of available apps.
-- Exposes core events for app discovery and lifecycle management:
+- Exposes core events for app discovery and core-only lifecycle maintenance:
   `listApps`, `getApp`, `getAppLaunchInfo`, `rescanApps`,
   `installAppFromDirectory` and `uninstallApp`.
 - Handles `dispatchAppEvent` messages forwarded from sandboxed iframes with a
@@ -43,17 +43,16 @@ points are known ahead of time.
   blocks launch if any API event has no listener.
 
 ## APIs
-- `POST /admin/api/apps/install` delegates to `installAppFromDirectory`.
-- `DELETE /admin/api/apps/:appName` delegates to `uninstallApp`.
-- Both endpoints require an authenticated admin with `builder.manage` permission
-  for backwards compatibility.
-- Runtime/admin facade actions use the narrower `apps.list`, `apps.install`,
-  `apps.delete` and `apps.rescan` permissions.
+- App install and delete are not exposed as HTTP routes or runtime/admin facade
+  actions. Bundled admin tools ship with the application and are updated by the
+  normal release path, not by a user-facing app marketplace.
+- Runtime/admin facade actions use the narrower `apps.list` and `apps.rescan`
+  permissions for discovery and registry refresh only.
 - App management and discovery events (`listApps`, `getApp`,
   `getAppLaunchInfo`, `listBuilderApps`, `installAppFromDirectory`,
   `uninstallApp` and `rescanApps`) are not raw public `/api/meltdown` targets.
-  External admin/editor clients use the dedicated admin routes or the
-  `runtimeManager` `apps` resource instead of dispatching raw appLoader events.
+  External admin/editor clients use the `runtimeManager` `apps` resource for
+  discovery and launch metadata instead of dispatching raw appLoader events.
 - Those events all require a scoped AppLoader core payload
   (`moduleName: "appLoader"`, `moduleType: "core"` and a valid JWT); a browser
   or app-supplied `decodedJWT` object alone is never treated as caller identity.
@@ -62,8 +61,9 @@ points are known ahead of time.
 
 ## Security Notes
 - Manifest paths are resolved and normalized to block directory traversal.
-- App install, uninstall and rescan are centralized in this core module so HTTP
-  routes and apps do not perform direct registry writes or filesystem deletes.
+- Internal app install, uninstall and rescan helpers are centralized in this
+  core module so apps do not perform direct registry writes or filesystem
+  deletes.
 - Builder discovery and `/admin/app/:appName` launch use appLoader-validated
   folder metadata instead of reading `apps/*/app.json` directly.
 - `dispatchAppEvent` uses the same validated app folder metadata as launch
@@ -82,8 +82,8 @@ points are known ahead of time.
   config files, package manifests/lockfiles or `node_modules`. Runtime secrets,
   package-manager credentials and embedded Node runtimes do not belong in
   deployable app folders.
-- App installs validate the source folder shape and real path before replacing
-  an existing app folder.
+- Internal app installs validate the source folder shape and real path before
+  replacing an existing app folder.
 - App folders cannot contain symlinks or junctions; app assets must be real
   files under the app directory.
 - User-managed app client files are scanned before activation. Direct

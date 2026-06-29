@@ -3,7 +3,8 @@ export function getAvailableWidgetDefinitions(input = window.availableWidgets) {
     return Array.isArray(input)
         ? input.filter((item) => (Boolean(item) &&
             typeof item === 'object' &&
-            typeof item.id === 'string'))
+            typeof item.id === 'string' &&
+            item.metadata?.hiddenFromCatalog !== true))
         : [];
 }
 export function groupWidgetsByCategory(widgets) {
@@ -33,9 +34,15 @@ function createWidgetCard(def) {
         void addDashboardWidget(def);
     });
     card.addEventListener('dragstart', ev => {
+        window.__dashboardDraggingWidgetId = def.id;
         ev.dataTransfer?.setData('text/plain', def.id);
         if (ev.dataTransfer)
             ev.dataTransfer.effectAllowed = 'copy';
+    });
+    card.addEventListener('dragend', () => {
+        if (window.__dashboardDraggingWidgetId === def.id) {
+            delete window.__dashboardDraggingWidgetId;
+        }
     });
     return card;
 }

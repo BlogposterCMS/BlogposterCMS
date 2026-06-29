@@ -1,28 +1,60 @@
-import { applyWidgetOptions } from '../options/widgetOptions.js';
+import { applyDashboardHeightPolicyToElement, applyDashboardSlotToElement, getDefaultDashboardSlot, getSupportedDashboardSlots, resolveDashboardSlotForWidget } from '../../shared/layout/dashboardSlots.js';
 import { renderWidget } from '../rendering/widgetRenderer.js';
 import { attachDashboardControls } from './widgetControls.js';
-const DEFAULT_ADMIN_ROWS = 20;
-function resolvePosition(value) {
-    return Number.isFinite(value) ? Number(value) : 0;
+const LAYOUT_OPTION_KEYS = new Set([
+    'max',
+    'maxWidth',
+    'maxHeight',
+    'halfWidth',
+    'thirdWidth',
+    'width',
+    'height',
+    'overflow'
+]);
+function toFiniteNumber(value) {
+    const num = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
+    return Number.isFinite(num) ? num : null;
 }
-function createWidgetWrapper(grid, def, pos) {
-    const wrapper = grid.addWidget({
-        x: resolvePosition(pos.x),
-        y: resolvePosition(pos.y),
-        w: 8,
-        h: DEFAULT_ADMIN_ROWS
-    });
+function stripLayoutOptions(value) {
+    if (!value)
+        return null;
+    const cleanEntries = Object.entries(value)
+        .filter(([key]) => !LAYOUT_OPTION_KEYS.has(key));
+    return cleanEntries.length ? Object.fromEntries(cleanEntries) : null;
+}
+function getDashboardController() {
+    return window.adminGrid && typeof window.adminGrid === 'object'
+        ? window.adminGrid
+        : null;
+}
+function createWidgetWrapper(gridEl, def, pos = {}) {
+    const wrapper = document.createElement('article');
+    wrapper.classList.add('canvas-item', 'dashboard-widget', 'loading');
     wrapper.dataset.widgetId = def.id;
     wrapper.dataset.instanceId = `w${Math.random().toString(36).slice(2, 8)}`;
+    const slot = resolveDashboardSlotForWidget(def, pos.slot || getDefaultDashboardSlot(def));
+    const order = toFiniteNumber(pos.order) ?? gridEl.querySelectorAll('.dashboard-widget').length * 10;
+    wrapper.dataset.dashboardOrder = String(order);
+    wrapper.style.order = String(order);
+    applyDashboardSlotToElement(wrapper, slot, getSupportedDashboardSlots(def), pos.column);
+    applyDashboardHeightPolicyToElement(wrapper, def);
     const content = document.createElement('div');
     content.className = 'canvas-item-content';
     wrapper.appendChild(content);
+    const beforeInstanceId = typeof pos.beforeInstanceId === 'string'
+        ? pos.beforeInstanceId
+        : null;
+    const beforeEl = beforeInstanceId
+        ? Array.from(gridEl.querySelectorAll('.dashboard-widget'))
+            .find(widget => widget.dataset.instanceId === beforeInstanceId)
+        : null;
+    gridEl.insertBefore(wrapper, beforeEl || null);
     return wrapper;
 }
 async function loadDefaultWidgetInstance(def) {
     const emit = window.meltdownEmit;
     if (typeof emit !== 'function') {
-        throw new Error('meltdownEmit unavailable');
+        throw new Error('DASHBOARD_WIDGET_INSTANCE_EMITTER_MISSING');
     }
     const res = await emit('getWidgetInstance', {
         jwt: window.ADMIN_TOKEN,
@@ -31,27 +63,31 @@ async function loadDefaultWidgetInstance(def) {
         instanceId: `default.${def.id}`
     });
     const contentRaw = res && typeof res === 'object' ? res.content : null;
-    return typeof contentRaw === 'string'
+    const parsed = typeof contentRaw === 'string'
         ? JSON.parse(contentRaw)
         : null;
+    return stripLayoutOptions(parsed);
 }
 export async function addDashboardWidget(def, pos = {}) {
-    const grid = window.adminGrid;
-    if (!grid || !def)
+    const controller = getDashboardController();
+    const gridEl = controller?.el || document.getElementById('adminGrid');
+    if (!gridEl || !def)
         return;
-    const wrapper = createWidgetWrapper(grid, def, pos);
+    const wrapper = createWidgetWrapper(gridEl, def, pos);
+    controller?.registerWidget?.(wrapper);
     let instance = null;
     try {
         instance = await loadDefaultWidgetInstance(def);
-        applyWidgetOptions(wrapper, instance, grid);
     }
     catch {
-        /* keep rendering with the widget definition only */
+        /* Default widget data is optional; the registry contract owns layout. */
     }
     await renderWidget(wrapper, def, null, instance, 'Widgets');
-    attachDashboardControls(wrapper, grid);
-    if (document.body.classList.contains('dashboard-edit-mode')) {
-        grid.select?.(wrapper);
-    }
+    const controlsGrid = controller && typeof controller.removeWidget === 'function'
+        ? controller
+        : null;
+    attachDashboardControls(wrapper, controlsGrid);
+    controller?.select?.(wrapper);
+    controller?.emitChange?.(wrapper);
     document.dispatchEvent(new CustomEvent('ui:widget:add', { detail: { type: def.id } }));
 }

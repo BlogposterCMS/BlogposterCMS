@@ -389,6 +389,12 @@ motherEmitter.on('removeListenersByModule', (payload) => {
 motherEmitter.on('deactivateModule', (payload) => {
   const { moduleName, reason } = payload || {};
   console.warn('[MotherEmitter] Deactivating module="%s" => reason="%s"', moduleName, reason);
+  const loadedModule = global.loadedModules?.[moduleName];
+  if (loadedModule && typeof loadedModule.stop === 'function') {
+    Promise.resolve(loadedModule.stop(reason)).catch(err => {
+      console.error('[MotherEmitter] Failed to stop runner for module="%s": %s', moduleName, err.message);
+    });
+  }
   removeListenersForModule(motherEmitter, moduleName);
   if (global.loadedModules) delete global.loadedModules[moduleName];
 });

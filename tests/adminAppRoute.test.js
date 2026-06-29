@@ -126,39 +126,39 @@ test('GET /admin/app/badapp returns error when index missing', async () => {
 });
 
 test('real admin app route keeps app iframe sandboxed', () => {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  expect(appJs).toContain('getAppLaunchInfo');
-  expect(appJs).toContain('<script type="module" src="/build/appFrameLoader.js"></script>');
-  expect(appJs).toContain('<script type="module" src="/build/agentConsole.js"></script>');
-  expect(appJs).toContain('<script src="/build/openExplorer.js"></script>');
-  expect(appJs).toContain('<meta name="app-agent-surface" content="${agentSurfaceSafe}">');
-  expect(appJs).toContain('manifest.agentSurface');
-  expect(appJs).toContain('sandbox="${appSandbox}"');
-  expect(appJs).toContain('allow="clipboard-read; clipboard-write"');
-  expect(appJs).not.toContain("const manifestPath = path.join(appDir, 'app.json')");
-  expect(appJs).not.toContain('/assets/js/appFrameLoader.js');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/adminShellRoutes.js'), 'utf8');
+  expect(source).toContain('getAppLaunchInfo');
+  expect(source).toContain('<script type="module" src="/build/appFrameLoader.js"></script>');
+  expect(source).toContain('<script type="module" src="/build/agentConsole.js"></script>');
+  expect(source).toContain('<script src="/build/openExplorer.js"></script>');
+  expect(source).toContain('<meta name="app-agent-surface" content="${agentSurfaceSafe}">');
+  expect(source).toContain('manifest.agentSurface');
+  expect(source).toContain('sandbox="${appSandbox}"');
+  expect(source).toContain('allow="clipboard-read; clipboard-write"');
+  expect(source).not.toContain("const manifestPath = path.join(appDir, 'app.json')");
+  expect(source).not.toContain('/assets/js/appFrameLoader.js');
 });
 
 test('real app static route is guarded before serving files', () => {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  expect(appJs).toContain('STATIC_BLOCKED_FILENAMES');
-  expect(appJs).toContain('package-lock.json');
-  expect(appJs).toContain('^\\.env(?:\\.|$)');
-  expect(appJs).toMatch(/const appStaticPath = path\.join\(__dirname, 'apps'\)/);
-  expect(appJs).toMatch(/const guardAppStaticRoot = makeStaticRealpathGuard\(appStaticPath, 'apps'\)/);
-  expect(appJs).toMatch(
+  const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/staticAssets.js'), 'utf8');
+  expect(source).toContain('STATIC_BLOCKED_FILENAMES');
+  expect(source).toContain('package-lock.json');
+  expect(source).toContain('^\\.env(?:\\.|$)');
+  expect(source).toMatch(/const appStaticPath = path\.join\(rootDir, 'apps'\)/);
+  expect(source).toMatch(/const guardAppStaticRoot = makeStaticRealpathGuard\(appStaticPath, 'apps'\)/);
+  expect(source).toMatch(
     /app\.use\(\s*['"]\/apps['"]\s*,\s*setStaticCorsHeaders\s*,\s*guardAppStaticRoot\s*,\s*blockBrowserSourceFiles\s*,\s*express\.static\(appStaticPath\)/
   );
 });
 
 test('real theme static route blocks executable theme assets', () => {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  expect(appJs).toContain('blockThemeExecutableAssets');
-  expect(appJs).toContain('Themes are presentation-only');
-  expect(appJs).toMatch(/const themesPath = path\.join\(publicPath, 'themes'\)/);
-  expect(appJs).toMatch(/const guardThemeStaticRoot = makeStaticRealpathGuard\(themesPath, 'themes'\)/);
-  expect(appJs).toMatch(/\?\:asp\|aspx\|cjs\|js\|jsx\|jsp\|mjs\|php\|phtml\|py\|rb\|sh\|ts\|tsx\|vue\|svelte/);
-  expect(appJs).toMatch(
+  const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/staticAssets.js'), 'utf8');
+  expect(source).toContain('blockThemeExecutableAssets');
+  expect(source).toContain('Themes are presentation-only');
+  expect(source).toMatch(/const themesPath = path\.join\(publicPath, 'themes'\)/);
+  expect(source).toMatch(/const guardThemeStaticRoot = makeStaticRealpathGuard\(themesPath, 'themes'\)/);
+  expect(source).toMatch(/\?\:asp\|aspx\|cjs\|js\|jsx\|jsp\|mjs\|php\|phtml\|py\|rb\|sh\|ts\|tsx\|vue\|svelte/);
+  expect(source).toMatch(
     /app\.use\(\s*['"]\/themes['"]\s*,\s*setStaticCorsHeaders\s*,\s*guardThemeStaticRoot\s*,\s*blockThemeExecutableAssets\s*,\s*express\.static\(themesPath\)/
   );
 });

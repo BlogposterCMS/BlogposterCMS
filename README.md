@@ -28,7 +28,7 @@ A system that’s as **intuitive as a design tool**, as **flexible as a develope
   Load only what you need. Keep your project lean, your code clean, and your sanity intact.
 
 *  **Secure by Design**
-  Built-in sandboxing, granular permissions, and JWT-secured events.
+  Process-isolated community modules, granular permissions, and JWT-secured events.
   Because “ship now, patch later” isn’t a strategy – it’s a lawsuit waiting to happen.
 
 *  **Visual Builder with CanvasGrid** *(Alpha)*

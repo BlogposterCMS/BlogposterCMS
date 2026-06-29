@@ -446,12 +446,15 @@ test('agent http api invokes central surface workflows', async () => {
 });
 
 test('real app mounts the dedicated agent admin api before admin fallback routes', () => {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  const mountIndex = appJs.indexOf("app.use('/admin/api/agent'");
-  const fallbackIndex = appJs.indexOf("app.get('/admin/*'");
+  const appSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/createBlogposterApp.js'), 'utf8');
+  const agentRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/agentApiRoutes.js'), 'utf8');
+  const adminRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/adminShellRoutes.js'), 'utf8');
+  const mountIndex = appSource.indexOf('mountAgentApiRoutes(app');
+  const fallbackIndex = appSource.indexOf('app.use(createAdminShellRoutes');
   assert(mountIndex > -1, 'agent admin api mount missing');
   assert(fallbackIndex > -1, 'admin fallback route missing');
   assert(mountIndex < fallbackIndex, 'agent admin api must be mounted before the admin fallback');
-  assert(appJs.includes("createAgentApiRouter({"));
-  assert(appJs.includes("csrfProtection, createAgentApiRouter"));
+  assert(agentRoutesSource.includes("app.use('/admin/api/agent'"));
+  assert(agentRoutesSource.includes('csrfProtection, createAgentApiRouter'));
+  assert(adminRoutesSource.includes("router.get('/admin/*'"));
 });

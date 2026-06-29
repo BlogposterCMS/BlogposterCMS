@@ -3,13 +3,13 @@ const fs = require('fs');
 const path = require('path');
 
 function testLoginRoute() {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/authRoutes.js'), 'utf8');
   assert(
-    appJs.includes("res.redirect('/admin/home')"),
+    source.includes("res.redirect('/admin/home')"),
     'Login route does not redirect authenticated users to /admin/home'
   );
   assert(
-    appJs.includes("Cache-Control', 'no-store"),
+    source.includes("Cache-Control', 'no-store"),
     'Login route missing no-store Cache-Control header'
   );
 }

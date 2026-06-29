@@ -9,14 +9,14 @@ test('designer uses the central agent manager instead of a private agent API', (
   const allowedEvents = new Map(
     appLoader._internals.normalizeAllowedAppEvents(appJson)
   );
-  const appJs = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  const coreModulesSource = fs.readFileSync(path.join(root, 'mother/server/bootstrap/coreModules.js'), 'utf8');
   const designerHtml = fs.readFileSync(path.join(root, 'apps/designer/index.html'), 'utf8');
   const indexSource = fs.readFileSync(path.join(root, 'ui/designer/app/index.ts'), 'utf8');
   const agentSurfaceSource = fs.readFileSync(path.join(root, 'ui/designer/app/agentSurface.ts'), 'utf8');
   const builderRendererSource = fs.readFileSync(path.join(root, 'ui/designer/app/builderRenderer.ts'), 'utf8');
   const sharedClientSource = fs.readFileSync(path.join(root, 'ui/shared/agent/agentSurfaceClient.ts'), 'utf8');
 
-  expect(appJs).toContain("path:'mother/modules/agentManager'");
+  expect(coreModulesSource).toContain("path: 'mother/modules/agentManager'");
   expect(appJson.agentSurface).toBe(true);
   expect(appJson.allowedEvents.some((entry: { eventName?: string }) => String(entry.eventName || '').startsWith('agent.'))).toBe(false);
   expect(designerHtml).toContain('/build/appBridge.js');

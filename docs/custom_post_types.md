@@ -13,6 +13,16 @@ This flexibility means you rarely need a separate "custom post type" concept.
 This approach simplifies security because the CMS only needs to validate one kind of page object.
 Developers still get predictable data structures, while editors can organize content however they like.
 
+WordPress imports follow the same model: categories become collection parent
+pages where possible, imported posts become child pages, and tags stay metadata
+or later filter hints instead of creating a separate taxonomy system.
+Runtime presentation can then cascade through that parent/child hierarchy: a
+child page without its own design can reuse the nearest parent page design or
+layout template while keeping its own content.
+WordPress language and translation-group hints stay metadata-first as well:
+valid language codes are copied onto the imported entry/page, while translation
+extension grouping remains traceable under the WordPress metadata.
+
 ## Why No Custom Post Types?
 - Fewer moving parts reduce the attack surface.
 - Layout inheritance keeps your pages consistent without extra configuration.

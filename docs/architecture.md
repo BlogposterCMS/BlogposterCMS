@@ -5,8 +5,8 @@ BlogposterCMS is designed around a modular core that communicates exclusively vi
 ## Core vs Community Modules
 
 - **Core modules** ship with the CMS and live in `mother/modules`. They are loaded at server start and receive a high-trust token so they can perform privileged operations. Core bootstrap issues tokens per core module identity; new code should not reuse one module's token for another module's payload.
-- **Community modules** live under `modules/`. They are sandboxed during the health check phase, then loaded if they pass. These modules run with lower trust tokens and are restricted to the permissions granted in their JWT.
-- Community modules do not receive the raw Express app. The module loader passes a scoped `moduleHost` plus a scoped event bus so static registration and event emission stay behind a stable contract. This is the migration seam for moving the core host from Node to Go later.
+- **Community modules** live under `modules/`. They are validated, health-checked in a short-lived runner process and started in a fresh runtime process if they pass. These modules run with lower trust tokens and are restricted to the permissions granted in their JWT.
+- Community modules do not receive the raw Express app or host objects. The module loader exposes `moduleHost` plus a scoped event bus through an IPC contract so static registration and event emission stay behind a stable process boundary. This is the migration seam for moving the core host from Node to Go later.
 
 ## Event Driven Workflow
 
@@ -18,6 +18,19 @@ BlogposterCMS is designed around a modular core that communicates exclusively vi
 For community modules, `motherEmitter` is a scoped facade supplied by the loader. It automatically tags listeners with the module name and prevents a module from emitting as another module or as `core`.
 
 This design ensures that even optional modules cannot bypass security rules or directly access the internals of other modules.
+
+## Server Composition
+
+The Node entry point `app.js` is intentionally thin. It loads environment
+configuration, attaches process-level error/shutdown handlers, then delegates
+Express setup to `mother/server/createBlogposterApp.js`. Host concerns such as
+static assets, security middleware, HTTP routers, installation state and module
+bootstrap live under `mother/server/` so they can be tested without turning the
+entry point into a central implementation file again.
+
+Core product behavior still belongs in `mother/modules/*`. Server composition
+files may mount routers, guard asset delivery and bootstrap modules, but should
+not become a second module system or own CMS business logic.
 
 ## Modules, Widgets And Apps
 
@@ -34,10 +47,10 @@ This design ensures that even optional modules cannot bypass security rules or d
 ## Security Layers
 
 - **JWT Signatures** – Every event payload must include a signed token. Invalid or missing tokens cause the request to be rejected.
-- **Sandboxing** – Optional modules are executed inside a VM sandbox during the health check. If a module throws errors or tries unsafe operations it is deactivated.
+- **Process isolation** - Optional modules execute outside the CMS host process. Health checks and runtime initialization both use the runner protocol, and invalid host requests deactivate the module.
 - **Permission Checks** – Many events verify explicit permissions before executing. Admin routes require valid credentials and user roles.
 
 - **Identity Binding** - Registered module type wins over the payload, and non-high-trust module tokens cannot emit as another module.
 - **Host Contract** - Community modules use `moduleHost` capabilities such as `eventBus` and `registerStaticAssets()` instead of direct server access.
 
-By layering these protections the CMS aims to remain robust even when running untrusted community modules.
+By layering these protections the CMS keeps community code out of the host process. Real Marketplace production hardening still needs OS/container isolation around the runner process.

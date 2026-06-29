@@ -1,5 +1,3 @@
-import { init as initCanvasGrid } from './canvasGrid.js';
-import type { RendererGrid } from './runtimeGridMetrics.js';
 import { clearContentKeepHeader } from './runtimePageShell.js';
 import {
   loadRuntimeLayoutForViewport,
@@ -16,9 +14,10 @@ import {
   ADMIN_COLUMN_COUNT,
   bindAdminDropTarget,
   bindAdminLayoutPersistence,
-  bindResponsiveAdminColumns,
+  createAdminDashboardController,
   exposeAdminGridGlobals
 } from './runtimeAdminGridInteractions.js';
+import type { RuntimeAdminDashboardController } from './runtimeAdminGridInteractions.js';
 
 type LooseRecord = Record<string, any>;
 type LayoutItem = RuntimeAdminGridLayoutItem;
@@ -36,32 +35,21 @@ export type RuntimeAdminGridOptions = {
 
 export type RuntimeAdminGridResult = {
   gridEl: HTMLElement;
-  grid: RendererGrid;
+  grid: RuntimeAdminDashboardController;
   layout: LayoutItem[];
 };
 
 function createAdminGrid(contentEl: HTMLElement): {
   gridEl: HTMLElement;
-  grid: RendererGrid;
+  grid: RuntimeAdminDashboardController;
 } {
   const gridEl = document.createElement('div');
   gridEl.id = 'adminGrid';
-  gridEl.className = 'canvas-grid';
+  gridEl.className = 'canvas-grid dashboard-grid';
+  gridEl.style.setProperty('--dashboard-columns', String(ADMIN_COLUMN_COUNT));
   contentEl.appendChild(gridEl);
 
-  const grid = initCanvasGrid({
-    cellHeight: 1,
-    columnWidth: 1,
-    columns: ADMIN_COLUMN_COUNT,
-    percentageMode: true,
-    pushOnOverlap: true,
-    useBoundingBox: true,
-    bboxHandles: false,
-    enableZoom: false,
-    renderPercentLayoutAsPixels: true
-  }, gridEl) as RendererGrid;
-  grid.options = grid.options || {};
-
+  const grid = createAdminDashboardController(gridEl);
   return { gridEl, grid };
 }
 
@@ -81,7 +69,6 @@ export async function renderAdminRuntimeGrid({
 
   clearContentKeepHeader(contentEl);
   const { gridEl, grid } = createAdminGrid(contentEl);
-  bindResponsiveAdminColumns(gridEl, grid);
   exposeAdminGridGlobals(grid, page.id, lane, layout);
   bindAdminDropTarget(gridEl, grid);
 

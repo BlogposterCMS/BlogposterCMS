@@ -1,3 +1,4 @@
+export { fetchPendingModuleAccessRequests, moduleAccessErrorMessage, resolveModuleAccessRequest, toModuleAccessRuntimeRequests } from '../../../shared/module-access/moduleAccessConsentData.js';
 const MODULE_LOADER_MODULE = {
     moduleName: 'moduleLoader',
     moduleType: 'core'
@@ -18,6 +19,15 @@ function toArray(value) {
 }
 export function toModules(value) {
     return toArray(value).filter((item) => Boolean(item) && typeof item === 'object');
+}
+export function toModuleZipInspection(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    return {
+        moduleName: source.moduleName || source.moduleInfo?.moduleName,
+        moduleInfo: source.moduleInfo || {},
+        permissions: Array.isArray(source.permissions) ? source.permissions : source.moduleInfo?.permissions || [],
+        requestedAccess: Array.isArray(source.requestedAccess) ? source.requestedAccess : source.moduleInfo?.requestedAccess || []
+    };
 }
 export function errorMessage(err) {
     return err instanceof Error ? err.message : String(err);
@@ -56,21 +66,34 @@ export async function fetchModuleLists(emit, jwt) {
         system: toModules(systemRes)
     };
 }
-export async function toggleModuleRegistryActivation(emit, jwt, moduleRecord) {
+export async function toggleModuleRegistryActivation(emit, jwt, moduleRecord, approvedAccess) {
     const meltdownEmit = requireEmitter(emit);
     const nextActive = !moduleRecord.is_active;
-    await meltdownEmit(moduleRecord.is_active ? 'deactivateModuleInRegistry' : 'activateModuleInRegistry', {
+    const payload = {
         jwt,
         ...MODULE_LOADER_MODULE,
         targetModuleName: moduleRecord.module_name
-    });
+    };
+    if (Array.isArray(approvedAccess))
+        payload.approvedAccess = approvedAccess;
+    await meltdownEmit(moduleRecord.is_active ? 'deactivateModuleInRegistry' : 'activateModuleInRegistry', payload);
     return nextActive;
 }
-export async function installModuleZip(emit, jwt, zipData) {
+export async function inspectModuleZip(emit, jwt, zipData) {
+    const meltdownEmit = requireEmitter(emit);
+    const res = await meltdownEmit('inspectModuleZipAccess', {
+        jwt,
+        ...MODULE_LOADER_MODULE,
+        zipData
+    });
+    return toModuleZipInspection(res);
+}
+export async function installModuleZip(emit, jwt, zipData, approvedAccess = []) {
     const meltdownEmit = requireEmitter(emit);
     await meltdownEmit('installModuleFromZip', {
         jwt,
         ...MODULE_LOADER_MODULE,
-        zipData
+        zipData,
+        approvedAccess
     });
 }

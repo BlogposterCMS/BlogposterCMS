@@ -19,6 +19,7 @@ const {
   assertHighLevelCrudIdentifiers,
   assertHighLevelCrudAllowed,
   canUseRemoteDatabaseBridge,
+  isCommunityStorageCall,
   markInternalDatabaseCall,
   normalizeSafeRawExpressionForColumn
 } = require('./databaseEventBoundary');
@@ -291,6 +292,25 @@ async function remoteDbDelete(baseUrl, moduleName, table, where) {
   return resp.data;
 }
 
+function quoteIdentifier(identifier) {
+  return `"${String(identifier).replace(/"/g, '""')}"`;
+}
+
+function resolveSqlTableName(payload) {
+  const { moduleName, table } = payload;
+  if (isCommunityStorageCall(payload)) {
+    return quoteIdentifier(table);
+  }
+  if (getDbType() === 'postgres') {
+    return `${quoteIdentifier(moduleName.toLowerCase())}.${quoteIdentifier(table)}`;
+  }
+  return quoteIdentifier(`${moduleName.toLowerCase()}_${table}`);
+}
+
+function resolveCollectionName(payload) {
+  return payload.table;
+}
+
 /* ------------------------------------------------------------------
    Local meltdown bridging
    ------------------------------------------------------------------ */
@@ -324,7 +344,7 @@ function localDbInsert(motherEmitter, payload, callback) {
         jwt,
         moduleName,
         operation: 'insertOne',
-        params: { collectionName: table, doc: data }
+        params: { collectionName: resolveCollectionName(payload), doc: data }
       }, 'insert'),
       (err, result) => {
         if (err) return callback(err);
@@ -341,9 +361,7 @@ function localDbInsert(motherEmitter, payload, callback) {
   const placeholders = columns.map((_, i) => ph(i+1));
   const values = Object.values(data);
 
-  const tableName = getDbType() === 'postgres'
-    ? `"${moduleName.toLowerCase()}"."${table}"`
-    : `"${moduleName.toLowerCase()}_${table}"`;
+  const tableName = resolveSqlTableName(payload);
   const sql = `
     INSERT INTO ${tableName}
     (${columns.join(', ')})
@@ -394,7 +412,7 @@ function localDbSelect(motherEmitter, payload, callback) {
         jwt,
         moduleName,
         operation: 'find',
-        params: { collectionName: table, query: where || {} }
+        params: { collectionName: resolveCollectionName(payload), query: where || {} }
       }, 'select'),
       (err, result) => {
         if (err) return callback(err);
@@ -420,9 +438,7 @@ function localDbSelect(motherEmitter, payload, callback) {
     values = Object.values(where);
   }
 
-  const tableName = getDbType() === 'postgres'
-    ? `"${moduleName.toLowerCase()}"."${table}"`
-    : `"${moduleName.toLowerCase()}_${table}"`;
+  const tableName = resolveSqlTableName(payload);
   const sql = `
     SELECT *
     FROM ${tableName}
@@ -499,7 +515,7 @@ function localDbUpdate(motherEmitter, payload, callback) {
         jwt,
         moduleName,
         operation: 'updateOne',
-        params: { collectionName: table, query: where, update: updateObj }
+        params: { collectionName: resolveCollectionName(payload), query: where, update: updateObj }
       }, 'update'),
       (err, result) => {
         if (err) return callback(err);
@@ -542,9 +558,7 @@ function localDbUpdate(motherEmitter, payload, callback) {
 
   const allValues = [...setValues, ...whereValues];
 
-  const tableName = getDbType() === 'postgres'
-    ? `"${moduleName.toLowerCase()}"."${table}"`
-    : `"${moduleName.toLowerCase()}_${table}"`;
+  const tableName = resolveSqlTableName(payload);
   const sql = `
     UPDATE ${tableName}
     SET ${setClauses.join(', ')}
@@ -593,7 +607,7 @@ function localDbDelete(motherEmitter, payload, callback) {
         jwt,
         moduleName,
         operation: 'deleteOne',
-        params: { collectionName: table, query: where }
+        params: { collectionName: resolveCollectionName(payload), query: where }
       }, 'delete'),
       (err, result) => {
         if (err) return callback(err);
@@ -606,9 +620,7 @@ function localDbDelete(motherEmitter, payload, callback) {
   const whereClauses = whereKeys.map((col, i) => `"${col}" = ${ph(i+1)}`);
   const whereValues = Object.values(where);
 
-  const tableName = getDbType() === 'postgres'
-    ? `"${moduleName.toLowerCase()}"."${table}"`
-    : `"${moduleName.toLowerCase()}_${table}"`;
+  const tableName = resolveSqlTableName(payload);
   const sql = `
     DELETE FROM ${tableName}
     WHERE ${whereClauses.join(' AND ')}

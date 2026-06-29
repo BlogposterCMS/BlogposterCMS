@@ -3,6 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const plainSpace = require('../mother/modules/plainSpace');
+const { DEFAULT_WIDGETS } = require('../mother/modules/plainSpace/config/defaultWidgets');
 
 const {
   buildDefaultWidgetSizeContract,
@@ -101,11 +102,8 @@ test('plainSpace widget registry resolves bundled, community, and legacy widget 
       ]
     );
     assert.strictEqual(widgets[0].metadata.layout.supportedSlots[0].name, 'full');
-    assert.deepStrictEqual(widgets[0].metadata.seedOptions, {
-      height: 150,
-      maxWidth: true,
-      debug: true
-    });
+    assert.strictEqual(widgets[0].metadata.seedOptions, undefined);
+    assert.strictEqual(widgets[0].metadata.layout.defaultSlot, 'full');
     assert.deepStrictEqual(widgets[0].metadata.layout.supportedSlots[0], {
       name: 'full',
       minCols: 12,
@@ -126,20 +124,28 @@ test('plainSpace widget registry resolves bundled, community, and legacy widget 
   }
 });
 
-test('plainSpace registry metadata carries widget size contracts from seed options', () => {
+test('plainSpace registry metadata carries explicit widget size contracts', () => {
   assert.deepStrictEqual(
     buildDefaultWidgetSizeContract({ options: { halfWidth: true, overflow: true } }),
     {
+      defaultSlot: 'full',
       supportedSlots: [
-        { name: 'full', minCols: 12, maxCols: 12 },
-        { name: 'wide', minCols: 6 }
+        { name: 'full', minCols: 12, maxCols: 12 }
       ],
       breakpoints: {
         mobile: ['full'],
-        tablet: ['full', 'wide'],
-        desktop: ['full', 'wide']
+        tablet: ['full'],
+        desktop: ['full']
       },
-      heightMode: 'scroll'
+      heightMode: 'dynamic',
+      height: {
+        mode: 'dynamic',
+        minHeight: {
+          mobile: 120,
+          tablet: 140,
+          desktop: 160
+        }
+      }
     }
   );
 
@@ -150,27 +156,23 @@ test('plainSpace registry metadata carries widget size contracts from seed optio
       category: 'core'
     }).layout.supportedSlots,
     [
-      { name: 'full', minCols: 12, maxCols: 12 },
-      { name: 'wide', minCols: 6 },
-      { name: 'compact', minCols: 4 }
+      { name: 'third', minCols: 4, maxCols: 4 },
+      { name: 'half', minCols: 6, maxCols: 6 },
+      { name: 'full', minCols: 12, maxCols: 12 }
     ]
   );
-  assert.deepStrictEqual(
+  assert.strictEqual(
     buildRegistryMetadata({
       widgetId: 'pageStats',
       label: 'Page Stats',
       category: 'core'
     }).seedOptions,
-    {
-      halfWidth: true,
-      height: 160,
-      overflow: true
-    }
+    undefined
   );
 
   assert.strictEqual(
     buildDefaultWidgetSizeContract({ options: { width: 100, overflow: true } }).heightMode,
-    'auto'
+    'dynamic'
   );
 
   assert.deepStrictEqual(
@@ -207,4 +209,70 @@ test('plainSpace registry metadata carries widget size contracts from seed optio
       mode: 'advisory'
     }
   );
+});
+
+test('plainSpace default public widget metadata exposes Design Studio essentials except page lists', () => {
+  const publicWidgets = [
+    ['textBox', 'Rich Text', '/ui/widgets/plainspace/public/basicwidgets/textBoxWidget.js'],
+    ['mediaBlock', 'Media', '/ui/widgets/plainspace/public/basicwidgets/mediaWidget.js'],
+    ['buttonLink', 'Button / Link', '/ui/widgets/plainspace/public/basicwidgets/buttonWidget.js'],
+    ['navigationMenu', 'Menu', '/ui/widgets/plainspace/public/basicwidgets/navigationMenuWidget.js'],
+    ['breadcrumb', 'Breadcrumb', '/ui/widgets/plainspace/public/basicwidgets/breadcrumbWidget.js'],
+    ['gallery', 'Gallery', '/ui/widgets/plainspace/public/basicwidgets/galleryWidget.js']
+  ];
+
+  for (const [widgetId, label, content] of publicWidgets) {
+    const metadata = buildRegistryMetadata({ widgetId, label, content, category: 'public' });
+    assert.strictEqual(metadata.label, label);
+    assert.deepStrictEqual(metadata.designContract, {
+      version: 1,
+      mode: 'strict',
+      tokens: 'required',
+      designerRules: 'required'
+    });
+    assert(Array.isArray(metadata.layout.supportedSlots), `${widgetId} should publish a size contract`);
+  }
+
+  const publicIds = DEFAULT_WIDGETS
+    .filter(widget => widget.widgetType === 'public')
+    .map(widget => widget.widgetId);
+  assert(!publicIds.includes('pageList'));
+  assert(!publicIds.includes('collectionsList'));
+
+  const htmlBlock = DEFAULT_WIDGETS.find(widget => widget.widgetId === 'htmlBlock');
+  assert.strictEqual(htmlBlock.metadata.hiddenFromCatalog, true);
+  assert.strictEqual(htmlBlock.metadata.advanced, true);
+});
+
+test('plainSpace default admin widgets include Navigation Studio contracts', () => {
+  const widget = DEFAULT_WIDGETS.find(item => item.widgetId === 'navigationStudio');
+
+  assert(widget);
+  assert.strictEqual(widget.content, '/ui/widgets/plainspace/admin/navigationStudioWidget.js');
+  assert(widget.metadata.apiEvents.includes('listNavigationMenus'));
+  assert(widget.metadata.apiEvents.includes('getNavigationTree'));
+  assert(widget.metadata.apiEvents.includes('designer.saveDesign'));
+  assert.strictEqual(widget.metadata.seedOptions, undefined);
+  assert.strictEqual(widget.metadata.layout.defaultSlot, 'page');
+  assert.strictEqual(widget.metadata.layout.heightMode, 'scroll');
+  assert.deepStrictEqual(widget.metadata.layout.height.minHeight, {
+    mobile: 'calc(100dvh - 120px)',
+    tablet: 'calc(100dvh - 140px)',
+    desktop: 'calc(100dvh - 160px)'
+  });
+  assert.deepStrictEqual(widget.metadata.layout.supportedSlots, [
+    { name: 'page', minCols: 12, maxCols: 12, exclusive: true }
+  ]);
+});
+
+test('plainSpace keeps legacy page editor alias hidden from catalogs', () => {
+  const alias = DEFAULT_WIDGETS.find(item => item.widgetId === 'pageEditor');
+  const active = DEFAULT_WIDGETS.find(item => item.widgetId === 'pageEditorWidget');
+
+  assert(alias);
+  assert(active);
+  assert.strictEqual(alias.content, active.content);
+  assert.strictEqual(alias.metadata.aliasOf, 'pageEditorWidget');
+  assert.strictEqual(alias.metadata.hiddenFromCatalog, true);
+  assert.strictEqual(alias.metadata.deprecated, true);
 });

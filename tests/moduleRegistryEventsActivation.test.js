@@ -22,6 +22,10 @@ class ActivationEmitter extends EventEmitter {
   }
 
   emit(eventName, payload, cb) {
+    if (eventName === 'dbSelect') {
+      if (typeof cb === 'function') cb(null, []);
+      return true;
+    }
     if (eventName === 'dbUpdate') {
       this.updates.push(payload);
       if (typeof cb === 'function') cb(null, { ok: true });
@@ -35,7 +39,7 @@ class ActivationEmitter extends EventEmitter {
   }
 }
 
-function withTempModule(moduleName, source, fn) {
+async function withTempModule(moduleName, source, fn) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-activation-'));
   const modulesRoot = path.join(root, 'modules');
   const moduleDir = path.join(modulesRoot, moduleName);
@@ -52,8 +56,12 @@ function withTempModule(moduleName, source, fn) {
   const previousLoadedModules = global.loadedModules;
   try {
     process.chdir(root);
-    return fn({ root, modulesRoot, moduleDir });
+    return await fn({ root, modulesRoot, moduleDir });
   } finally {
+    const loadedModule = global.loadedModules?.[moduleName];
+    if (loadedModule && typeof loadedModule.stop === 'function') {
+      await loadedModule.stop('test cleanup');
+    }
     process.chdir(originalCwd);
     global.loadedModules = previousLoadedModules;
     fs.rmSync(root, { recursive: true, force: true });
@@ -131,24 +139,26 @@ test('activateModuleInRegistry immediate load scopes safe payloads and records l
 test('activateModuleInRegistry does not expose loader tokens in module initialize context', async () => {
   await withTempModule('tokenlessActivation', `
     module.exports = {
-      seenContext: null,
       async initialize(context) {
-        module.exports.seenContext = {
+        context.motherEmitter.emit('tokenlessActivation.ready', {
           hasJwt: Object.prototype.hasOwnProperty.call(context, 'jwt'),
           hasNonce: Object.prototype.hasOwnProperty.call(context, 'nonce')
-        };
-        context.motherEmitter.emit('tokenlessActivation.ready', { ok: true }, () => {});
+        }, () => {});
       }
     };
   `, async ({ modulesRoot }) => {
     const emitter = new ActivationEmitter();
-    emitter.on('tokenlessActivation.ready', (payload, cb) => cb(null, payload));
+    const forwarded = [];
+    emitter.on('tokenlessActivation.ready', (payload, cb) => {
+      forwarded.push(payload);
+      cb(null, payload);
+    });
 
     const result = await _internals.attemptSingleLoad('tokenlessActivation', emitter, {}, 'module-token', { modulesRoot });
 
     assert.strictEqual(result, true);
-    assert.strictEqual(global.loadedModules.tokenlessActivation.seenContext.hasJwt, false);
-    assert.strictEqual(global.loadedModules.tokenlessActivation.seenContext.hasNonce, false);
+    assert.strictEqual(forwarded[0].hasJwt, false);
+    assert.strictEqual(forwarded[0].hasNonce, false);
   });
 });
 
@@ -170,32 +180,27 @@ test('activateModuleInRegistry immediate load blocks system events', async () =>
   });
 });
 
-test('activateModuleInRegistry immediate load cannot bypass the module sandbox', async () => {
-  await withTempModule('sandboxedActivation', `
-    const childProcess = require('child_process');
+test('activateModuleInRegistry immediate load runs community code outside the host process', async () => {
+  await withTempModule('processActivation', `
     module.exports = {
-      async initialize() {
-        childProcess.execSync('node --version');
+      async initialize({ motherEmitter }) {
+        motherEmitter.emit('processActivation.ready', { modulePid: process.pid }, () => {});
       }
     };
   `, async ({ modulesRoot }) => {
     const emitter = new ActivationEmitter();
-    const previousSandboxOptOut = process.env.ALLOW_INDIVIDUAL_SANDBOX;
-    process.env.ALLOW_INDIVIDUAL_SANDBOX = 'false';
+    const forwarded = [];
+    emitter.on('processActivation.ready', (payload, cb) => {
+      forwarded.push(payload);
+      cb(null, { ok: true });
+    });
 
-    try {
-      const result = await _internals.attemptSingleLoad('sandboxedActivation', emitter, {}, 'module-token', { modulesRoot });
+    const result = await _internals.attemptSingleLoad('processActivation', emitter, {}, 'module-token', { modulesRoot });
 
-      assert.strictEqual(result, false);
-      assert.strictEqual(global.loadedModules?.sandboxedActivation, undefined);
-      assert.match(emitter.updates[0].data.last_error, /Access to 'child_process' is denied/);
-    } finally {
-      if (previousSandboxOptOut === undefined) {
-        delete process.env.ALLOW_INDIVIDUAL_SANDBOX;
-      } else {
-        process.env.ALLOW_INDIVIDUAL_SANDBOX = previousSandboxOptOut;
-      }
-    }
+    assert.strictEqual(result, true);
+    assert.notStrictEqual(forwarded[0].modulePid, process.pid);
+    assert.strictEqual(global.loadedModules.processActivation.runtime, 'process');
+    assert.strictEqual(typeof global.loadedModules.processActivation.processId, 'number');
   });
 });
 
@@ -250,8 +255,13 @@ test('deactivateModuleInRegistry removes runtime listeners and loaded module exp
   const emitter = new ActivationEmitter();
   initModuleRegistryAdminEvents(emitter, {});
 
+  let stopped = false;
   global.loadedModules = {
-    staleModule: { initialize() {} }
+    staleModule: {
+      async stop() {
+        stopped = true;
+      }
+    }
   };
   const staleListener = Object.assign(() => {}, { moduleName: 'staleModule' });
   emitter.on('stale.event', staleListener);
@@ -273,6 +283,7 @@ test('deactivateModuleInRegistry removes runtime listeners and loaded module exp
   assert.strictEqual(emitter.updates[0].where.module_name, 'staleModule');
   assert.strictEqual(emitter.updates[0].data.is_active, false);
   assert.strictEqual(global.loadedModules.staleModule, undefined);
+  assert.strictEqual(stopped, true);
   assert.strictEqual(emitter.removals.length, 0);
   assert.strictEqual(emitter.listeners('stale.event').length, 0);
 });

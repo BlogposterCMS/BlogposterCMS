@@ -9,14 +9,16 @@ export type WidgetModuleDefinition = {
 export async function renderWidgetModule(
   container: HTMLElement,
   widgetDef: WidgetModuleDefinition,
-  instanceId?: string
+  instanceId?: string,
+  instanceMetadata: Record<string, any> = {}
 ): Promise<void> {
   if (!widgetDef.codeUrl) return;
 
   const ctx: Record<string, any> = {
     id: instanceId,
     widgetId: widgetDef.id,
-    metadata: widgetDef.metadata
+    metadata: widgetDef.metadata,
+    instanceMetadata
   };
   if (window.ADMIN_TOKEN) ctx.jwt = window.ADMIN_TOKEN;
 

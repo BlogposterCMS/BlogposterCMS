@@ -186,7 +186,9 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
     count: { eventName: 'getUserCount', moduleName: 'userManagement', permission: 'users.read' },
     create: { eventName: 'createUser', moduleName: 'userManagement', permission: 'users.create' },
     update: { eventName: 'updateUserProfile', moduleName: 'userManagement', permission: 'users.update' },
-    delete: { eventName: 'deleteUser', moduleName: 'userManagement', permission: 'users.delete' }
+    delete: { eventName: 'deleteUser', moduleName: 'userManagement', permission: 'users.delete' },
+    access: { eventName: 'getUserAccess', moduleName: 'userManagement', permission: 'userManagement.editUser' },
+    setAccess: { eventName: 'setUserAccess', moduleName: 'userManagement', permission: 'userManagement.editUser' }
   },
   roles: {
     list: { eventName: 'getAllRoles', moduleName: 'userManagement', permission: 'userManagement.listRoles' },
@@ -208,16 +210,17 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
     activeGrapes: { eventName: 'listActiveGrapesModules', moduleName: 'moduleLoader', permission: 'modules.listActive' },
     activate: { eventName: 'activateModuleInRegistry', moduleName: 'moduleLoader', permission: 'modules.activate' },
     deactivate: { eventName: 'deactivateModuleInRegistry', moduleName: 'moduleLoader', permission: 'modules.deactivate' },
-    installZip: { eventName: 'installModuleFromZip', moduleName: 'moduleLoader', permission: 'modules.install' }
+    inspectZip: { eventName: 'inspectModuleZipAccess', moduleName: 'moduleLoader', permission: 'modules.install' },
+    installZip: { eventName: 'installModuleFromZip', moduleName: 'moduleLoader', permission: 'modules.install' },
+    accessRequests: { eventName: 'listPendingModuleAccessRequests', moduleName: 'moduleLoader', permission: 'modules.manageAccess' },
+    resolveAccessRequest: { eventName: 'resolveModuleAccessRequest', moduleName: 'moduleLoader', permission: 'modules.manageAccess' }
   },
   apps: {
     list: { eventName: 'listApps', moduleName: 'appLoader', permission: 'apps.list' },
     get: { eventName: 'getApp', moduleName: 'appLoader', permission: 'apps.list' },
     builderList: { eventName: 'listBuilderApps', moduleName: 'appLoader', permission: 'builder.use' },
     launchInfo: { eventName: 'getAppLaunchInfo', moduleName: 'appLoader', permission: 'builder.use' },
-    rescan: { eventName: 'rescanApps', moduleName: 'appLoader', permission: 'apps.rescan' },
-    installFromDirectory: { eventName: 'installAppFromDirectory', moduleName: 'appLoader', permission: 'apps.install' },
-    uninstall: { eventName: 'uninstallApp', moduleName: 'appLoader', permission: 'apps.delete' }
+    rescan: { eventName: 'rescanApps', moduleName: 'appLoader', permission: 'apps.rescan' }
   },
   fonts: {
     listProviders: { eventName: 'listFontProviders', moduleName: 'fontsManager', permission: 'fonts.read' },

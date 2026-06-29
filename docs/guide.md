@@ -16,6 +16,8 @@ The admin dashboard uses the shared Studio tokens in `public/assets/scss/_variab
 
 ![Login screen](screenshots/Clean%20Login%20Interface.png)
 
+Dashboard hover growth should scale only the background or shadow layer, not the text or icon layer, so the chrome stays sharp while animating.
+
 The login screen cycles through the preset accent colors, softly fading the dotted background and form border between each hue.
 
 Elements with `title`, `aria-label`, or `data-label` attributes automatically reveal an animated floating label on hover, mirroring the sidebar tooltip style.
@@ -26,11 +28,17 @@ When maintenance mode is enabled, the admin header surfaces a red maintenance ba
 
 ## Button System
 
+Global buttons are borderless at rest, keep accessible focus outlines and use a delayed shadow transition for quiet pointer feedback without hover scaling.
+
 Use the global `.button` classes for consistent actions across the dashboard. Variants such as `.primary`, `.ghost`, `.outline`, `.text` and `.danger` cover common intents, while size modifiers `.sm` and `.lg` adjust height. Apply `.block` for full‑width buttons and wrap related actions in a `.button-group` to handle spacing and wrapping. Buttons accept optional icons via a child `.icon` element and expose an `.is-loading` state for spinners.
 
 Dashboard chrome and floating tools should use the same Studio control tokens instead of bespoke button radii, shadows or transition timings. Edit-mode selection frames, CanvasGrid bounding boxes and resize handles are dashboard chrome too, so keep them on `--studio-border-strong` and `--studio-shadow-*` rather than direct `--user-color` rails. Respect `prefers-color-scheme` and `prefers-reduced-motion` by relying on the existing CSS custom properties rather than hard-coding light colors or animation durations.
 
 Modal actions are standard `.button` instances inside `.bp-dialog__actions`. Use `.primary` for the main action, `.ghost` for cancel/secondary actions and `.danger` only for destructive confirmations.
+
+## Link System
+
+The shared external-link enhancer marks cross-origin `http` and `https` anchors with `data-external-link="true"`. Global CSS removes their underline and adds the small north-east arrow marker automatically, including links inserted by dashboard navigation or widget rendering after page load.
 
 ## Dropdown System
 
@@ -66,19 +74,37 @@ Widgets are small blocks of functionality (text blocks, images, counters, etc.) 
 - Widgets registered for the **public** lane render on live pages.
 - Widgets registered for the **admin** lane appear in the dashboard for building pages or showing statistics.
 
-Layouts and widgets are edited via drag and drop in the admin dashboard. While in edit mode, open the widget drawer and drag widgets onto the grid to place them. The widget manager ensures only users with the appropriate permissions can create or modify widgets.
+The bundled Design Studio public lane includes `textBox` as the compatible
+Rich Text widget plus `mediaBlock`, `buttonLink`, `navigationMenu`,
+`breadcrumb` and `gallery`. Page-list and collection teaser rendering stays out
+of this public widget set until it can be built directly on the parent/child
+page model.
+
+In Design Studio the left insert sidebar groups these technical widgets into
+Text, Media, Shape, Button and Navigation presets. Authors pick presets; the
+registry keeps the underlying widget IDs stable for runtime compatibility.
+
+Layouts and widgets are edited through the admin dashboard raster grid. While in edit mode, open the widget drawer and drag widgets onto the dashboard; the drop position chooses a raster column and flow order, while the widget contract chooses the allowed size. The widget manager ensures only users with the appropriate permissions can create or modify widgets.
 When edit mode is active, the content header shows quick action buttons on the right. Use the grid icon to toggle the widgets panel and the X icon to delete the current admin page.
 
-Widgets can provide layout hints when seeded. Administrators may specify width
-and height options such as `halfWidth`, `maxHeight` or `overflow` so the initial
-layout matches the desired size. All built-in admin widgets ship with sensible
-defaults for their width and height so a freshly seeded dashboard is usable
-immediately. Height values above 100 are treated as fixed grid-pixel rows, which
-keeps compact admin widgets from scaling to the full dashboard viewport.
+Widgets declare explicit supported dashboard slots in `metadata.layout`.
+Built-in admin widgets use fixed `third`, `half`, `twoThird`, `full` or `page`
+slots per viewport. Page-slot widgets, such as full workspace tools, own the
+dashboard surface alone. Widgets can also declare a responsive height policy:
+`dynamic` and `auto` grow with content, `scroll` gives large tools an inner
+scroll area, and `fixed` can set an explicit height. `minHeight` values cascade
+per viewport so content has enough room before the widget grows.
 
-Widgets are arranged with a CanvasGrid drag-and-drop layout. Its twelve columns automatically resize to fill the available space, preventing dead zones at the edges. The admin dashboard grid keeps decorative spacing outside the placement surface so a widget at `x=0` and `y=0` is actually reachable at the top-left of the canvas. The sequence below demonstrates arranging widgets from an empty grid to a customized dashboard.
+The dashboard uses a twelve-column CSS grid with gaps between widgets so card
+shadows can render cleanly. Designer Studio keeps its own canvas/free-placement
+model; dashboard widgets store `slot`, `column` and `order`.
 
-Each widget now includes a resize toggle to switch between a small four-column width and a large eight-column width, making layout adjustments quick and intuitive.
+Each widget includes a slot toggle that cycles only through the sizes that the
+widget contract supports for the current viewport.
+Dragging widgets in edit mode shows a live placeholder in the dashboard raster;
+dropping commits that previewed position, including when a new widget is dragged
+in from the widget drawer. A lightweight drag preview follows the pointer while
+the target grid column gives a subtle pulse only when the snapped column changes.
 
 ![Initial grid view](screenshots/Arrange%20Your%20Dashboard%20Freely.png)
 ![Adding widgets](screenshots/Perfectly%20Adaptive%20Widgets.png)
@@ -104,13 +130,16 @@ The callback receives results only if the token has the `db.read` permission. Th
 
 ## Building a Module
 
+For a beginner-friendly, step-by-step walkthrough, see the
+[Community Module Guide](community_module_guide.md).
+
 1. Create a new folder under `modules/`.
-2. Add an `index.js` that exports an `initialize({ motherEmitter, jwt, isCore })` function.
+2. Add an `index.js` that exports an `initialize({ motherEmitter, eventBus, moduleHost, moduleInfo, app, isCore })` function.
 3. Inside `initialize`, register any meltdown event listeners your module needs.
 4. Include a `moduleInfo.json` file describing your module. It must define `moduleName`, `version`, `developer` and `description`; other properties like permissions are optional.
-5. Restart the server. The Module Loader will automatically attempt to load the new module inside its sandbox.
+5. Restart the server. The Module Loader will automatically health-check the new module in a runner process, then start a fresh runtime process if it passes.
 
-Modules should only interact with the rest of the CMS through meltdown events. Refer to existing core modules for practical examples.
+Modules should only interact with the rest of the CMS through meltdown events and `moduleHost` capabilities. Host-facing calls cross process IPC, so await `moduleHost.registerStaticAssets()` when you need its mount result and keep database writes behind documented core contracts.
 
 
 ## Page Hierarchy (No PostType)

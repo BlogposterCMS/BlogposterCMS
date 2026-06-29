@@ -5,9 +5,9 @@
  *
  * Highlights:
  * 1) Checks whether modules can initialize cleanly (health check).
- * 2) Uses a simple Node vm sandbox to test modules in isolation.
+ * 2) Runs community modules in an external process boundary.
  * 3) Deactivates malfunctioning modules.
- * 4) After a successful health check, reloads the module in production mode.
+ * 4) After a successful health check, starts a fresh runtime process.
  * 5) Auto-retries previously crashed modules.
  * 6) Optionally serves Grapes frontends.
  */
@@ -44,9 +44,6 @@ const {
 
 const { initModuleRegistryAdminEvents } = require('./moduleRegistryEvents');
 const {
-  createCommunityModuleHost,
-  createCommunityHealthCheckHost,
-  createDeniedAppFacade,
   normalizeMountPath,
   resolveStaticAssetDir,
   blockCommunityStaticAssetFiles,
@@ -59,14 +56,19 @@ const {
 const { CORE_OWNED_MODULE_NAMES } = require('./moduleOwnershipPolicy');
 const { sanitizeModuleName } = require('../../utils/moduleUtils');
 const {
-  buildSandboxEnv,
-  createScopedFsFacade,
-  loadModuleSandboxed,
+  buildModuleRuntimeEnv,
   normalizeServiceName,
   readModuleApiDefinition,
-  resolveSandboxPath,
   serviceNamesFromApiDefinition
-} = require('./moduleSandbox');
+} = require('./moduleRuntimeEnv');
+const {
+  runCommunityModuleHealthCheck,
+  startCommunityModuleProcess
+} = require('./moduleProcessRuntime');
+const { getGrantedModuleEvents } = require('./moduleAccessPolicy');
+const {
+  sharedModuleAccessConsentManager
+} = require('./moduleAccessConsent');
 
 const CORE_OWNED_OPTIONAL_MODULES = CORE_OWNED_MODULE_NAMES;
 const MODULE_NAME = 'moduleLoader';
@@ -106,10 +108,6 @@ async function loadAllModules({ emitter, app, jwt }) {
     motherEmitter.registerModuleType(MODULE_NAME, MODULE_TYPE);
   }
   const modulesPath = path.resolve(__dirname, '../../../modules');
-  const ALLOW_INDIVIDUAL_SANDBOX = true;
-  if (process.env.ALLOW_INDIVIDUAL_SANDBOX === 'false') {
-    console.warn('[MODULE LOADER] Ignoring ALLOW_INDIVIDUAL_SANDBOX=false; community modules always load through the sandbox.');
-  }
   if (process.env.ALLOW_COMMUNITY_APP_ACCESS === 'true') {
     console.warn('[MODULE LOADER] Ignoring ALLOW_COMMUNITY_APP_ACCESS=true; community modules never receive the raw Express app.');
   }
@@ -221,8 +219,7 @@ async function loadAllModules({ emitter, app, jwt }) {
         motherEmitter,
         app,
         jwt,
-        ALLOW_INDIVIDUAL_SANDBOX,
-          false // Normal load, not an auto-retry
+        false // Normal load, not an auto-retry
       );
     }
   }
@@ -241,7 +238,6 @@ async function loadAllModules({ emitter, app, jwt }) {
         motherEmitter,
         app,
         jwt,
-        ALLOW_INDIVIDUAL_SANDBOX,
         true 
       );
     }
@@ -293,19 +289,11 @@ function serveLegacyGrapesFrontend({ row, folderNames = [], modulesPath, app }) 
   return { moduleName, mountPath, dir: root };
 }
 
-function loadModuleFresh(indexJsPath, allowSandbox) {
-  if (allowSandbox === false) {
-    console.warn('[MODULE LOADER] Ignoring sandbox opt-out for community module load.');
-  }
-  return loadModuleSandboxed(indexJsPath);
-}
-
 /**
  * attemptModuleLoad: tries to load a single module with a preceding health check.
- * - Loads the module from its folder
- * - Runs a health check (test initialize)
+ * - Starts the module in an external process for a health check
  * - On error -> deactivate module and remove event listeners
- * - On success -> perform real load (initialize with the real emitter)
+ * - On success -> starts a fresh runtime process with scoped host IPC
  * - On auto-retry -> reactivate the module in the database
  */
 async function attemptModuleLoad(
@@ -315,16 +303,17 @@ async function attemptModuleLoad(
   motherEmitter,
   app,
   jwt,
-  ALLOW_INDIVIDUAL_SANDBOX,
   isAutoRetry
 ) {
   const { module_name: moduleName } = registryRow;
   const moduleInfo = normalizeModuleInfo(registryRow);
+  const accessGrants = getGrantedModuleEvents(moduleInfo);
   const nonce = crypto.randomBytes(16).toString('hex');
 
   // Does the folder still exist?
   if (!folderNames.includes(moduleName)) {
     console.warn(`[MODULE LOADER] No folder => ${moduleName}. Possibly was deleted.`);
+    sharedModuleAccessConsentManager.rejectAllForModule(moduleName, 'Module folder missing.');
     return false;
   }
 
@@ -349,6 +338,7 @@ async function attemptModuleLoad(
     });
     await deactivateModule(motherEmitter, jwt, moduleName, 'Missing index.js');
     removeListenersForModule(motherEmitter, moduleName);
+    sharedModuleAccessConsentManager.rejectAllForModule(moduleName, 'Missing index.js');
     return false;
   }
 
@@ -368,42 +358,33 @@ async function attemptModuleLoad(
   motherEmitter.on('deactivateModule', deactivationListener);
 
   try {
-    modEntry = loadModuleFresh(indexJsPath, ALLOW_INDIVIDUAL_SANDBOX);
+    await runCommunityModuleHealthCheck({
+      indexJsPath,
+      jwt,
+      moduleDir: path.dirname(indexJsPath),
+      moduleInfo,
+      moduleName,
+      motherEmitter,
+      nonce,
+      accessGrants
+    });
+
+    modEntry = await startCommunityModuleProcess({
+      app,
+      indexJsPath,
+      jwt,
+      moduleDir: path.dirname(indexJsPath),
+      moduleInfo,
+      moduleName,
+      motherEmitter,
+      nonce,
+      phase: 'runtime',
+      accessGrants,
+      accessConsentManager: sharedModuleAccessConsentManager
+    });
   } catch (err) {
     loadFailed = true;
-    await handleModuleError(err, moduleName, motherEmitter, jwt);
-  }
-
-  if (!loadFailed) {
-    try {
-        // Run the health check first
-      await performHealthCheck(modEntry, moduleName, moduleInfo, indexJsPath, jwt, nonce);
-
-        // If we reach this point, the health check succeeded
-        // => initialize the module for real
-      modEntry = loadModuleFresh(indexJsPath, ALLOW_INDIVIDUAL_SANDBOX);
-      const moduleHost = createCommunityModuleHost({
-        app,
-        motherEmitter,
-        moduleName,
-        moduleInfo,
-        moduleDir: path.dirname(indexJsPath),
-        jwt,
-        nonce
-      });
-
-      await modEntry.initialize({
-        motherEmitter: moduleHost.eventBus,
-        eventBus: moduleHost.eventBus,
-        moduleHost,
-        app: createDeniedAppFacade(moduleName),
-        isCore: false,
-        moduleInfo
-      });
-    } catch (err) {
-      loadFailed = true;
-      await handleModuleError(err, moduleName, motherEmitter, jwt);
-    }
+    await handleModuleError(err, moduleName, motherEmitter, jwt, modEntry);
   }
 
   if (loadFailed) {
@@ -452,11 +433,11 @@ async function attemptModuleLoad(
   }
 
   motherEmitter.off('deactivateModule', deactivationListener);
-  global.loadedModules[moduleName] = modEntry;
+  global.loadedModules[moduleName] = modEntry.getRuntimeRecord();
   console.log(`[MODULE LOADER] Successfully loaded => ${moduleName}`);
   return true;
 
-  async function handleModuleError(err, moduleName, motherEmitter, jwt) {
+  async function handleModuleError(err, moduleName, motherEmitter, jwt, runtime = null) {
     const errorMsg = `[E_MODULE_LOAD_FAILED] Error loading "${moduleName}": ${err.message}`;
     notify({
       moduleName,
@@ -470,50 +451,13 @@ async function attemptModuleLoad(
 
     // Clean up emitter listeners
     removeListenersForModule(motherEmitter, moduleName);
+    sharedModuleAccessConsentManager.rejectAllForModule(moduleName, errorMsg);
+    runtime?.stop?.(errorMsg);
+    if (global.loadedModules?.[moduleName]?.stop) {
+      global.loadedModules[moduleName].stop(errorMsg);
+    }
     if (global.loadedModules) delete global.loadedModules[moduleName];
   }
-}
-
-/**
- * performHealthCheck: run a trial initialization of the module.
- * If the module misbehaves (e.g., missing initialize() or emitting invalid events),
- * it gets rejected.
- */
-async function performHealthCheck(modEntry, moduleName, moduleInfo, indexJsPath, jwt, nonce) {
-  // 1) Does the module even have an initialize() function?
-  if (!modEntry || typeof modEntry.initialize !== 'function') {
-    throw new Error('[HEALTH CHECK] Module has no initialize() function.');
-  }
-
-  let healthCheckPassed = false;
-
-  const moduleHost = createCommunityHealthCheckHost({
-    moduleName,
-    moduleInfo,
-    moduleDir: path.dirname(indexJsPath),
-    jwt,
-    nonce,
-    markEvent() {
-      healthCheckPassed = true;
-    }
-  });
-
-    // 3) Execute the initialize method; hope it doesn't blow up.
-  await modEntry.initialize({
-    motherEmitter: moduleHost.eventBus,
-    eventBus: moduleHost.eventBus,
-    moduleHost,
-    app: createDeniedAppFacade(moduleName),
-    isCore: false, 
-    moduleInfo
-  });
-
-  if (!healthCheckPassed) {
-    throw new Error(
-      `Health check failed: Module "${moduleName}" did not emit a valid event or never used the emitter.`
-    );
-  }
-  // Looks good.
 }
 
 module.exports = {
@@ -523,14 +467,14 @@ module.exports = {
   _internals: {
     CORE_OWNED_OPTIONAL_MODULES,
     assertCommunityModuleFolderShape,
-    buildSandboxEnv,
-    createScopedFsFacade,
-    loadModuleSandboxed,
+    attemptModuleLoad,
+    buildModuleRuntimeEnv,
     normalizeServiceName,
     readCommunityModuleInfo,
     readModuleApiDefinition,
-    resolveSandboxPath,
+    runCommunityModuleHealthCheck,
     serveLegacyGrapesFrontend,
-    serviceNamesFromApiDefinition
+    serviceNamesFromApiDefinition,
+    startCommunityModuleProcess
   }
 };

@@ -98,7 +98,9 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   public/global filtering are owned by `loginStrategiesPublicData.ts`.
   Public registration availability and register payloads are owned by
   `registerData.ts`. First-install status, user-count checks, and install POST
-  payloads are owned by `installData.ts`.
+  payloads are owned by `installData.ts`; the install shell still applies
+  `userColor.ts` theme mode so Light, Dark and System follow the dashboard
+  token contract.
   Dashboard page creation/layout-template event payloads, content-header admin
   page deletion data, page-picker list/order/create/redirect payloads, admin
   search, maintenance-mode setting payloads, theme-mode document token binding, workspace navigation page
@@ -108,6 +110,10 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `pageActionsData.ts`, `contentHeaderActionsData.ts`, `pagePickerData.ts`,
   `topHeaderActionsData.ts`, `workspacesData.ts`, `openExplorerData.ts`,
   `notificationHubData.ts`, and `userColorData.ts` helpers.
+  Top-header account chrome groups theme mode, profile and logout actions in
+  the account menu partial; `topHeaderAccountMenu.ts` owns its
+  keyboard/outside-click binding, while `userColor.ts` keeps the theme icon and
+  visible menu label in sync.
   Dashboard alerts, confirmations, prompts, and custom modal content must use
   `ui/shared/dialogs/bpDialog.ts`; feature code should not call native browser
   dialogs directly when it is running inside the dashboard shell.
@@ -191,9 +197,14 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `ui/runtime/main/runtimeWidgetRenderer.ts`. Default widget instance option
   loading and application are owned by
   `ui/runtime/main/runtimeWidgetInstances.ts`. Widget definitions may carry a
-  `layout`/`metadata.layout` size contract with named slots such as `compact`,
-  `wide` and `full`; PlainSpace publishes its seeded width/height hints through
-  that metadata so the runtime can mark each canvas item with the active slot.
+  `layout`/`metadata.layout` size contract with named slots such as `third`,
+  `half`, `twoThird`, `full` and `page`. PlainSpace publishes explicit
+  contracts instead of deriving dashboard sizing from widget-instance
+  width/height hints, so the admin dashboard can mark each flow item with the
+  active slot. The same shared slot helper resolves widget-owned height
+  policies (`dynamic`, `auto`, `scroll`, or `fixed`) and mobile-first
+  `minHeight`/`height`/`maxHeight` values into CSS variables on the dashboard
+  wrapper.
   Widget hydration state and the
   shell-first paint delay are owned by
   `ui/runtime/main/runtimeWidgetHydration.ts`, so dashboards can mount stable
@@ -201,6 +212,21 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   mount pipeline that applies those defaults, renders widget code, and marks
   widgets `ready` or `failed` is owned by
   `ui/runtime/main/runtimeWidgetMounting.ts`.
+- Admin dashboard layout is intentionally separate from CanvasGrid. It uses the
+  flow controller in `ui/runtime/main/runtimeAdminGridInteractions.ts` plus the
+  slot helpers in `ui/shared/layout/dashboardSlots.ts`; saved admin
+  dashboard entries store `slot`, `column` and `order`, not free pixel
+  placement or user-defined sizes. Widget height and minimum readable height
+  stay in the widget metadata contract, not in user layout state.
+  Drag-and-drop within this flow uses a dashboard-only placeholder and
+  `beforeInstanceId` insertion hook plus pointer-preview/snap feedback, leaving
+  CanvasGrid drag behavior scoped to Designer/public surfaces.
+  The admin lane skips legacy widget-instance layout options during hydration;
+  `applyWidgetOptions` and percent-to-grid-unit sizing are reserved for
+  CanvasGrid/public-style surfaces.
+  Designer Studio and public/static runtime grids may continue to use
+  CanvasGrid-style percent geometry where free placement is the actual editing
+  model.
 - `ui/shared/grid/*`: shared CanvasGrid implementation, geometry, global event
   wiring, and bounding-box helpers used by Shell, Runtime, PlainSpace, and
   Designer through stable compatibility paths.
@@ -275,7 +301,9 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   Route-specific settings loads, saves, media picks, SEO values, and security
   page lists are owned by
   `ui/widgets/plainspace/admin/settings/settingsPanelsData.ts`.
-  Basic public widgets `htmlWidget` and `textBoxWidget` plus the admin widgets
+  Basic public widgets `htmlWidget`, `textBoxWidget`, `mediaWidget`,
+  `buttonWidget`, `navigationMenuWidget`, `breadcrumbWidget`, `galleryWidget`
+  and their shared `publicWidgetHelpers` plus the admin widgets
   `accessSettingsWidget`, `activityLogWidget`, `designerLayoutsWidget`,
   `dragInfoWidget`, `fontsListWidget`, `layoutTemplatesWidget`,
   `loginStrategiesWidget`, `loginStrategyEditWidget`, `mediaExplorerWidget`,

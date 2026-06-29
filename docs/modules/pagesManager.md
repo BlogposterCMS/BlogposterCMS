@@ -75,3 +75,7 @@ same origin should import `/ui/runtime/envelope/orchestrator.js` and
 - The mirror is optional and non-blocking for legacy behavior. If Content
   Engine is not loaded or returns an error, the original page event still
   returns its normal result.
+- Core importers may pass `skipContentMirror: true` when creating page
+  projections for content that was already imported through Content Engine. This
+  avoids duplicate canonical entries while still exposing parent/child
+  collection structure to the current Pages UI.

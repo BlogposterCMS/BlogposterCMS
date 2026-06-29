@@ -42,7 +42,7 @@ function toRuntimeErrorMessage(err) {
         return err.message;
     return String(err);
 }
-export async function renderRuntimeWidgetModule(wrapper, container, def, lane = 'public') {
+export async function renderRuntimeWidgetModule(wrapper, container, def, lane = 'public', instanceMetadata = {}) {
     if (!def.codeUrl) {
         console.warn(`[Widget ${def.id}] WIDGET_RUNTIME_MISSING_CODE_URL: missing codeUrl`);
         renderRuntimeWidgetError(container, {
@@ -84,7 +84,7 @@ export async function renderRuntimeWidgetModule(wrapper, container, def, lane = 
         return;
     }
     try {
-        await mod.render(container, createRuntimeWidgetContext(wrapper, def, lane));
+        await mod.render(container, createRuntimeWidgetContext(wrapper, def, lane, instanceMetadata));
     }
     catch (err) {
         console.error(`[Widget ${def.id}] WIDGET_RUNTIME_RENDER_FAILED render error:`, err);

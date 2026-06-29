@@ -3,13 +3,14 @@ const fs = require('fs');
 const path = require('path');
 
 function testMiddlewareUsage() {
-  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const meltdownSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/meltdownRouter.js'), 'utf8');
+  const authSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/authRoutes.js'), 'utf8');
   assert(
-    !appJs.includes("app.post('/api/meltdown', apiLimiter"),
+    !meltdownSource.includes("router.post('/api/meltdown', apiLimiter"),
     'apiLimiter should not be used on /api/meltdown route anymore'
   );
   assert(
-    appJs.includes("app.post('/admin/api/login', loginLimiter"),
+    authSource.includes("router.post('/admin/api/login', loginLimiter"),
     'Missing loginLimiter on /admin/api/login route'
   );
 }

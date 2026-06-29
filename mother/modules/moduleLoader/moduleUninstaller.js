@@ -32,7 +32,11 @@ function assertInside(baseDir, candidatePath, label = 'path') {
   return resolved;
 }
 
-function cleanupModuleRuntime(motherEmitter, moduleName, reason = 'User uninstalled module') {
+async function cleanupModuleRuntime(motherEmitter, moduleName, reason = 'User uninstalled module') {
+  const loadedModule = global.loadedModules?.[moduleName];
+  if (loadedModule && typeof loadedModule.stop === 'function') {
+    await loadedModule.stop(reason);
+  }
   if (global.loadedModules) delete global.loadedModules[moduleName];
   deactivateModuleRuntime(motherEmitter, moduleName, reason);
   removeListenersForModule(motherEmitter, moduleName);
@@ -41,7 +45,7 @@ function cleanupModuleRuntime(motherEmitter, moduleName, reason = 'User uninstal
 async function uninstallModule(motherEmitter, jwt, moduleName, options = {}) {
   const safeModuleName = assertUserManagedModuleName(moduleName, 'uninstalled');
   try {
-    cleanupModuleRuntime(motherEmitter, safeModuleName, 'User uninstalled module');
+    await cleanupModuleRuntime(motherEmitter, safeModuleName, 'User uninstalled module');
 
     // 1) remove or deactivate from registry
     if (options.removeRegistryRow) {

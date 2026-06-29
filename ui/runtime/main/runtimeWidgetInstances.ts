@@ -23,14 +23,17 @@ export async function applyDefaultWidgetInstanceOptions(
   emit: RuntimeEmitter,
   lane = 'public'
 ): Promise<void> {
+  if (lane === 'admin') {
+    return;
+  }
+
   try {
     const res = await emit('getWidgetInstance', {
       moduleName: 'plainspace',
       moduleType: 'core',
-      instanceId: `default.${def.id}`,
-      ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {})
+      instanceId: `default.${def.id}`
     });
-    const opts = parseWidgetOptions(res?.content) ?? undefined;
-    applyWidgetOptions(wrapper, opts, grid as any);
+    const parsedOptions = parseWidgetOptions(res?.content);
+    applyWidgetOptions(wrapper, parsedOptions ?? undefined, grid as any);
   } catch {}
 }

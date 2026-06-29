@@ -18,6 +18,34 @@ async function registerWidgetEvents(widgetDef) {
   }
 }
 
+function hasInlineWidgetCode(data) {
+  return Boolean(data && (
+    typeof data.html === 'string' && data.html.trim() ||
+    typeof data.css === 'string' && data.css.trim() ||
+    typeof data.js === 'string' && data.js.trim()
+  ));
+}
+
+function parseWidgetMetadata(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function instanceMetadataFromCode(data) {
+  if (!data) return {};
+  return {
+    ...parseWidgetMetadata(data.metadata),
+    ...parseWidgetMetadata(data.meta)
+  };
+}
+
 export async function renderWidget(wrapper, widgetDef, codeMap, customData = null) {
   const instanceId = wrapper.dataset.instanceId;
   const data = customData || (codeMap && codeMap[instanceId]) || null;
@@ -53,7 +81,7 @@ export async function renderWidget(wrapper, widgetDef, codeMap, customData = nul
 
   await registerWidgetEvents(widgetDef);
 
-  if (data) {
+  if (hasInlineWidgetCode(data)) {
     if (data.css) {
       const customStyle = document.createElement('style');
       customStyle.textContent = data.css;
@@ -75,6 +103,7 @@ export async function renderWidget(wrapper, widgetDef, codeMap, customData = nul
     id: instanceId,
     widgetId: widgetDef.id,
     metadata: widgetDef.metadata,
+    instanceMetadata: instanceMetadataFromCode(data),
     scene: {
       behavior: wrapper.dataset.behavior || '',
       sceneId: wrapper.dataset.sceneId || '',

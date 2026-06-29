@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { isCoreOwnedModule } = require('./moduleOwnershipPolicy');
+const { normalizeModuleInfoAccess } = require('./moduleAccessPolicy');
 
 const FORBIDDEN_COMMUNITY_MODULE_FILENAMES = new Set([
   '.env',
@@ -178,13 +179,13 @@ function readCommunityModuleInfo(moduleFolderPath, moduleName, options = {}) {
   }
   assertCommunityModuleInfoRole(parsed, safeModuleName);
 
-  return {
+  return normalizeModuleInfoAccess({
     ...parsed,
     moduleName: safeModuleName,
     developer: parsed.developer || 'Unknown Developer',
     version: parsed.version || '',
     description: parsed.description || ''
-  };
+  }, safeModuleName);
 }
 
 module.exports = {

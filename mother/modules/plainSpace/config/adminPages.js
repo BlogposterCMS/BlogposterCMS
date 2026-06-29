@@ -15,6 +15,11 @@ module.exports.ADMIN_PAGES = [
       },
       icon: '/assets/icons/house.svg',
       widgets: ['roadmapIntro', 'roadmapUpcoming', 'dragbarDemo'],
+      widgetSlots: {
+        roadmapIntro: 'half',
+        roadmapUpcoming: 'half',
+        dragbarDemo: 'third'
+      },
       workspace: 'home'
     }
   },
@@ -31,6 +36,9 @@ module.exports.ADMIN_PAGES = [
       },
       icon: '/assets/icons/file-box.svg',
       widgets: ['contentSummary'],
+      widgetSlots: {
+        contentSummary: 'full'
+      },
       actionButton: {
         icon: '/assets/icons/plus.svg',
         action: 'createNewLayout'
@@ -55,7 +63,11 @@ module.exports.ADMIN_PAGES = [
         icon: '/assets/icons/plus.svg',
         action: 'createNewPage'
       },
-      widgets: ['pageList', 'pageStats']
+      widgets: ['pageList', 'pageStats'],
+      widgetSlots: {
+        pageList: 'twoThird',
+        pageStats: 'third'
+      }
     }
   },
   {
@@ -71,7 +83,10 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/image.svg',
-      widgets: ['mediaExplorer']
+      widgets: ['mediaExplorer'],
+      widgetSlots: {
+        mediaExplorer: 'page'
+      }
     }
   },
   {
@@ -87,7 +102,10 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/folder-tree.svg',
-      widgets: ['collectionsList']
+      widgets: ['collectionsList'],
+      widgetSlots: {
+        collectionsList: 'full'
+      }
     }
   },
   {
@@ -103,11 +121,14 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/puzzle.svg',
-      widgets: ['widgetList']
+      widgets: ['widgetList'],
+      widgetSlots: {
+        widgetList: 'full'
+      }
     }
   },
   {
-    title: 'Menu',
+    title: 'Navigation Studio',
     slug: 'menu',
     parentSlug: 'content',
     lane: 'admin',
@@ -119,7 +140,10 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/menu.svg',
-      widgets: []
+      widgets: ['navigationStudio'],
+      widgetSlots: {
+        navigationStudio: 'page'
+      }
     }
   },
   {
@@ -135,7 +159,10 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/layout-dashboard.svg',
-      widgets: ['layoutTemplates']
+      widgets: ['layoutTemplates'],
+      widgetSlots: {
+        layoutTemplates: 'half'
+      }
     }
   },
   {
@@ -151,7 +178,10 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/layers.svg',
-      widgets: ['designerLayouts']
+      widgets: ['designerLayouts'],
+      widgetSlots: {
+        designerLayouts: 'half'
+      }
     }
   },
   {
@@ -167,7 +197,11 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/file-pen-line.svg',
-      widgets: ['pageEditorWidget', 'pageContent']
+      widgets: ['pageEditorWidget', 'pageContent'],
+      widgetSlots: {
+        pageEditorWidget: 'third',
+        pageContent: 'twoThird'
+      }
 
     }
   },

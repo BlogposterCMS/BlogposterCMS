@@ -44,6 +44,9 @@ Runtime code should keep concrete dynamic edges behind small gateways:
   rendering, and attached design/layout/HTML fallbacks.
 - `main/runtimePageComposition.ts` owns public runtime page composition,
   static grid mounting, and fallback selection.
+- `main/runtimePresentationCascade.ts` owns parent-page presentation inheritance
+  for public pages so children can reuse the nearest ancestor design or layout
+  template without adding a taxonomy-style template system.
 - `main/runtimePageShell.ts` owns renderer DOM shell, global style, and URL
   sanitizing helpers.
 - `main/runtimeShellPartials.ts` owns shell partial fetching, sanitized

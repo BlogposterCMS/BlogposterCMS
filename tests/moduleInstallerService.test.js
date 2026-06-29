@@ -18,6 +18,10 @@ class InstallerEmitter extends EventEmitter {
   }
 
   emit(eventName, payload, cb) {
+    if (eventName === 'dbSelect') {
+      if (typeof cb === 'function') cb(null, []);
+      return true;
+    }
     if (eventName === 'dbInsert') {
       this.inserts.push(payload);
       if (typeof cb === 'function') cb(null, { ok: true });
@@ -280,4 +284,115 @@ test('module installer rejects traversal archive entries before extraction', () 
     () => _internals.normalizeArchiveEntryName('/absolute/moduleInfo.json'),
     /relative/
   );
+});
+
+test('module installer stores approved access grants separately from declared module permissions', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-install-'));
+  const emitter = new InstallerEmitter();
+
+  try {
+    const result = await installModuleFromZip(
+      emitter,
+      'module-token',
+      createModuleZip('shopSync', {}, {
+        permissions: [
+          { key: 'shopSync.sync', description: 'Run shop sync' }
+        ],
+        requestedAccess: [
+          { event: 'listContentEntries', reason: 'Read catalog entries' }
+        ]
+      }),
+      {
+        modulesRoot: path.join(tempRoot, 'modules'),
+        tempDir: path.join(tempRoot, 'tmp'),
+        approvedAccess: [{ event: 'listContentEntries' }],
+        grantedBy: 'user-1'
+      }
+    );
+
+    assert.deepStrictEqual(result, { success: true, moduleName: 'shopSync' });
+    const registryInsert = emitter.inserts.find(insert => insert.table === 'module_registry');
+    const permissionInsert = emitter.inserts.find(insert => insert.table === 'permissions');
+    const moduleInfo = JSON.parse(registryInsert.data.module_info);
+    assert.deepStrictEqual(moduleInfo.permissions[0], {
+      key: 'shopSync.sync',
+      permission_key: 'shopSync.sync',
+      description: 'Run shop sync',
+      category: 'shopSync',
+      source: 'module',
+      ownerModule: 'shopSync'
+    });
+    assert.strictEqual(moduleInfo.trustedAccessGrants[0].event, 'listContentEntries');
+    assert.strictEqual(moduleInfo.trustedAccessGrants[0].grantedBy, 'user-1');
+    assert.strictEqual(permissionInsert.data.permission_key, 'shopSync.sync');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('module installer rejects community manifests that claim core permission names', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-install-'));
+  const emitter = new InstallerEmitter();
+
+  try {
+    await assert.rejects(
+      () => installModuleFromZip(
+        emitter,
+        'module-token',
+        createModuleZip('shopSync', {}, {
+          permissions: ['users.delete']
+        }),
+        { modulesRoot: path.join(tempRoot, 'modules'), tempDir: path.join(tempRoot, 'tmp') }
+      ),
+      /only declare permissions below "shopSync\.\*"/
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('module ZIP inspection returns access requests without installing files', () => {
+  const inspected = _internals.inspectModuleZipBuffer(createModuleZip('shopSync', {}, {
+    permissions: ['shopSync.read'],
+    requestedAccess: [{ event: 'listContentEntries' }]
+  }));
+
+  assert.strictEqual(inspected.moduleName, 'shopSync');
+  assert.strictEqual(inspected.permissions[0].permission_key, 'shopSync.read');
+  assert.strictEqual(inspected.requestedAccess[0].event, 'listContentEntries');
+});
+
+test('module ZIP inspection exposes protected access as one-time only but rejects permanent grants', async () => {
+  const inspected = _internals.inspectModuleZipBuffer(createModuleZip('shopSync', {}, {
+    requestedAccess: [{ event: 'deleteUser', reason: 'Clean up mapped shop users' }]
+  }));
+
+  assert.strictEqual(inspected.requestedAccess[0].event, 'deleteUser');
+  assert.strictEqual(inspected.requestedAccess[0].resource, 'users');
+  assert.strictEqual(inspected.requestedAccess[0].protected, true);
+  assert.strictEqual(inspected.requestedAccess[0].allowPermanent, false);
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-install-'));
+  const emitter = new InstallerEmitter();
+
+  try {
+    await assert.rejects(
+      () => installModuleFromZip(
+        emitter,
+        'module-token',
+        createModuleZip('shopSync', {}, {
+          requestedAccess: [{ event: 'deleteUser', reason: 'Clean up mapped shop users' }]
+        }),
+        {
+          modulesRoot: path.join(tempRoot, 'modules'),
+          tempDir: path.join(tempRoot, 'tmp'),
+          approvedAccess: [{ event: 'deleteUser' }],
+          grantedBy: 'user-1'
+        }
+      ),
+      /protected resource "users"/
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });

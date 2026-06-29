@@ -70,6 +70,17 @@ async function handleCustomPlaceholder(dbClient, customRef, operation, params) {
     throw new Error(`[PLACEHOLDER HANDLER] No module object for "${moduleName}" in global.loadedModules.`);
   }
 
+  if (modObj.runtime === 'process' || modObj.moduleType === 'community') {
+    const message = `[E_PLACEHOLDER_PROCESS_MODULE_UNSUPPORTED] Custom placeholder "${operation}" belongs to external module "${moduleName}". Process-isolated modules cannot receive the host dbClient; expose a module-owned event or a core database contract instead.`;
+    notificationEmitter.notify({
+      moduleName: 'databaseManager',
+      notificationType: 'system',
+      priority: 'critical',
+      message
+    });
+    throw new Error(message);
+  }
+
   const fn = modObj[functionName];
   if (typeof fn !== 'function') {
     notificationEmitter.notify({

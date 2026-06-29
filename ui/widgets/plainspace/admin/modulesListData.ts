@@ -1,8 +1,50 @@
+export {
+  fetchPendingModuleAccessRequests,
+  moduleAccessErrorMessage,
+  resolveModuleAccessRequest,
+  toModuleAccessRuntimeRequests,
+  type ModuleAccessRuntimeRequest
+} from '../../../shared/module-access/moduleAccessConsentData.js';
+
 export interface ModuleInfo {
   moduleName?: string;
   version?: string;
   developer?: string;
   description?: string;
+  permissions?: ModulePermissionDeclaration[];
+  requestedAccess?: ModuleAccessRequest[];
+  trustedAccessGrants?: ModuleAccessGrant[];
+}
+
+export interface ModulePermissionDeclaration {
+  key?: string;
+  permission_key?: string;
+  description?: string;
+  category?: string;
+  ownerModule?: string;
+}
+
+export interface ModuleAccessRequest {
+  event?: string;
+  resource?: string;
+  action?: string;
+  protected?: boolean;
+  allowPermanent?: boolean;
+  reason?: string;
+  risk?: string;
+}
+
+export interface ModuleAccessGrant extends ModuleAccessRequest {
+  granted?: boolean;
+  grantedAt?: string;
+  grantedBy?: string | null;
+}
+
+export interface ModuleZipInspection {
+  moduleName?: string;
+  moduleInfo?: ModuleInfo;
+  permissions?: ModulePermissionDeclaration[];
+  requestedAccess?: ModuleAccessRequest[];
 }
 
 export interface ModuleRecord {
@@ -36,6 +78,16 @@ function toArray(value: unknown): unknown[] {
 
 export function toModules(value: unknown): ModuleRecord[] {
   return toArray(value).filter((item): item is ModuleRecord => Boolean(item) && typeof item === 'object');
+}
+
+export function toModuleZipInspection(value: unknown): ModuleZipInspection {
+  const source = value && typeof value === 'object' ? value as ModuleZipInspection : {};
+  return {
+    moduleName: source.moduleName || source.moduleInfo?.moduleName,
+    moduleInfo: source.moduleInfo || {},
+    permissions: Array.isArray(source.permissions) ? source.permissions : source.moduleInfo?.permissions || [],
+    requestedAccess: Array.isArray(source.requestedAccess) ? source.requestedAccess : source.moduleInfo?.requestedAccess || []
+  };
 }
 
 export function errorMessage(err: unknown): string {
@@ -84,27 +136,46 @@ export async function fetchModuleLists(
 export async function toggleModuleRegistryActivation(
   emit: ModulesEmitter,
   jwt: string | null | undefined,
-  moduleRecord: ModuleRecord
+  moduleRecord: ModuleRecord,
+  approvedAccess?: ModuleAccessRequest[] | string[]
 ): Promise<boolean> {
   const meltdownEmit = requireEmitter(emit);
   const nextActive = !moduleRecord.is_active;
-  await meltdownEmit(moduleRecord.is_active ? 'deactivateModuleInRegistry' : 'activateModuleInRegistry', {
+  const payload: Record<string, unknown> = {
     jwt,
     ...MODULE_LOADER_MODULE,
     targetModuleName: moduleRecord.module_name
-  });
+  };
+  if (Array.isArray(approvedAccess)) payload.approvedAccess = approvedAccess;
+  await meltdownEmit(moduleRecord.is_active ? 'deactivateModuleInRegistry' : 'activateModuleInRegistry', payload);
   return nextActive;
+}
+
+export async function inspectModuleZip(
+  emit: ModulesEmitter,
+  jwt: string | null | undefined,
+  zipData: string
+): Promise<ModuleZipInspection> {
+  const meltdownEmit = requireEmitter(emit);
+  const res = await meltdownEmit('inspectModuleZipAccess', {
+    jwt,
+    ...MODULE_LOADER_MODULE,
+    zipData
+  });
+  return toModuleZipInspection(res);
 }
 
 export async function installModuleZip(
   emit: ModulesEmitter,
   jwt: string | null | undefined,
-  zipData: string
+  zipData: string,
+  approvedAccess: ModuleAccessRequest[] | string[] = []
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
   await meltdownEmit('installModuleFromZip', {
     jwt,
     ...MODULE_LOADER_MODULE,
-    zipData
+    zipData,
+    approvedAccess
   });
 }

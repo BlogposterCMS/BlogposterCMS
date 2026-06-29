@@ -1,26 +1,15 @@
-import { init as initCanvasGrid } from './canvasGrid.js';
 import { clearContentKeepHeader } from './runtimePageShell.js';
 import { loadRuntimeLayoutForViewport } from './runtimePageData.js';
 import { renderAttachedRuntimeContent } from './runtimeAttachedContent.js';
 import { mountAdminGridWidgets } from './runtimeAdminGridMounting.js';
-import { ADMIN_COLUMN_COUNT, bindAdminDropTarget, bindAdminLayoutPersistence, bindResponsiveAdminColumns, exposeAdminGridGlobals } from './runtimeAdminGridInteractions.js';
+import { ADMIN_COLUMN_COUNT, bindAdminDropTarget, bindAdminLayoutPersistence, createAdminDashboardController, exposeAdminGridGlobals } from './runtimeAdminGridInteractions.js';
 function createAdminGrid(contentEl) {
     const gridEl = document.createElement('div');
     gridEl.id = 'adminGrid';
-    gridEl.className = 'canvas-grid';
+    gridEl.className = 'canvas-grid dashboard-grid';
+    gridEl.style.setProperty('--dashboard-columns', String(ADMIN_COLUMN_COUNT));
     contentEl.appendChild(gridEl);
-    const grid = initCanvasGrid({
-        cellHeight: 1,
-        columnWidth: 1,
-        columns: ADMIN_COLUMN_COUNT,
-        percentageMode: true,
-        pushOnOverlap: true,
-        useBoundingBox: true,
-        bboxHandles: false,
-        enableZoom: false,
-        renderPercentLayoutAsPixels: true
-    }, gridEl);
-    grid.options = grid.options || {};
+    const grid = createAdminDashboardController(gridEl);
     return { gridEl, grid };
 }
 export async function renderAdminRuntimeGrid({ page, contentEl, globalLayout = [], allWidgets, lane, emit, widgetEmit, debug = false }) {
@@ -30,7 +19,6 @@ export async function renderAdminRuntimeGrid({ page, contentEl, globalLayout = [
     const combinedAdmin = [...globalLayout, ...layout];
     clearContentKeepHeader(contentEl);
     const { gridEl, grid } = createAdminGrid(contentEl);
-    bindResponsiveAdminColumns(gridEl, grid);
     exposeAdminGridGlobals(grid, page.id, lane, layout);
     bindAdminDropTarget(gridEl, grid);
     const instanceMetaMap = new Map();

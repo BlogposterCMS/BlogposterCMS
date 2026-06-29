@@ -1,7 +1,13 @@
 import { createColorPicker } from '../../shared/controls/colorPicker.js';
+import { bpDialog } from '../../shared/dialogs/bpDialog.js';
 import { resolveShellPublicClient } from '../data/publicMeltdownClient.js';
-import { setAccentVariables } from '../theme/userColor.js';
-import { fetchFirstInstallState, submitInstallRequest, type InstallData } from './installData.js';
+import { applyThemeMode, setAccentVariables } from '../theme/userColor.js';
+import {
+  fetchFirstInstallState,
+  isAlreadyInstalledSubmitError,
+  submitInstallRequest,
+  type InstallData
+} from './installData.js';
 
 interface AdminFormControls extends HTMLFormControlsCollection {
   username: HTMLInputElement;
@@ -27,15 +33,33 @@ interface SiteFormElement extends HTMLFormElement {
   projectName: HTMLInputElement;
 }
 
+const DASHBOARD_ENTRY_URL = '/login?redirectTo=%2Fadmin%2Fhome';
+
 function messageFromError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+async function showAlreadyInstalledDialog(): Promise<void> {
+  const result = await bpDialog.open({
+    kind: 'modal',
+    title: 'Installation already complete',
+    message: 'This BlogposterCMS instance already has an administrator. Open the dashboard to continue.',
+    actions: [
+      { id: 'stay', label: 'Stay here', variant: 'ghost' },
+      { id: 'dashboard', label: 'Go to Dashboard', variant: 'primary', autofocus: true }
+    ]
+  });
+
+  if (result.action === 'dashboard') {
+    window.location.href = DASHBOARD_ENTRY_URL;
+  }
 }
 
 async function redirectIfAlreadyInstalled(): Promise<void> {
   try {
     const { firstInstallDone } = await fetchFirstInstallState(resolveShellPublicClient(window));
     if (firstInstallDone) {
-      window.location.href = '/login';
+      window.location.href = DASHBOARD_ENTRY_URL;
     }
   } catch (err) {
     console.error('[install] install status check failed', err);
@@ -43,6 +67,7 @@ async function redirectIfAlreadyInstalled(): Promise<void> {
 }
 
 void redirectIfAlreadyInstalled();
+applyThemeMode();
 
 const adminForm = document.getElementById('adminForm') as AdminFormElement | null;
 const siteForm = document.getElementById('siteForm') as SiteFormElement | null;
@@ -66,12 +91,27 @@ function setStep(i: number): void {
 document.getElementById('startSetup')?.addEventListener('click', () => setStep(1));
 
 const allowWeak = document.querySelector<HTMLMetaElement>('meta[name="allow-weak-creds"]')?.content === 'true';
+const devAutologin = document.querySelector<HTMLMetaElement>('meta[name="dev-autologin"]')?.content === 'true';
+const devUser = document.querySelector<HTMLMetaElement>('meta[name="dev-user"]')?.content || 'admin';
 const data: InstallData = { favoriteColor: '#008080' };
 setAccentVariables(data.favoriteColor);
 
 function passwordStrong(pw: string): boolean {
   return pw.length >= 12 && /[a-z]/.test(pw) && /[A-Z]/.test(pw) && /\d/.test(pw);
 }
+
+function applyLocalDevInstallDefaults(): void {
+  if (!adminForm || !allowWeak || !devAutologin) return;
+
+  // Mirrors the login dev shortcut so first-run setup and auto-login agree.
+  const localPart = devUser.replace(/[^a-z0-9._-]/gi, '.') || 'admin';
+  adminForm.username.value ||= devUser;
+  adminForm.password.value ||= '123';
+  adminForm.confirmPassword.value ||= '123';
+  adminForm.email.value ||= `${localPart}@localhost.test`;
+}
+
+applyLocalDevInstallDefaults();
 
 adminForm?.addEventListener('submit', e => {
   e.preventDefault();
@@ -142,6 +182,10 @@ async function submitInstall(): Promise<void> {
     setStep(3);
   } catch (err) {
     console.error(err);
+    if (isAlreadyInstalledSubmitError(err)) {
+      await showAlreadyInstalledDialog();
+      return;
+    }
     alert('Installation failed: ' + messageFromError(err));
   }
 }

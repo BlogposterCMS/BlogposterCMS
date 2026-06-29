@@ -299,7 +299,8 @@ function setupPagesManagerEvents(motherEmitter) {
       language = 'en',
       meta = null,
       weight: rawWeight = 0,
-      autoSuffixSlug = false
+      autoSuffixSlug = false,
+      skipContentMirror = false
     } = payload || {};
     const weight = Number(rawWeight) || 0;
   
@@ -409,21 +410,25 @@ function setupPagesManagerEvents(motherEmitter) {
           if (!pageId) {
             return callback(new Error('Could not retrieve newly created page ID.'));
           }
-          await mirrorPageWriteToContentEngine(motherEmitter, 'create', {
-            jwt,
-            pageId,
-            title: mainTitle,
-            slug: finalSlug,
-            status,
-            seo_image,
-            translations,
-            parent_id,
-            is_content,
-            lane,
-            language,
-            meta,
-            weight
-          });
+          // Importers may create page projections for existing content entries.
+          // In that case the mirror would duplicate the already imported entry.
+          if (!skipContentMirror) {
+            await mirrorPageWriteToContentEngine(motherEmitter, 'create', {
+              jwt,
+              pageId,
+              title: mainTitle,
+              slug: finalSlug,
+              status,
+              seo_image,
+              translations,
+              parent_id,
+              is_content,
+              lane,
+              language,
+              meta,
+              weight
+            });
+          }
           callback(null, { pageId });
         }
       );

@@ -1,18 +1,12 @@
+import type {
+  DashboardWidgetSizeContract,
+  DashboardWidgetSizeSlot
+} from '../../shared/layout/dashboardSlots.js';
+
 export type LooseRecord = Record<string, any>;
 
-export type RuntimeWidgetSizeSlot = {
-  name: string;
-  minCols?: number;
-  maxCols?: number;
-  minRows?: number;
-  maxRows?: number;
-};
-
-export type RuntimeWidgetSizeContract = {
-  supportedSlots?: RuntimeWidgetSizeSlot[];
-  breakpoints?: Record<string, string[]>;
-  heightMode?: 'auto' | 'fixed' | 'scroll' | string;
-};
+export type RuntimeWidgetSizeSlot = DashboardWidgetSizeSlot;
+export type RuntimeWidgetSizeContract = DashboardWidgetSizeContract;
 
 export type RuntimeWidgetDefinition = LooseRecord & {
   id: string;

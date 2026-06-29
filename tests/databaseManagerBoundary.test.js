@@ -4,6 +4,9 @@ const path = require('path');
 const { registerApplySchemaDefinitionEvent } = require('../mother/modules/databaseManager/meltdownBridging/applySchemaDefinitionEvent');
 const { registerApplySchemaFileEvent } = require('../mother/modules/databaseManager/meltdownBridging/applySchemaFileEvent');
 const { registerCreateDatabaseEvent } = require('../mother/modules/databaseManager/meltdownBridging/createDatabaseEvent');
+const {
+  markCommunityStorageCall
+} = require('../mother/modules/databaseManager/meltdownBridging/databaseEventBoundary');
 const { registerHighLevelCrudEvents } = require('../mother/modules/databaseManager/meltdownBridging/highLevelCrudEvents');
 const { registerPerformDbOperationEvent } = require('../mother/modules/databaseManager/meltdownBridging/performDbOperationEvent');
 
@@ -41,6 +44,32 @@ test('database manager rejects community high-level database mutations', async (
   assert(err);
   assert.match(err.message, /cannot call dbUpdate/);
   assert.strictEqual(performedOperation, false);
+});
+
+test('database manager allows host-marked community storage mutations on physical tables', async () => {
+  const emitter = createEmitterWithCommunityModule();
+  const operations = [];
+  registerHighLevelCrudEvents(emitter);
+  emitter.on('performDbOperation', (payload, cb) => {
+    operations.push(payload);
+    cb(null, { rows: [{ id: 1, title: 'Stored' }] });
+  });
+
+  const payload = markCommunityStorageCall({
+    jwt: 'token',
+    moduleName: 'demoModule',
+    moduleType: 'community',
+    table: 'community_demomodule_items',
+    data: { title: 'Stored' }
+  }, 'insert');
+
+  const { err, result } = await emitAsync(emitter, 'dbInsert', payload);
+
+  assert.ifError(err);
+  assert.deepStrictEqual(result, [{ id: 1, title: 'Stored' }]);
+  assert.strictEqual(operations.length, 1);
+  assert.match(operations[0].operation, /INSERT INTO "community_demomodule_items"/);
+  assert.doesNotMatch(operations[0].operation, /demomodule_community_demomodule_items/);
 });
 
 test('database manager trusts registered community type over spoofed core payloads', async () => {

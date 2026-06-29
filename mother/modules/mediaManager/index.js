@@ -29,10 +29,17 @@ const ALLOWED_MIME_TYPES = [
   'image/png',
   'image/gif',
   'image/webp',
+  'image/avif',
   'image/svg+xml',
+  'image/x-icon',
   'text/html',
   'text/css',
-  'application/javascript'
+  'application/javascript',
+  'font/woff',
+  'font/woff2',
+  'font/ttf',
+  'font/otf',
+  'application/vnd.ms-fontobject'
 ];
 
 const EXTENSION_MIME_MAP = {
@@ -41,12 +48,19 @@ const EXTENSION_MIME_MAP = {
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
+  '.avif': 'image/avif',
   '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
   '.html': 'text/html',
   '.htm': 'text/html',
   '.css': 'text/css',
   '.js': 'application/javascript',
-  '.mjs': 'application/javascript'
+  '.mjs': 'application/javascript',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.eot': 'application/vnd.ms-fontobject'
 };
 
 const MODULE_NAME = 'mediaManager';

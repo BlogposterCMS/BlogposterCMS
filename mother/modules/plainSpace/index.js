@@ -100,49 +100,36 @@ function parseRegistryMetadata(value) {
 }
 
 function buildDefaultWidgetSizeContract(widget = {}) {
-  const options = widget.options && typeof widget.options === 'object'
-    ? widget.options
-    : {};
-  // Promote legacy seed sizing hints into a runtime contract without requiring
-  // a widget-table migration for existing installations.
-  const supportedSlots = [{ name: 'full', minCols: 12, maxCols: 12 }];
-
-  if (options.halfWidth) {
-    supportedSlots.push({ name: 'wide', minCols: 6 });
+  const metadata = parseRegistryMetadata(widget.metadata);
+  const contract = metadata.layout || metadata.sizeContract;
+  if (contract && typeof contract === 'object' && !Array.isArray(contract)) {
+    return clonePlainObject(contract);
   }
-  if (options.thirdWidth) {
-    supportedSlots.push({ name: 'wide', minCols: 6 });
-    supportedSlots.push({ name: 'compact', minCols: 4 });
-  }
-
-  const uniqueSlots = Array.from(
-    new Map(supportedSlots.map(slot => [slot.name, slot])).values()
-  );
 
   return {
-    supportedSlots: uniqueSlots,
+    defaultSlot: 'full',
+    supportedSlots: [{ name: 'full', minCols: 12, maxCols: 12 }],
     breakpoints: {
       mobile: ['full'],
-      tablet: uniqueSlots.filter(slot => slot.name !== 'compact').map(slot => slot.name),
-      desktop: uniqueSlots.map(slot => slot.name)
+      tablet: ['full'],
+      desktop: ['full']
     },
-    heightMode: options.overflow && !isDefaultFullAreaOnly(options) ? 'scroll' : 'auto'
+    heightMode: 'dynamic',
+    height: {
+      mode: 'dynamic',
+      minHeight: {
+        mobile: 120,
+        tablet: 140,
+        desktop: 160
+      }
+    }
   };
-}
-
-function isDefaultFullAreaOnly(options = {}) {
-  if (options.halfWidth || options.thirdWidth) return false;
-  const width = Number(options.width);
-  return !Number.isFinite(width) || width >= 100;
 }
 
 function getDefaultWidgetMetadata(widgetId) {
   const widget = DEFAULT_WIDGET_BY_ID.get(widgetId);
   if (!widget) return {};
   const metadata = clonePlainObject(widget.metadata);
-  if (widget.options && !metadata.seedOptions) {
-    metadata.seedOptions = clonePlainObject(widget.options);
-  }
   if (!metadata.layout && !metadata.sizeContract) {
     metadata.layout = buildDefaultWidgetSizeContract(widget);
   }
@@ -329,7 +316,7 @@ module.exports = {
       const seededVal = await getSetting(motherEmitter, jwt, 'PLAINSPACE_SEEDED');
       if (seededVal === 'true') {
         console.log('[plainSpace] Already seeded (PLAINSPACE_SEEDED=true). Checking for missing admin pages and widgets...');
-        // Ensure widget instances exist first so page seeding can read their defaults
+        // Ensure registry rows exist before page layouts reference widgets.
         for (const widgetData of DEFAULT_WIDGETS) {
           const { options = {}, ...data } = widgetData;
           await seedAdminWidget(motherEmitter, jwt, data, options);
@@ -340,13 +327,13 @@ module.exports = {
       } else {
         console.log('[plainSpace] Not seeded => running seed steps...');
 
-        // A) Seed default widgets first so instance defaults are available
+        // A) Seed default widgets before pages so registry rows exist.
         for (const widgetData of DEFAULT_WIDGETS) {
           const { options = {}, ...data } = widgetData;
           await seedAdminWidget(motherEmitter, jwt, data, options);
         }
 
-        // B) Seed admin pages (now can derive layout from widget instances)
+        // B) Seed admin pages from explicit page/widget slot contracts.
         if (isCore && jwt) {
           await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
         }

@@ -42,23 +42,37 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
   imports, default instance options and data work in a second stage so layout
   does not wait for widget code.
 - Widget definitions may expose a `layout` or `metadata.layout` size contract
-  with named `supportedSlots`, breakpoint slot lists and a `heightMode`. The
-  runtime records the resolved slot on the canvas item; unsupported declared
-  slots are marked with `WIDGET_SIZE_UNSUPPORTED` for editor/debug surfaces.
-- The `full` slot means a widget owns the full dashboard row/area. Runtime
-  layout treats that area as exclusive for overlap resolution and disables
-  inner widget scrollbars so the surrounding page/grid owns scrolling.
-- Existing default widget seed options (`halfWidth`, `thirdWidth` and
-  `overflow`) are published into the registry as `metadata.layout`, preserving
-  old seeds while giving the editor/runtime an explicit size contract.
-- `seedAdminWidget` can attach width and height options when creating admin widgets.
-- When seeding layout options without a `height`, a default of 40% is applied so
-  widgets occupy space without overlap. If no layout options are provided and an
-  instance already exists, its stored size is preserved. Seeded layouts now pack
-  widgets into deterministic rows using the supplied width metadata, so half-width
-  widgets land side-by-side (0% / 50%) and thirds land in columns (0% / 33.333% /
-  66.666%). When no width metadata is present a widget spans the full row.
-- Default admin widgets are seeded with options describing their suggested layout.
+  with named `supportedSlots`, breakpoint slot lists, a `defaultSlot`, and a
+  `heightMode` plus optional viewport-aware height policy. The dashboard
+  runtime resolves these contracts to fixed flow slots: `third`, `half`,
+  `twoThird`, `full`, or `page`.
+- Dashboard layouts are stored as `{ widgetId, slot, column, order }` entries.
+  The widget owns the supported size, while the user owns the raster placement.
+  The dashboard no longer derives sizing from widget-instance width/height hints
+  or absolute pixel placement.
+- Dashboard edit drag-and-drop uses a live flow placeholder. Existing widgets
+  move to the previewed placeholder on drop, and new widgets from the drawer can
+  be inserted before the next dashboard instance instead of being appended. A
+  pointer-driven widget preview follows the cursor while a snap pulse exposes
+  the active grid column without reintroducing free CanvasGrid positioning.
+- Widget height is owned by the registry contract too. A layout can declare
+  `heightMode: 'dynamic' | 'auto' | 'scroll' | 'fixed'` and a `height` object
+  with `minHeight`, `height`, `maxHeight`, `viewports`, or `heights` overrides.
+  Viewport values cascade mobile -> tablet -> desktop, so a widget can set the
+  smallest readable height once and override only where a larger viewport needs
+  more space.
+- The `page` slot is exclusive: if a page-sized admin tool is present, it owns
+  the dashboard surface by itself. Use it for full-page workspaces such as Media
+  Explorer or Navigation Studio.
+- `seedAdminWidget` strips layout keys from module seed defaults. Layout belongs
+  in registry metadata and page `widgetSlots`, while widget instances store only
+  real render defaults.
+- Admin dashboard hydration does not apply legacy widget-instance layout
+  options. Percent sizing through `applyWidgetOptions` remains available to
+  CanvasGrid-style public/runtime surfaces, while dashboard admin placement and
+  height come only from the registry contract.
+- Default admin widgets are seeded with explicit metadata contracts and page
+  `widgetSlots`.
 - The Home workspace now seeds widgets that highlight what's coming next and a draggable demo.
 
 - Widgets can be marked as **global** in the builder. A global widget shares its
@@ -91,33 +105,52 @@ database work with the same fixed core scope; callers can query layouts,
 templates and widget metadata only through the runtime/admin facades, not by
 impersonating another module on the raw event bus.
 
-### Seeding Widgets with Layout Options
+### Seeding Widgets with Dashboard Slots
 
-The helper `seedAdminWidget(motherEmitter, jwt, widgetData, options)` creates an
-admin lane widget if it does not already exist and stores layout options in the
-`widget_instances` table. The `options` object supports the following keys:
+The helper `seedAdminWidget(motherEmitter, jwt, widgetData, options)` creates a
+widget row if it does not already exist. Dashboard sizing is not read from
+`options`; layout keys such as `halfWidth`, `thirdWidth`, `width`, `height` and
+`overflow` are stripped before optional default widget data is stored.
 
-- `max` – applies both `max-width` and `max-height` using a percentage value (number or string).
-- `maxWidth` – percentage value for the maximum width (number or string).
-- `maxHeight` – percentage value for the maximum height (number or string).
-- `halfWidth` – if `true` the widget should use at least half of the desktop width.
-- `thirdWidth` – if `true` the widget should use at least one third of the width.
-- `width` – custom width percentage.
-- `height` – custom height hint. Values from 1 to 100 are treated as
-  percentages; values above 100 are treated as fixed grid-pixel rows so compact
-  admin widgets such as `height: 160` do not expand to `160%` of the viewport.
-  If omitted, a default of 40% is used so seeded widgets occupy space.
-- `xPercent`/`yPercent` are automatically derived from the hints above during
-  seeding and saved together with grid `x`/`y`/`w`/`h` so the client can render
-  the layout without running collision correction.
-- Full-slot widgets ignore inner overflow scrolling and use page-level
-  scrolling instead.
-- Full-only widget contracts are normalized to the grid width before slot
-  validation, so legacy `w=8` layouts still render as full-width widgets.
-- `overflow` – when `true` the widget height is fixed and may scroll; when
-  `false` the widget expands to fit its content.
+Built-in widgets declare their allowed dashboard sizes in `metadata.layout`:
 
-Example seed entry specifying a compact 160px widget height:
+```js
+metadata: {
+  layout: {
+    defaultSlot: 'half',
+    supportedSlots: [
+      { name: 'half', minCols: 6, maxCols: 6 },
+      { name: 'full', minCols: 12, maxCols: 12 }
+    ],
+    breakpoints: {
+      mobile: ['full'],
+      tablet: ['half', 'full'],
+      desktop: ['half', 'full']
+    },
+    heightMode: 'dynamic',
+    height: {
+      mode: 'dynamic',
+      minHeight: {
+        mobile: 160,
+        tablet: 180,
+        desktop: 220
+      }
+    }
+  }
+}
+```
+
+Seed pages choose where each widget may start with `config.widgetSlots`:
+
+```js
+config: {
+  widgets: ['pageList', 'pageStats'],
+  widgetSlots: {
+    pageList: 'twoThird',
+    pageStats: 'third'
+  }
+}
+```
 
 Widget `content` values are browser URLs. New seeds should use
 `/ui/widgets/plainspace/*`. The active bundled widget source lives under
@@ -125,41 +158,12 @@ Widget `content` values are browser URLs. New seeds should use
 compatibility shims for existing content and are normalized to canonical
 `/ui/widgets/plainspace/*` module URLs by the runtime import guard.
 
-The default Media page seeds `mediaExplorer` as a full-width admin widget. The
+The default Media page seeds `mediaExplorer` as a page-slot admin widget. The
 widget itself is only a PlainSpace mount point; folder browsing, upload,
 share-link creation, rename and delete are provided by the shared Explorer
 surface in `ui/shared/media/` so the shell picker and global media modal can
 reuse the same Media Manager integration.
 
-```json
-{
-  "adminWidgets": [
-    {
-      "widgetId": "designerDemo",
-      "widgetType": "admin",
-      "label": "Designer Demo",
-      "content": "/ui/widgets/plainspace/admin/dragInfoWidget.js",
-      "category": "core",
-      "options": { "height": 160 }
-    }
-  ]
-}
-```
-
 Seed files run without validation; only load admin seeds from trusted modules.
-CanvasGrid recalculates widget hitboxes and bounding boxes on first render,
-so seeding the `height` option is sufficient – no extra size data is needed.
-
-Enable debug logging for option calculations by seeding `debug: true`:
-
-```json
-{
-  "options": { "height": 160, "debug": true }
-}
-```
-The front-end console will show grid dimensions and the resulting update
-payload, helping diagnose why a widget renders at a different size than
-expected.
-
-Saved options can be read later with `getWidgetInstance` to decide how the
-widget should render in the builder.
+Community seeds that need default render data can still pass non-layout
+`options`; saved options can be read later with `getWidgetInstance`.

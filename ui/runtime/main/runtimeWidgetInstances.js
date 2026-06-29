@@ -9,15 +9,17 @@ function parseWidgetOptions(content) {
     return JSON.parse(content);
 }
 export async function applyDefaultWidgetInstanceOptions(wrapper, def, grid, emit, lane = 'public') {
+    if (lane === 'admin') {
+        return;
+    }
     try {
         const res = await emit('getWidgetInstance', {
             moduleName: 'plainspace',
             moduleType: 'core',
-            instanceId: `default.${def.id}`,
-            ...(lane === 'admin' ? { jwt: window.ADMIN_TOKEN } : {})
+            instanceId: `default.${def.id}`
         });
-        const opts = parseWidgetOptions(res?.content) ?? undefined;
-        applyWidgetOptions(wrapper, opts, grid);
+        const parsedOptions = parseWidgetOptions(res?.content);
+        applyWidgetOptions(wrapper, parsedOptions ?? undefined, grid);
     }
     catch { }
 }

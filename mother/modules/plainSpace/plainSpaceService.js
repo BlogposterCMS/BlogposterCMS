@@ -35,11 +35,17 @@ const MODULE      = 'plainspace';
 const MODULE_TYPE = 'core';
 const PUBLIC_LANE = 'public';
 const ADMIN_LANE  = 'admin';
-// Default height percentage for seeded widgets to avoid initial overlap
-const DEFAULT_WIDGET_HEIGHT = 40;
-const GRID_COLUMNS = 12;
-const PERCENT_PRECISION = 3;
-const ROW_EPSILON = 0.01;
+const DASHBOARD_SLOTS = new Set(['third', 'half', 'twoThird', 'full', 'page']);
+const LAYOUT_OPTION_KEYS = new Set([
+  'max',
+  'maxWidth',
+  'maxHeight',
+  'halfWidth',
+  'thirdWidth',
+  'width',
+  'height',
+  'overflow'
+]);
 
 function assertPlainSpacePayload(payload, eventName) {
   const { jwt, moduleName, moduleType } = payload || {};
@@ -48,33 +54,60 @@ function assertPlainSpacePayload(payload, eventName) {
   }
 }
 
-const roundPercent = (value) => {
-  return Number.isFinite(value)
-    ? Math.round(value * (10 ** PERCENT_PRECISION)) / (10 ** PERCENT_PRECISION)
-    : value;
-};
-
-const clampPercent = (value, fallback, { min = 5, max = 100 } = {}) => {
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
-  const capped = max == null ? value : Math.min(max, value);
-  return Math.max(min, capped);
-};
-
-const percentToGridPosition = (percent) => {
-  if (!Number.isFinite(percent)) return 0;
-  return Math.round((percent / 100) * GRID_COLUMNS);
-};
-
-const percentToGridSpan = (percent) => {
-  if (!Number.isFinite(percent)) return 1;
-  const span = Math.round((percent / 100) * GRID_COLUMNS);
-  return Math.max(1, span);
-};
-
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeDashboardSlot(value, fallback = 'full') {
+  return DASHBOARD_SLOTS.has(value) ? value : fallback;
+}
+
+function normalizeWidgetSeedEntry(entry, widgetSlots = {}) {
+  if (typeof entry === 'string') {
+    return {
+      widgetId: entry,
+      slot: normalizeDashboardSlot(widgetSlots[entry])
+    };
+  }
+  if (!isPlainObject(entry) || typeof entry.widgetId !== 'string') {
+    return null;
+  }
+  return {
+    widgetId: entry.widgetId,
+    slot: normalizeDashboardSlot(entry.slot ?? widgetSlots[entry.widgetId])
+  };
+}
+
+function getSeedWidgetEntries(widgets = [], widgetSlots = {}) {
+  return Array.isArray(widgets)
+    ? widgets
+      .map(entry => normalizeWidgetSeedEntry(entry, widgetSlots))
+      .filter(Boolean)
+    : [];
+}
+
+function getSeedWidgetIds(widgets = []) {
+  return getSeedWidgetEntries(widgets).map(entry => entry.widgetId);
+}
+
+function buildDashboardLayoutFromWidgets(widgets = [], widgetSlots = {}, startIndex = 0) {
+  return getSeedWidgetEntries(widgets, widgetSlots).map((entry, index) => {
+    const orderIndex = startIndex + index;
+    return {
+      id: `w${orderIndex}`,
+      widgetId: entry.widgetId,
+      slot: entry.slot,
+      order: orderIndex * 10,
+      code: null
+    };
+  });
+}
+
+function stripLayoutOptions(options = {}) {
+  if (!isPlainObject(options)) return null;
+  const cleanEntries = Object.entries(options)
+    .filter(([key]) => !LAYOUT_OPTION_KEYS.has(key));
+  return cleanEntries.length ? Object.fromEntries(cleanEntries) : null;
 }
 
 function cloneSeedLayout(page) {
@@ -251,8 +284,9 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
       let missingWidgets = [];
       if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
+        const seedWidgetIds = getSeedWidgetIds(page.config.widgets);
         const existingWidgets = Array.isArray(newMeta.widgets) ? newMeta.widgets.slice() : [];
-        missingWidgets = page.config.widgets.filter(w => !existingWidgets.includes(w));
+        missingWidgets = seedWidgetIds.filter(w => !existingWidgets.includes(w));
         if (missingWidgets.length) {
           newMeta.widgets = [...existingWidgets, ...missingWidgets];
           metaChanged = true;
@@ -293,55 +327,12 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           });
           let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
           const existingIds = layout.map(l => l.widgetId);
-          let y = layout.reduce((m, l) => Math.max(m, (l.y ?? 0) + (l.h ?? 4)), 0);
-          for (const w of missingWidgets) {
-            if (existingIds.includes(w)) continue;
-            // Derive percent-based layout from widget instance options if available
-            let wPercent = null, hPercent = null;
-            try {
-              const inst = await meltdownEmit(motherEmitter, 'getWidgetInstance', {
-                jwt,
-                moduleName: MODULE,
-                moduleType: MODULE_TYPE,
-                instanceId: `default.${w}`
-              }).catch(() => null);
-              const content = inst?.content ? JSON.parse(inst.content) : null;
-              if (content) {
-                if (content.halfWidth) wPercent = 50;
-                if (content.thirdWidth) wPercent = 33.333;
-                if (typeof content.width === 'number') wPercent = content.width;
-                if (typeof content.height === 'number') hPercent = content.height;
-              }
-            } catch (_) {}
-
-            const widthCandidate = Number(wPercent);
-            const hasWidthHint = wPercent != null && Number.isFinite(widthCandidate);
-            const widthPercent = hasWidthHint
-              ? clampPercent(widthCandidate, 100)
-              : 100;
-            const heightCandidate = Number(hPercent);
-            const heightPercent = Number.isFinite(heightCandidate)
-              ? clampPercent(heightCandidate, DEFAULT_WIDGET_HEIGHT, { max: null })
-              : DEFAULT_WIDGET_HEIGHT;
-            const yPercentValue = roundPercent((y / GRID_COLUMNS) * 100);
-            const gridWidth = Math.max(1, Math.min(percentToGridSpan(widthPercent), GRID_COLUMNS));
-            const gridHeight = percentToGridSpan(heightPercent);
-            const layoutItem = {
-              id: `w${layout.length}`,
-              widgetId: w,
-              xPercent: 0,
-              yPercent: yPercentValue,
-              ...(hasWidthHint ? { wPercent: roundPercent(widthPercent) } : {}),
-              hPercent: roundPercent(heightPercent),
-              x: 0,
-              y,
-              w: gridWidth,
-              h: gridHeight,
-              code: null
-            };
-            layout.push(layoutItem);
-            y += layoutItem.h;
-          }
+          const missingLayoutEntries = buildDashboardLayoutFromWidgets(
+            missingWidgets.filter(w => !existingIds.includes(w)),
+            page.config.widgetSlots || {},
+            layout.length
+          );
+          layout = [...layout, ...missingLayoutEntries];
           await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
             jwt,
             moduleName: MODULE,
@@ -351,13 +342,13 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
             viewport: 'desktop',
             layout
           });
-          console.log(`[plainSpace] Updated widgets for existing admin page "${finalSlugForCheck}".`);
+          console.log(`[plainSpace] Updated widget slots for existing admin page "${finalSlugForCheck}".`);
         } catch (err) {
           notify({
             moduleName: MODULE,
             notificationType: 'system',
             priority: 'error',
-            message: `[plainSpace] Failed to update admin page "${finalSlugForCheck}": ${err.message}`
+            message: `[plainSpace:ADMIN_PAGE_SLOT_UPDATE_FAILED] Failed to update admin page "${finalSlugForCheck}": ${err.message}`
           });
         }
       }
@@ -370,7 +361,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     if (pageWorkspace) pageMeta.workspace = pageWorkspace;
     if (pageLayout) pageMeta.layout = pageLayout;
     if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
-      pageMeta.widgets = page.config.widgets;
+      pageMeta.widgets = getSeedWidgetIds(page.config.widgets);
     }
 
     const createRes = await meltdownEmit(motherEmitter, 'createPage', {
@@ -398,107 +389,10 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
     const pageId = createRes?.pageId;
     if (pageId && Array.isArray(page.config?.widgets) && page.config.widgets.length) {
-      // Build a layout that mirrors what a user save would produce, using
-      // percent-based width/height derived from widget instance defaults.
-      const layout = [];
-      const pendingRow = [];
-      let rowWidthPercent = 0;
-      let yPercentCursor = 0;
-
-      const flushRow = () => {
-        if (!pendingRow.length) {
-          return;
-        }
-        const rowHeightPercent = pendingRow.reduce(
-          (maxHeight, widget) => Math.max(maxHeight, widget.heightPercent),
-          DEFAULT_WIDGET_HEIGHT
-        );
-        let xPercentCursor = 0;
-        for (const widget of pendingRow) {
-          const xPercentValue = roundPercent(xPercentCursor);
-          const yPercentValue = roundPercent(yPercentCursor);
-          const xGrid = Math.min(
-            Math.max(0, percentToGridPosition(xPercentValue)),
-            GRID_COLUMNS - 1
-          );
-          const yGrid = percentToGridPosition(yPercentValue);
-          const gridWidth = Math.max(
-            1,
-            Math.min(percentToGridSpan(widget.widthPercent), GRID_COLUMNS - xGrid)
-          );
-          const gridHeight = percentToGridSpan(widget.heightPercent);
-          const layoutItem = {
-            id: widget.id,
-            widgetId: widget.widgetId,
-            xPercent: xPercentValue,
-            yPercent: yPercentValue,
-            ...(widget.widthHint != null ? { wPercent: roundPercent(widget.widthHint) } : {}),
-            hPercent: roundPercent(widget.heightPercent),
-            x: xGrid,
-            y: yGrid,
-            w: gridWidth,
-            h: gridHeight,
-            code: null
-          };
-          layout.push(layoutItem);
-          xPercentCursor += widget.widthPercent;
-        }
-        yPercentCursor += rowHeightPercent;
-        pendingRow.length = 0;
-        rowWidthPercent = 0;
-      };
-
-      for (let idx = 0; idx < page.config.widgets.length; idx++) {
-        const wId = page.config.widgets[idx];
-        let wPercent = null;
-        let hPercent = null;
-        try {
-          const inst = await meltdownEmit(motherEmitter, 'getWidgetInstance', {
-            jwt,
-            moduleName: MODULE,
-            moduleType: MODULE_TYPE,
-            instanceId: `default.${wId}`
-          }).catch(() => null);
-          const content = inst?.content ? JSON.parse(inst.content) : null;
-          if (content) {
-            if (content.halfWidth) wPercent = 50;
-            if (content.thirdWidth) wPercent = 33.333;
-            if (typeof content.width === 'number') wPercent = content.width;
-            if (typeof content.height === 'number') hPercent = content.height;
-          }
-        } catch (_) {}
-
-        const widthCandidate = Number(wPercent);
-        const hasWidthHint = wPercent != null && Number.isFinite(widthCandidate);
-        const widthPercent = hasWidthHint
-          ? clampPercent(widthCandidate, 100)
-          : 100;
-        const heightCandidate = Number(hPercent);
-        const heightPercent = Number.isFinite(heightCandidate)
-          ? clampPercent(heightCandidate, DEFAULT_WIDGET_HEIGHT, { max: null })
-          : DEFAULT_WIDGET_HEIGHT;
-
-        if (pendingRow.length && rowWidthPercent + widthPercent > 100 + ROW_EPSILON) {
-          flushRow();
-        }
-
-        pendingRow.push({
-          id: `w${idx}`,
-          widgetId: wId,
-          widthPercent,
-          heightPercent,
-          widthHint: hasWidthHint ? widthPercent : null
-        });
-        rowWidthPercent += widthPercent;
-
-        if (Math.abs(rowWidthPercent - 100) <= ROW_EPSILON) {
-          flushRow();
-        }
-      }
-
-      if (pendingRow.length) {
-        flushRow();
-      }
+      const layout = buildDashboardLayoutFromWidgets(
+        page.config.widgets,
+        page.config.widgetSlots || {}
+      );
 
       try {
         await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
@@ -510,13 +404,13 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
           viewport: 'desktop',
           layout
         });
-        console.log(`[plainSpace] Default layout seeded for "${finalSlugForCheck}".`);
+        console.log(`[plainSpace] Default dashboard slots seeded for "${finalSlugForCheck}".`);
       } catch (err) {
         notify({
           moduleName: MODULE,
           notificationType: 'system',
           priority: 'error',
-          message: `[plainSpace] Failed to seed layout for "${finalSlugForCheck}": ${err.message}`
+          message: `[plainSpace:DASHBOARD_SLOT_SEED_FAILED] Failed to seed layout for "${finalSlugForCheck}": ${err.message}`
         });
       }
     }
@@ -601,60 +495,38 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
 
 /**
  * seedAdminWidget:
- * Creates an admin lane widget if missing and optionally stores
- * layout options in the widget_instances table. These options
- * describe width/height behaviour of the widget when seeded on a page.
+ * Creates a widget row if missing and stores only non-layout defaults.
+ * Dashboard sizing is owned by explicit widget metadata and page slots.
  *
  * @param {EventEmitter} motherEmitter
  * @param {string} jwt
  * @param {object} widgetData - { widgetId, widgetType, label, content, category }
- * @param {object} [layoutOpts] - { max, maxWidth, maxHeight, halfWidth, thirdWidth, width, height, overflow }
+ * @param {object} [layoutOpts] - legacy/non-layout defaults from module seeds
  */
 async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) {
   await checkOrCreateWidget(motherEmitter, jwt, widgetData);
 
-  const instanceId = `default.${widgetData.widgetId}`;
-
-  // If no layout options are provided, only seed a default height when the
-  // widget instance does not already exist. This preserves any user‑saved
-  // custom height from being overwritten on startup.
-  if (!layoutOpts || Object.keys(layoutOpts).length === 0) {
-    try {
-      const existing = await meltdownEmit(motherEmitter, 'getWidgetInstance', {
-        jwt,
-        moduleName: MODULE,
-        moduleType: MODULE_TYPE,
-        instanceId
-      }).catch(() => null);
-
-      if (existing?.content) {
-        return; // Instance exists; respect saved settings.
-      }
-
-      layoutOpts = { height: DEFAULT_WIDGET_HEIGHT };
-    } catch (err) {
-      layoutOpts = { height: DEFAULT_WIDGET_HEIGHT };
-    }
-  } else if (layoutOpts.height == null) {
-    // Ensure widgets have a base height so they don't stack in the top-left corner
-    layoutOpts.height = DEFAULT_WIDGET_HEIGHT;
+  const defaultData = stripLayoutOptions(layoutOpts);
+  if (!defaultData) {
+    return;
   }
 
+  const instanceId = `default.${widgetData.widgetId}`;
   try {
     await meltdownEmit(motherEmitter, 'saveWidgetInstance', {
       jwt,
       moduleName: MODULE,
       moduleType: MODULE_TYPE,
       instanceId,
-      content: JSON.stringify(layoutOpts)
+      content: JSON.stringify(defaultData)
     });
-    console.log(`[plainSpace] Stored layout options for ${widgetData.widgetId}.`);
+    console.log(`[plainSpace] Stored default widget data for ${widgetData.widgetId}.`);
   } catch (err) {
     notify({
       moduleName: MODULE,
       notificationType: 'system',
       priority: 'error',
-      message: `[plainSpace] Failed to store layout options for ${widgetData.widgetId}: ${err.message}`
+      message: `[plainSpace:WIDGET_DEFAULT_SAVE_FAILED] Failed to store default widget data for ${widgetData.widgetId}: ${err.message}`
     });
   }
 }

@@ -2,7 +2,7 @@
 
 require('dotenv').config();
 
-const ADMIN_PERMISSIONS = JSON.stringify({ '*': true, canAccessEverything: true });
+const ADMIN_PERMISSIONS = JSON.stringify({ '*': true });
 
 /**
  * ensureUserManagementDatabase:

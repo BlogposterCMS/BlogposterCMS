@@ -19,8 +19,8 @@ export interface ModuleAccessRuntimeRequest {
 
 type ModuleAccessEmitter = Window['meltdownEmit'];
 
-const MODULE_LOADER_MODULE = {
-  moduleName: 'moduleLoader',
+const RUNTIME_MANAGER_MODULE = {
+  moduleName: 'runtimeManager',
   moduleType: 'core'
 } as const;
 
@@ -29,6 +29,40 @@ function requireEmitter(emit: ModuleAccessEmitter): NonNullable<ModuleAccessEmit
     throw new Error('MODULE_ACCESS_CONSENT_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
   }
   return emit;
+}
+
+function objectParams(value: Record<string, unknown> = {}): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function unwrapRuntimeFacadeData<T = unknown>(value: unknown): T {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'resource' in value &&
+    'action' in value &&
+    'data' in value
+  ) {
+    return (value as { data?: T }).data as T;
+  }
+  return value as T;
+}
+
+async function emitRuntimeAdmin<T = unknown>(
+  emit: NonNullable<ModuleAccessEmitter>,
+  jwt: string | null | undefined,
+  resource: string,
+  action: string,
+  params: Record<string, unknown> = {}
+): Promise<T> {
+  const result = await emit('cmsAdminApiRequest', {
+    jwt,
+    ...RUNTIME_MANAGER_MODULE,
+    resource,
+    action,
+    params: objectParams(params)
+  });
+  return unwrapRuntimeFacadeData<T>(result);
 }
 
 function toArray(value: unknown): unknown[] {
@@ -54,12 +88,9 @@ export async function fetchPendingModuleAccessRequests(
   targetModuleName?: string
 ): Promise<ModuleAccessRuntimeRequest[]> {
   const meltdownEmit = requireEmitter(emit);
-  const payload: Record<string, unknown> = {
-    jwt,
-    ...MODULE_LOADER_MODULE
-  };
+  const payload: Record<string, unknown> = {};
   if (targetModuleName) payload.targetModuleName = targetModuleName;
-  const res = await meltdownEmit('listPendingModuleAccessRequests', payload);
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'accessRequests', payload);
   return toModuleAccessRuntimeRequests(res);
 }
 
@@ -71,9 +102,7 @@ export async function resolveModuleAccessRequest(
   mode: 'once' | 'always' = 'once'
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('resolveModuleAccessRequest', {
-    jwt,
-    ...MODULE_LOADER_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'resolveAccessRequest', {
     requestId,
     decision,
     mode

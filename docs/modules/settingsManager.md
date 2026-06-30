@@ -42,3 +42,7 @@ Permission checks ensure only authorised callers can view or modify core
 settings. Public settings are limited to non-secret site/runtime keys such as
 `SITE_TITLE`, `SITE_DESCRIPTION`, `SITE_URL`, `FAVICON_URL`,
 `PERMALINK_STRUCTURE`, `POSTS_PER_PAGE` and comment defaults.
+Browser callers should read public settings through
+`runtimeManager.cmsPublicRuntimeRequest` resource `settings`, action `public`;
+direct `getPublicSetting`/`getPublicSettings` events are internal module
+contracts.

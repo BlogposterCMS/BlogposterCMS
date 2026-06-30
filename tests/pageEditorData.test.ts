@@ -66,30 +66,34 @@ describe('pageEditorData', () => {
   it('builds updatePage payloads from form values and existing page metadata', () => {
     expect(buildPageUpdatePayload('admin-token', page, values)).toEqual({
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1',
-      slug: 'new-slug',
-      status: 'published',
-      seo_image: '/new.png',
-      parent_id: null,
-      is_content: true,
-      lane: 'public',
-      language: 'en',
-      title: 'New Title',
-      translations: [{
+      resource: 'pages',
+      action: 'update',
+      params: {
+        pageId: 'page-1',
+        slug: 'new-slug',
+        status: 'published',
+        seo_image: '/new.png',
+        parent_id: null,
+        is_content: true,
+        lane: 'public',
         language: 'en',
         title: 'New Title',
-        html: '<p>Body</p>',
-        css: '.body{}',
-        metaDesc: 'Description',
-        seoTitle: 'SEO Old',
-        seoKeywords: 'old,keywords'
-      }],
-      meta: {
-        keep: true,
-        publish_at: '2026-06-17T12:00',
-        layoutTemplate: 'landing'
+        translations: [{
+          language: 'en',
+          title: 'New Title',
+          html: '<p>Body</p>',
+          css: '.body{}',
+          metaDesc: 'Description',
+          seoTitle: 'SEO Old',
+          seoKeywords: 'old,keywords'
+        }],
+        meta: {
+          keep: true,
+          publish_at: '2026-06-17T12:00',
+          layoutTemplate: 'landing'
+        }
       }
     });
   });
@@ -104,11 +108,13 @@ describe('pageEditorData', () => {
 
     await expect(fetchPageEditorTemplates(emit, 'admin-token', 'public'))
       .resolves.toEqual([{ name: 'Landing' }]);
-    expect(emit).toHaveBeenCalledWith('getLayoutTemplateNames', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'plainspace',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'plainSpace',
+      action: 'layoutTemplateNames',
+      params: { lane: 'public' }
     });
   });
 
@@ -119,17 +125,23 @@ describe('pageEditorData', () => {
     await savePageEditorPage(emit, 'admin-token', page, values);
     clearPageEditorCache(loader, page);
 
-    expect(emit).toHaveBeenCalledWith('updatePage', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1',
-      slug: 'new-slug'
+      resource: 'pages',
+      action: 'update',
+      params: expect.objectContaining({
+        pageId: 'page-1',
+        slug: 'new-slug'
+      })
     }));
-    expect(loader.clear).toHaveBeenCalledWith('getPageById', {
-      moduleName: 'pagesManager',
+    expect(loader.clear).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1'
+      resource: 'pages',
+      action: 'get',
+      params: { pageId: 'page-1' }
     });
   });
 });

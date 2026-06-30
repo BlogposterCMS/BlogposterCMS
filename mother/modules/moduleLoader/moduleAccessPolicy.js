@@ -1,8 +1,11 @@
 'use strict';
 
 const {
-  legacyHttpFacadeAction
-} = require('../../utils/meltdownHttpPolicy');
+  _internals: {
+    adminApiDefinition,
+    adminApiEventDefinition
+  }
+} = require('../runtimeManager');
 
 const SAFE_PERMISSION_KEY = /^[A-Za-z][A-Za-z0-9_-]*(?:\.[A-Za-z][A-Za-z0-9_-]*)+$/;
 const SAFE_EVENT_NAME = /^[A-Za-z][A-Za-z0-9:._-]*$/;
@@ -153,6 +156,17 @@ function describeGrantableEvent(eventName) {
   return { event, resource, action };
 }
 
+function describeGrantableAccessDescriptor(descriptor = {}) {
+  const { event, resource, action } = describeCoreAccessDescriptor(descriptor);
+  if (DENIED_GRANT_RESOURCES.has(resource)) {
+    throw createModuleAccessError(
+      'E_MODULE_ACCESS_RESOURCE_DENIED',
+      `Resource action "${resource}.${action}" resolves to protected event "${event}" and is not grantable to community modules.`
+    );
+  }
+  return { event, resource, action };
+}
+
 function describeCoreAccessEvent(eventName) {
   const event = normalizeString(eventName);
   if (!event || !SAFE_EVENT_NAME.test(event)) {
@@ -161,14 +175,46 @@ function describeCoreAccessEvent(eventName) {
   if (HARD_DENIED_GRANT_EVENTS.has(event)) {
     throw createModuleAccessError('E_MODULE_ACCESS_EVENT_DENIED', `Event "${event}" is never grantable to community modules.`);
   }
-  const facade = legacyHttpFacadeAction(event);
-  if (!facade) {
+  // Community grants are derived from Runtime Manager's admin facade so module
+  // consent cannot drift back to HTTP facade maps or raw core-event maps.
+  const facade = adminApiEventDefinition(event);
+  if (!facade.definition) {
     throw createModuleAccessError(
       'E_MODULE_ACCESS_EVENT_UNKNOWN',
       `Event "${event}" is not a documented grantable core event.`
     );
   }
   return { event, resource: facade.resource, action: facade.action };
+}
+
+function describeCoreAccessDescriptor(descriptor = {}) {
+  const resource = normalizeString(descriptor.resource);
+  const action = normalizeString(descriptor.action);
+  if (!resource || !action) {
+    throw createModuleAccessError(
+      'E_MODULE_ACCESS_DESCRIPTOR_REQUIRED',
+      'requestedAccess entries must declare resource and action.'
+    );
+  }
+  const facade = adminApiDefinition(resource, action);
+  if (!facade.definition) {
+    throw createModuleAccessError(
+      'E_MODULE_ACCESS_DESCRIPTOR_UNKNOWN',
+      `Resource action "${resource}.${action}" is not a documented grantable admin facade action.`
+    );
+  }
+  const event = facade.definition.eventName;
+  if (HARD_DENIED_GRANT_EVENTS.has(event)) {
+    throw createModuleAccessError(
+      'E_MODULE_ACCESS_EVENT_DENIED',
+      `Resource action "${facade.resource}.${facade.action}" resolves to event "${event}", which is never grantable to community modules.`
+    );
+  }
+  return {
+    event,
+    resource: facade.resource,
+    action: facade.action
+  };
 }
 
 function describeOneTimeAccessEvent(eventName) {
@@ -180,19 +226,25 @@ function describeOneTimeAccessEvent(eventName) {
 }
 
 function normalizeAccessRequest(item) {
-  const source = typeof item === 'string' ? { event: item } : item;
-  if (!source || typeof source !== 'object' || Array.isArray(source)) {
-    throw createModuleAccessError('E_MODULE_ACCESS_REQUEST', 'requestedAccess entries must be strings or objects.');
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    throw createModuleAccessError('E_MODULE_ACCESS_REQUEST', 'requestedAccess entries must be objects with resource and action.');
   }
-  const facade = describeOneTimeAccessEvent(source.event || source.eventName);
+  if (item.event || item.eventName) {
+    throw createModuleAccessError(
+      'E_MODULE_ACCESS_EVENT_DESCRIPTOR_DEPRECATED',
+      'requestedAccess entries must use resource/action, not raw core event names.'
+    );
+  }
+  const facade = describeCoreAccessDescriptor(item);
+  const protectedResource = DENIED_GRANT_RESOURCES.has(facade.resource);
   return {
     event: facade.event,
     resource: facade.resource,
     action: facade.action,
-    protected: facade.protected,
-    allowPermanent: facade.allowPermanent,
-    reason: normalizeString(source.reason || ''),
-    risk: normalizeString(source.risk || 'standard')
+    protected: protectedResource,
+    allowPermanent: !protectedResource,
+    reason: normalizeString(item.reason || ''),
+    risk: normalizeString(item.risk || 'standard')
   };
 }
 
@@ -215,24 +267,30 @@ function normalizeRequestedAccess(moduleInfo = {}) {
 }
 
 function normalizeApprovedAccess(approvedAccess = [], requestedAccess = [], grantedBy = null) {
-  const requestedByEvent = new Map(requestedAccess.map(item => [item.event, item]));
+  const requestedByKey = new Map(requestedAccess.map(item => [`${item.resource}.${item.action}`, item]));
   const rawItems = Array.isArray(approvedAccess) ? approvedAccess : [];
   const now = new Date().toISOString();
   const seen = new Set();
   const result = [];
 
   for (const item of rawItems) {
-    const event = normalizeString(typeof item === 'string' ? item : item?.event || item?.eventName);
-    if (!event || seen.has(event)) continue;
-    const request = requestedByEvent.get(event);
+    if (!item || typeof item !== 'object' || Array.isArray(item) || item.event || item.eventName) {
+      throw createModuleAccessError(
+        'E_MODULE_ACCESS_GRANT_DESCRIPTOR',
+        'approvedAccess entries must use resource/action, not raw core event names.'
+      );
+    }
+    const descriptor = describeGrantableAccessDescriptor(item);
+    const key = `${descriptor.resource}.${descriptor.action}`;
+    if (seen.has(key)) continue;
+    const request = requestedByKey.get(key);
     if (!request) {
       throw createModuleAccessError(
         'E_MODULE_ACCESS_NOT_REQUESTED',
-        `Event "${event}" cannot be granted because the module did not request it.`
+        `Resource action "${key}" cannot be granted because the module did not request it.`
       );
     }
-    describeGrantableEvent(event);
-    seen.add(event);
+    seen.add(key);
     result.push({
       ...request,
       granted: true,

@@ -50,7 +50,7 @@ export type RuntimeCanvasRectOptions = {
   defaultW?: number | string;
   defaultH?: number | string;
   def?: RuntimeCanvasWidgetDefinition;
-  heightProjectionMode?: 'percent' | 'legacyAdminPixels';
+  heightProjectionMode?: 'percent' | 'absoluteRowsAbovePercentRange';
 };
 
 export type RuntimeCanvasItem = {
@@ -100,7 +100,7 @@ function projectRuntimeHeight(
   mode: RuntimeCanvasRectOptions['heightProjectionMode'] = 'percent'
 ): number {
   const raw = Number(value);
-  if (mode === 'legacyAdminPixels' && Number.isFinite(raw) && raw > 100) {
+  if (mode === 'absoluteRowsAbovePercentRange' && Number.isFinite(raw) && raw > 100) {
     return Math.max(1, Math.round(raw));
   }
   return projectPercent(value, scale, divisor, true);
@@ -113,7 +113,7 @@ function projectRuntimeVerticalPosition(
   mode: RuntimeCanvasRectOptions['heightProjectionMode'] = 'percent'
 ): number {
   const raw = Number(value);
-  if (mode === 'legacyAdminPixels' && Number.isFinite(raw) && raw > 100) {
+  if (mode === 'absoluteRowsAbovePercentRange' && Number.isFinite(raw) && raw > 100) {
     return Math.max(0, Math.round(raw));
   }
   return projectPercent(value, scale, divisor);

@@ -98,10 +98,10 @@ test('ensureDefaultRoles gives new admin roles wildcard permissions', async () =
   assert(adminRole);
   const permissions = JSON.parse(adminRole.permissions);
   assert.strictEqual(permissions['*'], true);
-  assert.strictEqual(permissions.canAccessEverything, true);
+  assert.strictEqual(permissions.canAccessEverything, undefined);
 });
 
-test('ensureDefaultRoles upgrades legacy admin roles to wildcard permissions', async () => {
+test('ensureDefaultRoles upgrades retired admin roles to wildcard permissions', async () => {
   const emitter = new RoleMockEmitter([
     { id: 1, role_name: 'admin', permissions: JSON.stringify({ canAccessEverything: true }) },
     { id: 2, role_name: 'standard', permissions: '{}' }
@@ -113,21 +113,21 @@ test('ensureDefaultRoles upgrades legacy admin roles to wildcard permissions', a
   assert.deepStrictEqual(emitter.updated[0].where, { id: 1 });
   const permissions = JSON.parse(emitter.updated[0].data.permissions);
   assert.strictEqual(permissions['*'], true);
-  assert.strictEqual(permissions.canAccessEverything, true);
+  assert.strictEqual(permissions.canAccessEverything, undefined);
 });
 
-test('permission helpers preserve legacy admin compatibility', () => {
+test('permission helpers keep admin access on the wildcard permission', () => {
   assert.deepStrictEqual(parsePermissionBlob('{"content":{"update":true}}'), {
     content: { update: true }
   });
 
   const permissions = JSON.parse(makeAdminPermissionBlob({ content: { update: true } }));
   assert.strictEqual(permissions['*'], true);
-  assert.strictEqual(permissions.canAccessEverything, true);
+  assert.strictEqual(permissions.canAccessEverything, undefined);
   assert.deepStrictEqual(permissions.content, { update: true });
 
   assert.strictEqual(
     hasPermission({ permissions: { canAccessEverything: true } }, 'content.update'),
-    true
+    false
   );
 });

@@ -13,6 +13,8 @@ export interface AdminPage {
   } | null;
 }
 
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
+
 export const ADMIN_LANE = 'admin';
 
 type WorkspacesEmitter = Window['meltdownEmit'];
@@ -27,12 +29,6 @@ interface WorkspaceSubpageInput extends WorkspacePageInput {
   workspace: string;
   parentId: string | null;
 }
-
-// Keep workspace navigation page contracts here so rendering code stays UI-only.
-const PAGES_MANAGER_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
 
 function requireEmitter(emit: WorkspacesEmitter): NonNullable<WorkspacesEmitter> {
   if (typeof emit !== 'function') {
@@ -66,9 +62,7 @@ export async function fetchAdminPagesByLane(
   jwt: string | null | undefined
 ): Promise<AdminPage[]> {
   const meltdownEmit = requireEmitter(emit);
-  const response = await meltdownEmit('getPagesByLane', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', {
     lane: ADMIN_LANE
   });
   return toAdminPages(response);
@@ -80,9 +74,7 @@ export async function fetchAdminPageBySlug(
   slug: string
 ): Promise<AdminPage | null> {
   const meltdownEmit = requireEmitter(emit);
-  const response = await meltdownEmit('getPageBySlug', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'getBySlug', {
     slug,
     lane: ADMIN_LANE
   });
@@ -95,9 +87,7 @@ export async function createWorkspacePage(
   input: WorkspacePageInput
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('createPage', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'create', {
     title: input.title,
     slug: input.slug,
     lane: ADMIN_LANE,
@@ -113,9 +103,7 @@ export async function createWorkspaceSubpage(
   input: WorkspaceSubpageInput
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('createPage', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'create', {
     title: input.title,
     slug: `${input.workspace}/${input.slug}`,
     lane: ADMIN_LANE,

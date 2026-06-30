@@ -1,4 +1,5 @@
 import { fetchShellPublicSetting, issueShellPublicToken, publicSettingEnabled } from '../data/publicMeltdownClient.js';
+import { runtimePublicPayload } from '../../shared/api-client/runtimeFacade.js';
 export async function fetchRegistrationAvailability(client) {
     const publicToken = await issueShellPublicToken(client, 'firstInstallCheck');
     const firstInstallDone = publicSettingEnabled(await fetchShellPublicSetting(client, publicToken, 'FIRST_INSTALL_DONE'));
@@ -19,12 +20,9 @@ export async function fetchRegistrationAvailability(client) {
 }
 export async function registerPublicUser(client, input) {
     const publicToken = await issueShellPublicToken(client, 'registration');
-    await client.emit('publicRegister', {
-        jwt: publicToken,
-        moduleName: 'userManagement',
-        moduleType: 'core',
+    await client.emit('cmsPublicRuntimeRequest', runtimePublicPayload(String(publicToken || ''), 'users', 'register', {
         username: input.username,
         password: input.password,
         role: input.role
-    });
+    }));
 }

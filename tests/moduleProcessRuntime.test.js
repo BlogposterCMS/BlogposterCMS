@@ -256,10 +256,10 @@ test('module loader rejects mixed app, widget and package-manager folders', asyn
   });
 });
 
-test('module loader serves Grapes frontends through bounded static asset rules', () => {
-  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-grapes-'));
+test('module loader serves module static frontends through bounded static asset rules', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-static-'));
   const modulesRoot = path.join(tmpRoot, 'modules');
-  const moduleDir = path.join(modulesRoot, 'grapesModule');
+  const moduleDir = path.join(modulesRoot, 'staticModule');
   const frontendDir = path.join(moduleDir, 'frontend');
   const mounts = [];
   const app = {
@@ -270,7 +270,7 @@ test('module loader serves Grapes frontends through bounded static asset rules',
   fs.mkdirSync(frontendDir, { recursive: true });
   fs.writeFileSync(path.join(moduleDir, 'index.js'), 'module.exports = { initialize() {} };');
   fs.writeFileSync(path.join(moduleDir, 'moduleInfo.json'), JSON.stringify({
-    moduleName: 'grapesModule',
+    moduleName: 'staticModule',
     version: '1.0.0',
     developer: 'Test',
     description: 'Frontend'
@@ -278,22 +278,22 @@ test('module loader serves Grapes frontends through bounded static asset rules',
   fs.writeFileSync(path.join(frontendDir, 'view.html'), '<div>Frontend</div>');
 
   try {
-    const result = _internals.serveLegacyGrapesFrontend({
+    const result = _internals.serveStaticFrontend({
       row: {
-        module_name: 'grapesModule',
+        module_name: 'staticModule',
         is_active: true,
-        moduleInfo: { grapesComponent: true }
+        moduleInfo: { staticFrontend: true }
       },
-      folderNames: ['grapesModule'],
+      folderNames: ['staticModule'],
       modulesPath: modulesRoot,
       app
     });
 
-    assert.strictEqual(result.moduleName, 'grapesModule');
-    assert.strictEqual(result.mountPath, '/modules/grapesModule');
+    assert.strictEqual(result.moduleName, 'staticModule');
+    assert.strictEqual(result.mountPath, '/modules/staticModule');
     assert.strictEqual(result.dir, frontendDir);
     assert.strictEqual(mounts.length, 1);
-    assert.strictEqual(mounts[0].mountPath, '/modules/grapesModule');
+    assert.strictEqual(mounts[0].mountPath, '/modules/staticModule');
     assert.strictEqual(typeof mounts[0].handler, 'function');
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });

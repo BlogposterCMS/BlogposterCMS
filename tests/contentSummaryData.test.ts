@@ -58,24 +58,31 @@ describe('contentSummaryData', () => {
   });
 
   it('fetches content designs and uploaded content pages', async () => {
-    const emit = jest.fn(async eventName => {
-      if (eventName === 'designer.listDesigns') return { designs: [{ id: 'd1' }] };
-      if (eventName === 'getAllPages') return { data: [{ slug: 'upload', is_content: true, lane: 'public', meta: {} }] };
+    const emit = jest.fn(async (_eventName, payload) => {
+      const route = `${payload.resource}.${payload.action}`;
+      if (route === 'designer.list') return { designs: [{ id: 'd1' }] };
+      if (route === 'pages.list') return { data: [{ slug: 'upload', is_content: true, lane: 'public', meta: {} }] };
       return undefined;
     });
 
     await expect(fetchContentDesigns(emit, 'admin-token')).resolves.toEqual([{ id: 'd1' }]);
     await expect(fetchUploadedContentPages(emit, 'admin-token'))
       .resolves.toEqual([{ slug: 'upload', is_content: true, lane: 'public', meta: {} }]);
-    expect(emit).toHaveBeenCalledWith('designer.listDesigns', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'designer',
-      moduleType: 'community'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'designer',
+      action: 'list',
+      params: {}
     });
-    expect(emit).toHaveBeenCalledWith('getAllPages', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'pages',
+      action: 'list',
+      params: {}
     });
   });
 
@@ -84,17 +91,21 @@ describe('contentSummaryData', () => {
 
     await expect(createDraftDesign(emit, 'admin-token', 'owner-1', new Date('2026-06-17T10:30:00.000Z')))
       .resolves.toBe('new-design');
-    expect(emit).toHaveBeenCalledWith('designer.saveDesign', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'designer',
-      moduleType: 'community',
-      design: expect.objectContaining({
-        id: null,
-        ownerId: 'owner-1',
-        isDraft: true
-      }),
-      widgets: [],
-      layout: null
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'designer',
+      action: 'save',
+      params: expect.objectContaining({
+        design: expect.objectContaining({
+          id: null,
+          ownerId: 'owner-1',
+          isDraft: true
+        }),
+        widgets: [],
+        layout: null
+      })
     }), 20000);
   });
 

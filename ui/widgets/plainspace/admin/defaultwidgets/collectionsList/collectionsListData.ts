@@ -40,8 +40,8 @@ interface PageListPayload {
 
 type CollectionsEmitter = Window['meltdownEmit'];
 
-const PAGES_MODULE = {
-  moduleName: 'pagesManager',
+const RUNTIME_MANAGER_MODULE = {
+  moduleName: 'runtimeManager',
   moduleType: 'core'
 } as const;
 
@@ -50,6 +50,49 @@ function requireEmitter(emit: CollectionsEmitter): NonNullable<CollectionsEmitte
     throw new Error('PLAINSPACE_COLLECTIONS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
   }
   return emit;
+}
+
+function objectParams(value: Record<string, unknown> = {}): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function unwrapRuntimeFacadeData<T = unknown>(value: unknown): T {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'resource' in value &&
+    'action' in value &&
+    'data' in value
+  ) {
+    return (value as { data?: T }).data as T;
+  }
+  return value as T;
+}
+
+function runtimeAdminPayload(
+  jwt: string | null | undefined,
+  resource: string,
+  action: string,
+  params: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    jwt,
+    ...RUNTIME_MANAGER_MODULE,
+    resource,
+    action,
+    params: objectParams(params)
+  };
+}
+
+async function emitRuntimeAdmin<T = unknown>(
+  emit: NonNullable<CollectionsEmitter>,
+  jwt: string | null | undefined,
+  resource: string,
+  action: string,
+  params: Record<string, unknown> = {}
+): Promise<T> {
+  const result = await emit('cmsAdminApiRequest', runtimeAdminPayload(jwt, resource, action, params));
+  return unwrapRuntimeFacadeData<T>(result);
 }
 
 export function errorMessage(err: unknown): string {
@@ -95,11 +138,7 @@ export function toPages(value: unknown): PageRecord[] {
 }
 
 export function buildCollectionsPayload(jwt: string | null | undefined): Record<string, unknown> {
-  return {
-    jwt,
-    ...PAGES_MODULE,
-    lane: 'public'
-  };
+  return runtimeAdminPayload(jwt, 'pages', 'byLane', { lane: 'public' });
 }
 
 function isVisiblePublicPage(page: PageRecord): boolean {
@@ -182,6 +221,6 @@ export async function fetchCollections(
   jwt: string | null | undefined
 ): Promise<CollectionView[]> {
   const meltdownEmit = requireEmitter(emit);
-  const response = await meltdownEmit('getPagesByLane', buildCollectionsPayload(jwt));
+  const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane: 'public' });
   return deriveCollections(toPages(response));
 }

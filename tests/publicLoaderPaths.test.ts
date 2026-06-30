@@ -1,9 +1,10 @@
 import { getPublicLoaderPaths, isPublicLoaderSource } from '../ui/runtime/publicLoaderPaths';
 
 describe('public loader paths', () => {
-  it('loads community module public loaders from the community module mount', () => {
-    expect(getPublicLoaderPaths('designer')).toEqual([
-      '/modules/designer/publicLoader.js'
+  it('loads Designer through the core public loader mount', () => {
+    expect(getPublicLoaderPaths('designerManager')).toEqual([
+      '/modules/designerManager/publicLoader.js',
+      '/mother/modules/designerManager/publicLoader.js'
     ]);
   });
 

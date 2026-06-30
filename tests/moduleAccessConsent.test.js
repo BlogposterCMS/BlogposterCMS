@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const {
   ModuleAccessConsentManager,
   assertCanApproveRequest,
@@ -5,12 +7,22 @@ const {
   _internals
 } = require('../mother/modules/moduleLoader/moduleAccessConsent');
 
+test('module access policy resolves grants from the runtime admin facade', () => {
+  const policySource = fs.readFileSync(
+    path.join(__dirname, '../mother/modules/moduleLoader/moduleAccessPolicy.js'),
+    'utf8'
+  );
+
+  expect(policySource).toContain('adminApiEventDefinition');
+  expect(policySource).not.toContain('HttpFacadeAction');
+});
+
 test('module access consent builds grantable runtime requests from core events', () => {
   const request = _internals.buildRequest({
     moduleName: 'shopSync',
     moduleInfo: {
       requestedAccess: [
-        { event: 'listContentEntries', reason: 'Read catalog entries', risk: 'low' }
+        { resource: 'content', action: 'list', reason: 'Read catalog entries', risk: 'low' }
       ]
     },
     eventName: 'listContentEntries',

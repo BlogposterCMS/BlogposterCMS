@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
+
 export interface NotificationSummary {
   priority?: string;
   moduleName?: string;
@@ -26,11 +28,6 @@ export async function fetchRecentNotifications(
   limit = 5
 ): Promise<NotificationSummary[]> {
   const meltdownEmit = requireEmitter(emit);
-  const data = await meltdownEmit('getRecentNotifications', {
-    jwt,
-    moduleName: 'notificationManager',
-    moduleType: 'core',
-    limit
-  });
+  const data = await emitRuntimeAdmin(meltdownEmit, jwt, 'notifications', 'recent', { limit });
   return notificationItems(data);
 }

@@ -63,7 +63,10 @@ describe('runtimeWidgetRenderer', () => {
         id: 'heroWidget',
         metadata: {
           label: 'Hero',
-          apiEvents: ['content.viewed', 'bad event']
+          apiActions: [
+            { resource: 'content', action: 'list' },
+            { resource: 'bad event', action: 'list' }
+          ]
         }
       },
       {
@@ -82,9 +85,13 @@ describe('runtimeWidgetRenderer', () => {
     expect(container.innerHTML).toContain('<p>Hello</p>');
     expect(container.innerHTML).not.toContain('onerror');
     expect(root.querySelector('slot[name="resize-handle"]')).not.toBeNull();
-    expect(window.meltdownEmit).toHaveBeenCalledWith('registerWidgetUsage', {
+    expect(window.meltdownEmit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      events: ['content.viewed']
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'widgets',
+      action: 'registerUsage',
+      params: { actions: [{ resource: 'content', action: 'list' }] }
     });
   });
 

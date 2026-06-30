@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
+
 export interface DesignRecord {
   id?: string | number;
   title?: string;
@@ -8,11 +10,6 @@ export interface DesignRecord {
 }
 
 type DesignerLayoutsEmitter = Window['meltdownEmit'];
-
-const DESIGNER_MODULE = {
-  moduleName: 'designer',
-  moduleType: 'community'
-} as const;
 
 function requireEmitter(emit: DesignerLayoutsEmitter): NonNullable<DesignerLayoutsEmitter> {
   if (typeof emit !== 'function') {
@@ -57,9 +54,6 @@ export async function fetchDesignerLayouts(
   jwt: string | null | undefined
 ): Promise<DesignRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('designer.listDesigns', {
-    jwt,
-    ...DESIGNER_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list');
   return toDesigns(res);
 }

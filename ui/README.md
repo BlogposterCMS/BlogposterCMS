@@ -9,12 +9,10 @@ the server runtime:
 - `widgets` owns the widget SDK and bundled widget implementations.
 - `shared` owns API clients, contracts, schemas, and design-system primitives.
 
-Existing files under `public/` and `apps/` remain in place while they are
-migrated. New shared code starts here and is imported by the legacy entrypoints
-through thin compatibility adapters.
+Existing files under `public/` and `apps/` remain as shells, assets and bundle
+entry points. New shared code starts here and is imported through thin adapters.
 
 Active browser bundles should start from `*/entries/` files in this tree. Those
-entry files own the implementation and must not import legacy browser
-implementations from `public/` or `apps/`. The dependency direction is one-way:
-legacy browser paths forward into `ui/`, and Webpack emits browser bundles to
-`public/build/`.
+entry files own the implementation and must not import browser implementations
+from `public/` or `apps/`. The dependency direction is one-way: public entry
+points forward into `ui/`, and Webpack emits browser bundles to `public/build/`.

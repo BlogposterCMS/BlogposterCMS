@@ -58,14 +58,20 @@ describe('publicMeltdownClient', () => {
   });
 
   it('builds public setting payloads and normalizes boolean settings', async () => {
-    const emit = jest.fn().mockResolvedValue('true');
+    const emit = jest.fn().mockResolvedValue({
+      resource: 'settings',
+      action: 'public',
+      data: { FIRST_INSTALL_DONE: 'true' }
+    });
 
     await expect(fetchShellPublicSetting({ emit }, 'token', 'FIRST_INSTALL_DONE')).resolves.toBe('true');
-    expect(emit).toHaveBeenCalledWith('getPublicSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'FIRST_INSTALL_DONE'
+      resource: 'settings',
+      action: 'public',
+      params: { keys: ['FIRST_INSTALL_DONE'] }
     });
     expect(publicSettingEnabled('true')).toBe(true);
     expect(publicSettingEnabled('FALSE')).toBe(false);

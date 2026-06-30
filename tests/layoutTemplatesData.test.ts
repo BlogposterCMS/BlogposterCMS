@@ -57,25 +57,29 @@ describe('layoutTemplatesData', () => {
   });
 
   it('fetches layout template names and public pages', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'getLayoutTemplateNames'
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'plainSpace.layoutTemplateNames'
         ? { templates: ['Landing'] }
         : { pages: [{ title: 'Home' }] }
     ));
 
     await expect(fetchLayoutTemplateNames(emit, 'admin-token')).resolves.toEqual([{ name: 'Landing' }]);
     await expect(fetchPublicPages(emit, 'admin-token')).resolves.toEqual([{ title: 'Home' }]);
-    expect(emit).toHaveBeenCalledWith('getLayoutTemplateNames', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'plainspace',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'plainSpace',
+      action: 'layoutTemplateNames',
+      params: { lane: 'public' }
     });
-    expect(emit).toHaveBeenCalledWith('getPagesByLane', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'public' }
     });
   });
 
@@ -84,15 +88,19 @@ describe('layoutTemplatesData', () => {
 
     await createBlankLayoutTemplate(emit, 'admin-token', ' Landing ', '/preview.png');
 
-    expect(emit).toHaveBeenCalledWith('saveLayoutTemplate', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'plainspace',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      name: 'Landing',
-      lane: 'public',
-      viewport: 'desktop',
-      layout: [],
-      previewPath: '/preview.png'
+      resource: 'plainSpace',
+      action: 'saveLayoutTemplate',
+      params: {
+        name: 'Landing',
+        lane: 'public',
+        viewport: 'desktop',
+        layout: [],
+        previewPath: '/preview.png'
+      }
     });
   });
 });

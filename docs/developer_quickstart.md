@@ -18,9 +18,9 @@ First follow the [Installation](installation.md) guide if you have not yet set u
   The sample defaults to the local SQLite engine (`CONTENT_DB_TYPE=sqlite`),
   which stores data in `./data/cms.sqlite` and does not require a local
   PostgreSQL or MongoDB service. Use strong random values for `JWT_SECRET`,
-  `AUTH_MODULE_INTERNAL_SECRET`, `API_JWT_SECRET` and the various `*_SALT`
-  variables. The application no longer provides fallback secrets, so missing
-  values will cause startup errors.
+  `AUTH_MODULE_INTERNAL_SECRET` and the various `*_SALT` variables. The
+  application no longer provides fallback secrets, so missing values will cause
+  startup errors.
 
   The admin iframe origin guard also requires an RSA key pair. Generate one,
   escape PEM newlines as `\n`, then paste the values into

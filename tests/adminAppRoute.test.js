@@ -67,7 +67,7 @@ async function startServer(fakeDesigns, availableEvents = []) {
 test('GET /admin/app/designer/123 returns iframe with tokens', async () => {
   const server = await startServer(
     { '123': { title: 'My Design', version: 5 } },
-    ['designer.saveDesign', 'designer.listDesigns', 'designer.getDesign']
+    ['cmsAdminApiRequest']
   );
   const port = server.address().port;
   const res = await axios.get(`http://localhost:${port}/admin/app/designer/123`);
@@ -84,7 +84,7 @@ test('GET /admin/app/designer/507f1f77bcf86cd799439011 preserves string IDs', as
   const mongoId = '507f1f77bcf86cd799439011';
   const server = await startServer(
     { [mongoId]: { title: 'Hex Design', version: 1 } },
-    ['designer.saveDesign', 'designer.listDesigns', 'designer.getDesign']
+    ['cmsAdminApiRequest']
   );
   const port = server.address().port;
   const res = await axios.get(`http://localhost:${port}/admin/app/designer/${mongoId}`);

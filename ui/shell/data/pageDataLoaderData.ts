@@ -57,11 +57,13 @@ export function buildInitialPageDataRequest(pageId: string | number): {
   fields: readonly string[];
 } {
   return {
-    eventName: 'getPageById',
+    eventName: 'cmsAdminApiRequest',
     payload: {
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId
+      resource: 'pages',
+      action: 'get',
+      params: { pageId }
     },
     fields: DEFAULT_PAGE_DATA_FIELDS
   };

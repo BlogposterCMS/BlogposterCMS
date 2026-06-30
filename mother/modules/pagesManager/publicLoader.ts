@@ -10,11 +10,16 @@ type SanitizerModule = {
 type SanitizerImporter = () => Promise<SanitizerModule>;
 
 type HtmlDescriptor = {
+  fallbackOnly?: boolean;
   inline?: {
     html?: string;
     css?: string;
     js?: string;
   };
+};
+
+type RuntimeLayoutContext = {
+  activeLayout?: unknown;
 };
 
 type LoaderTestDeps = {
@@ -75,11 +80,26 @@ function appendBlockedPlaceholder(root: HTMLElement): void {
   root.appendChild(placeholder);
 }
 
+function hasActiveDesignLayout(ctx?: unknown): boolean {
+  const scopedLayout = ctx && typeof ctx === 'object'
+    ? (ctx as RuntimeLayoutContext).activeLayout
+    : undefined;
+  const layout = scopedLayout;
+  return Boolean(
+    layout &&
+    typeof layout === 'object' &&
+    Array.isArray((layout as { items?: unknown }).items) &&
+    ((layout as { items?: unknown[] }).items || []).length > 0
+  );
+}
+
 export async function loadHtml(
   descriptor: HtmlDescriptor = {},
   ctx?: unknown
 ): Promise<void> {
-  void ctx;
+  if (descriptor.fallbackOnly && hasActiveDesignLayout(ctx)) {
+    return;
+  }
   await ensureSanitizer();
 
   const inline = descriptor.inline || {};

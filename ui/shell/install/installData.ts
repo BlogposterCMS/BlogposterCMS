@@ -4,6 +4,10 @@ import {
   publicSettingEnabled,
   type ShellPublicClient
 } from '../data/publicMeltdownClient.js';
+import {
+  runtimePublicPayload,
+  unwrapRuntimeFacadeData
+} from '../../shared/api-client/runtimeFacade.js';
 
 export interface InstallData {
   username?: string;
@@ -49,11 +53,11 @@ export async function fetchFirstInstallState(client: ShellPublicClient): Promise
 }
 
 export async function fetchPublicUserCount(client: ShellPublicClient, publicToken: unknown): Promise<number> {
-  const result = await client.emit('getUserCount', {
-    jwt: publicToken,
-    moduleName: 'userManagement',
-    moduleType: 'core'
-  });
+  const result = unwrapRuntimeFacadeData<unknown>(await client.emit('cmsPublicRuntimeRequest', runtimePublicPayload(
+    String(publicToken || ''),
+    'users',
+    'count'
+  )));
   return typeof result === 'number' ? result : 0;
 }
 

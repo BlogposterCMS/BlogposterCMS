@@ -134,7 +134,7 @@ test('search internals convert content entries to search documents', () => {
 
 test('search internals strip unsafe urls and sanitize metadata', () => {
   const unsafe = _internals.normalizeSearchDocument({
-    sourceModule: 'legacy',
+    sourceModule: 'imported',
     sourceId: '1',
     title: 'Unsafe',
     url: 'javascript:alert(1)',

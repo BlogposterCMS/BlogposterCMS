@@ -27,7 +27,13 @@ describe('installData', () => {
   it('loads the first-install completion state through public settings', async () => {
     const emit = jest.fn(async (eventName, payload) => {
       if (eventName === 'issuePublicToken') return 'public-token';
-      if (payload.key === 'FIRST_INSTALL_DONE') return 'true';
+      if (payload.resource === 'settings' && payload.action === 'public') {
+        return {
+          resource: 'settings',
+          action: 'public',
+          data: { FIRST_INSTALL_DONE: 'true' }
+        };
+      }
       return null;
     });
 
@@ -35,23 +41,30 @@ describe('installData', () => {
       publicToken: 'public-token',
       firstInstallDone: true
     });
-    expect(emit).toHaveBeenCalledWith('getPublicSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'FIRST_INSTALL_DONE'
+      resource: 'settings',
+      action: 'public',
+      params: { keys: ['FIRST_INSTALL_DONE'] }
     });
   });
 
   it('normalizes public user-count results', async () => {
-    const emit = jest.fn().mockResolvedValueOnce(2).mockResolvedValueOnce('unexpected');
+    const emit = jest.fn()
+      .mockResolvedValueOnce({ resource: 'users', action: 'count', data: 2 })
+      .mockResolvedValueOnce({ resource: 'users', action: 'count', data: 'unexpected' });
 
     await expect(fetchPublicUserCount({ emit }, 'public-token')).resolves.toBe(2);
     await expect(fetchPublicUserCount({ emit }, 'public-token')).resolves.toBe(0);
-    expect(emit).toHaveBeenCalledWith('getUserCount', {
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      moduleName: 'userManagement',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'users',
+      action: 'count',
+      params: {}
     });
   });
 

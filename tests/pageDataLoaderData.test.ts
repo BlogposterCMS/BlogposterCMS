@@ -19,18 +19,21 @@ describe('pageDataLoaderData', () => {
   });
 
   it('builds stable cache keys', () => {
-    expect(pageDataCacheKey('getPageById', { pageId: 1 })).toBe('getPageById:{"pageId":1}');
-    expect(pageDataCacheKey('getPageById')).toBe('getPageById:{}');
+    expect(pageDataCacheKey('cmsAdminApiRequest', { params: { pageId: 1 } }))
+      .toBe('cmsAdminApiRequest:{"params":{"pageId":1}}');
+    expect(pageDataCacheKey('cmsAdminApiRequest')).toBe('cmsAdminApiRequest:{}');
   });
 
   it('builds the initial admin page data request payload', () => {
     const request = buildInitialPageDataRequest('page-1');
 
-    expect(request.eventName).toBe('getPageById');
+    expect(request.eventName).toBe('cmsAdminApiRequest');
     expect(request.payload).toEqual({
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1'
+      resource: 'pages',
+      action: 'get',
+      params: { pageId: 'page-1' }
     });
     expect(request.fields).toContain('html');
     expect(request.fields).toContain('is_content');

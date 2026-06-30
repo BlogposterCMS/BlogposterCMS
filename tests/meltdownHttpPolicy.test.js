@@ -9,14 +9,12 @@ const {
   hasRawPlaceholderPayload,
   HTTP_DIRECT_CONTRACT_EVENTS,
   HTTP_FORBIDDEN_EXTERNAL_EVENTS,
-  HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS,
   HTTP_PUBLIC_TOKEN_EVENTS,
   isHttpDirectContractEvent,
   isHttpPublicEvent,
   isHttpPublicTokenEvent,
   SENSITIVE_SYSTEM_QUERY_EVENTS,
-  stripHttpPayloadAuthMeta,
-  translateLegacyHttpFacadeEvent
+  stripHttpPayloadAuthMeta
 } = require('../mother/utils/meltdownHttpPolicy');
 
 function collectCoreListenerEvents() {
@@ -60,16 +58,17 @@ function collectCoreListenerEvents() {
   return events;
 }
 
-test('meltdown HTTP policy only exposes token bootstrap as public events', () => {
+test('meltdown HTTP policy only exposes token bootstrap and the public runtime facade', () => {
   assert.strictEqual(isHttpPublicEvent('issuePublicToken'), true);
   assert.strictEqual(isHttpPublicEvent('ensurePublicToken'), true);
   assert.strictEqual(isHttpDirectContractEvent('cmsAdminApiRequest'), true);
   assert.strictEqual(isHttpDirectContractEvent('dispatchAppEvent'), true);
   assert.strictEqual(isHttpPublicTokenEvent('cmsPublicRuntimeRequest'), true);
-  assert.strictEqual(isHttpPublicTokenEvent('getPublicSetting'), true);
-  assert.strictEqual(isHttpPublicTokenEvent('getUserCount'), true);
-  assert.strictEqual(isHttpPublicTokenEvent('listActiveLoginStrategies'), true);
-  assert.strictEqual(isHttpPublicTokenEvent('publicRegister'), true);
+  assert.strictEqual(isHttpPublicTokenEvent('getPublicSetting'), false);
+  assert.strictEqual(isHttpPublicTokenEvent('getUserCount'), false);
+  assert.strictEqual(isHttpPublicTokenEvent('listActiveLoginStrategies'), false);
+  assert.strictEqual(isHttpPublicTokenEvent('loginWithStrategy'), false);
+  assert.strictEqual(isHttpPublicTokenEvent('publicRegister'), false);
   assert.strictEqual(HTTP_PUBLIC_TOKEN_EVENTS.has('getRecentNotifications'), false);
   assert.strictEqual(isHttpPublicEvent('deactivateModule'), false);
   assert.strictEqual(isHttpPublicEvent('removeListenersByModule'), false);
@@ -117,7 +116,6 @@ test('meltdown HTTP policy accounts for all core listener events', () => {
     ...HTTP_FORBIDDEN_EXTERNAL_EVENTS,
     ...HTTP_DIRECT_CONTRACT_EVENTS,
     ...HTTP_PUBLIC_TOKEN_EVENTS,
-    ...Object.keys(HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS),
     'cmsAdminApiRequest',
     'cmsPublicRuntimeRequest'
   ]);
@@ -148,7 +146,7 @@ test('meltdown HTTP policy blocks direct widget management writes', () => {
   }), /internal/);
 });
 
-test('meltdown HTTP policy blocks direct PlainSpace presentation events through the runtime facade', () => {
+test('meltdown HTTP policy blocks direct PlainSpace presentation events and accepts explicit runtime facades', () => {
   const blocked = [
     'widget.registry.request.v1',
     'getLayoutForViewport',
@@ -170,19 +168,9 @@ test('meltdown HTTP policy blocks direct PlainSpace presentation events through 
   for (const eventName of blocked) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true, eventName);
     assert.match(explainExternalEventRejection(eventName, {}), /internal/, eventName);
-    assert(HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS[eventName], eventName);
   }
 
-  const translatedLayout = translateLegacyHttpFacadeEvent('saveLayoutForViewport', {
-    jwt: 'browser-token',
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    pageId: 'page-1',
-    lane: 'public',
-    viewport: 'desktop',
-    layout: [{ widgetId: 'hero' }]
-  });
-  assert.deepStrictEqual(translatedLayout.payload, {
+  assert.strictEqual(explainExternalEventRejection('cmsAdminApiRequest', {
     moduleName: 'runtimeManager',
     moduleType: 'core',
     resource: 'plainSpace',
@@ -193,33 +181,27 @@ test('meltdown HTTP policy blocks direct PlainSpace presentation events through 
       viewport: 'desktop',
       layout: [{ widgetId: 'hero' }]
     }
-  });
+  }), null);
 
-  const translatedEnvelope = translateLegacyHttpFacadeEvent('getEnvelope', {
-    jwt: 'browser-token',
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    slug: 'home'
-  });
-  assert.deepStrictEqual(translatedEnvelope.payload, {
+  assert.strictEqual(explainExternalEventRejection('cmsPublicRuntimeRequest', {
     moduleName: 'runtimeManager',
     moduleType: 'core',
     resource: 'pages',
     action: 'envelope',
     params: { slug: 'home' }
-  });
-  assert.strictEqual(translatedEnvelope.eventName, 'cmsPublicRuntimeRequest');
-  assert.strictEqual(explainExternalEventRejection(translatedEnvelope.eventName, translatedEnvelope.payload), null);
+  }), null);
 
-  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('getLayoutForViewport'), false);
-  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('getLayoutTemplate'), false);
-  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('saveLayoutForViewport'), false);
-  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('widget.registry.request.v1'), false);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('getLayoutForViewport'), true);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('getLayoutTemplate'), true);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('saveLayoutForViewport'), true);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('widget.registry.request.v1'), true);
   assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('saveLayoutTemplate'), true);
   assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('getWidgetInstance'), true);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('cmsAdminApiRequest'), false);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('cmsPublicRuntimeRequest'), true);
 });
 
-test('meltdown HTTP policy blocks direct designer events through runtime facades', () => {
+test('meltdown HTTP policy blocks direct designer events and accepts explicit runtime facades', () => {
   const blocked = [
     'designer.getDesign',
     'designer.getLayout',
@@ -231,173 +213,70 @@ test('meltdown HTTP policy blocks direct designer events through runtime facades
   for (const eventName of blocked) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true, eventName);
     assert.match(explainExternalEventRejection(eventName, { id: 'design-1' }), /internal/, eventName);
-    assert(HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS[eventName], eventName);
   }
 
-  const publicDesign = translateLegacyHttpFacadeEvent('designer.getDesign', {
-    jwt: 'public-token',
-    moduleName: 'designer',
-    moduleType: 'core',
-    id: 'design-1'
-  });
-  assert.strictEqual(publicDesign.eventName, 'cmsPublicRuntimeRequest');
-  assert.deepStrictEqual(publicDesign.payload, {
+  assert.strictEqual(explainExternalEventRejection('cmsPublicRuntimeRequest', {
     moduleName: 'runtimeManager',
     moduleType: 'core',
     resource: 'designer',
     action: 'get',
     params: { id: 'design-1' }
-  });
-
-  const publicDesignLayout = translateLegacyHttpFacadeEvent('designer.getLayout', {
-    jwt: 'public-token',
-    moduleName: 'designer',
-    moduleType: 'core',
-    lane: 'public',
-    layoutRef: 'layout:design-1@v1'
-  });
-  assert.strictEqual(publicDesignLayout.eventName, 'cmsPublicRuntimeRequest');
-  assert.deepStrictEqual(publicDesignLayout.payload, {
+  }), null);
+  assert.strictEqual(explainExternalEventRejection('cmsPublicRuntimeRequest', {
     moduleName: 'runtimeManager',
     moduleType: 'core',
     resource: 'designer',
     action: 'getLayout',
     params: { lane: 'public', layoutRef: 'layout:design-1@v1' }
-  });
-
-  const adminDesign = translateLegacyHttpFacadeEvent('designer.getDesign', {
-    moduleName: 'designer',
+  }), null);
+  assert.strictEqual(explainExternalEventRejection('cmsAdminApiRequest', {
+    moduleName: 'runtimeManager',
     moduleType: 'core',
-    id: 'design-1',
-    lane: 'admin'
-  });
-  assert.strictEqual(adminDesign.eventName, 'cmsAdminApiRequest');
-  assert.strictEqual(adminDesign.payload.action, 'get');
+    resource: 'designer',
+    action: 'save',
+    params: { title: 'Hero' }
+  }), null);
 
-  const listDesigns = translateLegacyHttpFacadeEvent('designer.listDesigns', {
-    moduleName: 'designer',
-    moduleType: 'core'
-  });
-  assert.strictEqual(listDesigns.eventName, 'cmsAdminApiRequest');
-  assert.strictEqual(listDesigns.payload.action, 'list');
-
-  const saveDesign = translateLegacyHttpFacadeEvent('designer.saveDesign', {
-    moduleName: 'designer',
-    moduleType: 'core',
-    title: 'Hero'
-  });
-  assert.strictEqual(saveDesign.eventName, 'cmsAdminApiRequest');
-  assert.strictEqual(saveDesign.payload.action, 'save');
-
-  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('designer.getDesign'), false);
-  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('designer.listDesigns'), false);
-  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('designer.saveDesign'), false);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('designer.getDesign'), true);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('designer.listDesigns'), true);
+  assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('designer.saveDesign'), true);
   assert.strictEqual(APP_FORBIDDEN_DIRECT_EVENTS.has('designer.getLayout'), true);
 });
 
-test('meltdown HTTP policy routes public runtime legacy reads through a public facade', () => {
-  const start = translateLegacyHttpFacadeEvent('getStartPage', {
-    jwt: 'public-token',
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    language: 'en'
-  });
-  assert.strictEqual(start.eventName, 'cmsPublicRuntimeRequest');
-  assert.deepStrictEqual(start.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'pages',
-    action: 'start',
-    params: { language: 'en' }
-  });
-  assert.strictEqual(explainExternalEventRejection(start.eventName, start.payload), null);
+test('meltdown HTTP policy accepts public runtime reads only as explicit public facades', () => {
+  for (const eventName of [
+    'getStartPage',
+    'getPageBySlug',
+    'getPageById',
+    'getChildPages',
+    'getWidgets',
+    'widget.registry.request.v1',
+    'getLayoutForViewport',
+    'getGlobalLayoutTemplate',
+    'getWidgetInstance'
+  ]) {
+    assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true, eventName);
+    assert.match(explainExternalEventRejection(eventName, {}), /internal/, eventName);
+  }
 
-  const publicPage = translateLegacyHttpFacadeEvent('getPageBySlug', {
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    slug: 'home',
-    lane: 'public'
-  });
-  assert.strictEqual(publicPage.eventName, 'cmsPublicRuntimeRequest');
-  assert.strictEqual(publicPage.payload.action, 'getBySlug');
+  const publicFacades = [
+    { resource: 'pages', action: 'start', params: { language: 'en' } },
+    { resource: 'pages', action: 'getBySlug', params: { slug: 'home' } },
+    { resource: 'widgets', action: 'list', params: { widgetType: 'public' } },
+    { resource: 'plainSpace', action: 'widgetRegistry', params: { lane: 'public' } },
+    { resource: 'plainSpace', action: 'layoutForViewport', params: { pageId: 'page-1', lane: 'public', viewport: 'desktop' } },
+    { resource: 'plainSpace', action: 'globalLayoutTemplate', params: { lane: 'public' } },
+    { resource: 'plainSpace', action: 'widgetInstance', params: { instanceId: 'default.hero' } }
+  ];
 
-  const adminPage = translateLegacyHttpFacadeEvent('getPageBySlug', {
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    slug: 'settings',
-    lane: 'admin'
-  });
-  assert.strictEqual(adminPage.eventName, 'cmsAdminApiRequest');
-  assert.strictEqual(adminPage.payload.action, 'getBySlug');
-
-  const publicWidgets = translateLegacyHttpFacadeEvent('getWidgets', {
-    moduleName: 'widgetManager',
-    moduleType: 'core',
-    widgetType: 'public'
-  });
-  assert.strictEqual(publicWidgets.eventName, 'cmsPublicRuntimeRequest');
-  assert.deepStrictEqual(publicWidgets.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'widgets',
-    action: 'list',
-    params: { widgetType: 'public' }
-  });
-
-  const adminRegistry = translateLegacyHttpFacadeEvent('widget.registry.request.v1', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    lane: 'admin'
-  });
-  assert.strictEqual(adminRegistry.eventName, 'cmsAdminApiRequest');
-
-  const publicRegistry = translateLegacyHttpFacadeEvent('widget.registry.request.v1', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    lane: 'public'
-  });
-  assert.strictEqual(publicRegistry.eventName, 'cmsPublicRuntimeRequest');
-
-  const publicLayout = translateLegacyHttpFacadeEvent('getLayoutForViewport', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    pageId: 'page-1',
-    lane: 'public',
-    viewport: 'desktop'
-  });
-  assert.strictEqual(publicLayout.eventName, 'cmsPublicRuntimeRequest');
-  assert.strictEqual(publicLayout.payload.action, 'layoutForViewport');
-
-  const publicGlobalTemplate = translateLegacyHttpFacadeEvent('getGlobalLayoutTemplate', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    lane: 'public'
-  });
-  assert.strictEqual(publicGlobalTemplate.eventName, 'cmsPublicRuntimeRequest');
-  assert.strictEqual(publicGlobalTemplate.payload.action, 'globalLayoutTemplate');
-
-  const adminGlobalTemplate = translateLegacyHttpFacadeEvent('getGlobalLayoutTemplate', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    lane: 'admin'
-  });
-  assert.strictEqual(adminGlobalTemplate.eventName, 'cmsAdminApiRequest');
-
-  const publicWidgetInstance = translateLegacyHttpFacadeEvent('getWidgetInstance', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    instanceId: 'default.hero'
-  });
-  assert.strictEqual(publicWidgetInstance.eventName, 'cmsPublicRuntimeRequest');
-
-  const privateWidgetInstance = translateLegacyHttpFacadeEvent('getWidgetInstance', {
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    instanceId: 'custom.secret'
-  });
-  assert.strictEqual(privateWidgetInstance.eventName, 'cmsAdminApiRequest');
+  for (const facade of publicFacades) {
+    assert.strictEqual(explainExternalEventRejection('cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      ...facade
+    }), null, `${facade.resource}.${facade.action}`);
+  }
 });
-
 test('meltdown HTTP policy blocks direct app management and inventory events', () => {
   for (const eventName of ['installAppFromDirectory', 'uninstallApp', 'rescanApps', 'listApps', 'getApp', 'listBuilderApps', 'getAppLaunchInfo']) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true);
@@ -470,8 +349,7 @@ test('meltdown HTTP policy does not expose removed content taxonomy facade event
 
   for (const eventName of removed) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), false, eventName);
-    assert.strictEqual(HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS[eventName], undefined, eventName);
-    assert.strictEqual(translateLegacyHttpFacadeEvent(eventName, {}), null, eventName);
+    assert.match(explainExternalEventRejection(eventName, {}), /not exposed/, eventName);
   }
 });
 
@@ -592,6 +470,7 @@ test('meltdown HTTP policy blocks direct backend infrastructure events covered b
     'registerNavigationLocation',
     'setLoginStrategyEnabled',
     'setCmsMode',
+    'listActiveStaticFrontends',
     'listFontProviders',
     'listFonts',
     'addFont',
@@ -613,7 +492,7 @@ test('meltdown HTTP policy blocks direct backend infrastructure events covered b
   }
 });
 
-test('meltdown HTTP policy blocks internal backend infrastructure events without legacy facade mapping', () => {
+test('meltdown HTTP policy blocks internal backend infrastructure events without facade aliases', () => {
   const blocked = [
     'appLoader:appEvent',
     'finalizeUserLogin',
@@ -632,7 +511,6 @@ test('meltdown HTTP policy blocks internal backend infrastructure events without
 
   for (const eventName of blocked) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true, eventName);
-    assert.strictEqual(translateLegacyHttpFacadeEvent(eventName, {}), null, eventName);
     assert.match(explainExternalEventRejection(eventName, {}), /internal/, eventName);
   }
 
@@ -676,7 +554,6 @@ test('meltdown HTTP policy blocks direct agent manager events while preserving a
 
   for (const eventName of agentEvents) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true, eventName);
-    assert.strictEqual(translateLegacyHttpFacadeEvent(eventName, {}), null, eventName);
     assert.match(explainExternalEventRejection(eventName, {}), /internal/, eventName);
   }
 
@@ -708,177 +585,92 @@ test('meltdown HTTP policy strips caller supplied auth metadata from payloads', 
   assert.deepStrictEqual(stripHttpPayloadAuthMeta(null), {});
 });
 
-test('meltdown HTTP policy translates legacy admin events through runtime facade', () => {
-  const blockedLegacyEvents = Object.keys(HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS);
+test('meltdown HTTP policy requires explicit runtime facade contracts for admin API access', () => {
+  const blockedDirectEvents = [
+    'createPage',
+    'getAllUsers',
+    'getRecentNotifications',
+    'listContentEntries',
+    'getNavigationTree',
+    'listCommentsForEntry',
+    'searchDocuments',
+    'listFonts',
+    'getShareDetails'
+  ];
 
-  for (const eventName of blockedLegacyEvents) {
+  for (const eventName of blockedDirectEvents) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true, eventName);
     assert.match(explainExternalEventRejection(eventName, {}), /internal/, eventName);
-    assert(HTTP_LEGACY_ADMIN_EVENT_FACADE_ACTIONS[eventName], eventName);
   }
 
-  const translated = translateLegacyHttpFacadeEvent('createPage', {
-    jwt: 'browser-token',
-    decodedJWT: { permissions: { '*': true } },
-    moduleName: 'pagesManager',
-    moduleType: 'core',
-    title: 'About',
-    lane: 'admin'
-  });
-
-  assert.deepStrictEqual(translated, {
-    originalEventName: 'createPage',
-    eventName: 'cmsAdminApiRequest',
-    unwrapData: true,
-    payload: {
-      moduleName: 'runtimeManager',
-      moduleType: 'core',
+  const adminFacades = [
+    {
       resource: 'pages',
       action: 'create',
-      params: {
-        title: 'About',
-        lane: 'admin'
-      }
+      params: { title: 'About', lane: 'admin' }
+    },
+    {
+      resource: 'users',
+      action: 'list',
+      params: {}
+    },
+    {
+      resource: 'notifications',
+      action: 'recent',
+      params: { limit: 5 }
+    },
+    {
+      resource: 'content',
+      action: 'list',
+      params: { status: 'draft', limit: 20 }
+    },
+    {
+      resource: 'navigation',
+      action: 'tree',
+      params: { locationKey: 'main' }
+    },
+    {
+      resource: 'comments',
+      action: 'listForEntry',
+      params: { entryId: 'entry-1', status: 'pending' }
+    },
+    {
+      resource: 'search',
+      action: 'query',
+      params: { query: 'launch', status: 'draft' }
+    },
+    {
+      resource: 'fonts',
+      action: 'list',
+      params: {}
+    },
+    {
+      resource: 'shares',
+      action: 'get',
+      params: { shortToken: 'abc123' }
     }
-  });
-  assert.strictEqual(explainExternalEventRejection(translated.eventName, translated.payload), null);
+  ];
 
-  const translatedRead = translateLegacyHttpFacadeEvent('getAllUsers', {
-    moduleName: 'userManagement',
-    moduleType: 'core',
-    jwt: 'browser-token'
-  });
-  assert.strictEqual(translatedRead.eventName, 'cmsAdminApiRequest');
-  assert.deepStrictEqual(translatedRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'users',
-    action: 'list',
-    params: {}
-  });
+  for (const facade of adminFacades) {
+    assert.strictEqual(explainExternalEventRejection('cmsAdminApiRequest', {
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      ...facade
+    }), null, `${facade.resource}.${facade.action}`);
+  }
 
-  const translatedShellRead = translateLegacyHttpFacadeEvent('getRecentNotifications', {
-    jwt: 'browser-token',
-    moduleName: 'notificationManager',
-    moduleType: 'core',
-    limit: 5
-  });
-  assert.deepStrictEqual(translatedShellRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'notifications',
-    action: 'recent',
-    params: { limit: 5 }
-  });
-
-  const translatedContentRead = translateLegacyHttpFacadeEvent('listContentEntries', {
-    jwt: 'browser-token',
-    decodedJWT: { permissions: { '*': true } },
-    moduleName: 'contentEngine',
-    moduleType: 'core',
-    status: 'draft',
-    limit: 20
-  });
-  assert.deepStrictEqual(translatedContentRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'content',
-    action: 'list',
-    params: {
-      status: 'draft',
-      limit: 20
-    }
-  });
-
-  const translatedPresentationRead = translateLegacyHttpFacadeEvent('getNavigationTree', {
-    jwt: 'browser-token',
-    moduleName: 'navigationManager',
-    moduleType: 'core',
-    locationKey: 'main'
-  });
-  assert.deepStrictEqual(translatedPresentationRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'navigation',
-    action: 'tree',
-    params: { locationKey: 'main' }
-  });
-
-  const translatedCommentRead = translateLegacyHttpFacadeEvent('listCommentsForEntry', {
-    jwt: 'browser-token',
-    moduleName: 'commentsManager',
-    moduleType: 'core',
-    entryId: 'entry-1',
-    status: 'pending'
-  });
-  assert.deepStrictEqual(translatedCommentRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'comments',
-    action: 'listForEntry',
-    params: {
-      entryId: 'entry-1',
-      status: 'pending'
-    }
-  });
-
-  const translatedSearchRead = translateLegacyHttpFacadeEvent('searchDocuments', {
-    jwt: 'browser-token',
-    moduleName: 'searchManager',
-    moduleType: 'core',
-    query: 'launch',
-    status: 'draft'
-  });
-  assert.deepStrictEqual(translatedSearchRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'search',
-    action: 'query',
-    params: {
-      query: 'launch',
-      status: 'draft'
-    }
-  });
-
-  const translatedFontRead = translateLegacyHttpFacadeEvent('listFonts', {
-    jwt: 'browser-token',
-    moduleName: 'fontsManager',
-    moduleType: 'core'
-  });
-  assert.deepStrictEqual(translatedFontRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'fonts',
-    action: 'list',
-    params: {}
-  });
-
-  const translatedShareRead = translateLegacyHttpFacadeEvent('getShareDetails', {
-    jwt: 'browser-token',
-    moduleName: 'shareManager',
-    moduleType: 'core',
-    shortToken: 'abc123'
-  });
-  assert.deepStrictEqual(translatedShareRead.payload, {
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource: 'shares',
-    action: 'get',
-    params: { shortToken: 'abc123' }
-  });
-
-  assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has('getUserCount'), false);
-  assert.strictEqual(translateLegacyHttpFacadeEvent('getUserCount', {}), null);
+  assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has('getUserCount'), true);
+  assert.strictEqual(isHttpPublicTokenEvent('getUserCount'), false);
+  assert.match(explainExternalEventRejection('getUserCount', {}), /internal/);
 });
-
 test('app meltdown route uses the shared HTTP policy', () => {
   const routerSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/meltdownRouter.js'), 'utf8');
   const authSource = fs.readFileSync(path.join(__dirname, '..', 'mother/server/auth/adminAuth.js'), 'utf8');
   assert.match(routerSource, /meltdownHttpPolicy/);
-  assert.match(routerSource, /translateLegacyHttpFacadeEvent\(eventName, payload\)/);
+  assert.doesNotMatch(routerSource, /translate[A-Za-z]+HttpFacadeEvent/);
   assert.match(authSource, /jwt:\s*token,\s*\r?\n\s*moduleName: 'auth'/);
   assert.match(authSource, /tokenToValidate:\s*token/);
-  assert.match(routerSource, /stripHttpPayloadAuthMeta\(legacyFacade\?\.payload \|\| payload\)/);
+  assert.match(routerSource, /stripHttpPayloadAuthMeta\(payload\)/);
   assert.match(routerSource, /explainExternalEventRejection\(targetEventName, targetPayload\)/);
   assert.match(routerSource, /isHttpPublicEvent\(targetEventName\)/);
   assert.match(routerSource, /isHttpPublicTokenEvent\(targetEventName\)/);
@@ -887,7 +679,7 @@ test('app meltdown route uses the shared HTTP policy', () => {
   assert.doesNotMatch(routerSource, /targetPayload\.jwt\s*\|\|\s*globalJwt/);
   assert.match(routerSource, /listenerCount\(targetEventName\) === 0/);
   assert.match(routerSource, /motherEmitter\.emit\(targetEventName, targetPayload/);
-  assert.match(routerSource, /legacyFacade\?\.unwrapData \? data\?\.data : data/);
+  assert.doesNotMatch(routerSource, /unwrapData/);
 });
 
 test('app bridge policy blocks sensitive system query contracts', () => {
@@ -904,6 +696,7 @@ test('module and app boundaries share sensitive system query policy', () => {
   assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS, SENSITIVE_SYSTEM_QUERY_EVENTS);
   assert.strictEqual(SENSITIVE_SYSTEM_QUERY_EVENTS.has('getAllPermissions'), true);
   assert.strictEqual(SENSITIVE_SYSTEM_QUERY_EVENTS.has('getTheme'), true);
+  assert.strictEqual(SENSITIVE_SYSTEM_QUERY_EVENTS.has('listActiveStaticFrontends'), true);
   assert.strictEqual(COMMUNITY_FORBIDDEN_DIRECT_EVENTS.has('cmsAdminApiRequest'), true);
   assert.strictEqual(COMMUNITY_FORBIDDEN_DIRECT_EVENTS.has('cmsPublicRuntimeRequest'), true);
   assert.strictEqual(COMMUNITY_FORBIDDEN_DIRECT_EVENTS.has('requestDependency'), true);

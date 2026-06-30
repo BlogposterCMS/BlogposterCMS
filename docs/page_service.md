@@ -1,9 +1,7 @@
 # Page Service
 
 The `pageService` module, located at `ui/widgets/plainspace/admin/defaultwidgets/pageList/pageService.js`, provides a thin data layer for page operations.
-It wraps `meltdownEmit` calls so UI code can remain focused on rendering. The
-legacy `/plainspace/widgets/admin/defaultwidgets/pageList/pageService.js` URL is
-kept as a compatibility shim only.
+It wraps `meltdownEmit` calls so UI code can remain focused on rendering.
 
 ## API
 

@@ -57,10 +57,6 @@ function resolveRegistryWidgetFilePath(content, cmsRoot = CMS_ROOT) {
     {
       urlPrefix: '/widgets/',
       diskRoot: path.resolve(cmsRoot, 'widgets')
-    },
-    {
-      urlPrefix: '/plainspace/widgets/',
-      diskRoot: path.resolve(cmsRoot, 'public', 'plainspace', 'widgets')
     }
   ];
 

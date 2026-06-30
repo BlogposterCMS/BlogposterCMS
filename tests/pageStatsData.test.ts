@@ -23,9 +23,11 @@ describe('pageStatsData', () => {
   it('builds lane payloads and summarizes public/admin pages', () => {
     expect(buildPageLanePayload('admin-token', 'public')).toEqual({
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'public' }
     });
 
     expect(summarizePageStats(
@@ -41,24 +43,26 @@ describe('pageStatsData', () => {
 
   it('fetches pages by lane through the Pages Manager contract', async () => {
     const emit = jest.fn(async (_eventName, payload) => (
-      payload.lane === 'admin'
+      payload.params.lane === 'admin'
         ? { data: [{ status: 'draft' }] }
         : { data: [] }
     ));
 
     await expect(fetchPagesByLane(emit, 'admin-token', 'admin'))
       .resolves.toEqual([{ status: 'draft' }]);
-    expect(emit).toHaveBeenCalledWith('getPagesByLane', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'admin'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'admin' }
     });
   });
 
   it('fetches and summarizes page statistics', async () => {
     const emit = jest.fn(async (_eventName, payload) => (
-      payload.lane === 'public'
+      payload.params.lane === 'public'
         ? { data: [{ status: 'published' }, { status: 'draft' }] }
         : { data: [{ status: 'draft' }] }
     ));

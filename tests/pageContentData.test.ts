@@ -93,68 +93,87 @@ describe('pageContentData', () => {
       meta
     })).toEqual({
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1',
-      slug: 'home',
-      status: 'draft',
-      seo_image: '/seo.png',
-      parent_id: null,
-      is_content: true,
-      lane: 'public',
-      language: 'en',
-      title: 'Home',
-      translations: [{
+      resource: 'pages',
+      action: 'update',
+      params: {
+        pageId: 'page-1',
+        slug: 'home',
+        status: 'draft',
+        seo_image: '/seo.png',
+        parent_id: null,
+        is_content: true,
+        lane: 'public',
         language: 'en',
         title: 'Home',
-        html: '<h1>New</h1>',
-        css: '.old{}'
-      }],
-      meta
+        translations: [{
+          language: 'en',
+          title: 'Home',
+          html: '<h1>New</h1>',
+          css: '.old{}'
+        }],
+        meta
+      }
     });
 
     const loader = { clear: jest.fn() };
     clearPageContentCache(loader, page);
-    expect(loader.clear).toHaveBeenCalledWith('getPageById', {
-      moduleName: 'pagesManager',
+    expect(loader.clear).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1'
+      resource: 'pages',
+      action: 'get',
+      params: { pageId: 'page-1' }
     });
   });
 
   it('fetches builder apps, published designs, and HTML file listings', async () => {
-    const emit = jest.fn(async eventName => {
-      if (eventName === 'listBuilderApps') return { apps: [{ name: 'designer' }] };
-      if (eventName === 'designer.listDesigns') return { designs: [{ id: 'd1' }, { id: 'd2', is_draft: true }] };
-      if (eventName === 'listLocalFolder') return { files: ['a.html', 'b.txt', 'c.htm'] };
+    const emit = jest.fn(async (_eventName, payload) => {
+      const route = `${payload.resource}.${payload.action}`;
+      if (route === 'apps.builderList') return { apps: [{ name: 'designer' }] };
+      if (route === 'designer.list') return { designs: [{ id: 'd1' }, { id: 'd2', is_draft: true }] };
+      if (route === 'media.listLocalFolder') return { files: ['a.html', 'b.txt', 'c.htm'] };
       return undefined;
     });
 
     await expect(fetchBuilderApps(emit, 'admin-token')).resolves.toEqual([{ name: 'designer' }]);
     await expect(fetchPublishedDesigns(emit, 'admin-token')).resolves.toEqual([{ id: 'd1' }]);
     await expect(listHtmlFiles(emit, 'admin-token')).resolves.toEqual(['a.html', 'c.htm']);
-    expect(emit).toHaveBeenCalledWith('listBuilderApps', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'appLoader',
-      moduleType: 'core'
-    });
-    expect(emit).toHaveBeenCalledWith('designer.listDesigns', {
-      jwt: 'admin-token',
-      moduleName: 'designer',
-      moduleType: 'community'
-    });
-    expect(emit).toHaveBeenCalledWith('createLocalFolder', {
-      jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      currentPath: 'public',
-      newFolderName: 'page-content'
+      resource: 'apps',
+      action: 'builderList',
+      params: {}
     });
-    expect(emit).toHaveBeenCalledWith('listLocalFolder', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      subPath: 'public/page-content'
+      resource: 'designer',
+      action: 'list',
+      params: {}
+    });
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'media',
+      action: 'createLocalFolder',
+      params: {
+        currentPath: 'public',
+        newFolderName: 'page-content'
+      }
+    });
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'media',
+      action: 'listLocalFolder',
+      params: { subPath: 'public/page-content' }
     });
   });
 
@@ -164,21 +183,25 @@ describe('pageContentData', () => {
     await expect(fetchHtmlFile(fetchImpl, 'my file.html')).resolves.toBe('<h1>Hello</h1>');
     expect(fetchImpl).toHaveBeenCalledWith('/media/page-content/my%20file.html');
 
-    const emit = jest.fn(async eventName => (
-      eventName === 'uploadFileToFolder'
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'media.uploadToFolder'
         ? { fileName: 'saved.html' }
         : undefined
     ));
     await expect(uploadHtmlFile(emit, 'admin-token', 'source.html', '<h1>Hello</h1>'))
       .resolves.toBe('saved.html');
-    expect(emit).toHaveBeenCalledWith('uploadFileToFolder', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      subPath: 'public/page-content',
-      fileName: 'source.html',
-      fileData: expect.any(String),
-      mimeType: 'text/html'
+      resource: 'media',
+      action: 'uploadToFolder',
+      params: expect.objectContaining({
+        subPath: 'public/page-content',
+        fileName: 'source.html',
+        fileData: expect.any(String),
+        mimeType: 'text/html'
+      })
     }));
   });
 
@@ -188,18 +211,22 @@ describe('pageContentData', () => {
 
     await savePageContent(emit, 'admin-token', page, { html: '', meta });
 
-    expect(emit).toHaveBeenCalledWith('updatePage', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1',
-      translations: [{
-        language: 'en',
-        title: 'Home',
-        html: '',
-        css: '.old{}'
-      }],
-      meta
+      resource: 'pages',
+      action: 'update',
+      params: expect.objectContaining({
+        pageId: 'page-1',
+        translations: [{
+          language: 'en',
+          title: 'Home',
+          html: '',
+          css: '.old{}'
+        }],
+        meta
+      })
     }));
   });
 });

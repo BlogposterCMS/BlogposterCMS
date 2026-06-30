@@ -87,13 +87,13 @@ features belong to widgets, modules or apps.
 - Risks: Too strict too early may break existing imported themes; too loose may
   invite feature/theme overlap.
 
-#### `theme.js` compatibility policy
+#### `theme.js` execution policy
 
 - Status: Review
 - Type: architecture
 - Area: public themes
-- Context: Blogposter is a fresh platform and does not need legacy theme
-  JavaScript compatibility.
+- Context: Blogposter is a fresh platform and imported themes should not bring
+  executable JavaScript into the theme layer.
 - Acceptance: Theme imports do not generate `theme.js`, Theme Manager does not
   expose JS theme assets, and `/themes` does not serve executable assets.
 - Tests: Runtime theme loading and Theme Manager metadata tests.
@@ -178,27 +178,55 @@ second product or bypassing the event-driven architecture.
 
 #### Event-first transport hardening
 
-- Status: Ready
+- Status: In progress
 - Type: architecture, security, migration
 - Area: `runtimeManager`, `meltdownHttpPolicy`, browser clients, app bridge
-- Context: Blogposter already uses module events internally, but browser,
-  runtime, app and widget callers still have compatibility paths that know raw
-  event names. The next hardening pass should make resource/action facades the
-  normal edge contract without introducing a parallel REST product.
-- Acceptance: Add a shared browser facade client for `cmsAdminApiRequest` and
-  `cmsPublicRuntimeRequest`, keep legacy event translation working, classify all
-  `/api/*` and `/admin/api/*` routes by transport responsibility, preserve
-  stable error codes across module -> facade -> HTTP -> UI helper paths, and
-  document `ENABLE_API` / `API_PORT` as reserved or remove them.
-- Tests: Meltdown HTTP policy translation tests, Runtime Manager facade tests,
+- Context: Blogposter uses module events internally, while browser, runtime,
+  app and widget callers now use resource/action facades as the normal edge
+  contract. The hardening direction is to avoid reintroducing raw event names
+  or a parallel REST product.
+- Acceptance: Shared browser facade helpers exist for `cmsAdminApiRequest` and
+  `cmsPublicRuntimeRequest`, HTTP rejects raw event names instead of translating
+  them, `/api/*` and `/admin/api/*` routes remain classified by transport
+  responsibility, stable error codes are preserved across module -> facade ->
+  HTTP -> UI helper paths, and retired API env keys are absent from samples and
+  setup docs.
+- Tests: Meltdown HTTP policy allowlist tests, Runtime Manager facade tests,
   AppLoader bridge tests, UI boundary tests for raw event construction, and
   focused HTTP integration tests for `/api/meltdown` and
   `/api/meltdown/batch` when transport behavior changes.
 - Docs: `docs/event_first_transport.md`, Runtime Manager reference, UI
   architecture and configuration notes.
-- Risks: Moving too much UI at once could break Designer and public rendering;
-  leaving the legacy paths undocumented could make future features add new
-  domain REST controllers or bypass facade permissions.
+- Risks: New feature work could add raw event calls back into browser helpers
+  unless UI boundary tests and facade helper reuse remain part of every
+  transport change.
+
+#### No-legacy purge before production
+
+- Status: Done
+- Type: architecture, migration, cleanup
+- Area: `runtimeManager`, `pagesManager`, `designerManager`, `plainSpace`,
+  `appLoader`, `moduleLoader`, static browser assets, configuration
+- Context: The event-first boundary and active browser surfaces now use v1
+  resource/action contracts. Designer Manager owns Designer service code in
+  core, PlainSpace public mirror folders are removed, direct app runtime bridge
+  names use `cms-app-runtime-*`, static module frontends use `staticFrontend`,
+  widget metadata uses `apiActions`, and retired env/API bypass contracts are
+  removed. See `docs/no_legacy_purge_report.md`.
+- Acceptance: Keep v1 runtime contracts as the only supported active edge:
+  resource/action facades, explicit loader context, canonical widget URLs,
+  `cms-app-runtime-*` bridge names, `staticFrontend` module metadata and
+  wildcard-only admin bypass.
+- Tests: Module access consent tests, Runtime Manager facade tests, AppLoader
+  bridge tests, UI architecture boundary tests, widget URL resolver tests,
+  PlainSpace registry tests and focused migration tests for saved layout/widget
+  URL rewrites.
+- Docs: `docs/no_legacy_purge_report.md`, Event-First Transport Boundary,
+  ModuleLoader, Designer, PagesManager, Content Engine, UI Architecture and
+  Configuration notes.
+- Risks: New feature work could reintroduce retired aliases unless tests keep
+  rejecting raw event names, retired public imports and direct broad permission
+  keys.
 
 #### Platform Core v1 scope
 
@@ -243,7 +271,7 @@ second product or bypassing the event-driven architecture.
   active organization selection.
 - Docs: New module reference plus updates to architecture, modules and
   user-management boundaries.
-- Risks: Mixing tenant state directly into legacy roles could make later
+- Risks: Mixing tenant state directly into broad roles could make later
   organization-scoped permissions difficult to reason about.
 
 #### Dashboard project switcher

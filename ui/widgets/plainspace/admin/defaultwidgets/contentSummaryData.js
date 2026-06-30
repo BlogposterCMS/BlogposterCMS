@@ -1,11 +1,4 @@
-const DESIGNER_MODULE = {
-    moduleName: 'designer',
-    moduleType: 'community'
-};
-const PAGES_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
+import { emitRuntimeAdmin } from '../../../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('PLAINSPACE_CONTENT_SUMMARY_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -90,26 +83,18 @@ export function designIdFromResult(value) {
 }
 export async function fetchContentDesigns(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('designer.listDesigns', {
-        jwt,
-        ...DESIGNER_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list');
     return toDesigns(res);
 }
 export async function fetchUploadedContentPages(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllPages', {
-        jwt,
-        ...PAGES_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'list');
     return uploadedContentPages(res);
 }
 export async function createDraftDesign(emit, jwt, ownerId, timestamp = new Date()) {
     const meltdownEmit = requireEmitter(emit);
     const title = buildDefaultDesignTitle(timestamp);
-    const res = await meltdownEmit('designer.saveDesign', {
-        jwt,
-        ...DESIGNER_MODULE,
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'save', {
         design: buildDraftDesignRecord(ownerId, title),
         widgets: [],
         layout: null

@@ -1,8 +1,4 @@
-// Keep page-picker event contracts in one place; the picker owns only rendering.
-const PAGES_MANAGER_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('SHELL_PAGE_PICKER_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -33,27 +29,21 @@ export function slugFromPageLookup(value) {
 }
 export async function fetchPublicPages(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getPagesByLane', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', {
         lane: 'public'
     });
     return toPages(res);
 }
 export async function savePageOrder(emit, jwt, pageId, newOrder) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('updatePage', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'update', {
         pageId,
         newOrder
     });
 }
 export async function createPublicPageForPicker(emit, jwt, title, slug) {
     const meltdownEmit = requireEmitter(emit);
-    const result = await meltdownEmit('createPage', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    const result = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'create', {
         title,
         slug,
         lane: 'public',
@@ -69,9 +59,7 @@ export async function createPublicPageForPicker(emit, jwt, title, slug) {
 }
 export async function fetchPageSlugById(emit, jwt, pageId) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getPageById', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'get', {
         pageId
     });
     const slug = slugFromPageLookup(res);

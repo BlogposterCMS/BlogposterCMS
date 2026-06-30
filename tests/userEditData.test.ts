@@ -54,38 +54,42 @@ describe('userEditData', () => {
   it('builds the update payload with trimmed profile fields and unchanged bio text', () => {
     expect(buildUserProfilePayload('admin-token', 'user-1', fullValues)).toEqual({
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      userId: 'user-1',
-      newUsername: 'ada',
-      newEmail: 'ada@example.test',
-      newFirstName: 'Ada',
-      newLastName: 'Lovelace',
-      newDisplayName: 'Countess',
-      newPhone: '123',
-      newCompany: 'Notes',
-      newWebsite: 'https://example.test',
-      newAvatarUrl: '/avatar.png',
-      newBio: ' keeps\nspacing ',
-      newUiColor: '#123456',
-      newPassword: 'secret'
+      resource: 'users',
+      action: 'update',
+      params: {
+        userId: 'user-1',
+        newUsername: 'ada',
+        newEmail: 'ada@example.test',
+        newFirstName: 'Ada',
+        newLastName: 'Lovelace',
+        newDisplayName: 'Countess',
+        newPhone: '123',
+        newCompany: 'Notes',
+        newWebsite: 'https://example.test',
+        newAvatarUrl: '/avatar.png',
+        newBio: ' keeps\nspacing ',
+        newUiColor: '#123456',
+        newPassword: 'secret'
+      }
     });
 
     expect(buildUserProfilePayload('admin-token', 'user-1', {
       ...fullValues,
       password: '   '
-    })).not.toHaveProperty('newPassword');
+    })).not.toHaveProperty('params.newPassword');
   });
 
-  it('fetches, updates, and deletes user profiles through explicit events', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'getUserDetailsById'
+  it('fetches, updates, and deletes user profiles through the runtime admin facade', async () => {
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'users.get'
         ? { data: { id: 'user-1', username: 'ada' } }
-        : eventName === 'getAllRoles'
+        : `${payload.resource}.${payload.action}` === 'roles.list'
           ? [{ id: 'role-1', role_name: 'Editors' }]
-          : eventName === 'getAllPermissions'
+          : `${payload.resource}.${payload.action}` === 'permissions.list'
             ? [{ permission_key: 'pages.read' }]
-            : eventName === 'getUserAccess'
+            : `${payload.resource}.${payload.action}` === 'users.access'
               ? { roleIds: ['role-1'], directPermissions: { pages: { read: true } } }
         : undefined
     ));
@@ -107,33 +111,45 @@ describe('userEditData', () => {
     });
     await deleteUserRecord(emit, 'admin-token', 'user-1');
 
-    expect(emit).toHaveBeenCalledWith('getUserDetailsById', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      userId: 'user-1'
+      resource: 'users',
+      action: 'get',
+      params: { userId: 'user-1' }
     });
-    expect(emit).toHaveBeenCalledWith('updateUserProfile', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      userId: 'user-1',
-      newUsername: 'ada',
-      newPassword: 'secret'
+      resource: 'users',
+      action: 'update',
+      params: expect.objectContaining({
+        userId: 'user-1',
+        newUsername: 'ada',
+        newPassword: 'secret'
+      })
     }));
-    expect(emit).toHaveBeenCalledWith('setUserAccess', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      userId: 'user-1',
-      roleIds: ['role-1'],
-      directPermissions: { pages: { read: true } }
+      resource: 'users',
+      action: 'setAccess',
+      params: {
+        userId: 'user-1',
+        roleIds: ['role-1'],
+        directPermissions: { pages: { read: true } }
+      }
     });
-    expect(emit).toHaveBeenCalledWith('deleteUser', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      userId: 'user-1'
+      resource: 'users',
+      action: 'delete',
+      params: { userId: 'user-1' }
     });
   });
 });

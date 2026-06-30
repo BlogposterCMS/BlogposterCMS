@@ -3,8 +3,8 @@ import {
   APP_BRIDGE_REQUEST,
   APP_BRIDGE_RESPONSE,
   dispatchAppLifecycleMessage,
-  dispatchAppMeltdownBatch,
-  dispatchAppMeltdownRequest,
+  dispatchAppRuntimeBatch,
+  dispatchAppRuntimeRequest,
   type AppFrameMessage
 } from './appFrameLoaderData.js';
 
@@ -118,11 +118,11 @@ async function dispatchAppBridgeRequest(msg: AppFrameMessage): Promise<unknown> 
     return localResult;
   }
 
-  return dispatchAppMeltdownRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload);
+  return dispatchAppRuntimeRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload);
 }
 
 async function dispatchAppBridgeBatch(msg: AppFrameMessage): Promise<unknown> {
-  return dispatchAppMeltdownBatch(window.meltdownEmit, window.ADMIN_TOKEN, appName, msg.events);
+  return dispatchAppRuntimeBatch(window.meltdownEmit, window.ADMIN_TOKEN, appName, msg.events);
 }
 
 async function handleBridgeMessage(msg: AppFrameMessage, responseTarget: string): Promise<boolean> {

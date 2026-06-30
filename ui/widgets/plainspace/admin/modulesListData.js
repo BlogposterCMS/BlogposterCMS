@@ -1,8 +1,5 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
 export { fetchPendingModuleAccessRequests, moduleAccessErrorMessage, resolveModuleAccessRequest, toModuleAccessRuntimeRequests } from '../../../shared/module-access/moduleAccessConsentData.js';
-const MODULE_LOADER_MODULE = {
-    moduleName: 'moduleLoader',
-    moduleType: 'core'
-};
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('PLAINSPACE_MODULES_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -52,14 +49,8 @@ export function zipDataFromDataUrl(value) {
 export async function fetchModuleLists(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
     const [installedRes, systemRes] = await Promise.all([
-        meltdownEmit('getModuleRegistry', {
-            jwt,
-            ...MODULE_LOADER_MODULE
-        }),
-        meltdownEmit('listSystemModules', {
-            jwt,
-            ...MODULE_LOADER_MODULE
-        })
+        emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'registry'),
+        emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'system')
     ]);
     return {
         installed: toModules(installedRes),
@@ -70,29 +61,21 @@ export async function toggleModuleRegistryActivation(emit, jwt, moduleRecord, ap
     const meltdownEmit = requireEmitter(emit);
     const nextActive = !moduleRecord.is_active;
     const payload = {
-        jwt,
-        ...MODULE_LOADER_MODULE,
         targetModuleName: moduleRecord.module_name
     };
     if (Array.isArray(approvedAccess))
         payload.approvedAccess = approvedAccess;
-    await meltdownEmit(moduleRecord.is_active ? 'deactivateModuleInRegistry' : 'activateModuleInRegistry', payload);
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', moduleRecord.is_active ? 'deactivate' : 'activate', payload);
     return nextActive;
 }
 export async function inspectModuleZip(emit, jwt, zipData) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('inspectModuleZipAccess', {
-        jwt,
-        ...MODULE_LOADER_MODULE,
-        zipData
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'inspectZip', { zipData });
     return toModuleZipInspection(res);
 }
 export async function installModuleZip(emit, jwt, zipData, approvedAccess = []) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('installModuleFromZip', {
-        jwt,
-        ...MODULE_LOADER_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installZip', {
         zipData,
         approvedAccess
     });

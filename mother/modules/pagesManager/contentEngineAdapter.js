@@ -177,9 +177,9 @@ function buildPageContentEntryPayload({
     },
     meta: {
       ...pageMeta,
-      legacyPageId: pageId,
-      legacyLane: lane,
-      legacyParentId: parent_id || null,
+      sourcePageId: pageId,
+      sourceLane: lane,
+      sourceParentId: parent_id || null,
       isContent: Boolean(is_content),
       weight: Number(weight) || 0,
       seoImage: seo_image || '',

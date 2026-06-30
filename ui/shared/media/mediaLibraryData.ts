@@ -17,13 +17,8 @@ export type MediaUploadFetch = (
 
 type MediaEmitter = Window['meltdownEmit'];
 
-const MEDIA_MODULE = {
-  moduleName: 'mediaManager',
-  moduleType: 'core'
-} as const;
-
-const SHARE_MODULE = {
-  moduleName: 'shareManager',
+const RUNTIME_MANAGER_MODULE = {
+  moduleName: 'runtimeManager',
   moduleType: 'core'
 } as const;
 
@@ -32,6 +27,40 @@ function requireEmitter(emit: MediaEmitter): NonNullable<MediaEmitter> {
     throw new Error('MEDIA_LIBRARY_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
   }
   return emit;
+}
+
+function objectParams(value: Record<string, unknown> = {}): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function unwrapRuntimeFacadeData<T = unknown>(value: unknown): T {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'resource' in value &&
+    'action' in value &&
+    'data' in value
+  ) {
+    return (value as { data?: T }).data as T;
+  }
+  return value as T;
+}
+
+async function emitRuntimeAdmin<T = unknown>(
+  emit: NonNullable<MediaEmitter>,
+  jwt: string | null | undefined,
+  resource: string,
+  action: string,
+  params: Record<string, unknown> = {}
+): Promise<T> {
+  const result = await emit('cmsAdminApiRequest', {
+    jwt,
+    ...RUNTIME_MANAGER_MODULE,
+    resource,
+    action,
+    params: objectParams(params)
+  });
+  return unwrapRuntimeFacadeData<T>(result);
 }
 
 function requireUploadFetch(uploadFetch?: MediaUploadFetch): MediaUploadFetch {
@@ -106,9 +135,7 @@ export async function createMediaFolder(
   newFolderName: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('createLocalFolder', {
-    jwt,
-    ...MEDIA_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'createLocalFolder', {
     currentPath,
     newFolderName
   });
@@ -120,11 +147,7 @@ export async function listMediaFolder(
   subPath: string
 ): Promise<FolderListing> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('listLocalFolder', {
-    jwt,
-    ...MEDIA_MODULE,
-    subPath
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'listLocalFolder', { subPath });
   return toFolderListing(res);
 }
 
@@ -136,9 +159,7 @@ export async function renameMediaItem(
   newName: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('renameLocalItem', {
-    jwt,
-    ...MEDIA_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'renameLocalItem', {
     currentPath,
     oldName,
     newName
@@ -152,9 +173,7 @@ export async function deleteMediaItem(
   itemName: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('deleteLocalItem', {
-    jwt,
-    ...MEDIA_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'deleteLocalItem', {
     currentPath,
     itemName
   });
@@ -166,11 +185,7 @@ export async function createMediaShareLink(
   filePath: string
 ): Promise<ShareLinkResult> {
   const meltdownEmit = requireEmitter(emit);
-  const result = await meltdownEmit('createShareLink', {
-    jwt,
-    ...SHARE_MODULE,
-    filePath
-  });
+  const result = await emitRuntimeAdmin(meltdownEmit, jwt, 'shares', 'create', { filePath });
   return result && typeof result === 'object'
     ? result as ShareLinkResult
     : {};

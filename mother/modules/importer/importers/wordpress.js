@@ -487,7 +487,7 @@ function emptyPlan(warnings = []) {
     dryRun: true,
     site: {},
     authors: [],
-    legacyWordPressTerms: [],
+    sourceWordPressTerms: [],
     collections: [],
     entries: [],
     attachments: [],
@@ -495,7 +495,7 @@ function emptyPlan(warnings = []) {
     skipped: [],
     totals: {
       authors: 0,
-      legacyWordPressTerms: 0,
+      sourceWordPressTerms: 0,
       collections: 0,
       entries: 0,
       attachments: 0,
@@ -572,10 +572,10 @@ async function buildImportPlan(options = {}) {
     for (const term of entry.metadata.wordpress.terms) addUniqueWordPressTerm(wordpressTermMap, term);
   }
 
-  const legacyWordPressTerms = Array.from(wordpressTermMap.values()).sort((a, b) =>
+  const sourceWordPressTerms = Array.from(wordpressTermMap.values()).sort((a, b) =>
     `${a.wpDomain}:${a.slug}`.localeCompare(`${b.wpDomain}:${b.slug}`)
   );
-  const collections = buildCollectionPlans(legacyWordPressTerms, entries);
+  const collections = buildCollectionPlans(sourceWordPressTerms, entries);
   const authors = asArray(channel['wp:author']).map(normalizeAuthor).filter(Boolean);
   const plan = {
     source: 'wordpress',
@@ -589,7 +589,7 @@ async function buildImportPlan(options = {}) {
       baseBlogUrl: text(channel['wp:base_blog_url']).trim()
     },
     authors,
-    legacyWordPressTerms,
+    sourceWordPressTerms,
     collections,
     entries,
     attachments,
@@ -597,7 +597,7 @@ async function buildImportPlan(options = {}) {
     skipped,
     totals: {
       authors: authors.length,
-      legacyWordPressTerms: legacyWordPressTerms.length,
+      sourceWordPressTerms: sourceWordPressTerms.length,
       collections: collections.length,
       entries: entries.length,
       attachments: attachments.length,

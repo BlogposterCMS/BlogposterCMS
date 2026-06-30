@@ -41,7 +41,7 @@ Calling `bindGlobalListeners` automatically registers all of the above. Events t
 
 ### Are they implemented?
 
-Yes. The source lives in [`ui/runtime/grid-core/globalEvents.js`](../ui/runtime/grid-core/globalEvents.js). The legacy `/plainspace/grid-core/globalEvents.js` URL remains available as a compatibility shim. The tests exercise public event handling in `tests/publicEvents.test.js`, ensuring the bindings work.
+Yes. The source lives in [`ui/runtime/grid-core/globalEvents.js`](../ui/runtime/grid-core/globalEvents.js). The tests exercise public event handling in `tests/publicEvents.test.js`, ensuring the bindings work.
 
 ### Example Usage
 

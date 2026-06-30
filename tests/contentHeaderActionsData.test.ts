@@ -33,32 +33,38 @@ describe('contentHeaderActionsData', () => {
     expect(adminBaseHref('/cms/admin')).toBe('/cms/admin');
   });
 
-  it('fetches admin pages through pagesManager slug lookup', async () => {
+  it('fetches admin pages through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({ id: 'page-1', slug: 'content' });
 
     await expect(fetchAdminPageBySlug(emit, 'admin-token', 'content')).resolves.toEqual({
       id: 'page-1',
       slug: 'content'
     });
-    expect(emit).toHaveBeenCalledWith('getPageBySlug', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      slug: 'content',
-      lane: 'admin'
+      resource: 'pages',
+      action: 'getBySlug',
+      params: {
+        slug: 'content',
+        lane: 'admin'
+      }
     });
   });
 
-  it('deletes admin pages through pagesManager', async () => {
+  it('deletes admin pages through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await deleteAdminPage(emit, 'admin-token', 'page-1');
 
-    expect(emit).toHaveBeenCalledWith('deletePage', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-1'
+      resource: 'pages',
+      action: 'delete',
+      params: { pageId: 'page-1' }
     });
   });
 

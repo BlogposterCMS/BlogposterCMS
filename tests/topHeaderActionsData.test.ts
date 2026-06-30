@@ -17,15 +17,22 @@ describe('topHeaderActionsData', () => {
   it('builds maintenance setting payloads and parses setting values', () => {
     expect(buildMaintenanceSettingPayload('admin-token')).toEqual({
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'MAINTENANCE_MODE'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'MAINTENANCE_MODE' }
     });
     expect(buildMaintenanceSettingPayload('', { value: 'false' })).toEqual({
-      moduleName: 'settingsManager',
+      jwt: '',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'MAINTENANCE_MODE',
-      value: 'false'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'MAINTENANCE_MODE',
+        value: 'false'
+      }
     });
     expect(parseMaintenanceValue(true)).toBe(true);
     expect(parseMaintenanceValue('TRUE')).toBe(true);
@@ -34,29 +41,35 @@ describe('topHeaderActionsData', () => {
     expect(errorMessage(new Error('boom'))).toBe('boom');
   });
 
-  it('fetches maintenance mode through settingsManager', async () => {
+  it('fetches maintenance mode through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({ value: 'true' });
 
     await expect(fetchMaintenanceMode(emit, 'admin-token')).resolves.toBe(true);
-    expect(emit).toHaveBeenCalledWith('getSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'MAINTENANCE_MODE'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'MAINTENANCE_MODE' }
     });
   });
 
-  it('disables maintenance mode through settingsManager', async () => {
+  it('disables maintenance mode through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await disableMaintenanceMode(emit, 'admin-token');
 
-    expect(emit).toHaveBeenCalledWith('setSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'MAINTENANCE_MODE',
-      value: 'false'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'MAINTENANCE_MODE',
+        value: 'false'
+      }
     });
   });
 
@@ -71,17 +84,21 @@ describe('topHeaderActionsData', () => {
     const emit = jest.fn().mockResolvedValue({ value: '  Studio CMS  ' });
 
     await expect(fetchProjectName(emit, 'admin-token')).resolves.toBe('Studio CMS');
-    expect(emit).toHaveBeenCalledWith('getSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'SITE_TITLE'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'SITE_TITLE' }
     });
     expect(buildProjectNameSettingPayload('admin-token')).toEqual({
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'SITE_TITLE'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'SITE_TITLE' }
     });
     expect(parseSettingText({ value: '' })).toBe('Blogposter');
     expect(parseSettingText(null)).toBe('Blogposter');

@@ -1,6 +1,6 @@
 # PixelGrid
 
-PixelGrid is a legacy grid system built on the shared grid core modules.
+PixelGrid is an internal grid system built on the shared grid core modules.
 The builder now uses `CanvasGrid` for responsive layouts, but PixelGrid remains available for reference and potential niche use cases.
 
 ## Features
@@ -22,6 +22,5 @@ const grid = initPixelGrid({}, gridEl);
 
 PixelGrid is internal to the designer app and does not depend on dashboard scripts.
 
-Legacy `/apps/designer/main/*.js` URLs are still available as compatibility
-shims, but new Designer code should import from `ui/designer/app/*` or through
-the bundled `/build/designer.js` entry.
+Designer code should import from `ui/designer/app/*` or through the bundled
+`/build/designer.js` entry.

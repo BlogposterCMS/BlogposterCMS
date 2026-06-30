@@ -8,13 +8,14 @@ describe('resolveWidgetModuleUrl', () => {
       .toBe('/ui/widgets/plainspace/admin/widgetListWidget.js');
   });
 
-  it('normalizes legacy bundled PlainSpace widget shims to canonical UI modules', () => {
+  it('blocks retired bundled PlainSpace widget paths', () => {
+    const retiredWidgetUrl = ['/plainspace', 'widgets/admin/defaultwidgets/contentSummaryWidget.js?v=1#root'].join('/');
     expect(
       resolveWidgetModuleUrl(
-        '/plainspace/widgets/admin/defaultwidgets/contentSummaryWidget.js?v=1#root',
+        retiredWidgetUrl,
         BASE
       )
-    ).toBe('/ui/widgets/plainspace/admin/defaultwidgets/contentSummaryWidget.js?v=1#root');
+    ).toBeNull();
   });
 
   it('allows documented community widget assets', () => {

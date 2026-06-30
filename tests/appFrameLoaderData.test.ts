@@ -4,8 +4,8 @@
 
 import {
   dispatchAppLifecycleMessage,
-  dispatchAppMeltdownBatch,
-  dispatchAppMeltdownRequest,
+  dispatchAppRuntimeBatch,
+  dispatchAppRuntimeRequest,
   objectPayload,
   unwrapAppEventResult
 } from '../ui/shell/apps/appFrameLoaderData';
@@ -22,7 +22,7 @@ describe('appFrameLoaderData', () => {
   it('dispatches single bridge requests through appLoader', async () => {
     const emit = jest.fn().mockResolvedValue({ data: { id: 'design-1' } });
 
-    await expect(dispatchAppMeltdownRequest(
+    await expect(dispatchAppRuntimeRequest(
       emit,
       'admin-token',
       'designer',
@@ -35,7 +35,7 @@ describe('appFrameLoaderData', () => {
       moduleName: 'appLoader',
       moduleType: 'core',
       appName: 'designer',
-      event: 'cms-meltdown-request',
+      event: 'cms-app-runtime-request',
       data: {
         eventName: 'designer.getDesign',
         payload: { id: 'design-1' }
@@ -47,14 +47,14 @@ describe('appFrameLoaderData', () => {
     const emit = jest.fn().mockResolvedValue({ data: [{ ok: true }] });
     const events = [{ eventName: 'designer.listDesigns' }];
 
-    await expect(dispatchAppMeltdownBatch(emit, 'admin-token', 'designer', events))
+    await expect(dispatchAppRuntimeBatch(emit, 'admin-token', 'designer', events))
       .resolves.toEqual([{ ok: true }]);
     expect(emit).toHaveBeenCalledWith('dispatchAppEvent', {
       jwt: 'admin-token',
       moduleName: 'appLoader',
       moduleType: 'core',
       appName: 'designer',
-      event: 'cms-meltdown-batch-request',
+      event: 'cms-app-runtime-batch-request',
       data: { events }
     });
   });
@@ -75,9 +75,9 @@ describe('appFrameLoaderData', () => {
   });
 
   it('fails with searchable errors for missing emitters and event names', async () => {
-    await expect(dispatchAppMeltdownRequest(undefined as never, 'admin-token', 'designer', 'event', {}))
+    await expect(dispatchAppRuntimeRequest(undefined as never, 'admin-token', 'designer', 'event', {}))
       .rejects.toThrow('SHELL_APP_FRAME_EMITTER_UNAVAILABLE');
-    await expect(dispatchAppMeltdownRequest(jest.fn(), 'admin-token', 'designer', ' ', {}))
+    await expect(dispatchAppRuntimeRequest(jest.fn(), 'admin-token', 'designer', ' ', {}))
       .rejects.toThrow('SHELL_APP_FRAME_EVENT_NAME_MISSING');
   });
 });

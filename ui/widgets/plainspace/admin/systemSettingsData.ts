@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
+
 export interface PageRecord {
   id?: string | number;
   lane?: string;
@@ -58,13 +60,13 @@ export async function fetchSystemSettings(
 ): Promise<SystemSettingsState> {
   const meltdownEmit = requireEmitter(emit);
   const [title, desc, isMaint, pageId, faviconUrl, pagesRes, googleFontsKey] = await Promise.all([
-    meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'SITE_TITLE' }),
-    meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'SITE_DESC' }),
-    meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'MAINTENANCE_MODE' }),
-    meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'MAINTENANCE_PAGE_ID' }),
-    meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'FAVICON_URL' }),
-    meltdownEmit('getAllPages', { jwt, moduleName: 'pagesManager', moduleType: 'core' }),
-    meltdownEmit('getSetting', { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'GOOGLE_FONTS_API_KEY' })
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'SITE_TITLE' }),
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'SITE_DESC' }),
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'MAINTENANCE_MODE' }),
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'MAINTENANCE_PAGE_ID' }),
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'FAVICON_URL' }),
+    emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'list'),
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'GOOGLE_FONTS_API_KEY' })
   ]);
   const pages = toPages(pagesRes);
   const maintenancePageId = asSetting(pageId);
@@ -88,10 +90,7 @@ export async function setSystemSetting(
   value: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('setSetting', {
-    jwt,
-    moduleName: 'settingsManager',
-    moduleType: 'core',
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'set', {
     key,
     value
   });

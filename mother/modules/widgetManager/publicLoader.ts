@@ -14,6 +14,13 @@ type PublicWidgetLayoutItem = {
   yPercent?: number;
   wPercent?: number;
   hPercent?: number;
+  html?: string;
+  css?: string;
+  js?: string;
+  zIndex?: number;
+  rotationDeg?: number;
+  opacity?: number;
+  metadata?: Record<string, unknown>;
 };
 
 type PublicWidgetLayout = {
@@ -38,6 +45,13 @@ type WidgetCode = {
   js?: string;
 };
 
+type PublicWidgetModule = {
+  render?: (
+    el: HTMLElement,
+    ctx?: Record<string, unknown>
+  ) => void | Promise<void>;
+};
+
 type WidgetLoaderContext = {
   meltdownEmit?: <T = unknown>(eventName: string, payload?: Record<string, unknown>) => Promise<T>;
   publicToken?: string | null;
@@ -51,9 +65,16 @@ type WidgetDescriptor = {
   layoutRef?: unknown;
 };
 
-type WindowWithPublicLayout = Window & {
-  __BP_ACTIVE_LAYOUT__?: PublicWidgetLayout;
+type RuntimeFacadeResponse<T> = {
+  resource?: string;
+  action?: string;
+  data?: T;
 };
+
+const PUBLIC_CANVAS_STYLE_ID = 'bp-public-canvas-runtime-style';
+const PUBLIC_CANVAS_MIN_HEIGHT_PERCENT = 100;
+const PUBLIC_CANVAS_MAX_HEIGHT_PERCENT = 400;
+const PUBLIC_WIDGETS_READY_EVENT = 'bp:public-widgets-ready';
 
 function toNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -61,6 +82,141 @@ function toNumber(value: unknown, fallback: number): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toBoundedPercent(value: unknown, fallback: number, max = 100): number {
+  const num = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(0, num));
+}
+
+function publicCanvasHeightPercent(layout: PublicWidgetLayout): number {
+  const maxPercent = (layout.items || []).reduce((max, item) => {
+    const y = toBoundedPercent(item.yPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
+    const h = toBoundedPercent(item.hPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
+    return Math.max(max, y + h);
+  }, PUBLIC_CANVAS_MIN_HEIGHT_PERCENT);
+  return Math.min(
+    PUBLIC_CANVAS_MAX_HEIGHT_PERCENT,
+    Math.max(PUBLIC_CANVAS_MIN_HEIGHT_PERCENT, Math.ceil(maxPercent))
+  );
+}
+
+function ensurePublicCanvasStyles(): void {
+  if (document.getElementById(PUBLIC_CANVAS_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = PUBLIC_CANVAS_STYLE_ID;
+  style.textContent = `
+.bp-public-canvas {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  overflow: visible;
+  contain: none;
+  background: var(--studio-canvas, #fff);
+  color: var(--studio-text, #1f2933);
+}
+.bp-public-canvas,
+.bp-public-canvas * {
+  box-sizing: border-box;
+}
+.bp-public-canvas > .canvas-item {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  user-select: auto;
+  -webkit-user-select: auto;
+  backdrop-filter: none;
+  transition: none;
+}
+.bp-public-canvas > .canvas-item::before,
+.bp-public-canvas .resize-handle,
+.bp-public-canvas .bounding-box {
+  display: none !important;
+}
+.bp-public-canvas .widget {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+@media (max-width: 760px) {
+  .bp-public-canvas {
+    display: grid;
+    gap: 16px;
+    height: auto !important;
+    min-height: auto !important;
+    padding: 24px !important;
+  }
+  .bp-public-canvas > .canvas-item {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    transform: none !important;
+  }
+  .bp-public-canvas .widget {
+    height: auto;
+    min-height: 0;
+  }
+}
+  `.trim();
+  document.head.appendChild(style);
+}
+
+function preparePublicCanvas(gridEl: HTMLElement, layout: PublicWidgetLayout): void {
+  ensurePublicCanvasStyles();
+  const height = `${publicCanvasHeightPercent(layout)}vh`;
+  gridEl.classList.add('bp-public-canvas');
+  gridEl.style.width = '100%';
+  gridEl.style.minHeight = height;
+  gridEl.style.height = height;
+  gridEl.style.position = 'relative';
+  gridEl.style.overflow = 'visible';
+  gridEl.style.setProperty('--studio-canvas', '#ffffff');
+  gridEl.style.setProperty('--studio-surface-solid', '#ffffff');
+  gridEl.style.setProperty('--studio-surface-muted', '#f6f7f8');
+  gridEl.style.setProperty('--studio-text', '#1f2933');
+  gridEl.style.setProperty('--studio-text-muted', 'rgba(31,41,51,.62)');
+  gridEl.style.setProperty('--studio-border', 'rgba(17,24,39,.08)');
+  gridEl.style.setProperty('--studio-border-strong', 'rgba(17,24,39,.14)');
+  gridEl.style.setProperty('--studio-radius-panel', '18px');
+  gridEl.style.setProperty('--studio-radius-control', '999px');
+  gridEl.style.setProperty('--studio-shadow-soft', '0 1px 2px rgba(0,0,0,.04), 0 14px 36px rgba(17,24,39,.08)');
+}
+
+function markPublicWidgetsReady(layout: PublicWidgetLayout, renderedCount: number): void {
+  document.documentElement.dataset.bpPublicWidgetsReady = 'true';
+  window.dispatchEvent(new CustomEvent(PUBLIC_WIDGETS_READY_EVENT, {
+    detail: {
+      layoutRef: layout.layoutRef || '',
+      renderedCount
+    }
+  }));
+}
+
+function applyPublicPercentPosition(itemEl: HTMLElement, item: PublicWidgetLayoutItem): void {
+  const x = toBoundedPercent(item.xPercent, 0);
+  const y = toBoundedPercent(item.yPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
+  const w = toBoundedPercent(item.wPercent, 100);
+  const h = toBoundedPercent(item.hPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
+  itemEl.dataset.xPercent = String(x);
+  itemEl.dataset.yPercent = String(y);
+  itemEl.dataset.wPercent = String(w);
+  itemEl.dataset.hPercent = String(h);
+  itemEl.style.position = 'absolute';
+  itemEl.style.left = `${x}%`;
+  itemEl.style.top = `${y}%`;
+  itemEl.style.width = `${Math.max(1, w)}%`;
+  itemEl.style.height = h > 0 ? `${h}%` : 'auto';
+  if (Number.isFinite(Number(item.zIndex))) itemEl.style.zIndex = String(Number(item.zIndex));
+  if (Number.isFinite(Number(item.opacity))) itemEl.style.opacity = String(Number(item.opacity));
+  const rotation = Number(item.rotationDeg);
+  itemEl.style.transform = Number.isFinite(rotation) && rotation !== 0 ? `rotate(${rotation}deg)` : '';
 }
 
 function normalizePublicWidgetLayout(value: unknown): PublicWidgetLayout | null {
@@ -86,6 +242,38 @@ function fallbackLayout(layoutRef?: unknown): PublicWidgetLayout {
   };
 }
 
+function unwrapRuntimeFacadeData<T>(value: unknown): T {
+  if (
+    isRecord(value) &&
+    'resource' in value &&
+    'action' in value &&
+    'data' in value
+  ) {
+    return (value as RuntimeFacadeResponse<T>).data as T;
+  }
+  return value as T;
+}
+
+async function emitPublicRuntime<T>(
+  ctx: WidgetLoaderContext,
+  resource: string,
+  action: string,
+  params: Record<string, unknown> = {}
+): Promise<T> {
+  if (typeof ctx.meltdownEmit !== 'function') {
+    throw new Error('[WidgetPublicLoader:PUBLIC_RUNTIME_EMIT_MISSING] meltdownEmit is required.');
+  }
+  const result = await ctx.meltdownEmit('cmsPublicRuntimeRequest', {
+    jwt: ctx.publicToken,
+    moduleName: 'runtimeManager',
+    moduleType: 'core',
+    resource,
+    action,
+    params
+  });
+  return unwrapRuntimeFacadeData<T>(result);
+}
+
 function resolveWidgetLayout(
   descriptor: WidgetDescriptor,
   ctx: WidgetLoaderContext
@@ -100,9 +288,6 @@ function resolveWidgetLayout(
   const ctxLayout = normalizePublicWidgetLayout(ctx.activeLayout);
   if (ctxLayout) return ctxLayout;
 
-  const legacyLayout = normalizePublicWidgetLayout((window as WindowWithPublicLayout).__BP_ACTIVE_LAYOUT__);
-  if (legacyLayout) return legacyLayout;
-
   return fallbackLayout(descriptor.layoutRef || ctx.activeLayoutRef);
 }
 
@@ -114,6 +299,36 @@ function parseWidgetCode(content: PublicWidgetDefinition['content']): WidgetCode
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
     return {};
+  }
+}
+
+function isSafeWidgetModulePath(value: unknown): value is string {
+  return typeof value === 'string'
+    && /^\/ui\/widgets\/plainspace\/public\/basicwidgets\/[A-Za-z0-9_-]+\.js$/.test(value);
+}
+
+async function renderWidgetModule(
+  container: HTMLElement,
+  item: PublicWidgetLayoutItem,
+  def: PublicWidgetDefinition,
+  ctx: WidgetLoaderContext
+): Promise<boolean> {
+  if (!isSafeWidgetModulePath(def.content)) return false;
+  try {
+    const mod = await import(/* webpackIgnore: true */ def.content) as PublicWidgetModule;
+    if (typeof mod.render !== 'function') return false;
+    await mod.render(container, {
+      id: item.instanceId,
+      widgetId: item.widgetId,
+      publicToken: ctx.publicToken,
+      meltdownEmit: ctx.meltdownEmit,
+      metadata: def.metadata || {},
+      instanceMetadata: isRecord(item.metadata) ? item.metadata : {}
+    });
+    return true;
+  } catch (error) {
+    console.error('[WidgetPublicLoader:MODULE_RENDER_FAILED]', error);
+    return false;
   }
 }
 
@@ -130,21 +345,23 @@ async function loadWidgets(
   const root = document.getElementById('app') || document.body;
 
   const registry = typeof ctx.meltdownEmit === 'function'
-    ? await ctx.meltdownEmit<PublicWidgetDefinition[]>('getWidgets', {
-        jwt: ctx.publicToken,
-        moduleName: 'widgetManager',
-        moduleType: 'core',
-        widgetType: 'public'
-      }).catch(() => [])
+    ? await emitPublicRuntime<PublicWidgetDefinition[]>(ctx, 'widgets', 'list').catch(() => [])
     : [];
 
   const gridEl = document.createElement('div');
   gridEl.id = 'bp-grid';
+  preparePublicCanvas(gridEl, layout);
   root.appendChild(gridEl);
 
   const cols = toNumber(layout.grid?.columns, 12);
   const cellHeight = toNumber(layout.grid?.cellHeight, 8);
-  const grid = initCanvasGrid({ columns: cols, cellHeight }, gridEl);
+  const grid = initCanvasGrid({
+    columns: cols,
+    cellHeight,
+    percentageMode: true,
+    staticGrid: true,
+    enableZoom: false
+  }, gridEl);
   let rows = toNumber(layout.grid?.rows, 0);
   if (!rows) {
     const maxPercent = (layout.items || []).reduce(
@@ -154,10 +371,10 @@ async function loadWidgets(
     rows = Math.max(1, Math.round((maxPercent / 100) * cols));
   }
 
+  let renderedCount = 0;
   for (const item of layout.items || []) {
     const def = registry.find(widget => widget.widgetId === item.widgetId);
     if (!def) continue;
-    const code = parseWidgetCode(def.content);
     const itemEl = document.createElement('div');
     itemEl.className = 'canvas-item';
     itemEl.dataset.instanceId = createInstanceId(item);
@@ -172,31 +389,41 @@ async function loadWidgets(
     itemEl.setAttribute('gs-h', String(h));
     gridEl.appendChild(itemEl);
     grid.makeWidget(itemEl);
+    applyPublicPercentPosition(itemEl, item);
 
     const container = document.createElement('div');
     container.className = 'widget';
     itemEl.appendChild(container);
 
-    if (code?.css) {
-      const style = document.createElement('style');
-      style.textContent = code.css;
-      itemEl.appendChild(style);
-    }
-    if (code?.html) container.innerHTML = sanitizeHtml(code.html);
-    if (code?.js) {
-      try {
-        executeJs(code.js, itemEl, itemEl, 'Widget');
-      } catch (error) {
-        console.error(error);
+    const renderedByModule = await renderWidgetModule(container, item, def, ctx);
+    if (!renderedByModule) {
+      const code = {
+        ...parseWidgetCode(def.content),
+        ...(item.html ? { html: item.html } : {}),
+        ...(item.css ? { css: item.css } : {}),
+        ...(item.js ? { js: item.js } : {})
+      };
+      if (code?.css) {
+        const style = document.createElement('style');
+        style.textContent = code.css;
+        itemEl.appendChild(style);
+      }
+      if (code?.html) container.innerHTML = sanitizeHtml(code.html);
+      if (code?.js) {
+        try {
+          executeJs(code.js, itemEl, itemEl, 'Widget');
+        } catch (error) {
+          console.error(error);
+        }
       }
     }
 
-    applyWidgetOptions(
-      itemEl,
-      def.metadata || {},
-      grid as unknown as Parameters<typeof applyWidgetOptions>[2]
-    );
+    applyWidgetOptions(itemEl, def.metadata || {});
+    applyPublicPercentPosition(itemEl, item);
+    renderedCount += 1;
   }
+  preparePublicCanvas(gridEl, layout);
+  markPublicWidgetsReady(layout, renderedCount);
 }
 
 export function registerLoaders(register: WidgetRegister): void {

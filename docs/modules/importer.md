@@ -51,7 +51,7 @@ The `wordpress` importer accepts one of:
 - `options.filePath` inside an import staging root
 
 By default it returns a dry-run plan containing site metadata, authors,
-WordPress legacy terms, collection page plans, entries, attachments, comments
+WordPress terms, collection page plans, entries, attachments, comments
 and skipped WordPress-only item types. Passing `dryRun: false` applies the plan
 by emitting `registerContentType`, `createContentEntry`,
 `createMediaAttachment` and `createComment`. When `pagesManager.createPage` is
@@ -205,7 +205,7 @@ neutral package:
 - `reports/mapping-hints.json`, `reports/blocked-behavior.json` and
   `reports/source-summary.json` make import confidence and review work explicit.
 
-This exporter is a neutralizer, not a compatibility runtime. It preserves the
+This exporter is a neutralizer, not an alternate runtime. It preserves the
 rendered page and records JavaScript assets, while Blogposter imports the
 normalized HTML and mapping hints for native rebuild work.
 If WordPress cannot fetch its own frontend during export, the exporter writes a

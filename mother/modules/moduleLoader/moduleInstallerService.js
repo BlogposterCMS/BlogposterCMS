@@ -126,7 +126,7 @@ function validateZipEntries(zip) {
   return entries;
 }
 
-function validateModuleInfo(moduleInfo = {}) {
+function validateModuleInfo(moduleInfo = {}, options = {}) {
   for (const field of REQUIRED_MODULE_INFO_FIELDS) {
     if (!moduleInfo[field]) {
       throw new Error(`moduleInfo.json missing "${field}" field.`);
@@ -145,7 +145,7 @@ function validateModuleInfo(moduleInfo = {}) {
     version: String(moduleInfo.version).trim(),
     developer: String(moduleInfo.developer).trim(),
     description: String(moduleInfo.description).trim()
-  }, moduleName);
+  }, moduleName, options);
 }
 
 function emitAsync(motherEmitter, eventName, payload) {
@@ -239,15 +239,10 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
     if (!foundModuleDir || !moduleInfo) {
       throw new Error('No moduleInfo.json found in the uploaded ZIP.');
     }
-    const baseModuleInfo = validateModuleInfo(moduleInfo);
-    const normalizedModuleInfo = normalizeModuleInfoAccess(
-      baseModuleInfo,
-      baseModuleInfo.moduleName,
-      {
-        approvedAccess: options.approvedAccess || [],
-        grantedBy: options.grantedBy
-      }
-    );
+    const normalizedModuleInfo = validateModuleInfo(moduleInfo, {
+      approvedAccess: options.approvedAccess || [],
+      grantedBy: options.grantedBy
+    });
     const moduleSourceDir = validateModuleDirectory(foundModuleDir, normalizedModuleInfo, extractedTemp);
 
     // 3) Move to final /modules folder

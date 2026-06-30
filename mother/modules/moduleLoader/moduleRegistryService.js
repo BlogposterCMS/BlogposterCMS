@@ -95,26 +95,26 @@ function initGetModuleRegistryEvent(motherEmitter) {
 }
 
 /**
- * meltdown => "listActiveGrapesModules"
+ * core event => "listActiveStaticFrontends"
  */
-function initListActiveGrapesModulesEvent(motherEmitter) {
-  motherEmitter.on('listActiveGrapesModules', async (payload, originalCb) => {
+function initListActiveStaticFrontendsEvent(motherEmitter) {
+  motherEmitter.on('listActiveStaticFrontends', async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     if (!payload || typeof payload !== 'object') {
-      return callback(new Error('[MODULE LOADER] listActiveGrapesModules => invalid meltdown payload.'));
+      return callback(new Error('[MODULE LOADER:E_STATIC_FRONTENDS_PAYLOAD] listActiveStaticFrontends requires a payload object.'));
     }
     const { jwt, moduleName, moduleType } = payload;
     if (!jwt || moduleName !== 'moduleLoader' || moduleType !== 'core') {
-      return callback(new Error('[MODULE LOADER] meltdown => must come from moduleLoader/core.'));
+      return callback(new Error('[MODULE LOADER:E_STATIC_FRONTENDS_SCOPE] listActiveStaticFrontends must come from moduleLoader/core.'));
     }
 
     if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'modules.listActive')) {
-      return callback(new Error('Forbidden – missing permission: modules.listActive'));
+      return callback(new Error('[MODULE LOADER:E_STATIC_FRONTENDS_FORBIDDEN] missing permission: modules.listActive'));
     }
 
     try {
-      const rows = await runDbSelectPlaceholder(motherEmitter, jwt, 'LIST_ACTIVE_GRAPES_MODULES', {});
+      const rows = await runDbSelectPlaceholder(motherEmitter, jwt, 'LIST_ACTIVE_STATIC_FRONTENDS', {});
       const result = rows.map(r => {
         let info = (typeof r.module_info === 'string')
           ? safelyParseJSON(r.module_info) || {}
@@ -127,7 +127,7 @@ function initListActiveGrapesModulesEvent(motherEmitter) {
 
       callback(null, result);
     } catch (err) {
-      console.error('[MODULE LOADER] listActiveGrapesModules => meltdown meltdown =>', err.message);
+      console.error('[MODULE LOADER:E_STATIC_FRONTENDS_QUERY] listActiveStaticFrontends failed =>', err.message);
       callback(err);
     }
   });
@@ -454,7 +454,7 @@ function safelyParseJSON(str) {
 module.exports = {
   ensureModuleRegistrySchema,
   initGetModuleRegistryEvent,
-  initListActiveGrapesModulesEvent,
+  initListActiveStaticFrontendsEvent,
   initListSystemModulesEvent,
   readFsModuleInfo,
   updateModuleInfo,

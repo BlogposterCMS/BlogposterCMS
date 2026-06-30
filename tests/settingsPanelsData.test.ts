@@ -36,7 +36,7 @@ describe('settingsPanelsData', () => {
       .toEqual([{ id: 1, lane: 'public' }]);
   });
 
-  it('fetches general, design, and SEO settings through explicit settings events', async () => {
+  it('fetches general, design, and SEO settings through the runtime admin facade', async () => {
     const settings: Record<string, string> = {
       SITE_TITLE: 'Blogposter',
       SITE_DESC: 'CMS',
@@ -46,7 +46,7 @@ describe('settingsPanelsData', () => {
       SEO_TITLE_TEMPLATE: '%title%',
       SEO_INDEXING_ENABLED: ''
     };
-    const emit = jest.fn(async (_eventName, payload) => settings[payload.key] ?? '');
+    const emit = jest.fn(async (_eventName, payload) => settings[payload.params.key] ?? '');
 
     await expect(fetchGeneralSettings(emit, 'admin-token')).resolves.toEqual({
       siteTitle: 'Blogposter',
@@ -61,11 +61,13 @@ describe('settingsPanelsData', () => {
       titleTemplate: '%title%',
       indexingEnabled: true
     });
-    expect(emit).toHaveBeenCalledWith('getSetting', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'SITE_TITLE'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'SITE_TITLE' }
     }));
   });
 
@@ -76,11 +78,11 @@ describe('settingsPanelsData', () => {
       MAINTENANCE_MODE: 'false',
       MAINTENANCE_PAGE_ID: 'home'
     };
-    const emit = jest.fn(async (eventName, payload) => {
-      if (eventName === 'getAllPages') {
+    const emit = jest.fn(async (_eventName, payload) => {
+      if (payload.resource === 'pages' && payload.action === 'list') {
         return { data: [{ id: 'home', lane: 'public' }, { id: 'admin', lane: 'admin' }] };
       }
-      return settings[payload.key] ?? '';
+      return settings[payload.params.key] ?? '';
     });
 
     await expect(fetchSecuritySettings(emit, 'admin-token')).resolves.toEqual({
@@ -90,14 +92,17 @@ describe('settingsPanelsData', () => {
       maintenancePageId: 'home',
       publicPages: [{ id: 'home', lane: 'public' }]
     });
-    expect(emit).toHaveBeenCalledWith('getAllPages', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'pages',
+      action: 'list',
+      params: {}
     });
   });
 
-  it('saves grouped settings through explicit setSetting events', async () => {
+  it('saves grouped settings through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await saveGeneralSettings(emit, 'admin-token', {
@@ -112,26 +117,38 @@ describe('settingsPanelsData', () => {
     await saveAllowRegistration(emit, 'admin-token', true);
     await saveMaintenanceSettings(emit, 'admin-token', true, 'maintenance');
 
-    expect(emit).toHaveBeenCalledWith('setSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'SITE_TITLE',
-      value: 'New title'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'SITE_TITLE',
+        value: 'New title'
+      }
     });
-    expect(emit).toHaveBeenCalledWith('setSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'SEO_INDEXING_ENABLED',
-      value: 'false'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'SEO_INDEXING_ENABLED',
+        value: 'false'
+      }
     });
-    expect(emit).toHaveBeenCalledWith('setSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'MAINTENANCE_PAGE_ID',
-      value: 'maintenance'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'MAINTENANCE_PAGE_ID',
+        value: 'maintenance'
+      }
     });
   });
 

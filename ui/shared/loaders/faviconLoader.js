@@ -1,3 +1,4 @@
+import { runtimePublicPayload, unwrapRuntimeFacadeData } from '../api-client/runtimeFacade.js';
 export async function loadFavicon() {
     if (typeof window.meltdownEmit !== 'function')
         return;
@@ -6,12 +7,8 @@ export async function loadFavicon() {
             purpose: 'favicon',
             moduleName: 'auth'
         });
-        const url = await window.meltdownEmit('getPublicSetting', {
-            jwt,
-            moduleName: 'settingsManager',
-            moduleType: 'core',
-            key: 'FAVICON_URL'
-        });
+        const settings = unwrapRuntimeFacadeData(await window.meltdownEmit('cmsPublicRuntimeRequest', runtimePublicPayload(jwt, 'settings', 'public', { keys: ['FAVICON_URL'] })));
+        const url = settings && typeof settings === 'object' ? settings.FAVICON_URL : undefined;
         if (typeof url === 'string' && url) {
             let link = document.querySelector('link[rel="icon"]');
             if (!link) {

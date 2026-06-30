@@ -1,5 +1,5 @@
-// Designer tokens bridge the legacy builder variable names to the dashboard
-// Studio tokens. This keeps older component SCSS working while the document
+// Designer tokens bridge builder variable names to the dashboard Studio tokens.
+// This keeps component SCSS working while the document
 // follows the same data-theme and prefers-color-scheme contract as the shell.
 @mixin designer-dark-neutral-palette {
   color-scheme: dark;
@@ -33,7 +33,7 @@
   --error-color: #ef4444;
   --info-color: #6366f1;
 
-  // Neutral colors retained for older controls and option renderers.
+  // Neutral colors retained for existing controls and option renderers.
   --color-white: #ffffff;
   --color-gray-50: #f8fafc;
   --color-gray-100: #f1f5f9;
@@ -60,7 +60,7 @@
   --designer-shadow-lift: var(--studio-shadow-lift);
   --designer-shadow-control: var(--studio-shadow-control);
 
-  // Legacy names used throughout the Designer components.
+  // Builder names used throughout the Designer components.
   --color-bg: var(--designer-canvas);
   --color-secondary-light: var(--designer-surface-muted);
   --color-text: var(--designer-text);

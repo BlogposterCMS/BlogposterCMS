@@ -1,7 +1,4 @@
-const PAGES_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('PLAINSPACE_PAGE_STATS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -23,11 +20,7 @@ export function errorMessage(err) {
     return err instanceof Error ? err.message : String(err);
 }
 export function buildPageLanePayload(jwt, lane) {
-    return {
-        jwt,
-        ...PAGES_MODULE,
-        lane
-    };
+    return runtimeAdminPayload(jwt, 'pages', 'byLane', { lane });
 }
 export function summarizePageStats(publicPages, adminPages) {
     return {
@@ -39,7 +32,7 @@ export function summarizePageStats(publicPages, adminPages) {
 }
 export async function fetchPagesByLane(emit, jwt, lane) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getPagesByLane', buildPageLanePayload(jwt, lane));
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane });
     return toPages(res);
 }
 export async function fetchPageStats(emit, jwt) {

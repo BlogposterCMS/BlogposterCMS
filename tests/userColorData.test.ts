@@ -20,25 +20,21 @@ describe('userColorData', () => {
     expect(uiColorFromUserDetails({ ui_color: 'bad' })).toBeNull();
   });
 
-  it('fetches user color through auth and userManagement contracts', async () => {
-    const emit = jest.fn(async eventName => {
-      if (eventName === 'validateToken') return { userId: 'user-1' };
-      if (eventName === 'getUserDetailsById') return { data: { ui_color: '#123456' } };
-      return undefined;
-    });
+  it('fetches user color through the runtime admin facade', async () => {
+    const emit = jest.fn(async () => ({
+      resource: 'users',
+      action: 'me',
+      data: { ui_color: '#123456' }
+    }));
 
     await expect(fetchUserColor(emit, 'admin-token')).resolves.toBe('#123456');
-    expect(emit).toHaveBeenCalledWith('validateToken', {
-      moduleName: 'auth',
-      moduleType: 'core',
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      tokenToValidate: 'admin-token'
-    });
-    expect(emit).toHaveBeenCalledWith('getUserDetailsById', {
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      userId: 'user-1',
-      jwt: 'admin-token'
+      resource: 'users',
+      action: 'me',
+      params: {}
     });
   });
 

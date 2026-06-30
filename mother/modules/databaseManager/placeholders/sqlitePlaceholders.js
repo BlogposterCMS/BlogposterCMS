@@ -809,13 +809,13 @@ case 'SELECT_MODULE_REGISTRY': {
   return rows;
 }
 
-case 'LIST_ACTIVE_GRAPES_MODULES': {
+case 'LIST_ACTIVE_STATIC_FRONTENDS': {
   /* uses JSON1 extension if available; otherwise filters in JS */
   try {
     const rows = await db.all(`
       SELECT * FROM moduleloader_module_registry
        WHERE is_active = 1
-         AND json_extract(module_info,'$.grapesComponent') = 1
+         AND json_extract(module_info,'$.staticFrontend') = 1
        ORDER BY id ASC;
     `);
     return rows;
@@ -825,7 +825,7 @@ case 'LIST_ACTIVE_GRAPES_MODULES': {
     `);
     return rows.filter(r => {
       try {
-        return JSON.parse(r.module_info).grapesComponent === true;
+        return JSON.parse(r.module_info).staticFrontend === true;
       } catch { return false; }
     });
   }

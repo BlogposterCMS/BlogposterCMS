@@ -67,4 +67,5 @@ motherEmitter.emit(
 List the admin strategy configuration through `runtimeManager.cmsAdminApiRequest`
 resource `auth`, action `loginStrategies`; it requires
 `auth.strategies.view` or `auth.strategies.manage`. Public login discovery uses
-the read-only `listActiveLoginStrategies` public-token contract.
+`runtimeManager.cmsPublicRuntimeRequest` resource `auth`, action
+`activeLoginStrategies` with a scoped public token.

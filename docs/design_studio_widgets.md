@@ -1,8 +1,9 @@
 # Design Studio Widget Inventory
 
 This document defines the first useful widget set for the user-facing
-**Design Studio**. Internal code and backend events may still use the
-`designer` name for compatibility.
+**Design Studio**. The backend owner is `designerManager`; the public resource
+identity remains `designer` where the app shell and runtime loader address the
+same Design Studio surface.
 
 ## Boundary
 
@@ -38,7 +39,7 @@ technical widget as a first-level choice. The visible groups are Text, Media,
 Shape, Button, Navigation and Content. Selecting a group opens its preset panel;
 dragging a group still keeps the fast insert path.
 
-- Text presets resolve to the compatible `textBox` widget id and store rich
+- Text presets resolve to the stable `textBox` widget id and store rich
   text settings in widget metadata.
 - Media presets use `mediaBlock` for single images and `gallery` for grid,
   masonry and carousel galleries.
@@ -50,13 +51,13 @@ dragging a group still keeps the fast insert path.
 - Shape, Divider and Spacer remain lightweight `htmlBlock` fallbacks until a
   dedicated public shape widget is introduced.
 
-`htmlBlock` remains registered for importer and fallback compatibility, but it
+`htmlBlock` remains registered for importer fallbacks, but it
 is marked as advanced and hidden from normal catalogs.
 
 ### Implemented Bundled Widgets
 
 - `textBox`: Rich Text baseline for headings, paragraphs and sanitized saved
-  HTML while keeping the existing widget id compatible with saved designs.
+  HTML while keeping the saved-design widget id stable.
 - `mediaBlock`: image/media presentation with alt text, captions, aspect ratio
   handling, safe links and clear empty states.
 - `buttonLink`: primary, secondary and plain link actions with safe URL

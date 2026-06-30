@@ -19,14 +19,13 @@ function writeFixture(root, relativePath) {
   return filePath;
 }
 
-test('plainSpace widget registry resolves bundled, community, and legacy widget browser URLs', () => {
+test('plainSpace widget registry resolves bundled and community widget browser URLs', () => {
   const cmsRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-plainspace-registry-'));
   const bundledPath = writeFixture(
     cmsRoot,
     path.join('ui', 'widgets', 'plainspace', 'admin', 'defaultwidgets', 'contentSummaryWidget.js')
   );
   writeFixture(cmsRoot, path.join('widgets', 'weather', 'widget.js'));
-  writeFixture(cmsRoot, path.join('public', 'plainspace', 'widgets', 'admin', 'legacyWidget.js'));
 
   const warnings = [];
   try {
@@ -59,12 +58,6 @@ test('plainSpace widget registry resolves bundled, community, and legacy widget 
         category: 'community'
       },
       {
-        widgetId: 'legacy',
-        label: 'Legacy',
-        content: '/plainspace/widgets/admin/legacyWidget.js',
-        category: 'legacy'
-      },
-      {
         widgetId: 'missing',
         label: 'Missing',
         content: '/ui/widgets/plainspace/admin/missingWidget.js',
@@ -83,22 +76,21 @@ test('plainSpace widget registry resolves bundled, community, and legacy widget 
 
     assert.deepStrictEqual(widgets.map(widget => widget.id), [
       'contentSummary',
-      'weather',
-      'legacy'
+      'weather'
     ]);
     assert.strictEqual(
       widgets[0].codeUrl,
       '/ui/widgets/plainspace/admin/defaultwidgets/contentSummaryWidget.js'
     );
     assert.deepStrictEqual(
-      widgets[0].metadata.apiEvents,
+      widgets[0].metadata.apiActions,
       [
-        'getLayoutTemplateNames',
-        'getAllPages',
-        'getLayoutTemplate',
-        'saveLayoutTemplate',
-        'setGlobalLayoutTemplate',
-        'deleteLayoutTemplate'
+        { resource: 'plainSpace', action: 'layoutTemplateNames' },
+        { resource: 'pages', action: 'list' },
+        { resource: 'plainSpace', action: 'layoutTemplate' },
+        { resource: 'plainSpace', action: 'saveLayoutTemplate' },
+        { resource: 'plainSpace', action: 'setGlobalLayoutTemplate' },
+        { resource: 'plainSpace', action: 'deleteLayoutTemplate' }
       ]
     );
     assert.strictEqual(widgets[0].metadata.layout.supportedSlots[0].name, 'full');
@@ -249,9 +241,9 @@ test('plainSpace default admin widgets include Navigation Studio contracts', () 
 
   assert(widget);
   assert.strictEqual(widget.content, '/ui/widgets/plainspace/admin/navigationStudioWidget.js');
-  assert(widget.metadata.apiEvents.includes('listNavigationMenus'));
-  assert(widget.metadata.apiEvents.includes('getNavigationTree'));
-  assert(widget.metadata.apiEvents.includes('designer.saveDesign'));
+  assert(widget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'menus'));
+  assert(widget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'tree'));
+  assert(widget.metadata.apiActions.some(action => action.resource === 'designer' && action.action === 'save'));
   assert.strictEqual(widget.metadata.seedOptions, undefined);
   assert.strictEqual(widget.metadata.layout.defaultSlot, 'page');
   assert.strictEqual(widget.metadata.layout.heightMode, 'scroll');
@@ -265,14 +257,10 @@ test('plainSpace default admin widgets include Navigation Studio contracts', () 
   ]);
 });
 
-test('plainSpace keeps legacy page editor alias hidden from catalogs', () => {
+test('plainSpace default widgets no longer seed the retired page editor alias', () => {
   const alias = DEFAULT_WIDGETS.find(item => item.widgetId === 'pageEditor');
   const active = DEFAULT_WIDGETS.find(item => item.widgetId === 'pageEditorWidget');
 
-  assert(alias);
   assert(active);
-  assert.strictEqual(alias.content, active.content);
-  assert.strictEqual(alias.metadata.aliasOf, 'pageEditorWidget');
-  assert.strictEqual(alias.metadata.hiddenFromCatalog, true);
-  assert.strictEqual(alias.metadata.deprecated, true);
+  assert.strictEqual(alias, undefined);
 });

@@ -35,14 +35,14 @@ function projectPercent(value, scale, divisor, minOne = false) {
 }
 function projectRuntimeHeight(value, scale, divisor, mode = 'percent') {
     const raw = Number(value);
-    if (mode === 'legacyAdminPixels' && Number.isFinite(raw) && raw > 100) {
+    if (mode === 'absoluteRowsAbovePercentRange' && Number.isFinite(raw) && raw > 100) {
         return Math.max(1, Math.round(raw));
     }
     return projectPercent(value, scale, divisor, true);
 }
 function projectRuntimeVerticalPosition(value, scale, divisor, mode = 'percent') {
     const raw = Number(value);
-    if (mode === 'legacyAdminPixels' && Number.isFinite(raw) && raw > 100) {
+    if (mode === 'absoluteRowsAbovePercentRange' && Number.isFinite(raw) && raw > 100) {
         return Math.max(0, Math.round(raw));
     }
     return projectPercent(value, scale, divisor);

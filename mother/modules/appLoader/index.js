@@ -26,16 +26,13 @@ const APP_LIFECYCLE_EVENTS = new Set([
   'app-close'
 ]);
 const APP_COMMAND_EVENTS = new Set([
-  'cms-admin-request',
-  'cms:request'
+  'cms-admin-request'
 ]);
 const APP_DIRECT_EVENT_REQUESTS = new Set([
-  'cms-meltdown-request',
-  'cms:meltdown-request'
+  'cms-app-runtime-request'
 ]);
 const APP_DIRECT_EVENT_BATCH_REQUESTS = new Set([
-  'cms-meltdown-batch-request',
-  'cms:meltdown-batch-request'
+  'cms-app-runtime-batch-request'
 ]);
 const CORE_OWNED_APPS = new Set([
   'designer'
@@ -88,38 +85,10 @@ const APP_FORBIDDEN_MANIFEST_FIELDS = new Map([
   ['widgetType', 'apps cannot claim widget identity']
 ]);
 const APP_EVENT_ACCESS_LEVELS = new Set(['read', 'write']);
-const APP_FACADE_RESOURCE_MODULES = Object.freeze({
-  apps: ['appLoader'],
-  auth: ['auth'],
-  comments: ['commentsManager'],
-  content: ['contentEngine'],
-  contentTypes: ['contentEngine'],
-  designer: ['designer', 'designerManager'],
-  exporters: ['exportManager'],
-  fonts: ['fontsManager'],
-  importers: ['importer'],
-  media: ['mediaManager'],
-  metadata: ['metadataManager'],
-  modules: ['moduleLoader'],
-  navigation: ['navigationManager'],
-  notifications: ['notificationManager'],
-  pages: ['pagesManager'],
-  permissions: ['userManagement'],
-  plainSpace: ['plainspace', 'plainSpace'],
-  preview: ['runtimeManager'],
-  redirects: ['redirectManager'],
-  roles: ['userManagement'],
-  search: ['searchManager'],
-  serverLocations: ['serverManager'],
-  settings: ['settingsManager'],
-  shares: ['shareManager'],
-  themes: ['themeManager'],
-  translations: ['translationManager'],
-  unifiedSettings: ['unifiedSettings'],
-  users: ['userManagement'],
-  widgets: ['widgetManager'],
-  workflow: ['workflowManager']
-});
+const APP_RUNTIME_FACADE_EVENTS = new Set([
+  'cmsAdminApiRequest',
+  'cmsPublicRuntimeRequest'
+]);
 const AGENT_SURFACE_ALLOWED_EVENTS = Object.freeze([
   { eventName: 'agent.getCapabilities', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
   { eventName: 'agent.getApiDefinition', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
@@ -317,27 +286,19 @@ function assertAllowedAppEventAccess(eventName, descriptor = {}, options = {}) {
   if (isMutatingAppEvent(eventName) && access !== 'write') {
     throw new Error(`[APP LOADER] App event "${eventName}" must declare write access in app.json.`);
   }
-  const translated = AGENT_SURFACE_EVENT_NAMES.has(eventName)
-    ? null
-    : translateAppBridgeFacadeEvent(eventName, {});
-  if (!AGENT_SURFACE_EVENT_NAMES.has(eventName) && !translated) {
-    throw new Error(`[APP LOADER] App event "${eventName}" must map to a runtime facade contract.`);
+  if (AGENT_SURFACE_EVENT_NAMES.has(eventName)) {
+    return access;
   }
-  if (translated) {
-    assertAppEventMatchesRuntimeFacade(eventName, descriptor, translated);
+  if (!APP_RUNTIME_FACADE_EVENTS.has(eventName)) {
+    throw new Error(`[APP LOADER] App event "${eventName}" must use cmsAdminApiRequest or cmsPublicRuntimeRequest.`);
+  }
+  if (descriptor.moduleName !== 'runtimeManager') {
+    throw new Error(`[APP LOADER] App facade event "${eventName}" must declare moduleName "runtimeManager".`);
+  }
+  if (eventName === 'cmsPublicRuntimeRequest' && access !== 'read') {
+    throw new Error(`[APP LOADER] App event "${eventName}" must declare read access in app.json.`);
   }
   return access;
-}
-
-function assertAppEventMatchesRuntimeFacade(eventName, descriptor = {}, translated = {}) {
-  const resource = translated?.payload?.resource;
-  const expectedModules = APP_FACADE_RESOURCE_MODULES[resource];
-  if (!expectedModules) {
-    throw new Error(`[APP LOADER] App event "${eventName}" maps to unknown runtime facade resource "${resource}".`);
-  }
-  if (!expectedModules.includes(descriptor.moduleName)) {
-    throw new Error(`[APP LOADER] App event "${eventName}" moduleName "${descriptor.moduleName}" does not match runtime facade resource "${resource}". Expected: ${expectedModules.join(', ')}.`);
-  }
 }
 
 function manifestHasAgentSurface(manifest = {}) {
@@ -381,7 +342,7 @@ function getAllowedAppEventDescriptor(manifest, eventName) {
 
 function assertDirectAppBridgeAllowed(appName = '') {
   if (!isCoreOwnedApp(appName)) {
-    throw new Error('[APP LOADER] Direct app meltdown bridge is reserved for core-owned apps. Apps must use cms-admin-request runtime contracts.');
+    throw new Error('[APP LOADER] Direct app runtime bridge is reserved for core-owned apps. Apps must use cms-admin-request runtime contracts.');
   }
 }
 
@@ -677,7 +638,7 @@ async function dispatchCmsAdminRequest(motherEmitter, payload, eventName) {
   });
 }
 
-async function dispatchAllowedAppMeltdownEvent(motherEmitter, payload, manifest, request = {}, bridgeEventName) {
+async function dispatchAllowedAppRuntimeEvent(motherEmitter, payload, manifest, request = {}, bridgeEventName) {
   const eventName = normalizeAppEvent(request.eventName || request.event);
   assertDirectAppBridgeAllowedForEvent(payload.appName, manifest, eventName);
   const descriptor = getAllowedAppEventDescriptor(manifest, eventName);
@@ -703,6 +664,8 @@ async function dispatchAllowedAppMeltdownEvent(motherEmitter, payload, manifest,
     const runtimePayload = {
       ...forwarded,
       jwt: payload.jwt,
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
       decodedJWT: payload.decodedJWT,
       appContext: {
         appName: payload.appName,
@@ -744,14 +707,14 @@ async function dispatchAllowedAppMeltdownEvent(motherEmitter, payload, manifest,
   return emitAsync(motherEmitter, eventName, forwarded);
 }
 
-async function dispatchAllowedAppMeltdownBatch(motherEmitter, payload, manifest, bridgeEventName) {
+async function dispatchAllowedAppRuntimeBatch(motherEmitter, payload, manifest, bridgeEventName) {
   const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
   const events = Array.isArray(data.events) ? data.events : [];
   const results = [];
   for (const event of events) {
     const eventName = event?.eventName || event?.event;
     try {
-      const result = await dispatchAllowedAppMeltdownEvent(
+      const result = await dispatchAllowedAppRuntimeEvent(
         motherEmitter,
         payload,
         manifest,
@@ -783,7 +746,7 @@ async function handleDispatchAppEvent(motherEmitter, payload, baseDir) {
   }
 
   if (APP_DIRECT_EVENT_REQUESTS.has(eventName)) {
-    const result = await dispatchAllowedAppMeltdownEvent(
+    const result = await dispatchAllowedAppRuntimeEvent(
       motherEmitter,
       { ...payload, appName },
       manifest,
@@ -794,7 +757,7 @@ async function handleDispatchAppEvent(motherEmitter, payload, baseDir) {
   }
 
   if (APP_DIRECT_EVENT_BATCH_REQUESTS.has(eventName)) {
-    const result = await dispatchAllowedAppMeltdownBatch(
+    const result = await dispatchAllowedAppRuntimeBatch(
       motherEmitter,
       { ...payload, appName },
       manifest,
@@ -958,12 +921,10 @@ module.exports = {
     getAppLaunchInfo,
     handleDispatchAppEvent,
     assertAllowedAppEventAccess,
-    assertAppEventMatchesRuntimeFacade,
     assertDirectAppBridgeAllowed,
     manifestHasAgentSurface,
     normalizeAllowedAppEvents,
     AGENT_SURFACE_ALLOWED_EVENTS,
-    translateAppBridgeFacadeEvent,
     isLifecycleEvent,
     isMutatingAppEvent,
     assertUserManagedAppName,

@@ -75,7 +75,6 @@ test('core modules have moduleInfo metadata and module docs', () => {
 test('core module entrypoints register their MotherEmitter identity', () => {
   const modulesDir = path.join(root, 'mother/modules');
   const identityAliases = {
-    designerManager: ['designerManager', 'designer'],
     plainSpace: ['plainSpace', 'plainspace']
   };
   const moduleNames = fs.readdirSync(modulesDir, { withFileTypes: true })

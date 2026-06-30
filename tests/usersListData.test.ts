@@ -52,9 +52,9 @@ describe('usersListData', () => {
     expect(errorMessage('nope')).toBe('nope');
   });
 
-  it('fetches users and roles through the user-management module', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'getAllUsers'
+  it('fetches users and roles through the runtime admin facade', async () => {
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'users.list'
         ? { data: [{ id: '1', username: 'ada' }] }
         : [{ id: 'admin', role_name: 'Admin' }]
     ));
@@ -62,24 +62,33 @@ describe('usersListData', () => {
     await expect(fetchUsers(emit, 'admin-token')).resolves.toEqual([{ id: '1', username: 'ada' }]);
     await expect(fetchRoles(emit, 'admin-token')).resolves.toEqual([{ id: 'admin', role_name: 'Admin' }]);
     await expect(fetchPermissions(emit, 'admin-token')).resolves.toEqual([{ id: 'admin', role_name: 'Admin' }]);
-    expect(emit).toHaveBeenCalledWith('getAllUsers', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'users',
+      action: 'list',
+      params: {}
     });
-    expect(emit).toHaveBeenCalledWith('getAllRoles', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'roles',
+      action: 'list',
+      params: {}
     });
-    expect(emit).toHaveBeenCalledWith('getAllPermissions', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'permissions',
+      action: 'list',
+      params: {}
     });
   });
 
-  it('creates users and permission groups through explicit events', async () => {
+  it('creates users and permission groups through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await createUserRecord(emit, 'admin-token', {
@@ -94,26 +103,34 @@ describe('usersListData', () => {
       permissions: { pages: true }
     });
 
-    expect(emit).toHaveBeenCalledWith('createUser', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      username: 'ada',
-      password: 'secret',
-      email: 'ada@example.test',
-      roleIds: ['editor'],
-      directPermissions: { pages: { read: true } }
+      resource: 'users',
+      action: 'create',
+      params: {
+        username: 'ada',
+        password: 'secret',
+        email: 'ada@example.test',
+        roleIds: ['editor'],
+        directPermissions: { pages: { read: true } }
+      }
     });
-    expect(emit).toHaveBeenCalledWith('createRole', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      roleName: 'Editors',
-      permissions: { pages: true }
+      resource: 'roles',
+      action: 'create',
+      params: {
+        roleName: 'Editors',
+        permissions: { pages: true }
+      }
     });
   });
 
-  it('updates and deletes permission groups through explicit events', async () => {
+  it('updates and deletes permission groups through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
     const role = { id: 'role-1', role_name: 'Editors' };
 
@@ -124,20 +141,26 @@ describe('usersListData', () => {
     });
     await deleteRoleRecord(emit, 'admin-token', role);
 
-    expect(emit).toHaveBeenCalledWith('updateRole', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      roleId: 'role-1',
-      newRoleName: 'Senior Editors',
-      newDescription: 'Can edit content',
-      newPermissions: { pages: true }
+      resource: 'roles',
+      action: 'update',
+      params: {
+        roleId: 'role-1',
+        newRoleName: 'Senior Editors',
+        newDescription: 'Can edit content',
+        newPermissions: { pages: true }
+      }
     });
-    expect(emit).toHaveBeenCalledWith('deleteRole', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      roleId: 'role-1'
+      resource: 'roles',
+      action: 'delete',
+      params: { roleId: 'role-1' }
     });
   });
 });

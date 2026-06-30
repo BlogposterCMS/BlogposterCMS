@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
+
 export interface TokenValidationResult {
   userId?: string | number;
 }
@@ -41,20 +43,6 @@ export async function fetchUserColor(
 ): Promise<string | null> {
   if (!jwt) return null;
   const meltdownEmit = requireEmitter(emit);
-  const decoded = await meltdownEmit('validateToken', {
-    moduleName: 'auth',
-    moduleType: 'core',
-    jwt,
-    tokenToValidate: jwt
-  });
-  const userId = userIdFromTokenResult(decoded);
-  if (!userId) return null;
-
-  const res = await meltdownEmit('getUserDetailsById', {
-    moduleName: 'userManagement',
-    moduleType: 'core',
-    userId,
-    jwt
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'me');
   return uiColorFromUserDetails(res);
 }

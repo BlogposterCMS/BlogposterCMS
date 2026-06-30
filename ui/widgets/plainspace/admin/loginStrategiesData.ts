@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
+
 export interface LoginStrategy {
   name: string;
   scope?: string;
@@ -43,11 +45,7 @@ export async function fetchLoginStrategies(
   jwt: string | null | undefined
 ): Promise<LoginStrategy[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('listLoginStrategies', {
-    jwt,
-    moduleName: 'auth',
-    moduleType: 'core'
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'auth', 'loginStrategies');
   return visibleLoginStrategies(toStrategies(res));
 }
 
@@ -58,10 +56,7 @@ export async function setLoginStrategyEnabled(
   enabled: boolean
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('setLoginStrategyEnabled', {
-    jwt,
-    moduleName: 'auth',
-    moduleType: 'core',
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'auth', 'setStrategyEnabled', {
     strategyName,
     enabled
   });

@@ -3,6 +3,8 @@ export interface TemplateName {
   previewPath?: string;
 }
 
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
+
 export interface PageRecord {
   title?: string;
   meta?: {
@@ -77,10 +79,7 @@ export async function fetchLayoutTemplateNames(
   jwt: string | null | undefined
 ): Promise<TemplateName[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getLayoutTemplateNames', {
-    jwt,
-    moduleName: 'plainspace',
-    moduleType: 'core',
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'layoutTemplateNames', {
     lane: 'public'
   });
   return toTemplateNames(res);
@@ -91,10 +90,7 @@ export async function fetchPublicPages(
   jwt: string | null | undefined
 ): Promise<PageRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getPagesByLane', {
-    jwt,
-    moduleName: 'pagesManager',
-    moduleType: 'core',
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', {
     lane: 'public'
   });
   return toPages(res);
@@ -107,10 +103,7 @@ export async function createBlankLayoutTemplate(
   previewPath: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('saveLayoutTemplate', {
-    jwt,
-    moduleName: 'plainspace',
-    moduleType: 'core',
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'saveLayoutTemplate', {
     name: name.trim(),
     lane: 'public',
     viewport: 'desktop',

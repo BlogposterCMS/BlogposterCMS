@@ -1,3 +1,5 @@
+import { emitRuntimePublic } from '../../shared/api-client/runtimeFacade.js';
+
 export interface LoginStrategy {
   name?: string;
   scope?: string;
@@ -46,10 +48,6 @@ export async function issueLoginPublicToken(emit: LoginStrategiesEmitter): Promi
 export async function fetchPublicLoginStrategies(emit: LoginStrategiesEmitter): Promise<LoginStrategy[]> {
   const meltdownEmit = requireEmitter(emit);
   const loginJwt = await issueLoginPublicToken(meltdownEmit);
-  const response = await meltdownEmit('listActiveLoginStrategies', {
-    jwt: loginJwt,
-    moduleName: 'auth',
-    moduleType: 'core'
-  });
+  const response = await emitRuntimePublic(meltdownEmit, loginJwt as string | null | undefined, 'auth', 'activeLoginStrategies');
   return publicStrategies(response);
 }

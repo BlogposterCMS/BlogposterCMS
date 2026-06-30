@@ -1,5 +1,6 @@
 import { renderLayoutTree } from '../renderer/layoutRender.js';
 import { executeJs } from '../utils.js';
+import { emitAdminFacade } from './runtimeFacade.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
 
 const JS_TRUST_FLAGS = [
@@ -46,56 +47,35 @@ export const canExecuteCustomJs = design => {
 const applySanitizedHtml = (target, html) => {
   target.innerHTML = sanitizeHtml(html);
 };
-const basePayload = extra => ({ jwt: getJwt(), ...extra });
 
-async function safeEmit(event, payload) {
+async function safeAdminFacade(resource, action, params = {}) {
   const jwt = getJwt();
   if (typeof window.meltdownEmit !== 'function' || !jwt) return null;
   try {
-    return await window.meltdownEmit(event, payload);
+    return await emitAdminFacade(window.meltdownEmit, resource, action, params);
   } catch (err) {
-    console.warn('[PageLoader] event failed', event, err);
+    console.warn('[PageLoader] runtime facade failed', `${resource}.${action}`, err);
     return null;
   }
 }
 
 async function loadDesign(designId) {
   if (!designId) return null;
-  const res = await safeEmit('designer.getDesign', basePayload({
-    id: designId,
-    moduleName: 'designer',
-    moduleType: 'community'
-  }));
+  const res = await safeAdminFacade('designer', 'get', { id: designId });
   return res && res.design ? res.design : res;
 }
 
 export async function renderPage(pageId, mountEl) {
   if (!mountEl) return;
-  const pageRes = await safeEmit('getPageById', basePayload({
-    pageId,
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-  }));
+  const pageRes = await safeAdminFacade('pages', 'get', { pageId });
   const page = pageRes?.data || pageRes || {};
-  const siteRes = await safeEmit('getSiteMeta', basePayload({
-    moduleName: 'plainspace',
-    moduleType: 'core'
-  }));
-  const site = siteRes || {};
-  const layoutId = page.layout_id || site.global_layout_id;
+  const layoutId = page.layout_id || page.layoutTemplate || page.layout_template || '';
   let layoutTree = null;
   if (layoutId) {
-    const layoutRes = await safeEmit('getLayoutTemplate', basePayload({
-      layoutId,
-      moduleName: 'plainspace',
-      moduleType: 'core'
-    }));
+    const layoutRes = await safeAdminFacade('plainSpace', 'layoutTemplate', { layoutId });
     layoutTree = layoutRes?.layout || layoutRes?.tree || null;
   } else {
-    const globalRes = await safeEmit('getGlobalLayoutTemplate', basePayload({
-      moduleName: 'plainspace',
-      moduleType: 'core'
-    }));
+    const globalRes = await safeAdminFacade('plainSpace', 'globalLayoutTemplate');
     layoutTree = globalRes?.layout || globalRes?.tree || null;
   }
   if (!layoutTree) {

@@ -3,6 +3,7 @@ import { fetchPartial } from '../fetchPartial.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
 import { wrapCss } from '../utils.js';
 import { createLogger } from '../utils/logger';
+import { emitAdminFacade } from '../runtime/runtimeFacade.js';
 import { pageService, sanitizeSlug } from '/ui/widgets/plainspace/admin/defaultwidgets/pageList/pageService.js';
 
 const publishLogger = createLogger('builder:publish');
@@ -221,10 +222,7 @@ export function initPublishPanel({
 
   async function lookupPages(q) {
     try {
-      const res = await meltdownEmit('searchPages', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
+      const res = await emitAdminFacade(meltdownEmit, 'pages', 'search', {
         query: q,
         lane: 'public',
         limit: 10
@@ -239,10 +237,7 @@ export function initPublishPanel({
 
   async function getPageById(id) {
     try {
-      const res = await meltdownEmit('getPageById', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
+      const res = await emitAdminFacade(meltdownEmit, 'pages', 'get', {
         pageId: id
       });
       const page = res?.data ?? res;
@@ -395,20 +390,14 @@ export function initPublishPanel({
     }
     let existingMeta = null;
     try {
-      existingMeta = await meltdownEmit('getPublishedDesignMeta', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
+      existingMeta = await emitAdminFacade(meltdownEmit, 'plainSpace', 'publishedDesignMeta', {
         name
       });
     } catch (err) {
       publishLogger.warn('getPublishedDesignMeta failed', err);
     }
     try {
-      await meltdownEmit('deleteLocalItem', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'mediaManager',
-        moduleType: 'core',
+      await emitAdminFacade(meltdownEmit, 'media', 'deleteLocalItem', {
         currentPath: existingMeta?.path ? existingMeta.path.split('/').slice(0, -1).join('/') : 'builder',
         itemName: existingMeta?.path ? existingMeta.path.split('/').pop() : safeName
       });
@@ -416,27 +405,18 @@ export function initPublishPanel({
       publishLogger.warn('deleteLocalItem failed', err);
     }
     for (const f of filesToUpload) {
-      await meltdownEmit('uploadFileToFolder', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'mediaManager',
-        moduleType: 'core',
+      await emitAdminFacade(meltdownEmit, 'media', 'uploadToFolder', {
         subPath: normalizedSubPath,
         fileName: f.fileName,
         fileData: btoa(unescape(encodeURIComponent(f.data)))
       });
     }
     const currentUserId = getAdminUserId();
-    await meltdownEmit('makeFilePublic', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'mediaManager',
-      moduleType: 'core',
+    await emitAdminFacade(meltdownEmit, 'media', 'makeFilePublic', {
       filePath: normalizedSubPath,
       ...(currentUserId ? { userId: currentUserId } : {})
     });
-    await meltdownEmit('savePublishedDesignMeta', {
-      jwt: window.ADMIN_TOKEN,
-      moduleName: 'plainspace',
-      moduleType: 'core',
+    await emitAdminFacade(meltdownEmit, 'plainSpace', 'savePublishedDesignMeta', {
       name,
       path: normalizedSubPath,
       files: filesToUpload.map(f => f.fileName)

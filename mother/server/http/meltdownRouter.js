@@ -5,8 +5,7 @@ const {
   explainExternalEventRejection,
   isHttpPublicEvent,
   isHttpPublicTokenEvent,
-  stripHttpPayloadAuthMeta,
-  translateLegacyHttpFacadeEvent
+  stripHttpPayloadAuthMeta
 } = require('../../utils/meltdownHttpPolicy');
 
 function createMeltdownRouter({
@@ -19,10 +18,9 @@ function createMeltdownRouter({
 
   router.post('/api/meltdown', async (req, res) => {
     const { eventName, payload = {} } = req.body || {};
-    const legacyFacade = translateLegacyHttpFacadeEvent(eventName, payload);
-    const targetEventName = legacyFacade?.eventName || eventName;
-    const targetPayload = stripHttpPayloadAuthMeta(legacyFacade?.payload || payload);
-    const responseEventName = legacyFacade?.originalEventName || eventName;
+    const targetEventName = eventName;
+    const targetPayload = stripHttpPayloadAuthMeta(payload);
+    const responseEventName = eventName;
     const eventRejected = explainExternalEventRejection(targetEventName, targetPayload);
     if (eventRejected) {
       return res.status(403).json({ error: eventRejected });
@@ -76,7 +74,7 @@ function createMeltdownRouter({
       }
       return res.json({
         eventName: responseEventName,
-        data: legacyFacade?.unwrapData ? data?.data : data
+        data
       });
     });
   });
@@ -99,10 +97,9 @@ function createMeltdownRouter({
         continue;
       }
 
-      const legacyFacade = translateLegacyHttpFacadeEvent(eventName, payload);
-      const targetEventName = legacyFacade?.eventName || eventName;
-      const targetPayload = stripHttpPayloadAuthMeta(legacyFacade?.payload || payload);
-      const responseEventName = legacyFacade?.originalEventName || eventName;
+      const targetEventName = eventName;
+      const targetPayload = stripHttpPayloadAuthMeta(payload);
+      const responseEventName = eventName;
       const eventRejected = explainExternalEventRejection(targetEventName, targetPayload);
       if (eventRejected) {
         results.push({ eventName: responseEventName, error: eventRejected });
@@ -153,7 +150,7 @@ function createMeltdownRouter({
         });
         results.push({
           eventName: responseEventName,
-          data: legacyFacade?.unwrapData ? data?.data : data
+          data
         });
       } catch (err) {
         const safeEvent = String(responseEventName).replace(/[\n\r]/g, '');

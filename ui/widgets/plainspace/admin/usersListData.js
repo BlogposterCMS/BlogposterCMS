@@ -1,3 +1,4 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('meltdownEmit unavailable');
@@ -78,37 +79,22 @@ export function permissionGroupForKey(key) {
 }
 export async function fetchUsers(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllUsers', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core'
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'list');
     return toUsers(res);
 }
 export async function fetchRoles(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllRoles', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core'
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'roles', 'list');
     return toRoles(res);
 }
 export async function fetchPermissions(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllPermissions', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core'
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'permissions', 'list');
     return toPermissions(res);
 }
 export async function createUserRecord(emit, jwt, user) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('createUser', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core',
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'create', {
         username: user.username,
         password: user.password,
         email: user.email,
@@ -118,20 +104,14 @@ export async function createUserRecord(emit, jwt, user) {
 }
 export async function createRoleRecord(emit, jwt, role) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('createRole', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core',
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'roles', 'create', {
         roleName: role.roleName,
         permissions: role.permissions
     });
 }
 export async function updateRoleRecord(emit, jwt, role, values) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('updateRole', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core',
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'roles', 'update', {
         roleId: role.id,
         newRoleName: values.roleName,
         newDescription: values.description,
@@ -140,10 +120,5 @@ export async function updateRoleRecord(emit, jwt, role, values) {
 }
 export async function deleteRoleRecord(emit, jwt, role) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('deleteRole', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core',
-        roleId: role.id
-    });
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'roles', 'delete', { roleId: role.id });
 }

@@ -299,13 +299,13 @@ test('module installer stores approved access grants separately from declared mo
           { key: 'shopSync.sync', description: 'Run shop sync' }
         ],
         requestedAccess: [
-          { event: 'listContentEntries', reason: 'Read catalog entries' }
+          { resource: 'content', action: 'list', reason: 'Read catalog entries' }
         ]
       }),
       {
         modulesRoot: path.join(tempRoot, 'modules'),
         tempDir: path.join(tempRoot, 'tmp'),
-        approvedAccess: [{ event: 'listContentEntries' }],
+        approvedAccess: [{ resource: 'content', action: 'list' }],
         grantedBy: 'user-1'
       }
     );
@@ -354,17 +354,19 @@ test('module installer rejects community manifests that claim core permission na
 test('module ZIP inspection returns access requests without installing files', () => {
   const inspected = _internals.inspectModuleZipBuffer(createModuleZip('shopSync', {}, {
     permissions: ['shopSync.read'],
-    requestedAccess: [{ event: 'listContentEntries' }]
+    requestedAccess: [{ resource: 'content', action: 'list' }]
   }));
 
   assert.strictEqual(inspected.moduleName, 'shopSync');
   assert.strictEqual(inspected.permissions[0].permission_key, 'shopSync.read');
   assert.strictEqual(inspected.requestedAccess[0].event, 'listContentEntries');
+  assert.strictEqual(inspected.requestedAccess[0].resource, 'content');
+  assert.strictEqual(inspected.requestedAccess[0].action, 'list');
 });
 
 test('module ZIP inspection exposes protected access as one-time only but rejects permanent grants', async () => {
   const inspected = _internals.inspectModuleZipBuffer(createModuleZip('shopSync', {}, {
-    requestedAccess: [{ event: 'deleteUser', reason: 'Clean up mapped shop users' }]
+    requestedAccess: [{ resource: 'users', action: 'delete', reason: 'Clean up mapped shop users' }]
   }));
 
   assert.strictEqual(inspected.requestedAccess[0].event, 'deleteUser');
@@ -381,16 +383,16 @@ test('module ZIP inspection exposes protected access as one-time only but reject
         emitter,
         'module-token',
         createModuleZip('shopSync', {}, {
-          requestedAccess: [{ event: 'deleteUser', reason: 'Clean up mapped shop users' }]
+          requestedAccess: [{ resource: 'users', action: 'delete', reason: 'Clean up mapped shop users' }]
         }),
         {
           modulesRoot: path.join(tempRoot, 'modules'),
           tempDir: path.join(tempRoot, 'tmp'),
-          approvedAccess: [{ event: 'deleteUser' }],
+          approvedAccess: [{ resource: 'users', action: 'delete' }],
           grantedBy: 'user-1'
         }
       ),
-      /protected resource "users"/
+      /Resource action "users\.delete" resolves to protected event "deleteUser"/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

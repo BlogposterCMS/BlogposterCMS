@@ -32,7 +32,7 @@ describe('loginStrategiesData', () => {
     expect(errorMessage('nope')).toBe('nope');
   });
 
-  it('fetches visible login strategies through the auth module', async () => {
+  it('fetches visible login strategies through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({
       data: [
         { name: 'adminLocal' },
@@ -43,24 +43,31 @@ describe('loginStrategiesData', () => {
     await expect(fetchLoginStrategies(emit, 'admin-token')).resolves.toEqual([
       { name: 'google', scope: 'public', description: 'Google Login' }
     ]);
-    expect(emit).toHaveBeenCalledWith('listLoginStrategies', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'auth',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'auth',
+      action: 'loginStrategies',
+      params: {}
     });
   });
 
-  it('toggles login strategies through the auth module', async () => {
+  it('toggles login strategies through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await setLoginStrategyEnabled(emit, 'admin-token', 'github', true);
 
-    expect(emit).toHaveBeenCalledWith('setLoginStrategyEnabled', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'auth',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      strategyName: 'github',
-      enabled: true
+      resource: 'auth',
+      action: 'setStrategyEnabled',
+      params: {
+        strategyName: 'github',
+        enabled: true
+      }
     });
   });
 });

@@ -10,7 +10,7 @@ and permissions. Payloads must carry `moduleName: "metadataManager"`,
 
 Core metadata and custom fields domain. It is backend-only and stores reusable
 field definitions plus values for content, media, users, comments, paths, global
-records and legacy source pairs.
+records and source-owned records.
 
 ## Startup
 
@@ -42,7 +42,7 @@ Supported targets are `contentEntry`, `mediaAttachment`, `user`, `comment`,
 `source`, `path` and `global`.
 
 Convenience payloads such as `entryId`, `attachmentId`, `userId` and
-`sourceModule`/`sourceId` are normalized into the target model. Legacy
+`sourceModule`/`sourceId` are normalized into the target model. Retired
 `termId`/`taxonomyTerm` targets are rejected; page hierarchy metadata should be
 stored against the relevant page or content entry instead.
 
@@ -57,7 +57,7 @@ Other schemes, protocol-relative links, backslashes, whitespace and control
 characters are rejected.
 
 JSON values, field settings and metadata bags are sanitized before storage and
-when legacy records are read back. Non-JSON values are removed, depth and size
+when imported/source-owned records are read back. Non-JSON values are removed, depth and size
 are capped, and prototype-pollution keys such as `__proto__`, `constructor` and
 `prototype` are stripped.
 

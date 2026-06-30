@@ -1,22 +1,7 @@
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../../../shared/api-client/runtimeFacade.js';
 export const HTML_FOLDER = 'page-content';
 export const HTML_SUBPATH = `public/${HTML_FOLDER}`;
 export const HTML_WEB_BASE = `/media/${HTML_FOLDER}`;
-const PAGES_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
-const APP_LOADER_MODULE = {
-    moduleName: 'appLoader',
-    moduleType: 'core'
-};
-const DESIGNER_MODULE = {
-    moduleName: 'designer',
-    moduleType: 'community'
-};
-const MEDIA_MODULE = {
-    moduleName: 'mediaManager',
-    moduleType: 'core'
-};
 // Keep cross-module event names, media paths, and page update payloads out of the DOM widget.
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
@@ -65,10 +50,8 @@ export function visibleDesigns(value) {
 export function htmlFileUrl(name) {
     return `${HTML_WEB_BASE}/${encodeURIComponent(name)}`;
 }
-export function buildPageContentCommonPayload(jwt, page) {
+export function buildPageContentCommonPayload(_jwt, page) {
     return {
-        jwt,
-        ...PAGES_MODULE,
         pageId: page.id,
         slug: page.slug,
         status: page.status,
@@ -81,7 +64,7 @@ export function buildPageContentCommonPayload(jwt, page) {
     };
 }
 export function buildPageContentUpdatePayload(jwt, page, values) {
-    return {
+    return runtimeAdminPayload(jwt, 'pages', 'update', {
         ...buildPageContentCommonPayload(jwt, page),
         translations: [{
                 language: page.language,
@@ -90,12 +73,15 @@ export function buildPageContentUpdatePayload(jwt, page, values) {
                 css: page.css || ''
             }],
         meta: values.meta
-    };
+    });
 }
 export function clearPageContentCache(pageDataLoader, page) {
-    pageDataLoader?.clear?.('getPageById', {
-        ...PAGES_MODULE,
-        pageId: page.id
+    pageDataLoader?.clear?.('cmsAdminApiRequest', {
+        moduleName: 'runtimeManager',
+        moduleType: 'core',
+        resource: 'pages',
+        action: 'get',
+        params: { pageId: page.id }
     });
 }
 export function detachDesignMeta(page) {
@@ -133,26 +119,18 @@ export function attachHtmlMeta(page, htmlFileName) {
 }
 export async function fetchBuilderApps(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('listBuilderApps', {
-        jwt,
-        ...APP_LOADER_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'apps', 'builderList');
     return toBuilderApps(res);
 }
 export async function fetchPublishedDesigns(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('designer.listDesigns', {
-        jwt,
-        ...DESIGNER_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list');
     return visibleDesigns(res);
 }
 export async function ensureHtmlContentFolder(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
     try {
-        await meltdownEmit('createLocalFolder', {
-            jwt,
-            ...MEDIA_MODULE,
+        await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'createLocalFolder', {
             currentPath: 'public',
             newFolderName: HTML_FOLDER
         });
@@ -164,11 +142,7 @@ export async function ensureHtmlContentFolder(emit, jwt) {
 export async function listHtmlFiles(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
     await ensureHtmlContentFolder(meltdownEmit, jwt);
-    const res = await meltdownEmit('listLocalFolder', {
-        jwt,
-        ...MEDIA_MODULE,
-        subPath: HTML_SUBPATH
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'listLocalFolder', { subPath: HTML_SUBPATH });
     return toFiles(res).filter(isHtmlFileName);
 }
 export async function fetchHtmlFile(fetchImpl, name) {
@@ -178,9 +152,7 @@ export async function fetchHtmlFile(fetchImpl, name) {
 export async function uploadHtmlFile(emit, jwt, fileName, html) {
     const meltdownEmit = requireEmitter(emit);
     await ensureHtmlContentFolder(meltdownEmit, jwt);
-    const res = await meltdownEmit('uploadFileToFolder', {
-        jwt,
-        ...MEDIA_MODULE,
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'uploadToFolder', {
         subPath: HTML_SUBPATH,
         fileName,
         fileData: btoa(unescape(encodeURIComponent(html))),
@@ -192,5 +164,5 @@ export async function uploadHtmlFile(emit, jwt, fileName, html) {
 }
 export async function savePageContent(emit, jwt, page, values) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('updatePage', buildPageContentUpdatePayload(jwt, page, values));
+    await meltdownEmit('cmsAdminApiRequest', buildPageContentUpdatePayload(jwt, page, values));
 }

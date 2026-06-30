@@ -134,9 +134,9 @@ test('wordpress importer builds a WXR dry-run plan', async () => {
   assert.strictEqual(plan.totals.skipped, 1);
   assert.strictEqual(plan.entries[0].contentType, 'post');
   assert.strictEqual(plan.entries[0].status, 'published');
-  assert.strictEqual(plan.totals.legacyWordPressTerms, 2);
+  assert.strictEqual(plan.totals.sourceWordPressTerms, 2);
   assert.strictEqual(plan.totals.collections, 1);
-  assert.strictEqual(plan.legacyWordPressTerms.length, 2);
+  assert.strictEqual(plan.sourceWordPressTerms.length, 2);
   assert.strictEqual(plan.collections[0].slug, 'news');
   assert.strictEqual(plan.collections[0].title, 'News');
   assert.deepStrictEqual(plan.collections[0].entrySourceIds, ['42']);

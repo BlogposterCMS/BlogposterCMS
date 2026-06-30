@@ -23,48 +23,60 @@ describe('accessSettingsData', () => {
     expect(errorMessage('nope')).toBe('nope');
   });
 
-  it('fetches access settings through the settings manager', async () => {
+  it('fetches access settings through the runtime admin facade', async () => {
     const emit = jest.fn(async (_eventName, payload: Record<string, unknown>) => (
-      payload.key === 'ALLOW_REGISTRATION' ? 'true' : 'false'
+      (payload.params as Record<string, unknown>).key === 'ALLOW_REGISTRATION' ? 'true' : 'false'
     ));
 
     await expect(fetchAccessSettings(emit, 'admin-token')).resolves.toEqual({
       allowRegistration: true,
       firstInstallDone: false
     });
-    expect(emit).toHaveBeenCalledWith('getSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'ALLOW_REGISTRATION'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'ALLOW_REGISTRATION' }
     });
-    expect(emit).toHaveBeenCalledWith('getSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'FIRST_INSTALL_DONE'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'FIRST_INSTALL_DONE' }
     });
   });
 
-  it('saves the public registration flag through the settings manager', async () => {
+  it('saves the public registration flag through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await setAllowRegistration(emit, 'admin-token', true);
     await setAllowRegistration(emit, 'admin-token', false);
 
-    expect(emit).toHaveBeenCalledWith('setSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'ALLOW_REGISTRATION',
-      value: 'true'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'ALLOW_REGISTRATION',
+        value: 'true'
+      }
     });
-    expect(emit).toHaveBeenCalledWith('setSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'ALLOW_REGISTRATION',
-      value: 'false'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'ALLOW_REGISTRATION',
+        value: 'false'
+      }
     });
   });
 

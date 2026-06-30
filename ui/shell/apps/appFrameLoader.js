@@ -1,4 +1,4 @@
-import { APP_BRIDGE_BATCH_REQUEST, APP_BRIDGE_REQUEST, APP_BRIDGE_RESPONSE, dispatchAppLifecycleMessage, dispatchAppMeltdownBatch, dispatchAppMeltdownRequest } from './appFrameLoaderData.js';
+import { APP_BRIDGE_BATCH_REQUEST, APP_BRIDGE_REQUEST, APP_BRIDGE_RESPONSE, dispatchAppLifecycleMessage, dispatchAppRuntimeBatch, dispatchAppRuntimeRequest } from './appFrameLoaderData.js';
 const csrfMeta = document.querySelector('meta[name="csrf-token"]');
 const adminMeta = document.querySelector('meta[name="admin-token"]');
 const appMeta = document.querySelector('meta[name="app-name"]');
@@ -93,10 +93,10 @@ async function dispatchAppBridgeRequest(msg) {
     if (typeof localResult !== 'undefined') {
         return localResult;
     }
-    return dispatchAppMeltdownRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload);
+    return dispatchAppRuntimeRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload);
 }
 async function dispatchAppBridgeBatch(msg) {
-    return dispatchAppMeltdownBatch(window.meltdownEmit, window.ADMIN_TOKEN, appName, msg.events);
+    return dispatchAppRuntimeBatch(window.meltdownEmit, window.ADMIN_TOKEN, appName, msg.events);
 }
 async function handleBridgeMessage(msg, responseTarget) {
     if (msg.type !== APP_BRIDGE_REQUEST && msg.type !== APP_BRIDGE_BATCH_REQUEST) {

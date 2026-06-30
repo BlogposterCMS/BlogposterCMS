@@ -1,6 +1,6 @@
-export const APP_BRIDGE_REQUEST = 'cms-app-meltdown-request';
-export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-meltdown-batch-request';
-export const APP_BRIDGE_RESPONSE = 'cms-app-meltdown-response';
+export const APP_BRIDGE_REQUEST = 'cms-app-runtime-request';
+export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-runtime-batch-request';
+export const APP_BRIDGE_RESPONSE = 'cms-app-runtime-response';
 const APP_LOADER_MODULE = {
     moduleName: 'appLoader',
     moduleType: 'core'
@@ -21,7 +21,7 @@ export function unwrapAppEventResult(result) {
         ? result.data
         : result;
 }
-export async function dispatchAppMeltdownRequest(emit, jwt, appName, eventName, payload) {
+export async function dispatchAppRuntimeRequest(emit, jwt, appName, eventName, payload) {
     const meltdownEmit = requireEmitter(emit);
     const safeEventName = eventName.trim();
     if (!safeEventName) {
@@ -31,7 +31,7 @@ export async function dispatchAppMeltdownRequest(emit, jwt, appName, eventName, 
         jwt,
         ...APP_LOADER_MODULE,
         appName,
-        event: 'cms-meltdown-request',
+        event: APP_BRIDGE_REQUEST,
         data: {
             eventName: safeEventName,
             payload: objectPayload(payload)
@@ -39,13 +39,13 @@ export async function dispatchAppMeltdownRequest(emit, jwt, appName, eventName, 
     });
     return unwrapAppEventResult(result);
 }
-export async function dispatchAppMeltdownBatch(emit, jwt, appName, events) {
+export async function dispatchAppRuntimeBatch(emit, jwt, appName, events) {
     const meltdownEmit = requireEmitter(emit);
     const result = await meltdownEmit('dispatchAppEvent', {
         jwt,
         ...APP_LOADER_MODULE,
         appName,
-        event: 'cms-meltdown-batch-request',
+        event: APP_BRIDGE_BATCH_REQUEST,
         data: {
             events: Array.isArray(events) ? events : []
         }

@@ -1,6 +1,6 @@
 # redirectManager
 
-Core redirect domain for permalink migrations, legacy URL redirects and hit
+Core redirect domain for permalink migrations, imported URL redirects and hit
 tracking.
 
 ## Startup

@@ -1,3 +1,4 @@
+import { emitRuntimePublic } from '../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('SHELL_LOGIN_STRATEGIES_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -28,10 +29,6 @@ export async function issueLoginPublicToken(emit) {
 export async function fetchPublicLoginStrategies(emit) {
     const meltdownEmit = requireEmitter(emit);
     const loginJwt = await issueLoginPublicToken(meltdownEmit);
-    const response = await meltdownEmit('listActiveLoginStrategies', {
-        jwt: loginJwt,
-        moduleName: 'auth',
-        moduleType: 'core'
-    });
+    const response = await emitRuntimePublic(meltdownEmit, loginJwt, 'auth', 'activeLoginStrategies');
     return publicStrategies(response);
 }

@@ -4,13 +4,9 @@ export interface AdminPageRecord {
   title?: string;
 }
 
-type ContentHeaderEmitter = Window['meltdownEmit'];
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 
-// Keep admin-page delete contracts here so the header module remains DOM-focused.
-const PAGES_MANAGER_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
+type ContentHeaderEmitter = Window['meltdownEmit'];
 
 const PROTECTED_ROOT_WORKSPACES = new Set(['home', 'settings']);
 
@@ -60,9 +56,7 @@ export async function fetchAdminPageBySlug(
   slug: string
 ): Promise<AdminPageRecord | null> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getPageBySlug', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'getBySlug', {
     slug,
     lane: 'admin'
   });
@@ -75,9 +69,7 @@ export async function deleteAdminPage(
   pageId: string | number
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('deletePage', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'delete', {
     pageId
   });
 }

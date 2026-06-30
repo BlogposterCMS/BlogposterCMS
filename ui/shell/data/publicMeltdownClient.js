@@ -1,4 +1,10 @@
 import { createMeltdownClient } from '../../shared/api-client/meltdownClient.js';
+import { runtimePublicPayload, unwrapRuntimeFacadeData } from '../../shared/api-client/runtimeFacade.js';
+function runtimeToken(value) {
+    if (value === null || value === undefined)
+        return value;
+    return String(value);
+}
 function browserFetch(win) {
     if (typeof win.fetchWithTimeout === 'function') {
         return ((resource, options) => win.fetchWithTimeout?.(resource, options) ?? Promise.reject(new Error('SHELL_PUBLIC_MELTDOWN_FETCH_UNAVAILABLE: fetchWithTimeout unavailable')));
@@ -25,12 +31,9 @@ export async function issueShellPublicToken(client, purpose) {
     });
 }
 export async function fetchShellPublicSetting(client, publicToken, key) {
-    return client.emit('getPublicSetting', {
-        jwt: publicToken,
-        moduleName: 'settingsManager',
-        moduleType: 'core',
-        key
-    });
+    const result = await client.emit('cmsPublicRuntimeRequest', runtimePublicPayload(runtimeToken(publicToken), 'settings', 'public', { keys: [key] }));
+    const settings = unwrapRuntimeFacadeData(result);
+    return settings && typeof settings === 'object' ? settings[key] : undefined;
 }
 export function publicSettingEnabled(value) {
     return String(value).toLowerCase() === 'true';

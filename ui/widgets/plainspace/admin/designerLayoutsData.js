@@ -1,7 +1,4 @@
-const DESIGNER_MODULE = {
-    moduleName: 'designer',
-    moduleType: 'community'
-};
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('PLAINSPACE_DESIGNER_LAYOUTS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -33,9 +30,6 @@ export function sortDesignsByRecent(designs) {
 }
 export async function fetchDesignerLayouts(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('designer.listDesigns', {
-        jwt,
-        ...DESIGNER_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list');
     return toDesigns(res);
 }

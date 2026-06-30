@@ -2,9 +2,19 @@ import {
   createMeltdownClient,
   type MeltdownClient
 } from '../../shared/api-client/meltdownClient.js';
+import {
+  runtimePublicPayload,
+  unwrapRuntimeFacadeData
+} from '../../shared/api-client/runtimeFacade.js';
 
 export type ShellPublicClient = Pick<MeltdownClient, 'emit'>;
 export type PublicSettingKey = 'FIRST_INSTALL_DONE' | 'ALLOW_REGISTRATION';
+type PublicSettings = Record<string, unknown>;
+
+function runtimeToken(value: unknown): string | null | undefined {
+  if (value === null || value === undefined) return value;
+  return String(value);
+}
 
 function browserFetch(win: Window): typeof fetch {
   if (typeof win.fetchWithTimeout === 'function') {
@@ -43,12 +53,14 @@ export async function fetchShellPublicSetting(
   publicToken: unknown,
   key: PublicSettingKey
 ): Promise<unknown> {
-  return client.emit('getPublicSetting', {
-    jwt: publicToken,
-    moduleName: 'settingsManager',
-    moduleType: 'core',
-    key
-  });
+  const result = await client.emit('cmsPublicRuntimeRequest', runtimePublicPayload(
+    runtimeToken(publicToken),
+    'settings',
+    'public',
+    { keys: [key] }
+  ));
+  const settings = unwrapRuntimeFacadeData<PublicSettings>(result);
+  return settings && typeof settings === 'object' ? settings[key] : undefined;
 }
 
 export function publicSettingEnabled(value: unknown): boolean {

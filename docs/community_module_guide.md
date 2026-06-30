@@ -93,7 +93,7 @@ Rules:
 - Community permission keys must start with the module name, such as
   `helloModule.read`.
 - A module must not declare core permissions such as `users.delete`,
-  `modules.install`, `settings.core.edit`, `*` or `canAccessEverything`.
+  `modules.install`, `settings.core.edit`, `*` or retired broad keys.
 - `requestedAccess` is only a request. The admin can approve it during
   install or activation before it becomes a permanent runtime grant.
 - Events that were not permanently granted stay blocked until the runtime
@@ -245,7 +245,7 @@ admin iframe apps or public widget packages.
 - Folder name and `moduleInfo.moduleName` are identical.
 - `index.js` exports `initialize`.
 - Permission names start with `<moduleName>.`.
-- Requested core events are documented and approved in the admin UI.
+- Requested core actions are documented and approved in the admin UI.
 - System events such as user deletion, role edits, module install or settings
   edits are one-time only and cannot become permanent grants.
 - Own data uses `moduleHost.storage`.

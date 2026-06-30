@@ -7,6 +7,43 @@ interface FontProviderRecord {
   name?: unknown;
 }
 
+const RUNTIME_MANAGER_MODULE = {
+  moduleName: 'runtimeManager',
+  moduleType: 'core'
+} as const;
+
+function objectParams(value: Record<string, unknown> = {}): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function unwrapRuntimeFacadeData<T = unknown>(value: unknown): T {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'resource' in value &&
+    'action' in value &&
+    'data' in value
+  ) {
+    return (value as { data?: T }).data as T;
+  }
+  return value as T;
+}
+
+function runtimePublicPayload(
+  jwt: string | null | undefined,
+  resource: string,
+  action: string,
+  params: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    jwt,
+    ...RUNTIME_MANAGER_MODULE,
+    resource,
+    action,
+    params: objectParams(params)
+  };
+}
+
 function unwrapData<T>(value: T[] | { data?: unknown } | unknown): T[] {
   if (Array.isArray(value)) return value as T[];
   if (value && typeof value === 'object' && 'data' in value) {
@@ -77,23 +114,21 @@ export async function loadFonts(): Promise<void> {
       purpose: 'fonts',
       moduleName: 'auth'
     });
-    const rawList = await window.meltdownEmit<FontRecord[] | { data?: unknown }>('listFonts', {
-      jwt,
-      moduleName: 'fontsManager',
-      moduleType: 'core'
-    });
-    const list = unwrapData<FontRecord>(rawList);
+    const rawList = await window.meltdownEmit<FontRecord[] | { data?: unknown }>(
+      'cmsPublicRuntimeRequest',
+      runtimePublicPayload(jwt, 'fonts', 'list')
+    );
+    const list = unwrapData<FontRecord>(unwrapRuntimeFacadeData(rawList));
     fonts = list
       .map(font => font?.name)
       .filter((name): name is string => typeof name === 'string' && Boolean(name));
     publishAvailableFonts(fonts, list);
 
-    const rawProviders = await window.meltdownEmit<FontProviderRecord[] | { data?: unknown }>('listFontProviders', {
-      jwt,
-      moduleName: 'fontsManager',
-      moduleType: 'core'
-    });
-    const providers = unwrapData<FontProviderRecord>(rawProviders);
+    const rawProviders = await window.meltdownEmit<FontProviderRecord[] | { data?: unknown }>(
+      'cmsPublicRuntimeRequest',
+      runtimePublicPayload(jwt, 'fonts', 'listProviders')
+    );
+    const providers = unwrapData<FontProviderRecord>(unwrapRuntimeFacadeData(rawProviders));
     providers.find(provider => provider.name === 'googleFonts');
   } catch (err) {
     console.error('[fontsLoader] Failed to load fonts', err);

@@ -103,7 +103,7 @@ function hasPermission(decodedJWT, keyPath) {
   try {
     if (!decodedJWT || !decodedJWT.permissions) return false;
     const perms = decodedJWT.permissions;
-    if (perms['*'] === true || perms.canAccessEverything === true) return true;
+    if (perms['*'] === true) return true;
 
     const parts = keyPath.split('.');
     let current = perms;

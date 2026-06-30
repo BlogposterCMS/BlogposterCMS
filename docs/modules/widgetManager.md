@@ -15,9 +15,8 @@ Stores widgets used by both the public site and the admin dashboard.
 - Allows saving page layouts via `saveLayout.v1`.
 - Registers community widgets as UI assets, not backend capabilities.
 - The public `widgets` loader renders from the current page envelope/context
-  layout first and only falls back to legacy `window.__BP_ACTIVE_LAYOUT__`
-  state for older loaders, so one page's loaded widget layout cannot bleed into
-  another page.
+  layout. Loader-to-loader layout sharing happens through explicit context, so
+  one page's loaded widget layout cannot bleed into another page.
 - Community widget folders can only register `widgetType: "public"`; admin
   widgets belong to trusted UI modules.
 - Community widget metadata cannot declare `moduleType`; widgets are not core

@@ -21,7 +21,7 @@ Handles file and folder operations under the media library. It verifies permissi
   status, visibility, dimensions, checksum and source references.
 - Store attachment variants such as thumbnail, medium, large or custom
   renditions.
-- Link attachments to content entries or legacy module sources with a role and
+- Link attachments to content entries or source-owned records with a role and
   stable ordering.
 
 Uploads performed through meltdown events accept empty payloads. Supplying `fileData` as an empty string or zero-length `Buffer` writes the decoded content to disk while preserving the strict MIME/type whitelist enforced by the module.
@@ -54,7 +54,7 @@ File operations check user permissions using the validated JWT permissions from
 
 ## Storage
 
-The module keeps the legacy `media_files` table/collection and adds:
+The module keeps the existing `media_files` table/collection and adds:
 
 - `media_attachments`
 - `media_variants`

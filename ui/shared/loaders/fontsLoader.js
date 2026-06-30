@@ -1,3 +1,29 @@
+const RUNTIME_MANAGER_MODULE = {
+    moduleName: 'runtimeManager',
+    moduleType: 'core'
+};
+function objectParams(value = {}) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+function unwrapRuntimeFacadeData(value) {
+    if (value &&
+        typeof value === 'object' &&
+        'resource' in value &&
+        'action' in value &&
+        'data' in value) {
+        return value.data;
+    }
+    return value;
+}
+function runtimePublicPayload(jwt, resource, action, params = {}) {
+    return {
+        jwt,
+        ...RUNTIME_MANAGER_MODULE,
+        resource,
+        action,
+        params: objectParams(params)
+    };
+}
 function unwrapData(value) {
     if (Array.isArray(value))
         return value;
@@ -63,22 +89,14 @@ export async function loadFonts() {
             purpose: 'fonts',
             moduleName: 'auth'
         });
-        const rawList = await window.meltdownEmit('listFonts', {
-            jwt,
-            moduleName: 'fontsManager',
-            moduleType: 'core'
-        });
-        const list = unwrapData(rawList);
+        const rawList = await window.meltdownEmit('cmsPublicRuntimeRequest', runtimePublicPayload(jwt, 'fonts', 'list'));
+        const list = unwrapData(unwrapRuntimeFacadeData(rawList));
         fonts = list
             .map(font => font?.name)
             .filter((name) => typeof name === 'string' && Boolean(name));
         publishAvailableFonts(fonts, list);
-        const rawProviders = await window.meltdownEmit('listFontProviders', {
-            jwt,
-            moduleName: 'fontsManager',
-            moduleType: 'core'
-        });
-        const providers = unwrapData(rawProviders);
+        const rawProviders = await window.meltdownEmit('cmsPublicRuntimeRequest', runtimePublicPayload(jwt, 'fonts', 'listProviders'));
+        const providers = unwrapData(unwrapRuntimeFacadeData(rawProviders));
         providers.find(provider => provider.name === 'googleFonts');
     }
     catch (err) {

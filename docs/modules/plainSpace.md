@@ -34,8 +34,7 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
 - Provides `widget.registry.request.v1` for the page builder.
 - The widget registry validates stored browser URLs against their real static
   roots: `/ui/widgets/plainspace/*` maps to bundled UI widgets,
-  `/widgets/*` maps to community widgets, and `/plainspace/widgets/*` remains a
-  legacy compatibility path.
+  and `/widgets/*` maps to community widgets.
 - Runtime widget module failures render inline diagnostic codes instead of
   leaving dashboard cards as blank white panels.
 - Runtime grids mount layout and widget placeholders first, then hydrate widget
@@ -67,7 +66,7 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
 - `seedAdminWidget` strips layout keys from module seed defaults. Layout belongs
   in registry metadata and page `widgetSlots`, while widget instances store only
   real render defaults.
-- Admin dashboard hydration does not apply legacy widget-instance layout
+- Admin dashboard hydration does not apply widget-instance layout
   options. Percent sizing through `applyWidgetOptions` remains available to
   CanvasGrid-style public/runtime surfaces, while dashboard admin placement and
   height come only from the registry contract.
@@ -154,9 +153,7 @@ config: {
 
 Widget `content` values are browser URLs. New seeds should use
 `/ui/widgets/plainspace/*`. The active bundled widget source lives under
-`ui/widgets/plainspace/`; the `/plainspace/widgets/*` URLs are
-compatibility shims for existing content and are normalized to canonical
-`/ui/widgets/plainspace/*` module URLs by the runtime import guard.
+`ui/widgets/plainspace/`; community widgets use `/widgets/{folder}/widget.js`.
 
 The default Media page seeds `mediaExplorer` as a page-slot admin widget. The
 widget itself is only a PlainSpace mount point; folder browsing, upload,

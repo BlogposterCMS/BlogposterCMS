@@ -2,5 +2,5 @@
   "moduleName": "designerManager",
   "version": "0.1.0",
   "developer": "Blogposter Team",
-  "description": "Core adapter that owns the legacy designer backend as a first-party service."
+  "description": "Core service owner for Designer data, layouts and public loader contracts."
 }

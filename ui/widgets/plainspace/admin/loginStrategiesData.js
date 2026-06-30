@@ -1,3 +1,4 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('meltdownEmit unavailable');
@@ -25,19 +26,12 @@ export function errorMessage(err) {
 }
 export async function fetchLoginStrategies(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('listLoginStrategies', {
-        jwt,
-        moduleName: 'auth',
-        moduleType: 'core'
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'auth', 'loginStrategies');
     return visibleLoginStrategies(toStrategies(res));
 }
 export async function setLoginStrategyEnabled(emit, jwt, strategyName, enabled) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('setLoginStrategyEnabled', {
-        jwt,
-        moduleName: 'auth',
-        moduleType: 'core',
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'auth', 'setStrategyEnabled', {
         strategyName,
         enabled
     });

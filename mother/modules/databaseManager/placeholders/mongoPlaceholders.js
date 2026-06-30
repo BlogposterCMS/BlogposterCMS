@@ -756,7 +756,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
   
   
     //
-    // Removed legacy placeholders 'SET_AS_SUBPAGE' and
+    // Removed retired placeholders 'SET_AS_SUBPAGE' and
     // 'ASSIGN_PAGE_TO_POSTTYPE' which were unused and not present in the
     // Postgres implementation.
 
@@ -956,11 +956,11 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       return docs;
     }
   
-    case 'LIST_ACTIVE_GRAPES_MODULES': {
-      // Return active modules with "grapesComponent" = true
+    case 'LIST_ACTIVE_STATIC_FRONTENDS': {
+      // Return active modules that explicitly publish a bounded static frontend.
       const docs = await db.collection('module_registry').find({
         is_active: true,
-        'module_info.grapesComponent': true
+        'module_info.staticFrontend': true
       }).toArray();
       return docs;
     }
@@ -1293,7 +1293,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     // WIDGET MANAGER
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Removed legacy placeholder 'INIT_WIDGETS_TABLE' which created an unused
+    // Removed retired placeholder 'INIT_WIDGETS_TABLE' which created an unused
     // collection. Widget tables are now handled via INIT_WIDGETS_TABLE_PUBLIC
     // and INIT_WIDGETS_TABLE_ADMIN for parity with Postgres.
 

@@ -8,7 +8,7 @@ const {
   trashPageContentEntry
 } = require('../mother/modules/pagesManager/contentEngineAdapter');
 
-test('page content mirror maps legacy page data to a content entry payload', () => {
+test('page content mirror maps page data to a content entry payload', () => {
   const payload = buildPageContentEntryPayload({
     jwt: 't',
     pageId: 12,
@@ -38,7 +38,7 @@ test('page content mirror maps legacy page data to a content entry payload', () 
   assert.strictEqual(payload.sourceModule, 'pagesManager');
   assert.strictEqual(payload.sourceId, '12');
   assert.strictEqual(payload.permalink, '/admin/settings');
-  assert.strictEqual(payload.meta.legacyPageId, 12);
+  assert.strictEqual(payload.meta.sourcePageId, 12);
   assert.strictEqual(payload.meta.seoImage, 'hero.png');
   assert.strictEqual(payload.content.html, '<main>Settings</main>');
   assert.strictEqual(payload.content.translations.length, 1);

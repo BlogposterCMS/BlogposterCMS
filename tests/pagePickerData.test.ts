@@ -23,31 +23,37 @@ describe('pagePickerData', () => {
     expect(errorMessage(new Error('boom'))).toBe('boom');
   });
 
-  it('fetches public pages through pagesManager lane loading', async () => {
+  it('fetches public pages through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({ pages: [{ pageId: 'page-1', title: 'Home' }] });
 
     await expect(fetchPublicPages(emit, 'admin-token')).resolves.toEqual([
       { pageId: 'page-1', title: 'Home' }
     ]);
-    expect(emit).toHaveBeenCalledWith('getPagesByLane', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'public' }
     });
   });
 
-  it('saves page order through pagesManager updates', async () => {
+  it('saves page order through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await savePageOrder(emit, 'admin-token', 7, 2);
 
-    expect(emit).toHaveBeenCalledWith('updatePage', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 7,
-      newOrder: 2
+      resource: 'pages',
+      action: 'update',
+      params: {
+        pageId: 7,
+        newOrder: 2
+      }
     });
   });
 
@@ -56,14 +62,18 @@ describe('pagePickerData', () => {
 
     await expect(createPublicPageForPicker(emit, 'admin-token', 'Landing', 'landing'))
       .resolves.toBe('page-9');
-    expect(emit).toHaveBeenCalledWith('createPage', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      title: 'Landing',
-      slug: 'landing',
-      lane: 'public',
-      status: 'published'
+      resource: 'pages',
+      action: 'create',
+      params: {
+        title: 'Landing',
+        slug: 'landing',
+        lane: 'public',
+        status: 'published'
+      }
     });
   });
 
@@ -71,11 +81,13 @@ describe('pagePickerData', () => {
     const emit = jest.fn().mockResolvedValue({ data: { slug: 'landing' } });
 
     await expect(fetchPageSlugById(emit, 'admin-token', 'page-9')).resolves.toBe('landing');
-    expect(emit).toHaveBeenCalledWith('getPageById', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'page-9'
+      resource: 'pages',
+      action: 'get',
+      params: { pageId: 'page-9' }
     });
   });
 

@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../../../shared/api-client/runtimeFacade.js';
+
 export interface DesignRecord {
   id?: string | number;
   title?: string;
@@ -34,16 +36,6 @@ export interface DraftDesignRecord {
 }
 
 type ContentSummaryEmitter = Window['meltdownEmit'];
-
-const DESIGNER_MODULE = {
-  moduleName: 'designer',
-  moduleType: 'community'
-} as const;
-
-const PAGES_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
 
 function requireEmitter(emit: ContentSummaryEmitter): NonNullable<ContentSummaryEmitter> {
   if (typeof emit !== 'function') {
@@ -155,10 +147,7 @@ export async function fetchContentDesigns(
   jwt: string | null | undefined
 ): Promise<DesignRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('designer.listDesigns', {
-    jwt,
-    ...DESIGNER_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list');
   return toDesigns(res);
 }
 
@@ -167,10 +156,7 @@ export async function fetchUploadedContentPages(
   jwt: string | null | undefined
 ): Promise<PageRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getAllPages', {
-    jwt,
-    ...PAGES_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'list');
   return uploadedContentPages(res);
 }
 
@@ -182,9 +168,7 @@ export async function createDraftDesign(
 ): Promise<string | number | null> {
   const meltdownEmit = requireEmitter(emit);
   const title = buildDefaultDesignTitle(timestamp);
-  const res = await meltdownEmit('designer.saveDesign', {
-    jwt,
-    ...DESIGNER_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'save', {
     design: buildDraftDesignRecord(ownerId, title),
     widgets: [],
     layout: null

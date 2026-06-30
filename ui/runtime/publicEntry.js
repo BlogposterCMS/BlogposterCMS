@@ -1,5 +1,6 @@
 import { orchestrate } from './envelope/orchestrator.js';
 import { loadPublicRuntimeLoaders } from './publicLoaderImporter.js';
+import { emitRuntimePublic } from '../shared/api-client/runtimeFacade.js';
 function getMeltdownEmit() {
     const emit = window.meltdownEmit;
     if (typeof emit !== 'function') {
@@ -21,10 +22,7 @@ export async function bootPublicRuntime() {
     const emit = getMeltdownEmit();
     let slug = location.pathname.replace(/^\/+/, '') || '';
     if (!slug) {
-        const start = await emit('getStartPage', {
-            jwt: window.PUBLIC_TOKEN,
-            moduleName: 'pagesManager',
-            moduleType: 'core',
+        const start = await emitRuntimePublic(emit, window.PUBLIC_TOKEN, 'pages', 'start', {
             language: window.LANG || 'en'
         }).catch(() => null);
         slug = typeof start?.slug === 'string' ? start.slug : '';
@@ -33,10 +31,7 @@ export async function bootPublicRuntime() {
         console.error('No start page configured');
         return;
     }
-    const envelope = await emit('getEnvelope', {
-        jwt: window.PUBLIC_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
+    const envelope = await emitRuntimePublic(emit, window.PUBLIC_TOKEN, 'pages', 'envelope', {
         slug,
         language: window.LANG || 'en'
     });

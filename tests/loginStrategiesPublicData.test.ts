@@ -48,10 +48,13 @@ describe('loginStrategiesPublicData', () => {
     await expect(fetchPublicLoginStrategies(emit)).resolves.toEqual([
       { name: 'github', scope: 'public' }
     ]);
-    expect(emit).toHaveBeenCalledWith('listActiveLoginStrategies', {
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      moduleName: 'auth',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'auth',
+      action: 'activeLoginStrategies',
+      params: {}
     });
   });
 

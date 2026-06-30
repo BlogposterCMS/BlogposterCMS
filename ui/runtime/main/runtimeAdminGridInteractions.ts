@@ -287,11 +287,11 @@ function positionDashboardDragPreviewAt(
 
 function setTransparentNativeDragImage(event: DragEvent): void {
   if (!event.dataTransfer?.setDragImage) return;
-  const shim = document.createElement('span');
-  shim.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
-  document.body.appendChild(shim);
-  event.dataTransfer.setDragImage(shim, 0, 0);
-  setTimeout(() => shim.remove(), 0);
+  const transparentDragImage = document.createElement('span');
+  transparentDragImage.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
+  document.body.appendChild(transparentDragImage);
+  event.dataTransfer.setDragImage(transparentDragImage, 0, 0);
+  setTimeout(() => transparentDragImage.remove(), 0);
 }
 
 function readWidgetHeightVars(source: HTMLElement, target: HTMLElement): void {

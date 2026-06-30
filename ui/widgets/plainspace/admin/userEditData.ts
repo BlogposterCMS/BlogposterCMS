@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../../shared/api-client/runtimeFacade.js';
+
 export interface UserEditRecord {
   id?: string | number;
   username?: string;
@@ -55,11 +57,6 @@ export interface UserEditFormValues extends UserEditFieldValues {
 
 type UserEditEmitter = Window['meltdownEmit'];
 
-const USER_MANAGEMENT_MODULE = {
-  moduleName: 'userManagement',
-  moduleType: 'core'
-} as const;
-
 // Keep user-management event names and payload shapes outside the DOM widget.
 function requireEmitter(emit: UserEditEmitter): NonNullable<UserEditEmitter> {
   if (typeof emit !== 'function') {
@@ -111,9 +108,7 @@ export function buildUserProfilePayload(
   userId: string | number | undefined,
   values: UserEditFormValues
 ): Record<string, unknown> {
-  const payload: Record<string, unknown> = {
-    jwt,
-    ...USER_MANAGEMENT_MODULE,
+  const params: Record<string, unknown> = {
     userId,
     newUsername: values.username.trim(),
     newEmail: values.email.trim(),
@@ -129,9 +124,9 @@ export function buildUserProfilePayload(
   };
   const newPassword = values.password?.trim();
   if (newPassword) {
-    payload.newPassword = newPassword;
+    params.newPassword = newPassword;
   }
-  return payload;
+  return runtimeAdminPayload(jwt, 'users', 'update', params);
 }
 
 export async function fetchUserDetails(
@@ -140,11 +135,7 @@ export async function fetchUserDetails(
   userId: string | number | null | undefined
 ): Promise<UserEditRecord | null> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getUserDetailsById', {
-    jwt,
-    ...USER_MANAGEMENT_MODULE,
-    userId
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'get', { userId });
   return toUser(res);
 }
 
@@ -153,10 +144,7 @@ export async function fetchRoles(
   jwt: string | null | undefined
 ): Promise<RoleRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getAllRoles', {
-    jwt,
-    ...USER_MANAGEMENT_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'roles', 'list');
   return toRoles(res);
 }
 
@@ -165,10 +153,7 @@ export async function fetchPermissions(
   jwt: string | null | undefined
 ): Promise<PermissionRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getAllPermissions', {
-    jwt,
-    ...USER_MANAGEMENT_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'permissions', 'list');
   return toPermissions(res);
 }
 
@@ -178,11 +163,7 @@ export async function fetchUserAccess(
   userId: string | number | null | undefined
 ): Promise<UserAccessRecord> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getUserAccess', {
-    jwt,
-    ...USER_MANAGEMENT_MODULE,
-    userId
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'access', { userId });
   return toUserAccess(res);
 }
 
@@ -193,9 +174,7 @@ export async function updateUserAccess(
   values: { roleIds: string[]; directPermissions: unknown }
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('setUserAccess', {
-    jwt,
-    ...USER_MANAGEMENT_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'setAccess', {
     userId,
     roleIds: values.roleIds,
     directPermissions: values.directPermissions || {}
@@ -209,7 +188,7 @@ export async function updateUserProfile(
   values: UserEditFormValues
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('updateUserProfile', buildUserProfilePayload(jwt, userId, values));
+  await meltdownEmit('cmsAdminApiRequest', buildUserProfilePayload(jwt, userId, values));
 }
 
 export async function deleteUserRecord(
@@ -218,9 +197,5 @@ export async function deleteUserRecord(
   userId: string | number | undefined
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('deleteUser', {
-    jwt,
-    ...USER_MANAGEMENT_MODULE,
-    userId
-  });
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'delete', { userId });
 }

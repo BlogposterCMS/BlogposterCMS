@@ -119,7 +119,7 @@ test('app loader routes app backend commands through runtime admin facade', asyn
   });
 });
 
-test('app loader routes manifest-allowed legacy app events through the runtime facade', async () => {
+test('app loader routes manifest-allowed app facade events through the runtime facade', async () => {
   const emitter = new MockEmitter();
   await appLoader.initialize({
     motherEmitter: emitter,
@@ -153,14 +153,16 @@ test('app loader routes manifest-allowed legacy app events through the runtime f
   });
 
   const allowed = await emitAsync(emitter, 'dispatchAppEvent', adminPayload({
-    event: 'cms-meltdown-request',
+    event: 'cms-app-runtime-request',
     data: {
-      eventName: 'designer.getDesign',
+      eventName: 'cmsAdminApiRequest',
       payload: {
-        id: 'design-1',
-        jwt: 'app-supplied-token',
         moduleName: 'wrongModule',
         moduleType: 'community',
+        resource: 'designer',
+        action: 'get',
+        params: { id: 'design-1' },
+        jwt: 'app-supplied-token',
         decodedJWT: { permissions: { '*': false } }
       }
     }
@@ -168,7 +170,7 @@ test('app loader routes manifest-allowed legacy app events through the runtime f
 
   assert.ifError(allowed.err);
   assert.strictEqual(allowed.result.ok, true);
-  assert.deepStrictEqual(allowed.result.data, { id: 'design-1', title: 'Allowed Design' });
+  assert.deepStrictEqual(allowed.result.data.data, { id: 'design-1', title: 'Allowed Design' });
   assert.strictEqual(routed[0].jwt, 'admin-token');
   assert.strictEqual(routed[0].moduleName, 'runtimeManager');
   assert.strictEqual(routed[0].moduleType, 'core');
@@ -177,14 +179,14 @@ test('app loader routes manifest-allowed legacy app events through the runtime f
   assert.deepStrictEqual(routed[0].params, { id: 'design-1' });
   assert.deepStrictEqual(routed[0].appContext, {
     appName: 'designer',
-    event: 'cms-meltdown-request',
-    targetEvent: 'designer.getDesign',
+    event: 'cms-app-runtime-request',
+    targetEvent: 'cmsAdminApiRequest',
     coreOwned: true
   });
   assert.strictEqual(routed[0].decodedJWT.permissions.builder.use, true);
 
   const denied = await emitAsync(emitter, 'dispatchAppEvent', adminPayload({
-    event: 'cms-meltdown-request',
+    event: 'cms-app-runtime-request',
     data: {
       eventName: 'deleteUser',
       payload: { userId: 1 }
@@ -194,32 +196,35 @@ test('app loader routes manifest-allowed legacy app events through the runtime f
   assert.match(denied.err.message, /not allowed/);
 
   const rawDenied = await emitAsync(emitter, 'dispatchAppEvent', adminPayload({
-    event: 'cms-meltdown-request',
+    event: 'cms-app-runtime-request',
     data: {
-      eventName: 'designer.getDesign',
-      payload: { table: '__rawSQL__', id: 'design-1' }
+      eventName: 'cmsAdminApiRequest',
+      payload: { table: '__rawSQL__', resource: 'designer', action: 'get' }
     }
   }));
   assert(rawDenied.err);
   assert.match(rawDenied.err.message, /Raw database/);
 
   const writeAllowed = await emitAsync(emitter, 'dispatchAppEvent', adminPayload({
-    event: 'cms-meltdown-request',
+    event: 'cms-app-runtime-request',
     data: {
-      eventName: 'deleteLocalItem',
-      payload: { id: 'media-1' }
+      eventName: 'cmsAdminApiRequest',
+      payload: {
+        resource: 'media',
+        action: 'deleteLocalItem',
+        params: { id: 'media-1' }
+      }
     }
   }));
   assert.ifError(writeAllowed.err);
-  assert.deepStrictEqual(writeAllowed.result.data, { deleted: true, id: 'media-1' });
+  assert.deepStrictEqual(writeAllowed.result.data.data, { deleted: true, id: 'media-1' });
   assert.strictEqual(routed[1].moduleName, 'runtimeManager');
   assert.strictEqual(routed[1].moduleType, 'core');
   assert.strictEqual(routed[1].resource, 'media');
   assert.strictEqual(routed[1].action, 'deleteLocalItem');
   assert.deepStrictEqual(routed[1].params, { id: 'media-1' });
 });
-
-test('app loader requires explicit write access for mutating bridge events', async () => {
+test('app loader rejects direct bridge domain events even when manifests allow them', async () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-app-loader-'));
   const appDir = path.join(tmpRoot, 'thinapp');
   fs.mkdirSync(appDir);
@@ -244,20 +249,20 @@ test('app loader requires explicit write access for mutating bridge events', asy
         moduleName: 'appLoader',
         moduleType: 'core',
         appName: 'thinapp',
-        event: 'cms-meltdown-request',
+        event: 'cms-app-runtime-request',
         data: {
           eventName: 'deleteLocalItem',
           payload: { id: 'media-1' }
         }
       }, tmpRoot),
-      /write access/
+      /internal event: deleteLocalItem/
     );
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
 });
 
-test('app loader requires direct bridge events to map to runtime facade contracts', async () => {
+test('app loader requires direct bridge events to use runtime facade contracts', async () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-app-loader-'));
   const appDir = path.join(tmpRoot, 'thinapp');
   fs.mkdirSync(appDir);
@@ -284,13 +289,13 @@ test('app loader requires direct bridge events to map to runtime facade contract
         moduleName: 'appLoader',
         moduleType: 'core',
         appName: 'thinapp',
-        event: 'cms-meltdown-request',
+        event: 'cms-app-runtime-request',
         data: {
           eventName: 'getThing',
           payload: {}
         }
       }, tmpRoot),
-      /runtime facade/
+      /cmsAdminApiRequest or cmsPublicRuntimeRequest/
     );
     assert.strictEqual(forwarded, false);
   } finally {
@@ -336,7 +341,7 @@ test('app loader lets manifest agentSurface apps publish and poll only surface-o
       moduleName: 'appLoader',
       moduleType: 'core',
       appName: 'agentapp',
-      event: 'cms-meltdown-request',
+      event: 'cms-app-runtime-request',
       data: {
         eventName: 'agent.publishSurfaceSnapshot',
         payload: {
@@ -357,7 +362,7 @@ test('app loader lets manifest agentSurface apps publish and poll only surface-o
     assert.strictEqual(forwarded[0].appName, 'agentapp');
     assert.deepStrictEqual(forwarded[0].appContext, {
       appName: 'agentapp',
-      event: 'cms-meltdown-request',
+      event: 'cms-app-runtime-request',
       targetEvent: 'agent.publishSurfaceSnapshot',
       coreOwned: false
     });
@@ -367,7 +372,7 @@ test('app loader lets manifest agentSurface apps publish and poll only surface-o
       moduleName: 'appLoader',
       moduleType: 'core',
       appName: 'agentapp',
-      event: 'cms-meltdown-request',
+      event: 'cms-app-runtime-request',
       data: {
         eventName: 'agent.pollSurfaceCommands',
         payload: { appName: 'otherapp', surfaceId: 'agentapp.main' }
@@ -382,7 +387,7 @@ test('app loader lets manifest agentSurface apps publish and poll only surface-o
         moduleName: 'appLoader',
         moduleType: 'core',
         appName: 'agentapp',
-        event: 'cms-meltdown-request',
+        event: 'cms-app-runtime-request',
         data: {
           eventName: 'agent.enqueueSurfaceCommand',
           payload: { surfaceId: 'agentapp.main', command: { action: 'dom.click' } }
@@ -403,14 +408,14 @@ test('app loader refuses direct write bridge access for non-core apps', async ()
     name: 'thinapp',
     permissions: [],
     allowedEvents: [
-      { eventName: 'deleteLocalItem', moduleName: 'mediaManager', moduleType: 'core', access: 'write' }
+      { eventName: 'cmsAdminApiRequest', moduleName: 'runtimeManager', moduleType: 'core', access: 'write' }
     ]
   }, null, 2));
   fs.writeFileSync(path.join(appDir, 'index.html'), '<!doctype html><title>Thin App</title>');
 
   try {
     const emitter = new MockEmitter();
-    emitter.on('deleteLocalItem', (_payload, cb) => {
+    emitter.on('cmsAdminApiRequest', (_payload, cb) => {
       cb(null, { deleted: true });
     });
 
@@ -420,10 +425,14 @@ test('app loader refuses direct write bridge access for non-core apps', async ()
         moduleName: 'appLoader',
         moduleType: 'core',
         appName: 'thinapp',
-        event: 'cms-meltdown-request',
+        event: 'cms-app-runtime-request',
         data: {
-          eventName: 'deleteLocalItem',
-          payload: { id: 'media-1' }
+          eventName: 'cmsAdminApiRequest',
+          payload: {
+            resource: 'media',
+            action: 'deleteLocalItem',
+            params: { id: 'media-1' }
+          }
         }
       }, tmpRoot),
       /direct write access/
@@ -441,7 +450,7 @@ test('app loader dispatch validates app folder shape before forwarding app event
     name: 'mixedapp',
     permissions: [],
     allowedEvents: [
-      { eventName: 'getThing', moduleName: 'contentEngine', moduleType: 'core', access: 'read' }
+      { eventName: 'cmsAdminApiRequest', moduleName: 'runtimeManager', moduleType: 'core', access: 'read' }
     ]
   }, null, 2));
   fs.writeFileSync(path.join(appDir, 'index.html'), '<!doctype html><title>Mixed App</title>');
@@ -453,7 +462,7 @@ test('app loader dispatch validates app folder shape before forwarding app event
   try {
     const emitter = new MockEmitter();
     let forwarded = false;
-    emitter.on('getThing', (_payload, cb) => {
+    emitter.on('cmsAdminApiRequest', (_payload, cb) => {
       forwarded = true;
       cb(null, { ok: true });
     });
@@ -464,10 +473,14 @@ test('app loader dispatch validates app folder shape before forwarding app event
         moduleName: 'appLoader',
         moduleType: 'core',
         appName: 'mixedapp',
-        event: 'cms-meltdown-request',
+        event: 'cms-app-runtime-request',
         data: {
-          eventName: 'getThing',
-          payload: {}
+          eventName: 'cmsAdminApiRequest',
+          payload: {
+            resource: 'content',
+            action: 'list',
+            params: {}
+          }
         }
       }, tmpRoot),
       /widgetInfo\.json/
@@ -539,21 +552,21 @@ test('app loader rejects direct host bridge code inside user-managed app folders
   }
 });
 
-test('app loader rejects app manifests that claim module, widget or legacy app identity', () => {
+test('app loader rejects app manifests that claim module, widget or retired app identity', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-app-loader-'));
-  const legacyNameAppDir = path.join(tmpRoot, 'legacynameapp');
+  const retiredNameAppDir = path.join(tmpRoot, 'retirednameapp');
   const typedAppDir = path.join(tmpRoot, 'typedapp');
   const moduleLikeAppDir = path.join(tmpRoot, 'modulelikeapp');
   const widgetLikeAppDir = path.join(tmpRoot, 'widgetlikeapp');
-  fs.mkdirSync(legacyNameAppDir);
+  fs.mkdirSync(retiredNameAppDir);
   fs.mkdirSync(typedAppDir);
   fs.mkdirSync(moduleLikeAppDir);
   fs.mkdirSync(widgetLikeAppDir);
-  fs.writeFileSync(path.join(legacyNameAppDir, 'app.json'), JSON.stringify({
-    name: 'legacynameapp',
+  fs.writeFileSync(path.join(retiredNameAppDir, 'app.json'), JSON.stringify({
+    name: 'retirednameapp',
     appName: 'otherapp'
   }, null, 2));
-  fs.writeFileSync(path.join(legacyNameAppDir, 'index.html'), '<!doctype html><title>Legacy Name App</title>');
+  fs.writeFileSync(path.join(retiredNameAppDir, 'index.html'), '<!doctype html><title>Retired Name App</title>');
   fs.writeFileSync(path.join(typedAppDir, 'app.json'), JSON.stringify({
     name: 'typedapp',
     appType: 'module'
@@ -574,7 +587,7 @@ test('app loader rejects app manifests that claim module, widget or legacy app i
 
   try {
     assert.throws(
-      () => appLoader._internals.readAppDirectoryInfo(legacyNameAppDir, 'legacynameapp'),
+      () => appLoader._internals.readAppDirectoryInfo(retiredNameAppDir, 'retirednameapp'),
       /cannot declare appName/
     );
     assert.throws(
@@ -687,10 +700,17 @@ test('app loader bridge batch reports per-event errors without exposing system e
   });
 
   const batch = await emitAsync(emitter, 'dispatchAppEvent', adminPayload({
-    event: 'cms-meltdown-batch-request',
+    event: 'cms-app-runtime-batch-request',
     data: {
       events: [
-        { eventName: 'designer.getDesign', payload: { id: 'ok' } },
+        {
+          eventName: 'cmsAdminApiRequest',
+          payload: {
+            resource: 'designer',
+            action: 'get',
+            params: { id: 'ok' }
+          }
+        },
         { eventName: 'dbSelect', payload: { table: 'users' } }
       ]
     }
@@ -699,8 +719,13 @@ test('app loader bridge batch reports per-event errors without exposing system e
   assert.ifError(batch.err);
   assert.strictEqual(batch.result.ok, true);
   assert.deepStrictEqual(batch.result.data[0], {
-    eventName: 'designer.getDesign',
-    data: { id: 'ok' }
+    eventName: 'cmsAdminApiRequest',
+    data: {
+      resource: 'designer',
+      action: 'get',
+      eventName: 'designer.getDesign',
+      data: { id: 'ok' }
+    }
   });
   assert.strictEqual(batch.result.data[1].eventName, 'dbSelect');
   assert.match(batch.result.data[1].error, /not allowed|internal/);

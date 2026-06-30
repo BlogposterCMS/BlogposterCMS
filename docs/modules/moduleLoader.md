@@ -38,8 +38,9 @@ and `TMP` may also be passed so the child process can start.
   contracts, or `moduleHost.storage` calls for module-owned CRUD. A
   query-looking name such as `getContentEntry` is not enough to reach into a
   core module.
-- Allows documented core events when the module declared them in
-  `moduleInfo.requestedAccess` and an administrator approved the exact event
+- Allows only core actions that are reachable through Runtime Manager's
+  documented `cmsAdminApiRequest` facade when the module declared them in
+  `moduleInfo.requestedAccess` and an administrator approved the exact action
   during install or activation. The permanent grant is stored as trusted
   registry data, not read from the module folder. At runtime, unapproved core
   calls open a one-time admin prompt for that exact call. Protected user, role,
@@ -70,12 +71,12 @@ and `TMP` may also be passed so the child process can start.
   dependency lockfiles before Express can serve them. Community modules may
   pass only inert cache/index/extension options; callback options such as
   `setHeaders` are refused so module code never receives host Express objects.
-- Legacy `grapesComponent` frontends are mounted through the same static asset
-  checks as `moduleHost.registerStaticAssets()`: module names are sanitized,
-  the module folder shape is revalidated, and `frontend/` must resolve inside
-  the module folder.
-- Skips core-owned folders such as `modules/designer`; those backends are
-  initialized by their core service instead of as community modules.
+- Static module frontends declare `staticFrontend: true` and are mounted
+  through the same static asset checks as `moduleHost.registerStaticAssets()`:
+  module names are sanitized, the module folder shape is revalidated, and
+  `frontend/` must resolve inside the module folder.
+- Core-owned services such as Designer Manager are initialized from `mother/`
+  and are not treated as community modules.
 - Core-owned module names are shared ownership policy. They cannot be installed,
   activated, deactivated or uninstalled through module management APIs; they are
   updated with the application release path.
@@ -100,7 +101,7 @@ and `TMP` may also be passed so the child process can start.
 ## Listened Events
 
 - `getModuleRegistry`
-- `listActiveGrapesModules`
+- `listActiveStaticFrontends`
 - `listSystemModules`
 - `inspectModuleZipAccess`
 - `installModuleFromZip`

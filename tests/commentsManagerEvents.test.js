@@ -154,7 +154,7 @@ test('comment input keeps only safe author urls and object metadata', () => {
   assert.deepStrictEqual(stripped.meta, {});
 });
 
-test('comment results sanitize legacy urls and metadata before returning', () => {
+test('comment results sanitize unsafe urls and metadata before returning', () => {
   const result = _internals.sanitizeCommentResult({
     id: 2,
     author_url: 'data:text/html,owned',

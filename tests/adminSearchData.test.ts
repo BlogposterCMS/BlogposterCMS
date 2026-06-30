@@ -21,19 +21,23 @@ describe('adminSearchData', () => {
     expect(errorMessage(new Error('boom'))).toBe('boom');
   });
 
-  it('fetches admin search pages through pagesManager search', async () => {
+  it('fetches admin search pages through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({ pages: [{ id: 'page-1', title: 'Home' }] });
 
     await expect(fetchAdminSearchPages(emit, 'admin-token', 'home')).resolves.toEqual([
       { id: 'page-1', title: 'Home' }
     ]);
-    expect(emit).toHaveBeenCalledWith('searchPages', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      query: 'home',
-      lane: 'all',
-      limit: 10
+      resource: 'pages',
+      action: 'search',
+      params: {
+        query: 'home',
+        lane: 'all',
+        limit: 10
+      }
     });
   });
 

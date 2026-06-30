@@ -84,7 +84,12 @@ function findManifestRequest(moduleInfo = {}, eventName = '') {
   const requestedAccess = Array.isArray(moduleInfo.requestedAccess)
     ? moduleInfo.requestedAccess
     : [];
-  return requestedAccess.find(item => item && item.event === eventName) || null;
+  return requestedAccess.find(item => {
+    if (!item || typeof item !== 'object') return false;
+    if (item.event === eventName) return true;
+    const { definition } = adminApiDefinition(item.resource, item.action);
+    return definition?.eventName === eventName;
+  }) || null;
 }
 
 function buildRequest({ moduleName, moduleInfo = {}, eventName, eventPayload = {}, timeoutMs }) {

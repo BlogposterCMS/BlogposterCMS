@@ -1,3 +1,4 @@
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('SHELL_ADMIN_SEARCH_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -30,10 +31,7 @@ export function adminSearchDisabledPlaceholder(err) {
 }
 export async function fetchAdminSearchPages(emit, jwt, query, limit = 10) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('searchPages', {
-        jwt,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'search', {
         query,
         lane: 'all',
         limit

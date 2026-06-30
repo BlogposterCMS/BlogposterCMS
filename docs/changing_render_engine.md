@@ -82,11 +82,13 @@ their own React frontend against BlogposterCMS APIs. To harden the instance:
    on cookies and configure CORS to allow only the admin origin. Always prefer
    HTTPS so tokens and CSRF cookies cannot be intercepted.
 5. **Limit public meltdown events** - Only `issuePublicToken` and
-   `ensurePublicToken` are unauthenticated public events. A small public-token
-   contract (`getPublicSetting`, `getUserCount`, `listActiveLoginStrategies`,
-   `loginWithStrategy`, `publicRegister`) exists for install, login and
-   registration flows. All admin/editor events must carry a validated admin
-   token and should use `cmsAdminApiRequest` rather than raw core events.
+   `ensurePublicToken` are unauthenticated public events. Browser install,
+   login-discovery, registration and public rendering helpers should use the
+   issued token with `cmsPublicRuntimeRequest`; direct core events such as
+   `getPublicSetting`, `getUserCount`, `listActiveLoginStrategies` and
+   `publicRegister` are internal module events, not HTTP contracts. All
+   admin/editor events must carry a validated admin token and should use
+   `cmsAdminApiRequest` rather than raw core events.
 
 ### React frontend checklist
 
@@ -102,8 +104,8 @@ their own React frontend against BlogposterCMS APIs. To harden the instance:
 ### Optional: embedding the envelope orchestrator in React
 
 The envelope orchestrator that powers the dashboard lives in
-`ui/runtime/envelope/` and remains exposed through compatibility
-URLs for older same-origin clients. A React client can reuse it to hydrate admin
+`ui/runtime/envelope/` and remains exposed through stable same-origin
+URLs. A React client can reuse it to hydrate admin
 pages:
 
 ```ts

@@ -1,15 +1,6 @@
 type DashboardActionsEmitter = Window['meltdownEmit'];
 
-// Keep dashboard event contracts here so DOM handlers stay focused on UI flow.
-const PAGES_MANAGER_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
-
-const PLAINSPACE_MODULE = {
-  moduleName: 'plainspace',
-  moduleType: 'core'
-} as const;
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 
 function requireEmitter(emit: DashboardActionsEmitter): NonNullable<DashboardActionsEmitter> {
   if (typeof emit !== 'function') {
@@ -29,9 +20,7 @@ export async function createPublicPage(
   slug: string
 ): Promise<string | number | null> {
   const meltdownEmit = requireEmitter(emit);
-  const result = await meltdownEmit('createPage', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  const result = await emitRuntimeAdmin<{ pageId?: string | number }>(meltdownEmit, jwt, 'pages', 'create', {
     title,
     slug,
     lane: 'public',
@@ -49,9 +38,7 @@ export async function savePublicLayoutTemplate(
   layoutName: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('saveLayoutTemplate', {
-    jwt,
-    ...PLAINSPACE_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'saveLayoutTemplate', {
     name: layoutName.trim(),
     lane: 'public',
     viewport: 'desktop',

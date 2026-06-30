@@ -100,19 +100,20 @@ function makeStaticRealpathGuard(rootPath, label) {
 }
 
 function mountModulePublicLoaderRoutes(app, { rootDir, modulePublicLoaderRoot }) {
-  const modulePublicLoaderTsPaths = {
+  const corePublicLoaderPaths = {
+    designerManager: path.join(rootDir, 'mother', 'modules', 'designerManager', 'publicLoader.ts'),
     pagesManager: path.join(rootDir, 'mother', 'modules', 'pagesManager', 'publicLoader.ts'),
     widgetManager: path.join(rootDir, 'mother', 'modules', 'widgetManager', 'publicLoader.ts')
   };
 
-  Object.entries(modulePublicLoaderTsPaths).forEach(([moduleName, loaderTsPath]) => {
+  Object.entries(corePublicLoaderPaths).forEach(([moduleName, loaderPath]) => {
     app.get(
       `/mother/modules/${moduleName}/publicLoader.js`,
-      makeFixedTsHandler(loaderTsPath)
+      makeFixedTsHandler(loaderPath)
     );
     app.head(
       `/mother/modules/${moduleName}/publicLoader.js`,
-      makeFixedTsHandler(loaderTsPath)
+      makeFixedTsHandler(loaderPath)
     );
   });
 

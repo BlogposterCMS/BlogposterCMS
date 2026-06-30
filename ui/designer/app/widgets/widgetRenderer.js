@@ -1,18 +1,16 @@
 import { addHitLayer, executeJs } from '../utils.js';
 import { registerElement } from '../editor/editor.js';
+import { emitAdminFacade } from '../runtime/runtimeFacade.js';
+import { normalizeWidgetApiActions } from '../../../widgets/rendering/widgetEvents.js';
 
 async function registerWidgetEvents(widgetDef) {
-  const raw = widgetDef?.metadata?.apiEvents;
-  if (!raw || typeof window.meltdownEmit !== 'function') return;
-  const list = Array.isArray(raw) ? raw : [raw];
-  const events = list.filter(
-    ev => typeof ev === 'string' && /^[\w.:-]{1,64}$/.test(ev)
-  );
-  if (!events.length) return;
+  if (typeof window.meltdownEmit !== 'function') return;
+  const actions = normalizeWidgetApiActions(widgetDef?.metadata || {});
+  if (!actions.length) return;
   const jwt = window.ADMIN_TOKEN || window.PUBLIC_TOKEN;
   if (!jwt) return;
   try {
-    await window.meltdownEmit('registerWidgetUsage', { jwt, events });
+    await emitAdminFacade(window.meltdownEmit, 'widgets', 'registerUsage', { actions });
   } catch (err) {
     console.warn('[Designer] registerWidgetUsage failed for', widgetDef.id, err);
   }

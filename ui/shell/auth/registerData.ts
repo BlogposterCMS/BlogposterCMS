@@ -4,6 +4,9 @@ import {
   publicSettingEnabled,
   type ShellPublicClient
 } from '../data/publicMeltdownClient.js';
+import {
+  runtimePublicPayload
+} from '../../shared/api-client/runtimeFacade.js';
 
 export type RegistrationRole = 'admin' | 'standard';
 
@@ -49,12 +52,9 @@ export async function registerPublicUser(
   input: PublicRegistrationInput
 ): Promise<void> {
   const publicToken = await issueShellPublicToken(client, 'registration');
-  await client.emit('publicRegister', {
-    jwt: publicToken,
-    moduleName: 'userManagement',
-    moduleType: 'core',
+  await client.emit('cmsPublicRuntimeRequest', runtimePublicPayload(String(publicToken || ''), 'users', 'register', {
     username: input.username,
     password: input.password,
     role: input.role
-  });
+  }));
 }

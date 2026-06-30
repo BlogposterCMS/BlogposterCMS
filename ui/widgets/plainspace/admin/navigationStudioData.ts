@@ -4,6 +4,7 @@ import {
   fetchDesignerLayouts,
   sortDesignsByRecent
 } from './designerLayoutsData.js';
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
 
 export type NavigationStudioEmitter = Window['meltdownEmit'];
 
@@ -110,21 +111,6 @@ interface DraftDesignRecord {
   isDraft: boolean;
   meta: { surface: string };
 }
-
-const NAVIGATION_MODULE = {
-  moduleName: 'navigationManager',
-  moduleType: 'core'
-} as const;
-
-const PAGES_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
-
-const DESIGNER_MODULE = {
-  moduleName: 'designer',
-  moduleType: 'community'
-} as const;
 
 export const NAVIGATION_STUDIO_MAX_DEPTH = 3;
 
@@ -466,10 +452,7 @@ export async function fetchNavigationLocations(
   jwt: string | null | undefined
 ): Promise<NavigationLocation[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('listNavigationLocations', {
-    jwt,
-    ...NAVIGATION_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'locations');
   return toNavigationLocations(res);
 }
 
@@ -478,10 +461,7 @@ export async function fetchNavigationMenus(
   jwt: string | null | undefined
 ): Promise<NavigationMenu[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('listNavigationMenus', {
-    jwt,
-    ...NAVIGATION_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'menus');
   return toNavigationMenus(res);
 }
 
@@ -491,11 +471,7 @@ export async function fetchNavigationTree(
   menu: NavigationMenu
 ): Promise<NavigationMenuItem[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getNavigationTree', {
-    jwt,
-    ...NAVIGATION_MODULE,
-    ...navigationMenuRef(menu)
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'tree', navigationMenuRef(menu));
   return toNavigationItems(res);
 }
 
@@ -504,11 +480,7 @@ export async function fetchPublicPages(
   jwt: string | null | undefined
 ): Promise<PageRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getPagesByLane', {
-    jwt,
-    ...PAGES_MODULE,
-    lane: 'public'
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane: 'public' });
   return toPages(res);
 }
 
@@ -525,9 +497,7 @@ export async function registerNavigationLocation(
   location: NavigationLocation
 ): Promise<unknown> {
   const meltdownEmit = requireEmitter(emit);
-  return meltdownEmit('registerNavigationLocation', {
-    jwt,
-    ...NAVIGATION_MODULE,
+  return emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'registerLocation', {
     key: location.key,
     label: location.label || location.key,
     description: location.description || ''
@@ -540,9 +510,7 @@ export async function upsertNavigationMenu(
   menu: NavigationMenu
 ): Promise<NavigationMenu> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('upsertNavigationMenu', {
-    jwt,
-    ...NAVIGATION_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'upsertMenu', {
     key: menuKey(menu),
     label: menu.label || menuKey(menu),
     description: menu.description || '',
@@ -558,9 +526,7 @@ export async function addNavigationItem(
   item: NavigationMenuItem
 ): Promise<NavigationMenuItem> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('addNavigationMenuItem', {
-    jwt,
-    ...NAVIGATION_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'addItem', {
     ...navigationMenuRef(menu),
     ...navigationItemPayload(item)
   });
@@ -574,11 +540,7 @@ export async function updateNavigationItem(
   patch: Partial<NavigationMenuItem>
 ): Promise<NavigationMenuItem> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('updateNavigationMenuItem', {
-    jwt,
-    ...NAVIGATION_MODULE,
-    ...navigationItemPayload(item, patch)
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'updateItem', navigationItemPayload(item, patch));
   return toNavigationItems([res])[0] || (res as NavigationMenuItem);
 }
 
@@ -588,11 +550,7 @@ export async function deleteNavigationItem(
   item: NavigationMenuItem
 ): Promise<unknown> {
   const meltdownEmit = requireEmitter(emit);
-  return meltdownEmit('deleteNavigationMenuItem', {
-    jwt,
-    ...NAVIGATION_MODULE,
-    itemId: itemId(item)
-  });
+  return emitRuntimeAdmin(meltdownEmit, jwt, 'navigation', 'deleteItem', { itemId: itemId(item) });
 }
 
 export async function ensureNavigationStudioDefaults(
@@ -686,9 +644,7 @@ export async function createMegaMenuDesign(
 ): Promise<string | number | null> {
   const meltdownEmit = requireEmitter(emit);
   const design = buildMegaDraftDesignRecord(ownerId, title);
-  const res = await meltdownEmit('designer.saveDesign', {
-    jwt,
-    ...DESIGNER_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'save', {
     design,
     widgets: [],
     layout: null

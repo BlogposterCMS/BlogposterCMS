@@ -1,11 +1,4 @@
-const PAGES_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
-const PLAINSPACE_MODULE = {
-    moduleName: 'plainspace',
-    moduleType: 'core'
-};
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../../../shared/api-client/runtimeFacade.js';
 // Keep page-manager and layout-template event payloads outside the DOM widget.
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
@@ -44,9 +37,7 @@ export function buildPageUpdatePayload(jwt, page, values) {
     const publishAt = values.publishAt || '';
     const layoutName = values.layoutName || '';
     const seoImage = values.seoImage.trim() || '';
-    return {
-        jwt,
-        ...PAGES_MODULE,
+    return runtimeAdminPayload(jwt, 'pages', 'update', {
         pageId: page.id,
         slug,
         status,
@@ -70,24 +61,23 @@ export function buildPageUpdatePayload(jwt, page, values) {
             publish_at: publishAt,
             layoutTemplate: layoutName
         }
-    };
+    });
 }
 export function clearPageEditorCache(pageDataLoader, page) {
-    pageDataLoader?.clear?.('getPageById', {
-        ...PAGES_MODULE,
-        pageId: page.id
+    pageDataLoader?.clear?.('cmsAdminApiRequest', {
+        moduleName: 'runtimeManager',
+        moduleType: 'core',
+        resource: 'pages',
+        action: 'get',
+        params: { pageId: page.id }
     });
 }
 export async function fetchPageEditorTemplates(emit, jwt, lane) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getLayoutTemplateNames', {
-        jwt,
-        ...PLAINSPACE_MODULE,
-        lane
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'layoutTemplateNames', { lane });
     return visibleTemplates(res);
 }
 export async function savePageEditorPage(emit, jwt, page, values) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('updatePage', buildPageUpdatePayload(jwt, page, values));
+    await meltdownEmit('cmsAdminApiRequest', buildPageUpdatePayload(jwt, page, values));
 }

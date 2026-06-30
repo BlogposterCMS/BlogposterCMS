@@ -36,7 +36,7 @@ describe('mediaExplorerData', () => {
     expect(errorMessage('nope')).toBe('nope');
   });
 
-  it('lists media folders through the media manager', async () => {
+  it('lists media folders through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({
       folders: ['images'],
       files: ['logo.png'],
@@ -50,17 +50,19 @@ describe('mediaExplorerData', () => {
       parentPath: '',
       currentPath: 'uploads'
     });
-    expect(emit).toHaveBeenCalledWith('listLocalFolder', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      subPath: 'uploads'
+      resource: 'media',
+      action: 'listLocalFolder',
+      params: { subPath: 'uploads' }
     });
   });
 
-  it('creates media folders and share links through explicit events', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'createShareLink'
+  it('creates media folders and share links through the runtime admin facade', async () => {
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'shares.create'
         ? { shareURL: 'https://share.example/logo.png' }
         : undefined
     ));
@@ -69,41 +71,55 @@ describe('mediaExplorerData', () => {
     await expect(createMediaShareLink(emit, 'admin-token', 'uploads/logo.png'))
       .resolves.toBe('https://share.example/logo.png');
 
-    expect(emit).toHaveBeenCalledWith('createLocalFolder', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      currentPath: 'uploads',
-      newFolderName: 'images'
+      resource: 'media',
+      action: 'createLocalFolder',
+      params: {
+        currentPath: 'uploads',
+        newFolderName: 'images'
+      }
     });
-    expect(emit).toHaveBeenCalledWith('createShareLink', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'shareManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      filePath: 'uploads/logo.png'
+      resource: 'shares',
+      action: 'create',
+      params: { filePath: 'uploads/logo.png' }
     });
   });
 
-  it('renames and deletes media items through explicit media manager events', async () => {
+  it('renames and deletes media items through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await renameMediaItem(emit, 'admin-token', 'uploads', 'old.png', 'new.png');
     await deleteMediaItem(emit, 'admin-token', 'uploads', 'new.png');
 
-    expect(emit).toHaveBeenCalledWith('renameLocalItem', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      currentPath: 'uploads',
-      oldName: 'old.png',
-      newName: 'new.png'
+      resource: 'media',
+      action: 'renameLocalItem',
+      params: {
+        currentPath: 'uploads',
+        oldName: 'old.png',
+        newName: 'new.png'
+      }
     });
-    expect(emit).toHaveBeenCalledWith('deleteLocalItem', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      currentPath: 'uploads',
-      itemName: 'new.png'
+      resource: 'media',
+      action: 'deleteLocalItem',
+      params: {
+        currentPath: 'uploads',
+        itemName: 'new.png'
+      }
     });
   });
 

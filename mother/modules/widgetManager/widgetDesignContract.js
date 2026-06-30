@@ -4,7 +4,6 @@ const path = require('path');
 const WIDGET_DESIGN_CONTRACT_VERSION = 1;
 const STRICT_WIDGET_SOURCE_PREFIX = '/ui/widgets/plainspace/';
 const COMMUNITY_WIDGET_SOURCE_PREFIX = '/widgets/';
-const LEGACY_WIDGET_SOURCE_PREFIX = '/plainspace/widgets/';
 const SCRIPT_EXTENSIONS = new Set(['.js', '.mjs', '.cjs']);
 
 const ISSUE = Object.freeze({
@@ -230,7 +229,6 @@ module.exports = {
   WIDGET_DESIGN_CONTRACT_VERSION,
   STRICT_WIDGET_SOURCE_PREFIX,
   COMMUNITY_WIDGET_SOURCE_PREFIX,
-  LEGACY_WIDGET_SOURCE_PREFIX,
   extractWidgetContent,
   formatWidgetDesignContractIssues,
   resolveWidgetDesignPolicy,

@@ -3,6 +3,8 @@ export interface PageRecord {
   [key: string]: unknown;
 }
 
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../../../shared/api-client/runtimeFacade.js';
+
 interface PageListPayload {
   data?: unknown[];
 }
@@ -15,11 +17,6 @@ export interface PageStatsSummary {
 }
 
 type PageStatsEmitter = Window['meltdownEmit'];
-
-const PAGES_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
 
 function requireEmitter(emit: PageStatsEmitter): NonNullable<PageStatsEmitter> {
   if (typeof emit !== 'function') {
@@ -52,11 +49,7 @@ export function buildPageLanePayload(
   jwt: string | null | undefined,
   lane: 'public' | 'admin'
 ): Record<string, unknown> {
-  return {
-    jwt,
-    ...PAGES_MODULE,
-    lane
-  };
+  return runtimeAdminPayload(jwt, 'pages', 'byLane', { lane });
 }
 
 export function summarizePageStats(
@@ -77,7 +70,7 @@ export async function fetchPagesByLane(
   lane: 'public' | 'admin'
 ): Promise<PageRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getPagesByLane', buildPageLanePayload(jwt, lane));
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane });
   return toPages(res);
 }
 

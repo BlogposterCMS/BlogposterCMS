@@ -28,8 +28,8 @@ describe('fontsListData', () => {
   });
 
   it('fetches providers and the Google Fonts key', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'listFontProviders'
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'fonts.listProviders'
         ? { data: [{ name: 'googleFonts', isEnabled: false }] }
         : '  AIza-key  '
     ));
@@ -38,16 +38,21 @@ describe('fontsListData', () => {
       { name: 'googleFonts', isEnabled: false }
     ]);
     await expect(fetchGoogleFontsKey(emit, 'admin-token')).resolves.toBe('AIza-key');
-    expect(emit).toHaveBeenCalledWith('listFontProviders', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'fontsManager',
-      moduleType: 'core'
-    });
-    expect(emit).toHaveBeenCalledWith('getSetting', {
-      jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GOOGLE_FONTS_API_KEY'
+      resource: 'fonts',
+      action: 'listProviders',
+      params: {}
+    });
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'GOOGLE_FONTS_API_KEY' }
     });
   });
 
@@ -58,8 +63,8 @@ describe('fontsListData', () => {
   });
 
   it('fetches the full font provider state', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'listFontProviders'
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'fonts.listProviders'
         ? { data: [{ name: 'localFonts', isEnabled: true }] }
         : 'key'
     ));
@@ -76,19 +81,27 @@ describe('fontsListData', () => {
     await setFontProviderEnabled(emit, 'admin-token', 'googleFonts', true);
     await expect(saveGoogleFontsKey(emit, 'admin-token', '  next-key  ')).resolves.toBe('next-key');
 
-    expect(emit).toHaveBeenCalledWith('setFontProviderEnabled', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'fontsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      providerName: 'googleFonts',
-      enabled: true
+      resource: 'fonts',
+      action: 'setProviderEnabled',
+      params: {
+        providerName: 'googleFonts',
+        enabled: true
+      }
     });
-    expect(emit).toHaveBeenCalledWith('setSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GOOGLE_FONTS_API_KEY',
-      value: 'next-key'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'GOOGLE_FONTS_API_KEY',
+        value: 'next-key'
+      }
     });
   });
 
@@ -98,26 +111,38 @@ describe('fontsListData', () => {
     await refreshFontProviderCatalog(emit, 'admin-token', 'googleFonts', true);
     await refreshFontProviderCatalog(emit, 'admin-token', 'localFonts', false);
 
-    expect(emit).toHaveBeenNthCalledWith(1, 'setFontProviderEnabled', {
+    expect(emit).toHaveBeenNthCalledWith(1, 'cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'fontsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      providerName: 'googleFonts',
-      enabled: false
+      resource: 'fonts',
+      action: 'setProviderEnabled',
+      params: {
+        providerName: 'googleFonts',
+        enabled: false
+      }
     });
-    expect(emit).toHaveBeenNthCalledWith(2, 'setFontProviderEnabled', {
+    expect(emit).toHaveBeenNthCalledWith(2, 'cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'fontsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      providerName: 'googleFonts',
-      enabled: true
+      resource: 'fonts',
+      action: 'setProviderEnabled',
+      params: {
+        providerName: 'googleFonts',
+        enabled: true
+      }
     });
-    expect(emit).toHaveBeenNthCalledWith(3, 'setFontProviderEnabled', {
+    expect(emit).toHaveBeenNthCalledWith(3, 'cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'fontsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      providerName: 'localFonts',
-      enabled: true
+      resource: 'fonts',
+      action: 'setProviderEnabled',
+      params: {
+        providerName: 'localFonts',
+        enabled: true
+      }
     });
   });
 });

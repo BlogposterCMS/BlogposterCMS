@@ -1,16 +1,18 @@
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../shared/api-client/runtimeFacade.js';
+
 type TopHeaderEmitter = Window['meltdownEmit'];
 
 // SettingsManager payloads stay in this data helper so the header UI only
 // coordinates controls and visible state.
 const MAINTENANCE_SETTING = {
-  moduleName: 'settingsManager',
-  moduleType: 'core',
+  resource: 'settings',
+  action: 'get',
   key: 'MAINTENANCE_MODE'
 } as const;
 
 const PROJECT_NAME_SETTING = {
-  moduleName: 'settingsManager',
-  moduleType: 'core',
+  resource: 'settings',
+  action: 'get',
   key: 'SITE_TITLE'
 } as const;
 
@@ -46,11 +48,12 @@ function buildSettingPayload(
   jwt: string | null | undefined,
   extra: Record<string, unknown> = {}
 ): Record<string, unknown> {
-  const payload: Record<string, unknown> = { ...setting };
-  if (jwt) {
-    payload.jwt = jwt;
-  }
-  return Object.assign(payload, extra);
+  return runtimeAdminPayload(
+    jwt,
+    setting.resource,
+    String(extra.value === undefined ? 'get' : 'set'),
+    { key: setting.key, ...extra }
+  );
 }
 
 export function parseMaintenanceValue(value: unknown): boolean {
@@ -84,7 +87,7 @@ export async function fetchMaintenanceMode(
   jwt: string | null | undefined
 ): Promise<boolean> {
   const meltdownEmit = requireEmitter(emit);
-  const value = await meltdownEmit('getSetting', buildMaintenanceSettingPayload(jwt));
+  const value = await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'MAINTENANCE_MODE' });
   return parseMaintenanceValue(value);
 }
 
@@ -93,7 +96,7 @@ export async function fetchProjectName(
   jwt: string | null | undefined
 ): Promise<string> {
   const meltdownEmit = requireEmitter(emit);
-  const value = await meltdownEmit('getSetting', buildProjectNameSettingPayload(jwt));
+  const value = await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'SITE_TITLE' });
   return parseSettingText(value);
 }
 
@@ -102,5 +105,5 @@ export async function disableMaintenanceMode(
   jwt: string | null | undefined
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('setSetting', buildMaintenanceSettingPayload(jwt, { value: 'false' }));
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'set', { key: 'MAINTENANCE_MODE', value: 'false' });
 }

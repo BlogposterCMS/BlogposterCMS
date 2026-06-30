@@ -1,5 +1,5 @@
-const MODULE_LOADER_MODULE = {
-    moduleName: 'moduleLoader',
+const RUNTIME_MANAGER_MODULE = {
+    moduleName: 'runtimeManager',
     moduleType: 'core'
 };
 function requireEmitter(emit) {
@@ -7,6 +7,29 @@ function requireEmitter(emit) {
         throw new Error('MODULE_ACCESS_CONSENT_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
     }
     return emit;
+}
+function objectParams(value = {}) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+function unwrapRuntimeFacadeData(value) {
+    if (value &&
+        typeof value === 'object' &&
+        'resource' in value &&
+        'action' in value &&
+        'data' in value) {
+        return value.data;
+    }
+    return value;
+}
+async function emitRuntimeAdmin(emit, jwt, resource, action, params = {}) {
+    const result = await emit('cmsAdminApiRequest', {
+        jwt,
+        ...RUNTIME_MANAGER_MODULE,
+        resource,
+        action,
+        params: objectParams(params)
+    });
+    return unwrapRuntimeFacadeData(result);
 }
 function toArray(value) {
     if (Array.isArray(value))
@@ -25,20 +48,15 @@ export function moduleAccessErrorMessage(err) {
 }
 export async function fetchPendingModuleAccessRequests(emit, jwt, targetModuleName) {
     const meltdownEmit = requireEmitter(emit);
-    const payload = {
-        jwt,
-        ...MODULE_LOADER_MODULE
-    };
+    const payload = {};
     if (targetModuleName)
         payload.targetModuleName = targetModuleName;
-    const res = await meltdownEmit('listPendingModuleAccessRequests', payload);
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'accessRequests', payload);
     return toModuleAccessRuntimeRequests(res);
 }
 export async function resolveModuleAccessRequest(emit, jwt, requestId, decision, mode = 'once') {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('resolveModuleAccessRequest', {
-        jwt,
-        ...MODULE_LOADER_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'resolveAccessRequest', {
         requestId,
         decision,
         mode

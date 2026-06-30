@@ -95,7 +95,7 @@ describe('appFrameLoader postMessage security', () => {
     window.meltdownEmit.mockResolvedValueOnce({ data: { id: 'design-1' } });
     const bridgeEvent = new window.MessageEvent('message', {
       data: {
-        type: 'cms-app-meltdown-request',
+        type: 'cms-app-runtime-request',
         requestId: 17,
         eventName: 'designer.getDesign',
         payload: { id: 'design-1' }
@@ -111,14 +111,14 @@ describe('appFrameLoader postMessage security', () => {
       moduleName: 'appLoader',
       moduleType: 'core',
       appName: 'designer',
-      event: 'cms-meltdown-request',
+      event: 'cms-app-runtime-request',
       data: {
         eventName: 'designer.getDesign',
         payload: { id: 'design-1' }
       }
     }));
     expect(frame.contentWindow.postMessage).toHaveBeenCalledWith({
-      type: 'cms-app-meltdown-response',
+      type: 'cms-app-runtime-response',
       requestId: 17,
       ok: true,
       data: { id: 'design-1' }

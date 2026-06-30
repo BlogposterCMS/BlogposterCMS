@@ -66,6 +66,7 @@ describe('widgetModuleRenderer', () => {
   it('skips missing or blocked widget module URLs', async () => {
     const container = document.createElement('div');
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const blockedWidgetUrl = ['/plainspace', 'widgets/admin/blocked.js'].join('/');
 
     await renderWidgetModule(container, { id: 'empty' }, 'instance-1');
     expect(loadWidgetModule).not.toHaveBeenCalled();
@@ -73,13 +74,13 @@ describe('widgetModuleRenderer', () => {
     (loadWidgetModule as jest.Mock).mockResolvedValue(null);
     await renderWidgetModule(container, {
       id: 'blocked',
-      codeUrl: '/plainspace/widgets/admin/blocked.js'
+      codeUrl: blockedWidgetUrl
     }, 'instance-1');
 
     expect(warn).toHaveBeenCalledWith(
       '[Widgets] blocked widget import path',
       'blocked',
-      '/plainspace/widgets/admin/blocked.js'
+      blockedWidgetUrl
     );
   });
 

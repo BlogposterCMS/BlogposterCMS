@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
+
 export interface SearchPage {
   id: string | number;
   slug?: string;
@@ -52,10 +54,7 @@ export async function fetchAdminSearchPages(
   limit = 10
 ): Promise<SearchPage[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('searchPages', {
-    jwt,
-    moduleName: 'pagesManager',
-    moduleType: 'core',
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'search', {
     query,
     lane: 'all',
     limit

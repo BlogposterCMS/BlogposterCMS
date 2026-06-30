@@ -32,6 +32,6 @@ groups. Do not create arbitrary permission names in the user form. Core
 permissions are seeded by `getAllPermissions`, and community modules may add
 only module-owned names such as `shopSync.sync`.
 
-Wildcards such as `*` and legacy admin bypass keys are intentionally not
+Wildcards such as `*` and retired admin bypass keys are intentionally not
 assignable as direct user rights. Use a reviewed admin group for broad
 administrator access.

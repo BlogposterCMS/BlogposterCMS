@@ -43,7 +43,9 @@ The Auth Module validates credentials and issues JWTs for the rest of the system
 
 All payloads must include a valid JWT and the correct `moduleName`/`moduleType`. Invalid calls are rejected. Login strategy administration is permission-gated:
 
-- `listActiveLoginStrategies` is read-only discovery for the login screen.
+- `listActiveLoginStrategies` is read-only discovery for the login screen;
+  browser callers use `runtimeManager.cmsPublicRuntimeRequest` resource `auth`,
+  action `activeLoginStrategies` rather than calling this event directly.
 - `listLoginStrategies` requires `auth.strategies.view` or `auth.strategies.manage`;
   browser/admin callers should reach it through
   `runtimeManager.cmsAdminApiRequest` resource `auth`, action
@@ -51,8 +53,9 @@ All payloads must include a valid JWT and the correct `moduleName`/`moduleType`.
 - `setLoginStrategyEnabled` requires `auth.strategies.manage`.
 - `registerLoginStrategy` is reserved for boot-time strategy registration with `AUTH_MODULE_INTERNAL_SECRET`.
 - `loginWithStrategy` accepts either scoped Auth core payloads or verified
-  public tokens with `purpose: "login"`. `skipJWT` alone is not a login
-  bypass.
+  public tokens with `purpose: "login"`. The HTTP login route calls it
+  server-side; browsers should not call it through `/api/meltdown`. `skipJWT`
+  alone is not a login bypass.
 - `issueModuleToken` and `issueUserToken` are internal Auth contracts only:
   callers must use `moduleName: "auth"`, `moduleType: "core"`,
   `skipJWT: true`, and `AUTH_MODULE_INTERNAL_SECRET`. A normal module,

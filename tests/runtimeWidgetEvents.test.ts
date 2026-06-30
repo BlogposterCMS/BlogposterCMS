@@ -43,7 +43,7 @@ describe('runtimeWidgetEvents', () => {
     ]);
   });
 
-  it('registers sanitized widget API events with lane auth', async () => {
+  it('registers sanitized widget API actions with lane auth', async () => {
     window.ADMIN_TOKEN = 'admin-token';
     window.meltdownEmit = jest.fn().mockResolvedValue(undefined);
 
@@ -51,31 +51,45 @@ describe('runtimeWidgetEvents', () => {
       {
         id: 'hero',
         metadata: {
-          apiEvents: ['content.viewed', 'bad event', 'a'.repeat(65), 'widget:save']
+          apiActions: [
+            { resource: 'content', action: 'list' },
+            { resource: 'bad event', action: 'list' },
+            { resource: 'content', action: 'a'.repeat(65) },
+            { resource: 'widgets', action: 'registerUsage' }
+          ]
         }
       },
       'admin'
     );
 
-    expect(window.meltdownEmit).toHaveBeenCalledWith('registerWidgetUsage', {
+    expect(window.meltdownEmit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      events: ['content.viewed', 'widget:save']
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'widgets',
+      action: 'registerUsage',
+      params: {
+        actions: [
+          { resource: 'content', action: 'list' },
+          { resource: 'widgets', action: 'registerUsage' }
+        ]
+      }
     });
   });
 
-  it('skips widget API registration without a token or valid event names', async () => {
+  it('skips widget API registration without a token or valid actions', async () => {
     window.PUBLIC_TOKEN = 'public-token';
     window.meltdownEmit = jest.fn().mockResolvedValue(undefined);
 
     await registerRuntimeWidgetEvents(
-      { id: 'empty', metadata: { apiEvents: ['bad event'] } },
+      { id: 'empty', metadata: { apiActions: [{ resource: 'bad event', action: 'list' }] } },
       'public'
     );
     expect(window.meltdownEmit).not.toHaveBeenCalled();
 
     delete window.PUBLIC_TOKEN;
     await registerRuntimeWidgetEvents(
-      { id: 'valid', metadata: { apiEvents: ['content.viewed'] } },
+      { id: 'valid', metadata: { apiActions: [{ resource: 'content', action: 'list' }] } },
       'public'
     );
     expect(window.meltdownEmit).not.toHaveBeenCalled();

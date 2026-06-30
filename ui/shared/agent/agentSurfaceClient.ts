@@ -135,6 +135,7 @@ export interface AgentSurfaceSnapshotPayload {
   controls?: readonly unknown[];
   actions?: readonly unknown[];
   visual?: unknown;
+  feedback?: Record<string, unknown>;
   metrics?: Record<string, unknown>;
   meta?: Record<string, unknown>;
 }

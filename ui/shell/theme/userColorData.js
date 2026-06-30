@@ -1,3 +1,4 @@
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('SHELL_USER_COLOR_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -24,20 +25,6 @@ export async function fetchUserColor(emit, jwt) {
     if (!jwt)
         return null;
     const meltdownEmit = requireEmitter(emit);
-    const decoded = await meltdownEmit('validateToken', {
-        moduleName: 'auth',
-        moduleType: 'core',
-        jwt,
-        tokenToValidate: jwt
-    });
-    const userId = userIdFromTokenResult(decoded);
-    if (!userId)
-        return null;
-    const res = await meltdownEmit('getUserDetailsById', {
-        moduleName: 'userManagement',
-        moduleType: 'core',
-        userId,
-        jwt
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'me');
     return uiColorFromUserDetails(res);
 }

@@ -61,9 +61,9 @@ describe('modulesListData', () => {
     expect(() => zipDataFromDataUrl('bad')).toThrow('PLAINSPACE_MODULES_ZIP_DATA_UNAVAILABLE');
   });
 
-  it('fetches installed and system module lists through meltdown', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'getModuleRegistry'
+  it('fetches installed and system module lists through the runtime admin facade', async () => {
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'modules.registry'
         ? { data: [{ module_name: 'installed' }] }
         : [{ module_name: 'system' }]
     ));
@@ -72,68 +72,84 @@ describe('modulesListData', () => {
       installed: [{ module_name: 'installed' }],
       system: [{ module_name: 'system' }]
     });
-    expect(emit).toHaveBeenCalledWith('getModuleRegistry', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'modules',
+      action: 'registry',
+      params: {}
     });
-    expect(emit).toHaveBeenCalledWith('listSystemModules', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
-      moduleType: 'core'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'modules',
+      action: 'system',
+      params: {}
     });
   });
 
-  it('toggles module activation through the registry events', async () => {
+  it('toggles module activation through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await expect(toggleModuleRegistryActivation(emit, 'admin-token', {
       module_name: 'comments',
       is_active: false
     })).resolves.toBe(true);
-    expect(emit).toHaveBeenCalledWith('activateModuleInRegistry', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      targetModuleName: 'comments'
+      resource: 'modules',
+      action: 'activate',
+      params: { targetModuleName: 'comments' }
     });
 
     await expect(toggleModuleRegistryActivation(emit, 'admin-token', {
       module_name: 'comments',
       is_active: true
     })).resolves.toBe(false);
-    expect(emit).toHaveBeenCalledWith('deactivateModuleInRegistry', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      targetModuleName: 'comments'
+      resource: 'modules',
+      action: 'deactivate',
+      params: { targetModuleName: 'comments' }
     });
   });
 
-  it('installs uploaded module ZIP data through moduleLoader', async () => {
+  it('installs uploaded module ZIP data through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await inspectModuleZip(emit, 'admin-token', 'UEsDBAo=');
     await installModuleZip(emit, 'admin-token', 'UEsDBAo=', [{ event: 'listContentEntries' }]);
 
-    expect(emit).toHaveBeenCalledWith('inspectModuleZipAccess', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      zipData: 'UEsDBAo='
+      resource: 'modules',
+      action: 'inspectZip',
+      params: { zipData: 'UEsDBAo=' }
     });
-    expect(emit).toHaveBeenCalledWith('installModuleFromZip', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      zipData: 'UEsDBAo=',
-      approvedAccess: [{ event: 'listContentEntries' }]
+      resource: 'modules',
+      action: 'installZip',
+      params: {
+        zipData: 'UEsDBAo=',
+        approvedAccess: [{ event: 'listContentEntries' }]
+      }
     });
   });
 
   it('lists and resolves pending runtime module access requests', async () => {
-    const emit = jest.fn(async eventName => (
-      eventName === 'listPendingModuleAccessRequests'
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'modules.accessRequests'
         ? [{ id: 'req-1', moduleName: 'shopSync', event: 'deleteUser', resource: 'users', action: 'delete' }]
         : undefined
     ));
@@ -143,19 +159,25 @@ describe('modulesListData', () => {
     ]);
     await resolveModuleAccessRequest(emit, 'admin-token', 'req-1', 'approve', 'once');
 
-    expect(emit).toHaveBeenCalledWith('listPendingModuleAccessRequests', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      targetModuleName: 'shopSync'
+      resource: 'modules',
+      action: 'accessRequests',
+      params: { targetModuleName: 'shopSync' }
     });
-    expect(emit).toHaveBeenCalledWith('resolveModuleAccessRequest', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'moduleLoader',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      requestId: 'req-1',
-      decision: 'approve',
-      mode: 'once'
+      resource: 'modules',
+      action: 'resolveAccessRequest',
+      params: {
+        requestId: 'req-1',
+        decision: 'approve',
+        mode: 'once'
+      }
     });
   });
 

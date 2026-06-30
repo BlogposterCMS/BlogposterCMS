@@ -1,16 +1,40 @@
+import { runtimeAdminPayload, runtimePublicPayload } from '../../shared/api-client/runtimeFacade.js';
+const API_ACTION_PART_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+export function normalizeWidgetApiActions(metadata = {}) {
+    const raw = metadata.apiActions;
+    if (!Array.isArray(raw))
+        return [];
+    const seen = new Set();
+    return raw.reduce((actions, item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item))
+            return actions;
+        const resource = typeof item.resource === 'string' ? item.resource.trim() : '';
+        const action = typeof item.action === 'string' ? item.action.trim() : '';
+        if (!API_ACTION_PART_PATTERN.test(resource) || !API_ACTION_PART_PATTERN.test(action)) {
+            return actions;
+        }
+        const key = `${resource}:${action}`;
+        if (seen.has(key))
+            return actions;
+        seen.add(key);
+        actions.push({ resource, action });
+        return actions;
+    }, []);
+}
 export async function registerWidgetEvents(widgetDef) {
-    const raw = widgetDef.metadata?.apiEvents;
-    if (!raw || typeof window.meltdownEmit !== 'function')
+    if (typeof window.meltdownEmit !== 'function')
         return;
-    const list = Array.isArray(raw) ? raw : [raw];
-    const events = list.filter((eventName) => typeof eventName === 'string' && /^[\w.:-]{1,64}$/.test(eventName));
-    if (!events.length)
+    const actions = normalizeWidgetApiActions(widgetDef.metadata || {});
+    if (!actions.length)
         return;
-    const jwt = window.ADMIN_TOKEN || window.PUBLIC_TOKEN;
+    const isAdmin = Boolean(window.ADMIN_TOKEN);
+    const jwt = isAdmin ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
     if (!jwt)
         return;
     try {
-        await window.meltdownEmit('registerWidgetUsage', { jwt, events });
+        await window.meltdownEmit(isAdmin ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest', isAdmin
+            ? runtimeAdminPayload(jwt, 'widgets', 'registerUsage', { actions })
+            : runtimePublicPayload(jwt, 'widgets', 'registerUsage', { actions }));
     }
     catch (err) {
         console.warn('[Widgets] registerWidgetUsage failed for', widgetDef.id, err);

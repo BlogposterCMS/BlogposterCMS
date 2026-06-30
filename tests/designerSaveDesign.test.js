@@ -84,7 +84,7 @@ test('handleSaveDesignPlaceholder updates existing design by ID', async () => {
   const {
     handleSaveDesignPlaceholder,
     handleGetDesignPlaceholder
-  } = require('../modules/designer/dbPlaceholders');
+  } = require('../mother/modules/designerManager/dbPlaceholders');
 
   const sceneLayout = {
     type: 'leaf',

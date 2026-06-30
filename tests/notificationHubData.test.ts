@@ -13,15 +13,17 @@ describe('notificationHubData', () => {
     expect(notificationItems({ data: [] })).toEqual([]);
   });
 
-  it('fetches recent notifications through notificationManager', async () => {
+  it('fetches recent notifications through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue([{ message: 'One' }]);
 
     await expect(fetchRecentNotifications(emit, 'admin-token')).resolves.toEqual([{ message: 'One' }]);
-    expect(emit).toHaveBeenCalledWith('getRecentNotifications', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'notificationManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      limit: 5
+      resource: 'notifications',
+      action: 'recent',
+      params: { limit: 5 }
     });
   });
 

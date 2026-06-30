@@ -37,16 +37,16 @@ move to a cleaner content contract.
 - `trashContentEntry`
 - `restoreContentEntry`
 
-## Legacy Page Bridge
+## Page Projection Bridge
 
-`pagesManager` remains the legacy page facade for the current UI. Successful
+`pagesManager` remains the page projection facade for the current UI. Successful
 `createPage` and `updatePage` calls are mirrored into Content Engine as
 `page` entries with `sourceModule: "pagesManager"` and `sourceId` set to the
-legacy page id. The mirror is optional and fault tolerant: if Content Engine is
+source page id. The mirror is optional and fault tolerant: if Content Engine is
 not loaded or the mirror fails, the existing page event still completes.
 
 New backend features should prefer Content Engine events and only expose
-compatibility events where existing UI code still depends on `pagesManager`.
+page projection events where existing UI code still depends on `pagesManager`.
 
 ## Content Lifecycle
 

@@ -1,13 +1,13 @@
 "use strict";
 
 const path = require("path");
-const legacyDesignerService = require("../../../modules/designer");
+const designerService = require("./designerService");
 
 const MANAGER_NAME = "designerManager";
-const LEGACY_MODULE_NAME = "designer";
+const DESIGNER_RESOURCE_NAME = "designer";
 const MODULE_TYPE = "core";
 const VERSION = "0.1.0";
-const LEGACY_SERVICE_PATH = path.resolve(__dirname, "../../../modules/designer");
+const SERVICE_PATH = path.resolve(__dirname, "designerService.js");
 
 function assertCoreInitialize({ motherEmitter, isCore, jwt } = {}) {
   if (!isCore) {
@@ -26,8 +26,8 @@ function capabilities() {
     moduleName: MANAGER_NAME,
     moduleType: MODULE_TYPE,
     version: VERSION,
-    ownsLegacyModule: LEGACY_MODULE_NAME,
-    legacyServicePath: LEGACY_SERVICE_PATH,
+    ownsResource: DESIGNER_RESOURCE_NAME,
+    servicePath: SERVICE_PATH,
     events: [
       "designer.saveDesign",
       "designer.getDesign",
@@ -44,10 +44,9 @@ module.exports = {
 
     if (typeof motherEmitter.registerModuleType === "function") {
       motherEmitter.registerModuleType(MANAGER_NAME, MODULE_TYPE);
-      motherEmitter.registerModuleType(LEGACY_MODULE_NAME, MODULE_TYPE);
     }
 
-    await legacyDesignerService.initialize({
+    await designerService.initialize({
       motherEmitter,
       jwt,
       nonce,
@@ -55,19 +54,19 @@ module.exports = {
     });
 
     global.loadedModules = global.loadedModules || {};
-    global.loadedModules[LEGACY_MODULE_NAME] = legacyDesignerService;
+    global.loadedModules[MANAGER_NAME] = designerService;
   },
 
   _internals: {
     capabilities,
-    legacyServicePath: LEGACY_SERVICE_PATH,
+    servicePath: SERVICE_PATH,
     MANAGER_NAME,
-    LEGACY_MODULE_NAME,
+    DESIGNER_RESOURCE_NAME,
     MODULE_TYPE,
     VERSION
   },
   MANAGER_NAME,
-  LEGACY_MODULE_NAME,
+  DESIGNER_RESOURCE_NAME,
   MODULE_TYPE,
   VERSION
 };

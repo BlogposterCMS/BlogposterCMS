@@ -1,9 +1,5 @@
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 export const ADMIN_LANE = 'admin';
-// Keep workspace navigation page contracts here so rendering code stays UI-only.
-const PAGES_MANAGER_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('SHELL_WORKSPACES_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -31,18 +27,14 @@ export function toAdminPages(value) {
 }
 export async function fetchAdminPagesByLane(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const response = await meltdownEmit('getPagesByLane', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', {
         lane: ADMIN_LANE
     });
     return toAdminPages(response);
 }
 export async function fetchAdminPageBySlug(emit, jwt, slug) {
     const meltdownEmit = requireEmitter(emit);
-    const response = await meltdownEmit('getPageBySlug', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'getBySlug', {
         slug,
         lane: ADMIN_LANE
     });
@@ -50,9 +42,7 @@ export async function fetchAdminPageBySlug(emit, jwt, slug) {
 }
 export async function createWorkspacePage(emit, jwt, input) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('createPage', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'create', {
         title: input.title,
         slug: input.slug,
         lane: ADMIN_LANE,
@@ -63,9 +53,7 @@ export async function createWorkspacePage(emit, jwt, input) {
 }
 export async function createWorkspaceSubpage(emit, jwt, input) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('createPage', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'create', {
         title: input.title,
         slug: `${input.workspace}/${input.slug}`,
         lane: ADMIN_LANE,

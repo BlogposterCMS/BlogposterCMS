@@ -6,7 +6,7 @@ import {
 } from '../ui/shared/layout/layoutDocument';
 
 describe('shared layout document contract', () => {
-  it('normalizes legacy layout trees into explicit nodes', () => {
+  it('normalizes imported layout trees into explicit nodes', () => {
     expect(normalizeLayoutTree({
       orientation: 'horizontal',
       node_id: 10,

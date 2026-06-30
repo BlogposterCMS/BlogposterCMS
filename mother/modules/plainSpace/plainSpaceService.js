@@ -501,7 +501,7 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
  * @param {EventEmitter} motherEmitter
  * @param {string} jwt
  * @param {object} widgetData - { widgetId, widgetType, label, content, category }
- * @param {object} [layoutOpts] - legacy/non-layout defaults from module seeds
+ * @param {object} [layoutOpts] - non-layout defaults from module seeds
  */
 async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) {
   await checkOrCreateWidget(motherEmitter, jwt, widgetData);

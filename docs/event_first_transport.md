@@ -46,7 +46,7 @@ The architecture already supports the decision.
 - `motherEmitter` validates module identity, JWTs, trust level and internal
   system event markers before dispatch.
 - `meltdownHttpPolicy` blocks direct database/system events, strips payload auth
-  metadata and translates legacy browser event names to runtime facades.
+  metadata and exposes only direct facade contracts through `/api/meltdown`.
 - `runtimeManager` owns the admin `cmsAdminApiRequest` facade and the public
   read-only `cmsPublicRuntimeRequest` facade.
 - `appLoader` routes app iframe commands through Runtime Manager instead of
@@ -56,10 +56,10 @@ The architecture already supports the decision.
 - UI architecture docs already say browser code should use shared clients and
   typed contracts instead of knowing server module internals.
 
-The main gap is at the client edge. Several runtime, shell, widget and Designer
-helpers still know low-level event names and module payload fields. The server
-usually translates those names safely today, but new implementation work should
-move callers toward resource/action facade clients.
+The remaining gap is coverage and ergonomics. Active
+browser, app, widget and public runtime helpers should keep using shared
+resource/action facade clients; new low-level event names must be added behind
+Runtime Manager or AppLoader, not exposed directly through HTTP.
 
 ## Transport Classes
 
@@ -72,16 +72,13 @@ move callers toward resource/action facade clients.
 - Runtime Manager public HTTP routes for published public resources.
 - Auth, install and upload routes when they remain thin transport adapters.
 
-### Compatibility Only
+### Transitional Shell APIs
 
-- Legacy browser event names sent to `/api/meltdown` while older UI modules are
-  being migrated.
-- `window.meltdownEmit` and `window.meltdownEmitBatch` globals.
-- Core-owned app bridge compatibility for bundled internal apps such as
-  Designer.
-
-Compatibility paths should stay tested and translated, but new feature code
-should prefer resource/action facades.
+- `window.meltdownEmit` and `window.meltdownEmitBatch` remain the browser
+  transport functions, but callers should pass `cmsAdminApiRequest`,
+  `cmsPublicRuntimeRequest`, `dispatchAppEvent` or token bootstrap events.
+- Core-owned bundled apps such as Designer may use the AppLoader bridge, which
+  validates the app manifest and forwards only resource/action facade requests.
 
 ### Not Allowed For New Work
 
@@ -97,12 +94,13 @@ should prefer resource/action facades.
 
 ### Facade Map Drift
 
-`meltdownHttpPolicy` and `runtimeManager` both know about legacy event names and
-resource/action mappings. If one changes without the other, a browser caller can
-receive confusing errors or a policy can become broader than intended.
+`meltdownHttpPolicy` owns which facade events may cross HTTP, while
+`runtimeManager` owns the resource/action maps. If one changes without tests,
+a caller can receive confusing errors or the policy can become broader than
+intended.
 
-Mitigation: add a contract or test that keeps HTTP policy translation and
-Runtime Manager actions aligned before expanding the facade surface.
+Mitigation: keep policy tests, Runtime Manager facade tests and UI boundary
+tests together whenever expanding the facade surface.
 
 ### Oversized Runtime Manager
 
@@ -131,25 +129,22 @@ Mitigation: introduce a stable error shape with `code`, `message`, `status` and
 sanitized `details`, then require facade, HTTP and UI tests to preserve the
 code.
 
-### Stale REST Configuration
+### Removed Standalone REST Configuration
 
-`ENABLE_API` and `API_PORT` remain in the sample configuration, but no current
-server code mounts a separate REST API from those values.
-
-Mitigation: treat them as reserved legacy configuration until removed or
-reintroduced as an explicitly facade-backed API.
+The sample configuration exposes no standalone REST API flags. HTTP entry
+points are the facade-backed routes documented here, not a second API server.
 
 ## Implementation Plan
 
 ### Phase 1: Contract Inventory
 
 - Define one documented inventory of admin and public facade actions.
-- Add or extend tests so `meltdownHttpPolicy` legacy translation and
+- Add or extend tests so `meltdownHttpPolicy` direct facade allowlists and
   `runtimeManager` resource/action definitions cannot drift silently.
 - Classify all `/api/*` and `/admin/api/*` routes as adapter, public facade,
-  agent facade, auth/install/upload or compatibility.
-- Decide whether `ENABLE_API` and `API_PORT` should be removed or reintroduced
-  later as a facade-backed API.
+  agent facade or auth/install/upload.
+- Keep sample configuration limited to routes and limits the current server
+  actually reads.
 
 ### Phase 2: Shared Browser Facade Client
 
@@ -162,7 +157,7 @@ reintroduced as an explicitly facade-backed API.
 
 ### Phase 3: Public Runtime First
 
-- Move `ui/runtime/main/runtimePageData.ts` internals from legacy event names to
+- Keep `ui/runtime/main/runtimePageData.ts` and public loaders on
   `cmsPublicRuntimeRequest` and `cmsAdminApiRequest` shapes.
 - Keep current public rendering behavior and page/widget/layout normalization.
 - Add regression tests for public page reads, widget registry reads, public
@@ -173,8 +168,8 @@ reintroduced as an explicitly facade-backed API.
 - Add resource/action helpers to `pageDataLoader` and shell data modules.
 - Expose a first-class app bridge API such as
   `blogposterApi.request({ resource, action, params })`.
-- Keep `window.meltdownEmit` only as compatibility for old code and bundled
-  core-owned app bridges.
+- Keep `window.meltdownEmit` as the low-level browser transport, but avoid raw
+  core event names in Shell and bundled app code.
 
 ### Phase 5: Designer And Widgets
 
@@ -196,7 +191,7 @@ reintroduced as an explicitly facade-backed API.
 
 Every meaningful implementation phase should update or add focused tests:
 
-- `tests/meltdownHttpPolicy.test.js` for HTTP translation and raw event
+- `tests/meltdownHttpPolicy.test.js` for direct facade allowlists and raw event
   rejection.
 - `tests/runtimeManager.test.js` for admin/public facade allowlists,
   permissions and app-origin limits.
@@ -212,8 +207,7 @@ Every meaningful implementation phase should update or add focused tests:
 Start with Phase 1 and Phase 2. Do not start by adding new REST routes or
 rewriting module events.
 
-The safest first code change is a shared browser facade client layered on top
-of the existing `meltdownClient`, plus tests that prove the old legacy event
-translation and new resource/action calls resolve to the same Runtime Manager
-contracts. After that, migrate Public Runtime data helpers before touching the
-larger Designer surface.
+The first facade client and public runtime migration are in place. The next
+safest change is to keep migrating any newly touched browser helper to the
+shared facade utilities, then split Runtime Manager maps by domain once the
+error shape and action inventory are stable.

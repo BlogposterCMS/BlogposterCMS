@@ -9,6 +9,19 @@ script execution, belong in `ui/shared`; reusable widget behavior belongs in
 
 Runtime code should keep concrete dynamic edges behind small gateways:
 
+- Browser-side public runtime loaders must read core data through
+  `cmsPublicRuntimeRequest` resource/action facades. They must not call direct
+  internal events such as `getEnvelope`, `designer.getLayout` or `getWidgets`
+  through `/api/meltdown`.
+- Public Design Studio/widget rendering should use the widget loader's static
+  public canvas for saved percent bounds and responsive stacking. Editor-only
+  canvas controls, zoom state and DOM scraping must not be required to verify a
+  public page preview.
+- After the public widget loader finishes rendering a page design it sets
+  `document.documentElement.dataset.bpPublicWidgetsReady = "true"` and emits
+  `bp:public-widgets-ready` with the `layoutRef` and rendered widget count.
+  Agent/browser checks should wait for this signal before comparing screenshots
+  or bounds.
 - `publicLoaderImporter.ts` owns module public-loader discovery/import.
 - `envelope/orchestrator.ts` passes one mutable page runtime context through
   ordered public loaders so a blocking design loader can hand the current page

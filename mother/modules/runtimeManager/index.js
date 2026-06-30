@@ -76,7 +76,8 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
     create: { eventName: 'createWidget', moduleName: 'widgetManager', permission: 'widgets.create' },
     update: { eventName: 'updateWidget', moduleName: 'widgetManager', permission: 'widgets.update' },
     delete: { eventName: 'deleteWidget', moduleName: 'widgetManager', permission: 'widgets.delete' },
-    saveLayout: { eventName: 'saveLayout.v1', moduleName: 'widgetManager', permission: 'widgets.saveLayout' }
+    saveLayout: { eventName: 'saveLayout.v1', moduleName: 'widgetManager', permission: 'widgets.saveLayout' },
+    registerUsage: { eventName: 'registerWidgetUsage', moduleName: 'widgetManager', permission: 'widgets.read' }
   },
   plainSpace: {
     widgetRegistry: { eventName: 'widget.registry.request.v1', moduleName: 'plainspace', permission: 'widgets.read' },
@@ -181,6 +182,7 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
   },
   users: {
     list: { eventName: 'getAllUsers', moduleName: 'userManagement', permission: 'users.read' },
+    me: { eventName: 'getUserDetailsById', moduleName: 'userManagement', permission: 'users.read', useActorUserId: true },
     get: { eventName: 'getUserDetailsById', moduleName: 'userManagement', permission: 'users.read' },
     getByUsername: { eventName: 'getUserDetailsByUsername', moduleName: 'userManagement', permission: 'users.read' },
     count: { eventName: 'getUserCount', moduleName: 'userManagement', permission: 'users.read' },
@@ -207,7 +209,7 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
   modules: {
     registry: { eventName: 'getModuleRegistry', moduleName: 'moduleLoader', permission: 'modules.list' },
     system: { eventName: 'listSystemModules', moduleName: 'moduleLoader', permission: 'modules.list' },
-    activeGrapes: { eventName: 'listActiveGrapesModules', moduleName: 'moduleLoader', permission: 'modules.listActive' },
+    activeStaticFrontends: { eventName: 'listActiveStaticFrontends', moduleName: 'moduleLoader', permission: 'modules.listActive' },
     activate: { eventName: 'activateModuleInRegistry', moduleName: 'moduleLoader', permission: 'modules.activate' },
     deactivate: { eventName: 'deactivateModuleInRegistry', moduleName: 'moduleLoader', permission: 'modules.deactivate' },
     inspectZip: { eventName: 'inspectModuleZipAccess', moduleName: 'moduleLoader', permission: 'modules.install' },
@@ -283,11 +285,11 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
     deleteLanguage: { eventName: 'deleteTranslationLanguage', moduleName: 'translationManager', permission: 'translations.delete' }
   },
   designer: {
-    get: { eventName: 'designer.getDesign', moduleName: 'designer', permission: 'builder.use' },
-    getLayout: { eventName: 'designer.getLayout', moduleName: 'designer', permission: 'builder.use' },
-    list: { eventName: 'designer.listDesigns', moduleName: 'designer', permission: 'builder.use' },
-    layouts: { eventName: 'designer.listLayouts', moduleName: 'designer', permission: 'builder.use' },
-    save: { eventName: 'designer.saveDesign', moduleName: 'designer', permission: 'builder.publish' }
+    get: { eventName: 'designer.getDesign', moduleName: 'designerManager', permission: 'builder.use' },
+    getLayout: { eventName: 'designer.getLayout', moduleName: 'designerManager', permission: 'builder.use' },
+    list: { eventName: 'designer.listDesigns', moduleName: 'designerManager', permission: 'builder.use' },
+    layouts: { eventName: 'designer.listLayouts', moduleName: 'designerManager', permission: 'builder.use' },
+    save: { eventName: 'designer.saveDesign', moduleName: 'designerManager', permission: 'builder.publish' }
   },
   preview: {
     token: { eventName: 'createContentPreviewToken', moduleName: 'runtimeManager', permission: 'content.update' }
@@ -295,6 +297,13 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
 });
 
 const CMS_PUBLIC_RUNTIME_ACTIONS = Object.freeze({
+  settings: {
+    public: { eventName: 'getPublicSettings', moduleName: 'settingsManager' }
+  },
+  users: {
+    count: { eventName: 'getUserCount', moduleName: 'userManagement' },
+    register: { eventName: 'publicRegister', moduleName: 'userManagement' }
+  },
   pages: {
     start: { eventName: 'getStartPage', moduleName: 'pagesManager' },
     envelope: { eventName: 'getEnvelope', moduleName: 'pagesManager' },
@@ -303,7 +312,11 @@ const CMS_PUBLIC_RUNTIME_ACTIONS = Object.freeze({
     children: { eventName: 'getChildPages', moduleName: 'pagesManager' }
   },
   widgets: {
-    list: { eventName: 'getWidgets', moduleName: 'widgetManager' }
+    list: { eventName: 'getWidgets', moduleName: 'widgetManager' },
+    registerUsage: { eventName: 'registerWidgetUsage', moduleName: 'widgetManager' }
+  },
+  auth: {
+    activeLoginStrategies: { eventName: 'listActiveLoginStrategies', moduleName: 'auth' }
   },
   plainSpace: {
     widgetRegistry: { eventName: 'widget.registry.request.v1', moduleName: 'plainspace' },
@@ -313,8 +326,12 @@ const CMS_PUBLIC_RUNTIME_ACTIONS = Object.freeze({
     widgetInstance: { eventName: 'getWidgetInstance', moduleName: 'plainspace' }
   },
   designer: {
-    get: { eventName: 'designer.getDesign', moduleName: 'designer' },
-    getLayout: { eventName: 'designer.getLayout', moduleName: 'designer' }
+    get: { eventName: 'designer.getDesign', moduleName: 'designerManager' },
+    getLayout: { eventName: 'designer.getLayout', moduleName: 'designerManager' }
+  },
+  fonts: {
+    list: { eventName: 'listFonts', moduleName: 'fontsManager' },
+    listProviders: { eventName: 'listFontProviders', moduleName: 'fontsManager' }
   }
 });
 
@@ -339,11 +356,9 @@ const APP_CONTEXT_READ_ACTIONS = Object.freeze({
   themes: new Set(['list', 'get', 'active']),
   translations: new Set(['get', 'list', 'listLanguages', 'getLanguage'])
 });
-const APP_CONTEXT_CORE_OWNED_LEGACY_EVENTS = new Set([
-  'cms-meltdown-request',
-  'cms:meltdown-request',
-  'cms-meltdown-batch-request',
-  'cms:meltdown-batch-request'
+const APP_CONTEXT_CORE_OWNED_WRITE_BRIDGE_EVENTS = new Set([
+  'cms-app-runtime-request',
+  'cms-app-runtime-batch-request'
 ]);
 const PUBLIC_PLAINSPACE_LANE_ACTIONS = new Set([
   'widgetRegistry',
@@ -425,6 +440,29 @@ function adminApiDefinition(resource, action) {
   };
 }
 
+function adminApiEventDefinition(eventName) {
+  const normalizedEventName = String(eventName || '').trim();
+  for (const [resource, actions] of Object.entries(CMS_ADMIN_ACTIONS)) {
+    for (const [action, definition] of Object.entries(actions)) {
+      if (definition?.eventName === normalizedEventName) {
+        return {
+          event: normalizedEventName,
+          resource,
+          action,
+          definition
+        };
+      }
+    }
+  }
+
+  return {
+    event: normalizedEventName,
+    resource: '',
+    action: '',
+    definition: null
+  };
+}
+
 function publicRuntimeDefinition(resource, action) {
   const normalizedResource = normalizeAdminApiKey(resource);
   const normalizedAction = normalizeAdminApiKey(action);
@@ -439,15 +477,15 @@ function isAppContextReadAction(resource, action) {
   return APP_CONTEXT_READ_ACTIONS[resource]?.has(action) === true;
 }
 
-function isCoreOwnedLegacyAppContext(appContext = {}) {
+function isCoreOwnedWriteBridgeContext(appContext = {}) {
   return appContext?.coreOwned === true &&
-    APP_CONTEXT_CORE_OWNED_LEGACY_EVENTS.has(String(appContext.event || ''));
+    APP_CONTEXT_CORE_OWNED_WRITE_BRIDGE_EVENTS.has(String(appContext.event || ''));
 }
 
 function requireAppContextReadOnly(payload, resource, action) {
   if (!payload?.appContext) return;
   if (isAppContextReadAction(resource, action)) return;
-  if (isCoreOwnedLegacyAppContext(payload.appContext)) return;
+  if (isCoreOwnedWriteBridgeContext(payload.appContext)) return;
   throw new Error(`Forbidden - apps can only query CMS admin API resources: ${resource}.${action}`);
 }
 
@@ -765,6 +803,51 @@ function toFiniteNumber(value, fallback) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function publicJsonValue(value, depth = 0) {
+  if (depth > 4) return undefined;
+  if (value == null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map(item => publicJsonValue(item, depth + 1))
+      .filter(item => item !== undefined);
+  }
+  if (typeof value === 'object') {
+    const out = {};
+    for (const [key, nested] of Object.entries(value)) {
+      const safeKey = String(key || '').trim();
+      if (!safeKey || safeKey === '__proto__' || safeKey === 'constructor' || safeKey === 'prototype') continue;
+      const safeValue = publicJsonValue(nested, depth + 1);
+      if (safeValue !== undefined) out[safeKey] = safeValue;
+    }
+    return out;
+  }
+  return undefined;
+}
+
+function publicWidgetLayoutItem(item = {}) {
+  const result = {
+    instanceId: String(item.instanceId || ''),
+    widgetId: String(item.widgetId || ''),
+    xPercent: toFiniteNumber(item.xPercent, 0),
+    yPercent: toFiniteNumber(item.yPercent, 0),
+    wPercent: toFiniteNumber(item.wPercent, 0),
+    hPercent: toFiniteNumber(item.hPercent, 0)
+  };
+  for (const key of ['zIndex', 'rotationDeg', 'opacity']) {
+    if (item[key] != null) result[key] = toFiniteNumber(item[key], key === 'opacity' ? 1 : 0);
+  }
+  for (const key of ['html', 'css', 'js']) {
+    if (typeof item[key] === 'string' && item[key]) result[key] = item[key];
+  }
+  const metadata = publicJsonValue(item.metadata);
+  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata) && Object.keys(metadata).length) {
+    result.metadata = metadata;
+  }
+  return result;
+}
+
 function toPublicDesignerLayout(layout = {}) {
   const source = layout && typeof layout === 'object' && !Array.isArray(layout) ? layout : {};
   const grid = source.grid && typeof source.grid === 'object' && !Array.isArray(source.grid)
@@ -778,14 +861,7 @@ function toPublicDesignerLayout(layout = {}) {
     items: Array.isArray(source.items)
       ? source.items
           .filter(item => item && typeof item === 'object' && !Array.isArray(item))
-          .map(item => ({
-            instanceId: String(item.instanceId || ''),
-            widgetId: String(item.widgetId || ''),
-            xPercent: toFiniteNumber(item.xPercent, 0),
-            yPercent: toFiniteNumber(item.yPercent, 0),
-            wPercent: toFiniteNumber(item.wPercent, 0),
-            hPercent: toFiniteNumber(item.hPercent, 0)
-          }))
+          .map(publicWidgetLayoutItem)
           .filter(item => item.instanceId && item.widgetId)
       : [],
     layoutRef: typeof source.layoutRef === 'string' ? source.layoutRef : undefined
@@ -1210,13 +1286,17 @@ function requirePublicRuntimePrincipal(payload) {
 function publicRuntimeParams(params = {}, resource = '', action = '') {
   const source = params && typeof params === 'object' && !Array.isArray(params) ? params : {};
   const safe = { ...source };
+  delete safe.jwt;
+  delete safe.decodedJWT;
+  delete safe.moduleName;
+  delete safe.moduleType;
 
   if (resource === 'pages') {
     safe.lane = 'public';
     if (action === 'children') delete safe.lane;
   }
 
-  if (resource === 'widgets') {
+  if (resource === 'widgets' && action === 'list') {
     safe.widgetType = 'public';
   }
 
@@ -1339,6 +1419,13 @@ async function cmsAdminApiRequest(motherEmitter, jwt, payload = {}) {
     moduleType: definition.moduleType || 'core',
     decodedJWT: payload.decodedJWT
   };
+  if (definition.useActorUserId) {
+    const userId = actorIdFromPayload(payload);
+    if (!userId) {
+      throw new Error('[runtimeManager:ACTOR_USER_ID_REQUIRED] Current-user admin action requires an authenticated user id.');
+    }
+    eventPayload.userId = userId;
+  }
   const data = await emitAsync(motherEmitter, definition.eventName, eventPayload);
   return {
     resource,
@@ -1756,6 +1843,7 @@ module.exports = {
   _internals: {
     activeNavigationItems,
     adminApiDefinition,
+    adminApiEventDefinition,
     baseUrlFromRequest,
     cmsAdminApiRequest,
     cmsPublicRuntimeRequest,

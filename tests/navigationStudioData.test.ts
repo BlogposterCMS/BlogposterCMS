@@ -14,21 +14,27 @@ describe('navigationStudioData', () => {
 
     await ensureNavigationStudioDefaults(emit, 'admin-token', [], []);
 
-    const events = emit.mock.calls.map(call => call[0]);
-    expect(events.filter(event => event === 'registerNavigationLocation')).toHaveLength(5);
-    expect(events.filter(event => event === 'upsertNavigationMenu')).toHaveLength(5);
-    expect(emit).toHaveBeenCalledWith('registerNavigationLocation', expect.objectContaining({
+    const routes = emit.mock.calls.map(call => `${call[1].resource}.${call[1].action}`);
+    expect(routes.filter(route => route === 'navigation.registerLocation')).toHaveLength(5);
+    expect(routes.filter(route => route === 'navigation.upsertMenu')).toHaveLength(5);
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'navigationManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'primary'
+      resource: 'navigation',
+      action: 'registerLocation',
+      params: expect.objectContaining({ key: 'primary' })
     }));
-    expect(emit).toHaveBeenCalledWith('upsertNavigationMenu', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'navigationManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'header-main',
-      locationKey: 'primary'
+      resource: 'navigation',
+      action: 'upsertMenu',
+      params: expect.objectContaining({
+        key: 'header-main',
+        locationKey: 'primary'
+      })
     }));
   });
 
@@ -39,11 +45,13 @@ describe('navigationStudioData', () => {
 
     await expect(fetchNavigationTree(emit, 'admin-token', { key: 'header-main' }))
       .resolves.toEqual([{ id: 'home', title: 'Home', url: '/' }]);
-    expect(emit).toHaveBeenCalledWith('getNavigationTree', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'navigationManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      menuKey: 'header-main'
+      resource: 'navigation',
+      action: 'tree',
+      params: { menuKey: 'header-main' }
     });
   });
 
@@ -111,9 +119,9 @@ describe('navigationStudioData', () => {
   });
 
   it('replaces current items with generated page links in parent-first order', async () => {
-    const emit = jest.fn(async (eventName, payload) => {
-      if (eventName === 'addNavigationMenuItem') {
-        return { id: `new-${payload.sourceId}`, ...payload };
+    const emit = jest.fn(async (_eventName, payload) => {
+      if (`${payload.resource}.${payload.action}` === 'navigation.addItem') {
+        return { id: `new-${payload.params.sourceId}`, ...payload.params };
       }
       return { done: true };
     });
@@ -129,14 +137,14 @@ describe('navigationStudioData', () => {
       ]
     );
 
-    expect(emit.mock.calls.map(call => call[0])).toEqual([
-      'deleteNavigationMenuItem',
-      'deleteNavigationMenuItem',
-      'addNavigationMenuItem',
-      'addNavigationMenuItem'
+    expect(emit.mock.calls.map(call => `${call[1].resource}.${call[1].action}`)).toEqual([
+      'navigation.deleteItem',
+      'navigation.deleteItem',
+      'navigation.addItem',
+      'navigation.addItem'
     ]);
-    expect(emit.mock.calls[2][1]).toMatchObject({ sourceId: '1', parentId: null, position: 0 });
-    expect(emit.mock.calls[3][1]).toMatchObject({ sourceId: '2', parentId: 'new-1', position: 0 });
+    expect(emit.mock.calls[2][1].params).toMatchObject({ sourceId: '1', parentId: null, position: 0 });
+    expect(emit.mock.calls[3][1].params).toMatchObject({ sourceId: '2', parentId: 'new-1', position: 0 });
   });
 
   it('creates dedicated draft designs for mega menu panels', async () => {
@@ -144,18 +152,22 @@ describe('navigationStudioData', () => {
 
     await expect(createMegaMenuDesign(emit, 'admin-token', 'owner-1', 'Mega Menu - Services'))
       .resolves.toBe('mega-1');
-    expect(emit).toHaveBeenCalledWith('designer.saveDesign', expect.objectContaining({
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
-      moduleName: 'designer',
-      moduleType: 'community',
-      design: expect.objectContaining({
-        ownerId: 'owner-1',
-        title: 'Mega Menu - Services',
-        isDraft: true,
-        meta: { surface: 'mega-menu' }
-      }),
-      widgets: [],
-      layout: null
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'designer',
+      action: 'save',
+      params: expect.objectContaining({
+        design: expect.objectContaining({
+          ownerId: 'owner-1',
+          title: 'Mega Menu - Services',
+          isDraft: true,
+          meta: { surface: 'mega-menu' }
+        }),
+        widgets: [],
+        layout: null
+      })
     }), 20000);
   });
 });

@@ -9,20 +9,24 @@ import {
 } from '../ui/shell/dashboard/pageActionsData';
 
 describe('pageActionsData', () => {
-  it('creates public pages through pagesManager and returns the created id', async () => {
+  it('creates public pages through the runtime admin facade and returns the created id', async () => {
     const emit = jest.fn().mockResolvedValue({ pageId: 'page-1' });
 
     await expect(createPublicPage(emit, 'admin-token', 'Landing', 'landing'))
       .resolves.toBe('page-1');
 
-    expect(emit).toHaveBeenCalledWith('createPage', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      title: 'Landing',
-      slug: 'landing',
-      lane: 'public',
-      status: 'published'
+      resource: 'pages',
+      action: 'create',
+      params: {
+        title: 'Landing',
+        slug: 'landing',
+        lane: 'public',
+        status: 'published'
+      }
     });
   });
 
@@ -33,20 +37,24 @@ describe('pageActionsData', () => {
       .resolves.toBeNull();
   });
 
-  it('saves public layout templates through PlainSpace', async () => {
+  it('saves public layout templates through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await savePublicLayoutTemplate(emit, 'admin-token', '  Hero Layout  ');
 
-    expect(emit).toHaveBeenCalledWith('saveLayoutTemplate', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'plainspace',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      name: 'Hero Layout',
-      lane: 'public',
-      viewport: 'desktop',
-      layout: [],
-      previewPath: ''
+      resource: 'plainSpace',
+      action: 'saveLayoutTemplate',
+      params: {
+        name: 'Hero Layout',
+        lane: 'public',
+        viewport: 'desktop',
+        layout: [],
+        previewPath: ''
+      }
     });
   });
 

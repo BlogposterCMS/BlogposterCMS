@@ -65,19 +65,21 @@ describe('renderPage sanitization', () => {
     };
 
     window.meltdownEmit = jest.fn(async (event, payload) => {
-      switch (event) {
-        case 'getPageById':
+      if (event !== 'cmsAdminApiRequest') {
+        throw new Error(`Unexpected event ${event}`);
+      }
+      const route = `${payload.resource}.${payload.action}`;
+      switch (route) {
+        case 'pages.get':
           return { data: { layout_id: 'layout-1', design_id: 'page-design', auto_mount: true } };
-        case 'getSiteMeta':
-          return {};
-        case 'getLayoutTemplate':
+        case 'plainSpace.layoutTemplate':
           return { layout: layoutTree };
-        case 'designer.getDesign':
-          if (payload.id === 'static-1') return { design: staticDesign };
-          if (payload.id === 'page-design') return { design: pageDesign };
+        case 'designer.get':
+          if (payload.params.id === 'static-1') return { design: staticDesign };
+          if (payload.params.id === 'page-design') return { design: pageDesign };
           return null;
         default:
-          throw new Error(`Unexpected event ${event}`);
+          throw new Error(`Unexpected route ${route}`);
       }
     });
 

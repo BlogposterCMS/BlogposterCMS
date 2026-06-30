@@ -1,3 +1,4 @@
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../../shared/api-client/runtimeFacade.js';
 export const userEditTextFields = [
     'username',
     'email',
@@ -10,10 +11,6 @@ export const userEditTextFields = [
     'avatar_url',
     'bio'
 ];
-const USER_MANAGEMENT_MODULE = {
-    moduleName: 'userManagement',
-    moduleType: 'core'
-};
 // Keep user-management event names and payload shapes outside the DOM widget.
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
@@ -54,9 +51,7 @@ export function userValue(user, field) {
     return user[field] == null ? '' : String(user[field]);
 }
 export function buildUserProfilePayload(jwt, userId, values) {
-    const payload = {
-        jwt,
-        ...USER_MANAGEMENT_MODULE,
+    const params = {
         userId,
         newUsername: values.username.trim(),
         newEmail: values.email.trim(),
@@ -72,49 +67,33 @@ export function buildUserProfilePayload(jwt, userId, values) {
     };
     const newPassword = values.password?.trim();
     if (newPassword) {
-        payload.newPassword = newPassword;
+        params.newPassword = newPassword;
     }
-    return payload;
+    return runtimeAdminPayload(jwt, 'users', 'update', params);
 }
 export async function fetchUserDetails(emit, jwt, userId) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getUserDetailsById', {
-        jwt,
-        ...USER_MANAGEMENT_MODULE,
-        userId
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'get', { userId });
     return toUser(res);
 }
 export async function fetchRoles(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllRoles', {
-        jwt,
-        ...USER_MANAGEMENT_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'roles', 'list');
     return toRoles(res);
 }
 export async function fetchPermissions(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllPermissions', {
-        jwt,
-        ...USER_MANAGEMENT_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'permissions', 'list');
     return toPermissions(res);
 }
 export async function fetchUserAccess(emit, jwt, userId) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getUserAccess', {
-        jwt,
-        ...USER_MANAGEMENT_MODULE,
-        userId
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'access', { userId });
     return toUserAccess(res);
 }
 export async function updateUserAccess(emit, jwt, userId, values) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('setUserAccess', {
-        jwt,
-        ...USER_MANAGEMENT_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'setAccess', {
         userId,
         roleIds: values.roleIds,
         directPermissions: values.directPermissions || {}
@@ -122,13 +101,9 @@ export async function updateUserAccess(emit, jwt, userId, values) {
 }
 export async function updateUserProfile(emit, jwt, userId, values) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('updateUserProfile', buildUserProfilePayload(jwt, userId, values));
+    await meltdownEmit('cmsAdminApiRequest', buildUserProfilePayload(jwt, userId, values));
 }
 export async function deleteUserRecord(emit, jwt, userId) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('deleteUser', {
-        jwt,
-        ...USER_MANAGEMENT_MODULE,
-        userId
-    });
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'users', 'delete', { userId });
 }

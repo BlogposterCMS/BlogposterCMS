@@ -8,7 +8,7 @@ does not add UI routes by itself.
 - Ensures the comments database/schema and comments table/collection exist.
 
 ## Purpose
-- Stores comments against either a Content Engine `entryId` or a legacy source
+- Stores comments against either a Content Engine `entryId` or a source-owned
   pair such as `sourceModule: "pagesManager"` plus `sourceId`.
 - Supports nested comments through `parentId`.
 - Keeps moderation status separate from deletion using `pending`, `approved`,
@@ -56,5 +56,5 @@ checked through the normal permission utility.
 - `meta` is always sanitized as a plain JSON object. Unsafe object keys such as
   `__proto__`, `constructor` and `prototype` are dropped, unsupported values turn
   into `null`, and nested objects/arrays are capped before they reach storage.
-- Legacy rows returned from storage pass through the same URL and metadata
+- Imported/source-owned rows returned from storage pass through the same URL and metadata
   cleanup before callers receive them.

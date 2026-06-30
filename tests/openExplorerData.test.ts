@@ -27,7 +27,7 @@ describe('openExplorerData', () => {
     expect(errorMessage('bad')).toBe('bad');
   });
 
-  it('lists folders through mediaManager', async () => {
+  it('lists folders through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({
       folders: ['images'],
       files: ['hero.png'],
@@ -41,15 +41,17 @@ describe('openExplorerData', () => {
       parentPath: '',
       currentPath: 'public'
     });
-    expect(emit).toHaveBeenCalledWith('listLocalFolder', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'mediaManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      subPath: 'public'
+      resource: 'media',
+      action: 'listLocalFolder',
+      params: { subPath: 'public' }
     });
   });
 
-  it('creates share links through shareManager', async () => {
+  it('creates share links through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({
       shareURL: '/media/share/abc',
       shortToken: 'abc'
@@ -59,11 +61,13 @@ describe('openExplorerData', () => {
       shareURL: '/media/share/abc',
       shortToken: 'abc'
     });
-    expect(emit).toHaveBeenCalledWith('createShareLink', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'shareManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      filePath: 'public/hero.png'
+      resource: 'shares',
+      action: 'create',
+      params: { filePath: 'public/hero.png' }
     });
   });
 

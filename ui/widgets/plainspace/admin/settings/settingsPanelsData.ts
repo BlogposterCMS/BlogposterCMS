@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../../../shared/api-client/runtimeFacade.js';
+
 export interface PageRecord {
   id?: string | number;
   slug?: string;
@@ -45,16 +47,6 @@ type SettingKey =
   | 'MAINTENANCE_MODE'
   | 'MAINTENANCE_PAGE_ID';
 
-const SETTINGS_MODULE = {
-  moduleName: 'settingsManager',
-  moduleType: 'core'
-} as const;
-
-const PAGES_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
-
 function requireEmitter(emit: SettingsPanelsEmitter): NonNullable<SettingsPanelsEmitter> {
   if (typeof emit !== 'function') {
     throw new Error('PLAINSPACE_SETTINGS_PANELS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -97,11 +89,7 @@ export async function fetchSettingValue(
   key: SettingKey
 ): Promise<string> {
   const meltdownEmit = requireEmitter(emit);
-  const value = await meltdownEmit('getSetting', {
-    jwt,
-    ...SETTINGS_MODULE,
-    key
-  });
+  const value = await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key });
   return asSetting(value);
 }
 
@@ -112,12 +100,7 @@ export async function saveSettingValue(
   value: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('setSetting', {
-    jwt,
-    ...SETTINGS_MODULE,
-    key,
-    value
-  });
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'set', { key, value });
 }
 
 export async function fetchSettingValues<K extends SettingKey>(
@@ -241,10 +224,7 @@ export async function fetchAllPages(
   jwt: string | null | undefined
 ): Promise<PageRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getAllPages', {
-    jwt,
-    ...PAGES_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'list');
   return toPages(res);
 }
 

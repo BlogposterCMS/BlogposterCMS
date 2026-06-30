@@ -1,3 +1,4 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
 import { createRoleRecord, deleteRoleRecord, errorMessage, fetchRoles, permissionsPromptDefault, updateRoleRecord } from './usersListData.js';
 export { createRoleRecord, deleteRoleRecord, errorMessage, fetchRoles, permissionsPromptDefault, updateRoleRecord };
 function requireEmitter(emit) {
@@ -19,11 +20,7 @@ export function toPermissions(value) {
 }
 export async function fetchPermissions(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllPermissions', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core'
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'permissions', 'list');
     return toPermissions(res);
 }
 export async function fetchPermissionsState(emit, jwt) {
@@ -35,10 +32,7 @@ export async function fetchPermissionsState(emit, jwt) {
 }
 export async function createPermissionRecord(emit, jwt, permission) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('createPermission', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core',
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'permissions', 'create', {
         permissionKey: permission.permissionKey,
         description: permission.description
     });

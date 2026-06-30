@@ -874,14 +874,13 @@ switch (operation) {
       return rows;
     }
   
-    case 'LIST_ACTIVE_GRAPES_MODULES': {
-      // Lists modules where is_active = true
-      // and module_info->>'grapesComponent' is 'true'
+    case 'LIST_ACTIVE_STATIC_FRONTENDS': {
+      // Lists modules that explicitly publish a bounded static frontend.
       const { rows } = await client.query(`
         SELECT *
         FROM "moduleloader"."module_registry"
         WHERE is_active = true
-          AND (module_info->>'grapesComponent')::boolean = true
+          AND (module_info->>'staticFrontend')::boolean = true
         ORDER BY id ASC;
       `);
       return rows;

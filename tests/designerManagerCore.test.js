@@ -38,7 +38,7 @@ function emitAsync(emitter, eventName, payload) {
 
 afterEach(() => {
   if (global.loadedModules) {
-    delete global.loadedModules.designer;
+    delete global.loadedModules.designerManager;
   }
 });
 
@@ -55,17 +55,17 @@ test('designer manager owns designer backend events as a core service', async ()
   });
 
   assert.deepStrictEqual(emitter.registered, [
-    { moduleName: 'designerManager', moduleType: 'core' },
-    { moduleName: 'designer', moduleType: 'core' }
+    { moduleName: 'designerManager', moduleType: 'core' }
   ]);
   assert.strictEqual(emitter.listenerCount('designer.saveDesign'), 1);
   assert.strictEqual(emitter.listenerCount('designer.getDesign'), 1);
   assert.strictEqual(emitter.listenerCount('designer.listDesigns'), 1);
-  assert.strictEqual(global.loadedModules.designer.handleSaveDesignPlaceholder instanceof Function, true);
+  assert.strictEqual(global.loadedModules.designerManager.handleSaveDesignPlaceholder instanceof Function, true);
 
   const setupEvents = emitter.calls.filter(call => call.eventName !== 'performDbOperation');
   assert.deepStrictEqual(setupEvents.map(call => call.eventName), ['createDatabase', 'applySchemaDefinition']);
-  assert(setupEvents.every(call => call.payload.moduleName === 'designer'));
+  assert(setupEvents.every(call => call.payload.moduleName === 'designerManager'));
+  assert.strictEqual(setupEvents[0].payload.targetModuleName, 'designer');
   assert(setupEvents.every(call => call.payload.moduleType === 'core'));
 
   const list = await emitAsync(emitter, 'designer.listDesigns', {});
@@ -74,7 +74,7 @@ test('designer manager owns designer backend events as a core service', async ()
 
   const dbCall = emitter.calls.find(call => call.eventName === 'performDbOperation');
   assert(dbCall);
-  assert.strictEqual(dbCall.payload.moduleName, 'designer');
+  assert.strictEqual(dbCall.payload.moduleName, 'designerManager');
   assert.strictEqual(dbCall.payload.moduleType, 'core');
   assert.strictEqual(dbCall.payload.operation, 'DESIGNER_LIST_DESIGNS');
 });
@@ -98,7 +98,7 @@ test('designer layout lookup forwards a core payload to designer.getDesign', asy
 
   const layout = await emitAsync(emitter, 'designer.getLayout', {
     jwt: 'core-token',
-    moduleName: 'designer',
+    moduleName: 'designerManager',
     moduleType: 'core',
     nonce: 'nonce-1',
     layoutRef: 'layout:design-1@v1'
@@ -107,7 +107,7 @@ test('designer layout lookup forwards a core payload to designer.getDesign', asy
   assert.ifError(layout.err);
   assert.strictEqual(nestedPayload.id, 'design-1');
   assert.strictEqual(nestedPayload.jwt, 'core-token');
-  assert.strictEqual(nestedPayload.moduleName, 'designer');
+  assert.strictEqual(nestedPayload.moduleName, 'designerManager');
   assert.strictEqual(nestedPayload.moduleType, 'core');
   assert.strictEqual(nestedPayload.nonce, 'nonce-1');
 });
@@ -123,9 +123,9 @@ test('designer manager documents its core adapter boundary', () => {
   assert.strictEqual(info.version, designerManager.VERSION);
   assert.strictEqual(capabilities.moduleName, 'designerManager');
   assert.strictEqual(capabilities.moduleType, 'core');
-  assert.strictEqual(capabilities.ownsLegacyModule, 'designer');
+  assert.strictEqual(capabilities.ownsResource, 'designer');
   assert(capabilities.events.includes('designer.saveDesign'));
-  assert.strictEqual(capabilities.legacyServicePath, designerManager._internals.legacyServicePath);
+  assert.strictEqual(capabilities.servicePath, designerManager._internals.servicePath);
 });
 
 test('designer manager refuses non-core initialization', async () => {
@@ -144,33 +144,33 @@ test('designer manager refuses non-core initialization', async () => {
   assert.deepStrictEqual(emitter.registered, []);
 });
 
-test('legacy designer service refuses community initialization', async () => {
+test('designer service refuses direct community initialization', async () => {
   jest.resetModules();
-  const legacyDesigner = require('../modules/designer');
+  const designerService = require('../mother/modules/designerManager/designerService');
   const emitter = new CapturingEmitter();
 
   await assert.rejects(
-    () => legacyDesigner.initialize({
+    () => designerService.initialize({
       motherEmitter: emitter,
       moduleType: 'community',
       jwt: 'community-token'
     }),
-    /core adapter/
+    /core service/
   );
 
   await assert.rejects(
-    () => legacyDesigner.initialize({
+    () => designerService.initialize({
       motherEmitter: emitter,
       jwt: 'token-without-core-type'
     }),
-    /core adapter/
+    /core service/
   );
 
   assert.strictEqual(emitter.listenerCount('designer.saveDesign'), 0);
   assert.strictEqual(emitter.calls.length, 0);
 });
 
-test('module loader skips legacy designer folder because core owns it', () => {
+test('module loader reserves the designer resource name for the core service', () => {
   const { _internals } = require('../mother/modules/moduleLoader');
-  assert.strictEqual(_internals.CORE_OWNED_OPTIONAL_MODULES.has('designer'), true);
+  assert.strictEqual(_internals.RESERVED_CORE_MODULES.has('designer'), true);
 });

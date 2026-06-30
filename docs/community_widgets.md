@@ -15,11 +15,9 @@ only letters, numbers, underscores and dashes. Each widget folder contains:
   `widgetType: "public"`, `label` and `category`. It must not declare
   `moduleType`; widgets are UI assets, not modules.
 
-System and Blogposter widgets live under `ui/widgets/plainspace/`.
-The old `/plainspace/widgets/*` browser URLs remain as compatibility shims that
-forward into `ui/widgets/plainspace`. The runtime resolver canonicalizes those
-legacy shim URLs before importing so saved dashboard layouts keep working
-without widening the widget import guard. Keeping community code separate avoids
+System and Blogposter widgets live under `ui/widgets/plainspace/`. Bundled
+widget URLs must use `/ui/widgets/plainspace/...`; community widget URLs must
+use `/widgets/{folderName}/widget.js`. Keeping community code separate avoids
 mixing trusted admin UI with unknown widget code.
 The server exposes `widgets/` at `/widgets/` as static browser assets with
 TypeScript source requests blocked; community widgets should ship JavaScript

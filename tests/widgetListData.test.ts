@@ -42,17 +42,20 @@ describe('widgetListData', () => {
     });
 
     await expect(fetchWidgetRegistry(emit, 'admin-token')).resolves.toEqual([{ id: 'hero' }]);
-    expect(emit).toHaveBeenCalledWith('widget.registry.request.v1', {
-      lane: 'public',
-      moduleName: 'plainspace',
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      jwt: 'admin-token'
+      resource: 'plainSpace',
+      action: 'widgetRegistry',
+      params: { lane: 'public' }
     });
   });
 
   it('fetches global widget ids from public page layouts', async () => {
-    const emit = jest.fn(async eventName => {
-      if (eventName === 'getPagesByLane') {
+    const emit = jest.fn(async (_eventName, payload) => {
+      const route = `${payload.resource}.${payload.action}`;
+      if (route === 'pages.byLane') {
         return { pages: [{ id: 'home' }, { id: 'about' }] };
       }
       return {
@@ -66,26 +69,32 @@ describe('widgetListData', () => {
     const ids = await fetchGlobalWidgetIds(emit, 'admin-token');
 
     expect(Array.from(ids)).toEqual(['hero']);
-    expect(emit).toHaveBeenCalledWith('getPagesByLane', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'public' }
     });
-    expect(emit).toHaveBeenCalledWith('getLayoutForViewport', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'plainspace',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      pageId: 'home',
-      lane: 'public',
-      viewport: 'desktop'
+      resource: 'plainSpace',
+      action: 'layoutForViewport',
+      params: {
+        pageId: 'home',
+        lane: 'public',
+        viewport: 'desktop'
+      }
     });
   });
 
   it('skips global layout lookup when the page list is too large', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const emit = jest.fn(async eventName => (
-      eventName === 'getPagesByLane'
+    const emit = jest.fn(async (_eventName, payload) => (
+      `${payload.resource}.${payload.action}` === 'pages.byLane'
         ? { pages: Array.from({ length: 21 }, (_, idx) => ({ id: idx })) }
         : { layout: [{ widgetId: 'hero', global: true }] }
     ));

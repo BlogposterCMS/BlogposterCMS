@@ -33,32 +33,44 @@ describe('loginStrategyEditData', () => {
     })).toEqual([
       {
         jwt: 'admin-token',
-        moduleName: 'settingsManager',
+        moduleName: 'runtimeManager',
         moduleType: 'core',
-        key: 'GITHUB_CLIENT_ID',
-        value: 'id-1'
+        resource: 'settings',
+        action: 'set',
+        params: {
+          key: 'GITHUB_CLIENT_ID',
+          value: 'id-1'
+        }
       },
       {
         jwt: 'admin-token',
-        moduleName: 'settingsManager',
+        moduleName: 'runtimeManager',
         moduleType: 'core',
-        key: 'GITHUB_CLIENT_SECRET',
-        value: 'secret-1'
+        resource: 'settings',
+        action: 'set',
+        params: {
+          key: 'GITHUB_CLIENT_SECRET',
+          value: 'secret-1'
+        }
       },
       {
         jwt: 'admin-token',
-        moduleName: 'settingsManager',
+        moduleName: 'runtimeManager',
         moduleType: 'core',
-        key: 'GITHUB_SCOPE',
-        value: 'both'
+        resource: 'settings',
+        action: 'set',
+        params: {
+          key: 'GITHUB_SCOPE',
+          value: 'both'
+        }
       }
     ]);
   });
 
-  it('fetches login strategy settings through settingsManager', async () => {
+  it('fetches login strategy settings through the runtime admin facade', async () => {
     const emit = jest.fn(async (_eventName, payload) => {
-      if (payload.key === 'GITHUB_CLIENT_ID') return 'id-1';
-      if (payload.key === 'GITHUB_CLIENT_SECRET') return 'secret-1';
+      if (payload.params.key === 'GITHUB_CLIENT_ID') return 'id-1';
+      if (payload.params.key === 'GITHUB_CLIENT_SECRET') return 'secret-1';
       return 'invalid';
     });
 
@@ -67,27 +79,33 @@ describe('loginStrategyEditData', () => {
       clientSecret: 'secret-1',
       scope: 'admin'
     });
-    expect(emit).toHaveBeenCalledWith('getSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GITHUB_CLIENT_ID'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'GITHUB_CLIENT_ID' }
     });
-    expect(emit).toHaveBeenCalledWith('getSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GITHUB_CLIENT_SECRET'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'GITHUB_CLIENT_SECRET' }
     });
-    expect(emit).toHaveBeenCalledWith('getSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GITHUB_SCOPE'
+      resource: 'settings',
+      action: 'get',
+      params: { key: 'GITHUB_SCOPE' }
     });
   });
 
-  it('saves login strategy settings through explicit setSetting events', async () => {
+  it('saves login strategy settings through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
     await saveLoginStrategySettings(emit, 'admin-token', 'github', {
@@ -96,26 +114,38 @@ describe('loginStrategyEditData', () => {
       scope: 'public'
     });
 
-    expect(emit).toHaveBeenNthCalledWith(1, 'setSetting', {
+    expect(emit).toHaveBeenNthCalledWith(1, 'cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GITHUB_CLIENT_ID',
-      value: 'id-1'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'GITHUB_CLIENT_ID',
+        value: 'id-1'
+      }
     });
-    expect(emit).toHaveBeenNthCalledWith(2, 'setSetting', {
+    expect(emit).toHaveBeenNthCalledWith(2, 'cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GITHUB_CLIENT_SECRET',
-      value: 'secret-1'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'GITHUB_CLIENT_SECRET',
+        value: 'secret-1'
+      }
     });
-    expect(emit).toHaveBeenNthCalledWith(3, 'setSetting', {
+    expect(emit).toHaveBeenNthCalledWith(3, 'cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'GITHUB_SCOPE',
-      value: 'public'
+      resource: 'settings',
+      action: 'set',
+      params: {
+        key: 'GITHUB_SCOPE',
+        value: 'public'
+      }
     });
   });
 });

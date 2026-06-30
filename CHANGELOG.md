@@ -2,11 +2,37 @@
 
 All notable changes to BlogposterCMS are documented here. This log starts at
 the BlogposterCMS root rebaseline. Earlier detailed history remains preserved
-in the private `BlogposterDEV` repository and the `legacy-blogposterdev-2026-06-26`
-tag.
+in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Removed the remaining active pre-v1 contracts: direct app bridge aliases now
+  use only `cms-app-runtime-*`, public loader layout sharing uses explicit
+  context instead of a window global, PlainSpace public mirror folders are gone,
+  Designer service code lives under `mother/modules/designerManager`, module
+  static frontends use `staticFrontend`, widgets declare `apiActions`, and the
+  retired broad permission bypass is no longer honored.
+- Renamed WordPress import-plan term provenance to `sourceWordPressTerms` so
+  dry-run output no longer exposes retired contract language.
+- Hardened the event-first HTTP boundary so `/api/meltdown` accepts only direct
+  facade contracts (`cmsAdminApiRequest`, `cmsPublicRuntimeRequest`,
+  `dispatchAppEvent`) plus public token bootstrap, rejects raw core event
+  names instead of translating them, and routes Shell, public loaders, widgets
+  and the Designer app through Runtime Manager resource/action helpers.
+- Fixed module access consent after the event-first hardening by deriving
+  grantable community-module events from Runtime Manager's admin facade instead
+  of the removed HTTP facade mapper.
+- Added an idempotent PagesManager Coming Soon seed that creates a public
+  `coming-soon` page for new installations, links a dashboard-styled Design
+  Studio tech preview when available, configures `MAINTENANCE_PAGE_ID`, upgrades
+  older seed-managed previews, and avoids overwriting custom user pages.
+- Updated public page rendering so browser loaders use `cmsPublicRuntimeRequest`
+  facades for page envelopes, Design Studio layouts and public widgets, and so
+  linked Design Studio pages only render stored HTML as a fallback.
+- Stabilized public Design Studio widget rendering with a dedicated static
+  public canvas that preserves saved percent bounds, stacks safely on narrow
+  screens, passes seed instance metadata into first-party public widgets, and
+  emits a ready signal for agent/browser preview checks.
 - Documented the Event-First Transport Boundary decision: Blogposter keeps an
   event-first core, treats HTTP as adapter/facade infrastructure, and should
   migrate new browser/app/widget work toward resource/action runtime facades
@@ -18,6 +44,10 @@ tag.
 - Added reusable Style Source metadata for Design Studio containers and widget
   placements so followers can copy layout/design properties from a source
   object without copying content, with per-object unlink controls.
+- Added a concrete Design Studio agent-feedback channel to the existing
+  AgentManager/AppLoader surface with structured layout tree, widget placement,
+  Style Source, stable-bounds, visual-preview metadata and
+  `DESIGNER_AGENT_FEEDBACK_*` warning contracts.
 - Clarified contributor guidance for agent-ready architecture: workflows should
   be designed for future agent control through existing contracts without
   exposing every internal function as an agent action.
@@ -42,7 +72,7 @@ tag.
   controls outside the rail.
 - Grouped the Design Studio insert palette into Text, Media, Shape, Button and
   Navigation circles that open preset panels, while keeping first-party widgets
-  as technical renderers and hiding `htmlBlock` / the legacy `pageEditor` alias
+  as technical renderers and hiding `htmlBlock` / the retired `pageEditor` alias
   from normal catalogs.
 - Grouped the top-header theme, profile and logout controls into one keyboard
   accessible account dropdown while keeping the existing theme/profile/logout
@@ -67,7 +97,7 @@ tag.
   slot/column/order persistence, responsive widget-owned height/min-height
   policies, live drag/drop placeholders, pointer-driven widget previews and
   subtle snap-column feedback for smooth dashboard reordering, admin-lane
-  removal of legacy widget-instance layout option hydration and default widget
+  removal of widget-instance layout option hydration and default widget
   contracts that no longer derive dashboard sizing from instance width/height
   options.
 - Added the first Navigation Studio admin surface on the existing Menu page:
@@ -183,5 +213,4 @@ tag.
 
 The active BlogposterCMS repository starts from the former BlogposterDEV
 application state. Earlier detailed changelog entries remain available in the
-preserved private BlogposterDEV history and the `legacy-blogposterdev-2026-06-26`
-tag.
+preserved private BlogposterDEV history and its 2026-06-26 archive tag.

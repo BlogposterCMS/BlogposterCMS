@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
+
 export interface AccessSettingsState {
   allowRegistration: boolean;
   firstInstallDone: boolean;
@@ -98,18 +100,8 @@ export async function fetchAccessSettings(
 ): Promise<AccessSettingsState> {
   const meltdownEmit = requireEmitter(emit);
   const [allowRegistrationRaw, firstInstallRaw] = await Promise.all([
-    meltdownEmit('getSetting', {
-      jwt,
-      moduleName: 'settingsManager',
-      moduleType: 'core',
-      key: 'ALLOW_REGISTRATION'
-    }),
-    meltdownEmit('getSetting', {
-      jwt,
-      moduleName: 'settingsManager',
-      moduleType: 'core',
-      key: 'FIRST_INSTALL_DONE'
-    })
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'ALLOW_REGISTRATION' }),
+    emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key: 'FIRST_INSTALL_DONE' })
   ]);
 
   return {
@@ -124,10 +116,7 @@ export async function setAllowRegistration(
   allowed: boolean
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('setSetting', {
-    jwt,
-    moduleName: 'settingsManager',
-    moduleType: 'core',
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'set', {
     key: 'ALLOW_REGISTRATION',
     value: allowed ? 'true' : 'false'
   });

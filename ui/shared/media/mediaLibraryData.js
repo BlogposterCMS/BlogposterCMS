@@ -1,9 +1,5 @@
-const MEDIA_MODULE = {
-    moduleName: 'mediaManager',
-    moduleType: 'core'
-};
-const SHARE_MODULE = {
-    moduleName: 'shareManager',
+const RUNTIME_MANAGER_MODULE = {
+    moduleName: 'runtimeManager',
     moduleType: 'core'
 };
 function requireEmitter(emit) {
@@ -11,6 +7,29 @@ function requireEmitter(emit) {
         throw new Error('MEDIA_LIBRARY_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
     }
     return emit;
+}
+function objectParams(value = {}) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+function unwrapRuntimeFacadeData(value) {
+    if (value &&
+        typeof value === 'object' &&
+        'resource' in value &&
+        'action' in value &&
+        'data' in value) {
+        return value.data;
+    }
+    return value;
+}
+async function emitRuntimeAdmin(emit, jwt, resource, action, params = {}) {
+    const result = await emit('cmsAdminApiRequest', {
+        jwt,
+        ...RUNTIME_MANAGER_MODULE,
+        resource,
+        action,
+        params: objectParams(params)
+    });
+    return unwrapRuntimeFacadeData(result);
 }
 function requireUploadFetch(uploadFetch) {
     if (typeof uploadFetch === 'function')
@@ -62,27 +81,19 @@ export async function uploadMediaFile(uploadFetch, csrfToken, currentPath, file)
 }
 export async function createMediaFolder(emit, jwt, currentPath, newFolderName) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('createLocalFolder', {
-        jwt,
-        ...MEDIA_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'createLocalFolder', {
         currentPath,
         newFolderName
     });
 }
 export async function listMediaFolder(emit, jwt, subPath) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('listLocalFolder', {
-        jwt,
-        ...MEDIA_MODULE,
-        subPath
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'listLocalFolder', { subPath });
     return toFolderListing(res);
 }
 export async function renameMediaItem(emit, jwt, currentPath, oldName, newName) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('renameLocalItem', {
-        jwt,
-        ...MEDIA_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'renameLocalItem', {
         currentPath,
         oldName,
         newName
@@ -90,20 +101,14 @@ export async function renameMediaItem(emit, jwt, currentPath, oldName, newName) 
 }
 export async function deleteMediaItem(emit, jwt, currentPath, itemName) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('deleteLocalItem', {
-        jwt,
-        ...MEDIA_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'deleteLocalItem', {
         currentPath,
         itemName
     });
 }
 export async function createMediaShareLink(emit, jwt, filePath) {
     const meltdownEmit = requireEmitter(emit);
-    const result = await meltdownEmit('createShareLink', {
-        jwt,
-        ...SHARE_MODULE,
-        filePath
-    });
+    const result = await emitRuntimeAdmin(meltdownEmit, jwt, 'shares', 'create', { filePath });
     return result && typeof result === 'object'
         ? result
         : {};

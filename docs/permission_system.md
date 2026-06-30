@@ -46,10 +46,10 @@ users.delete
 settings.core.edit
 ```
 
-The built-in admin role has `'*': true` and the legacy
-`canAccessEverything: true` flag. Those broad bypasses are reserved for
-reviewed administrator groups. They are not assignable as direct checkbox
-rights on a single user.
+The built-in admin role has `'*': true`. That broad bypass is reserved for
+reviewed administrator groups and is not assignable as a direct checkbox right
+on a single user. Startup normalizes retired broad keys out of stored admin
+role payloads.
 
 ## Where The Catalog Comes From
 
@@ -77,7 +77,7 @@ only inside their own namespace:
 ```
 
 They must not declare core permissions such as `users.delete`,
-`modules.install`, `settings.core.edit`, `*` or `canAccessEverything`.
+`modules.install`, `settings.core.edit`, `*` or retired broad keys.
 
 Important: declaring `shopSync.sync` only creates a permission key that admins
 can assign to users. It does not give the module access to core user, settings
@@ -121,7 +121,7 @@ Community modules have two different security concepts:
 | Concept | Declared in | Meaning |
 | --- | --- | --- |
 | Module-owned permission | `moduleInfo.permissions` | Adds keys such as `shopSync.sync` to the catalog so admins can assign them to users. |
-| Requested core event access | `moduleInfo.requestedAccess` | Asks for permission to call one specific core event, either permanently or once. |
+| Requested core action access | `moduleInfo.requestedAccess` | Asks for permission to call one documented `{ resource, action }` facade action, either permanently or once. |
 
 Example:
 

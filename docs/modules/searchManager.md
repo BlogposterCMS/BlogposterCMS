@@ -3,20 +3,20 @@
 ## Boundaries
 
 Search Manager owns indexing and query state as a core module. Content Engine
-and legacy core modules index through explicit search events; apps, widgets and
+and source-owning core modules index through explicit search events; apps, widgets and
 community modules read public search through Runtime Manager. Public callers
 cannot request private statuses or visibility, and direct manager writes require
 `search.manage`.
 
-Core search indexing and query domain for Content Engine entries and legacy
-sources. It is backend-only and does not add UI screens by itself.
+Core search indexing and query domain for Content Engine entries and source-owned
+records. It is backend-only and does not add UI screens by itself.
 
 ## Startup
 - Core module loaded after `seoManager`.
 - Ensures the search schema/table/collection exists.
 
 ## Purpose
-- Stores portable search documents for Content Engine entries and legacy source
+- Stores portable search documents for Content Engine entries and source-owned
   pairs.
 - Provides public-safe search defaults: non-manager callers only see
   `published` + `public` documents.
@@ -47,7 +47,7 @@ sources. It is backend-only and does not add UI screens by itself.
 ## Search Documents
 - Content Engine entries are indexed under
   `sourceModule: "contentEngine"` and `sourceId: entryId`.
-- Legacy modules can index under their own `sourceModule/sourceId`.
+- Source-owning modules can index under their own `sourceModule/sourceId`.
 - The portable implementation uses normalized text matching across SQLite,
   Postgres and MongoDB.
 - Document URLs are normalized to root-relative paths or absolute `http`/`https`

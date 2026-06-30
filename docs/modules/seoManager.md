@@ -20,7 +20,7 @@ add UI screens by itself.
 
 ## Purpose
 - Stores global SEO defaults.
-- Stores SEO metadata for content entries, paths and legacy source pairs such
+- Stores SEO metadata for content entries, paths and source-owned records such
   as `sourceModule: "pagesManager"` plus `sourceId`.
 - Resolves SEO metadata by merging global defaults, Content Engine metadata and
   explicit SEO overrides.

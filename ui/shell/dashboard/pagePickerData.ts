@@ -4,6 +4,8 @@ export type PageRecord = {
   slug?: string;
 };
 
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
+
 type PagePickerEmitter = Window['meltdownEmit'];
 
 interface PageListResult {
@@ -15,12 +17,6 @@ interface PageLookupResult {
     slug?: unknown;
   };
 }
-
-// Keep page-picker event contracts in one place; the picker owns only rendering.
-const PAGES_MANAGER_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
 
 function requireEmitter(emit: PagePickerEmitter): NonNullable<PagePickerEmitter> {
   if (typeof emit !== 'function') {
@@ -60,9 +56,7 @@ export async function fetchPublicPages(
   jwt: string | null | undefined
 ): Promise<PageRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getPagesByLane', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', {
     lane: 'public'
   });
   return toPages(res);
@@ -75,9 +69,7 @@ export async function savePageOrder(
   newOrder: number
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('updatePage', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'update', {
     pageId,
     newOrder
   });
@@ -90,9 +82,7 @@ export async function createPublicPageForPicker(
   slug: string
 ): Promise<string | number> {
   const meltdownEmit = requireEmitter(emit);
-  const result = await meltdownEmit('createPage', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  const result = await emitRuntimeAdmin<{ pageId?: string | number }>(meltdownEmit, jwt, 'pages', 'create', {
     title,
     slug,
     lane: 'public',
@@ -113,9 +103,7 @@ export async function fetchPageSlugById(
   pageId: string | number
 ): Promise<string> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('getPageById', {
-    jwt,
-    ...PAGES_MANAGER_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'get', {
     pageId
   });
   const slug = slugFromPageLookup(res);

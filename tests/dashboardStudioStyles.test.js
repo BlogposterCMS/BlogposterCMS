@@ -76,7 +76,7 @@ describe('dashboard studio styles', () => {
     expect(css).toContain('mask: url("/assets/icons/chevron-down.svg")');
   });
 
-  it('keeps dashboard chrome on studio tokens instead of legacy dotted surfaces', () => {
+  it('keeps dashboard chrome on studio tokens instead of dotted surfaces', () => {
     const adminScss = readProjectFile('public/assets/scss/pages/_admin.scss');
     const siteCss = readProjectFile('public/assets/css/site.css');
     const adminHtml = readProjectFile('public/admin.html');

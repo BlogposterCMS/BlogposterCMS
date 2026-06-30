@@ -1,5 +1,4 @@
 const SYSTEM_WIDGET_PREFIX = '/ui/widgets/plainspace/';
-const LEGACY_SYSTEM_WIDGET_PREFIX = '/plainspace/widgets/';
 const COMMUNITY_WIDGET_PATTERN = /^\/widgets\/[A-Za-z0-9_-]+\/widget\.js$/;
 
 function currentDocumentBase(): string {
@@ -20,15 +19,6 @@ function serializeSystemWidgetPath(pathname: string, url: URL): string {
   return `${pathname}${url.search}${url.hash}`;
 }
 
-function normalizeLegacySystemWidgetPath(pathname: string): string | null {
-  if (!pathname.startsWith(LEGACY_SYSTEM_WIDGET_PREFIX)) return null;
-
-  // Legacy browser shims are allowed only as aliases for the same canonical
-  // trusted widget tree; the URL parser has already resolved dot segments.
-  const relativePath = pathname.slice(LEGACY_SYSTEM_WIDGET_PREFIX.length);
-  return `${SYSTEM_WIDGET_PREFIX}${relativePath}`;
-}
-
 export function resolveWidgetModuleUrl(input: unknown, base = currentDocumentBase()): string | null {
   if (typeof input !== 'string' || !input.trim()) return null;
 
@@ -45,9 +35,8 @@ export function resolveWidgetModuleUrl(input: unknown, base = currentDocumentBas
     return null;
   }
 
-  const systemWidgetPath = normalizeLegacySystemWidgetPath(url.pathname) || url.pathname;
-  if (systemWidgetPath.startsWith(SYSTEM_WIDGET_PREFIX)) {
-    return serializeSystemWidgetPath(systemWidgetPath, url);
+  if (url.pathname.startsWith(SYSTEM_WIDGET_PREFIX)) {
+    return serializeSystemWidgetPath(url.pathname, url);
   }
 
   if (COMMUNITY_WIDGET_PATTERN.test(url.pathname)) {

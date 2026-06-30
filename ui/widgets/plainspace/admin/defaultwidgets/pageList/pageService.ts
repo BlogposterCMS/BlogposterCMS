@@ -1,4 +1,4 @@
-const baseOptions = { moduleName: 'pagesManager', moduleType: 'core' } as const;
+const runtimeManagerOptions = { moduleName: 'runtimeManager', moduleType: 'core' } as const;
 
 interface PageRecord {
   id?: string | number;
@@ -35,6 +35,31 @@ function toArray(value: unknown): unknown[] {
   return [];
 }
 
+function unwrapRuntimeResult(value: unknown): unknown {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'resource' in value &&
+    'action' in value &&
+    'data' in value
+  ) {
+    return (value as { data?: unknown }).data;
+  }
+  return value;
+}
+
+async function requestPageAction(action: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  const { meltdownEmit, jwt } = getRuntime();
+  const result = await meltdownEmit('cmsAdminApiRequest', {
+    ...runtimeManagerOptions,
+    jwt,
+    resource: 'pages',
+    action,
+    params
+  });
+  return unwrapRuntimeResult(result);
+}
+
 export const sanitizeSlug = (raw: unknown): string =>
   (raw == null ? '' : String(raw))
     .trim()
@@ -48,9 +73,8 @@ export const sanitizeSlug = (raw: unknown): string =>
 
 export const pageService = {
   async getPagesByLane(lane = 'public'): Promise<unknown[]> {
-    const { meltdownEmit, jwt } = getRuntime();
     const safeLane = typeof lane === 'string' && lane.trim() ? lane.trim() : 'public';
-    const res = await meltdownEmit('getPagesByLane', { ...baseOptions, jwt, lane: safeLane });
+    const res = await requestPageAction('byLane', { lane: safeLane });
     return toArray(res);
   },
 
@@ -69,10 +93,7 @@ export const pageService = {
     status?: string;
     meta?: Record<string, unknown>;
   }): Promise<unknown> {
-    const { meltdownEmit, jwt } = getRuntime();
-    return meltdownEmit('createPage', {
-      ...baseOptions,
-      jwt,
+    return requestPageAction('create', {
       title,
       slug,
       lane: 'public',
@@ -82,10 +103,7 @@ export const pageService = {
   },
 
   async update(page: PageRecord, patch: PagePatch): Promise<unknown> {
-    const { meltdownEmit, jwt } = getRuntime();
-    return meltdownEmit('updatePage', {
-      ...baseOptions,
-      jwt,
+    return requestPageAction('update', {
       pageId: page.id,
       slug: page.slug,
       status: page.status,
@@ -117,12 +135,10 @@ export const pageService = {
   },
 
   async setAsStart(id: string | number): Promise<unknown> {
-    const { meltdownEmit, jwt } = getRuntime();
-    return meltdownEmit('setAsStart', { ...baseOptions, jwt, pageId: id });
+    return requestPageAction('setStart', { pageId: id });
   },
 
   async delete(id: string | number): Promise<unknown> {
-    const { meltdownEmit, jwt } = getRuntime();
-    return meltdownEmit('deletePage', { ...baseOptions, jwt, pageId: id });
+    return requestPageAction('delete', { pageId: id });
   }
 };

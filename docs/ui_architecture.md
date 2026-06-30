@@ -14,18 +14,16 @@ UI keeps a stable TypeScript/JavaScript boundary.
 - **Widgets**: widget SDK, bundled widgets, and future sandbox adapters.
 - **Shared**: API clients, event contracts, schemas, and design-system tokens.
 
-The target source tree is `ui/`. Legacy URLs under
-`public/` and `apps/designer/` remain available as
-compatibility shims and static shells, but active Shell, Designer, PlainSpace
-dashboard, PlainSpace runtime, widget-panel, and shared UI sources now live
-under `ui/`.
+The target source tree is `ui/`. Active Shell, Designer, PlainSpace dashboard,
+PlainSpace runtime, widget-panel, and shared UI sources live under `ui/`.
+`public/` and `apps/designer/` hold HTML shells, CSS/assets and bundle entry
+points only.
 
 Active Webpack bundles start from TypeScript-authored
-`ui/<zone>/entries/` modules. New browser entrypoints should not
-be added directly under legacy public folders.
-The server also exposes `/ui` as a static compatibility mount so old widget and
-designer imports can resolve the new UI modules without copying source back
-into `public/`.
+`ui/<zone>/entries/` modules. New browser entrypoints should not be added
+directly under `public/` or `apps/designer/` implementation folders. The server
+exposes `/ui` as the canonical static mount for trusted first-party browser
+modules.
 
 ## API Boundary
 
@@ -50,7 +48,7 @@ commands from apps must use the `cms-admin-request` bridge shape
 `{ resource, action, params }`; the server routes that through
 `runtimeManager.cmsAdminApiRequest` and rejects arbitrary app event names.
 
-The existing global functions remain for compatibility:
+The host browser globals are:
 
 - `window.blogposterApi`
 - `window.meltdownEmit`
@@ -221,7 +219,7 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   Drag-and-drop within this flow uses a dashboard-only placeholder and
   `beforeInstanceId` insertion hook plus pointer-preview/snap feedback, leaving
   CanvasGrid drag behavior scoped to Designer/public surfaces.
-  The admin lane skips legacy widget-instance layout options during hydration;
+  The admin lane skips widget-instance layout options during hydration;
   `applyWidgetOptions` and percent-to-grid-unit sizing are reserved for
   CanvasGrid/public-style surfaces.
   Designer Studio and public/static runtime grids may continue to use
@@ -229,9 +227,9 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   model.
 - `ui/shared/grid/*`: shared CanvasGrid implementation, geometry, global event
   wiring, and bounding-box helpers used by Shell, Runtime, PlainSpace, and
-  Designer through stable compatibility paths.
-- `ui/runtime/grid-core/*`: runtime compatibility exports for older grid
-  imports, including geometry, global events, bbox, and the small event emitter.
+  Designer through stable shared paths.
+- `ui/runtime/grid-core/*`: stable runtime grid re-exports for geometry,
+  global events, bbox, and the small event emitter.
   `ui/runtime/main/{canvasGrid,BoundingBoxManager,grid-utils,globalEvents}.ts`
   and `ui/runtime/grid-core/*` forward to `ui/shared/grid`.
 - `ui/shared/partials/*`: shared partial loading helpers. Runtime code must use
@@ -248,7 +246,7 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   AppLoader bridge and starts the generic DOM agent surface adapter when the
   app manifest opts into `agentSurface`. Designer shells load the emitted
   `/build/appBridge.js` bundle directly; `apps/designer/` must not keep a
-  separate app-bridge shim.
+  separate app-bridge file.
 - `ui/shell/apps/appFrameLoader.ts`: parent-side app iframe bootstrap. It sends
   init tokens on iframe load and repeats them briefly after registration so
   fast same-host app frames do not miss the handshake while staying sandboxed.
@@ -256,12 +254,12 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `/build/designer.js` entry is a small bootloader that lazy-loads the
   Designer app chunk, keeping the shell entry below the production asset budget
   while preserving the single script URL used by the Designer HTML shell.
-- `ui/designer/app/*`: active Designer implementation. The legacy
-  `apps/designer/` tree keeps assets, partials, app metadata, and thin module
-  forwarders only. Sandboxed Designer frames verify parent origins through the
+- `ui/designer/app/*`: active Designer implementation. The `apps/designer/`
+  tree keeps assets, partials and app metadata only. Sandboxed Designer frames
+  verify parent origins through the
   public `/apps/designer/origin-public-key.json` CORS endpoint before accepting
   init tokens. Designer bootstrap applies the shared Shell theme mode from
-  `ui/shell/theme/userColor.ts`; Designer CSS should map legacy builder
+  `ui/shell/theme/userColor.ts`; Designer CSS should map builder
   variables onto the dashboard Studio tokens instead of defining an independent
   light/dark contract.
 - `ui/shared/layout/*`: shared Design Studio layout contract. It owns
@@ -281,7 +279,7 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   styles, datasets, and overflow behavior, and
   `ui/widgets/options/widgetPercentSizing.ts` owns percent-to-grid-unit sizing
   and delayed metric replay. Dynamic widget module URLs are resolved through
-  `ui/widgets/rendering/widgetModulePaths.ts`; widget API event registration is
+  `ui/widgets/rendering/widgetModulePaths.ts`; widget API action registration is
   owned by `ui/widgets/rendering/widgetEvents.ts`, while inline widget HTML
   sanitizing, CSS injection, and custom JS execution are owned by
   `ui/widgets/rendering/widgetInlineCode.ts`. Widget renderer content clearing,
@@ -299,7 +297,6 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   TypeScript-authored dashboard widget panel chrome, add-widget pipeline,
   searchable widget catalog/cards, and remove/resize controls.
 - `ui/widgets/plainspace/*`: active bundled PlainSpace widget implementation.
-  The legacy `/plainspace/widgets/*` URLs are compatibility shims only.
   Settings surfaces embed admin widget panels through a small canonical
   `/ui/widgets/plainspace/admin/*` allowlist rather than arbitrary import paths.
   Route-specific settings loads, saves, media picks, SEO values, and security
@@ -345,8 +342,7 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   owned by `ui/widgets/plainspace/admin/loginStrategyEditData.ts`.
   Media explorer listing normalization, upload requests, folder creation, and
   share-link payloads delegate to `ui/shared/media/mediaLibraryData.ts` through
-  the legacy-compatible `ui/widgets/plainspace/admin/mediaExplorerData.ts`
-  wrapper.
+  the `ui/widgets/plainspace/admin/mediaExplorerData.ts` wrapper.
   Page editor page normalization, layout-template loading, update payloads, and
   page-data cache invalidation are owned by
   `ui/widgets/plainspace/admin/pageEditorWidgets/pageEditorData.ts`.
@@ -371,36 +367,18 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   and blank template creation are owned by
   `ui/widgets/plainspace/admin/layoutTemplatesData.ts`.
 
-## Compatibility Shims
+## Public Entry Points
 
-Legacy browser paths such as `/assets/js/login.js`,
-`/plainspace/main/pageRenderer.js`, `/plainspace/dashboard/workspaces.js`, and
-`/plainspace/widgets/*` are intentionally kept as tiny modules that forward
-into `ui/`. This preserves existing widgets, designer code, and bookmarked
-module URLs while keeping the implementation source in the UI zone.
-Compatibility shims may forward only to canonical `ui/` sources or built
-`/build/` bundles; they should never chain through another legacy public path.
-Designer source shims are stricter: JavaScript under `apps/designer/` may only
-forward into `ui/designer`, while HTML shells load shared `/build/` bundles
-directly.
 HTML shells and server-rendered app shells should load `/build/` bundles
-directly instead of loading these legacy browser shim URLs.
-When server render mode strips the client page renderer, it targets the current
-`/build/pageRenderer.js` script, not retired `/assets/plainspace` paths.
-PlainSpace compatibility URLs are served as static shim files; TypeScript source
-for those modules belongs in `ui/` and is no longer runtime-transpiled from
-`public/plainspace`.
-Static files such as theme assets may remain under `public/`, but browser
-vendor libraries are owned from `ui/shared/vendor`; legacy public vendor URLs
-forward there instead of carrying duplicate implementation copies.
-The public compatibility trees are JavaScript-only: TypeScript sources belong in
-`ui/` and are emitted through `/build` bundles or the explicit runtime
+directly. Static files such as theme assets may remain under `public/`, but
+browser vendor libraries are owned from `ui/shared/vendor`. TypeScript sources
+belong in `ui/` and are emitted through `/build` bundles or explicit runtime
 transpiler routes. Direct `.ts` and `.tsx` requests on browser static mounts are
 blocked.
 Module `publicLoader.js`/`publicLoader.ts` files are browser modules too. They
 may stay with their server module for ownership, but they must import shared UI
-helpers from canonical `/ui/...` URLs, not from legacy `/plainspace/...` or
-`/assets/js/...` paths. The emitted `.js` loader files are build artifacts; new
+helpers from canonical `/ui/...` URLs, not from retired `/plainspace/...` or
+`/assets/js/...` implementation paths. The emitted `.js` loader files are build artifacts; new
 loader implementations should be TypeScript-authored beside them. Core module
 public loaders are exposed through an explicit server allowlist of
 `/mother/modules/<module>/publicLoader.js` routes; the `mother/` tree is not
@@ -411,10 +389,10 @@ only for the named core public loaders.
 
 The Jest suite includes `tests/uiArchitectureBoundaries.test.js` to keep these
 boundaries from regressing: `apps/designer/` and `public/plainspace/` source
-files must remain forwarders, public compatibility trees must not contain
-TypeScript sources, module public loaders must use canonical UI imports, docs
+trees must not contain browser implementation scripts, public entry trees must
+not contain TypeScript sources, module public loaders must use canonical UI imports, docs
 must not point new UI work at retired implementation paths, and UI code must not
-import legacy public implementation paths. Runtime UI sources must not import
+import retired public implementation paths. Runtime UI sources must not import
 from `ui/shell`; Shell UI sources must not import Runtime, Designer, or Widgets.
 Shared helpers belong in `ui/shared`. Widgets own their option and rendering
 helpers and must not import Runtime, Shell, or Designer. Shared UI code must not
@@ -445,7 +423,7 @@ build.
 keeps new UI modules inside the same strict browser contract instead of relying
 on hand-maintained file lists.
 
-Some older Designer files still carry explicit `@ts-nocheck` markers because
+Some Designer files still carry explicit `@ts-nocheck` markers because
 they were migrated from JavaScript before their DOM and layout contracts were
 typed. Runtime, Shell, Widgets, and Shared UI TypeScript are checked strictly.
 The boundary test pins the exact allowed suppression list so new UI TypeScript

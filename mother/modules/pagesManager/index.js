@@ -33,6 +33,9 @@ const {
   mirrorPageToContentEngine,
   trashPageContentEntry
 } = require('./contentEngineAdapter');
+const {
+  seedComingSoonPage
+} = require('./comingSoonSeed');
 
 const TIMEOUT_DURATION = 5000;
 const MIRROR_FETCH_TIMEOUT = 1000;
@@ -57,6 +60,41 @@ function isDuplicateConstraintError(err) {
   }
   const msg = String(err.message || '').toLowerCase();
   return msg.includes('duplicate') || msg.includes('unique constraint') || msg.includes('unique violation');
+}
+
+function parsePageMeta(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeDesignId(value) {
+  const raw = String(value || '').trim();
+  return /^[A-Za-z0-9_.:-]+$/.test(raw) ? raw : '';
+}
+
+function normalizeLayoutRef(value) {
+  const raw = String(value || '').trim();
+  return /^layout:[A-Za-z0-9_.:-]+(?:@[^/\s]+)?$/.test(raw) ? raw : '';
+}
+
+function designLayoutForPage(page = {}) {
+  const meta = parsePageMeta(page.meta);
+  const explicitLayoutRef = normalizeLayoutRef(meta.design_layout || meta.designLayout);
+  if (explicitLayoutRef) return { layoutRef: explicitLayoutRef, hasLinkedDesign: true };
+
+  const designId = normalizeDesignId(meta.designId || meta.design_id);
+  if (designId) return { layoutRef: `layout:${designId}@v1`, hasLinkedDesign: true };
+
+  return {
+    layoutRef: `layout:${page.slug || 'default'}@v1`,
+    hasLinkedDesign: false
+  };
 }
 
 function fetchPageRowForContentMirror(motherEmitter, { jwt, pageId, language = 'en' }) {
@@ -118,6 +156,12 @@ async function mirrorPageTrashToContentEngine(motherEmitter, action, pageData) {
 }
 
 module.exports = {
+  _internals: {
+    designLayoutForPage,
+    normalizeDesignId,
+    normalizeLayoutRef,
+    parsePageMeta
+  },
   async initialize({ motherEmitter, isCore, jwt, nonce }) {
     if (!isCore) {
       throw new Error('[PAGE MANAGER] Must be loaded as a core module.');
@@ -171,36 +215,19 @@ module.exports = {
           );
         });
 
-        if (pages.length === 0) {
-          console.log('[PAGE MANAGER] No pages found → seeding "Coming Soon"...');
+        const comingSoonSeed = await seedComingSoonPage(motherEmitter, jwt, {
+          enableMaintenanceMode: pages.length === 0
+        });
+        if (comingSoonSeed.created) {
+          console.log('[PAGE MANAGER] Seeded Coming Soon page.');
+        } else if (comingSoonSeed.upgraded) {
+          console.log('[PAGE MANAGER] Upgraded seeded Coming Soon page with a Design Studio design.');
+        }
+        if (comingSoonSeed.designSkipped && comingSoonSeed.designSkipReason !== 'already-linked') {
+          console.warn('[PAGE MANAGER] PAGES_COMING_SOON_DESIGN_SKIPPED', comingSoonSeed.designSkipReason);
+        }
 
-          // create "Coming Soon" page
-          const { pageId } = await new Promise((resolve, reject) => {
-            motherEmitter.emit(
-              'createPage',
-              {
-                jwt,
-                moduleName: 'pagesManager',
-                moduleType: 'core',
-                title: 'Coming Soon',
-                slug: 'coming-soon',
-                lane: 'public',
-                status: 'published',
-                translations: [{
-                  language: 'en',
-                  title: 'Coming Soon',
-                  html: '<div style="text-align:center;margin-top:20%;"><h1>🚧 Site Under Maintenance 🚧</h1><p>We\'ll be back shortly.</p></div>',
-                  metaDesc: 'Site under maintenance.',
-                  seoTitle: 'Coming Soon',
-                  seoKeywords: 'maintenance, coming soon'
-                }],
-                is_content: false
-              },
-              onceCallback((err, result) => (err ? reject(err) : resolve(result)))
-            );
-          });
-
-          // setAsStart => meltdown
+        if (pages.length === 0 && comingSoonSeed.pageId) {
           await new Promise((resolve, reject) => {
             motherEmitter.emit(
               'setAsStart',
@@ -208,29 +235,18 @@ module.exports = {
                 jwt,
                 moduleName: 'pagesManager',
                 moduleType: 'core',
-                pageId,
+                pageId: comingSoonSeed.pageId,
                 language: 'en'
               },
               onceCallback(err => (err ? reject(err) : resolve()))
             );
           });
 
-          // setSetting => meltdown => enable Maintenance Mode
-          await new Promise((resolve, reject) => {
-            motherEmitter.emit(
-              'setSetting',
-              {
-                jwt,
-                moduleName: 'settingsManager',
-                moduleType: 'core',
-                key: 'MAINTENANCE_MODE',
-                value: 'true'
-              },
-              onceCallback(err => (err ? reject(err) : resolve()))
-            );
-          });
+          console.log('[PAGE MANAGER] Maintenance mode enabled.');
+        }
 
-          console.log('[PAGE MANAGER] Maintenance mode enabled ✔');
+        if (pages.length === 0 && !comingSoonSeed.pageId) {
+          console.warn('[PAGE MANAGER] PAGES_COMING_SOON_SEED_NO_PAGE_ID');
         }
 
         // Mark PAGESMANAGER_SEEDED => meltdown => setSetting
@@ -727,8 +743,9 @@ function setupPagesManagerEvents(motherEmitter) {
           if (err) return cb(err);
           if (!page) return cb(new Error('Page not found'));
 
-          const theme = page?.meta?.theme || 'default';
-          const layoutRef = page?.meta?.design_layout || `layout:${page.slug || 'default'}@v1`;
+          const pageMeta = parsePageMeta(page?.meta);
+          const theme = pageMeta.theme || 'default';
+          const { layoutRef, hasLinkedDesign } = designLayoutForPage(page);
 
           const envelope = {
             id: page.id,
@@ -743,7 +760,7 @@ function setupPagesManagerEvents(motherEmitter) {
             attachments: [
               {
                 type: 'design',
-                source: 'designer',
+                source: 'designerManager',
                 descriptor: {
                   theme,
                   engine: 'grid-v2',
@@ -759,6 +776,7 @@ function setupPagesManagerEvents(motherEmitter) {
                 source: 'pagesManager',
                 descriptor: {
                   htmlRef: `pageHtml:${page.id}@v1`,
+                  fallbackOnly: hasLinkedDesign,
                   inline: {
                     html: page.html || '',
                     css: page.css || '',

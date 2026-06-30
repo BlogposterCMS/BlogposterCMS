@@ -24,7 +24,7 @@ function shouldEnhanceSelect(select) {
         return false;
     if (select.closest('.custom-select'))
         return false;
-    // Existing opt-in selects are allowed even when legacy CSS made them compact.
+    // Existing opt-in selects remain allowed even when nearby CSS makes them compact.
     if (select.dataset.enhance === 'dropdown')
         return true;
     return !isIntentionallyHidden(select);

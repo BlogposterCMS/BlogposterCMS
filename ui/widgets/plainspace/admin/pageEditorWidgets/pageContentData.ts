@@ -1,3 +1,5 @@
+import { emitRuntimeAdmin, runtimeAdminPayload } from '../../../../shared/api-client/runtimeFacade.js';
+
 export interface PageMeta {
   designId?: string | number;
   designTitle?: string;
@@ -53,26 +55,6 @@ type PageContentEmitter = Window['meltdownEmit'];
 export const HTML_FOLDER = 'page-content';
 export const HTML_SUBPATH = `public/${HTML_FOLDER}`;
 export const HTML_WEB_BASE = `/media/${HTML_FOLDER}`;
-
-const PAGES_MODULE = {
-  moduleName: 'pagesManager',
-  moduleType: 'core'
-} as const;
-
-const APP_LOADER_MODULE = {
-  moduleName: 'appLoader',
-  moduleType: 'core'
-} as const;
-
-const DESIGNER_MODULE = {
-  moduleName: 'designer',
-  moduleType: 'community'
-} as const;
-
-const MEDIA_MODULE = {
-  moduleName: 'mediaManager',
-  moduleType: 'core'
-} as const;
 
 // Keep cross-module event names, media paths, and page update payloads out of the DOM widget.
 function requireEmitter(emit: PageContentEmitter): NonNullable<PageContentEmitter> {
@@ -142,12 +124,10 @@ export function htmlFileUrl(name: string): string {
 }
 
 export function buildPageContentCommonPayload(
-  jwt: string | null | undefined,
+  _jwt: string | null | undefined,
   page: PageRecord
 ): Record<string, unknown> {
   return {
-    jwt,
-    ...PAGES_MODULE,
     pageId: page.id,
     slug: page.slug,
     status: page.status,
@@ -165,7 +145,7 @@ export function buildPageContentUpdatePayload(
   page: PageRecord,
   values: PageContentUpdateValues
 ): Record<string, unknown> {
-  return {
+  return runtimeAdminPayload(jwt, 'pages', 'update', {
     ...buildPageContentCommonPayload(jwt, page),
     translations: [{
       language: page.language,
@@ -174,16 +154,19 @@ export function buildPageContentUpdatePayload(
       css: page.css || ''
     }],
     meta: values.meta
-  };
+  });
 }
 
 export function clearPageContentCache(
   pageDataLoader: PageDataLoaderLike | undefined,
   page: PageRecord
 ): void {
-  pageDataLoader?.clear?.('getPageById', {
-    ...PAGES_MODULE,
-    pageId: page.id
+  pageDataLoader?.clear?.('cmsAdminApiRequest', {
+    moduleName: 'runtimeManager',
+    moduleType: 'core',
+    resource: 'pages',
+    action: 'get',
+    params: { pageId: page.id }
   });
 }
 
@@ -229,10 +212,7 @@ export async function fetchBuilderApps(
   jwt: string | null | undefined
 ): Promise<BuilderApp[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('listBuilderApps', {
-    jwt,
-    ...APP_LOADER_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'apps', 'builderList');
   return toBuilderApps(res);
 }
 
@@ -241,10 +221,7 @@ export async function fetchPublishedDesigns(
   jwt: string | null | undefined
 ): Promise<DesignRecord[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('designer.listDesigns', {
-    jwt,
-    ...DESIGNER_MODULE
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list');
   return visibleDesigns(res);
 }
 
@@ -254,9 +231,7 @@ export async function ensureHtmlContentFolder(
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
   try {
-    await meltdownEmit('createLocalFolder', {
-      jwt,
-      ...MEDIA_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'createLocalFolder', {
       currentPath: 'public',
       newFolderName: HTML_FOLDER
     });
@@ -271,11 +246,7 @@ export async function listHtmlFiles(
 ): Promise<string[]> {
   const meltdownEmit = requireEmitter(emit);
   await ensureHtmlContentFolder(meltdownEmit, jwt);
-  const res = await meltdownEmit('listLocalFolder', {
-    jwt,
-    ...MEDIA_MODULE,
-    subPath: HTML_SUBPATH
-  });
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'listLocalFolder', { subPath: HTML_SUBPATH });
   return toFiles(res).filter(isHtmlFileName);
 }
 
@@ -292,9 +263,7 @@ export async function uploadHtmlFile(
 ): Promise<string> {
   const meltdownEmit = requireEmitter(emit);
   await ensureHtmlContentFolder(meltdownEmit, jwt);
-  const res = await meltdownEmit('uploadFileToFolder', {
-    jwt,
-    ...MEDIA_MODULE,
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'uploadToFolder', {
     subPath: HTML_SUBPATH,
     fileName,
     fileData: btoa(unescape(encodeURIComponent(html))),
@@ -312,5 +281,5 @@ export async function savePageContent(
   values: PageContentUpdateValues
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
-  await meltdownEmit('updatePage', buildPageContentUpdatePayload(jwt, page, values));
+  await meltdownEmit('cmsAdminApiRequest', buildPageContentUpdatePayload(jwt, page, values));
 }

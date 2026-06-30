@@ -1,6 +1,7 @@
 import { capturePreview as defaultCapturePreview } from './capturePreview.js';
 import { designerState } from '../managers/designerState.js';
 import { serializeLayout } from './layoutSerialize.js';
+import { adminFacadePayload, emitAdminFacade } from '../runtime/runtimeFacade.js';
 
 export function createSaveManager(state, ctx) {
   function scheduleAutosave() {
@@ -32,10 +33,7 @@ export function createSaveManager(state, ctx) {
     if (autosave && layoutStr === state.lastSavedLayoutStr) { state.pendingSave = false; return; }
     if (!autosave) pushState(layout);
     try {
-      await window.meltdownEmit('saveLayoutForViewport', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
+      await emitAdminFacade(window.meltdownEmit, 'plainSpace', 'saveLayoutForViewport', {
         pageId: state.pageId,
         lane: 'public',
         viewport: 'desktop',
@@ -87,18 +85,12 @@ export function createSaveManager(state, ctx) {
         const base64 = previewDataUrl.split(',')[1];
         const thumbFile = `thumb-${Date.now()}.png`;
         const subPath = 'builder/designer-thumbnails';
-        await window.meltdownEmit('uploadFileToFolder', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'mediaManager',
-          moduleType: 'core',
+        await emitAdminFacade(window.meltdownEmit, 'media', 'uploadToFolder', {
           subPath,
           fileName: thumbFile,
           fileData: base64
         });
-        const pubRes = await window.meltdownEmit('makeFilePublic', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'mediaManager',
-          moduleType: 'core',
+        const pubRes = await emitAdminFacade(window.meltdownEmit, 'media', 'makeFilePublic', {
           filePath: `${subPath}/${thumbFile}`,
           userId: ownerId
         });
@@ -120,10 +112,7 @@ export function createSaveManager(state, ctx) {
         mediaId,
         mediaUrl
       } : null;
-      const res = await window.meltdownEmit('designer.saveDesign', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'designer',
-        moduleType: 'community',
+      const res = await emitAdminFacade(window.meltdownEmit, 'designer', 'save', {
         design: {
           id: state.designId,
           title: name,
@@ -152,16 +141,13 @@ export function createSaveManager(state, ctx) {
       }
       const targetIds = pageId ? [pageId] : [];
       const events = targetIds.map(id => ({
-        eventName: 'saveLayoutForViewport',
-        payload: {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core',
+        eventName: 'cmsAdminApiRequest',
+        payload: adminFacadePayload('plainSpace', 'saveLayoutForViewport', {
           pageId: id,
           lane: 'public',
           viewport: 'desktop',
           layout
-        }
+        })
       }));
       if (events.length) await window.meltdownEmitBatch(events);
     } catch (err) {

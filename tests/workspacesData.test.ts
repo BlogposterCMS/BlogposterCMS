@@ -21,15 +21,17 @@ describe('workspacesData', () => {
     expect(toAdminPages('bad')).toEqual([]);
   });
 
-  it('fetches admin pages through pagesManager lane loading', async () => {
+  it('fetches admin pages through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue({ pages: [{ slug: 'workspace' }] });
 
     await expect(fetchAdminPagesByLane(emit, 'admin-token')).resolves.toEqual([{ slug: 'workspace' }]);
-    expect(emit).toHaveBeenCalledWith('getPagesByLane', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'admin'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'admin' }
     });
   });
 
@@ -40,12 +42,16 @@ describe('workspacesData', () => {
       id: 'parent-1',
       slug: 'content'
     });
-    expect(emit).toHaveBeenCalledWith('getPageBySlug', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      slug: 'content',
-      lane: 'admin'
+      resource: 'pages',
+      action: 'getBySlug',
+      params: {
+        slug: 'content',
+        lane: 'admin'
+      }
     });
   });
 
@@ -58,16 +64,20 @@ describe('workspacesData', () => {
       icon: '/admin/assets/icons/file-box.svg'
     });
 
-    expect(emit).toHaveBeenCalledWith('createPage', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      title: 'Content',
-      slug: 'content',
-      lane: 'admin',
-      status: 'published',
-      parent_id: null,
-      meta: { icon: '/admin/assets/icons/file-box.svg', workspace: 'content' }
+      resource: 'pages',
+      action: 'create',
+      params: {
+        title: 'Content',
+        slug: 'content',
+        lane: 'admin',
+        status: 'published',
+        parent_id: null,
+        meta: { icon: '/admin/assets/icons/file-box.svg', workspace: 'content' }
+      }
     });
   });
 
@@ -82,16 +92,20 @@ describe('workspacesData', () => {
       icon: '/admin/assets/icons/file.svg'
     });
 
-    expect(emit).toHaveBeenCalledWith('createPage', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      title: 'News',
-      slug: 'content/news',
-      lane: 'admin',
-      status: 'published',
-      parent_id: 'parent-1',
-      meta: { icon: '/admin/assets/icons/file.svg' }
+      resource: 'pages',
+      action: 'create',
+      params: {
+        title: 'News',
+        slug: 'content/news',
+        lane: 'admin',
+        status: 'published',
+        parent_id: 'parent-1',
+        meta: { icon: '/admin/assets/icons/file.svg' }
+      }
     });
   });
 

@@ -645,7 +645,7 @@ test('static assets reject realpath escapes from symlinked directories', () => {
   }
 });
 
-test('legacy app facade denies direct Express access', () => {
+test('app facade denies direct Express access', () => {
   const appFacade = createDeniedAppFacade('demoModule');
   expect(() => appFacade.get('/x', () => {})).toThrow(/raw Express app/);
 });

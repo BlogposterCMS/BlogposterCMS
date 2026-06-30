@@ -21,7 +21,7 @@ PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
 - Registers theme/menu locations.
 - Stores named navigation menus.
 - Stores ordered menu items with optional parent-child nesting.
-- Allows menu items to point to custom URLs, Content Engine entries or legacy
+- Allows menu items to point to custom URLs, Content Engine entries or source-owned
   source pairs such as `sourceModule: "pagesManager"` plus `sourceId`.
 
 ## Listened Events

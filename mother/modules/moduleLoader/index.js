@@ -9,7 +9,7 @@
  * 3) Deactivates malfunctioning modules.
  * 4) After a successful health check, starts a fresh runtime process.
  * 5) Auto-retries previously crashed modules.
- * 6) Optionally serves Grapes frontends.
+ * 6) Optionally serves module-provided static frontends.
  */
 
 require('dotenv').config();
@@ -34,7 +34,7 @@ const notify = (payload) => {
 const {
   ensureModuleRegistrySchema,
   initGetModuleRegistryEvent,
-  initListActiveGrapesModulesEvent,
+  initListActiveStaticFrontendsEvent,
   initListSystemModulesEvent,
   getModuleRegistry,
   insertModuleRegistryEntry,
@@ -70,7 +70,7 @@ const {
   sharedModuleAccessConsentManager
 } = require('./moduleAccessConsent');
 
-const CORE_OWNED_OPTIONAL_MODULES = CORE_OWNED_MODULE_NAMES;
+const RESERVED_CORE_MODULES = CORE_OWNED_MODULE_NAMES;
 const MODULE_NAME = 'moduleLoader';
 const MODULE_TYPE = 'core';
 
@@ -125,7 +125,7 @@ async function loadAllModules({ emitter, app, jwt }) {
 
   // 2) Initialize meltdown events for registry fetch and admin tasks
   initGetModuleRegistryEvent(motherEmitter);
-  initListActiveGrapesModulesEvent(motherEmitter);
+  initListActiveStaticFrontendsEvent(motherEmitter);
   initListSystemModulesEvent(motherEmitter);
   initModuleRegistryAdminEvents(motherEmitter, app);
 
@@ -155,8 +155,8 @@ async function loadAllModules({ emitter, app, jwt }) {
     .readdirSync(modulesPath, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name);
-  const folderNames = allFolderNames.filter(folder => !CORE_OWNED_OPTIONAL_MODULES.has(folder));
-  const skippedCoreOwnedFolders = allFolderNames.filter(folder => CORE_OWNED_OPTIONAL_MODULES.has(folder));
+  const folderNames = allFolderNames.filter(folder => !RESERVED_CORE_MODULES.has(folder));
+  const skippedCoreOwnedFolders = allFolderNames.filter(folder => RESERVED_CORE_MODULES.has(folder));
   for (const folder of skippedCoreOwnedFolders) {
     console.log(`[MODULE LOADER] Skipping "${folder}" because it is provided by a core service.`);
   }
@@ -207,7 +207,7 @@ async function loadAllModules({ emitter, app, jwt }) {
 
   // 7) PASS #1 => Try loading all active modules
   for (const row of dbRegistry) {
-    if (CORE_OWNED_OPTIONAL_MODULES.has(row.module_name)) {
+    if (RESERVED_CORE_MODULES.has(row.module_name)) {
       console.log(`[MODULE LOADER] Registry entry "${row.module_name}" is core-owned; skipping optional load.`);
       continue;
     }
@@ -226,7 +226,7 @@ async function loadAllModules({ emitter, app, jwt }) {
 
   // 8) PASS #2 => Auto-retry previously crashed modules
   for (const row of dbRegistry) {
-    if (CORE_OWNED_OPTIONAL_MODULES.has(row.module_name)) {
+    if (RESERVED_CORE_MODULES.has(row.module_name)) {
       continue;
     }
     if (!row.is_active && row.last_error && row.last_error.trim() !== '') {
@@ -243,10 +243,10 @@ async function loadAllModules({ emitter, app, jwt }) {
     }
   }
 
-  // 9) Optionally serve legacy Grapes frontends through the same bounded static asset policy.
+  // 9) Optionally serve module frontends through the same bounded static asset policy.
   for (const row of dbRegistry) {
     try {
-      serveLegacyGrapesFrontend({
+      serveStaticFrontend({
         row,
         folderNames,
         modulesPath,
@@ -258,7 +258,7 @@ async function loadAllModules({ emitter, app, jwt }) {
         moduleName,
         notificationType: 'system',
         priority: 'error',
-        message: `[MODULE LOADER] Failed to serve legacy frontend for "${moduleName}": ${err.message}`
+        message: `[MODULE LOADER] Failed to serve static frontend for "${moduleName}": ${err.message}`
       });
     }
   }
@@ -266,15 +266,15 @@ async function loadAllModules({ emitter, app, jwt }) {
   console.log('[MODULE LOADER] All optional modules loaded / retried successfully. The meltdown continues.');
 }
 
-function serveLegacyGrapesFrontend({ row, folderNames = [], modulesPath, app }) {
+function serveStaticFrontend({ row, folderNames = [], modulesPath, app }) {
   if (!row || !row.is_active || !app || typeof app.use !== 'function') return false;
 
   const moduleName = sanitizeModuleName(row.module_name);
-  if (CORE_OWNED_OPTIONAL_MODULES.has(moduleName)) return false;
+  if (RESERVED_CORE_MODULES.has(moduleName)) return false;
   if (!folderNames.includes(moduleName)) return false;
 
   const rowModuleInfo = normalizeModuleInfo(row);
-  if (!rowModuleInfo.grapesComponent) return false;
+  if (rowModuleInfo.staticFrontend !== true) return false;
 
   const modulePath = path.join(modulesPath, moduleName);
   const frontendPath = path.join(modulePath, 'frontend');
@@ -285,7 +285,7 @@ function serveLegacyGrapesFrontend({ row, folderNames = [], modulesPath, app }) 
   const mountPath = normalizeMountPath(moduleName, '/');
   const express = require('express');
   app.use(mountPath, blockCommunityStaticAssetFiles, express.static(root, createCommunityStaticAssetOptions()));
-  console.log(`[MODULE LOADER] Serving frontend for Grapes module: ${moduleName}`);
+  console.log(`[MODULE LOADER] Serving static frontend for module: ${moduleName}`);
   return { moduleName, mountPath, dir: root };
 }
 
@@ -465,7 +465,7 @@ module.exports = {
   MODULE_NAME,
   MODULE_TYPE,
   _internals: {
-    CORE_OWNED_OPTIONAL_MODULES,
+    RESERVED_CORE_MODULES,
     assertCommunityModuleFolderShape,
     attemptModuleLoad,
     buildModuleRuntimeEnv,
@@ -473,7 +473,7 @@ module.exports = {
     readCommunityModuleInfo,
     readModuleApiDefinition,
     runCommunityModuleHealthCheck,
-    serveLegacyGrapesFrontend,
+    serveStaticFrontend,
     serviceNamesFromApiDefinition,
     startCommunityModuleProcess
   }

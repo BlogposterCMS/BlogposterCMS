@@ -1,5 +1,5 @@
-const PAGES_MODULE = {
-    moduleName: 'pagesManager',
+const RUNTIME_MANAGER_MODULE = {
+    moduleName: 'runtimeManager',
     moduleType: 'core'
 };
 function requireEmitter(emit) {
@@ -7,6 +7,32 @@ function requireEmitter(emit) {
         throw new Error('PLAINSPACE_COLLECTIONS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
     }
     return emit;
+}
+function objectParams(value = {}) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+function unwrapRuntimeFacadeData(value) {
+    if (value &&
+        typeof value === 'object' &&
+        'resource' in value &&
+        'action' in value &&
+        'data' in value) {
+        return value.data;
+    }
+    return value;
+}
+function runtimeAdminPayload(jwt, resource, action, params = {}) {
+    return {
+        jwt,
+        ...RUNTIME_MANAGER_MODULE,
+        resource,
+        action,
+        params: objectParams(params)
+    };
+}
+async function emitRuntimeAdmin(emit, jwt, resource, action, params = {}) {
+    const result = await emit('cmsAdminApiRequest', runtimeAdminPayload(jwt, resource, action, params));
+    return unwrapRuntimeFacadeData(result);
 }
 export function errorMessage(err) {
     return err instanceof Error ? err.message : String(err);
@@ -45,11 +71,7 @@ export function toPages(value) {
     return [];
 }
 export function buildCollectionsPayload(jwt) {
-    return {
-        jwt,
-        ...PAGES_MODULE,
-        lane: 'public'
-    };
+    return runtimeAdminPayload(jwt, 'pages', 'byLane', { lane: 'public' });
 }
 function isVisiblePublicPage(page) {
     return (page.lane || 'public') === 'public' && page.status !== 'deleted';
@@ -124,6 +146,6 @@ export function deriveCollections(pages) {
 }
 export async function fetchCollections(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const response = await meltdownEmit('getPagesByLane', buildCollectionsPayload(jwt));
+    const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane: 'public' });
     return deriveCollections(toPages(response));
 }

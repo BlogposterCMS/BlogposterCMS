@@ -1,11 +1,4 @@
-const SETTINGS_MODULE = {
-    moduleName: 'settingsManager',
-    moduleType: 'core'
-};
-const PAGES_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
+import { emitRuntimeAdmin } from '../../../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('PLAINSPACE_SETTINGS_PANELS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');
@@ -37,21 +30,12 @@ export function publicPages(value) {
 }
 export async function fetchSettingValue(emit, jwt, key) {
     const meltdownEmit = requireEmitter(emit);
-    const value = await meltdownEmit('getSetting', {
-        jwt,
-        ...SETTINGS_MODULE,
-        key
-    });
+    const value = await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', { key });
     return asSetting(value);
 }
 export async function saveSettingValue(emit, jwt, key, value) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('setSetting', {
-        jwt,
-        ...SETTINGS_MODULE,
-        key,
-        value
-    });
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'set', { key, value });
 }
 export async function fetchSettingValues(emit, jwt, keys) {
     const entries = await Promise.all(keys.map(async (key) => [
@@ -121,10 +105,7 @@ export async function saveSeoSettings(emit, jwt, values) {
 }
 export async function fetchAllPages(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getAllPages', {
-        jwt,
-        ...PAGES_MODULE
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'list');
     return toPages(res);
 }
 export async function fetchSecuritySettings(emit, jwt) {

@@ -74,4 +74,26 @@ describe('pagesManager public html loader security', () => {
 
     expect(executeJs).toHaveBeenCalledWith('window.__ran = true;', expect.any(HTMLElement), expect.any(HTMLElement), 'HTML Loader');
   });
+
+  test('skips fallback html when a linked design layout rendered widgets', async () => {
+    __setLoaderTestDeps({
+      sanitizeHtml: (value: string) => value,
+    });
+
+    await loadHtml(
+      {
+        fallbackOnly: true,
+        inline: {
+          html: '<section>Fallback page</section>',
+        },
+      },
+      {
+        activeLayout: {
+          items: [{ widgetId: 'hero', instanceId: 'hero-1' }],
+        },
+      }
+    );
+
+    expect(document.getElementById('app')?.innerHTML).toBe('');
+  });
 });

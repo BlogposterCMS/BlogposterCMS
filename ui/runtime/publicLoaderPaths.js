@@ -1,5 +1,6 @@
 const PUBLIC_LOADER_SOURCE_PATTERN = /^[-\w]+$/;
 const CORE_PUBLIC_LOADER_MODULES = new Set([
+    'designerManager',
     'pagesManager',
     'widgetManager'
 ]);

@@ -24,6 +24,7 @@ import { createLogger } from './utils/logger';
 import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
+import { emitAdminFacade } from './runtime/runtimeFacade.js';
 import { initTextPanel } from './managers/textPanelManager';
 import { getWidgetIcon } from './renderer/renderUtils.js';
 import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
@@ -2468,10 +2469,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let allWidgets = [];
   let loadedDesign = null;
   try {
-    const widgetRes = await meltdownEmit('widget.registry.request.v1', {
-      lane: 'public',
-      moduleName: 'plainspace',
-      moduleType: 'core'
+    const widgetRes = await emitAdminFacade(meltdownEmit, 'plainSpace', 'widgetRegistry', {
+      lane: 'public'
     });
     allWidgets = Array.isArray(widgetRes?.widgets) ? widgetRes.widgets : [];
   } catch (err) {
@@ -2480,10 +2479,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   if (!pageId && state.designId) {
     try {
-      loadedDesign = await meltdownEmit('designer.getDesign', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'designer',
-        moduleType: 'community',
+      loadedDesign = await emitAdminFacade(meltdownEmit, 'designer', 'get', {
         id: state.designId
       });
       if (loadedDesign?.design && typeof loadedDesign.design === 'object') {
@@ -3820,31 +3816,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   let pageData = null;
   if (pageId) {
     try {
-      const layoutRes = await meltdownEmit('getLayoutForViewport', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'plainspace',
-        moduleType: 'core',
+      const layoutRes = await emitAdminFacade(meltdownEmit, 'plainSpace', 'layoutForViewport', {
         pageId,
         lane: 'public',
         viewport: 'desktop'
       });
       initialLayout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
 
-      const pageRes = await meltdownEmit('getPageById', {
-        jwt: window.ADMIN_TOKEN,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
+      const pageRes = await emitAdminFacade(meltdownEmit, 'pages', 'get', {
         pageId
       });
       pageData = pageRes?.data ?? pageRes ?? null;
 
       if (HAS_LAYOUT_STRUCTURE) {
         try {
-          const globalRes = await meltdownEmit('getGlobalLayoutTemplate', {
-            jwt: window.ADMIN_TOKEN,
-            moduleName: 'plainspace',
-            moduleType: 'core'
-          });
+          const globalRes = await emitAdminFacade(meltdownEmit, 'plainSpace', 'globalLayoutTemplate');
           layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
           globalLayoutName = globalRes?.name || null;
         } catch (err) {
@@ -3890,10 +3876,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   } else {
     if (layoutNameParam) {
       try {
-        const tplRes = await meltdownEmit('getLayoutTemplate', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core',
+        const tplRes = await emitAdminFacade(meltdownEmit, 'plainSpace', 'layoutTemplate', {
           name: layoutNameParam
         });
         initialLayout = Array.isArray(tplRes?.layout) ? tplRes.layout : [];
@@ -3904,11 +3887,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     if (HAS_LAYOUT_STRUCTURE) {
       try {
-        const globalRes = await meltdownEmit('getGlobalLayoutTemplate', {
-          jwt: window.ADMIN_TOKEN,
-          moduleName: 'plainspace',
-          moduleType: 'core'
-        });
+        const globalRes = await emitAdminFacade(meltdownEmit, 'plainSpace', 'globalLayoutTemplate');
         layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
         globalLayoutName = globalRes?.name || null;
       } catch (err) {

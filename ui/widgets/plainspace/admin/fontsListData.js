@@ -1,3 +1,4 @@
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('meltdownEmit unavailable');
@@ -22,20 +23,13 @@ export function errorMessage(err) {
 }
 export async function fetchFontProviders(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('listFontProviders', {
-        jwt,
-        moduleName: 'fontsManager',
-        moduleType: 'core'
-    });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'fonts', 'listProviders');
     return toProviders(res);
 }
 export async function fetchGoogleFontsKey(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
     try {
-        const keyRes = await meltdownEmit('getSetting', {
-            jwt,
-            moduleName: 'settingsManager',
-            moduleType: 'core',
+        const keyRes = await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'get', {
             key: 'GOOGLE_FONTS_API_KEY'
         });
         return String(keyRes || '').trim();
@@ -53,10 +47,7 @@ export async function fetchFontProvidersState(emit, jwt) {
 }
 export async function setFontProviderEnabled(emit, jwt, providerName, enabled) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('setFontProviderEnabled', {
-        jwt,
-        moduleName: 'fontsManager',
-        moduleType: 'core',
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'fonts', 'setProviderEnabled', {
         providerName,
         enabled
     });
@@ -64,10 +55,7 @@ export async function setFontProviderEnabled(emit, jwt, providerName, enabled) {
 export async function saveGoogleFontsKey(emit, jwt, value) {
     const nextKey = value.trim();
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('setSetting', {
-        jwt,
-        moduleName: 'settingsManager',
-        moduleType: 'core',
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'settings', 'set', {
         key: 'GOOGLE_FONTS_API_KEY',
         value: nextKey
     });

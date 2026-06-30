@@ -21,6 +21,12 @@ const EFFECT_LABELS: Record<string, string> = {
 const DESIGNER_AGENT_ACTIONS = Object.freeze([
   ...SURFACE_AGENT_ACTIONS,
   {
+    action: 'feedback.refresh',
+    label: 'Refresh feedback',
+    category: 'feedback',
+    description: 'Publishes a fresh structured Design Studio feedback snapshot through AgentManager.'
+  },
+  {
     action: 'scene.next',
     label: 'Next section',
     category: 'scene',
@@ -210,6 +216,257 @@ function elementBounds(el: HTMLElement): Record<string, number> {
     yPercent: clampPercent(el.dataset.yPercent, 0),
     wPercent: clampPercent(el.dataset.wPercent, 0),
     hPercent: clampPercent(el.dataset.hPercent, 0)
+  };
+}
+
+function feedbackNodeId(el: HTMLElement, fallback: string): string {
+  return el.dataset.nodeId || el.dataset.instanceId || el.id || fallback;
+}
+
+function styleSourceState(el: HTMLElement): Record<string, unknown> | null {
+  const enabled = el.dataset.styleSourceEnabled;
+  const role = el.dataset.styleSourceRole;
+  const sourceId = el.dataset.styleSourceId;
+  const syncLayout = el.dataset.styleSyncLayout;
+  const syncDesign = el.dataset.styleSyncDesign;
+  if (!enabled && !role && !sourceId && !syncLayout && !syncDesign) return null;
+  return {
+    enabled: enabled !== 'false',
+    role: role || (sourceId ? 'follower' : null),
+    sourceId: sourceId || null,
+    syncLayout: syncLayout !== 'false',
+    syncDesign: syncDesign !== 'false'
+  };
+}
+
+function uniqueHtmlElements(elements: HTMLElement[]): HTMLElement[] {
+  const seen = new Set<HTMLElement>();
+  return elements.filter(el => {
+    if (seen.has(el)) return false;
+    seen.add(el);
+    return true;
+  });
+}
+
+function layoutElements(): HTMLElement[] {
+  const root = document.getElementById('layoutRoot') as HTMLElement | null;
+  return uniqueHtmlElements([
+    ...(root ? [root] : []),
+    ...Array.from(document.querySelectorAll<HTMLElement>('.layout-root, .layout-container'))
+  ]);
+}
+
+function layoutParentId(el: HTMLElement): string | null {
+  let parent = el.parentElement;
+  while (parent) {
+    if (parent.matches('.layout-root, .layout-container')) {
+      return feedbackNodeId(parent, 'layout-parent');
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+}
+
+function layoutNodeRole(el: HTMLElement): string {
+  if (el.id === 'layoutRoot' || el.classList.contains('layout-root')) return 'layout-root';
+  if (el.dataset.workarea === 'true') return 'workarea';
+  return 'layout-container';
+}
+
+function layoutNodeFeedback(el: HTMLElement, index: number): Record<string, unknown> {
+  const id = feedbackNodeId(el, `layout-node-${index + 1}`);
+  const directChildren = Array.from(el.children).filter(child => child.matches?.('.layout-container, .layout-root')).length;
+  return {
+    id,
+    role: layoutNodeRole(el),
+    parentId: layoutParentId(el),
+    label: el.dataset.label || el.dataset.nodeId || el.dataset.designRef || id,
+    selected: el.classList.contains('layout-container--active') || el.classList.contains('tree-selected'),
+    workarea: el.dataset.workarea === 'true',
+    containsWorkspace: Boolean(el.querySelector(':scope > #workspaceMain, :scope > .builder-grid')),
+    childContainerCount: directChildren,
+    mode: el.dataset.layoutMode || 'free',
+    settings: {
+      gap: el.dataset.layoutGap || null,
+      padding: el.dataset.layoutPadding || null,
+      background: el.dataset.layoutBackground || el.dataset.sceneBackground || null,
+      designRef: el.dataset.designRef || null
+    },
+    styleSource: styleSourceState(el),
+    bounds: elementBounds(el)
+  };
+}
+
+function widgetPlacementFeedback(): Record<string, unknown>[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('.canvas-item')).map((el, index) => {
+    const workarea = el.closest<HTMLElement>('.layout-container, .layout-root');
+    return {
+      id: feedbackNodeId(el, `widget-placement-${index + 1}`),
+      role: 'widget-placement',
+      widgetId: el.dataset.widgetId || null,
+      label: textOf(el.querySelector('.canvas-item-content'), el.dataset.elementName || el.dataset.widgetId || `Widget ${index + 1}`),
+      sceneId: el.dataset.sceneId || null,
+      sceneTitle: el.dataset.sceneTitle || null,
+      workareaId: el.dataset.workareaId || workarea?.dataset.nodeId || null,
+      selected: el.classList.contains('selected'),
+      global: el.dataset.global === 'true',
+      layer: el.dataset.layer || null,
+      behavior: behaviorOf(el),
+      range: rangeOf(el),
+      effects: effectsOf(el),
+      styleSource: styleSourceState(el),
+      bounds: elementBounds(el)
+    };
+  });
+}
+
+function styleSourceEntry(node: Record<string, unknown>): Record<string, unknown> | null {
+  const styleSource = node.styleSource as Record<string, unknown> | null;
+  if (!styleSource) return null;
+  return {
+    objectId: node.id || null,
+    objectRole: node.role || null,
+    enabled: styleSource.enabled !== false,
+    role: styleSource.role || null,
+    sourceId: styleSource.sourceId || null,
+    syncLayout: styleSource.syncLayout !== false,
+    syncDesign: styleSource.syncDesign !== false
+  };
+}
+
+function styleSourceRelationships(
+  layoutNodes: Record<string, unknown>[],
+  widgetPlacements: Record<string, unknown>[]
+): Record<string, unknown> {
+  const entries = [...layoutNodes, ...widgetPlacements]
+    .map(styleSourceEntry)
+    .filter(Boolean) as Record<string, unknown>[];
+  const sources = entries.filter(entry => entry.enabled !== false && entry.role === 'source');
+  const followers = entries.filter(entry => entry.enabled !== false && Boolean(entry.sourceId));
+  const disabled = entries.filter(entry => entry.enabled === false);
+  return {
+    sourceCount: sources.length,
+    followerCount: followers.length,
+    disabledCount: disabled.length,
+    sources,
+    followers,
+    disabled
+  };
+}
+
+function visualFeedbackState(visual: Record<string, unknown>): Record<string, unknown> {
+  return {
+    available: Boolean(visual.available),
+    kind: visual.kind || null,
+    source: visual.source || null,
+    capturedAt: visual.capturedAt || null,
+    reused: Boolean(visual.reused),
+    reason: visual.reason || visual.reuseReason || null,
+    width: visual.width || null,
+    height: visual.height || null,
+    previewBytes: Number(visual.previewDataUrl ? String(visual.previewDataUrl).length : visual.previewBytes || 0)
+  };
+}
+
+function designerFeedbackWarnings(
+  visual: Record<string, unknown>,
+  layoutNodes: Record<string, unknown>[],
+  widgets: Record<string, unknown>[]
+): Record<string, unknown>[] {
+  const warnings: Record<string, unknown>[] = [];
+  const hasLayoutRoot = Boolean(document.getElementById('layoutRoot'));
+  const hasCommandPort = Boolean(window.blogposterDesignerCommands && typeof window.blogposterDesignerCommands.execute === 'function');
+  const zeroSizeWidgets = widgets.filter(widget => {
+    const bounds = widget.bounds as Record<string, number> | undefined;
+    return bounds && (!bounds.width || !bounds.height);
+  });
+  if (!hasLayoutRoot || layoutNodes.length === 0) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_NO_LAYOUT_ROOT',
+      severity: 'warning',
+      message: 'Design Studio feedback could not find #layoutRoot or layout containers.'
+    });
+  }
+  if (!hasCommandPort) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_NO_COMMAND_PORT',
+      severity: 'warning',
+      message: 'window.blogposterDesignerCommands.execute is missing, so write commands can only use fallback DOM actions.'
+    });
+  }
+  if (zeroSizeWidgets.length > 0) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_ZERO_WIDGET_BOUNDS',
+      severity: 'warning',
+      message: 'One or more widget placements reported zero-size bounds.',
+      count: zeroSizeWidgets.length
+    });
+  }
+  if (!visual.available) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_VISUAL_PREVIEW_UNAVAILABLE',
+      severity: 'info',
+      message: 'Structured feedback is available, but the optional visual preview could not be captured.'
+    });
+  }
+  return warnings;
+}
+
+function feedbackStatus(warnings: Record<string, unknown>[]): string {
+  if (warnings.some(warning => warning.severity === 'error')) return 'blocked';
+  if (warnings.some(warning => warning.severity === 'warning')) return 'degraded';
+  return 'ready';
+}
+
+function buildDesignerAgentFeedback(
+  context: BuildSnapshotContext,
+  visual: Record<string, unknown>,
+  activeSceneId: string,
+  activeSceneTitle: string
+): Record<string, unknown> {
+  const layoutNodes = layoutElements().map(layoutNodeFeedback);
+  const widgetPlacements = widgetPlacementFeedback();
+  const warnings = designerFeedbackWarnings(visual, layoutNodes, widgetPlacements);
+  const status = feedbackStatus(warnings);
+  return {
+    version: 1,
+    channel: 'design-studio.agent-feedback',
+    source: 'ui/designer/app/agentSurface.ts',
+    guide: 'docs/design-studio-agent-feedback.md',
+    status,
+    reason: context.reason,
+    generatedAt: new Date().toISOString(),
+    contracts: {
+      transport: 'AgentManager/AppLoader agentSurface',
+      structuredSnapshot: true,
+      commandPort: !warnings.some(warning => warning.code === 'DESIGNER_AGENT_FEEDBACK_NO_COMMAND_PORT'),
+      visualPreview: Boolean(visual.available),
+      stableBounds: true
+    },
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio || 1
+    },
+    document: {
+      designId: document.body.dataset.designId || null,
+      designVersion: document.body.dataset.designVersion || null,
+      activeSceneId,
+      activeSceneTitle,
+      mode: document.body.classList.contains('builder-mode') ? 'builder' : 'unknown',
+      route: window.location.pathname
+    },
+    layoutTree: {
+      rootId: layoutNodes[0]?.id || null,
+      nodeCount: layoutNodes.length,
+      workareaCount: layoutNodes.filter(node => node.workarea === true).length,
+      nodes: layoutNodes
+    },
+    widgetPlacements,
+    styleSources: styleSourceRelationships(layoutNodes, widgetPlacements),
+    selection: selectionState(),
+    visual: visualFeedbackState(visual),
+    warnings
   };
 }
 
@@ -414,6 +671,10 @@ export async function buildDesignerAgentSnapshot(
   const activeSceneTitle = document.body.dataset.activeSceneTitle || '';
   const behaviorMap = stageBehaviorMap(activeSceneId);
   const visual = await captureStageVisual(context.reason);
+  const feedback = buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneTitle);
+  const feedbackWarnings = Array.isArray(feedback.warnings) ? feedback.warnings.length : 0;
+  const feedbackLayoutTree = feedback.layoutTree as Record<string, unknown>;
+  const feedbackWidgetPlacements = Array.isArray(feedback.widgetPlacements) ? feedback.widgetPlacements : [];
   return {
     appName: APP_NAME,
     surfaceId: SURFACE_ID,
@@ -427,7 +688,9 @@ export async function buildDesignerAgentSnapshot(
       layerCount: layers.length,
       behaviorElementCount: behaviorMap.behaviorElementCount,
       effectElementCount: behaviorMap.effectElementCount,
-      hasSelection: Boolean(selectedCanvasItem())
+      hasSelection: Boolean(selectedCanvasItem()),
+      feedbackStatus: feedback.status,
+      feedbackWarningCount: feedbackWarnings
     },
     state: {
       activeSceneId,
@@ -435,7 +698,8 @@ export async function buildDesignerAgentSnapshot(
       designId: document.body.dataset.designId || null,
       designVersion: document.body.dataset.designVersion || null,
       mode: document.body.classList.contains('builder-mode') ? 'builder' : 'unknown',
-      behaviorMap
+      behaviorMap,
+      feedback
     },
     selection: selectionState(),
     tree: [
@@ -455,11 +719,24 @@ export async function buildDesignerAgentSnapshot(
     controls: availableControls(),
     actions: DESIGNER_AGENT_ACTIONS,
     visual,
+    feedback,
+    meta: {
+      agentFeedback: {
+        channel: 'design-studio.agent-feedback',
+        version: 1,
+        status: feedback.status,
+        warningCount: feedbackWarnings,
+        guide: 'docs/design-studio-agent-feedback.md'
+      }
+    },
     metrics: {
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
       visualPreviewAvailable: Boolean(visual.available),
-      visualPreviewBytes: Number(visual.previewDataUrl ? String(visual.previewDataUrl).length : visual.previewBytes || 0)
+      visualPreviewBytes: Number(visual.previewDataUrl ? String(visual.previewDataUrl).length : visual.previewBytes || 0),
+      feedbackWarningCount: feedbackWarnings,
+      layoutNodeCount: Number(feedbackLayoutTree.nodeCount || 0),
+      widgetPlacementCount: feedbackWidgetPlacements.length
     }
   };
 }
@@ -526,6 +803,7 @@ export async function handleDesignerAgentCommand(command: AgentSurfaceCommand): 
     if (result && result.handled !== false) return result;
   }
   const action = commandAction(command);
+  if (action === 'feedback.refresh') return { handled: true, feedback: 'refresh-requested' };
   if (action.startsWith('scene.')) return handleSceneCommand(action, command);
   if (action === 'insert' || action === 'insert.element') return handleInsertCommand(command);
   if (action.startsWith('element.') || action.startsWith('behavior.')) return handleElementCommand(action, command);

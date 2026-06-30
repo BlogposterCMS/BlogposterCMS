@@ -1,18 +1,17 @@
 # designer
 
-User-facing surfaces call this app **Design Studio**. The internal module,
-folder and event names intentionally remain `designer` so existing app-loader
-manifests, saved designs, permissions and `designer.*` backend contracts stay
-compatible. `/admin/studio/design` is the preferred user-facing entry and
-redirects to the existing `/admin/app/designer` launcher.
+User-facing surfaces call this app **Design Studio**. The public resource and
+event names remain `designer` because they are the v1 Designer domain
+contract. `/admin/studio/design` is the preferred user-facing entry and
+redirects to `/admin/app/designer`.
 
 ## Boundaries
 
-The legacy `designer` backend is owned by the core `designerManager` adapter.
+The `designer` backend domain is owned by the core `designerManager` service.
 Designer UI code runs as an app surface and reaches backend behavior through
 AppLoader and Runtime Manager contracts, not by emitting arbitrary core events
 or receiving the admin token. `designer.*` backend events stay scoped to the
-core designer service and remain compatibility events for the isolated app.
+core Designer service.
 
 The `designer` backend persists full design definitions for the standalone Designer app using the event bus.
 It is owned by the core `designerManager` service because it provisions schema and
@@ -43,6 +42,27 @@ layers, selection, behavior controls, timeline/range metadata, an optional
 visual stage preview and an action catalog for scene, element and behavior
 commands. Agent controllers enqueue commands through `agentManager`; Designer
 polls and acknowledges them like any other surface.
+
+Design Studio agent feedback extends that same surface instead of adding
+DOM-scraping helpers. Each snapshot now carries a versioned
+`design-studio.agent-feedback` block as `feedback`, `state.feedback` and
+`meta.agentFeedback`. It exposes the current design id, active viewport,
+`LayoutTree`, widget placements, selected element, Style Source relationships,
+warnings and stable bounds for visible objects. Visual feedback remains an
+optional preview image plus structured bounds so an agent can compare what it
+sees with the editable contract. Agent writes stay command-based through
+AgentManager/AppLoader actions such as select, insert, set properties, link or
+unlink a Style Source, save and publish. Do not expose every internal Designer
+function as an agent action; if a command family such as exact move/resize
+bounds is missing, document that missing adapter in
+`docs/design-studio-agent-feedback.md` and keep the core domain logic behind the
+existing service and permission boundaries.
+
+Follow the Design Studio agent feedback guide in
+`docs/design-studio-agent-feedback.md` when changing canvas rendering, layout
+containers, widget placement, Style Source behavior, selection state,
+save/publish state or visual previews. Changes in those areas must update
+`ui/designer/app/agentSurface.ts`, the focused test contract and docs together.
 
 The builder now separates structure from content with distinct **Layout** and **Design** modes.
 Layout mode swaps the widget sidebar for a layout panel placeholder, disables widget
@@ -84,7 +104,7 @@ Layout terminology is explicit:
   placements, scenes, styles and metadata.
 
 The shared source of truth for this contract lives under `ui/shared/layout/`.
-Designer compatibility modules such as
+Designer adapter modules such as
 `ui/designer/app/renderer/layoutSerialize.js` and
 `ui/designer/app/managers/layoutContainerManager.js` forward to that shared core
 instead of owning separate serialization or container operations.
@@ -126,9 +146,9 @@ The renderer entry point delegates specific responsibilities to focused helpers:
 - `preparePublishPanelContainer()` ensures the publish panel host exists and stays hidden until explicitly opened.
 - `ui/designer/app/renderer/publishPanel.ts` handles publish flow UI, slug suggestions and upload orchestration while sharing the builder logger for consistent diagnostics.
 
-The legacy `apps/designer/` source files remain as compatibility forwarders and
-static iframe assets. New Designer implementation work belongs under
-`ui/designer/app/`, with bundle entries in `ui/designer/entries/`.
+`apps/designer/` contains the iframe shell, assets, partials and app metadata.
+Designer implementation work belongs under `ui/designer/app/`, with bundle
+entries in `ui/designer/entries/`.
 
 `#layoutRoot` now always acts as the root layout container. When no saved
 layout tree exists the builder seeds a leaf node, assigns it a deterministic
@@ -147,9 +167,8 @@ Each layout node carries a stable `nodeId` so runtime mapping between the JSON t
 
 ## Startup
 - Loaded as core module `mother/modules/designerManager`.
-- Reuses the legacy backend implementation and placeholders from
-  `modules/designer` for compatibility, but the optional module loader skips
-  that folder so it is not treated as a community module.
+- Owns Designer service handlers, placeholders, schema and public loader from
+  `mother/modules/designerManager`.
 - Exports `initialize({ motherEmitter, jwt, nonce })`.
 - On start it:
   - emits `createDatabase` to provision its own database or schema.
@@ -199,9 +218,8 @@ The app loader verifies these events before launching the designer. If any requi
 - The service emits as `moduleType: "core"`; community modules cannot use these
   schema or database-operation paths directly.
 - Raw `designer.*` events are not exposed as public `/api/meltdown` bus calls.
-  Legacy admin HTTP calls are translated to Runtime Manager's
-  `cmsAdminApiRequest` Designer resource, while public `designer.getDesign`
-  and `designer.getLayout` reads go through `cmsPublicRuntimeRequest`; layout
+  Admin callers use Runtime Manager's `cmsAdminApiRequest` Designer resource,
+  while public Design and layout reads use `cmsPublicRuntimeRequest`; layout
   reads require a public `layoutRef` and return only the renderable grid/items
   contract.
 - CSRF bootstrap data is delivered via `postMessage`; the admin token remains in

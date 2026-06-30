@@ -39,7 +39,7 @@ read/write events. Admin/editor clients should call `cmsAdminApiRequest` with
 `{ resource, action, params }` for CMS operations.
 Direct event names are limited to explicit adapter contracts: public token
 bootstrap, `cmsPublicRuntimeRequest`, `cmsAdminApiRequest` and the AppLoader
-`dispatchAppEvent` bridge. Everything else must be translated to one of those
+`dispatchAppEvent` bridge. Everything else must be wrapped by one of those
 contracts before it can leave the browser.
 The adapter treats authentication as transport metadata: tokens are accepted
 only from the `X-Public-Token` header or the `admin_jwt` cookie. Caller-supplied
@@ -49,35 +49,31 @@ If the translated target event is not registered, the adapter returns an error
 instead of forwarding into the raw emitter; unregistered names are not treated as
 implicit add-on points.
 
-Public page rendering uses a separate `cmsPublicRuntimeRequest` facade. Legacy
-public reads such as `getStartPage`, `getEnvelope`, public page reads, public
-widget registry reads, public PlainSpace layout reads and public
-`designer.getDesign` reads are translated to that
-facade when their payload is explicitly public. The facade validates the caller
-token, then uses the Runtime Manager's core token to query only public,
-published data. It is read-only and is not available as a direct module/app
-escape hatch.
+Public page rendering uses a separate `cmsPublicRuntimeRequest` facade. Public
+page, widget, PlainSpace layout, Designer layout, font, setting, user-count,
+registration and login-strategy reads are exposed as Runtime Manager
+`resource`/`action` entries. The facade validates the caller token, then uses
+the Runtime Manager's core token to call only the mapped public-safe module
+events. It is not available as a direct module/app escape hatch.
 
-Public bootstrap uses a separate, small public-token contract. Events such as
-`getPublicSetting`, `getUserCount`, `listActiveLoginStrategies`,
-`loginWithStrategy` and `publicRegister` may accept a valid public token for
-install, login and registration flows, but that token is not accepted for the
-admin facade or other CMS internals.
+Public bootstrap uses a separate, small public-token contract:
+`issuePublicToken` and `ensurePublicToken`. Browser install, login-discovery,
+registration and favicon helpers use that token with `cmsPublicRuntimeRequest`;
+direct public core events such as `getPublicSetting`, `getUserCount`,
+`listActiveLoginStrategies` and `publicRegister` are internal module events, not
+HTTP contracts. The login route may call `loginWithStrategy` server-side after
+issuing a scoped public token, but browsers should not call it through
+`/api/meltdown`.
 
 AgentManager has its own `/admin/api/agent` HTTP facade and an app-loader
 `agentSurface` bridge for surface-owned snapshot/poll/ack events. Raw
 `agent.*` events are not exposed through `/api/meltdown`.
 
-For compatibility while legacy UI code is being migrated, the HTTP adapter
-translates old content, page, content type, media, widget, workflow,
-PlainSpace layout/presentation, navigation, SEO, comment, metadata, redirect,
-search, setting, unified setting, translation, auth strategy, font,
-server-location, share, notification, user, role, permission, registry, app,
-importer, exporter, theme, Designer persistence and preview-token event names into
-`cmsAdminApiRequest` before dispatch. The legacy response data is unwrapped, so
-old callers keep working while core modules still receive the request through
-the audited runtime facade. Public runtime reads are routed to
-`cmsPublicRuntimeRequest` instead of the admin facade.
+The HTTP adapter no longer translates old browser event names. Content, page,
+media, widget, PlainSpace, navigation, search, setting, auth, font, user,
+role, app, importer, exporter, theme, Designer and preview-token operations
+must enter through `cmsAdminApiRequest`, `cmsPublicRuntimeRequest`, AppLoader or
+a purpose-built HTTP adapter such as auth/install/upload.
 
 ## Why Meltdown?
 

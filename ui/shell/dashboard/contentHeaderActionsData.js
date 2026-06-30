@@ -1,8 +1,4 @@
-// Keep admin-page delete contracts here so the header module remains DOM-focused.
-const PAGES_MANAGER_MODULE = {
-    moduleName: 'pagesManager',
-    moduleType: 'core'
-};
+import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 const PROTECTED_ROOT_WORKSPACES = new Set(['home', 'settings']);
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
@@ -40,9 +36,7 @@ export function isProtectedAdminWorkspace(page) {
 }
 export async function fetchAdminPageBySlug(emit, jwt, slug) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await meltdownEmit('getPageBySlug', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'getBySlug', {
         slug,
         lane: 'admin'
     });
@@ -50,9 +44,7 @@ export async function fetchAdminPageBySlug(emit, jwt, slug) {
 }
 export async function deleteAdminPage(emit, jwt, pageId) {
     const meltdownEmit = requireEmitter(emit);
-    await meltdownEmit('deletePage', {
-        jwt,
-        ...PAGES_MANAGER_MODULE,
+    await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'delete', {
         pageId
     });
 }

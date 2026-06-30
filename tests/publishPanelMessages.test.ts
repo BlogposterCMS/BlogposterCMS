@@ -189,21 +189,23 @@ describe('publish panel messaging', () => {
     const makePublicSpy = jest.fn();
 
     const meltdownMock = jest.fn((action: string, payload: any) => {
-      switch (action) {
-        case 'searchPages':
+      if (action !== 'cmsAdminApiRequest') return Promise.resolve(null);
+      const route = `${payload.resource}.${payload.action}`;
+      switch (route) {
+        case 'pages.search':
           return Promise.resolve([]);
-        case 'getPublishedDesignMeta':
+        case 'plainSpace.publishedDesignMeta':
           return Promise.resolve(null);
-        case 'deleteLocalItem':
+        case 'media.deleteLocalItem':
           return Promise.resolve(null);
-        case 'uploadFileToFolder':
-          uploadSpy(payload);
+        case 'media.uploadToFolder':
+          uploadSpy(payload.params);
           return Promise.resolve(null);
-        case 'makeFilePublic':
-          makePublicSpy(payload);
+        case 'media.makeFilePublic':
+          makePublicSpy(payload.params);
           return Promise.resolve(null);
-        case 'savePublishedDesignMeta':
-          saveMetaSpy(payload);
+        case 'plainSpace.savePublishedDesignMeta':
+          saveMetaSpy(payload.params);
           return Promise.resolve(null);
         default:
           return Promise.resolve(null);

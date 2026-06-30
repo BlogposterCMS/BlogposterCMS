@@ -4,7 +4,7 @@
 
 Runtime Manager is the HTTP and facade layer between browser surfaces and core
 modules. Public routes expose read-only or narrowly mutating contracts, while
-admin requests are translated into allowlisted core events with permissions.
+admin facade requests dispatch to allowlisted core events with permissions.
 Apps and widgets should call Runtime Manager resources instead of emitting raw
 module events, database events or system lifecycle events.
 
@@ -26,8 +26,8 @@ Connects public HTTP behavior to backend core events.
 - Serve allowlisted public settings through `/api/public/settings`.
 - Serve resolved public SEO metadata through `/api/public/seo`.
 - Provide the admin-facing `cmsAdminApiRequest` facade over core CMS modules.
-- Provide the public read-only `cmsPublicRuntimeRequest` facade for legacy
-  public rendering reads.
+- Provide the public `cmsPublicRuntimeRequest` facade for public rendering,
+  install, registration and login-discovery helpers.
 - Serve `/sitemap.xml` through `seoManager.generateSeoSitemap`.
 - Serve `/robots.txt` through `seoManager.generateRobotsTxt`.
 - Resolve public GET/HEAD requests through `redirectManager.resolveRedirect`.
@@ -119,10 +119,9 @@ actions across content, content types, media, widgets, workflow,
 PlainSpace layout/presentation, navigation, SEO, comments, metadata, redirects,
 search, settings, unified settings, translations, fonts, server locations,
 shares, preview tokens, identity, app/module management, importers, exporters,
-notifications, themes and Designer persistence. Legacy HTTP callers that still send those low-level
-event names are translated at the HTTP adapter into `cmsAdminApiRequest`, with
-the legacy response data unwrapped for compatibility. New callers should use
-the facade request shape directly.
+notifications, themes and Designer persistence. HTTP callers that send those
+low-level event names are rejected; callers must use the facade request shape
+directly.
 
 When the request comes from an iframe app through `appLoader`'s
 `cms-admin-request` bridge, the facade treats it as app-origin and allows only
@@ -132,11 +131,12 @@ app-origin requests even when the current admin principal has broad
 permissions. Direct admin UI calls can still use mutating actions when the admin
 principal has the required permission.
 
-Core-owned compatibility apps may reach mutating facade actions only through
-AppLoader's validated legacy `cms-meltdown-request` /
-`cms-meltdown-batch-request` bridge. That exception exists for bundled internal
-apps such as Designer; it does not apply to user-managed apps or to
-`cms-admin-request`, which remains query-only for every iframe app.
+Core-owned bundled apps may reach mutating facade actions only through
+AppLoader's validated bridge and only with direct `cmsAdminApiRequest` or
+`cmsPublicRuntimeRequest` payloads allowed by the app manifest. That exception
+exists for bundled internal apps such as Designer; it does not apply to
+user-managed apps or to `cms-admin-request`, which remains query-only for every
+iframe app.
 
 App-origin read access is limited to content and presentation contracts:
 `content`, `pages`, `contentTypes`, `media`, `navigation`, `seo`,
@@ -160,10 +160,10 @@ Allowed resources:
 - `search`: index/get/remove/query/reindexContent
 - `settings`: list/get/public/cmsMode/setCmsMode/set/bulk/delete
 - `auth`: loginStrategies/setStrategyEnabled
-- `users`: list/get/getByUsername/count/create/update/delete
+- `users`: list/me/get/getByUsername/count/create/update/delete
 - `roles`: list/create/update/delete/assign/remove/forUser/incrementToken
 - `permissions`: list/create
-- `modules`: registry/system/activeGrapes/activate/deactivate/installZip
+- `modules`: registry/system/activeStaticFrontends/activate/deactivate/installZip
 - `apps`: list/get/builderList/launchInfo/rescan
 - `fonts`: listProviders/list/add/setProviderEnabled
 - `notifications`: recent
@@ -183,22 +183,23 @@ motherEmitter event name.
 
 ## Public Runtime Facade
 
-Public rendering can use `cmsPublicRuntimeRequest` only through the HTTP
-adapter. Legacy public reads are translated when their payload is explicitly
-public, for example `getStartPage`, `getEnvelope`, `getPageBySlug` with
-`lane: "public"`, `getWidgets` with `widgetType: "public"`,
-`widget.registry.request.v1` with `lane: "public"` and public PlainSpace layout
-reads. Public runtime `designer.getDesign` reads are also routed here.
+Public callers use `cmsPublicRuntimeRequest` through the HTTP adapter with
+`resource`, `action` and `params`. The facade accepts a valid public or admin
+token from the caller, strips caller-supplied auth/module metadata from nested
+params, and uses the Runtime Manager core token for the underlying module call.
 
-The facade accepts a valid public or admin token from the caller, but uses the
-Runtime Manager core token for the underlying module query. It only exposes
-published public pages, public widgets, public layout reads and default widget
-instance options. Designer reads require an id, return only non-draft designs
-and strip private owner/user audit fields. For PlainSpace public reads, the
-facade forces `lane: "public"` for registry/layout/template calls, only allows
-`default.*` widget instances, filters any returned `lane: "admin"` objects, and
-strips private-looking fields such as secret/token/private metadata. It strips
-private-looking page metadata and has no mutating actions.
+Allowed public resources include `pages`, `widgets`, `plainSpace`, `designer`,
+`fonts`, `settings`, `users` and `auth`. Public pages are forced to the public
+lane and returned only when published. Widget listing is limited to public
+widgets, while widget usage registration is exposed as the dedicated
+`widgets.registerUsage` action. Designer reads require an id or layout ref,
+return only non-draft designs and strip private owner/user audit fields. For
+PlainSpace public reads, the facade forces `lane: "public"` for
+registry/layout/template calls, only allows `default.*` widget instances,
+filters any returned `lane: "admin"` objects, and strips private-looking fields
+such as secret/token/private metadata. Settings, user count, registration and
+active login-strategy reads are exposed only as public runtime actions, not as
+direct HTTP core events.
 
 ## Runtime Rules
 

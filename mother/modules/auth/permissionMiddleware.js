@@ -16,7 +16,7 @@ function requirePermission(keyPath) {
     }
 
     // Admin or wildcard => immediate pass
-    if (req.user.permissions['*'] === true || req.user.permissions.canAccessEverything === true) {
+    if (req.user.permissions['*'] === true) {
       return next();
     }
 

@@ -24,13 +24,11 @@ points are known ahead of time.
   strict bridge contract.
 - Allows app lifecycle events such as `designer-ready` and routes backend
   commands only through the `runtimeManager` admin facade.
-- Accepts legacy app `meltdownEmit` calls through a postMessage bridge only
-  when the target event is explicitly listed in the app manifest
-  `allowedEvents` and maps to a `runtimeManager` facade contract. The bridge is
-  compatibility input only; AppLoader dispatches the work through
-  `cmsAdminApiRequest` or `cmsPublicRuntimeRequest`, never by forwarding raw
-  system events. User-managed apps must use `cms-admin-request`, which is
-  query-only for app-origin calls.
+- Accepts direct Runtime Manager facade calls through the postMessage bridge
+  only when `cmsAdminApiRequest` or `cmsPublicRuntimeRequest` is explicitly
+  listed in the app manifest `allowedEvents`. AppLoader never forwards raw
+  system or low-level module events. User-managed apps must use
+  `cms-admin-request`, which is query-only for app-origin calls.
 - Expands manifest `agentSurface` opt-in into the safe agent surface event
   subset. This lets ordinary apps publish visible state and consume their own
   queued agent commands without copying the AgentManager event list into every
@@ -73,7 +71,7 @@ points are known ahead of time.
   ownership.
 - App manifests are bound to the folder identity. If `app.json` declares
   `name`, it must match the validated app folder or install target name.
-- App manifests cannot declare legacy app identity fields (`appName`,
+- App manifests cannot declare retired app identity fields (`appName`,
   `appType`). The canonical app identity is `name`.
 - App manifests cannot declare module identity fields (`moduleName`,
   `moduleType`) or widget identity fields (`widgetId`, `widgetType`). Apps may
@@ -102,13 +100,13 @@ points are known ahead of time.
 - App-origin `cms-admin-request` calls are query-only. Mutating actions such as
   create/update/delete/install/rescan are rejected by `runtimeManager` even when
   the current admin principal has those permissions.
-- Legacy app bridge calls use `cms-meltdown-request` or
-  `cms-meltdown-batch-request` and are reserved for core-owned compatibility
-  apps unless the manifest opts into the narrow Agent surface. The loader strips
-  app-supplied JWT/module identity, injects the parent admin principal
-  server-side, blocks raw database placeholders, rejects low-level system
-  events, requires a manifest allowlist entry and routes legacy target events
-  through `runtimeManager` facade resources.
+- Direct app bridge calls use `cms-app-runtime-request` or
+  `cms-app-runtime-batch-request` and are reserved for core-owned bundled apps
+  unless the manifest opts into the narrow Agent surface. The payload target
+  must be `cmsAdminApiRequest` or `cmsPublicRuntimeRequest`; low-level target
+  events are rejected. The loader strips app-supplied JWT/module identity,
+  injects the parent admin principal server-side, blocks raw database
+  placeholders and requires a manifest allowlist entry.
 - Auth token/session-control events are not valid app bridge contracts. Apps
   cannot allow or dispatch token issuing, token revocation, token lifetime
   changes or `validateToken` through `allowedEvents`; they must use documented
@@ -121,12 +119,12 @@ points are known ahead of time.
 - Manifest `allowedEvents` entries must be objects with `eventName`,
   `moduleName`, `moduleType: "core"` and `access`. String shorthand is rejected
   so every app bridge target is bound to a core contract. `access` is required,
-  not implied, and `moduleName` must be a normalized core contract name that
-  matches the event's `runtimeManager` facade resource.
+  not implied, `eventName` must be `cmsAdminApiRequest` or
+  `cmsPublicRuntimeRequest`, and `moduleName` must be `runtimeManager`.
   User-managed apps cannot dispatch `allowedEvents` through the direct bridge;
   they must query through runtime contracts instead. Core-owned internal apps
-  such as the Designer may declare read/write compatibility events only when
-  those events have an audited runtime facade mapping.
+  such as the Designer may declare read/write facade access only when those
+  resources have an audited runtime mapping.
 - Manifest `agentSurface: true` or an enabled `agentSurface` object is the
   only supported direct-bridge exception for non-core apps. The loader adds only
   the surface-owned AgentManager events required to publish snapshots, read

@@ -44,6 +44,23 @@ instruction in a subdirectory says otherwise.
   stable identifiers, typed payloads and searchable error codes, then document
   the missing adapter instead of creating a parallel agent-only API.
 
+## Design Studio Agent Feedback
+
+- Design Studio work must keep `ui/designer/app/agentSurface.ts` as the direct
+  agent feedback channel. Any change to canvas rendering, layout containers,
+  widget placement, Style Source behavior, selection, save/publish state or
+  visual preview behavior must update the feedback snapshot, actions, warnings
+  or docs before the feature is considered complete.
+- The feedback channel must stay on the existing AgentManager/AppLoader
+  `agentSurface` contract and expose stable ids, structured layout tree data,
+  widget placements, Style Source relationships, selected object state,
+  viewport/visual-preview metadata, stable bounds and searchable
+  `DESIGNER_AGENT_FEEDBACK_*` warnings. Do not add a parallel Designer-only
+  agent API or make DOM scraping the only way to understand the Studio state.
+- When a Design Studio command family is missing, document the missing adapter
+  in `docs/design-studio-agent-feedback.md` and keep domain logic behind the
+  existing service, permission, validation and transport boundaries.
+
 ## Tests
 
 - Add or update tests for every meaningful behavior change.

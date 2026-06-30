@@ -17,9 +17,9 @@ Community modules should use `moduleHost.storage` for their own data instead of 
 Community modules may declare their own permission names in
 `moduleInfo.permissions`, but only below their own namespace, for example
 `shopSync.sync`. They must not declare core permissions such as `users.delete`,
-`modules.install`, `userManagement.editRole`, `settings.*`, `*` or
-`canAccessEverything`. Core data or actions must be requested as explicit
-`moduleInfo.requestedAccess` event entries and approved by an administrator
+`modules.install`, `userManagement.editRole`, `settings.*`, `*` or retired
+broad keys. Core data or actions must be requested as explicit
+`moduleInfo.requestedAccess` `{ resource, action }` entries and approved by an administrator
 during install or activation for permanent grants, or by the one-time runtime
 prompt for one exact call. Security-critical resources such as users, roles,
 permissions, modules, settings, auth and apps can only use the one-time prompt
@@ -65,7 +65,7 @@ For a lighter tutorial with examples, read the
 
 1. Add a new folder under `modules/`.
 2. Place an `index.js` file inside it with an exported `initialize` function.
-3. Include a `moduleInfo.json` file with metadata. It must define `moduleName`, `version`, `developer` and `description` so the loader can detect updates and show author details. Optional `permissions` entries are limited to the module's own namespace. Optional `requestedAccess` entries request documented core events and require admin approval before they become runtime grants.
+3. Include a `moduleInfo.json` file with metadata. It must define `moduleName`, `version`, `developer` and `description` so the loader can detect updates and show author details. Optional `permissions` entries are limited to the module's own namespace. Optional `requestedAccess` entries request documented core `{ resource, action }` facade actions and require admin approval before they become runtime grants.
 4. Register any meltdown listeners within the `initialize` function. Use `motherEmitter.on('eventName', handler)` to react to events.
 5. Restart the CMS. The Module Loader will health-check your module in a runner process and activate it if no errors occur.
 

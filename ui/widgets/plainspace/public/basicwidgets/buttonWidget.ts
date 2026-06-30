@@ -11,7 +11,7 @@ import {
 function buttonStyle(): HTMLStyleElement {
   const style = document.createElement('style');
   style.textContent = `
-.bp-button-widget {
+.bp-public-widget.bp-button-widget {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -28,11 +28,11 @@ function buttonStyle(): HTMLStyleElement {
   text-decoration: none;
   letter-spacing: 0;
 }
-.bp-button-widget--secondary {
+.bp-public-widget.bp-button-widget--secondary {
   background: var(--studio-surface-solid);
   color: var(--studio-text);
 }
-.bp-button-widget--plain {
+.bp-public-widget.bp-button-widget--plain {
   min-width: 0;
   min-height: 0;
   padding: 0;
@@ -43,7 +43,7 @@ function buttonStyle(): HTMLStyleElement {
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
-.bp-button-widget:focus-visible {
+.bp-public-widget.bp-button-widget:focus-visible {
   outline: 0;
   box-shadow: var(--studio-focus-ring);
 }

@@ -82,7 +82,7 @@ module.exports = {
     '^\\.\\./dialogs/(.*)\\.js$': '<rootDir>/ui/shared/dialogs/$1.ts',
     '^\\.\\./(apps|auth|dashboard|data|install|media|notifications|search|theme)/(.*)\\.js$': '<rootDir>/ui/shell/$1/$2.ts',
     '^\\.\\./\\.\\./\\.\\./ui/shell/(apps|auth|dashboard|data|install|media|notifications|search|theme)/(.*)\\.js$': '<rootDir>/ui/shell/$1/$2.ts',
-    '^\\.\\./mother/modules/(pagesManager|widgetManager)/publicLoader\\.js$': '<rootDir>/mother/modules/$1/publicLoader.ts',
+    '^\\.\\./mother/modules/(designerManager|pagesManager|widgetManager)/publicLoader\\.js$': '<rootDir>/mother/modules/$1/publicLoader.ts',
     '^\\.\\./\\.\\./widgets/options/(.*)\\.js$': '<rootDir>/ui/widgets/options/$1.ts',
     '^\\.\\./\\.\\./widgets/rendering/(.*)\\.js$': '<rootDir>/ui/widgets/rendering/$1.ts',
     '^\\.\\./ui/shared/(agent|api-client|contracts|controls|dev|dialogs|grid|icons|layout|loaders|media|module-access|sanitize|utils)/(.*)\\.js$': '<rootDir>/ui/shared/$1/$2.ts',

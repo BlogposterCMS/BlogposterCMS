@@ -9,9 +9,9 @@ export interface AppFrameMessage {
 
 type AppFrameEmitter = Window['meltdownEmit'];
 
-export const APP_BRIDGE_REQUEST = 'cms-app-meltdown-request';
-export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-meltdown-batch-request';
-export const APP_BRIDGE_RESPONSE = 'cms-app-meltdown-response';
+export const APP_BRIDGE_REQUEST = 'cms-app-runtime-request';
+export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-runtime-batch-request';
+export const APP_BRIDGE_RESPONSE = 'cms-app-runtime-response';
 
 const APP_LOADER_MODULE = {
   moduleName: 'appLoader',
@@ -37,7 +37,7 @@ export function unwrapAppEventResult(result: unknown): unknown {
     : result;
 }
 
-export async function dispatchAppMeltdownRequest(
+export async function dispatchAppRuntimeRequest(
   emit: AppFrameEmitter,
   jwt: string | null | undefined,
   appName: string,
@@ -54,7 +54,7 @@ export async function dispatchAppMeltdownRequest(
     jwt,
     ...APP_LOADER_MODULE,
     appName,
-    event: 'cms-meltdown-request',
+    event: APP_BRIDGE_REQUEST,
     data: {
       eventName: safeEventName,
       payload: objectPayload(payload)
@@ -63,7 +63,7 @@ export async function dispatchAppMeltdownRequest(
   return unwrapAppEventResult(result);
 }
 
-export async function dispatchAppMeltdownBatch(
+export async function dispatchAppRuntimeBatch(
   emit: AppFrameEmitter,
   jwt: string | null | undefined,
   appName: string,
@@ -74,7 +74,7 @@ export async function dispatchAppMeltdownBatch(
     jwt,
     ...APP_LOADER_MODULE,
     appName,
-    event: 'cms-meltdown-batch-request',
+    event: APP_BRIDGE_BATCH_REQUEST,
     data: {
       events: Array.isArray(events) ? events : []
     }

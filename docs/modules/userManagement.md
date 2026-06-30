@@ -50,15 +50,21 @@ terms of caller intent, but it is still routed through the scoped
 `userManagement` core contract with a verified public token. Token-version
 mutation (`incrementUserTokenVersion`) is permission-gated and scoped the same
 way because it invalidates existing user sessions.
+Browser callers should use Runtime Manager facades for public account helpers:
+`users.count` and `users.register` through `cmsPublicRuntimeRequest`, and admin
+user/role work through `cmsAdminApiRequest`. Direct user-management events are
+internal module contracts, not `/api/meltdown` browser targets.
 
 ## Default Roles
 
 `ensureDefaultRoles` creates two built-in roles:
 
-- `admin` is a system role and receives both `'*': true` and the legacy `canAccessEverything: true` flag.
+- `admin` is a system role and receives `'*': true`.
 - `standard` is the default basic role and starts with no explicit permissions.
 
-Existing admin roles are self-healed during startup. If an older installation only has `canAccessEverything`, the role is updated to include the wildcard permission that current modules use.
+Existing admin roles are self-healed during startup. If an older installation
+has a retired broad key, the role is updated to include the wildcard permission
+that current modules use and the retired key is removed.
 
 ## Default Permissions
 
@@ -88,6 +94,6 @@ Management creates or updates an internally managed role named for that user
 and assigns it through `user_roles`. This keeps `finalizeUserLogin` and token
 permission merging on the existing role path.
 
-`setUserAccess` rejects unknown permission keys, wildcard keys and legacy admin
+`setUserAccess` rejects unknown permission keys, wildcard keys and retired admin
 bypass names for direct user rights. Broad administrator access should be
 handled through reviewed permission groups such as the built-in `admin` role.

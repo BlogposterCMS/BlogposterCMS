@@ -97,6 +97,10 @@ function dashboardLayout(defaultSlot, slotNames, breakpoints, heightMode = 'dyna
   };
 }
 
+function apiAction(resource, action) {
+  return { resource, action };
+}
+
 module.exports.DEFAULT_WIDGETS = [
   {
     widgetId: 'contentSummary',
@@ -106,28 +110,14 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
-      apiEvents: [
-        'getLayoutTemplateNames',
-        'getAllPages',
-        'getLayoutTemplate',
-        'saveLayoutTemplate',
-        'setGlobalLayoutTemplate',
-        'deleteLayoutTemplate'
+      apiActions: [
+        apiAction('plainSpace', 'layoutTemplateNames'),
+        apiAction('pages', 'list'),
+        apiAction('plainSpace', 'layoutTemplate'),
+        apiAction('plainSpace', 'saveLayoutTemplate'),
+        apiAction('plainSpace', 'setGlobalLayoutTemplate'),
+        apiAction('plainSpace', 'deleteLayoutTemplate')
       ]
-    }
-  },
-  {
-    widgetId: 'pageEditor',
-    widgetType: ADMIN_LANE,
-    label: 'Page Editor',
-    content: '/ui/widgets/plainspace/admin/pageEditorWidgets/pageEditorWidget.js',
-    category: 'core',
-    metadata: {
-      aliasOf: 'pageEditorWidget',
-      hiddenFromCatalog: true,
-      deprecated: true,
-      layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
-      apiEvents: ['getLayoutTemplateNames', 'updatePage']
     }
   },
   {
@@ -138,13 +128,13 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('twoThird', ['twoThird', 'full'], BREAKPOINTS.twoThirdFull),
-      apiEvents: [
-        'listBuilderApps',
-        'updatePage',
-        'getLayoutTemplateNames',
-        'createLocalFolder',
-        'listLocalFolder',
-        'uploadFileToFolder'
+      apiActions: [
+        apiAction('apps', 'builderList'),
+        apiAction('pages', 'update'),
+        apiAction('plainSpace', 'layoutTemplateNames'),
+        apiAction('media', 'createLocalFolder'),
+        apiAction('media', 'listLocalFolder'),
+        apiAction('media', 'uploadToFolder')
       ]
     }
   },
@@ -156,12 +146,12 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
-      apiEvents: [
-        'createLocalFolder',
-        'createShareLink',
-        'deleteLocalItem',
-        'renameLocalItem',
-        'listLocalFolder'
+      apiActions: [
+        apiAction('media', 'createLocalFolder'),
+        apiAction('shares', 'create'),
+        apiAction('media', 'deleteLocalItem'),
+        apiAction('media', 'renameLocalItem'),
+        apiAction('media', 'listLocalFolder')
       ]
     }
   },
@@ -173,10 +163,10 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull),
-      apiEvents: [
-        'getLayoutTemplateNames',
-        'getPagesByLane',
-        'saveLayoutTemplate'
+      apiActions: [
+        apiAction('plainSpace', 'layoutTemplateNames'),
+        apiAction('pages', 'byLane'),
+        apiAction('plainSpace', 'saveLayoutTemplate')
       ]
     }
   },
@@ -188,8 +178,8 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull),
-      apiEvents: [
-        'designer.listDesigns'
+      apiActions: [
+        apiAction('designer', 'list')
       ]
     }
   },
@@ -201,18 +191,18 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
-      apiEvents: [
-        'listNavigationLocations',
-        'registerNavigationLocation',
-        'listNavigationMenus',
-        'upsertNavigationMenu',
-        'getNavigationTree',
-        'addNavigationMenuItem',
-        'updateNavigationMenuItem',
-        'deleteNavigationMenuItem',
-        'getPagesByLane',
-        'designer.listDesigns',
-        'designer.saveDesign'
+      apiActions: [
+        apiAction('navigation', 'locations'),
+        apiAction('navigation', 'registerLocation'),
+        apiAction('navigation', 'menus'),
+        apiAction('navigation', 'upsertMenu'),
+        apiAction('navigation', 'tree'),
+        apiAction('navigation', 'addItem'),
+        apiAction('navigation', 'updateItem'),
+        apiAction('navigation', 'deleteItem'),
+        apiAction('pages', 'byLane'),
+        apiAction('designer', 'list'),
+        apiAction('designer', 'save')
       ],
       icon: 'menu'
     }
@@ -225,10 +215,10 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly, 'scroll'),
-      apiEvents: [
-        'widget.registry.request.v1',
-        'getPagesByLane',
-        'getLayoutForViewport'
+      apiActions: [
+        apiAction('plainSpace', 'widgetRegistry'),
+        apiAction('pages', 'byLane'),
+        apiAction('plainSpace', 'layoutForViewport')
       ]
     }
   },
@@ -240,12 +230,12 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('twoThird', ['twoThird', 'full'], BREAKPOINTS.twoThirdFull, 'scroll'),
-      apiEvents: [
-        'getPagesByLane',
-        'createPage',
-        'updatePage',
-        'setAsStart',
-        'deletePage'
+      apiActions: [
+        apiAction('pages', 'byLane'),
+        apiAction('pages', 'create'),
+        apiAction('pages', 'update'),
+        apiAction('pages', 'setStart'),
+        apiAction('pages', 'delete')
       ]
     }
   },
@@ -257,8 +247,8 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly, 'scroll'),
-      apiEvents: [
-        'getPagesByLane'
+      apiActions: [
+        apiAction('pages', 'byLane')
       ]
     }
   },
@@ -270,7 +260,9 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
-      apiEvents: ['getPagesByLane']
+      apiActions: [
+        apiAction('pages', 'byLane')
+      ]
     }
   },
   {
@@ -281,7 +273,10 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
-      apiEvents: ['getLayoutTemplateNames', 'updatePage']
+      apiActions: [
+        apiAction('plainSpace', 'layoutTemplateNames'),
+        apiAction('pages', 'update')
+      ]
     }
   },
   {
@@ -292,7 +287,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull),
-      apiEvents: []
+      apiActions: []
     }
   },
   {
@@ -303,7 +298,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull),
-      apiEvents: []
+      apiActions: []
     }
   },
   {
@@ -314,7 +309,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'core',
     metadata: {
       layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
-      apiEvents: []
+      apiActions: []
     }
   },
   {
@@ -327,7 +322,7 @@ module.exports.DEFAULT_WIDGETS = [
       advanced: true,
       hiddenFromCatalog: true,
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
-      apiEvents: []
+      apiActions: []
     }
   },
   {
@@ -342,7 +337,7 @@ module.exports.DEFAULT_WIDGETS = [
         tablet: ['half', 'full'],
         desktop: ['third', 'half', 'twoThird', 'full']
       }),
-      apiEvents: [],
+      apiActions: [],
       icon: 'type',
       defaults: {
         heading: 'New headline',
@@ -358,7 +353,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'authoring',
     metadata: {
       layout: dashboardLayout('half', ['half', 'twoThird', 'full'], BREAKPOINTS.halfTwoThirdFull),
-      apiEvents: [],
+      apiActions: [],
       icon: 'image',
       defaults: {
         aspectRatio: '16/9',
@@ -374,7 +369,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'authoring',
     metadata: {
       layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
-      apiEvents: [],
+      apiActions: [],
       icon: 'mouse-pointer-click',
       defaults: {
         label: 'Start now',
@@ -391,7 +386,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'navigation',
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
-      apiEvents: [],
+      apiActions: [],
       icon: 'menu',
       defaults: {
         locationKey: 'primary',
@@ -408,7 +403,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'navigation',
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
-      apiEvents: [],
+      apiActions: [],
       icon: 'chevrons-right',
       defaults: {
         homeLabel: 'Home',
@@ -424,7 +419,7 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'media',
     metadata: {
       layout: dashboardLayout('full', ['half', 'twoThird', 'full'], BREAKPOINTS.halfTwoThirdFull),
-      apiEvents: [],
+      apiActions: [],
       icon: 'images',
       defaults: {
         mode: 'grid',
@@ -455,8 +450,8 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'content',
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
-      apiEvents: [
-        'getChildPages'
+      apiActions: [
+        apiAction('pages', 'children')
       ],
       icon: 'archive',
       defaults: {

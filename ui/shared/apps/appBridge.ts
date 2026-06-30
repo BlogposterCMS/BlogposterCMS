@@ -1,9 +1,9 @@
 import { startDomAgentSurface, type AgentSurfaceClient } from '../agent/agentSurfaceClient';
 import type { MeltdownBatchEvent, MeltdownPayload } from '../api-client/meltdownClient';
 
-export const APP_BRIDGE_REQUEST = 'cms-app-meltdown-request';
-export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-meltdown-batch-request';
-export const APP_BRIDGE_RESPONSE = 'cms-app-meltdown-response';
+export const APP_BRIDGE_REQUEST = 'cms-app-runtime-request';
+export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-runtime-batch-request';
+export const APP_BRIDGE_RESPONSE = 'cms-app-runtime-response';
 
 const DEFAULT_TIMEOUT = 10000;
 

@@ -1,4 +1,5 @@
 import { fetchShellPublicSetting, issueShellPublicToken, publicSettingEnabled } from '../data/publicMeltdownClient.js';
+import { runtimePublicPayload, unwrapRuntimeFacadeData } from '../../shared/api-client/runtimeFacade.js';
 export function isAlreadyInstalledSubmitError(err) {
     const message = err instanceof Error ? err.message : String(err);
     // The install POST intentionally returns a tiny plain-text boundary error.
@@ -22,11 +23,7 @@ export async function fetchFirstInstallState(client) {
     };
 }
 export async function fetchPublicUserCount(client, publicToken) {
-    const result = await client.emit('getUserCount', {
-        jwt: publicToken,
-        moduleName: 'userManagement',
-        moduleType: 'core'
-    });
+    const result = unwrapRuntimeFacadeData(await client.emit('cmsPublicRuntimeRequest', runtimePublicPayload(String(publicToken || ''), 'users', 'count')));
     return typeof result === 'number' ? result : 0;
 }
 export async function submitInstallRequest(win, csrfToken, data) {

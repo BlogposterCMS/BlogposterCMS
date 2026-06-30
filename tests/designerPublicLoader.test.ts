@@ -2,13 +2,12 @@
  * @jest-environment jsdom
  */
 
-const { loadDesign, registerLoaders } = require('../modules/designer/publicLoader.js');
+const { loadDesign, registerLoaders } = require('../mother/modules/designerManager/publicLoader.js');
 
 describe('designer public loader', () => {
   beforeEach(() => {
     document.head.innerHTML = '';
     jest.clearAllMocks();
-    delete (window as any).__BP_ACTIVE_LAYOUT__;
   });
 
   test('registers the design loader', () => {
@@ -25,21 +24,27 @@ describe('designer public loader', () => {
     };
     const ctx: Record<string, unknown> = {
       publicToken: 'public-token',
-      meltdownEmit: jest.fn().mockResolvedValue(layout),
+      meltdownEmit: jest.fn().mockResolvedValue({
+        resource: 'designer',
+        action: 'getLayout',
+        data: layout,
+      }),
     };
 
     await loadDesign({ css: ['/assets/css/site.css'], layoutRef: 'layout:landing@v1' }, ctx);
 
-    expect(ctx.meltdownEmit).toHaveBeenCalledWith('designer.getLayout', {
+    expect(ctx.meltdownEmit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      moduleName: 'designer',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public',
-      layoutRef: 'layout:landing@v1',
+      resource: 'designer',
+      action: 'getLayout',
+      params: {
+        layoutRef: 'layout:landing@v1',
+      },
     });
     expect(ctx.activeLayout).toBe(layout);
     expect(ctx.activeLayoutRef).toBe('layout:landing@v1');
-    expect((window as any).__BP_ACTIVE_LAYOUT__).toBe(layout);
     expect(document.querySelector('link[href="/assets/css/site.css"]')).not.toBeNull();
   });
 });

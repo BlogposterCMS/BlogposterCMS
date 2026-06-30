@@ -3,6 +3,8 @@ export interface WidgetMetadata {
   icon?: string;
 }
 
+import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
+
 export interface WidgetDefinition {
   id: string;
   metadata?: WidgetMetadata;
@@ -87,11 +89,8 @@ export async function fetchWidgetRegistry(
   jwt: string | null | undefined
 ): Promise<WidgetDefinition[]> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await meltdownEmit('widget.registry.request.v1', {
-    lane: 'public',
-    moduleName: 'plainspace',
-    moduleType: 'core',
-    jwt
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'widgetRegistry', {
+    lane: 'public'
   });
   return toWidgets(res);
 }
@@ -102,10 +101,7 @@ export async function fetchGlobalWidgetIds(
 ): Promise<Set<string>> {
   const meltdownEmit = requireEmitter(emit);
   const globalIds = new Set<string>();
-  const res = await meltdownEmit('getPagesByLane', {
-    jwt,
-    moduleName: 'pagesManager',
-    moduleType: 'core',
+  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', {
     lane: 'public'
   });
   const pages = toPages(res);
@@ -116,10 +112,7 @@ export async function fetchGlobalWidgetIds(
   }
 
   for (const page of pages) {
-    const layoutRes = await meltdownEmit('getLayoutForViewport', {
-      jwt,
-      moduleName: 'plainspace',
-      moduleType: 'core',
+    const layoutRes = await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'layoutForViewport', {
       pageId: page.id,
       lane: 'public',
       viewport: 'desktop'

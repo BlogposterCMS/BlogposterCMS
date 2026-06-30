@@ -1,4 +1,4 @@
-const baseOptions = { moduleName: 'pagesManager', moduleType: 'core' };
+const runtimeManagerOptions = { moduleName: 'runtimeManager', moduleType: 'core' };
 function getRuntime() {
     const runtimeWindow = typeof window === 'undefined' ? null : window;
     const meltdownEmit = runtimeWindow?.meltdownEmit;
@@ -18,6 +18,27 @@ function toArray(value) {
     }
     return [];
 }
+function unwrapRuntimeResult(value) {
+    if (value &&
+        typeof value === 'object' &&
+        'resource' in value &&
+        'action' in value &&
+        'data' in value) {
+        return value.data;
+    }
+    return value;
+}
+async function requestPageAction(action, params = {}) {
+    const { meltdownEmit, jwt } = getRuntime();
+    const result = await meltdownEmit('cmsAdminApiRequest', {
+        ...runtimeManagerOptions,
+        jwt,
+        resource: 'pages',
+        action,
+        params
+    });
+    return unwrapRuntimeResult(result);
+}
 export const sanitizeSlug = (raw) => (raw == null ? '' : String(raw))
     .trim()
     .toLowerCase()
@@ -29,19 +50,15 @@ export const sanitizeSlug = (raw) => (raw == null ? '' : String(raw))
     .replace(/\/+$/, '');
 export const pageService = {
     async getPagesByLane(lane = 'public') {
-        const { meltdownEmit, jwt } = getRuntime();
         const safeLane = typeof lane === 'string' && lane.trim() ? lane.trim() : 'public';
-        const res = await meltdownEmit('getPagesByLane', { ...baseOptions, jwt, lane: safeLane });
+        const res = await requestPageAction('byLane', { lane: safeLane });
         return toArray(res);
     },
     async getAll() {
         return this.getPagesByLane('public');
     },
     async create({ title, slug, status = 'published', meta }) {
-        const { meltdownEmit, jwt } = getRuntime();
-        return meltdownEmit('createPage', {
-            ...baseOptions,
-            jwt,
+        return requestPageAction('create', {
             title,
             slug,
             lane: 'public',
@@ -50,10 +67,7 @@ export const pageService = {
         });
     },
     async update(page, patch) {
-        const { meltdownEmit, jwt } = getRuntime();
-        return meltdownEmit('updatePage', {
-            ...baseOptions,
-            jwt,
+        return requestPageAction('update', {
             pageId: page.id,
             slug: page.slug,
             status: page.status,
@@ -80,11 +94,9 @@ export const pageService = {
         return this.update(page, { parent_id });
     },
     async setAsStart(id) {
-        const { meltdownEmit, jwt } = getRuntime();
-        return meltdownEmit('setAsStart', { ...baseOptions, jwt, pageId: id });
+        return requestPageAction('setStart', { pageId: id });
     },
     async delete(id) {
-        const { meltdownEmit, jwt } = getRuntime();
-        return meltdownEmit('deletePage', { ...baseOptions, jwt, pageId: id });
+        return requestPageAction('delete', { pageId: id });
     }
 };

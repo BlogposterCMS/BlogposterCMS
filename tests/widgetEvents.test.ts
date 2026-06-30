@@ -18,32 +18,52 @@ describe('widgetEvents', () => {
     delete window.meltdownEmit;
   });
 
-  it('registers valid widget API events with the active token', async () => {
+  it('registers valid widget API actions with the active token', async () => {
     await registerWidgetEvents({
       id: 'hero',
       metadata: {
-        apiEvents: ['content.viewed', 'bad event', 'widget:opened']
+        apiActions: [
+          { resource: 'content', action: 'list' },
+          { resource: 'bad event', action: 'list' },
+          { resource: 'widgets', action: 'registerUsage' },
+          { resource: 'content', action: 'list' }
+        ]
       }
     });
 
-    expect(window.meltdownEmit).toHaveBeenCalledWith('registerWidgetUsage', {
+    expect(window.meltdownEmit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      events: ['content.viewed', 'widget:opened']
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'widgets',
+      action: 'registerUsage',
+      params: {
+        actions: [
+          { resource: 'content', action: 'list' },
+          { resource: 'widgets', action: 'registerUsage' }
+        ]
+      }
     });
   });
 
-  it('skips registration without events, emitter, or token', async () => {
+  it('skips registration without actions, emitter, or token', async () => {
     await registerWidgetEvents({ id: 'empty', metadata: {} });
     expect(window.meltdownEmit).not.toHaveBeenCalled();
 
     delete window.ADMIN_TOKEN;
     delete window.PUBLIC_TOKEN;
-    await registerWidgetEvents({ id: 'no-token', metadata: { apiEvents: 'content.viewed' } });
+    await registerWidgetEvents({
+      id: 'no-token',
+      metadata: { apiActions: [{ resource: 'content', action: 'list' }] }
+    });
     expect(window.meltdownEmit).not.toHaveBeenCalled();
 
     delete window.meltdownEmit;
     await expect(
-      registerWidgetEvents({ id: 'no-emitter', metadata: { apiEvents: 'content.viewed' } })
+      registerWidgetEvents({
+        id: 'no-emitter',
+        metadata: { apiActions: [{ resource: 'content', action: 'list' }] }
+      })
     ).resolves.toBeUndefined();
   });
 
@@ -52,7 +72,10 @@ describe('widgetEvents', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     window.meltdownEmit = jest.fn().mockRejectedValue(error);
 
-    await registerWidgetEvents({ id: 'broken', metadata: { apiEvents: 'content.viewed' } });
+    await registerWidgetEvents({
+      id: 'broken',
+      metadata: { apiActions: [{ resource: 'content', action: 'list' }] }
+    });
 
     expect(warn).toHaveBeenCalledWith(
       '[Widgets] registerWidgetUsage failed for',

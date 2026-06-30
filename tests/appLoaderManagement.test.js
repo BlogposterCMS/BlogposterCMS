@@ -274,7 +274,7 @@ test('app loader marks invalid app manifests inactive during scan', async () => 
   });
   createAppFolder(appsRoot, 'directWriteApp', {
     allowedEvents: [
-      { eventName: 'deleteLocalItem', moduleName: 'mediaManager', moduleType: 'core', access: 'write' }
+      { eventName: 'cmsAdminApiRequest', moduleName: 'runtimeManager', moduleType: 'core', access: 'write' }
     ]
   });
   createAppFolder(appsRoot, 'tokenIntrospectionApp', {
@@ -299,17 +299,17 @@ test('app loader marks invalid app manifests inactive during scan', async () => 
   });
   createAppFolder(appsRoot, 'missingAccessApp', {
     allowedEvents: [
-      { eventName: 'designer.getDesign', moduleName: 'designer', moduleType: 'core' }
+      { eventName: 'cmsAdminApiRequest', moduleName: 'runtimeManager', moduleType: 'core' }
     ]
   });
   createAppFolder(appsRoot, 'badTargetModuleApp', {
     allowedEvents: [
-      { eventName: 'designer.getDesign', moduleName: '../designer', moduleType: 'core', access: 'read' }
+      { eventName: 'cmsAdminApiRequest', moduleName: '../runtimeManager', moduleType: 'core', access: 'read' }
     ]
   });
   createAppFolder(appsRoot, 'wrongFacadeModuleApp', {
     allowedEvents: [
-      { eventName: 'designer.getDesign', moduleName: 'mediaManager', moduleType: 'core', access: 'read' }
+      { eventName: 'cmsAdminApiRequest', moduleName: 'mediaManager', moduleType: 'core', access: 'read' }
     ]
   });
   createAppFolder(appsRoot, 'wrongManifestNameApp', {
@@ -328,7 +328,7 @@ test('app loader marks invalid app manifests inactive during scan', async () => 
     const entry = await emitAsync(emitter, 'getApp', appPayload({ appName: 'badWriteApp' }));
     assert.ifError(entry.err);
     assert.strictEqual(entry.result.isActive, false);
-    assert.match(entry.result.lastError, /write access/);
+    assert.match(entry.result.lastError, /internal event: deleteLocalItem/);
 
     const directEntry = await emitAsync(emitter, 'getApp', appPayload({ appName: 'directWriteApp' }));
     assert.ifError(directEntry.err);
@@ -368,7 +368,7 @@ test('app loader marks invalid app manifests inactive during scan', async () => 
     const wrongFacadeModuleEntry = await emitAsync(emitter, 'getApp', appPayload({ appName: 'wrongFacadeModuleApp' }));
     assert.ifError(wrongFacadeModuleEntry.err);
     assert.strictEqual(wrongFacadeModuleEntry.result.isActive, false);
-    assert.match(wrongFacadeModuleEntry.result.lastError, /does not match runtime facade resource/);
+    assert.match(wrongFacadeModuleEntry.result.lastError, /must declare moduleName "runtimeManager"/);
 
     const wrongManifestNameEntry = await emitAsync(emitter, 'getApp', appPayload({ appName: 'wrongManifestNameApp' }));
     assert.ifError(wrongManifestNameEntry.err);

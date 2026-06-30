@@ -567,12 +567,49 @@ test('runtime public facade dispatches only public runtime reads through core co
           yPercent: 5,
           wPercent: 100,
           hPercent: 25,
+          metadata: {
+            settings: {
+              html: '<p>Public design text</p>'
+            },
+            secretToken: 'visible-instance-data'
+          },
+          html: '<p>Inline instance html</p>',
+          css: '.hero{color:red}',
+          js: 'window.hero = true;',
           privateToken: 'hidden'
         }
       ],
       layoutRef: payload.layoutRef,
       privateToken: 'hidden'
     });
+  });
+  emitter.on('listFonts', (payload, cb) => {
+    routed.push({ eventName: 'listFonts', payload });
+    cb(null, [{ name: 'Inter', url: '/fonts/inter.css' }]);
+  });
+  emitter.on('listFontProviders', (payload, cb) => {
+    routed.push({ eventName: 'listFontProviders', payload });
+    cb(null, [{ name: 'system' }]);
+  });
+  emitter.on('registerWidgetUsage', (payload, cb) => {
+    routed.push({ eventName: 'registerWidgetUsage', payload });
+    cb(null, { actions: payload.actions || [] });
+  });
+  emitter.on('listActiveLoginStrategies', (payload, cb) => {
+    routed.push({ eventName: 'listActiveLoginStrategies', payload });
+    cb(null, { data: [{ name: 'github', scope: 'public' }] });
+  });
+  emitter.on('getPublicSettings', (payload, cb) => {
+    routed.push({ eventName: 'getPublicSettings', payload });
+    cb(null, { SITE_TITLE: 'Blogposter' });
+  });
+  emitter.on('getUserCount', (payload, cb) => {
+    routed.push({ eventName: 'getUserCount', payload });
+    cb(null, 2);
+  });
+  emitter.on('publicRegister', (payload, cb) => {
+    routed.push({ eventName: 'publicRegister', payload });
+    cb(null, { username: payload.username, role: payload.role });
   });
 
   const decodedJWT = { isPublic: true, purpose: 'public' };
@@ -659,7 +696,16 @@ test('runtime public facade dispatches only public runtime reads through core co
     xPercent: 0,
     yPercent: 5,
     wPercent: 100,
-    hPercent: 25
+    hPercent: 25,
+    html: '<p>Inline instance html</p>',
+    css: '.hero{color:red}',
+    js: 'window.hero = true;',
+    metadata: {
+      settings: {
+        html: '<p>Public design text</p>'
+      },
+      secretToken: 'visible-instance-data'
+    }
   }]);
   assert.strictEqual(designLayout.data.privateToken, undefined);
   assert.strictEqual(designLayout.data.items[0].privateToken, undefined);
@@ -670,6 +716,56 @@ test('runtime public facade dispatches only public runtime reads through core co
   const draftDesign = await call('designer', 'get', { id: 'draft-design' });
   assert.strictEqual(draftDesign.eventName, 'designer.getDesign');
   assert.strictEqual(draftDesign.data, null);
+
+  const publicFonts = await call('fonts', 'list');
+  assert.strictEqual(publicFonts.eventName, 'listFonts');
+  assert.deepStrictEqual(publicFonts.data, [{ name: 'Inter', url: '/fonts/inter.css' }]);
+  const publicProviders = await call('fonts', 'listProviders');
+  assert.strictEqual(publicProviders.eventName, 'listFontProviders');
+  assert.deepStrictEqual(publicProviders.data, [{ name: 'system' }]);
+  assert.strictEqual(routed.find(entry => entry.eventName === 'listFonts').payload.jwt, 'runtime-core-token');
+
+  const widgetUsage = await call('widgets', 'registerUsage', { actions: [{ resource: 'content', action: 'list' }] });
+  assert.strictEqual(widgetUsage.eventName, 'registerWidgetUsage');
+  assert.deepStrictEqual(widgetUsage.data.actions, [{ resource: 'content', action: 'list' }]);
+
+  const loginStrategies = await call('auth', 'activeLoginStrategies');
+  assert.strictEqual(loginStrategies.eventName, 'listActiveLoginStrategies');
+  assert.deepStrictEqual(loginStrategies.data.data, [{ name: 'github', scope: 'public' }]);
+
+  const publicSettings = await call('settings', 'public', {
+    keys: ['SITE_TITLE'],
+    jwt: 'spoofed-token',
+    decodedJWT: { userId: 'spoofed' },
+    moduleName: 'spoofedModule',
+    moduleType: 'spoofedType'
+  });
+  assert.strictEqual(publicSettings.eventName, 'getPublicSettings');
+  assert.deepStrictEqual(publicSettings.data, { SITE_TITLE: 'Blogposter' });
+  const settingsPayload = routed.find(entry => entry.eventName === 'getPublicSettings').payload;
+  assert.strictEqual(settingsPayload.jwt, 'runtime-core-token');
+  assert.strictEqual(settingsPayload.moduleName, 'settingsManager');
+  assert.strictEqual(settingsPayload.moduleType, 'core');
+  assert.deepStrictEqual(settingsPayload.keys, ['SITE_TITLE']);
+  assert.strictEqual(settingsPayload.decodedJWT, undefined);
+
+  const userCount = await call('users', 'count', { moduleName: 'spoofedModule' });
+  assert.strictEqual(userCount.eventName, 'getUserCount');
+  assert.strictEqual(userCount.data, 2);
+  const userCountPayload = routed.find(entry => entry.eventName === 'getUserCount').payload;
+  assert.strictEqual(userCountPayload.moduleName, 'userManagement');
+
+  const registered = await call('users', 'register', {
+    username: 'public-user',
+    password: 'SecretPassword123',
+    role: 'standard',
+    jwt: 'spoofed-token'
+  });
+  assert.strictEqual(registered.eventName, 'publicRegister');
+  assert.deepStrictEqual(registered.data, { username: 'public-user', role: 'standard' });
+  const registerPayload = routed.find(entry => entry.eventName === 'publicRegister').payload;
+  assert.strictEqual(registerPayload.jwt, 'runtime-core-token');
+  assert.strictEqual(registerPayload.moduleName, 'userManagement');
 
   const deniedDesign = await new Promise(resolve => {
     emitter.emit('cmsPublicRuntimeRequest', {
@@ -1227,7 +1323,7 @@ test('runtime CMS admin facade dispatches identity, module, import and export ac
   assert.strictEqual(routed[6].payload.moduleName, 'exportManager');
 });
 
-test('runtime CMS admin facade dispatches legacy page actions', async () => {
+test('runtime CMS admin facade dispatches page actions', async () => {
   const emitter = new EventEmitter();
   setupRuntimeEvents(emitter);
   const routed = [];
@@ -1597,7 +1693,7 @@ test('runtime CMS admin facade dispatches Designer actions', async () => {
   const design = await call('get', { id: 'design-1' });
   assert.strictEqual(design.eventName, 'designer.getDesign');
   assert.strictEqual(design.data.design.id, 'design-1');
-  assert.strictEqual(routed[0].payload.moduleName, 'designer');
+  assert.strictEqual(routed[0].payload.moduleName, 'designerManager');
   assert.strictEqual(routed[0].payload.moduleType, 'core');
   assert.strictEqual(routed[0].payload.jwt, 'admin-token');
 
@@ -1806,7 +1902,7 @@ test('runtime CMS admin facade limits app-origin requests to query actions', asy
   assert.deepStrictEqual(routed.map(entry => entry.eventName), ['listContentEntries', 'getPublicSettings', 'getPageById', 'getLayoutForViewport']);
 });
 
-test('runtime CMS admin facade allows writes only for core-owned legacy app bridges', async () => {
+test('runtime CMS admin facade allows writes only for core-owned app bridges', async () => {
   const emitter = new EventEmitter();
   setupRuntimeEvents(emitter);
   const routed = [];
@@ -1836,7 +1932,7 @@ test('runtime CMS admin facade allows writes only for core-owned legacy app brid
       params: { id: 'design-1', title: 'Hero' },
       appContext: {
         appName: 'designer',
-        event: 'cms-meltdown-request',
+        event: 'cms-app-runtime-request',
         targetEvent: 'designer.saveDesign',
         coreOwned: true
       }
@@ -1845,7 +1941,7 @@ test('runtime CMS admin facade allows writes only for core-owned legacy app brid
   assert.strictEqual(allowedDesignerSave.eventName, 'designer.saveDesign');
   assert.strictEqual(allowedDesignerSave.data.version, 3);
 
-  const deniedUserManagedLegacyWrite = await new Promise(resolve => {
+  const deniedUserManagedWrite = await new Promise(resolve => {
     emitter.emit('cmsAdminApiRequest', {
       jwt: 'admin-token',
       moduleName: 'runtimeManager',
@@ -1856,14 +1952,14 @@ test('runtime CMS admin facade allows writes only for core-owned legacy app brid
       params: { title: 'Created from app' },
       appContext: {
         appName: 'thinapp',
-        event: 'cms-meltdown-request',
+        event: 'cms-app-runtime-request',
         targetEvent: 'createContentEntry',
         coreOwned: false
       }
     }, (err, result) => resolve({ err, result }));
   });
-  assert(deniedUserManagedLegacyWrite.err);
-  assert.match(deniedUserManagedLegacyWrite.err.message, /apps can only query/);
+  assert(deniedUserManagedWrite.err);
+  assert.match(deniedUserManagedWrite.err.message, /apps can only query/);
 
   const deniedCoreOwnedCmsAdminWrite = await new Promise(resolve => {
     emitter.emit('cmsAdminApiRequest', {
@@ -1912,13 +2008,18 @@ test('runtime CMS admin facade dispatches shell inventory reads through stable c
     routed.push({ eventName: 'getCmsMode', payload });
     cb(null, 'standard');
   });
+  emitter.on('getUserDetailsById', (payload, cb) => {
+    routed.push({ eventName: 'getUserDetailsById', payload });
+    cb(null, { id: payload.userId, ui_color: '#123456' });
+  });
 
   const decodedJWT = {
     permissions: {
       auth: { strategies: { view: true } },
       notifications: { read: true },
       builder: { use: true },
-      settings: { core: { view: true } }
+      settings: { core: { view: true } },
+      users: { read: true }
     },
     userId: 'admin-1'
   };
@@ -1954,12 +2055,18 @@ test('runtime CMS admin facade dispatches shell inventory reads through stable c
   assert.strictEqual(cmsMode.eventName, 'getCmsMode');
   assert.strictEqual(cmsMode.data, 'standard');
 
+  const currentUser = await call('users', 'me', { userId: 'other-user' });
+  assert.strictEqual(currentUser.eventName, 'getUserDetailsById');
+  assert.strictEqual(currentUser.data.id, 'admin-1');
+  assert.strictEqual(routed[5].payload.userId, 'admin-1');
+
   assert.deepStrictEqual(routed.map(entry => entry.payload.moduleName), [
     'auth',
     'notificationManager',
     'appLoader',
     'appLoader',
-    'settingsManager'
+    'settingsManager',
+    'userManagement'
   ]);
 });
 

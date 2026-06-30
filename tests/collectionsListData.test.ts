@@ -110,21 +110,25 @@ describe('collectionsListData', () => {
     expect(childRow?.hidden).toBe(true);
   });
 
-  it('builds the pagesManager lane payload and fetches collections through meltdownEmit', async () => {
+  it('builds the runtime facade lane payload and fetches collections through meltdownEmit', async () => {
     const emit = jest.fn(async () => ({ data: pages() }));
 
     await expect(fetchCollections(emit, 'admin-token')).resolves.toHaveLength(2);
     expect(buildCollectionsPayload('admin-token')).toEqual({
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'public' }
     });
-    expect(emit).toHaveBeenCalledWith('getPagesByLane', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'pagesManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      lane: 'public'
+      resource: 'pages',
+      action: 'byLane',
+      params: { lane: 'public' }
     });
   });
 

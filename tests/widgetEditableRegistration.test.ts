@@ -11,7 +11,7 @@ describe('registerEditableElement', () => {
     delete (window as typeof window & { BP_DESIGNER_EDITOR?: unknown }).BP_DESIGNER_EDITOR;
   });
 
-  it('uses a neutral widget editor bridge before legacy fallbacks', async () => {
+  it('uses the neutral widget editor bridge first', async () => {
     const element = document.createElement('div');
     const registerElement = jest.fn();
     (window as typeof window & { BP_WIDGET_EDITOR?: unknown }).BP_WIDGET_EDITOR = { registerElement };

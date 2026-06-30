@@ -44,8 +44,20 @@ function appendBlockedPlaceholder(root) {
     placeholder.textContent = 'Content unavailable.';
     root.appendChild(placeholder);
 }
+function hasActiveDesignLayout(ctx) {
+    const scopedLayout = ctx && typeof ctx === 'object'
+        ? ctx.activeLayout
+        : undefined;
+    const layout = scopedLayout;
+    return Boolean(layout &&
+        typeof layout === 'object' &&
+        Array.isArray(layout.items) &&
+        (layout.items || []).length > 0);
+}
 export async function loadHtml(descriptor = {}, ctx) {
-    void ctx;
+    if (descriptor.fallbackOnly && hasActiveDesignLayout(ctx)) {
+        return;
+    }
     await ensureSanitizer();
     const inline = descriptor.inline || {};
     const html = inline.html || '';

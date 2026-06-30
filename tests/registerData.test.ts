@@ -7,7 +7,13 @@ describe('registerData', () => {
   it('keeps the first install registration as an admin owner flow', async () => {
     const emit = jest.fn(async (eventName, payload) => {
       if (eventName === 'issuePublicToken') return 'public-token';
-      if (payload.key === 'FIRST_INSTALL_DONE') return 'false';
+      if (payload.resource === 'settings' && payload.action === 'public') {
+        return {
+          resource: 'settings',
+          action: 'public',
+          data: { FIRST_INSTALL_DONE: 'false' }
+        };
+      }
       return null;
     });
 
@@ -20,19 +26,28 @@ describe('registerData', () => {
       purpose: 'firstInstallCheck',
       moduleName: 'auth'
     });
-    expect(emit).toHaveBeenCalledWith('getPublicSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'FIRST_INSTALL_DONE'
+      resource: 'settings',
+      action: 'public',
+      params: { keys: ['FIRST_INSTALL_DONE'] }
     });
   });
 
   it('loads public registration availability for completed installs', async () => {
     const emit = jest.fn(async (eventName, payload) => {
       if (eventName === 'issuePublicToken') return 'public-token';
-      if (payload.key === 'FIRST_INSTALL_DONE') return 'true';
-      if (payload.key === 'ALLOW_REGISTRATION') return 'false';
+      if (payload.resource === 'settings' && payload.action === 'public') {
+        return {
+          resource: 'settings',
+          action: 'public',
+          data: payload.params.keys.includes('FIRST_INSTALL_DONE')
+            ? { FIRST_INSTALL_DONE: 'true' }
+            : { ALLOW_REGISTRATION: 'false' }
+        };
+      }
       return null;
     });
 
@@ -41,11 +56,13 @@ describe('registerData', () => {
       registrationAllowed: false,
       registrationRole: 'standard'
     });
-    expect(emit).toHaveBeenCalledWith('getPublicSetting', {
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      moduleName: 'settingsManager',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      key: 'ALLOW_REGISTRATION'
+      resource: 'settings',
+      action: 'public',
+      params: { keys: ['ALLOW_REGISTRATION'] }
     });
   });
 
@@ -58,13 +75,17 @@ describe('registerData', () => {
       role: 'standard'
     });
 
-    expect(emit).toHaveBeenCalledWith('publicRegister', {
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
-      moduleName: 'userManagement',
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      username: 'matteo',
-      password: 'SecretPassword123',
-      role: 'standard'
+      resource: 'users',
+      action: 'register',
+      params: {
+        username: 'matteo',
+        password: 'SecretPassword123',
+        role: 'standard'
+      }
     });
   });
 });

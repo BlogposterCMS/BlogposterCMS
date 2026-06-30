@@ -109,5 +109,4 @@ other widgets.
 
 Grid calculations are shared through `ui/runtime/main/grid-utils.js`. Import
 helpers like `snapToGrid`, `elementRect` and `rectsCollide` to keep widget logic
-consistent across modules. Legacy `/plainspace/main/*.js` URLs remain as
-compatibility shims for older browser code.
+consistent across modules.

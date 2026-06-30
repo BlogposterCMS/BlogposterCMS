@@ -659,8 +659,8 @@ function extractParamsIfNeeded(dataObj = {}, whereObj = {}) {
     return numericKeys.map(k => source[k]);
   }
 
-  // If rawSQL with named parameters, map common placeholders to positional
-  // arrays for cross-engine compatibility. Fallback to returning the object
+  // If rawSQL has named parameters, map common placeholders to positional
+  // arrays for database engine adapters. Fallback to returning the object
   // as-is for custom handlers.
   if (source.rawSQL) {
     if (source.rawSQL === 'GET_SETTING' && source.key !== undefined) {

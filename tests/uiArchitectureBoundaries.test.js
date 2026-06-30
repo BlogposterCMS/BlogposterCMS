@@ -91,7 +91,7 @@ function dynamicImportSpecifiers(source) {
   return specs;
 }
 
-function isForbiddenLegacySpecifier(specifier) {
+function isForbiddenRetiredBrowserSpecifier(specifier) {
   return (
     specifier.startsWith('/assets/js/') ||
     specifier.includes('public/assets/js') ||
@@ -133,7 +133,7 @@ function specifierTargetsUiZone(filePath, specifier, zone) {
 }
 
 describe('UI architecture boundaries', () => {
-  test('ui and designer code do not import legacy public implementation paths', () => {
+  test('ui and designer code do not import retired public implementation paths', () => {
     const files = [
       ...sourceFiles('ui'),
       ...sourceFiles('apps', 'designer')
@@ -143,7 +143,7 @@ describe('UI architecture boundaries', () => {
     files.forEach(filePath => {
       const source = fs.readFileSync(filePath, 'utf8');
       importSpecifiers(source).forEach(specifier => {
-        if (isForbiddenLegacySpecifier(specifier)) {
+        if (isForbiddenRetiredBrowserSpecifier(specifier)) {
           violations.push(`${toRepoPath(filePath)} -> ${specifier}`);
         }
       });
@@ -152,36 +152,19 @@ describe('UI architecture boundaries', () => {
     expect(violations).toEqual([]);
   });
 
-  test('legacy designer source files are forwarders into ui/designer', () => {
+  test('designer app shell keeps JavaScript and TypeScript under ui/designer', () => {
     const files = sourceFiles('apps', 'designer');
-    const violations = [];
 
-    files.forEach(filePath => {
-      if (!isThinForwarder(filePath)) {
-        violations.push(`${toRepoPath(filePath)} -> not a thin forwarder`);
-        return;
-      }
-
-      importSpecifiers(fs.readFileSync(filePath, 'utf8')).forEach(specifier => {
-        if (!resolvesToUiZone(filePath, specifier, 'designer')) {
-          violations.push(`${toRepoPath(filePath)} -> ${specifier}`);
-        }
-      });
-    });
-
-    expect(violations).toEqual([]);
+    expect(files.map(toRepoPath)).toEqual([]);
   });
 
-  test('legacy PlainSpace browser files are shims into ui', () => {
+  test('PlainSpace public shell has no retired browser implementation scripts', () => {
     const files = sourceFiles('public', 'plainspace');
-    const violations = files
-      .filter(filePath => !isThinForwarder(filePath))
-      .map(toRepoPath);
 
-    expect(violations).toEqual([]);
+    expect(files.map(toRepoPath)).toEqual([]);
   });
 
-  test('public asset scripts stay as shims', () => {
+  test('public asset entry scripts stay thin', () => {
     const files = sourceFiles('public', 'assets', 'js');
     const violations = files
       .filter(filePath => !isThinForwarder(filePath))
@@ -190,9 +173,8 @@ describe('UI architecture boundaries', () => {
     expect(violations).toEqual([]);
   });
 
-  test('legacy public shims forward only to ui sources or build bundles', () => {
+  test('public asset entry scripts forward only to ui sources or build bundles', () => {
     const files = [
-      ...sourceFiles('public', 'plainspace'),
       ...sourceFiles('public', 'assets', 'js')
     ];
     const violations = [];
@@ -220,7 +202,7 @@ describe('UI architecture boundaries', () => {
     modulePublicLoaderFiles().forEach(filePath => {
       const source = fs.readFileSync(filePath, 'utf8');
       importSpecifiers(source).forEach(specifier => {
-        if (isForbiddenLegacySpecifier(specifier)) {
+        if (isForbiddenRetiredBrowserSpecifier(specifier)) {
           violations.push(`${toRepoPath(filePath)} -> ${specifier}`);
         }
       });
@@ -243,7 +225,7 @@ describe('UI architecture boundaries', () => {
     const moduleNames = modulePublicLoaderTsFiles()
       .map(filePath => path.basename(path.dirname(filePath)));
 
-    expect(source).toContain('modulePublicLoaderTsPaths');
+    expect(source).toContain('corePublicLoaderPaths');
     expect(source).toContain('/mother/modules/${moduleName}/publicLoader.js');
     expect(source).not.toMatch(/app\.use\(\s*['"]\/mother/);
     expect(moduleNames.length).toBeGreaterThan(0);
@@ -297,6 +279,12 @@ describe('UI architecture boundaries', () => {
       ['ui/runtime/main/widgetRuntimeGateway.js', new Set([
         '../../widgets/options/widgetOptions.js',
         '../../widgets/rendering/widgetModuleLoader.js'
+      ])],
+      ['ui/runtime/main/runtimeWidgetEvents.ts', new Set([
+        '../../widgets/rendering/widgetEvents.js'
+      ])],
+      ['ui/runtime/main/runtimeWidgetEvents.js', new Set([
+        '../../widgets/rendering/widgetEvents.js'
       ])]
     ]);
     const violations = [];
@@ -317,7 +305,7 @@ describe('UI architecture boundaries', () => {
     expect(violations).toEqual([]);
   });
 
-  test('runtime widget compatibility forwarder delegates through the runtime gateway', () => {
+  test('runtime widget option forwarder delegates through the runtime gateway', () => {
     const source = fs.readFileSync(
       path.join(rootDir, 'ui', 'runtime', 'main', 'widgetOptions.ts'),
       'utf8'
@@ -381,8 +369,7 @@ describe('UI architecture boundaries', () => {
     expect(source).toContain("providers: '/ui/widgets/plainspace/admin/loginStrategiesWidget.js'");
     expect(source).toContain("users: '/ui/widgets/plainspace/admin/usersListWidget.js'");
     expect(source).toContain("access: '/ui/widgets/plainspace/admin/accessSettingsWidget.js'");
-    expect(source).not.toContain('renderLegacyWidgetPanel');
-    expect(source).not.toContain('/plainspace/widgets/');
+    expect(source).not.toContain(['/plainspace', 'widgets/'].join('/'));
   });
 
   test('widget renderers resolve dynamic widget modules through the canonical guard', () => {
@@ -641,9 +628,10 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchWidgetRegistry');
     expect(dataSource).toContain('export async function fetchGlobalWidgetIds');
     expect(dataSource).toContain('export function getWidgetTemplates');
-    expect(dataSource).toContain('widget.registry.request.v1');
-    expect(dataSource).toContain('getPagesByLane');
-    expect(dataSource).toContain('getLayoutForViewport');
+    expect(dataSource).toContain('emitRuntimeAdmin');
+    expect(dataSource).toContain("'plainSpace', 'widgetRegistry'");
+    expect(dataSource).toContain("'pages', 'byLane'");
+    expect(dataSource).toContain("'plainSpace', 'layoutForViewport'");
   });
 
   test('plainspace module list delegates registry data and actions to a data helper', () => {
@@ -675,11 +663,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function toggleModuleRegistryActivation');
     expect(dataSource).toContain('export async function installModuleZip');
     expect(dataSource).toContain('PLAINSPACE_MODULES_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getModuleRegistry');
-    expect(dataSource).toContain('listSystemModules');
-    expect(dataSource).toContain('activateModuleInRegistry');
-    expect(dataSource).toContain('deactivateModuleInRegistry');
-    expect(dataSource).toContain('installModuleFromZip');
+    expect(dataSource).toContain('emitRuntimeAdmin');
+    expect(dataSource).toContain("'modules', 'registry'");
+    expect(dataSource).toContain("'modules', 'system'");
+    expect(dataSource).toContain("moduleRecord.is_active ? 'deactivate' : 'activate'");
+    expect(dataSource).toContain("'modules', 'installZip'");
   });
 
   test('plainspace user list delegates user-management data and actions to a data helper', () => {
@@ -714,12 +702,13 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function createRoleRecord');
     expect(dataSource).toContain('export async function updateRoleRecord');
     expect(dataSource).toContain('export async function deleteRoleRecord');
-    expect(dataSource).toContain('getAllUsers');
-    expect(dataSource).toContain('getAllRoles');
-    expect(dataSource).toContain('createUser');
-    expect(dataSource).toContain('createRole');
-    expect(dataSource).toContain('updateRole');
-    expect(dataSource).toContain('deleteRole');
+    expect(dataSource).toContain('emitRuntimeAdmin');
+    expect(dataSource).toContain("'users', 'list'");
+    expect(dataSource).toContain("'roles', 'list'");
+    expect(dataSource).toContain("'users', 'create'");
+    expect(dataSource).toContain("'roles', 'create'");
+    expect(dataSource).toContain("'roles', 'update'");
+    expect(dataSource).toContain("'roles', 'delete'");
   });
 
   test('plainspace permissions delegates permission data and role actions to data helpers', () => {
@@ -751,15 +740,15 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchPermissions');
     expect(dataSource).toContain('export async function fetchPermissionsState');
     expect(dataSource).toContain('export async function createPermissionRecord');
-    expect(dataSource).toContain('getAllPermissions');
-    expect(dataSource).toContain('createPermission');
+    expect(dataSource).toContain("'permissions', 'list'");
+    expect(dataSource).toContain("'permissions', 'create'");
     expect(dataSource).toContain('createRoleRecord');
     expect(dataSource).toContain('updateRoleRecord');
     expect(dataSource).toContain('deleteRoleRecord');
-    expect(usersDataSource).toContain('getAllRoles');
-    expect(usersDataSource).toContain('createRole');
-    expect(usersDataSource).toContain('updateRole');
-    expect(usersDataSource).toContain('deleteRole');
+    expect(usersDataSource).toContain("'roles', 'list'");
+    expect(usersDataSource).toContain("'roles', 'create'");
+    expect(usersDataSource).toContain("'roles', 'update'");
+    expect(usersDataSource).toContain("'roles', 'delete'");
   });
 
   test('plainspace designer layouts delegates designer data to a data helper', () => {
@@ -783,9 +772,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export function sortDesignsByRecent');
     expect(dataSource).toContain('export async function fetchDesignerLayouts');
     expect(dataSource).toContain('PLAINSPACE_DESIGNER_LAYOUTS_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('designer.listDesigns');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain('emitRuntimeAdmin');
+    expect(dataSource).toContain("'designer', 'list'");
+    expect(dataSource).not.toContain('designer.listDesigns');
+    expect(dataSource).not.toContain('moduleName');
+    expect(dataSource).not.toContain('moduleType');
   });
 
   test('plainspace user edit delegates profile data and actions to a data helper', () => {
@@ -815,11 +806,14 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function updateUserProfile');
     expect(dataSource).toContain('export async function deleteUserRecord');
     expect(dataSource).toContain('PLAINSPACE_USER_EDIT_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getUserDetailsById');
-    expect(dataSource).toContain('updateUserProfile');
-    expect(dataSource).toContain('deleteUser');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain('emitRuntimeAdmin');
+    expect(dataSource).toContain('runtimeAdminPayload');
+    expect(dataSource).toContain("'users', 'get'");
+    expect(dataSource).toContain("'users', 'update'");
+    expect(dataSource).toContain("'users', 'delete'");
+    expect(dataSource).not.toContain('getUserDetailsById');
+    expect(dataSource).not.toContain('moduleName');
+    expect(dataSource).not.toContain('moduleType');
   });
 
   test('plainspace system settings delegates settings data and actions to a data helper', () => {
@@ -847,9 +841,9 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchSystemSettings');
     expect(dataSource).toContain('export async function setSystemSetting');
     expect(dataSource).toContain('export async function pickFaviconUrl');
-    expect(dataSource).toContain('getSetting');
-    expect(dataSource).toContain('setSetting');
-    expect(dataSource).toContain('getAllPages');
+    expect(dataSource).toContain("'settings', 'get'");
+    expect(dataSource).toContain("'settings', 'set'");
+    expect(dataSource).toContain("'pages', 'list'");
     expect(dataSource).toContain('openMediaExplorer');
   });
 
@@ -886,12 +880,12 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchSecuritySettings');
     expect(dataSource).toContain('export async function saveMaintenanceSettings');
     expect(dataSource).toContain('PLAINSPACE_SETTINGS_PANELS_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getSetting');
-    expect(dataSource).toContain('setSetting');
-    expect(dataSource).toContain('getAllPages');
+    expect(dataSource).toContain("'settings', 'get'");
+    expect(dataSource).toContain("'settings', 'set'");
+    expect(dataSource).toContain("'pages', 'list'");
     expect(dataSource).toContain('openMediaExplorer');
-    expect(dataSource).toContain('settingsManager');
-    expect(dataSource).toContain('pagesManager');
+    expect(dataSource).not.toContain('settingsManager');
+    expect(dataSource).not.toContain('pagesManager');
   });
 
   test('plainspace fonts list delegates provider data and actions to a data helper', () => {
@@ -921,12 +915,12 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function setFontProviderEnabled');
     expect(dataSource).toContain('export async function saveGoogleFontsKey');
     expect(dataSource).toContain('export async function refreshFontProviderCatalog');
-    expect(dataSource).toContain('listFontProviders');
-    expect(dataSource).toContain('getSetting');
-    expect(dataSource).toContain('setSetting');
-    expect(dataSource).toContain('setFontProviderEnabled');
-    expect(dataSource).toContain('fontsManager');
-    expect(dataSource).toContain('settingsManager');
+    expect(dataSource).toContain("'fonts', 'listProviders'");
+    expect(dataSource).toContain("'settings', 'get'");
+    expect(dataSource).toContain("'settings', 'set'");
+    expect(dataSource).toContain("'fonts', 'setProviderEnabled'");
+    expect(dataSource).not.toContain('fontsManager');
+    expect(dataSource).not.toContain('settingsManager');
   });
 
   test('plainspace login strategies delegates auth data and actions to a data helper', () => {
@@ -952,10 +946,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export function errorMessage');
     expect(dataSource).toContain('export async function fetchLoginStrategies');
     expect(dataSource).toContain('export async function setLoginStrategyEnabled');
-    expect(dataSource).toContain('listLoginStrategies');
-    expect(dataSource).toContain('setLoginStrategyEnabled');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain("'auth', 'loginStrategies'");
+    expect(dataSource).toContain("'auth', 'setStrategyEnabled'");
+    expect(dataSource).not.toContain('listLoginStrategies');
+    expect(dataSource).not.toContain('moduleName');
+    expect(dataSource).not.toContain('moduleType');
     expect(dataSource).toContain('adminLocal');
   });
 
@@ -986,9 +981,10 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchLoginStrategySettings');
     expect(dataSource).toContain('export async function saveLoginStrategySettings');
     expect(dataSource).toContain('PLAINSPACE_LOGIN_STRATEGY_EDIT_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getSetting');
-    expect(dataSource).toContain('setSetting');
-    expect(dataSource).toContain('settingsManager');
+    expect(dataSource).toContain('runtimeAdminPayload');
+    expect(dataSource).toContain("'settings', 'get'");
+    expect(dataSource).toContain("'settings', 'set'");
+    expect(dataSource).not.toContain('settingsManager');
     expect(dataSource).toContain('CLIENT_ID');
     expect(dataSource).toContain('CLIENT_SECRET');
     expect(dataSource).toContain('SCOPE');
@@ -1044,13 +1040,14 @@ describe('UI architecture boundaries', () => {
     expect(sharedDataSource).toContain('MEDIA_LIBRARY_EMITTER_UNAVAILABLE');
     expect(sharedDataSource).toContain('MEDIA_LIBRARY_FETCH_UNAVAILABLE');
     expect(sharedDataSource).toContain('/admin/api/upload');
-    expect(sharedDataSource).toContain('listLocalFolder');
-    expect(sharedDataSource).toContain('createLocalFolder');
-    expect(sharedDataSource).toContain('renameLocalItem');
-    expect(sharedDataSource).toContain('deleteLocalItem');
-    expect(sharedDataSource).toContain('createShareLink');
-    expect(sharedDataSource).toContain('mediaManager');
-    expect(sharedDataSource).toContain('shareManager');
+    expect(sharedDataSource).toContain("'media', 'listLocalFolder'");
+    expect(sharedDataSource).toContain("'media', 'createLocalFolder'");
+    expect(sharedDataSource).toContain("'media', 'renameLocalItem'");
+    expect(sharedDataSource).toContain("'media', 'deleteLocalItem'");
+    expect(sharedDataSource).toContain("'shares', 'create'");
+    expect(sharedDataSource).toContain('runtimeManager');
+    expect(sharedDataSource).not.toContain('mediaManager');
+    expect(sharedDataSource).not.toContain('shareManager');
   });
 
   test('plainspace page editor delegates page data and actions to a data helper', () => {
@@ -1082,10 +1079,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchPageEditorTemplates');
     expect(dataSource).toContain('export async function savePageEditorPage');
     expect(dataSource).toContain('PLAINSPACE_PAGE_EDITOR_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getLayoutTemplateNames');
-    expect(dataSource).toContain('updatePage');
-    expect(dataSource).toContain('pagesManager');
-    expect(dataSource).toContain('plainspace');
+    expect(dataSource).toContain("'plainSpace', 'layoutTemplateNames'");
+    expect(dataSource).toContain("'pages', 'update'");
+    expect(dataSource).toContain('cmsAdminApiRequest');
+    expect(dataSource).not.toContain('pagesManager');
+    expect(dataSource).not.toContain("moduleName: 'plainspace'");
   });
 
   test('plainspace page content delegates content data and actions to a data helper', () => {
@@ -1126,12 +1124,12 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function uploadHtmlFile');
     expect(dataSource).toContain('export async function savePageContent');
     expect(dataSource).toContain('PLAINSPACE_PAGE_CONTENT_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('listBuilderApps');
-    expect(dataSource).toContain('designer.listDesigns');
-    expect(dataSource).toContain('createLocalFolder');
-    expect(dataSource).toContain('listLocalFolder');
-    expect(dataSource).toContain('uploadFileToFolder');
-    expect(dataSource).toContain('updatePage');
+    expect(dataSource).toContain("'apps', 'builderList'");
+    expect(dataSource).toContain("'designer', 'list'");
+    expect(dataSource).toContain("'media', 'createLocalFolder'");
+    expect(dataSource).toContain("'media', 'listLocalFolder'");
+    expect(dataSource).toContain("'media', 'uploadToFolder'");
+    expect(dataSource).toContain("'pages', 'update'");
   });
 
   test('plainspace page stats delegates lane data and summaries to a data helper', () => {
@@ -1156,9 +1154,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export function summarizePageStats');
     expect(dataSource).toContain('export async function fetchPageStats');
     expect(dataSource).toContain('PLAINSPACE_PAGE_STATS_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getPagesByLane');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain('runtimeAdminPayload');
+    expect(dataSource).toContain("'pages', 'byLane'");
+    expect(dataSource).not.toContain('getPagesByLane');
+    expect(dataSource).not.toContain('moduleName');
+    expect(dataSource).not.toContain('moduleType');
   });
 
   test('plainspace content summary delegates content data and draft creation to a data helper', () => {
@@ -1189,11 +1189,12 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchUploadedContentPages');
     expect(dataSource).toContain('export async function createDraftDesign');
     expect(dataSource).toContain('PLAINSPACE_CONTENT_SUMMARY_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('designer.listDesigns');
-    expect(dataSource).toContain('designer.saveDesign');
-    expect(dataSource).toContain('getAllPages');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain("'designer', 'list'");
+    expect(dataSource).toContain("'designer', 'save'");
+    expect(dataSource).toContain("'pages', 'list'");
+    expect(dataSource).not.toContain('designer.listDesigns');
+    expect(dataSource).not.toContain('moduleName');
+    expect(dataSource).not.toContain('moduleType');
   });
 
   test('plainspace access settings delegates settings data and actions to a data helper', () => {
@@ -1218,9 +1219,9 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export function asBooleanSetting');
     expect(dataSource).toContain('export async function fetchAccessSettings');
     expect(dataSource).toContain('export async function setAllowRegistration');
-    expect(dataSource).toContain('getSetting');
-    expect(dataSource).toContain('setSetting');
-    expect(dataSource).toContain('settingsManager');
+    expect(dataSource).toContain("'settings', 'get'");
+    expect(dataSource).toContain("'settings', 'set'");
+    expect(dataSource).not.toContain('settingsManager');
     expect(dataSource).toContain('ALLOW_REGISTRATION');
     expect(dataSource).toContain('FIRST_INSTALL_DONE');
   });
@@ -1252,11 +1253,12 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchLayoutTemplateNames');
     expect(dataSource).toContain('export async function fetchPublicPages');
     expect(dataSource).toContain('export async function createBlankLayoutTemplate');
-    expect(dataSource).toContain('getLayoutTemplateNames');
-    expect(dataSource).toContain('getPagesByLane');
-    expect(dataSource).toContain('saveLayoutTemplate');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain("'plainSpace', 'layoutTemplateNames'");
+    expect(dataSource).toContain("'pages', 'byLane'");
+    expect(dataSource).toContain("'plainSpace', 'saveLayoutTemplate'");
+    expect(dataSource).not.toContain('getPagesByLane');
+    expect(dataSource).not.toContain('moduleName');
+    expect(dataSource).not.toContain('moduleType');
     expect(dataSource).toContain('usedMap');
   });
 
@@ -1402,16 +1404,18 @@ describe('UI architecture boundaries', () => {
     expect(adminSearchSource).not.toContain('moduleType');
     expect(adminSearchDataSource).toContain('export async function fetchAdminSearchPages');
     expect(adminSearchDataSource).toContain('SHELL_ADMIN_SEARCH_EMITTER_UNAVAILABLE');
-    expect(adminSearchDataSource).toContain('searchPages');
-    expect(adminSearchDataSource).toContain('pagesManager');
+    expect(adminSearchDataSource).toContain("'pages', 'search'");
+    expect(adminSearchDataSource).not.toContain('searchPages');
+    expect(adminSearchDataSource).not.toContain('pagesManager');
 
     expect(notificationSource).toContain("from './notificationHubData.js'");
     expect(notificationSource).not.toContain('getRecentNotifications');
     expect(notificationSource).not.toContain('notificationManager');
     expect(notificationDataSource).toContain('export async function fetchRecentNotifications');
     expect(notificationDataSource).toContain('SHELL_NOTIFICATION_HUB_EMITTER_UNAVAILABLE');
-    expect(notificationDataSource).toContain('getRecentNotifications');
-    expect(notificationDataSource).toContain('notificationManager');
+    expect(notificationDataSource).toContain("'notifications', 'recent'");
+    expect(notificationDataSource).not.toContain('getRecentNotifications');
+    expect(notificationDataSource).not.toContain('notificationManager');
 
     expect(userColorSource).toContain("from './userColorData.js'");
     expect(userColorSource).not.toContain('validateToken');
@@ -1420,8 +1424,9 @@ describe('UI architecture boundaries', () => {
     expect(userColorSource).not.toContain('moduleType');
     expect(userColorDataSource).toContain('export async function fetchUserColor');
     expect(userColorDataSource).toContain('SHELL_USER_COLOR_EMITTER_UNAVAILABLE');
-    expect(userColorDataSource).toContain('validateToken');
-    expect(userColorDataSource).toContain('getUserDetailsById');
+    expect(userColorDataSource).toContain("'users', 'me'");
+    expect(userColorDataSource).not.toContain('validateToken');
+    expect(userColorDataSource).not.toContain('getUserDetailsById');
   });
 
   test('shell media explorer delegates media and share payloads to a data helper', () => {
@@ -1449,10 +1454,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).not.toContain('moduleName');
     expect(dataSource).not.toContain('moduleType');
     expect(sharedDataSource).toContain('MEDIA_LIBRARY_EMITTER_UNAVAILABLE');
-    expect(sharedDataSource).toContain('listLocalFolder');
-    expect(sharedDataSource).toContain('createShareLink');
-    expect(sharedDataSource).toContain('mediaManager');
-    expect(sharedDataSource).toContain('shareManager');
+    expect(sharedDataSource).toContain("'media', 'listLocalFolder'");
+    expect(sharedDataSource).toContain("'shares', 'create'");
+    expect(sharedDataSource).toContain('runtimeManager');
+    expect(sharedDataSource).not.toContain('mediaManager');
+    expect(sharedDataSource).not.toContain('shareManager');
   });
 
   test('shell page data loader delegates bootstrap payload and normalization to a data helper', () => {
@@ -1473,10 +1479,12 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export function buildInitialPageDataRequest');
     expect(dataSource).toContain('export function sanitizePageData');
     expect(dataSource).toContain('export function unwrapMeltdownResult');
-    expect(dataSource).toContain('getPageById');
-    expect(dataSource).toContain('pagesManager');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain('cmsAdminApiRequest');
+    expect(dataSource).toContain("resource: 'pages'");
+    expect(dataSource).toContain("action: 'get'");
+    expect(dataSource).toContain("moduleName: 'runtimeManager'");
+    expect(dataSource).not.toContain('getPageById');
+    expect(dataSource).not.toContain('pagesManager');
   });
 
   test('shell app frame loader delegates appLoader payloads to a data helper', () => {
@@ -1493,8 +1501,8 @@ describe('UI architecture boundaries', () => {
     expect(loaderSource).not.toContain("'dispatchAppEvent'");
     expect(loaderSource).not.toContain('moduleName');
     expect(loaderSource).not.toContain('moduleType');
-    expect(dataSource).toContain('export async function dispatchAppMeltdownRequest');
-    expect(dataSource).toContain('export async function dispatchAppMeltdownBatch');
+    expect(dataSource).toContain('export async function dispatchAppRuntimeRequest');
+    expect(dataSource).toContain('export async function dispatchAppRuntimeBatch');
     expect(dataSource).toContain('export async function dispatchAppLifecycleMessage');
     expect(dataSource).toContain('SHELL_APP_FRAME_EMITTER_UNAVAILABLE');
     expect(dataSource).toContain('dispatchAppEvent');
@@ -1520,9 +1528,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchPublicLoginStrategies');
     expect(dataSource).toContain('SHELL_LOGIN_STRATEGIES_EMITTER_UNAVAILABLE');
     expect(dataSource).toContain('issuePublicToken');
-    expect(dataSource).toContain('listActiveLoginStrategies');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain('emitRuntimePublic');
+    expect(dataSource).toContain('activeLoginStrategies');
+    expect(dataSource).not.toContain('listActiveLoginStrategies');
+    expect(dataSource).toContain("moduleName: 'auth'");
+    expect(dataSource).not.toContain('moduleType');
   });
 
   test('shell public registration delegates token, setting, and register payloads to data helpers', () => {
@@ -1550,16 +1560,22 @@ describe('UI architecture boundaries', () => {
     expect(source).not.toContain('moduleType');
     expect(dataSource).toContain('export async function fetchRegistrationAvailability');
     expect(dataSource).toContain('export async function registerPublicUser');
-    expect(dataSource).toContain('publicRegister');
-    expect(dataSource).toContain('userManagement');
-    expect(dataSource).toContain('moduleName');
-    expect(dataSource).toContain('moduleType');
+    expect(dataSource).toContain('cmsPublicRuntimeRequest');
+    expect(dataSource).toContain("'users'");
+    expect(dataSource).toContain("'register'");
+    expect(dataSource).not.toContain('publicRegister');
+    expect(dataSource).not.toContain('userManagement');
+    expect(dataSource).not.toContain('moduleName');
+    expect(dataSource).not.toContain('moduleType');
     expect(clientSource).toContain('export function resolveShellPublicClient');
     expect(clientSource).toContain('export async function issueShellPublicToken');
     expect(clientSource).toContain('export async function fetchShellPublicSetting');
     expect(clientSource).toContain('issuePublicToken');
-    expect(clientSource).toContain('getPublicSetting');
-    expect(clientSource).toContain('settingsManager');
+    expect(clientSource).toContain('cmsPublicRuntimeRequest');
+    expect(clientSource).toContain("'settings'");
+    expect(clientSource).toContain("'public'");
+    expect(clientSource).not.toContain('getPublicSetting');
+    expect(clientSource).not.toContain('settingsManager');
   });
 
   test('shell install and first-install checks delegate setup payloads to data helpers', () => {
@@ -1596,8 +1612,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function fetchPublicUserCount');
     expect(dataSource).toContain('export async function submitInstallRequest');
     expect(dataSource).toContain('FIRST_INSTALL_DONE');
-    expect(dataSource).toContain('getUserCount');
-    expect(dataSource).toContain('userManagement');
+    expect(dataSource).toContain('cmsPublicRuntimeRequest');
+    expect(dataSource).toContain("'users'");
+    expect(dataSource).toContain("'count'");
+    expect(dataSource).not.toContain('getUserCount');
+    expect(dataSource).not.toContain('userManagement');
     expect(dataSource).toContain("'/install'");
     expect(dataSource).toContain('SHELL_INSTALL_SUBMIT_FAILED');
   });
@@ -1620,10 +1639,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function createPublicPage');
     expect(dataSource).toContain('export async function savePublicLayoutTemplate');
     expect(dataSource).toContain('SHELL_PAGE_ACTIONS_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('createPage');
-    expect(dataSource).toContain('saveLayoutTemplate');
-    expect(dataSource).toContain('pagesManager');
-    expect(dataSource).toContain('plainspace');
+    expect(dataSource).toContain("'pages', 'create'");
+    expect(dataSource).toContain("'plainSpace', 'saveLayoutTemplate'");
+    expect(dataSource).not.toContain('createPage');
+    expect(dataSource).not.toContain('pagesManager');
+    expect(dataSource).not.toContain("moduleName: 'plainspace'");
   });
 
   test('shell content header delegates admin page deletion data to a helper', () => {
@@ -1646,9 +1666,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function deleteAdminPage');
     expect(dataSource).toContain('export function isProtectedAdminWorkspace');
     expect(dataSource).toContain('SHELL_CONTENT_HEADER_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getPageBySlug');
-    expect(dataSource).toContain('deletePage');
-    expect(dataSource).toContain('pagesManager');
+    expect(dataSource).toContain("'pages', 'getBySlug'");
+    expect(dataSource).toContain("'pages', 'delete'");
+    expect(dataSource).not.toContain('getPageBySlug');
+    expect(dataSource).not.toContain('deletePage');
+    expect(dataSource).not.toContain('pagesManager');
   });
 
   test('shell page picker delegates page event payloads to a data helper', () => {
@@ -1672,11 +1694,12 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function createPublicPageForPicker');
     expect(dataSource).toContain('export async function fetchPageSlugById');
     expect(dataSource).toContain('SHELL_PAGE_PICKER_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getPagesByLane');
-    expect(dataSource).toContain('updatePage');
-    expect(dataSource).toContain('createPage');
-    expect(dataSource).toContain('getPageById');
-    expect(dataSource).toContain('pagesManager');
+    expect(dataSource).toContain("'pages', 'byLane'");
+    expect(dataSource).toContain("'pages', 'update'");
+    expect(dataSource).toContain("'pages', 'create'");
+    expect(dataSource).toContain("'pages', 'get'");
+    expect(dataSource).not.toContain('getPagesByLane');
+    expect(dataSource).not.toContain('pagesManager');
   });
 
   test('shell top header delegates maintenance setting payloads to a data helper', () => {
@@ -1699,9 +1722,10 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function disableMaintenanceMode');
     expect(dataSource).toContain('export function parseMaintenanceValue');
     expect(dataSource).toContain('SHELL_TOP_HEADER_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getSetting');
-    expect(dataSource).toContain('setSetting');
-    expect(dataSource).toContain('settingsManager');
+    expect(dataSource).toContain('runtimeAdminPayload');
+    expect(dataSource).toContain("'settings', 'get'");
+    expect(dataSource).toContain("'settings', 'set'");
+    expect(dataSource).not.toContain('settingsManager');
   });
 
   test('shell workspaces delegate page event payloads to a data helper', () => {
@@ -1726,10 +1750,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('export async function createWorkspacePage');
     expect(dataSource).toContain('export async function createWorkspaceSubpage');
     expect(dataSource).toContain('SHELL_WORKSPACES_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain('getPagesByLane');
-    expect(dataSource).toContain('getPageBySlug');
-    expect(dataSource).toContain('createPage');
-    expect(dataSource).toContain('pagesManager');
+    expect(dataSource).toContain("'pages', 'byLane'");
+    expect(dataSource).toContain("'pages', 'getBySlug'");
+    expect(dataSource).toContain("'pages', 'create'");
+    expect(dataSource).not.toContain('getPagesByLane');
+    expect(dataSource).not.toContain('pagesManager');
   });
 
   test('shared UI does not import feature zones', () => {
@@ -1884,7 +1909,7 @@ describe('UI architecture boundaries', () => {
     expect(violations).toEqual([]);
   });
 
-  test('public browser compatibility trees do not contain TypeScript sources', () => {
+  test('public browser asset trees do not contain TypeScript sources', () => {
     const files = [
       ...walk(
         path.join(rootDir, 'public', 'plainspace'),
@@ -1909,7 +1934,7 @@ describe('UI architecture boundaries', () => {
     ]));
   });
 
-  test('browser TypeScript suppressions are limited to named legacy UI files', () => {
+  test('browser TypeScript suppressions are limited to named migration UI files', () => {
     const allowedSuppressions = new Set([
       'ui/designer/app/builderRenderer.ts',
       'ui/designer/app/index.ts',
@@ -1979,7 +2004,7 @@ describe('UI architecture boundaries', () => {
     });
   });
 
-  test('PlainSpace compatibility URLs are static shims, not runtime TypeScript routes', () => {
+  test('retired PlainSpace browser URLs are not runtime TypeScript routes', () => {
     const source = [
       fs.readFileSync(path.join(rootDir, 'mother/server/http/staticAssets.js'), 'utf8'),
       fs.readFileSync(path.join(rootDir, 'mother/server/http/adminShellRoutes.js'), 'utf8'),
@@ -2002,17 +2027,12 @@ describe('UI architecture boundaries', () => {
       path.join(rootDir, 'ui', 'runtime', 'entries', 'publicEntry.ts'),
       'utf8'
     );
-    const legacyShim = fs.readFileSync(
-      path.join(rootDir, 'public', 'plainspace', 'main', 'publicEntry.js'),
-      'utf8'
-    );
 
     expect(runtimeSource).toContain('export async function bootPublicRuntime');
     expect(runtimeSource).not.toContain('bootPublicRuntime().catch');
     expect(entrySource).toContain("import { bootPublicRuntime } from '../publicEntry.js'");
     expect(entrySource).toContain('bootPublicRuntime().catch');
-    expect(legacyShim).toContain("export { bootPublicRuntime } from '../../../ui/runtime/publicEntry.js';");
-    expect(legacyShim).toContain("import '../../../ui/runtime/entries/publicEntry.js';");
+    expect(fs.existsSync(path.join(rootDir, 'public', 'plainspace', 'main', 'publicEntry.js'))).toBe(false);
   });
 
   test('page renderer boot side effect lives in the bundle entry', () => {
@@ -2024,17 +2044,12 @@ describe('UI architecture boundaries', () => {
       path.join(rootDir, 'ui', 'runtime', 'entries', 'pageRenderer.ts'),
       'utf8'
     );
-    const legacyShim = fs.readFileSync(
-      path.join(rootDir, 'public', 'plainspace', 'main', 'pageRenderer.js'),
-      'utf8'
-    );
 
     expect(runtimeSource).toContain('export async function bootPageRenderer');
     expect(runtimeSource).not.toMatch(/^\(async \(\) =>/m);
     expect(entrySource).toContain("import { bootPageRenderer } from '../main/pageRenderer.js'");
     expect(entrySource).toContain('bootPageRenderer().catch');
-    expect(legacyShim).toContain("export { bootPageRenderer } from '../../../ui/runtime/main/pageRenderer.js';");
-    expect(legacyShim).toContain("import '../../../ui/runtime/entries/pageRenderer.js';");
+    expect(fs.existsSync(path.join(rootDir, 'public', 'plainspace', 'main', 'pageRenderer.js'))).toBe(false);
   });
 
   test('page renderer delegates browser page context to a runtime helper', () => {
@@ -2689,7 +2704,7 @@ describe('UI architecture boundaries', () => {
     expect(source).not.toMatch(/\^\/assets\//);
   });
 
-  test('html shells load build bundles instead of legacy browser shims', () => {
+  test('html shells load build bundles instead of retired browser scripts', () => {
     const files = [
       ...htmlFiles('public'),
       ...htmlFiles('apps', 'designer')
@@ -2726,7 +2741,7 @@ describe('UI architecture boundaries', () => {
     expect(webpackSource).toContain('maxSize: 180 * 1024');
   });
 
-  test('server-rendered UI shells load build bundles instead of legacy browser shims', () => {
+  test('server-rendered UI shells load build bundles instead of retired browser scripts', () => {
     const source = [
       fs.readFileSync(path.join(rootDir, 'mother/server/http/adminShellRoutes.js'), 'utf8'),
       fs.readFileSync(path.join(rootDir, 'mother/server/http/publicPageRoutes.js'), 'utf8')

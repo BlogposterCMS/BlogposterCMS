@@ -137,10 +137,10 @@ function parsePermissionBlob(value) {
 }
 
 function makeAdminPermissionBlob(existing = {}) {
+  const { canAccessEverything, ...currentPermissions } = existing;
   return JSON.stringify({
-    ...existing,
-    '*': true,
-    canAccessEverything: true
+    ...currentPermissions,
+    '*': true
   });
 }
 
@@ -199,7 +199,7 @@ async function ensureDefaultRoles(motherEmitter, jwt) {
     }));
   } else {
     const adminPermissions = parsePermissionBlob(adminRole.permissions);
-    if (adminPermissions['*'] !== true || adminPermissions.canAccessEverything !== true) {
+    if (adminPermissions['*'] !== true || Object.prototype.hasOwnProperty.call(adminPermissions, 'canAccessEverything')) {
       const where = adminRole.id != null ? { id: adminRole.id } : { role_name: adminRole.role_name || 'admin' };
       tasks.push(emitAsync(motherEmitter, 'dbUpdate', {
         jwt,

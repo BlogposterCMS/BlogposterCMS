@@ -160,7 +160,7 @@ describe('runtimeCanvasItems', () => {
     });
   });
 
-  it('keeps legacy admin heights above 100 as absolute rows', () => {
+  it('keeps admin heights above the percent range as absolute rows', () => {
     expect(resolveRuntimeCanvasRect(
       {
         xPercent: 50,
@@ -171,7 +171,7 @@ describe('runtimeCanvasItems', () => {
       {
         scaleX: 12,
         scaleY: 900,
-        heightProjectionMode: 'legacyAdminPixels'
+        heightProjectionMode: 'absoluteRowsAbovePercentRange'
       }
     )).toEqual({
       x: 6,

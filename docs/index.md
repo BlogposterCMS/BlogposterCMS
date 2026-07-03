@@ -16,6 +16,7 @@ This folder provides additional information on installing, configuring and exten
 - [Event-First Transport Boundary](event_first_transport.md)
 - [No-Legacy Purge Report](no_legacy_purge_report.md)
 - [Workboard](workboard.md)
+- [Agent Worklog](agent-worklog.md)
 - [Security Notes](security.md)
 - [CMS Usage Guide](guide.md)
 - [Developer Quickstart](developer_quickstart.md)

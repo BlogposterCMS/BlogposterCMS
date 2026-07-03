@@ -6,6 +6,11 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Added a local-only agent worklog convention with a Git-ignored
+  `.agent-worklog/` scratch directory, helper command, docs and policy tests so
+  parallel coding agents can coordinate touched paths without committing
+  sensitive or temporary notes; interrupted entries now show an expiry timestamp
+  and are stale-cleaned on the next helper run after 6 hours without updates.
 - Moved Design Studio Scenes out of the primary sidebar rail and into a canvas
   storyboard rail with direct scene selection, rename, ordering and add/delete
   controls exposed through the existing agent feedback snapshot.

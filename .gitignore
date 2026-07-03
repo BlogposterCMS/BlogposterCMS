@@ -31,6 +31,9 @@ mother/modules/databaseManager/modulePasswords.json
 mother/modules/notificationManager/server.log*
 modulePasswords.json
 
+# Local agent coordination scratch files
+/.agent-worklog/
+
 # Sensitive files
 .pgpass
 cookies.txt

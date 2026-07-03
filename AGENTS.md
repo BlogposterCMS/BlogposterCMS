@@ -16,6 +16,23 @@ instruction in a subdirectory says otherwise.
   formatting churn, or metadata changes.
 - Preserve user or collaborator changes already present in the worktree.
 
+## Concurrent Agent Coordination
+
+- When changing code, docs or tests, keep a local worklog in `.agent-worklog/`
+  so parallel agents can see the active task, touched paths and latest status.
+- Start or refresh the entry before edits with
+  `npm run agent:worklog -- start --task "short summary" --paths "path/a,path/b"`
+  and update it when the touched area changes.
+- Keep worklog text short and non-sensitive. Do not include credentials,
+  tokens, cookies, private user data, raw customer content or full local paths
+  outside this repository.
+- Clear your entry before the final response, handoff or commit with
+  `npm run agent:worklog -- done`. If cleanup was missed, the helper removes
+  stale entries after 6 hours without updates on the next `start`, `update` or
+  `list` run. A worklog is coordination context, not a lock.
+- `.agent-worklog/` is ignored by Git and must stay local-only. Do not stage,
+  commit or paste its contents into public docs or changelog entries.
+
 ## Code Quality
 
 - Keep code modular, maintainable, and easy for humans to read.

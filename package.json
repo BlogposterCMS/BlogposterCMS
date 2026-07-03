@@ -10,6 +10,7 @@
     "verify:ui": "npm run test:ui && npm run build",
     "lint": "eslint --ext .js,.ts,.tsx .",
     "lint:fix": "npm run lint -- --fix",
+    "agent:worklog": "node tools/agent-worklog.js",
     "package:wordpress-exporter": "node tools/wordpress-visual-exporter/package-plugin.js",
     "placeholder-parity": "node tests/placeholderParityCheck.js",
     "build": "npm run build:browser && webpack --mode production",

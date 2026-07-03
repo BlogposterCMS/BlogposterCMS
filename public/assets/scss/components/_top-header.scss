@@ -10,6 +10,9 @@
   align-items: stretch;
   padding: 8px clamp(20px, 4vw, 48px);
   min-height: 48px;
+  position: relative;
+  // backdrop-filter creates a stacking context; keep header flyouts above dashboard widgets.
+  z-index: 140;
   font-family: var(--font-body);
   background: color-mix(in srgb, var(--studio-surface-solid) 86%, transparent);
   backdrop-filter: blur(18px);
@@ -187,7 +190,7 @@
   .right-icons a:hover,
   .right-icons a:focus-visible {
     background: var(--studio-surface-muted);
-    border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+    border-color: transparent;
     outline: none;
     transform: translateY(-1px);
   }
@@ -200,7 +203,7 @@
     // Keep the input and icon unscaled; only the shell grows on hover.
     &::before {
       background: var(--studio-surface-solid);
-      border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+      border-color: transparent;
       transform: scale(1.015);
     }
   }
@@ -347,7 +350,7 @@
       background: transparent;
       transform: none;
       &::before {
-        border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+        border-color: transparent;
         background: var(--studio-surface-solid);
         transform: scale(1.015);
       }
@@ -361,7 +364,7 @@
       border-color: transparent;
       background: transparent;
       &::before {
-        border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border));
+        border-color: transparent;
         background: var(--studio-surface-solid);
         transform: none;
       }

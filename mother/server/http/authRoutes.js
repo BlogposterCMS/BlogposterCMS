@@ -22,12 +22,29 @@ function renderLoginHtml({
   });
 }
 
+function safeAdminRedirectTarget(rawRedirect) {
+  const fallback = '/admin/home';
+  const raw = typeof rawRedirect === 'string' ? rawRedirect.trim() : '';
+  if (!raw) return fallback;
+
+  try {
+    const url = new URL(raw, 'http://blogposter.local');
+    if (url.origin !== 'http://blogposter.local' || !url.pathname.startsWith('/admin')) {
+      return fallback;
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
 function createAuthRoutes({
   csrfProtection,
   injectDevBanner,
   isDevAutoLoginAllowed,
   isProduction,
   loginLimiter,
+  maybeIssueDevAdminSession = async () => null,
   motherEmitter,
   needsInitialSetup,
   publicPath,
@@ -128,6 +145,11 @@ function createAuthRoutes({
         }
       }
 
+      const devJwt = await maybeIssueDevAdminSession(req, res, 'login route');
+      if (devJwt) {
+        return res.redirect(safeAdminRedirectTarget(req.query?.redirectTo));
+      }
+
       const html = await renderLoginHtml({
         req,
         publicPath,
@@ -147,5 +169,6 @@ function createAuthRoutes({
 
 module.exports = {
   createAuthRoutes,
-  renderLoginHtml
+  renderLoginHtml,
+  safeAdminRedirectTarget
 };

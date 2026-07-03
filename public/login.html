@@ -24,11 +24,13 @@
         <div class="field password-field">
           <input id="password" name="password" type="password" required placeholder=" " autocomplete="current-password">
           <label for="password">Password</label>
-          <button type="button" id="togglePassword" class="password-toggle" aria-label="Toggle password visibility">Show</button>
+          <button type="button" id="togglePassword" class="password-toggle" aria-label="Show password" title="Show password">
+            <span class="password-toggle__label">Show password</span>
+          </button>
         </div>
         <div id="loginError" class="error-message" aria-live="polite"></div>
 
-        <button class="button">Log In</button>
+        <button type="submit" class="button primary block">Log In</button>
       </form>
 
       <div class="secondary-actions">

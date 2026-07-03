@@ -14,6 +14,10 @@ const {
   preserveTrustedAccess,
   stripTrustedAccess
 } = require('./moduleAccessPolicy');
+const {
+  applyModificationSummary,
+  safeModuleModificationSummary
+} = require('./moduleModificationPolicy');
 
 async function ensureModuleRegistrySchema(motherEmitter, jwt) {
   // meltdown => dbUpdate => 'INIT_MODULE_REGISTRY_TABLE'
@@ -84,6 +88,11 @@ function initGetModuleRegistryEvent(motherEmitter) {
         } else {
           row.module_info = fsInfo || dbInfo;
         }
+
+        const modification = safeModuleModificationSummary(row.module_name);
+        row.hasModification = modification.hasModification;
+        row.modification = modification;
+        row.module_info = applyModificationSummary(row.module_info, row.module_name, { summary: modification });
       }
 
       callback(null, rows);
@@ -119,9 +128,12 @@ function initListActiveStaticFrontendsEvent(motherEmitter) {
         let info = (typeof r.module_info === 'string')
           ? safelyParseJSON(r.module_info) || {}
           : r.module_info || {};
+        const modification = safeModuleModificationSummary(r.module_name);
         return {
           module_name: r.module_name,
-          moduleInfo: info
+          hasModification: modification.hasModification,
+          modification,
+          moduleInfo: applyModificationSummary(info, r.module_name, { summary: modification })
         };
       });
 
@@ -172,7 +184,13 @@ function initListSystemModulesEvent(motherEmitter) {
         if (!info.moduleName) info.moduleName = folder;
         if (!info.version) info.version = '';
         if (!info.description) info.description = '';
-        return { module_name: folder, moduleInfo: info };
+        const modification = safeModuleModificationSummary(folder);
+        return {
+          module_name: folder,
+          hasModification: modification.hasModification,
+          modification,
+          moduleInfo: applyModificationSummary(info, folder, { summary: modification })
+        };
       });
 
       callback(null, result);

@@ -3,6 +3,7 @@
 import { bindGlobalListeners } from '/ui/shared/grid/globalEvents.js';
 import { BoundingBoxManager } from '/ui/shared/grid/BoundingBoxManager.js';
 import { snapToGrid, elementRect, rectsCollide } from '/ui/shared/grid/grid-utils.js';
+import { resolveObjectSnap } from '/ui/shared/grid/snapGuides.js';
 const COLUMN_WIDTH_EPSILON = 0.01;
 function normalizePercentRecalc(recalc) {
     if (typeof recalc === 'object' && recalc !== null) {
@@ -35,6 +36,9 @@ export class CanvasGrid {
             percentageMode: false,
             liveSnap: false,
             liveSnapResize: false,
+            objectSnapGuides: false,
+            objectSnapLiveMagnet: false,
+            objectSnapTolerance: 6,
             bboxHandles: true,
             enableZoom: true
         }, options);
@@ -48,6 +52,13 @@ export class CanvasGrid {
         if (this.el)
             this.el.__grid = this;
         this.el.classList.add('canvas-grid');
+        this.objectSnapGuides = Boolean(this.options.objectSnapGuides);
+        this.objectSnapLiveMagnet = Boolean(this.options.objectSnapLiveMagnet);
+        this._activeSnapGuides = [];
+        this._snapGuideLayer = null;
+        this.el.dataset.objectSnapGuides = this.objectSnapGuides ? 'true' : 'false';
+        this.el.dataset.objectSnapLiveMagnet = this.objectSnapLiveMagnet ? 'true' : 'false';
+        this.el.dataset.objectSnapTolerance = String(this.options.objectSnapTolerance || 0);
         // The scroll container hosts the scrollbars. Default to the grid's
         // parent element, but allow an explicit element via options.
         this.scrollContainer = options.scrollContainer || this.el.parentElement || this.el;
@@ -683,20 +694,27 @@ export class CanvasGrid {
         };
         const apply = () => {
             frame = null;
-            const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
+            const objectSnap = this._resolveObjectSnap(el, targetX, targetY);
+            // Keep the object under the pointer by default; the snap target is still
+            // shown as a guide and committed on pointerup.
+            const visualX = this.objectSnapLiveMagnet ? objectSnap.targetX : targetX;
+            const visualY = this.objectSnapLiveMagnet ? objectSnap.targetY : targetY;
+            const snap = snapToGrid(objectSnap.targetX, objectSnap.targetY, this.options.columnWidth, this.options.cellHeight);
+            this._renderSnapGuides(objectSnap.guides);
             el.dataset.x = snap.x;
             el.dataset.y = snap.y;
             if (this.options.percentageMode) {
                 const { width: gridW, height: gridH } = this._getCanvasMetrics();
-                el.dataset.xPercent = Math.min((snap.x * this.options.columnWidth / gridW) * 100, 100);
-                el.dataset.yPercent = Math.min((snap.y * this.options.cellHeight / gridH) * 100, 100);
+                el.dataset.xPercent = Math.min((snap.x * this.options.columnWidth / safePositiveMetric(gridW)) * 100, 100);
+                el.dataset.yPercent = Math.min((snap.y * this.options.cellHeight / safePositiveMetric(gridH)) * 100, 100);
             }
             if (this.options.liveSnap) {
+                const visualSnap = snapToGrid(visualX, visualY, this.options.columnWidth, this.options.cellHeight);
                 el.style.transform =
-                    `translate3d(${snap.x * this.options.columnWidth}px, ${snap.y * this.options.cellHeight}px, 0)`;
+                    `translate3d(${visualSnap.x * this.options.columnWidth}px, ${visualSnap.y * this.options.cellHeight}px, 0)`;
             }
             else {
-                el.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
+                el.style.transform = `translate3d(${visualX}px, ${visualY}px, 0)`;
             }
             // Drag-Event sofort auslösen…
             el.dispatchEvent(new Event('dragmove', { bubbles: true }));
@@ -729,7 +747,9 @@ export class CanvasGrid {
             document.removeEventListener('pointermove', move);
             document.removeEventListener('pointerup', up);
             el?.releasePointerCapture?.(e.pointerId);
-            const snap = snapToGrid(targetX, targetY, this.options.columnWidth, this.options.cellHeight);
+            const objectSnap = this._resolveObjectSnap(el, targetX, targetY);
+            this._clearSnapGuides();
+            const snap = snapToGrid(objectSnap.targetX, objectSnap.targetY, this.options.columnWidth, this.options.cellHeight);
             this.update(el, { x: snap.x, y: snap.y });
             this._emit('dragstop', el);
         };
@@ -766,6 +786,25 @@ export class CanvasGrid {
         const cols = this.options.columns;
         if (!Number.isFinite(width) || width <= 0)
             return false;
+        if (this.options.pixelColumns) {
+            const nextColumns = Math.max(1, Math.round(width));
+            const prevColumns = Number(this.options.columns);
+            const changed = !Number.isFinite(prevColumns) ||
+                Math.abs(prevColumns - nextColumns) >= 1 ||
+                Math.abs((Number(this.options.columnWidth) || 0) - 1) >= COLUMN_WIDTH_EPSILON;
+            this.options.columns = nextColumns;
+            this.options.columnWidth = 1;
+            this._lastColumnWidth = 1;
+            if (changed) {
+                this.widgets.forEach((wi) => this._applyPosition(wi, {
+                    x: false,
+                    y: false,
+                    w: false,
+                    h: false
+                }));
+            }
+            return changed;
+        }
         if (!Number.isFinite(cols) || cols <= 0)
             return false;
         const nextUnit = Math.max(1, width / cols);
@@ -814,6 +853,126 @@ export class CanvasGrid {
         return this._refreshCanvasMetrics();
     }
     // snapToGrid, elementRect and rectsCollide are imported from grid-utils.js
+    _snapRectForElement(el, x, y) {
+        return {
+            id: el.dataset.instanceId || el.id || el.dataset.widgetId || null,
+            x,
+            y,
+            w: Math.max(1, Number(el.getAttribute('gs-w')) || 1),
+            h: Math.max(1, Number(el.getAttribute('gs-h')) || 1)
+        };
+    }
+    _snapCandidatesFor(el) {
+        const widgetCandidates = this.widgets
+            .filter((candidate) => {
+            if (!candidate || candidate === el || !candidate.isConnected)
+                return false;
+            if (candidate.classList.contains('inactive-scene') || candidate.classList.contains('inactive-layer'))
+                return false;
+            const style = window.getComputedStyle(candidate);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+        })
+            .map((candidate) => this._snapRectForElement(candidate, Number(candidate.dataset.x) || 0, Number(candidate.dataset.y) || 0));
+        return [
+            ...widgetCandidates,
+            ...this._canvasSnapCandidates()
+        ];
+    }
+    _canvasSnapCandidates() {
+        if (!this.options.canvasSnapGuides)
+            return [];
+        const columnWidth = safePositiveMetric(this.options.columnWidth);
+        const cellHeight = safePositiveMetric(this.options.cellHeight);
+        const { width, height } = this._getCanvasMetrics();
+        const w = width / columnWidth;
+        const h = height / cellHeight;
+        if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0)
+            return [];
+        return [{
+                id: 'canvas',
+                x: 0,
+                y: 0,
+                w,
+                h
+            }];
+    }
+    _resolveObjectSnap(el, targetX, targetY) {
+        if (!this.objectSnapGuides)
+            return { targetX, targetY, guides: [] };
+        const columnWidth = safePositiveMetric(this.options.columnWidth);
+        const cellHeight = safePositiveMetric(this.options.cellHeight);
+        const rawTolerance = Number(this.options.objectSnapTolerance);
+        const tolerance = Number.isFinite(rawTolerance) && rawTolerance >= 0 ? rawTolerance : 6;
+        const active = this._snapRectForElement(el, targetX / columnWidth, targetY / cellHeight);
+        const result = resolveObjectSnap(active, this._snapCandidatesFor(el), {
+            tolerance: {
+                x: tolerance / columnWidth,
+                y: tolerance / cellHeight
+            },
+            // Keep CanvasGrid's persisted coordinates grid-compatible while still
+            // showing object-aware guides during the pointer move.
+            step: { x: 1, y: 1 }
+        });
+        return {
+            targetX: result.x * columnWidth,
+            targetY: result.y * cellHeight,
+            guides: result.guides
+        };
+    }
+    _ensureSnapGuideLayer() {
+        if (this._snapGuideLayer && this._snapGuideLayer.isConnected) {
+            return this._snapGuideLayer;
+        }
+        const layer = document.createElement('div');
+        layer.className = 'canvas-snap-guide-layer';
+        layer.setAttribute('aria-hidden', 'true');
+        this.el.appendChild(layer);
+        this._snapGuideLayer = layer;
+        return layer;
+    }
+    _renderSnapGuides(guides = []) {
+        this._activeSnapGuides = guides;
+        this.el.dataset.snapGuideActive = guides.length ? 'true' : 'false';
+        if (!guides.length) {
+            this._snapGuideLayer?.replaceChildren();
+            return;
+        }
+        const columnWidth = safePositiveMetric(this.options.columnWidth);
+        const cellHeight = safePositiveMetric(this.options.cellHeight);
+        const layer = this._ensureSnapGuideLayer();
+        layer.replaceChildren(...guides.map(guide => {
+            const line = document.createElement('div');
+            line.className = `canvas-snap-guide canvas-snap-guide--${guide.axis}`;
+            line.dataset.snapGuide = guide.kind === 'spacing' ? 'spacing' : 'object';
+            line.dataset.snapGuideKind = guide.kind || 'align';
+            line.dataset.snapGuideAxis = guide.axis;
+            line.dataset.snapGuideSource = guide.sourceId || '';
+            line.dataset.snapGuideSecondarySource = guide.secondarySourceId || '';
+            line.dataset.snapGuideSourceKind = guide.sourceKind;
+            line.dataset.snapGuideTargetKind = guide.targetKind;
+            if (Number.isFinite(guide.spacing)) {
+                line.dataset.snapGuideSpacing = String(Math.round(Number(guide.spacing)));
+            }
+            if (guide.axis === 'x') {
+                const position = Math.round(guide.position * columnWidth);
+                const spanStart = Math.round(guide.spanStart * cellHeight);
+                const spanEnd = Math.round(guide.spanEnd * cellHeight);
+                line.style.transform = `translate3d(${position}px, ${spanStart}px, 0)`;
+                line.style.height = `${Math.max(1, spanEnd - spanStart)}px`;
+            }
+            else {
+                const position = Math.round(guide.position * cellHeight);
+                const spanStart = Math.round(guide.spanStart * columnWidth);
+                const spanEnd = Math.round(guide.spanEnd * columnWidth);
+                line.style.transform = `translate3d(${spanStart}px, ${position}px, 0)`;
+                line.style.width = `${Math.max(1, spanEnd - spanStart)}px`;
+            }
+            return line;
+        }));
+    }
+    _clearSnapGuides() {
+        this._renderSnapGuides([]);
+    }
     _collisionRect(el) {
         const rect = elementRect(el);
         if (el?.dataset?.widgetSizeSlot !== 'full')

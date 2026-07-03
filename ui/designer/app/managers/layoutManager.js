@@ -51,6 +51,23 @@ function applyStyleSourceDataset(el, styleSource = {}) {
   if (styleSource.syncDesign !== undefined) el.dataset.styleSyncDesign = String(styleSource.syncDesign);
 }
 
+function readPercentValue(item, keys) {
+  for (const key of keys) {
+    const value = item?.[key];
+    if (value === null || value === undefined || value === '') continue;
+    const num = Number(value);
+    if (Number.isFinite(num)) return num;
+  }
+  return null;
+}
+
+function writePersistedPercentBounds(el, bounds) {
+  if (bounds.xPercent !== null) el.dataset.xPercent = String(bounds.xPercent);
+  if (bounds.yPercent !== null) el.dataset.yPercent = String(bounds.yPercent);
+  if (bounds.wPercent !== null) el.dataset.wPercent = String(bounds.wPercent);
+  if (bounds.hPercent !== null) el.dataset.hPercent = String(bounds.hPercent);
+}
+
 function readStyleSourceDataset(el) {
   const styleSource = {};
   if (el.dataset.styleSourceEnabled) styleSource.enabled = el.dataset.styleSourceEnabled !== 'false';
@@ -158,10 +175,19 @@ export function applyLayout(layout, {
     const cellH = grid?.options?.cellHeight || 1;
     const gridH = gridEl?.getBoundingClientRect().height || 1;
     const rows = gridH / cellH;
-    const x = item.xPercent != null ? Math.round((item.xPercent / 100) * cols) : (item.x ?? 0);
-    const y = item.yPercent != null ? Math.round((item.yPercent / 100) * rows) : (item.y ?? 0);
-    const w = item.wPercent != null ? Math.max(1, Math.round((item.wPercent / 100) * cols)) : (item.w ?? 4);
-    const h = item.hPercent != null ? Math.max(1, Math.round((item.hPercent / 100) * rows)) : (item.h ?? DEFAULT_ROWS);
+    const percentBounds = {
+      xPercent: readPercentValue(item, ['xPercent', 'x_percent']),
+      yPercent: readPercentValue(item, ['yPercent', 'y_percent']),
+      wPercent: readPercentValue(item, ['wPercent', 'w_percent']),
+      hPercent: readPercentValue(item, ['hPercent', 'h_percent'])
+    };
+    // CanvasGrid must see persisted percent bounds before makeWidget(), otherwise
+    // a not-yet-measured canvas can rewrite saved geometry into tiny values.
+    writePersistedPercentBounds(wrapper, percentBounds);
+    const x = percentBounds.xPercent !== null ? Math.round((percentBounds.xPercent / 100) * cols) : (item.x ?? 0);
+    const y = percentBounds.yPercent !== null ? Math.round((percentBounds.yPercent / 100) * rows) : (item.y ?? 0);
+    const w = percentBounds.wPercent !== null ? Math.max(1, Math.round((percentBounds.wPercent / 100) * cols)) : (item.w ?? 4);
+    const h = percentBounds.hPercent !== null ? Math.max(1, Math.round((percentBounds.hPercent / 100) * rows)) : (item.h ?? DEFAULT_ROWS);
     wrapper.dataset.x = x;
     wrapper.dataset.y = y;
     wrapper.style.zIndex = layerIndex.toString();
@@ -181,8 +207,8 @@ export function applyLayout(layout, {
     attachOptionsMenu(wrapper, widgetDef, editBtn, { grid, pageId: null, scheduleAutosave: () => {}, activeLayer: layerIndex, codeMap, genId: () => instId });
     attachLockOnClick(wrapper);
     gridEl.appendChild(wrapper);
-  grid.makeWidget(wrapper);
-  renderWidget(wrapper, widgetDef, codeMap);
+    grid.makeWidget(wrapper);
+    renderWidget(wrapper, widgetDef, codeMap);
   });
 }
 

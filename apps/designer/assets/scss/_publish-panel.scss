@@ -42,7 +42,125 @@
   .publish-title {
     font-size: var(--text-lg);
     font-weight: var(--font-bold);
-    margin: var(--space-2) 0;
+    margin: var(--space-2) 40px 0 0;
+  }
+
+  .publish-subtitle {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+
+  .publish-section-title,
+  .publish-section-heading h3 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+  }
+
+  .publish-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .publish-usage {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+  }
+
+  .publish-usage-refresh {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--color-text);
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bg-tertiary);
+    }
+  }
+
+  .publish-usage-status {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+
+    &[data-state='linked'] {
+      color: var(--color-text);
+    }
+
+    &[data-state='error'] {
+      color: var(--error-color);
+    }
+  }
+
+  .publish-usage-list {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .publish-usage-item {
+    min-width: 0;
+    padding: var(--space-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: inherit;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-2);
+    text-decoration: none;
+
+    &:hover {
+      border-color: var(--accent-color);
+      text-decoration: none;
+    }
+  }
+
+  .publish-usage-kind {
+    align-self: start;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--accent-color), transparent 88%);
+    color: var(--accent-color);
+    font-size: 10px;
+    font-weight: var(--font-bold);
+    line-height: 1.4;
+  }
+
+  .publish-usage-copy {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+
+    strong,
+    small {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    strong {
+      color: var(--color-text);
+      font-size: var(--text-sm);
+    }
+
+    small {
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
   }
 
   .publish-slug-label {

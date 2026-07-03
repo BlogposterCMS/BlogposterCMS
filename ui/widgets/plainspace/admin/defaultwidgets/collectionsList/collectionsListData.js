@@ -21,6 +21,17 @@ function unwrapRuntimeFacadeData(value) {
     }
     return value;
 }
+function readCreatedPageId(value) {
+    const result = unwrapRuntimeFacadeData(value);
+    if (!result || typeof result !== 'object')
+        return undefined;
+    if (result.pageId !== undefined)
+        return result.pageId;
+    const nested = result.data;
+    return nested && typeof nested === 'object'
+        ? nested.pageId
+        : undefined;
+}
 function runtimeAdminPayload(jwt, resource, action, params = {}) {
     return {
         jwt,
@@ -72,6 +83,17 @@ export function toPages(value) {
 }
 export function buildCollectionsPayload(jwt) {
     return runtimeAdminPayload(jwt, 'pages', 'byLane', { lane: 'public' });
+}
+export function buildCreateCollectionPayload(jwt, input) {
+    // Collections remain Pages-owned parent records so child-page rendering and editing stay on the existing facade.
+    return runtimeAdminPayload(jwt, 'pages', 'create', {
+        title: input.title.trim(),
+        slug: input.slug,
+        lane: 'public',
+        status: input.status || 'published',
+        parent_id: null,
+        meta: { isCollection: true }
+    });
 }
 function isVisiblePublicPage(page) {
     return (page.lane || 'public') === 'public' && page.status !== 'deleted';
@@ -148,4 +170,12 @@ export async function fetchCollections(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
     const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane: 'public' });
     return deriveCollections(toPages(response));
+}
+export async function createCollection(emit, jwt, input) {
+    const meltdownEmit = requireEmitter(emit);
+    const pageId = readCreatedPageId(await meltdownEmit('cmsAdminApiRequest', buildCreateCollectionPayload(jwt, input)));
+    if (pageId === undefined) {
+        throw new Error('PLAINSPACE_COLLECTIONS_CREATED_PAGE_ID_UNAVAILABLE: Page creation did not return a pageId');
+    }
+    return pageId;
 }

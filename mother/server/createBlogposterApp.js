@@ -83,6 +83,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     isDevAutoLoginAllowed: authContext.isDevAutoLoginAllowed,
     isProduction,
     loginLimiter,
+    maybeIssueDevAdminSession: authContext.maybeIssueDevAdminSession,
     motherEmitter,
     needsInitialSetup: installationStatus.needsInitialSetup,
     publicPath: staticPaths.publicPath,

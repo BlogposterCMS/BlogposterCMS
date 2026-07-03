@@ -14,11 +14,12 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/house.svg',
-      widgets: ['roadmapIntro', 'roadmapUpcoming', 'dragbarDemo'],
+      widgets: ['roadmapIntro', 'pageStats', 'contentSummary'],
+      retiredWidgets: ['roadmapUpcoming', 'dragbarDemo'],
       widgetSlots: {
         roadmapIntro: 'half',
-        roadmapUpcoming: 'half',
-        dragbarDemo: 'third'
+        pageStats: 'half',
+        contentSummary: 'full'
       },
       workspace: 'home'
     }
@@ -35,13 +36,16 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/file-box.svg',
-      widgets: ['contentSummary'],
+      // Content should open on real page management instead of a design-only summary.
+      widgets: ['pageList', 'pageStats', 'contentSummary'],
       widgetSlots: {
+        pageList: 'twoThird',
+        pageStats: 'third',
         contentSummary: 'full'
       },
       actionButton: {
         icon: '/assets/icons/plus.svg',
-        action: 'createNewLayout'
+        action: 'createNewPage'
       },
       workspace: 'content'
     }
@@ -161,7 +165,7 @@ module.exports.ADMIN_PAGES = [
       icon: '/assets/icons/layout-dashboard.svg',
       widgets: ['layoutTemplates'],
       widgetSlots: {
-        layoutTemplates: 'half'
+        layoutTemplates: 'page'
       }
     }
   },
@@ -180,7 +184,7 @@ module.exports.ADMIN_PAGES = [
       icon: '/assets/icons/layers.svg',
       widgets: ['designerLayouts'],
       widgetSlots: {
-        designerLayouts: 'half'
+        designerLayouts: 'page'
       }
     }
   },
@@ -298,6 +302,22 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/package.svg',
+      widgets: []
+    }
+  },
+  {
+    title: 'Update Center',
+    slug: 'updates',
+    parentSlug: 'settings',
+    lane: 'admin',
+    weight: 55,
+    config: {
+      layout: {
+        header: 'top-header',
+        sidebar: 'settings-sidebar',
+        inheritsLayout: true
+      },
+      icon: '/assets/icons/refresh-cw.svg',
       widgets: []
     }
   },

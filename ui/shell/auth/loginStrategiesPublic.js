@@ -15,7 +15,8 @@ export async function loadPublicLoginStrategies() {
         container.appendChild(label);
         strategies.forEach(strat => {
             const btn = document.createElement('button');
-            btn.className = 'oauth-button';
+            btn.type = 'button';
+            btn.className = 'button ghost block oauth-button';
             btn.textContent = strat.name || '';
             btn.addEventListener('click', () => {
                 alert(`${strat.name} login is not implemented in this demo.`);

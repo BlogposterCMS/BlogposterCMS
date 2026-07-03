@@ -5,12 +5,22 @@
 import {
   errorMessage,
   fetchModuleLists,
+  fetchModuleUpdateStatuses,
   fetchPendingModuleAccessRequests,
   inspectModuleZip,
+  inspectModuleUpdate,
+  installModuleUpdate,
   installModuleZip,
+  mergeModuleUpdateStatuses,
+  moduleHasModification,
+  moduleHasUpdate,
+  moduleUpdateStatus,
   resolveModuleAccessRequest,
   renderModuleMeta,
+  setModuleUpdateSource,
   toModuleAccessRuntimeRequests,
+  toModuleUpdateInspection,
+  toModuleUpdateStatuses,
   toggleModuleRegistryActivation,
   toModuleZipInspection,
   toModules,
@@ -55,6 +65,37 @@ describe('modulesListData', () => {
       description: 'CMS module'
     })).toBe('v1.2.3 \u2022 Blogposter \u2022 CMS module');
     expect(renderModuleMeta({})).toBe('Unknown Developer');
+    expect(moduleHasModification({
+      module_name: 'shopSync',
+      modification: { hasModification: true }
+    })).toBe(true);
+    expect(moduleHasModification({
+      module_name: 'shopSync',
+      moduleInfo: { modification: { hasModification: true } }
+    })).toBe(true);
+    expect(moduleHasModification({ module_name: 'plainModule' })).toBe(false);
+    expect(toModuleUpdateStatuses({ data: [{ moduleName: 'shopSync', available: true }, null] }))
+      .toEqual([{ moduleName: 'shopSync', available: true }]);
+    expect(toModuleUpdateInspection({
+      moduleName: 'shopSync',
+      latestVersion: '1.2.0',
+      moduleInfo: { moduleName: 'shopSync', requestedAccess: [{ event: 'listContentEntries' }] },
+      newRequestedAccess: [{ event: 'deleteContentEntry' }],
+      requiresAdminApproval: true
+    })).toMatchObject({
+      moduleName: 'shopSync',
+      latestVersion: '1.2.0',
+      requestedAccess: [{ event: 'listContentEntries' }],
+      newRequestedAccess: [{ event: 'deleteContentEntry' }],
+      requiresAdminApproval: true
+    });
+    const mergedUpdates = mergeModuleUpdateStatuses(
+      [{ module_name: 'shopSync' }, { module_name: 'plainModule' }],
+      [{ moduleName: 'shopSync', latestVersion: '1.2.0', available: true }]
+    );
+    expect(moduleHasUpdate(mergedUpdates[0])).toBe(true);
+    expect(moduleUpdateStatus(mergedUpdates[0])?.latestVersion).toBe('1.2.0');
+    expect(moduleHasUpdate(mergedUpdates[1])).toBe(false);
     expect(errorMessage(new Error('boom'))).toBe('boom');
     expect(errorMessage('nope')).toBe('nope');
     expect(zipDataFromDataUrl('data:application/zip;base64,UEsDBAo=')).toBe('UEsDBAo=');
@@ -143,6 +184,81 @@ describe('modulesListData', () => {
       params: {
         zipData: 'UEsDBAo=',
         approvedAccess: [{ event: 'listContentEntries' }]
+      }
+    });
+  });
+
+  it('checks and installs module updates through the runtime admin facade', async () => {
+    const emit = jest.fn(async (_eventName, payload) => {
+      if (`${payload.resource}.${payload.action}` === 'modules.checkUpdates') {
+        return [{ moduleName: 'shopSync', latestVersion: '1.2.0', available: true }];
+      }
+      if (`${payload.resource}.${payload.action}` === 'modules.inspectUpdate') {
+        return {
+          moduleName: 'shopSync',
+          latestVersion: '1.2.0',
+          moduleInfo: { moduleName: 'shopSync' },
+          newRequestedAccess: [{ event: 'listContentEntries' }]
+        };
+      }
+      return undefined;
+    });
+
+    await expect(fetchModuleUpdateStatuses(emit, 'admin-token', 'shopSync')).resolves.toEqual([
+      { moduleName: 'shopSync', latestVersion: '1.2.0', available: true }
+    ]);
+    await expect(inspectModuleUpdate(emit, 'admin-token', 'shopSync')).resolves.toMatchObject({
+      moduleName: 'shopSync',
+      latestVersion: '1.2.0',
+      newRequestedAccess: [{ event: 'listContentEntries' }]
+    });
+    await installModuleUpdate(emit, 'admin-token', 'shopSync', [{ resource: 'content', action: 'list' }]);
+    await setModuleUpdateSource(emit, 'admin-token', 'shopSync', {
+      provider: 'github',
+      owner: 'acme',
+      repo: 'shop-sync'
+    });
+
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'modules',
+      action: 'checkUpdates',
+      params: { targetModuleName: 'shopSync' }
+    });
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'modules',
+      action: 'inspectUpdate',
+      params: { targetModuleName: 'shopSync' }
+    });
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'modules',
+      action: 'installUpdate',
+      params: {
+        targetModuleName: 'shopSync',
+        approvedAccess: [{ resource: 'content', action: 'list' }]
+      }
+    });
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'modules',
+      action: 'setUpdateSource',
+      params: {
+        targetModuleName: 'shopSync',
+        trustedUpdateSource: {
+          provider: 'github',
+          owner: 'acme',
+          repo: 'shop-sync'
+        }
       }
     });
   });

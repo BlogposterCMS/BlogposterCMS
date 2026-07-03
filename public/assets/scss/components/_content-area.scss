@@ -1,4 +1,6 @@
 #content {
+  position: relative;
+  z-index: 0;
   overflow: auto;
   flex: 1 1 0;
   min-width: 0;
@@ -12,6 +14,11 @@
   transition:
     opacity var(--motion-duration-base) var(--motion-ease-standard),
     transform var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+#content:has(#adminGrid > .dashboard-widget[data-dashboard-slot='page']),
+#content:has(#adminGrid > .dashboard-drop-placeholder[data-dashboard-slot='page']) {
+  overflow: hidden;
 }
 
 #content.is-content-refreshing {
@@ -73,6 +80,11 @@
 #adminGrid.canvas-grid {
   contain: none;
   overflow: visible;
+}
+
+#adminGrid.canvas-grid:has(> .dashboard-widget[data-dashboard-slot='page']),
+#adminGrid.canvas-grid:has(> .dashboard-drop-placeholder[data-dashboard-slot='page']) {
+  overflow: hidden;
 }
 
 .canvas-item {

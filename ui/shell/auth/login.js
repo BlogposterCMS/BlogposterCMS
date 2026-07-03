@@ -1,4 +1,3 @@
-import { presetColors } from '../../shared/controls/colorPicker.js';
 import { readLoginCredentials, writeLoginCredentials } from './loginData.js';
 const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
@@ -31,7 +30,13 @@ togglePassword?.addEventListener('click', () => {
         return;
     const isText = pwd.type === 'text';
     pwd.type = isText ? 'password' : 'text';
-    togglePassword.textContent = isText ? 'Show' : 'Hide';
+    const label = isText ? 'Show password' : 'Hide password';
+    togglePassword.classList.toggle('is-password-visible', !isText);
+    togglePassword.setAttribute('aria-label', label);
+    togglePassword.setAttribute('title', label);
+    const labelEl = togglePassword.querySelector('.password-toggle__label');
+    if (labelEl)
+        labelEl.textContent = label;
 });
 loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -73,12 +78,3 @@ if (loginForm && devAutologin && allowWeak) {
     writeLoginCredentials(form, { username: devUser, password: '123' });
     form.dispatchEvent(new Event('submit'));
 }
-const root = document.documentElement;
-let colorIndex = 0;
-function cycleAccentColor() {
-    const color = presetColors[colorIndex % presetColors.length] || '#008080';
-    root.style.setProperty('--user-color', color);
-    colorIndex += 1;
-}
-cycleAccentColor();
-setInterval(cycleAccentColor, 5000);

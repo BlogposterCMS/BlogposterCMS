@@ -24,7 +24,8 @@ function resolveAssetPath(assetPath: string): string {
 
 const DEFAULT_WORKSPACE_ICON = resolveAssetPath('assets/icons/file-box.svg');
 const DEFAULT_SUBPAGE_ICON = resolveAssetPath('assets/icons/file.svg');
-const DETACHED_WORKSPACE_ACTION_SLUGS = new Set(['settings']);
+const ACCOUNT_MENU_WORKSPACE_SLUGS = new Set(['settings']);
+const DASHBOARD_WORKSPACE_ACTION_SLUGS = new Set<string>();
 let iconListPromise: Promise<string[]> | null = null;
 let fetchPromise: Promise<void> | null = null;
 let lastRenderSignature: string | null = null;
@@ -66,8 +67,14 @@ function compareWeight(a: AdminPage, b: AdminPage): number {
   return aw - bw;
 }
 
-function isDetachedWorkspaceAction(page: AdminPage): boolean {
-  return DETACHED_WORKSPACE_ACTION_SLUGS.has(page.slug);
+function isAccountMenuWorkspace(page: AdminPage): boolean {
+  // Settings is still a workspace route, but its dashboard entry point is the
+  // account menu so the main workspace nav stays focused on content workspaces.
+  return ACCOUNT_MENU_WORKSPACE_SLUGS.has(page.slug);
+}
+
+function isDashboardWorkspaceAction(page: AdminPage): boolean {
+  return DASHBOARD_WORKSPACE_ACTION_SLUGS.has(page.slug);
 }
 
 async function fetchAdminPages(): Promise<AdminPage[]> {
@@ -141,7 +148,7 @@ function buildWorkspaces(nav: HTMLElement, pages: AdminPage[], adminBase: string
 
   pages
     .filter(page => page.lane === ADMIN_LANE && page.meta?.workspace === page.slug)
-    .filter(page => !isDetachedWorkspaceAction(page))
+    .filter(page => !isAccountMenuWorkspace(page) && !isDashboardWorkspaceAction(page))
     .sort(compareWeight)
     .forEach(page => {
       const anchor = document.createElement('a');
@@ -173,7 +180,7 @@ function buildWorkspaceActions(nav: HTMLElement, pages: AdminPage[], adminBase: 
 
   pages
     .filter(page => page.lane === ADMIN_LANE && page.meta?.workspace === page.slug)
-    .filter(isDetachedWorkspaceAction)
+    .filter(isDashboardWorkspaceAction)
     .sort(compareWeight)
     .forEach(page => {
       const anchor = document.createElement('a');

@@ -1,4 +1,6 @@
-import { errorMessage, fetchCollections } from './collectionsListData.js';
+import { createCollection, errorMessage, fetchCollections } from './collectionsListData.js';
+import { bpDialog } from '/ui/shared/dialogs/bpDialog.js';
+import { sanitizeSlug } from '/ui/widgets/plainspace/admin/defaultwidgets/pageList/pageService.js';
 function escapeHtml(value) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
     return String(value ?? '').replace(/[&<>"']/g, char => map[char] || char);
@@ -21,6 +23,13 @@ function renderEmpty(tbody) {
     cell.textContent = 'No collections found.';
     empty.appendChild(cell);
     tbody.appendChild(empty);
+}
+function createErrorMessage(err) {
+    const coded = err;
+    if (coded?.code === 'DUPLICATE_SLUG') {
+        return coded.userMessage || 'This slug is already in use. Please choose another one.';
+    }
+    return `PLAINSPACE_COLLECTIONS_CREATE_FAILED: ${errorMessage(err)}`;
 }
 function renderChildPageRows(children) {
     return children.map(child => `
@@ -89,17 +98,43 @@ function renderCollectionRows(collection) {
     });
     return [row, childRow];
 }
-export function renderCollectionsList(el, collections) {
+export function renderCollectionsList(el, collections, options = {}) {
     el.innerHTML = '';
     const card = document.createElement('div');
     card.className = 'collections-list-card page-list-card';
+    const inlineError = document.createElement('div');
+    inlineError.className = 'collections-list-inline-error page-list-inline-error';
+    inlineError.hidden = true;
+    inlineError.setAttribute('role', 'alert');
+    const setInlineError = (message) => {
+        inlineError.hidden = !message;
+        inlineError.textContent = message || '';
+    };
     const titleBar = document.createElement('div');
     titleBar.className = 'collections-list-title-bar page-title-bar';
     const title = document.createElement('div');
     title.className = 'collections-list-title page-title';
     title.textContent = 'Collections';
     titleBar.appendChild(title);
+    if (options.onCreateCollection) {
+        const addBtn = document.createElement('img');
+        addBtn.src = '/assets/icons/plus.svg';
+        addBtn.alt = 'Add collection';
+        addBtn.title = 'Add new collection';
+        addBtn.className = 'icon add-page-btn add-collection-btn';
+        addBtn.addEventListener('click', async () => {
+            setInlineError('');
+            try {
+                await options.onCreateCollection?.();
+            }
+            catch (err) {
+                setInlineError(createErrorMessage(err));
+            }
+        });
+        titleBar.appendChild(addBtn);
+    }
     card.appendChild(titleBar);
+    card.appendChild(inlineError);
     const tableWrap = document.createElement('div');
     tableWrap.className = 'collections-list-table-wrap';
     const table = document.createElement('table');
@@ -131,8 +166,25 @@ export async function render(el) {
     if (!el)
         return;
     try {
-        const collections = await fetchCollections(window.meltdownEmit, window.ADMIN_TOKEN);
-        renderCollectionsList(el, collections);
+        let renderCurrent;
+        const handleCreateCollection = async () => {
+            const title = await bpDialog.prompt('New collection title:');
+            const trimmedTitle = title?.trim();
+            if (!trimmedTitle)
+                return;
+            const slugInput = await bpDialog.prompt('Slug (optional):');
+            const slug = slugInput ? sanitizeSlug(slugInput) : '';
+            await createCollection(window.meltdownEmit, window.ADMIN_TOKEN, {
+                title: trimmedTitle,
+                slug
+            });
+            await renderCurrent();
+        };
+        renderCurrent = async () => {
+            const collections = await fetchCollections(window.meltdownEmit, window.ADMIN_TOKEN);
+            renderCollectionsList(el, collections, { onCreateCollection: handleCreateCollection });
+        };
+        await renderCurrent();
     }
     catch (err) {
         el.innerHTML = `<div class="error">PLAINSPACE_COLLECTIONS_LOAD_FAILED: ${escapeHtml(errorMessage(err))}</div>`;

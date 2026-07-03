@@ -29,10 +29,13 @@ describe('designerLayoutsData', () => {
     const emit = jest.fn().mockResolvedValue({ designs: [{ id: 'd1' }] });
 
     await expect(fetchDesignerLayouts(emit, 'admin-token')).resolves.toEqual([{ id: 'd1' }]);
-    expect(emit).toHaveBeenCalledWith('designer.listDesigns', {
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
-      moduleName: 'designer',
-      moduleType: 'community'
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'designer',
+      action: 'list',
+      params: {}
     });
   });
 

@@ -176,6 +176,11 @@ function createAdminShellRoutes({
         }
       }
 
+      const devJwt = await maybeIssueDevAdminSession(req, res, 'admin home');
+      if (devJwt) {
+        return res.redirect('/admin/home');
+      }
+
       const devAutoLoginAllowed = await isDevAutoLoginAllowed();
       let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
       html = html.replace('{{CSRF_TOKEN}}', req.csrfToken())
@@ -208,7 +213,11 @@ function createAdminShellRoutes({
   });
 
   router.get('/admin/app/:appName/:pageId?', csrfProtection, async (req, res) => {
-    const adminJwt = req.cookies?.admin_jwt;
+    let adminJwt = req.cookies?.admin_jwt;
+    if (!adminJwt) {
+      adminJwt = await maybeIssueDevAdminSession(req, res, 'admin app');
+    }
+
     if (!adminJwt) {
       const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
       return res.redirect(jump);

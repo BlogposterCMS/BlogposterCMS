@@ -1,4 +1,7 @@
 let _toPng;
+const DEFAULT_VIEWPORT_THUMBNAIL_MAX_WIDTH = 960;
+const DEFAULT_VIEWPORT_THUMBNAIL_MAX_HEIGHT = 540;
+
 async function loadToPng() {
   if (_toPng) return _toPng;
   try {
@@ -45,15 +48,81 @@ function canReadStyleSheetsForPreview() {
   }
 }
 
-export async function capturePreview(gridEl) {
+function positiveNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function elementSize(gridEl, rect) {
+  return {
+    width: positiveNumber(rect?.width, gridEl.scrollWidth || gridEl.clientWidth || 1),
+    height: positiveNumber(rect?.height, gridEl.scrollHeight || gridEl.clientHeight || 1)
+  };
+}
+
+function viewportSize(rect) {
+  return {
+    width: positiveNumber(window.innerWidth, document.documentElement?.clientWidth || rect?.width || 1),
+    height: positiveNumber(window.innerHeight, document.documentElement?.clientHeight || rect?.height || 1)
+  };
+}
+
+function resolveViewportCapture(gridEl, options = {}) {
+  const rect = typeof gridEl.getBoundingClientRect === 'function'
+    ? gridEl.getBoundingClientRect()
+    : null;
+  const fallbackSize = elementSize(gridEl, rect);
+  const viewport = viewportSize(rect);
+  const rectLeft = Number.isFinite(rect?.left) ? rect.left : 0;
+  const rectTop = Number.isFinite(rect?.top) ? rect.top : 0;
+  const rectRight = Number.isFinite(rect?.right) ? rect.right : rectLeft + fallbackSize.width;
+  const rectBottom = Number.isFinite(rect?.bottom) ? rect.bottom : rectTop + fallbackSize.height;
+  const visibleLeft = Math.max(0, rectLeft);
+  const visibleTop = Math.max(0, rectTop);
+  const visibleRight = Math.min(viewport.width, rectRight);
+  const visibleBottom = Math.min(viewport.height, rectBottom);
+  const visibleWidth = visibleRight > visibleLeft ? visibleRight - visibleLeft : Math.min(fallbackSize.width, viewport.width);
+  const visibleHeight = visibleBottom > visibleTop ? visibleBottom - visibleTop : Math.min(fallbackSize.height, viewport.height);
+  const width = Math.max(1, Math.ceil(visibleWidth));
+  const height = Math.max(1, Math.ceil(visibleHeight));
+  const maxWidth = positiveNumber(options.maxWidth, DEFAULT_VIEWPORT_THUMBNAIL_MAX_WIDTH);
+  const maxHeight = positiveNumber(options.maxHeight, DEFAULT_VIEWPORT_THUMBNAIL_MAX_HEIGHT);
+  const scale = Math.min(1, maxWidth / width, maxHeight / height);
+  const offsetX = Math.max(0, Math.round(-rectLeft));
+  const offsetY = Math.max(0, Math.round(-rectTop));
+  const style = { transformOrigin: 'top left' };
+
+  if (offsetX || offsetY) {
+    style.transform = `translate(${-offsetX}px, ${-offsetY}px)`;
+  }
+
+  return {
+    width,
+    height,
+    canvasWidth: Math.max(1, Math.round(width * scale)),
+    canvasHeight: Math.max(1, Math.round(height * scale)),
+    style
+  };
+}
+
+function resolvePreviewOptions(gridEl, options = {}) {
+  if (!options.viewport) return {};
+  return resolveViewportCapture(gridEl, options);
+}
+
+export async function capturePreview(gridEl, options = {}) {
   if (!gridEl) return '';
   if (!canReadStyleSheetsForPreview()) return '';
   try {
     const toPng = await loadToPng();
     const fontEmbedCss = await getFontEmbedCss();
-    return await toPng(gridEl, { cacheBust: true, fontEmbedCss });
+    return await toPng(gridEl, {
+      cacheBust: true,
+      fontEmbedCss,
+      ...resolvePreviewOptions(gridEl, options)
+    });
   } catch (err) {
-    console.error('[Designer] preview capture error', err);
+    console.error('[Designer] DESIGNER_PREVIEW_CAPTURE_FAILED', err);
     return '';
   }
 }

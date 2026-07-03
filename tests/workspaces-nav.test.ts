@@ -108,7 +108,7 @@ describe('workspace navigation', () => {
     expect(sidebarLink).toBeNull();
   });
 
-  it('keeps workspace names visible while Settings stays detached', async () => {
+  it('keeps workspace names visible while Settings is owned by the account menu', async () => {
     window.history.replaceState({}, '', '/admin/content');
     const meltdownMock = window.meltdownEmit as jest.Mock;
     meltdownMock.mockResolvedValue([
@@ -140,8 +140,7 @@ describe('workspace navigation', () => {
       'Content',
     ]);
     expect(document.querySelector('#workspace-nav a[aria-label="Settings"]')).toBeNull();
-    expect(document.querySelector('#workspace-actions a')?.getAttribute('aria-label')).toBe('Settings');
-    expect(document.querySelector('#workspace-actions a .label')?.textContent).toBe('Settings');
+    expect(document.querySelector('#workspace-actions a')).toBeNull();
   });
 
   it('prefixes asset paths with the admin base when it includes a nested path', async () => {

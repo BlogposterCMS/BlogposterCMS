@@ -68,7 +68,9 @@ The builder now separates structure from content with distinct **Layout** and **
 Layout mode swaps the widget sidebar for a layout panel placeholder, disables widget
 interactions on the canvas and uses the existing header controls for saving. The header
 back button exits the editor entirely, returning to the previous page (such as the design editor)
-or falling back to the dashboard.
+or falling back to the dashboard. Because Design Studio runs inside the sandboxed app frame
+instead of the normal admin shell, that back control must remain visible as the first
+left-side builder-header action.
 Switching back to design mode restores the widget sidebar and re‑enables normal editing.
 Both editors share a footer with zoom controls, and the design sidebar now features a leading layout switch bubble for jumping to the layout editor.
 Layouts without an explicit title initialise the header input to "Layout name" instead of a generic "default" tag.
@@ -127,6 +129,10 @@ entry point coordinates features instead of re-implementing them inline:
   preview/publish buttons and exposes an autosave toggle.
 - `ui/designer/app/renderer/previewHeader.js` manages the responsive viewport header shown
   during preview mode.
+- `ui/designer/app/renderer/livePreviewFrame.ts` opens the current public page
+  route with `?designer-live-preview=1`, serializes the current layout tree and
+  widget placements, and bridges Runtime data requests back through the
+  existing app bridge.
 - `ui/designer/app/renderer/layoutBar.js` renders the zoom controls that live in the footer.
 - `ui/designer/app/renderer/layoutStructureHandlers.js` refreshes container bars and the
   layout tree sidebar whenever containers change.
@@ -189,6 +195,12 @@ Each layout node carries a stable `nodeId` so runtime mapping between the JSON t
   `designer.getDesign`, normalising snake_case widget fields to the builder's
   camelCase layout before rendering so editing a design no longer wipes its
   existing layout.
+- Loaded widget placements must write their saved percent bounds to the
+  `.canvas-item` before CanvasGrid registration. `gs-w`, `gs-h`, `data-x` and
+  `data-y` are derived edit-grid values; `data-x-percent`, `data-y-percent`,
+  `data-w-percent` and `data-h-percent` remain the persisted geometry contract
+  so a freshly loaded design renders at the saved size before any handle
+  interaction.
 - The `designId` parameter is treated as an opaque string so non-numeric IDs
   (e.g. MongoDB ObjectIds) are preserved without coercion.
 
@@ -206,6 +218,30 @@ The app loader verifies these events before launching the designer. If any requi
 
 ## Preview Capture
 - The builder fetches external font stylesheets (currently allowing only same-origin and Google Fonts) before calling `html-to-image` so previews render with correct typography without touching cross-origin stylesheets.
+- The header Preview button opens the page's public route with
+  `?designer-live-preview=1`. That route loads the normal public frontend shell,
+  then the preview adapter renders the current unsaved design through
+  `renderPublicRuntimePageContent` so the preview and saved page share the same
+  Runtime content contract.
+- The Live Preview payload normalizes stored `snake_case` design rows and the
+  global layout layer to the public Runtime placement contract before rendering,
+  so unsaved previews and saved public pages use the same widget identity and
+  percent-bound fields.
+- Closing the Live Preview removes the isolated frame from the editor DOM so
+  stale public-runtime messages cannot keep the preview surface half-open.
+- Design saves capture the visible viewport region for thumbnails and cap the
+  generated image dimensions, so small cards stay recognizable instead of
+  shrinking a full-height 1:1 page capture.
+- The publish panel stores the returned thumbnail URL on
+  `page.meta.designThumbnail` when it creates or updates a page from a Design
+  Studio publish flow.
+- The header Publish button opens the right-side Publishing panel on all design
+  layers. The panel combines first publication with a usage view: it lists
+  public pages whose `meta.designId` or `meta.layoutTemplate` points at the
+  current design, plus the current `plainSpace.publishedDesignMeta` bundle
+  path. Publishing still keeps the compatible `layoutTemplate` reference and
+  now also writes the saved `designId` and `designTitle` when `saveDesign`
+  returns an id.
 - If the design save request does not complete within 20 seconds, the client now reports a timeout to the user for clearer error handling.
 
 ## Security Notes
@@ -228,17 +264,42 @@ The app loader verifies these events before launching the designer. If any requi
   server-side.
 
 ## Grid configuration
-- The builder uses the shared CanvasGrid with 12 columns, percentage-mode
-  coordinates, disabled push-on-overlap and disabled live snapping. Layout
+- The builder uses the shared CanvasGrid in percentage mode, but Design Studio
+  editing mirrors the visible canvas width as 1px horizontal units instead of
+  exposing a 12-column editing grid. `data-x`, `data-y`, `gs-w` and `gs-h` are
+  edit-time pixel units; persisted geometry remains `xPercent`, `yPercent`,
+  `wPercent` and `hPercent` so runtime rendering can stay responsive. Layout
   containers are structural nodes; regular widgets should not duplicate
   sections, rows or columns as widget types.
+- Design Studio enables CanvasGrid object snap guides with a 6px tolerance.
+  During drag, moving widgets show visible neighbor edge, center, canvas-edge
+  canvas-center and equal-spacing guides while the live element stays under the
+  pointer; the snapped target is committed when the pointer is released. The
+  temporary guide lines, distance metadata and live-magnet mode are also exposed
+  through the agent feedback `snapGuides` block.
+- The editor `#layoutRoot` must not create a private stacking context, and
+  editable builder grids keep overflow visible so selection outlines and resize
+  handles remain visible at canvas edges. Viewport guides fade while a widget is
+  selected or edited so they do not compete with handles and outlines.
+- The editor `#builderViewport` owns the native scrollbars and keeps them on the
+  fixed stage edge. Canvas centering belongs to `.canvas-zoom-sizer`, so
+  changing canvas width or zoom does not move the scrollbar track with the
+  canvas content.
 
 ## Sidebar panels
 - The Design Studio sidebar uses one stable rail shell with circular panel
-  buttons for Widgets, Sections, Layers and Layout. Widgets are the compact
-  default state and render as icon circles; the section list, layer list and
-  layout tree expand into their own panels instead of replacing the whole
-  sidebar.
+  buttons for Widgets, Layers and Layout. Widgets are the compact default state
+  and render as icon circles; the layer list and layout tree expand into their
+  own panels instead of replacing the whole sidebar. Scenes are
+  storyboard-style viewport states, not vertical document scroll sections or a
+  primary sidebar chapter, and are edited from the canvas storyboard rail.
+  Layers are the editable elements inside the active Scene.
+  Selecting a row in Layers selects the matching canvas widget and scrolls the
+  stage to it when it is outside the visible viewport. Layer rows also expose
+  forward/backward order controls that update the saved widget `zIndex`.
+  Clicking the currently open rail button closes the flyout, and clicking
+  outside the sidebar closes it through the same state helper so the canvas is
+  not covered by a stale panel.
 - The Widgets panel now renders grouped insert circles for Text, Media, Shape,
   Button, Navigation and Content. Clicking a circle expands only that group into a
   preset panel. The raw public widget registry is no longer dumped into the

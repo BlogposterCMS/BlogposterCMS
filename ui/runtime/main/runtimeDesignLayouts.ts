@@ -18,7 +18,13 @@ export function normalizeRuntimeDesignWidget(
   widget: LooseRecord = {}
 ): RuntimeDesignLayoutItem | null {
   if (!widget || typeof widget !== 'object') return null;
-  const meta = parseMetadata(widget.metadata);
+  const widgetCode = widget.code && typeof widget.code === 'object' && !Array.isArray(widget.code)
+    ? widget.code as LooseRecord
+    : {};
+  const meta = {
+    ...parseMetadata(widgetCode.metadata ?? widgetCode.meta),
+    ...parseMetadata(widget.metadata)
+  };
   const layer = widget.layer ?? widget.zIndex ?? widget.z_index;
   const rotation = widget.rotationDeg ?? widget.rotation_deg;
   const opacity = widget.opacity ?? meta.opacity;
@@ -28,7 +34,7 @@ export function normalizeRuntimeDesignWidget(
     ?? meta.elementName ?? meta.element_name ?? meta.name;
 
   return {
-    id: widget.instance_id || widget.instanceId,
+    id: widget.instance_id || widget.instanceId || widget.id,
     widgetId: widget.widget_id || widget.widgetId,
     xPercent: widget.x_percent ?? widget.xPercent,
     yPercent: widget.y_percent ?? widget.yPercent,
@@ -49,11 +55,12 @@ export function normalizeRuntimeDesignWidget(
     effects: normalizeEffects(widget.effects ?? meta.effects),
     zIndex: widget.zIndex ?? widget.z_index ?? widget.layer ?? meta.zIndex ?? meta.z_index,
     code: {
-      html: widget.html,
-      css: widget.css,
-      js: widget.js,
+      ...widgetCode,
+      ...(widget.html !== undefined ? { html: widget.html } : {}),
+      ...(widget.css !== undefined ? { css: widget.css } : {}),
+      ...(widget.js !== undefined ? { js: widget.js } : {}),
       meta,
-      metadata: widget.metadata,
+      metadata: widget.metadata ?? widgetCode.metadata,
     },
   };
 }

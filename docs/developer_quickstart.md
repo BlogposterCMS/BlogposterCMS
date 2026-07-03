@@ -39,10 +39,12 @@ First follow the [Installation](installation.md) guide if you have not yet set u
    ```
    The server listens on the port configured in `.env` (default `3000`). Visit
    `http://localhost:3000/` to access the CMS.
-   During local non-production setup, `DEV_AUTOLOGIN=true` lets the first-run
-   installer prefill the default `admin` / `123` development account and allows
-   that weak password from loopback requests. Set `DEV_AUTOLOGIN=false` when you
-   want to exercise the strict login and install forms locally.
+   During local non-production setup, `DEV_AUTOLOGIN=true` lets `/login` and
+   protected admin routes issue a local dev session for `DEV_USER` (default
+   `admin`) when that user exists. It also lets the first-run installer prefill
+   the default `admin` / `123` development account and allows that weak password
+   from loopback requests. Set `DEV_AUTOLOGIN=false` when you want to exercise
+   the strict login and install forms locally.
    In development, console output is also mirrored into human-readable files
    under `logs/dev/`: `server.log` for all server messages, `errors.log` for
    warnings/errors, and `requests.log` for HTTP method, path, status and

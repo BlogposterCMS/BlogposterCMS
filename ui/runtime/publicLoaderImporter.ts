@@ -6,6 +6,12 @@ interface PublicLoaderModule {
   registerLoaders?: (register: typeof LR.register) => void;
 }
 
+const DESIGNER_LIVE_PREVIEW_RUNTIME_PATH = '/ui/designer/app/renderer/livePreviewRuntime.js';
+
+export async function importDesignerLivePreviewRuntime(): Promise<void> {
+  await import(/* webpackIgnore: true */ DESIGNER_LIVE_PREVIEW_RUNTIME_PATH);
+}
+
 export async function tryImportPublicLoader(src: string): Promise<boolean> {
   const paths = getPublicLoaderPaths(src);
   if (!paths.length) return false;

@@ -6,6 +6,104 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Moved Design Studio Scenes out of the primary sidebar rail and into a canvas
+  storyboard rail with direct scene selection, rename, ordering and add/delete
+  controls exposed through the existing agent feedback snapshot.
+- Changed Design Studio canvas editing to use 1px horizontal units instead of a
+  12-column editing grid, while keeping percent bounds as the saved/runtime
+  geometry contract and adding canvas edge/center plus equal-spacing smart snap
+  guides.
+- Fixed saved Design Studio design hydration so loaded widgets keep their
+  persisted percent bounds before CanvasGrid registration, preventing text boxes
+  from appearing tiny until a resize handle is clicked.
+- Changed the Design Studio Publish button into a Publishing panel entry that
+  stays available in the header, lists linked public pages and the current
+  published bundle, and stores the saved `designId` on published pages.
+- Fixed the Settings admin surface so its Update Center helper imports the
+  Modules data helper with a browser-loadable `.js` module path.
+- Fixed the Design Studio stage scrollbar so it stays on the fixed viewport
+  edge while the canvas zoom sizer handles centering.
+- Improved the Design Studio Layers panel so selecting a layer selects the
+  canvas widget, scrolls it into view when needed, and exposes inline
+  forward/backward stacking controls.
+- Changed the Home workspace into a lightweight first-run entry point by
+  seeding Getting Started, Page Stats and Content Summary widgets, restyling
+  the Home cards with Studio tokens, retiring older default Roadmap/Drag Demo
+  seed widgets on reseed, and softening those demo widgets for existing custom
+  layouts.
+- Renamed the Design Studio sidebar's user-facing Sections panel labels to
+  Scenes so the rail no longer implies vertical page scroll sections or layout
+  layers.
+- Fixed the Design Studio sidebar flyout so clicking the active rail button or
+  the canvas outside the sidebar closes and visually hides the open panel.
+- Removed the redundant Design Studio topbar tool strip and moved the remaining
+  Scroll/Action behavior shortcuts into the existing sidebar rail.
+- Changed Design Studio Live Preview to load the real public page route with
+  `?designer-live-preview=1` and removed the standalone legacy preview shell.
+- Added a trusted GitHub module updater that checks configured releases,
+  verifies ZIP SHA-256 sidecars, reviews new requested access before install,
+  health-checks the update package, swaps module folders with backup/rollback,
+  and exposes update badges/actions in the Modules admin UI.
+- Added a Settings > Update Center surface for checking installed community
+  module update sources and installing available GitHub release updates from
+  one admin screen.
+- Fixed the Design Studio builder header so the app-frame Back control remains
+  visibly available as the leftmost exit action.
+- Added a safe module modification indicator: module registry responses now
+  mark non-empty `data/module-overrides/<module>` folders, and the Modules UI
+  shows a red `Modification` badge beside affected modules.
+- Added a Design Studio Live Preview frame that renders the current unsaved
+  design through the public Runtime renderer with desktop/tablet/mobile
+  viewport switches and agent-readable preview status.
+- Fixed the Design Studio Live Preview close action so the X button tears down
+  the isolated public Runtime frame instead of leaving a stale hidden preview
+  in the editor DOM.
+- Fixed Design Studio Live Preview rendering parity by normalizing stored
+  design/global layout entries before rendering them in the isolated public
+  Runtime frame.
+- Added Design Studio object snap guides so dragged widgets can align to
+  nearby visible widget edges or centers, with the transient guide state
+  exposed in the existing agent feedback snapshot.
+- Fixed Design Studio snap-guide interactions so text widget hit layers no
+  longer override CanvasGrid positioning, resize handles remain usable, and
+  object guides no longer pull the live drag preview away from the pointer.
+- Fixed Design Studio selection chrome layering so resize handles and outlines
+  are no longer clipped at editable canvas edges, while scene viewport guides
+  fade behind active selections.
+- Restyled the PlainSpace Page Stats widget with stable label/value markup,
+  dashboard Studio typography tokens, and a searchable missing-emitter render
+  error code.
+- Added a Page Management-style create action to Content > Collections that
+  creates public collection parent pages through the Pages facade with
+  `meta.isCollection`.
+- Removed Navigation Studio panel shadows and moved its editor cards to a local
+  shadowless card utility with grey 2px bordered and borderless variants.
+- Fixed Design Studio publishing so newly created pages receive the saved
+  viewport thumbnail in their page metadata instead of only storing the layout
+  reference.
+- Moved the Settings entry into the top-header account menu and removed it from
+  the dashboard workspace-actions navigation.
+- Made the Content workspace pages-first by reusing the existing Page List and
+  Page Stats widgets ahead of the secondary Content Summary, with the seed
+  action metadata aligned to page creation.
+- Changed the Content > Design Studio layout browser to the exclusive page-slot
+  workspace contract so it fills the surface like Media Explorer and Navigation
+  Studio instead of rendering as a half-width dashboard card.
+- Changed the Content > Layouts template browser to the same exclusive
+  page-slot workspace contract so it also opens as a dedicated full-surface
+  admin tool.
+- Fixed page-slot dashboard workspaces so full-surface widgets no longer keep
+  the normal dashboard bottom padding and empty page scroll below the widget.
+- Removed visible hover borders from top-header project, search and account
+  controls while keeping their existing hover surface feedback.
+- Fixed admin sidebar shadow rendering by keeping the sidebar above content and
+  reserving a right-side bleed gutter so circular navigation button shadows can
+  paint beside the content edge.
+- Fixed top-header account dropdown layering so the menu stays above dashboard
+  widgets instead of being clipped by the next content panel.
+- Aligned the public login shell with the dashboard Studio token contract by
+  removing the login-only dotted background, gradient submit button and rotating
+  accent animation while keeping the existing auth form behavior.
 - Removed the remaining active pre-v1 contracts: direct app bridge aliases now
   use only `cms-app-runtime-*`, public loader layout sharing uses explicit
   context instead of a window global, PlainSpace public mirror folders are gone,
@@ -33,6 +131,9 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
   public canvas that preserves saved percent bounds, stacks safely on narrow
   screens, passes seed instance metadata into first-party public widgets, and
   emits a ready signal for agent/browser preview checks.
+- Fixed local development auto-login so `/login`, `/admin/home` and
+  `/admin/app/*` can issue a server-side dev admin session for `DEV_USER`
+  instead of relying on the stored password still matching `admin` / `123`.
 - Documented the Event-First Transport Boundary decision: Blogposter keeps an
   event-first core, treats HTTP as adapter/facade infrastructure, and should
   migrate new browser/app/widget work toward resource/action runtime facades

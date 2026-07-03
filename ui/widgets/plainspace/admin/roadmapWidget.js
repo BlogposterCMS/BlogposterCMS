@@ -3,15 +3,14 @@ export async function render(el) {
         return;
     el.innerHTML = `
     <div class="home-roadmap-widget">
-      <h3>Roadmap</h3>
-      <p>With this update we focused on user friendliness and overhauled the dashboard, but this is just the first step.</p>
-      <ul>
-        <li>All widgets will be revised in upcoming updates.</li>
-        <li>Refined permission settings in the dashboard.</li>
-        <li>Continue fixing all known bugs.</li>
-        <li>Add more functions to the designer app (builder).</li>
-        <li>Expand SMTP functionality.</li>
-        <li>Improve user feedback within the dashboard.</li>
+      <p class="home-widget-kicker">Launch checklist</p>
+      <h3>Make the site feel ready</h3>
+      <p class="home-widget-copy">These checks stay inside the existing Blogposter workflow and help new editors move from a blank install to a usable site.</p>
+      <ul class="home-check-list">
+        <li>Create or import the first public page.</li>
+        <li>Connect a layout or Design Studio draft.</li>
+        <li>Upload the first real image or document.</li>
+        <li>Publish only after page status and navigation look correct.</li>
       </ul>
     </div>
   `;

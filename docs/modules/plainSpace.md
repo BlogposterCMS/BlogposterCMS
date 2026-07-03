@@ -26,6 +26,15 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
   Icons set in `config.icon` are copied to `meta.icon` during seeding and
   used by the dashboard navigation; if `meta.icon` is missing the
   navigator falls back to `config.icon`.
+- The built-in Content workspace is pages-first: it reuses the existing
+  Page List and Page Stats widgets before the secondary Content Summary so
+  editors can see and manage public pages immediately from `/admin/content`.
+  Page Stats keeps its data loading in `pageStatsData` and renders stable
+  label/value classes so the dashboard card can be styled without changing the
+  lane-summary contract.
+- Content > Collections uses the same Pages create facade as Page Management:
+  new collections are public parent pages with `meta.isCollection: true`, so
+  collection editing and child-page rendering stay on the page hierarchy.
 - Seed pages can define their dashboard shell through `config.layout`; the
   seeder copies that object to `meta.layout` for new and existing seed pages.
   Use `layout.sidebar: 'empty-sidebar'` for detail/editor pages such as the
@@ -62,7 +71,10 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
   more space.
 - The `page` slot is exclusive: if a page-sized admin tool is present, it owns
   the dashboard surface by itself. Use it for full-page workspaces such as Media
-  Explorer or Navigation Studio.
+  Explorer, Navigation Studio, the Layouts template browser or the Design Studio
+  layout browser. The admin shell suppresses the normal dashboard minimum
+  height and footer padding for these page-slot widgets so overflow remains
+  inside the widget instead of creating empty scroll space below the workspace.
 - `seedAdminWidget` strips layout keys from module seed defaults. Layout belongs
   in registry metadata and page `widgetSlots`, while widget instances store only
   real render defaults.
@@ -72,7 +84,12 @@ Seeds default admin pages and widgets and handles multi-viewport layouts used by
   height come only from the registry contract.
 - Default admin widgets are seeded with explicit metadata contracts and page
   `widgetSlots`.
-- The Home workspace now seeds widgets that highlight what's coming next and a draggable demo.
+- The Home workspace now opens as a lightweight first-run entry point. Its seed
+  uses the existing Getting Started, Page Stats and Content Summary widgets so
+  new users can create a page, open Design Studio and continue with media or
+  recent content without a separate onboarding system. It also declares
+  `retiredWidgets` for the older Roadmap and Drag Demo seed widgets so reseeding
+  can remove those defaults while preserving unrelated custom Home widgets.
 
 - Widgets can be marked as **global** in the builder. A global widget shares its
   `instanceId` across pages so editing it updates every occurrence.
@@ -155,11 +172,13 @@ Widget `content` values are browser URLs. New seeds should use
 `/ui/widgets/plainspace/*`. The active bundled widget source lives under
 `ui/widgets/plainspace/`; community widgets use `/widgets/{folder}/widget.js`.
 
-The default Media page seeds `mediaExplorer` as a page-slot admin widget. The
-widget itself is only a PlainSpace mount point; folder browsing, upload,
-share-link creation, rename and delete are provided by the shared Explorer
-surface in `ui/shared/media/` so the shell picker and global media modal can
-reuse the same Media Manager integration.
+The default Media page seeds `mediaExplorer` as a page-slot admin widget, and
+the default Layouts and Design Studio pages seed `layoutTemplates` and
+`designerLayouts` the same way so these browsers own the workspace instead of
+appearing as half-width cards. The Media widget itself is only a PlainSpace
+mount point; folder browsing, upload, share-link creation, rename and delete
+are provided by the shared Explorer surface in `ui/shared/media/` so the shell
+picker and global media modal can reuse the same Media Manager integration.
 
 Seed files run without validation; only load admin seeds from trusted modules.
 Community seeds that need default render data can still pass non-layout

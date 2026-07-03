@@ -73,6 +73,33 @@ describe('runtimeDesignLayouts', () => {
     }).map(item => item.id)).toEqual(['a', 'b']);
   });
 
+  it('preserves design-document placement ids and code payloads', () => {
+    expect(normalizeRuntimeDesignWidget({
+      id: 'preview-1',
+      widgetId: 'text',
+      xPercent: 0,
+      yPercent: 0,
+      wPercent: 100,
+      hPercent: 20,
+      code: {
+        html: '<h1>Preview</h1>',
+        css: '.preview{}',
+        meta: { sceneId: 'hero' }
+      }
+    })).toMatchObject({
+      id: 'preview-1',
+      widgetId: 'text',
+      xPercent: 0,
+      wPercent: 100,
+      sceneId: 'hero',
+      code: {
+        html: '<h1>Preview</h1>',
+        css: '.preview{}',
+        meta: { sceneId: 'hero' }
+      }
+    });
+  });
+
   it('applies safe design surface styles', () => {
     const target = document.createElement('section');
 

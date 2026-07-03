@@ -13,7 +13,8 @@ function resolveAssetPath(assetPath) {
 }
 const DEFAULT_WORKSPACE_ICON = resolveAssetPath('assets/icons/file-box.svg');
 const DEFAULT_SUBPAGE_ICON = resolveAssetPath('assets/icons/file.svg');
-const DETACHED_WORKSPACE_ACTION_SLUGS = new Set(['settings']);
+const ACCOUNT_MENU_WORKSPACE_SLUGS = new Set(['settings']);
+const DASHBOARD_WORKSPACE_ACTION_SLUGS = new Set();
 let iconListPromise = null;
 let fetchPromise = null;
 let lastRenderSignature = null;
@@ -48,8 +49,13 @@ function compareWeight(a, b) {
     const bw = typeof b.weight === 'number' ? b.weight : 0;
     return aw - bw;
 }
-function isDetachedWorkspaceAction(page) {
-    return DETACHED_WORKSPACE_ACTION_SLUGS.has(page.slug);
+function isAccountMenuWorkspace(page) {
+    // Settings is still a workspace route, but its dashboard entry point is the
+    // account menu so the main workspace nav stays focused on content workspaces.
+    return ACCOUNT_MENU_WORKSPACE_SLUGS.has(page.slug);
+}
+function isDashboardWorkspaceAction(page) {
+    return DASHBOARD_WORKSPACE_ACTION_SLUGS.has(page.slug);
 }
 async function fetchAdminPages() {
     if (cachedPages) {
@@ -110,7 +116,7 @@ function buildWorkspaces(nav, pages, adminBase, workspaceSlug) {
     fragment.append(createBtn);
     pages
         .filter(page => page.lane === ADMIN_LANE && page.meta?.workspace === page.slug)
-        .filter(page => !isDetachedWorkspaceAction(page))
+        .filter(page => !isAccountMenuWorkspace(page) && !isDashboardWorkspaceAction(page))
         .sort(compareWeight)
         .forEach(page => {
         const anchor = document.createElement('a');
@@ -137,7 +143,7 @@ function buildWorkspaceActions(nav, pages, adminBase, workspaceSlug) {
     const fragment = document.createDocumentFragment();
     pages
         .filter(page => page.lane === ADMIN_LANE && page.meta?.workspace === page.slug)
-        .filter(isDetachedWorkspaceAction)
+        .filter(isDashboardWorkspaceAction)
         .sort(compareWeight)
         .forEach(page => {
         const anchor = document.createElement('a');

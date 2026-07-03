@@ -162,7 +162,7 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/layoutTemplatesWidget.js',
     category: 'core',
     metadata: {
-      layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull),
+      layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
       apiActions: [
         apiAction('plainSpace', 'layoutTemplateNames'),
         apiAction('pages', 'byLane'),
@@ -177,7 +177,7 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/designerLayoutsWidget.js',
     category: 'core',
     metadata: {
-      layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull),
+      layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
       apiActions: [
         apiAction('designer', 'list')
       ]
@@ -282,7 +282,7 @@ module.exports.DEFAULT_WIDGETS = [
   {
     widgetId: 'roadmapIntro',
     widgetType: ADMIN_LANE,
-    label: 'Roadmap Intro',
+    label: 'Getting Started',
     content: '/ui/widgets/plainspace/admin/roadmapIntroWidget.js',
     category: 'core',
     metadata: {
@@ -293,7 +293,7 @@ module.exports.DEFAULT_WIDGETS = [
   {
     widgetId: 'roadmapUpcoming',
     widgetType: ADMIN_LANE,
-    label: 'Roadmap',
+    label: 'Launch Checklist',
     content: '/ui/widgets/plainspace/admin/roadmapWidget.js',
     category: 'core',
     metadata: {
@@ -304,7 +304,7 @@ module.exports.DEFAULT_WIDGETS = [
   {
     widgetId: 'dragbarDemo',
     widgetType: ADMIN_LANE,
-    label: 'Drag Demo',
+    label: 'Arrange Dashboard',
     content: '/ui/widgets/plainspace/admin/dragInfoWidget.js',
     category: 'core',
     metadata: {

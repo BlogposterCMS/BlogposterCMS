@@ -86,6 +86,18 @@ and `TMP` may also be passed so the child process can start.
   belong under `apps/`, widgets belong under `widgets/`, and each module folder
   owns exactly one module manifest even if somebody copies files directly into
   `modules/`.
+- Marks non-empty `data/module-overrides/<moduleName>` folders as local module
+  modifications in registry and system-module responses. These user-owned
+  folders are only an explicit modification signal for the admin UI until a
+  dedicated overlay resolver consumes them; backend entry files, manifests,
+  package manager files, host folders and symlinks are reported with
+  `E_MODULE_MODIFICATION_*` errors instead of being silently treated as safe.
+- Updates installed community modules from an explicit `trustedUpdateSource`
+  in the registry metadata. The updater fetches GitHub release assets through
+  the Module Loader, requires a matching ZIP plus SHA-256 sidecar, optionally
+  verifies a signature when a public key is configured, reuses the installer
+  validation policy, compares permission/access diffs, runs a health check and
+  swaps the managed module folder with a backup for rollback.
 - `activateModuleInRegistry` uses the same process health check and runtime
   process path as startup, so registry activation cannot bypass runtime
   boundaries.
@@ -105,6 +117,10 @@ and `TMP` may also be passed so the child process can start.
 - `listSystemModules`
 - `inspectModuleZipAccess`
 - `installModuleFromZip`
+- `checkModuleUpdates`
+- `inspectModuleUpdate`
+- `installModuleUpdate`
+- `setModuleUpdateSource`
 - `activateModuleInRegistry`
 - `deactivateModuleInRegistry`
 - `listPendingModuleAccessRequests`
@@ -224,3 +240,62 @@ permission keys. The health check still fails closed for unapproved core
 events, while later runtime attempts use the one-time admin approval queue.
 Always review third-party code before installing it, and add OS/container
 isolation before treating Marketplace code as fully untrusted production input.
+
+## Module Updates
+
+Managed module code is updated through the same validation path as ZIP
+installation. Local user-owned overrides live separately under
+`data/module-overrides/<moduleName>` and are not touched by the updater.
+
+An installed module may declare or receive a registry-owned update source:
+
+```json
+{
+  "trustedUpdateSource": {
+    "provider": "github",
+    "owner": "acme",
+    "repo": "shop-sync",
+    "assetPattern": "shopSync-*.zip",
+    "sha256AssetPattern": "shopSync-*.zip.sha256",
+    "releaseChannel": "stable",
+    "publicKey": null,
+    "enabled": true
+  }
+}
+```
+
+The updater supports GitHub releases only. Stable sources ignore prereleases;
+`releaseChannel: "prerelease"` allows prerelease assets. Each release must
+publish a ZIP asset that matches `assetPattern` and a sidecar named either
+`<zip-name>.sha256` or matching `sha256AssetPattern`. If `publicKey` is set,
+the release must also publish `<zip-name>.sig` or an asset matching
+`signatureAssetPattern`; the signature is verified over the ZIP bytes.
+
+Update checks are exposed through Runtime Manager's admin facade:
+
+- `modules.checkUpdates` lists configured modules and reports whether a newer
+  GitHub release asset is available.
+- `modules.inspectUpdate` downloads the candidate, verifies its hash/signature
+  and reports the same manifest/access data as ZIP inspection plus
+  `newPermissions`, `newRequestedAccess` and `requiresAdminApproval`.
+- `modules.installUpdate` requires admin approval when the update asks for new
+  core access. It extracts to `temp_uploads/module-updates`, health-checks the
+  package, backs up the existing folder under `data/module-backups`, swaps the
+  new folder into `modules/<moduleName>`, writes update metadata into the
+  registry and reloads active modules.
+- `modules.setUpdateSource` stores a normalized GitHub source on the registry
+  manifest. It does not download or install code.
+
+The Modules admin list still shows per-module update badges/actions beside the
+existing activation controls. Settings > Update Center provides the consolidated
+admin surface for checking all installed community modules, seeing source/check
+state and installing available updates from one screen.
+
+The package must keep the same `moduleInfo.moduleName` and declare a newer
+semantic version. Downgrades, module-name mismatches, missing hashes, hash
+mismatches, forbidden files, host folders, symlinks, package manifests and
+permission/access policy violations fail closed with `E_MODULE_UPDATE_*` or the
+existing installer error code. If folder swapping fails after the old module
+was moved aside, the updater restores the previous folder before surfacing
+`E_MODULE_UPDATE_SWAP_FAILED`; a failed restore uses
+`E_MODULE_UPDATE_ROLLBACK_FAILED`.

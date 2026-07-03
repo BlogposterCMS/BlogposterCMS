@@ -1,9 +1,8 @@
-import { presetColors } from '../../shared/controls/colorPicker.js';
 import { readLoginCredentials, writeLoginCredentials } from './loginData.js';
 
 const loginForm = document.getElementById('loginForm') as HTMLFormElement | null;
 const loginError = document.getElementById('loginError');
-const togglePassword = document.getElementById('togglePassword');
+const togglePassword = document.getElementById('togglePassword') as HTMLButtonElement | null;
 const allowWeak = document.querySelector<HTMLMetaElement>('meta[name="allow-weak-creds"]')?.content === 'true';
 const devAutologin = document.querySelector<HTMLMetaElement>('meta[name="dev-autologin"]')?.content === 'true';
 const devUser = document.querySelector<HTMLMetaElement>('meta[name="dev-user"]')?.content || 'admin';
@@ -32,7 +31,12 @@ togglePassword?.addEventListener('click', () => {
   if (!pwd) return;
   const isText = pwd.type === 'text';
   pwd.type = isText ? 'password' : 'text';
-  togglePassword.textContent = isText ? 'Show' : 'Hide';
+  const label = isText ? 'Show password' : 'Hide password';
+  togglePassword.classList.toggle('is-password-visible', !isText);
+  togglePassword.setAttribute('aria-label', label);
+  togglePassword.setAttribute('title', label);
+  const labelEl = togglePassword.querySelector<HTMLElement>('.password-toggle__label');
+  if (labelEl) labelEl.textContent = label;
 });
 
 loginForm?.addEventListener('submit', async e => {
@@ -76,14 +80,3 @@ if (loginForm && devAutologin && allowWeak) {
   writeLoginCredentials(form, { username: devUser, password: '123' });
   form.dispatchEvent(new Event('submit'));
 }
-
-const root = document.documentElement;
-let colorIndex = 0;
-function cycleAccentColor(): void {
-  const color = presetColors[colorIndex % presetColors.length] || '#008080';
-  root.style.setProperty('--user-color', color);
-  colorIndex += 1;
-}
-
-cycleAccentColor();
-setInterval(cycleAccentColor, 5000);

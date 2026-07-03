@@ -1,4 +1,5 @@
 import { errorMessage, fetchDesignSettings, fetchGeneralSettings, fetchSecuritySettings, fetchSeoSettings, pickMediaShareUrl, saveAllowRegistration, saveFaviconUrl, saveGeneralSettings, saveGoogleFontsApiKey, saveMaintenanceSettings, saveSeoSettings } from './settingsPanelsData.js';
+import { approvedAccessDescriptors, fetchUpdateCenterRows, inspectUpdateCenterRow, installUpdateCenterRow, updateCenterRowLabel, updateInspectionLabel, updateInstallVersion } from './updateCenterData.js';
 const EMBEDDED_WIDGET_PANEL_PATHS = {
     modules: '/ui/widgets/plainspace/admin/modulesListWidget.js',
     providers: '/ui/widgets/plainspace/admin/loginStrategiesWidget.js',
@@ -62,6 +63,96 @@ function createTabSystem(container, tabsHost) {
         return panel;
     };
     return { addTab };
+}
+function dialogApi() {
+    return window.bpDialog || null;
+}
+async function alertError(message) {
+    const dialog = dialogApi();
+    if (dialog?.alert) {
+        await dialog.alert(message, { title: 'Error' });
+        return;
+    }
+    alert(message);
+}
+async function confirmSimple(title, message, confirmLabel) {
+    const dialog = dialogApi();
+    if (dialog?.confirm) {
+        return await dialog.confirm(message, { title, confirmLabel, cancelLabel: 'Cancel' });
+    }
+    return confirm(message);
+}
+function makeBadge(text, tone = 'neutral') {
+    const badge = document.createElement('span');
+    badge.className = `module-access-badge module-access-badge--${tone}`;
+    badge.textContent = text;
+    return badge;
+}
+function accessLabel(access) {
+    return access.resource && access.action
+        ? `${access.resource}.${access.action}`
+        : access.event || '';
+}
+function buildUpdateAccessReviewBody(accessList) {
+    const body = document.createElement('div');
+    body.className = 'module-access-review';
+    const section = document.createElement('div');
+    section.className = 'module-access-section';
+    const title = document.createElement('strong');
+    title.textContent = 'New core access';
+    section.appendChild(title);
+    accessList.forEach(access => {
+        const label = document.createElement('label');
+        label.className = 'module-access-option';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = access.allowPermanent !== false && access.protected !== true;
+        checkbox.disabled = access.allowPermanent === false || access.protected === true;
+        checkbox.dataset.moduleAccessKey = accessLabel(access);
+        const text = document.createElement('span');
+        text.textContent = accessLabel(access);
+        label.append(checkbox, text);
+        if (access.reason) {
+            const reason = document.createElement('small');
+            reason.textContent = access.reason;
+            label.appendChild(reason);
+        }
+        section.appendChild(label);
+    });
+    body.appendChild(section);
+    return body;
+}
+async function reviewUpdateAccess(inspection) {
+    const newAccess = Array.isArray(inspection.newRequestedAccess)
+        ? inspection.newRequestedAccess
+        : [];
+    if (!newAccess.length)
+        return [];
+    const dialog = dialogApi();
+    if (!dialog?.open) {
+        const message = newAccess.map(accessLabel).join(', ');
+        return confirm(`Update requests new core access:\n\n${message}`)
+            ? approvedAccessDescriptors(newAccess)
+            : null;
+    }
+    const body = buildUpdateAccessReviewBody(newAccess);
+    const result = await dialog.open({
+        kind: 'warning',
+        title: `Update ${updateInspectionLabel(inspection)}`,
+        message: 'Review new core access before installing this update.',
+        body,
+        dismissable: true,
+        actions: [
+            { id: 'cancel', label: 'Cancel' },
+            { id: 'confirm', label: 'Install update', variant: 'primary' }
+        ]
+    });
+    if (result.action !== 'confirm')
+        return null;
+    const selected = new Set(Array.from(body.querySelectorAll('input[data-module-access-key]'))
+        .filter(input => input.checked)
+        .map(input => input.dataset.moduleAccessKey || ''));
+    return approvedAccessDescriptors(newAccess.filter(access => selected.has(accessLabel(access))));
 }
 async function renderGeneral(ctx) {
     const shell = createShell('General Settings', 'Core site identity and default metadata.');
@@ -294,6 +385,121 @@ async function renderModules(ctx) {
     await renderEmbeddedWidgetPanel(providersPanel, 'providers');
     ctx.el.replaceChildren(shell.root);
 }
+async function renderUpdateRows(mount, status, ctx) {
+    mount.textContent = 'Checking module updates...';
+    const rows = await fetchUpdateCenterRows(ctx.meltdownEmit, ctx.jwt);
+    mount.innerHTML = '';
+    if (!rows.length) {
+        const empty = document.createElement('p');
+        empty.className = 'settings-hint';
+        empty.textContent = 'No installed community modules found.';
+        mount.appendChild(empty);
+        return;
+    }
+    const availableCount = rows.filter(row => row.available).length;
+    const summary = document.createElement('p');
+    summary.className = 'settings-hint';
+    summary.textContent = availableCount
+        ? `${availableCount} module update${availableCount === 1 ? '' : 's'} available.`
+        : 'All configured module update sources are current.';
+    const list = document.createElement('ul');
+    list.className = 'modules-list page-list';
+    rows.forEach(row => {
+        list.appendChild(renderUpdateRow(row, status, mount, ctx));
+    });
+    mount.append(summary, list);
+}
+function renderUpdateRow(row, status, mount, ctx) {
+    const item = document.createElement('li');
+    const details = document.createElement('div');
+    details.className = 'module-details';
+    const nameRow = document.createElement('div');
+    nameRow.className = 'module-name-row';
+    const name = document.createElement('span');
+    name.className = 'module-name';
+    name.textContent = updateCenterRowLabel(row);
+    const badge = makeBadge(row.statusLabel, row.statusTone);
+    if (row.updateStatus?.errorMessage) {
+        badge.title = row.updateStatus.errorMessage;
+    }
+    const actions = document.createElement('span');
+    actions.className = 'module-actions';
+    const updateButton = document.createElement('button');
+    updateButton.type = 'button';
+    updateButton.className = 'module-toggle-btn';
+    updateButton.textContent = 'Update';
+    updateButton.hidden = !row.available;
+    updateButton.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        updateButton.disabled = true;
+        const rowLabel = updateCenterRowLabel(row);
+        status.textContent = `Inspecting ${rowLabel} update...`;
+        try {
+            const inspection = await inspectUpdateCenterRow(ctx.meltdownEmit, ctx.jwt, row);
+            let approvedAccess = [];
+            if (inspection.requiresAdminApproval) {
+                const reviewed = await reviewUpdateAccess(inspection);
+                if (reviewed === null) {
+                    status.textContent = 'Update cancelled.';
+                    return;
+                }
+                approvedAccess = reviewed;
+            }
+            else if (!await confirmSimple(`Update ${rowLabel}`, `Install update ${updateInstallVersion(row, inspection)}?`, 'Update')) {
+                status.textContent = 'Update cancelled.';
+                return;
+            }
+            status.textContent = `Installing ${rowLabel} update...`;
+            await installUpdateCenterRow(ctx.meltdownEmit, ctx.jwt, row, approvedAccess);
+            status.textContent = `${rowLabel} update installed.`;
+            await renderUpdateRows(mount, status, ctx);
+        }
+        catch (err) {
+            status.textContent = `Update failed: ${errorMessage(err)}`;
+            await alertError(`Update failed: ${errorMessage(err)}`);
+        }
+        finally {
+            updateButton.disabled = false;
+        }
+    });
+    actions.appendChild(updateButton);
+    nameRow.append(name, badge, actions);
+    const meta = document.createElement('div');
+    meta.className = 'module-meta';
+    meta.textContent = row.latestVersion && row.latestVersion !== row.currentVersion
+        ? `${row.meta} -> v${row.latestVersion}`
+        : row.meta;
+    details.append(nameRow, meta);
+    item.appendChild(details);
+    return item;
+}
+async function renderUpdates(ctx) {
+    const shell = createShell('Update Center', 'GitHub release updates for installed community modules.');
+    const tabs = createTabSystem(shell.content, shell.tabs);
+    const updatesPanel = tabs.addTab('Module updates');
+    const refresh = document.createElement('button');
+    refresh.type = 'button';
+    refresh.className = 'button ghost sm';
+    refresh.textContent = 'Check updates';
+    const rowsMount = document.createElement('div');
+    rowsMount.className = 'modules-list-mount';
+    refresh.addEventListener('click', async () => {
+        refresh.disabled = true;
+        try {
+            await renderUpdateRows(rowsMount, shell.status, ctx);
+            shell.status.textContent = 'Update check completed.';
+        }
+        catch (err) {
+            shell.status.textContent = `Update check failed: ${errorMessage(err)}`;
+        }
+        finally {
+            refresh.disabled = false;
+        }
+    });
+    updatesPanel.append(refresh, rowsMount);
+    ctx.el.replaceChildren(shell.root);
+    await renderUpdateRows(rowsMount, shell.status, ctx);
+}
 async function renderUsersAccess(ctx) {
     const shell = createShell('Users & Access', 'User accounts, roles and registration flow.');
     const tabs = createTabSystem(shell.content, shell.tabs);
@@ -324,6 +530,7 @@ const SURFACE_RENDERERS = {
     seo: renderSeo,
     security: renderSecurity,
     modules: renderModules,
+    updates: renderUpdates,
     'users-access': renderUsersAccess,
     'import-export': renderImportExport
 };

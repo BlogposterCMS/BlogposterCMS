@@ -1,5 +1,6 @@
 import { createAgentControlClient, createAgentSurfaceClient, SURFACE_AGENT_ACTIONS } from '/ui/shared/agent/agentSurfaceClient.js';
 import { capturePreview } from './renderer/capturePreview.js';
+import { livePreviewFeedbackState } from './renderer/livePreviewFrame.js';
 const SURFACE_ID = 'studio.designer';
 const APP_NAME = 'designer';
 const VISUAL_CAPTURE_MIN_INTERVAL_MS = 7000;
@@ -19,34 +20,34 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     },
     {
         action: 'scene.next',
-        label: 'Next section',
+        label: 'Next scene',
         category: 'scene',
-        description: 'Selects the next section on the stage.'
+        description: 'Selects the next scene on the stage.'
     },
     {
         action: 'scene.prev',
-        label: 'Previous section',
+        label: 'Previous scene',
         category: 'scene',
-        description: 'Selects the previous section on the stage.'
+        description: 'Selects the previous scene on the stage.'
     },
     {
         action: 'scene.add',
-        label: 'Add section',
+        label: 'Add scene',
         category: 'scene',
-        description: 'Creates a new section and makes it active.'
+        description: 'Creates a new scene and makes it active.'
     },
     {
         action: 'scene.select',
-        label: 'Select section',
+        label: 'Select scene',
         category: 'scene',
-        description: 'Selects a section by id.',
+        description: 'Selects a scene by id.',
         params: [{ name: 'sceneId', type: 'string', required: true }]
     },
     {
         action: 'scene.update',
-        label: 'Update section',
+        label: 'Update scene',
         category: 'scene',
-        description: 'Renames a section or changes its background.',
+        description: 'Renames a scene or changes its background.',
         params: [
             { name: 'sceneId', type: 'string', required: false },
             { name: 'title', type: 'string', required: false },
@@ -346,6 +347,55 @@ function visualFeedbackState(visual) {
         previewBytes: Number(visual.previewDataUrl ? String(visual.previewDataUrl).length : visual.previewBytes || 0)
     };
 }
+function snapGuideFeedback() {
+    const grid = document.getElementById('workspaceMain') ||
+        document.querySelector('.builder-grid, .canvas-grid');
+    const guideElements = Array.from(document.querySelectorAll('.canvas-snap-guide'));
+    return {
+        enabled: grid instanceof HTMLElement ? grid.dataset.objectSnapGuides === 'true' : false,
+        liveMagnet: grid instanceof HTMLElement ? grid.dataset.objectSnapLiveMagnet === 'true' : false,
+        active: guideElements.length > 0,
+        activeCount: guideElements.length,
+        tolerance: grid instanceof HTMLElement ? Number(grid.dataset.objectSnapTolerance || 0) || null : null,
+        guides: guideElements.map((guide, index) => ({
+            id: `snap-guide-${index + 1}`,
+            role: 'snap-guide',
+            kind: guide.dataset.snapGuide || 'object',
+            guideKind: guide.dataset.snapGuideKind || null,
+            axis: guide.dataset.snapGuideAxis || null,
+            sourceId: guide.dataset.snapGuideSource || null,
+            secondarySourceId: guide.dataset.snapGuideSecondarySource || null,
+            sourceKind: guide.dataset.snapGuideSourceKind || null,
+            targetKind: guide.dataset.snapGuideTargetKind || null,
+            spacing: Number(guide.dataset.snapGuideSpacing || 0) || null,
+            bounds: elementBounds(guide)
+        }))
+    };
+}
+function publishingFeedbackState() {
+    const panel = document.getElementById('publishPanel');
+    const trigger = document.getElementById('publishLayoutBtn');
+    const usageItems = Array.from(panel?.querySelectorAll('.publish-usage-item') || []);
+    return {
+        available: Boolean(panel),
+        open: Boolean(panel && !panel.classList.contains('hidden') && panel.getAttribute('aria-hidden') !== 'true'),
+        triggerVisible: Boolean(trigger && trigger.offsetParent !== null),
+        triggerLabel: trigger?.getAttribute('aria-label') || textOf(trigger, 'Publish'),
+        title: textOf(panel?.querySelector('.publish-title') ?? null, 'Publishing'),
+        activeSlug: (panel?.querySelector('.publish-slug-input')?.value || '').trim() || null,
+        usageStatus: textOf(panel?.querySelector('.publish-usage-status') ?? null),
+        usageCount: usageItems.length,
+        pageUsageCount: usageItems.filter(item => item.dataset.usageKind === 'Page').length,
+        bundlePublished: usageItems.some(item => item.dataset.usageKind === 'Bundle'),
+        usages: usageItems.map((item, index) => ({
+            id: `publication-usage-${index + 1}`,
+            kind: item.dataset.usageKind || null,
+            label: textOf(item.querySelector('strong'), textOf(item)),
+            detail: textOf(item.querySelector('small')),
+            href: item instanceof HTMLAnchorElement ? item.getAttribute('href') : null
+        }))
+    };
+}
 function designerFeedbackWarnings(visual, layoutNodes, widgets) {
     const warnings = [];
     const hasLayoutRoot = Boolean(document.getElementById('layoutRoot'));
@@ -410,7 +460,10 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
             structuredSnapshot: true,
             commandPort: !warnings.some(warning => warning.code === 'DESIGNER_AGENT_FEEDBACK_NO_COMMAND_PORT'),
             visualPreview: Boolean(visual.available),
-            stableBounds: true
+            runtimeLivePreview: true,
+            stableBounds: true,
+            objectSnapGuides: true,
+            publishingCenter: true
         },
         viewport: {
             width: window.innerWidth,
@@ -434,6 +487,9 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
         widgetPlacements,
         styleSources: styleSourceRelationships(layoutNodes, widgetPlacements),
         selection: selectionState(),
+        snapGuides: snapGuideFeedback(),
+        livePreview: livePreviewFeedbackState(),
+        publishing: publishingFeedbackState(),
         visual: visualFeedbackState(visual),
         warnings
     };
@@ -501,7 +557,7 @@ function sectionNodes() {
         return {
             id: sceneId,
             role: 'section',
-            label: textOf(section.querySelector('.scene-section-title'), `Section ${index + 1}`),
+            label: textOf(section.querySelector('.scene-section-title'), `Scene ${index + 1}`),
             active: section.classList.contains('active'),
             meta: {
                 number: textOf(section.querySelector('.scene-section-number'), String(index + 1)),
@@ -524,7 +580,7 @@ function layerNodes() {
             label: textOf(layer.querySelector('.scene-layer-title'), textOf(layer, `Layer ${index + 1}`)),
             active: layer.classList.contains('scene-layer-item--active'),
             meta: {
-                ...datasetOf(layer, ['widgetId', 'behavior', 'sceneId']),
+                ...datasetOf(layer, ['widgetInstanceId', 'widgetId', 'behavior', 'sceneId', 'layer', 'zIndex']),
                 range: canvasItem ? rangeOf(canvasItem) : null,
                 effects,
                 effectCount: effects.length,
@@ -566,11 +622,46 @@ function availableControls() {
             disabled: button.hasAttribute('disabled')
         });
     });
-    document.querySelectorAll('[data-tool]').forEach(button => {
+    document.querySelectorAll('[data-scene-storyboard-item]').forEach((item, index) => {
+        const sceneId = item.dataset.sceneId || `scene-${index + 1}`;
         controls.push({
-            id: `tool.${button.dataset.tool}`,
-            role: 'insert-tool',
-            label: button.getAttribute('aria-label') || textOf(button, button.dataset.tool || '')
+            id: `scene.${sceneId}.select`,
+            role: 'scene-storyboard-command',
+            label: textOf(item.querySelector('.scene-section-title'), `Scene ${index + 1}`),
+            active: item.classList.contains('active'),
+            meta: {
+                ...datasetOf(item, ['sceneId']),
+                number: textOf(item.querySelector('.scene-section-number'), String(index + 1))
+            }
+        });
+    });
+    document.querySelectorAll('[data-scene-storyboard-item] [data-section-action]').forEach((button, index) => {
+        const item = button.closest('[data-scene-storyboard-item]');
+        controls.push({
+            id: `scene.${item?.dataset.sceneId || index}.${button.dataset.sectionAction}`,
+            role: 'scene-storyboard-command',
+            label: button.getAttribute('aria-label') || textOf(button, button.dataset.sectionAction || ''),
+            disabled: button.hasAttribute('disabled'),
+            meta: {
+                ...datasetOf(button, ['sectionAction']),
+                scene: item ? datasetOf(item, ['sceneId']) : {}
+            }
+        });
+    });
+    document.querySelectorAll('[data-insert-group]').forEach(button => {
+        controls.push({
+            id: `insert.${button.dataset.insertGroup}`,
+            role: 'insert-group',
+            label: button.getAttribute('aria-label') || textOf(button, button.dataset.insertGroup || ''),
+            active: button.classList.contains('active') || button.getAttribute('aria-expanded') === 'true'
+        });
+    });
+    document.querySelectorAll('[data-designer-tool]').forEach(button => {
+        controls.push({
+            id: `tool.${button.dataset.designerTool}`,
+            role: 'designer-tool',
+            label: button.getAttribute('aria-label') || textOf(button, button.dataset.designerTool || ''),
+            active: button.classList.contains('active') || button.getAttribute('aria-pressed') === 'true'
         });
     });
     document.querySelectorAll('[data-stage-behavior]').forEach(button => {
@@ -579,6 +670,28 @@ function availableControls() {
             role: 'behavior-command',
             label: button.getAttribute('aria-label') || textOf(button, button.dataset.stageBehavior || ''),
             active: button.classList.contains('active')
+        });
+    });
+    const publishButton = document.getElementById('publishLayoutBtn');
+    if (publishButton) {
+        controls.push({
+            id: 'publishing.open',
+            role: 'publication-center-command',
+            label: publishButton.getAttribute('aria-label') || textOf(publishButton, 'Publish'),
+            disabled: publishButton.hasAttribute('disabled')
+        });
+    }
+    document.querySelectorAll('[data-layer-action]').forEach((button, index) => {
+        const layer = button.closest('.scene-layer-item');
+        controls.push({
+            id: `layer.${layer?.dataset.widgetInstanceId || index}.${button.dataset.layerAction}`,
+            role: 'layer-order-command',
+            label: button.getAttribute('aria-label') || textOf(button, button.dataset.layerAction || ''),
+            disabled: button.hasAttribute('disabled'),
+            meta: {
+                ...datasetOf(button, ['layerAction']),
+                layer: layer ? datasetOf(layer, ['widgetInstanceId', 'widgetId', 'sceneId', 'layer', 'zIndex']) : {}
+            }
         });
     });
     return controls;
@@ -660,7 +773,7 @@ export async function buildDesignerAgentSnapshot(context = { reason: 'manual' })
             {
                 id: 'sections',
                 role: 'section-list',
-                label: 'Sections',
+                label: 'Scenes',
                 children: sections
             },
             {
@@ -727,7 +840,19 @@ function handleInsertCommand(command) {
     const direct = clickFirst(`[data-empty-insert="${cssEscape(type)}"]`);
     if (direct)
         return { handled: true, via: 'empty-state' };
-    return { handled: clickFirst(`[data-tool="${cssEscape(type)}"]`), via: 'topbar-tool' };
+    const preset = clickFirst(`[data-insert-preset="${cssEscape(type)}"]`);
+    if (preset)
+        return { handled: true, via: 'insert-preset' };
+    const nativeElement = clickFirst(`[data-native-element="${cssEscape(type)}"]`);
+    if (nativeElement)
+        return { handled: true, via: 'native-element' };
+    const group = clickFirst(`[data-insert-group="${cssEscape(type)}"]`);
+    if (group)
+        return { handled: true, via: 'insert-group' };
+    const designerTool = clickFirst(`[data-designer-tool="${cssEscape(type)}"]`);
+    if (designerTool)
+        return { handled: true, via: 'sidebar-tool' };
+    return { handled: false, reason: 'insert-target-not-found', type };
 }
 function handleElementCommand(action, command) {
     if (action === 'element.select') {

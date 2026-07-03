@@ -1,45 +1,75 @@
 // @ts-nocheck
 import { init as initCanvasGrid } from '/ui/runtime/main/canvasGrid.js';
+const DEFAULT_PIXEL_CANVAS_WIDTH = 1200;
+function measurableWidth(el) {
+    if (!el)
+        return 0;
+    const styleWidth = (() => {
+        try {
+            return parseFloat(getComputedStyle(el).width) || 0;
+        }
+        catch {
+            return 0;
+        }
+    })();
+    const rectWidth = (() => {
+        try {
+            return el.getBoundingClientRect?.().width || 0;
+        }
+        catch {
+            return 0;
+        }
+    })();
+    return el.clientWidth || styleWidth || rectWidth || 0;
+}
+function pixelColumnCount(containerEl, gridEl) {
+    const width = measurableWidth(containerEl) || measurableWidth(gridEl) || DEFAULT_PIXEL_CANVAS_WIDTH;
+    return Math.max(1, Math.round(width));
+}
 export function initGrid(gridEl, state, selectWidget, opts = {}) {
-    const columnCount = 12;
     // Determine the scroll container: prefer explicit option, otherwise
     // use the grid's parent element. This allows zoom to keep scrollbars
     // inside the designer viewport instead of the page.
     const scrollContainer = opts.scrollContainer || gridEl.parentElement || gridEl;
     const enableZoom = opts.enableZoom === true;
+    const columnCount = pixelColumnCount(scrollContainer, gridEl);
     const grid = initCanvasGrid({
         columns: columnCount,
+        columnWidth: 1,
         rows: Infinity,
         pushOnOverlap: false,
         liveSnap: false,
         liveSnapResize: false,
+        objectSnapGuides: true,
+        canvasSnapGuides: true,
+        objectSnapTolerance: 6,
+        pixelColumns: true,
         percentageMode: true,
         bboxHandles: true,
         scrollContainer,
         enableZoom
     }, gridEl);
     gridEl.__grid = grid;
+    function syncPixelColumns() {
+        const nextColumns = pixelColumnCount(scrollContainer, gridEl);
+        grid.options.columns = nextColumns;
+        grid.options.columnWidth = 1;
+        grid._lastColumnWidth = 1;
+        grid.refreshMetrics?.();
+        grid.widgets?.forEach?.(w => grid.update(w, {}, { silent: true }));
+    }
     let cwRAF = null;
     function setColumnWidth() {
-        // Recalculate based on the element's clientWidth to ignore any
-        // CSS transforms (e.g. panel-open scales the #content). Using
-        // getBoundingClientRect() would include transforms and produce
-        // incorrect column widths.
+        // Design Studio edits on a 1px horizontal unit. Percent bounds remain the
+        // saved contract; columns only mirror the current editable canvas width.
         if (cwRAF)
             return;
         cwRAF = requestAnimationFrame(() => {
             cwRAF = null;
-            const containerEl = scrollContainer || gridEl;
-            const width = containerEl.clientWidth ||
-                // Fallback to computed style if clientWidth is 0 (detached?)
-                parseFloat(getComputedStyle(containerEl).width) ||
-                // Last resort
-                (containerEl.getBoundingClientRect().width || 1);
-            grid.options.columnWidth = width / grid.options.columns;
-            // Trigger a silent update so widgets re-render to the new width
-            grid.widgets.forEach(w => grid.update(w, {}, { silent: true }));
+            syncPixelColumns();
         });
     }
+    syncPixelColumns();
     setColumnWidth();
     window.addEventListener('resize', setColumnWidth);
     // Also observe direct size changes of the grid container (e.g. sidebar toggles).

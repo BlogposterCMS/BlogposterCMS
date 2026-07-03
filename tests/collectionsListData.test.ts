@@ -8,6 +8,8 @@ jest.mock('../ui/widgets/plainspace/admin/defaultwidgets/collectionsList/collect
 
 import {
   buildCollectionsPayload,
+  buildCreateCollectionPayload,
+  createCollection,
   deriveCollections,
   errorMessage,
   fetchCollections,
@@ -74,7 +76,8 @@ describe('collectionsListData', () => {
 
   it('renders collections as a table instead of a design-only list', () => {
     const host = document.createElement('div');
-    renderCollectionsList(host, deriveCollections(pages()));
+    const onCreateCollection = jest.fn();
+    renderCollectionsList(host, deriveCollections(pages()), { onCreateCollection });
 
     expect(host.querySelector('ul')).toBeNull();
     expect(host.querySelector('table.collections-list-table')).not.toBeNull();
@@ -88,6 +91,13 @@ describe('collectionsListData', () => {
     ]);
     expect(host.querySelectorAll('tbody tr.collections-list-row')).toHaveLength(2);
     expect(host.querySelectorAll('table.collections-list-table > tbody > tr.collections-list-row .collections-list-actions a')).toHaveLength(4);
+
+    const addButton = host.querySelector<HTMLImageElement>('.add-collection-btn');
+    expect(addButton?.getAttribute('src')).toBe('/assets/icons/plus.svg');
+    expect(addButton?.getAttribute('title')).toBe('Add new collection');
+    expect(host.querySelector('.collections-list-inline-error')?.getAttribute('role')).toBe('alert');
+    addButton?.click();
+    expect(onCreateCollection).toHaveBeenCalledTimes(1);
   });
 
   it('expands collection rows to show child pages', () => {
@@ -130,6 +140,38 @@ describe('collectionsListData', () => {
       action: 'byLane',
       params: { lane: 'public' }
     });
+  });
+
+  it('builds public collection page create payloads and returns the created page id', async () => {
+    const expectedPayload = {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'pages',
+      action: 'create',
+      params: {
+        title: 'Landing',
+        slug: 'landing',
+        lane: 'public',
+        status: 'published',
+        parent_id: null,
+        meta: { isCollection: true }
+      }
+    };
+    const emit = jest.fn(async () => ({ data: { pageId: 9 } }));
+
+    expect(buildCreateCollectionPayload('admin-token', { title: ' Landing ', slug: 'landing' }))
+      .toEqual(expectedPayload);
+    await expect(createCollection(emit, 'admin-token', { title: ' Landing ', slug: 'landing' }))
+      .resolves.toBe(9);
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expectedPayload);
+  });
+
+  it('fails with a searchable code when collection creation does not return a page id', async () => {
+    const emit = jest.fn(async () => ({ data: {} }));
+
+    await expect(createCollection(emit, 'admin-token', { title: 'Landing', slug: 'landing' }))
+      .rejects.toThrow('PLAINSPACE_COLLECTIONS_CREATED_PAGE_ID_UNAVAILABLE');
   });
 
   it('fails with a searchable code when the emitter is unavailable', async () => {

@@ -66,6 +66,10 @@ PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
 - Item `meta` carries UI-layer details such as icon, desktop/mobile
   visibility, and optional Mega Menu references. These fields do not make the
   menu a page or move menu design ownership away from the theme.
+- The Studio chrome uses its own shadowless local card utility:
+  `navigation-studio__card` is borderless by default, while
+  `navigation-studio__card--bordered` adds the grey 2px panel border used by
+  the editor surface.
 
 ## Notes
 - Navigation URLs must be internal paths/fragments/queries, plain relative paths

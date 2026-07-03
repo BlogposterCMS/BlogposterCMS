@@ -214,6 +214,10 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
     deactivate: { eventName: 'deactivateModuleInRegistry', moduleName: 'moduleLoader', permission: 'modules.deactivate' },
     inspectZip: { eventName: 'inspectModuleZipAccess', moduleName: 'moduleLoader', permission: 'modules.install' },
     installZip: { eventName: 'installModuleFromZip', moduleName: 'moduleLoader', permission: 'modules.install' },
+    checkUpdates: { eventName: 'checkModuleUpdates', moduleName: 'moduleLoader', permission: 'modules.list' },
+    inspectUpdate: { eventName: 'inspectModuleUpdate', moduleName: 'moduleLoader', permission: 'modules.install' },
+    installUpdate: { eventName: 'installModuleUpdate', moduleName: 'moduleLoader', permission: 'modules.install' },
+    setUpdateSource: { eventName: 'setModuleUpdateSource', moduleName: 'moduleLoader', permission: 'modules.install' },
     accessRequests: { eventName: 'listPendingModuleAccessRequests', moduleName: 'moduleLoader', permission: 'modules.manageAccess' },
     resolveAccessRequest: { eventName: 'resolveModuleAccessRequest', moduleName: 'moduleLoader', permission: 'modules.manageAccess' }
   },

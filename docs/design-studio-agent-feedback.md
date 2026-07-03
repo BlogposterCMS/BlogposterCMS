@@ -22,11 +22,35 @@ The feedback block is versioned and should expose:
   and widget placements.
 - `selection`: selected object id, widget id, scene id, behavior/range/effect
   data and visible bounds.
+- `snapGuides`: whether object, canvas and equal-spacing snap guides are
+  enabled, whether live movement uses magnetic snapping, current active guide
+  count, tolerance, source ids, spacing distance and transient guide bounds
+  while a drag is in progress.
+- `livePreview`: whether the public-page Runtime preview frame is open, which
+  viewport it renders, its frame URL and whether it is loading, ready or in an
+  error state.
+- `publishing`: whether the Publishing panel is available/open, its active slug,
+  usage status, page usage count, published-bundle state and visible usage
+  entries.
 - `viewport` and `visual`: viewport size, device pixel ratio and optional
   stage-preview metadata.
 - `warnings`: searchable `DESIGNER_AGENT_FEEDBACK_*` entries when a structured
   adapter, command port, layout root, bounds signal or visual preview is
   missing.
+
+The snapshot tree keeps the stable `sections` id for compatibility, but the
+user-facing label is `Scenes`. These entries represent storyboard-style Design
+Studio scenes, not the LayoutTree's structural page sections. The visible
+authoring surface for these entries is the canvas storyboard rail; Scene chips
+and their rename/reorder/delete controls are exposed as
+`scene-storyboard-command` controls so agents do not need to infer them from the
+sidebar.
+Layer rows expose `widgetInstanceId`, widget id, scene id and `zIndex`
+metadata, plus `layer-order-command` controls for the visible forward/backward
+stacking actions in the Layers panel.
+The header Publish button is exposed as a `publication-center-command`; the
+visible Publishing panel state is mirrored in the feedback `publishing` block
+instead of requiring agents to scrape the sidebar.
 
 ## Contributor Checklist
 

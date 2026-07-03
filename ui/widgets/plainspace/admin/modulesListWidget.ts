@@ -1,14 +1,22 @@
 import {
   errorMessage,
   fetchModuleLists,
+  fetchModuleUpdateStatuses,
   fetchPendingModuleAccessRequests,
   inspectModuleZip,
+  inspectModuleUpdate,
+  installModuleUpdate,
   installModuleZip,
+  mergeModuleUpdateStatuses,
   type ModuleAccessRequest,
   type ModuleAccessRuntimeRequest,
   type ModuleInfo,
   type ModuleRecord,
+  type ModuleUpdateInspection,
   type ModuleZipInspection,
+  moduleHasModification,
+  moduleHasUpdate,
+  moduleUpdateStatus,
   renderModuleMeta,
   toggleModuleRegistryActivation,
   zipDataFromDataUrl
@@ -47,6 +55,14 @@ function accessEventLabel(access: ModuleAccessRequest): string {
   const event = access.event || '';
   const resource = access.resource && access.action ? `${access.resource}.${access.action}` : '';
   return resource ? `${event} (${resource})` : event;
+}
+
+function approvedAccessDescriptor(access: ModuleAccessRequest): ModuleAccessRequest | null {
+  if (!access.resource || !access.action) return null;
+  return {
+    resource: access.resource,
+    action: access.action
+  };
 }
 
 function buildAccessReviewBody(info: ModuleZipInspection | ModuleInfo, checkedEvents = new Set<string>()): HTMLDivElement {
@@ -163,7 +179,9 @@ async function reviewModuleAccess(
   const dialog = dialogApi();
 
   if (!dialog?.open) {
-    return confirm(`${title}\n\n${message}`) ? requestedAccess : null;
+    return confirm(`${title}\n\n${message}`)
+      ? requestedAccess.map(approvedAccessDescriptor).filter((access): access is ModuleAccessRequest => Boolean(access))
+      : null;
   }
 
   const result = await dialog.open({
@@ -182,7 +200,10 @@ async function reviewModuleAccess(
   const selectedEvents = new Set(Array.from(body.querySelectorAll<HTMLInputElement>('input[data-module-access-event]'))
     .filter(input => input.checked)
     .map(input => input.value));
-  return requestedAccess.filter(access => selectedEvents.has(access.event || ''));
+  return requestedAccess
+    .filter(access => selectedEvents.has(access.event || ''))
+    .map(approvedAccessDescriptor)
+    .filter((access): access is ModuleAccessRequest => Boolean(access));
 }
 
 function moduleInfoFromRecord(moduleRecord: ModuleRecord): ModuleInfo {
@@ -212,6 +233,40 @@ function makeBadge(text: string, tone = 'neutral'): HTMLSpanElement {
   const badge = document.createElement('span');
   badge.className = `module-access-badge module-access-badge--${tone}`;
   badge.textContent = text;
+  return badge;
+}
+
+function moduleModificationFromRecord(moduleRecord: ModuleRecord): ModuleInfo['modification'] {
+  const info = moduleInfoFromRecord(moduleRecord);
+  return moduleRecord.modification || info.modification;
+}
+
+function makeModificationBadge(moduleRecord: ModuleRecord): HTMLSpanElement {
+  const badge = makeBadge('Modification', 'danger');
+  const modification = moduleModificationFromRecord(moduleRecord);
+  if (modification?.valid === false) {
+    const code = modification.errorCode || 'E_MODULE_MODIFICATION_INVALID';
+    badge.title = `${code}: ${modification.errorMessage || 'Invalid module modification'}`;
+  } else if (modification?.path) {
+    badge.title = modification.path;
+  }
+  return badge;
+}
+
+function makeUpdateBadge(moduleRecord: ModuleRecord): HTMLSpanElement {
+  const update = moduleUpdateStatus(moduleRecord);
+  const label = update?.latestVersion ? `Update v${update.latestVersion}` : 'Update available';
+  const badge = makeBadge(label, 'warning');
+  if (update?.release?.name || update?.asset?.name) {
+    badge.title = [update.release?.name, update.asset?.name].filter(Boolean).join(' - ');
+  }
+  return badge;
+}
+
+function makeUpdateErrorBadge(moduleRecord: ModuleRecord): HTMLSpanElement {
+  const update = moduleUpdateStatus(moduleRecord);
+  const badge = makeBadge('Update check failed', 'danger');
+  badge.title = update?.errorMessage || update?.errorCode || 'MODULE_UPDATE_CHECK_FAILED';
   return badge;
 }
 
@@ -251,6 +306,20 @@ function appendAccessRows(
   });
 }
 
+function inspectionForNewUpdateAccess(inspection: ModuleUpdateInspection): ModuleUpdateInspection {
+  const newRequestedAccess = Array.isArray(inspection.newRequestedAccess)
+    ? inspection.newRequestedAccess
+    : [];
+  return {
+    ...inspection,
+    requestedAccess: newRequestedAccess,
+    moduleInfo: {
+      ...(inspection.moduleInfo || {}),
+      requestedAccess: newRequestedAccess
+    }
+  };
+}
+
 function renderModuleDetail(moduleRecord: ModuleRecord | null, pendingAccess: ModuleAccessRuntimeRequest[], isSystem = false): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'module-detail-panel';
@@ -278,6 +347,14 @@ function renderModuleDetail(moduleRecord: ModuleRecord | null, pendingAccess: Mo
   const statusRow = document.createElement('div');
   statusRow.className = 'module-detail-status-row';
   statusRow.appendChild(makeBadge(isSystem ? 'System' : moduleRecord.is_active ? 'Active' : 'Inactive', isSystem || moduleRecord.is_active ? 'ok' : 'neutral'));
+  if (moduleHasModification(moduleRecord)) {
+    statusRow.appendChild(makeModificationBadge(moduleRecord));
+  }
+  if (moduleHasUpdate(moduleRecord)) {
+    statusRow.appendChild(makeUpdateBadge(moduleRecord));
+  } else if (moduleUpdateStatus(moduleRecord)?.status === 'error') {
+    statusRow.appendChild(makeUpdateErrorBadge(moduleRecord));
+  }
   if (modulePending.length) {
     statusRow.appendChild(makeBadge(`${modulePending.length} pending`, 'warning'));
   }
@@ -366,10 +443,12 @@ export async function render(el: HTMLElement | null): Promise<void> {
   if (!el) return;
 
   try {
-    const [{ installed, system }, pendingAccess] = await Promise.all([
+    const [{ installed: installedRows, system }, pendingAccess, updateStatuses] = await Promise.all([
       fetchModuleLists(meltdownEmit, jwt),
-      fetchPendingModuleAccessRequests(meltdownEmit, jwt).catch(() => [])
+      fetchPendingModuleAccessRequests(meltdownEmit, jwt).catch(() => []),
+      fetchModuleUpdateStatuses(meltdownEmit, jwt).catch(() => [])
     ]);
+    const installed = mergeModuleUpdateStatuses(installedRows, updateStatuses);
 
     const card = document.createElement('div');
     card.className = 'modules-list-card page-list-card';
@@ -460,6 +539,38 @@ export async function render(el: HTMLElement | null): Promise<void> {
         const actions = document.createElement('span');
         actions.className = 'module-actions';
 
+        const updateBtn = document.createElement('button');
+        updateBtn.className = 'module-toggle-btn';
+        updateBtn.textContent = 'Update';
+        updateBtn.hidden = !moduleHasUpdate(moduleRecord);
+        updateBtn.addEventListener('click', async event => {
+          event.stopPropagation();
+          try {
+            const inspection = await inspectModuleUpdate(meltdownEmit, jwt, name);
+            let approvedAccess: ModuleAccessRequest[] = [];
+            if (inspection.requiresAdminApproval) {
+              const reviewed = await reviewModuleAccess(
+                `Update ${name}`,
+                `Review new core access before updating from v${inspection.currentVersion || info.version || '?'} to v${inspection.latestVersion || inspection.moduleInfo?.version || '?'}.`,
+                inspectionForNewUpdateAccess(inspection),
+                'Update'
+              );
+              if (reviewed === null) return;
+              approvedAccess = reviewed;
+            } else if (!await confirmSimple(
+              `Update ${name}`,
+              `Install update ${inspection.latestVersion || inspection.moduleInfo?.version || ''}?`,
+              'Update'
+            )) {
+              return;
+            }
+            await installModuleUpdate(meltdownEmit, jwt, name, approvedAccess);
+            window.location.reload();
+          } catch (err) {
+            await alertError(`Update failed: ${errorMessage(err)}`);
+          }
+        });
+
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'module-toggle-btn';
         toggleBtn.textContent = moduleRecord.is_active ? 'Deactivate' : 'Activate';
@@ -490,8 +601,14 @@ export async function render(el: HTMLElement | null): Promise<void> {
           }
         });
 
-        actions.appendChild(toggleBtn);
+        actions.append(updateBtn, toggleBtn);
         nameRow.appendChild(nameEl);
+        if (moduleHasModification(moduleRecord)) {
+          nameRow.appendChild(makeModificationBadge(moduleRecord));
+        }
+        if (moduleHasUpdate(moduleRecord)) {
+          nameRow.appendChild(makeUpdateBadge(moduleRecord));
+        }
         nameRow.appendChild(actions);
 
         const meta = document.createElement('div');
@@ -539,6 +656,9 @@ export async function render(el: HTMLElement | null): Promise<void> {
         nameEl.textContent = name;
 
         nameRow.appendChild(nameEl);
+        if (moduleHasModification(moduleRecord)) {
+          nameRow.appendChild(makeModificationBadge(moduleRecord));
+        }
 
         const meta = document.createElement('div');
         meta.className = 'module-meta';

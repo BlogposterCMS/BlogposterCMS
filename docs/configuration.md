@@ -16,7 +16,7 @@ Key variables to review:
 | `AUTH_MODULE_INTERNAL_SECRET` | Shared secret used by the auth module when issuing tokens. |
 | `TOKEN_SALT_HIGH` etc. | Additional salts used to derive secrets per trust level. |
 | `ALLOW_REGISTRATION` | If `true`, users may self-register via the public event. |
-| `DEV_AUTOLOGIN` | Local development auto-login for loopback dashboard and API requests. Defaults on outside production; set to `false` to force the login form and strict first-install credentials. |
+| `DEV_AUTOLOGIN` | Local development auto-login for loopback dashboard, login and API requests. Defaults on outside production; set to `false` to force the login form and strict first-install credentials. |
 | `DEV_USER` | Username used for development auto-login. Defaults to `admin` when omitted. |
 | `DEV_AGENT_LOGIN` | Localhost-only agent token helper for Codex/automation clients. Defaults on outside production; set to `false` to disable it. |
 | `ALLOW_WEAK_CREDS` | Optional explicit override for the local `admin`/`123` dev bootstrap. Local non-production requests also allow it while `DEV_AUTOLOGIN` is enabled. Never use it in production. |

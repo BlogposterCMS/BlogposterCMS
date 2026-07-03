@@ -1,6 +1,21 @@
 import { orchestrate } from './envelope/orchestrator.js';
-import { loadPublicRuntimeLoaders } from './publicLoaderImporter.js';
+import { importDesignerLivePreviewRuntime, loadPublicRuntimeLoaders } from './publicLoaderImporter.js';
 import { emitRuntimePublic } from '../shared/api-client/runtimeFacade.js';
+const DESIGNER_LIVE_PREVIEW_QUERY = 'designer-live-preview';
+function hasDesignerLivePreviewQuery() {
+    try {
+        return new URLSearchParams(window.location.search).has(DESIGNER_LIVE_PREVIEW_QUERY);
+    }
+    catch {
+        return false;
+    }
+}
+async function bootDesignerLivePreviewRuntime() {
+    if (!hasDesignerLivePreviewQuery())
+        return false;
+    await importDesignerLivePreviewRuntime();
+    return true;
+}
 function getMeltdownEmit() {
     const emit = window.meltdownEmit;
     if (typeof emit !== 'function') {
@@ -18,6 +33,8 @@ async function ensureToken() {
     }
 }
 export async function bootPublicRuntime() {
+    if (await bootDesignerLivePreviewRuntime())
+        return;
     await ensureToken();
     const emit = getMeltdownEmit();
     let slug = location.pathname.replace(/^\/+/, '') || '';

@@ -26,10 +26,11 @@ describe('mediaExplorerSurface', () => {
 
   it('renders a full media management surface and navigates folders', async () => {
     const emit = jest.fn(async (eventName, payload) => {
-      if (eventName === 'listLocalFolder' && payload.subPath === '') {
+      const route = `${payload.resource}.${payload.action}`;
+      if (eventName === 'cmsAdminApiRequest' && route === 'media.listLocalFolder' && payload.params.subPath === '') {
         return { folders: ['images'], files: ['logo.png'], parentPath: '', currentPath: '' };
       }
-      if (eventName === 'listLocalFolder' && payload.subPath === 'images') {
+      if (eventName === 'cmsAdminApiRequest' && route === 'media.listLocalFolder' && payload.params.subPath === 'images') {
         return { folders: [], files: ['hero.png'], parentPath: '', currentPath: 'images' };
       }
       return {};
@@ -46,21 +47,24 @@ describe('mediaExplorerSurface', () => {
     surface.element.querySelector<HTMLButtonElement>('.media-item.folder .media-item__main')?.click();
     await tick();
 
-    expect(emit).toHaveBeenCalledWith('listLocalFolder', expect.objectContaining({
-      moduleName: 'mediaManager',
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      subPath: 'images'
+      resource: 'media',
+      action: 'listLocalFolder',
+      params: { subPath: 'images' }
     }));
     expect(surface.element.textContent).toContain('hero.png');
   });
 
   it('uses picker mode to return a shared file selection', async () => {
     const onSelectFile = jest.fn();
-    const emit = jest.fn(async eventName => {
-      if (eventName === 'listLocalFolder') {
+    const emit = jest.fn(async (eventName, payload) => {
+      const route = `${payload.resource}.${payload.action}`;
+      if (eventName === 'cmsAdminApiRequest' && route === 'media.listLocalFolder') {
         return { folders: [], files: ['hero.png'], parentPath: '', currentPath: 'public' };
       }
-      if (eventName === 'createShareLink') {
+      if (eventName === 'cmsAdminApiRequest' && route === 'shares.create') {
         return { shareURL: '/media/share/abc', shortToken: 'abc' };
       }
       return {};
@@ -79,10 +83,12 @@ describe('mediaExplorerSurface', () => {
     surface.element.querySelector<HTMLButtonElement>('.media-item.file .media-item__main')?.click();
     await tick();
 
-    expect(emit).toHaveBeenCalledWith('createShareLink', expect.objectContaining({
-      moduleName: 'shareManager',
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      filePath: 'public/hero.png'
+      resource: 'shares',
+      action: 'create',
+      params: { filePath: 'public/hero.png' }
     }));
     expect(onSelectFile).toHaveBeenCalledWith({
       shareURL: '/media/share/abc',

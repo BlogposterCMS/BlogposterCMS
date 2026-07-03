@@ -80,7 +80,8 @@ modules/
   ],
   "requestedAccess": [
     {
-      "event": "listContentEntries",
+      "resource": "content",
+      "action": "list",
       "reason": "Show existing content entries in the module UI"
     }
   ]
@@ -150,7 +151,11 @@ If the module declared and the admin approved this:
 ```json
 {
   "requestedAccess": [
-    { "event": "listContentEntries", "reason": "Show content entries" }
+    {
+      "resource": "content",
+      "action": "list",
+      "reason": "Show content entries"
+    }
   ]
 }
 ```
@@ -223,6 +228,52 @@ For ZIP installation:
 6. Only approved events become permanent runtime grants.
 7. Anything not permanently granted uses the one-time approval flow before
    the host may allow that exact core event call.
+
+## Updating From GitHub
+
+Installed community modules can opt into the Module Loader update path with a
+trusted GitHub release source in `moduleInfo.json` or in the registry metadata:
+
+```json
+{
+  "trustedUpdateSource": {
+    "provider": "github",
+    "owner": "your-org",
+    "repo": "hello-module",
+    "assetPattern": "helloModule-*.zip",
+    "sha256AssetPattern": "helloModule-*.zip.sha256",
+    "releaseChannel": "stable",
+    "publicKey": null,
+    "enabled": true
+  }
+}
+```
+
+Each release must include one ZIP matching `assetPattern` and one SHA-256
+sidecar named `<zip-name>.sha256` or matching `sha256AssetPattern`. If a
+`publicKey` is configured, also publish a signature sidecar named
+`<zip-name>.sig` or matching `signatureAssetPattern`; it is verified against
+the ZIP bytes.
+
+The update package is installed only through the normal module installer
+policy: same `moduleName`, newer version, no forbidden host files, permission
+diff review, health check, backup and rollback. If the update requests new
+core access, the Modules admin UI requires an admin review before installation.
+Admins can check and install configured module updates from Settings > Update
+Center or from the individual module row in Settings > Modules.
+
+## Local Modification Indicator
+
+If an installation contains files under `data/module-overrides/<moduleName>`,
+the Modules admin page marks that module with a red `Modification` badge. This
+folder is user-owned and is never overwritten by the module ZIP installer.
+
+Treat the badge as an explicit local-change warning, not as permission to patch
+backend module code in place. Backend entry files such as `index.js`, manifests
+such as `moduleInfo.json`, package manager files, host folders and symlinks are
+reported as unsafe `E_MODULE_MODIFICATION_*` entries. Use the normal module ZIP
+install/update path for code changes so validation, permission review and
+health checks still run.
 
 ## What Not To Put In A Module
 

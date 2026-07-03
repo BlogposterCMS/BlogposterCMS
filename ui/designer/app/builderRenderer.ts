@@ -30,6 +30,11 @@ import { getWidgetIcon } from './renderer/renderUtils.js';
 import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
 import { createBuilderHeader } from './renderer/builderHeader';
 import { createPreviewHeader } from './renderer/previewHeader.js';
+import {
+  buildLivePreviewFrameUrl,
+  buildLivePreviewPayload,
+  createLivePreviewController
+} from './renderer/livePreviewFrame.js';
 import { buildLayoutBar } from './renderer/layoutBar.js';
 import { normalizeSceneRange, rangeFromPointer } from './renderer/sceneRangeControls';
 import { createLayoutStructureHandlers } from './renderer/layoutStructureHandlers.js';
@@ -217,11 +222,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     { id: 'instant', title: 'Instant' }
   ];
   const sceneInspector = ensureSceneInspector();
-  const SIDEBAR_PANEL_NAMES = new Set(['insert', 'sections', 'layers', 'layout']);
+  const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layers', 'layout']);
+  const SIDEBAR_TOOL_NAMES = new Set(['scroll', 'action']);
   const SIDEBAR_PANEL_BY_SELECTOR = [
     { selector: 'layout-panel', panel: 'layout' },
     { selector: 'layer-preview', panel: 'layers' },
-    { selector: 'scene-map', panel: 'sections' },
     { selector: 'element-library', panel: 'insert' },
     { selector: 'scene-insert-group', panel: 'insert' },
     { selector: 'scene-insert-preset', panel: 'insert' },
@@ -242,6 +247,35 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     sidebarEl.querySelectorAll('[data-insert-group-panel]').forEach(panel => {
       panel.classList.remove('is-active');
       panel.hidden = true;
+    });
+  }
+
+  function isSidebarFlyoutOpen() {
+    return sidebarEl.dataset.sidebarFlyoutOpen === 'true';
+  }
+
+  function setSidebarFlyoutOpen(open) {
+    const flyout = sidebarEl.querySelector('[data-sidebar-flyout]');
+    const shouldOpen = Boolean(open);
+    sidebarEl.dataset.sidebarFlyoutOpen = shouldOpen ? 'true' : 'false';
+    sidebarEl.classList.toggle('builder-sidebar--flyout-open', shouldOpen);
+    if (flyout) {
+      flyout.hidden = !shouldOpen;
+      flyout.style.display = shouldOpen ? '' : 'none';
+      flyout.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+    }
+  }
+
+  function closeSidebarPanel(options = {}) {
+    if (!options.preserveInsertGroup) collapseInsertGroup();
+    setSidebarFlyoutOpen(false);
+    sidebarEl.querySelectorAll('[data-sidebar-panel]').forEach(panel => {
+      panel.classList.remove('is-active');
+      panel.hidden = true;
+    });
+    sidebarEl.querySelectorAll('[data-sidebar-panel-target]').forEach(button => {
+      button.classList.remove('active');
+      button.setAttribute('aria-selected', 'false');
     });
   }
 
@@ -270,6 +304,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const activePanel = normalizeSidebarPanel(panelName);
     const shell = sidebarEl.querySelector('.scene-panel-shell');
     sidebarEl.dataset.activeSidebarPanel = activePanel;
+    setSidebarFlyoutOpen(true);
     sidebarEl.classList.toggle('builder-sidebar--compact', activePanel === 'insert');
     if (activePanel !== 'insert' || !options.preserveInsertGroup) collapseInsertGroup();
     if (shell) shell.dataset.activeSidebarPanel = activePanel;
@@ -284,6 +319,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       button.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     return activePanel;
+  }
+
+  function setSidebarToolActive(toolName = '') {
+    const activeTool = SIDEBAR_TOOL_NAMES.has(String(toolName)) ? String(toolName) : '';
+    sidebarEl.querySelectorAll('[data-designer-tool]').forEach(button => {
+      const active = button.dataset.designerTool === activeTool;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
   }
 
   async function activateSidebarPanel(panelName = 'insert') {
@@ -385,10 +429,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (!scene) return;
     document.body.dataset.activeScene = scene.id;
     document.body.dataset.activeSceneTitle = scene.title;
-    const titleNode = sidebarEl.querySelector(`.scene-section-item[data-scene-id="${cssEscape(scene.id)}"] .scene-section-title`);
-    if (titleNode) titleNode.textContent = scene.title;
-    const inputNode = sidebarEl.querySelector(`.scene-section-title-input[data-scene-id="${cssEscape(scene.id)}"]`);
-    if (inputNode && inputNode.value !== scene.title) inputNode.value = scene.title;
+    document.querySelectorAll(`.scene-section-item[data-scene-id="${cssEscape(scene.id)}"] .scene-section-title`).forEach(titleNode => {
+      titleNode.textContent = scene.title;
+    });
+    document.querySelectorAll(`.scene-section-title-input[data-scene-id="${cssEscape(scene.id)}"]`).forEach(inputNode => {
+      if (inputNode instanceof HTMLInputElement && inputNode.value !== scene.title) inputNode.value = scene.title;
+    });
     const stageLabel = document.querySelector('.scene-stage-title');
     if (stageLabel) stageLabel.textContent = scene.title;
     if (gridEl) {
@@ -1954,7 +2000,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   function createSceneFromUi({ edit = true } = {}) {
     const next = sceneSections.length + 1;
-    const title = `Section ${next}`;
+    const title = `Scene ${next}`;
     const section = { id: uniqueSceneId(title), title };
     sceneSections.push(section);
     activeSceneId = section.id;
@@ -2012,6 +2058,78 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           return !widget.dataset.sceneId || widget.dataset.sceneId === sceneId;
         })
       : [];
+  }
+
+  function layerStackIndex(widget) {
+    return Number.parseInt(widget?.style?.zIndex || widget?.dataset?.layerOrder || widget?.dataset?.layer || '0', 10) || 0;
+  }
+
+  function domStackIndex(widget) {
+    return gridEl ? Array.from(gridEl.children).indexOf(widget) : -1;
+  }
+
+  function getSceneLayerStack(sceneId = activeSceneId) {
+    return getActiveSceneWidgets(sceneId).sort((left, right) => {
+      const zIndexDiff = layerStackIndex(left) - layerStackIndex(right);
+      if (zIndexDiff !== 0) return zIndexDiff;
+      return domStackIndex(left) - domStackIndex(right);
+    });
+  }
+
+  function writeSceneLayerStack(stack) {
+    if (!gridEl || !Array.isArray(stack)) return;
+    stack.forEach((widget, index) => {
+      const order = String(index + 1);
+      widget.dataset.layerOrder = order;
+      widget.style.zIndex = order;
+      gridEl.appendChild(widget);
+    });
+  }
+
+  function arrangeSceneWidget(widget, direction = 'forward') {
+    if (!widget || !gridEl) return false;
+    const stack = getSceneLayerStack(widget.dataset.sceneId || activeSceneId);
+    const currentIndex = stack.indexOf(widget);
+    const offset = direction === 'backward' ? -1 : 1;
+    const nextIndex = currentIndex + offset;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= stack.length) return false;
+    [stack[currentIndex], stack[nextIndex]] = [stack[nextIndex], stack[currentIndex]];
+    writeSceneLayerStack(stack);
+    selectWidgetFromLayer(widget, { scroll: false });
+    renderSceneLayers();
+    requestSceneChangePersist();
+    return true;
+  }
+
+  function widgetIsInsideStageViewport(widget) {
+    if (!widget?.getBoundingClientRect) return true;
+    const viewport = document.getElementById('builderViewport') || document.getElementById('content');
+    const rect = widget.getBoundingClientRect();
+    const frame = viewport?.getBoundingClientRect?.();
+    if (!frame) {
+      return rect.top >= 0
+        && rect.left >= 0
+        && rect.bottom <= window.innerHeight
+        && rect.right <= window.innerWidth;
+    }
+    const padding = 24;
+    return rect.top >= frame.top + padding
+      && rect.left >= frame.left + padding
+      && rect.bottom <= frame.bottom - padding
+      && rect.right <= frame.right - padding;
+  }
+
+  function scrollWidgetIntoStageViewport(widget) {
+    if (!widget?.scrollIntoView || widgetIsInsideStageViewport(widget)) return false;
+    widget.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+    return true;
+  }
+
+  function selectWidgetFromLayer(widget, options = {}) {
+    if (!widget) return;
+    selectWidget(widget);
+    if (options.scroll !== false) scrollWidgetIntoStageViewport(widget);
+    pulseElement(widget);
   }
 
   function getSceneOverview(scene) {
@@ -2096,7 +2214,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     activeSceneId = sceneId;
     renderSceneNavigation();
     requestAnimationFrame(() => {
-      const input = sidebarEl.querySelector(`.scene-section-title-input[data-scene-id="${cssEscape(sceneId)}"]`);
+      const input = document.querySelector(`.scene-section-title-input[data-scene-id="${cssEscape(sceneId)}"]`);
       input?.focus();
       input?.select?.();
     });
@@ -2202,60 +2320,65 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
 
-  function renderStageSceneControls(activeScene = getActiveScene()) {
-    const controls = document.querySelector('.scene-stage-nav');
-    if (!controls || !activeScene) return;
-    const activeIndex = Math.max(0, sceneSections.findIndex(section => section.id === activeScene.id));
-    controls.innerHTML = `
-      <button type="button" class="scene-stage-nav__button" data-stage-scene-action="prev" aria-label="Previous section" ${activeIndex <= 0 ? 'disabled' : ''}>
-        <img src="/assets/icons/arrow-left.svg" alt="" class="icon" />
-      </button>
-      <span class="scene-stage-nav__current" aria-live="polite">
-        <small>${String(activeIndex + 1).padStart(2, '0')} / ${String(sceneSections.length).padStart(2, '0')}</small>
-        <strong>${escapeHtml(activeScene.title)}</strong>
-      </span>
-      <button type="button" class="scene-stage-nav__button" data-stage-scene-action="next" aria-label="Next section" ${activeIndex >= sceneSections.length - 1 ? 'disabled' : ''}>
-        <img src="/assets/icons/arrow-right.svg" alt="" class="icon" />
-      </button>
-      <button type="button" class="scene-stage-nav__button scene-stage-nav__button--add" data-stage-scene-action="add" aria-label="Add section">
-        <img src="/assets/icons/plus.svg" alt="" class="icon" />
-      </button>
-    `;
-  }
-
-  function renderSceneNavigation() {
-    const list = sidebarEl.querySelector('.scene-section-list');
-    if (!list) return;
-    list.innerHTML = sceneSections.map((section, index) => {
+  function renderSceneNavigationItems() {
+    return sceneSections.map((section, index) => {
       const overview = getSceneOverview(section);
       return `
-        <div class="scene-section-item${section.id === activeSceneId ? ' active' : ''}${editingSceneId === section.id ? ' scene-section-item--editing' : ''}" data-scene-id="${escapeHtml(section.id)}">
+        <div class="scene-section-item scene-storyboard__item${section.id === activeSceneId ? ' active' : ''}${editingSceneId === section.id ? ' scene-section-item--editing' : ''}" data-scene-id="${escapeHtml(section.id)}" data-scene-storyboard-item>
           <div class="scene-section-main" data-section-select="true" role="button" tabindex="0" aria-label="${escapeHtml(section.title)}">
             <span class="scene-section-number">${String(index + 1).padStart(2, '0')}</span>
             ${editingSceneId === section.id
-              ? `<input class="scene-section-title-input" data-scene-id="${escapeHtml(section.id)}" value="${escapeHtml(section.title)}" aria-label="Section name" />`
+              ? `<input class="scene-section-title-input" data-scene-id="${escapeHtml(section.id)}" value="${escapeHtml(section.title)}" aria-label="Scene name" />`
               : `<span class="scene-section-title">${escapeHtml(section.title)}</span>`}
             ${editingSceneId === section.id ? '' : renderSceneOverviewMeta(overview)}
           </div>
           <span class="scene-section-actions" aria-hidden="${editingSceneId === section.id ? 'true' : 'false'}">
-            <button type="button" class="scene-section-action" data-section-action="rename" aria-label="Rename section">
+            <button type="button" class="scene-section-action" data-section-action="rename" aria-label="Rename scene">
               <img src="/assets/icons/pencil.svg" alt="" class="icon" />
             </button>
-            <button type="button" class="scene-section-action" data-section-action="up" aria-label="Move section up" ${index === 0 ? 'disabled' : ''}>
-              <img src="/assets/icons/arrow-up.svg" alt="" class="icon" />
+            <button type="button" class="scene-section-action" data-section-action="up" aria-label="Move scene left" ${index === 0 ? 'disabled' : ''}>
+              <img src="/assets/icons/arrow-left.svg" alt="" class="icon" />
             </button>
-            <button type="button" class="scene-section-action" data-section-action="down" aria-label="Move section down" ${index === sceneSections.length - 1 ? 'disabled' : ''}>
-              <img src="/assets/icons/arrow-down.svg" alt="" class="icon" />
+            <button type="button" class="scene-section-action" data-section-action="down" aria-label="Move scene right" ${index === sceneSections.length - 1 ? 'disabled' : ''}>
+              <img src="/assets/icons/arrow-right.svg" alt="" class="icon" />
             </button>
-            <button type="button" class="scene-section-action" data-section-action="delete" aria-label="Delete section" ${sceneSections.length <= 1 ? 'disabled' : ''}>
+            <button type="button" class="scene-section-action" data-section-action="delete" aria-label="Delete scene" ${sceneSections.length <= 1 ? 'disabled' : ''}>
               <img src="/assets/icons/trash-2.svg" alt="" class="icon" />
             </button>
           </span>
         </div>
       `;
     }).join('');
+  }
+
+  function renderStageSceneControls(activeScene = getActiveScene(), itemsMarkup = renderSceneNavigationItems()) {
+    const controls = document.querySelector('.scene-stage-nav');
+    if (!controls || !activeScene) return;
+    const activeIndex = Math.max(0, sceneSections.findIndex(section => section.id === activeScene.id));
+    controls.innerHTML = `
+      <span class="scene-stage-nav__label">Scenes</span>
+      <button type="button" class="scene-stage-nav__button" data-stage-scene-action="prev" aria-label="Previous scene" ${activeIndex <= 0 ? 'disabled' : ''}>
+        <img src="/assets/icons/arrow-left.svg" alt="" class="icon" />
+      </button>
+      <div class="scene-storyboard__track scene-section-list" role="listbox" aria-label="Scene storyboard" aria-live="polite">
+        ${itemsMarkup}
+      </div>
+      <button type="button" class="scene-stage-nav__button" data-stage-scene-action="next" aria-label="Next scene" ${activeIndex >= sceneSections.length - 1 ? 'disabled' : ''}>
+        <img src="/assets/icons/arrow-right.svg" alt="" class="icon" />
+      </button>
+      <button type="button" class="scene-stage-nav__button scene-stage-nav__button--add" data-stage-scene-action="add" aria-label="Add scene">
+        <img src="/assets/icons/plus.svg" alt="" class="icon" />
+      </button>
+    `;
+  }
+
+  function renderSceneNavigation() {
     const activeScene = sceneSections.find(section => section.id === activeSceneId) || sceneSections[0];
-    renderStageSceneControls(activeScene);
+    const itemsMarkup = renderSceneNavigationItems();
+    sidebarEl.querySelectorAll('.scene-section-list').forEach(list => {
+      list.innerHTML = itemsMarkup;
+    });
+    renderStageSceneControls(activeScene, itemsMarkup);
     syncSceneTitleDom(activeScene);
     applyActiveSceneStyle();
     syncInspectorScene(activeScene);
@@ -2296,7 +2419,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (!layerPanel) return;
     const heading = layerPanel.querySelector('.scene-sidebar-heading');
     layerPanel.querySelectorAll('.scene-layer-item').forEach(item => item.remove());
-    const widgets = getActiveSceneWidgets();
+    const widgets = getSceneLayerStack().slice().reverse();
     renderSceneEmptyState(widgets);
     if (!widgets.length) {
       const empty = document.createElement('button');
@@ -2308,20 +2431,47 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       return;
     }
     widgets.forEach(widget => {
+      const stack = getSceneLayerStack(widget.dataset.sceneId || activeSceneId);
+      const stackIndex = stack.indexOf(widget);
+      const canSendBackward = stackIndex > 0;
+      const canBringForward = stackIndex >= 0 && stackIndex < stack.length - 1;
       const widgetDef = allWidgets.find(w => w.id === widget.dataset.widgetId);
       const label = widget.dataset.elementName || widgetDef?.metadata?.label || widget.dataset.widgetId || 'Element';
-      const item = document.createElement('button');
-      item.type = 'button';
+      const item = document.createElement('div');
       item.className = `scene-layer-item${widget === state.activeWidgetEl ? ' scene-layer-item--active' : ''}`;
       item.dataset.widgetInstanceId = widget.dataset.instanceId || '';
+      item.dataset.widgetId = widget.dataset.widgetId || '';
+      item.dataset.sceneId = widget.dataset.sceneId || activeSceneId;
+      item.dataset.layer = widget.dataset.layer || String(activeLayer);
+      item.dataset.zIndex = widget.style.zIndex || '';
+      item.setAttribute('role', 'listitem');
       item.innerHTML = `
-        ${getWidgetIcon(widgetDef || { id: widget.dataset.widgetId || 'box', metadata: { icon: 'box' } }, ICON_MAP)}
-        <span class="scene-layer-copy">
-          <span class="scene-layer-title">${escapeHtml(label)}</span>
-          ${renderLayerBehaviorMeta(widget)}
+        <button type="button" class="scene-layer-select" data-layer-select aria-label="Select ${escapeAttribute(label)}">
+          ${getWidgetIcon(widgetDef || { id: widget.dataset.widgetId || 'box', metadata: { icon: 'box' } }, ICON_MAP)}
+          <span class="scene-layer-copy">
+            <span class="scene-layer-title">${escapeHtml(label)}</span>
+            ${renderLayerBehaviorMeta(widget)}
+          </span>
+        </button>
+        <span class="scene-layer-actions" aria-label="Layer order">
+          <button type="button" class="scene-layer-action" data-layer-action="forward" aria-label="Bring layer forward" ${canBringForward ? '' : 'disabled'}>
+            <img src="/assets/icons/arrow-up.svg" alt="" class="icon" />
+          </button>
+          <button type="button" class="scene-layer-action" data-layer-action="backward" aria-label="Send layer backward" ${canSendBackward ? '' : 'disabled'}>
+            <img src="/assets/icons/arrow-down.svg" alt="" class="icon" />
+          </button>
         </span>
       `;
-      item.addEventListener('click', () => selectWidget(widget));
+      item.addEventListener('click', event => {
+        const actionButton = event.target.closest?.('[data-layer-action]');
+        if (actionButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          arrangeSceneWidget(widget, actionButton.dataset.layerAction);
+          return;
+        }
+        selectWidgetFromLayer(widget);
+      });
       layerPanel.appendChild(item);
     });
     if (heading && heading.parentElement !== layerPanel) {
@@ -2329,11 +2479,100 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
 
+  function handleSceneNavigationClick(event) {
+    if (event.target.closest?.('.scene-section-title-input')) return false;
+    const addButton = event.target.closest?.('.scene-add-section');
+    if (addButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      createSceneFromUi({ edit: true });
+      return true;
+    }
+    const actionButton = event.target.closest?.('[data-section-action]');
+    if (actionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const sectionItem = actionButton.closest('.scene-section-item');
+      const sceneId = sectionItem?.dataset?.sceneId;
+      if (!sceneId) return true;
+      const action = actionButton.dataset.sectionAction;
+      if (action === 'rename') startSceneRename(sceneId);
+      if (action === 'up') moveScene(sceneId, -1);
+      if (action === 'down') moveScene(sceneId, 1);
+      if (action === 'delete') removeScene(sceneId);
+      return true;
+    }
+    const item = event.target.closest?.('.scene-section-item');
+    if (item?.dataset?.sceneId) {
+      event.preventDefault();
+      event.stopPropagation();
+      activeSceneId = item.dataset.sceneId;
+      editingSceneId = null;
+      renderSceneNavigation();
+      return true;
+    }
+    return false;
+  }
+
+  function handleSceneNavigationKeydown(event) {
+    const input = event.target.closest?.('.scene-section-title-input');
+    if (input) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        finishSceneRename(input, true);
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        finishSceneRename(input, false);
+      }
+      return true;
+    }
+    const main = event.target.closest?.('.scene-section-main');
+    if (main && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      const sceneId = main.closest('.scene-section-item')?.dataset?.sceneId;
+      if (sceneId) {
+        activeSceneId = sceneId;
+        editingSceneId = null;
+        renderSceneNavigation();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function handleSceneNavigationFocusout(event) {
+    const input = event.target.closest?.('.scene-section-title-input');
+    if (!input) return false;
+    setTimeout(() => {
+      if (document.activeElement !== input) finishSceneRename(input, true);
+    }, 0);
+    return true;
+  }
+
   sidebarEl.addEventListener('click', event => {
     const panelButton = event.target.closest?.('[data-sidebar-panel-target]');
     if (panelButton) {
       event.preventDefault();
-      void activateSidebarPanel(panelButton.dataset.sidebarPanelTarget);
+      event.stopPropagation();
+      const panelName = normalizeSidebarPanel(panelButton.dataset.sidebarPanelTarget);
+      if (isSidebarFlyoutOpen() && sidebarEl.dataset.activeSidebarPanel === panelName) {
+        closeSidebarPanel();
+        return;
+      }
+      void activateSidebarPanel(panelName);
+      return;
+    }
+    const designerToolButton = event.target.closest?.('[data-designer-tool]');
+    if (designerToolButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const tool = designerToolButton.dataset.designerTool;
+      if (!SIDEBAR_TOOL_NAMES.has(tool)) return;
+      setSidebarToolActive(tool);
+      document.dispatchEvent(new CustomEvent('designerToolSelected', {
+        detail: { tool, source: 'sidebar' }
+      }));
       return;
     }
     const insertGroupButton = event.target.closest?.('[data-insert-group]');
@@ -2354,56 +2593,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       void insertNativeElement(nativeElementButton.dataset.nativeElement);
       return;
     }
-    const addButton = event.target.closest('.scene-add-section');
-    if (addButton) {
-      createSceneFromUi({ edit: true });
-      return;
-    }
-    const actionButton = event.target.closest('[data-section-action]');
-    if (actionButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      const sectionItem = actionButton.closest('.scene-section-item');
-      const sceneId = sectionItem?.dataset?.sceneId;
-      if (!sceneId) return;
-      const action = actionButton.dataset.sectionAction;
-      if (action === 'rename') startSceneRename(sceneId);
-      if (action === 'up') moveScene(sceneId, -1);
-      if (action === 'down') moveScene(sceneId, 1);
-      if (action === 'delete') removeScene(sceneId);
-      return;
-    }
-    const item = event.target.closest('.scene-section-item');
-    if (item?.dataset?.sceneId) {
-      activeSceneId = item.dataset.sceneId;
-      editingSceneId = null;
-      renderSceneNavigation();
-    }
+    handleSceneNavigationClick(event);
   });
 
+  document.addEventListener('click', event => {
+    const target = event.target;
+    if (!isSidebarFlyoutOpen() || !(target instanceof Node) || sidebarEl.contains(target)) return;
+    closeSidebarPanel();
+  }, true);
+
   sidebarEl.addEventListener('keydown', event => {
-    const input = event.target.closest?.('.scene-section-title-input');
-    if (input) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        finishSceneRename(input, true);
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        finishSceneRename(input, false);
-      }
-      return;
-    }
-    const main = event.target.closest?.('.scene-section-main');
-    if (main && (event.key === 'Enter' || event.key === ' ')) {
-      event.preventDefault();
-      const sceneId = main.closest('.scene-section-item')?.dataset?.sceneId;
-      if (sceneId) {
-        activeSceneId = sceneId;
-        editingSceneId = null;
-        renderSceneNavigation();
-      }
-    }
+    handleSceneNavigationKeydown(event);
   });
 
   sidebarEl.addEventListener('dragstart', event => {
@@ -2419,11 +2619,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   });
 
   sidebarEl.addEventListener('focusout', event => {
-    const input = event.target.closest?.('.scene-section-title-input');
-    if (!input) return;
-    setTimeout(() => {
-      if (document.activeElement !== input) finishSceneRename(input, true);
-    }, 0);
+    handleSceneNavigationFocusout(event);
   });
 
   let layoutName = layoutNameParam ? String(layoutNameParam) : '';
@@ -2510,7 +2706,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // alongside the main workspace.
   contentEl.innerHTML = `
     <div id="builderViewport" class="builder-viewport">
-      <div class="scene-stage-nav" aria-label="Scene controls"></div>
+      <div class="scene-stage-nav" aria-label="Scene storyboard"></div>
       <div class="scene-viewport-guides" aria-hidden="true">
         <div class="scene-stage-title">Hero Scene</div>
         <div class="scene-scroll-axis scene-scroll-axis--center">
@@ -2590,11 +2786,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         return;
       }
     }
+    if (handleSceneNavigationClick(event)) return;
     const insertButton = event.target.closest?.('[data-empty-insert]');
     if (!insertButton) return;
     event.preventDefault();
     event.stopPropagation();
     void insertNativeElement(insertButton.dataset.emptyInsert);
+  });
+  gridViewportEl?.addEventListener('keydown', event => {
+    handleSceneNavigationKeydown(event);
+  });
+  gridViewportEl?.addEventListener('focusout', event => {
+    handleSceneNavigationFocusout(event);
   });
 
   // Apply persisted background settings from the initial design payload so
@@ -2819,7 +3022,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     getCurrentLayoutForLayer,
     getActiveLayer: () => activeLayer,
     ensureCodeMap,
-    capturePreview: () => captureGridPreview(gridEl),
+    capturePreview: options => captureGridPreview(gridEl, options),
     updateAllWidgetContents,
     getAdminUserId,
     pageId,
@@ -3326,102 +3529,22 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
   }
 
-  function setHeaderActiveTool(tool) {
-    document.querySelectorAll('.builder-tool[data-tool]').forEach(button => {
-      button.classList.toggle('builder-tool--active', button.dataset.tool === tool);
-    });
-  }
-
-  let activeToolPopover = null;
-  let activeToolPopoverCleanup = null;
-
-  function closeToolPopover() {
-    activeToolPopover?.remove?.();
-    activeToolPopover = null;
-    activeToolPopoverCleanup?.();
-    activeToolPopoverCleanup = null;
-  }
-
-  function findHeaderToolButton(tool) {
-    return Array.from(document.querySelectorAll('.builder-tool[data-tool]'))
-      .find(button => button.dataset.tool === tool) || null;
-  }
-
-  function positionToolPopover(popover, anchor) {
-    if (!popover || !anchor) return;
-    const rect = anchor.getBoundingClientRect();
-    const width = popover.offsetWidth || 276;
-    const left = Math.max(
-      12,
-      Math.min(window.innerWidth - width - 12, rect.left + (rect.width / 2) - (width / 2))
-    );
-    popover.style.left = `${Math.round(left + window.scrollX)}px`;
-    popover.style.top = `${Math.round(rect.bottom + window.scrollY + 10)}px`;
-  }
-
-  function openInsertPopover(anchor = findHeaderToolButton('insert')) {
-    if (!anchor) {
-      focusSidebarSection('.element-library');
-      return;
-    }
-    closeToolPopover();
-    const popover = document.createElement('div');
-    popover.className = 'scene-tool-popover';
-    popover.setAttribute('role', 'menu');
-    popover.setAttribute('aria-label', 'Insert group');
-    popover.innerHTML = INSERT_TOOL_ITEMS.map(item => `
-      <button type="button" data-tool-insert-group="${escapeAttribute(item.id)}" role="menuitem">
-        <img src="/assets/icons/${escapeAttribute(item.icon)}.svg" alt="" class="icon" />
-        <span>${escapeHtml(item.title)}</span>
-      </button>
-    `).join('');
-    document.body.appendChild(popover);
-    activeToolPopover = popover;
-    positionToolPopover(popover, anchor);
-
-    popover.addEventListener('click', async event => {
-      const insertButton = event.target.closest?.('[data-tool-insert-group]');
-      if (!insertButton) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const group = insertButton.dataset.toolInsertGroup;
-      closeToolPopover();
-      setHeaderActiveTool('insert');
-      setInsertGroup(group);
-      focusSidebarSection('.element-library');
-    });
-
-    const onPointerDown = event => {
-      if (popover.contains(event.target) || anchor.contains(event.target)) return;
-      closeToolPopover();
-    };
-    const onKeyDown = event => {
-      if (event.key === 'Escape') closeToolPopover();
-    };
-    const onResize = () => closeToolPopover();
-    document.addEventListener('pointerdown', onPointerDown, true);
-    document.addEventListener('keydown', onKeyDown);
-    window.addEventListener('resize', onResize);
-    activeToolPopoverCleanup = () => {
-      document.removeEventListener('pointerdown', onPointerDown, true);
-      document.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('resize', onResize);
-    };
-  }
-
   function setActiveWidgetBehavior(behavior) {
     setInspectorMode('behavior');
+    const nextBehavior = normalizeBehavior(behavior);
     if (!state.activeWidgetEl) {
       focusSidebarSection('.layer-preview');
       updateSceneInspector(null);
+      setSidebarToolActive(nextBehavior === 'scroll' ? 'scroll' : 'action');
       return;
     }
-    state.activeWidgetEl.dataset.behavior = normalizeBehavior(behavior);
+    state.activeWidgetEl.dataset.behavior = nextBehavior;
     applyBehaviorRange(
       state.activeWidgetEl,
       state.activeWidgetEl.dataset.scrollStart,
       state.activeWidgetEl.dataset.scrollEnd
     );
+    setSidebarToolActive(nextBehavior === 'scroll' ? 'scroll' : 'action');
     updateSceneInspector(state.activeWidgetEl, allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId));
     renderSceneLayers();
     if (pageId && state.autosaveEnabled) scheduleAutosave();
@@ -3629,20 +3752,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   document.addEventListener('designerToolSelected', async event => {
     const tool = event.detail?.tool;
     if (!tool) return;
-    if (tool !== 'insert') closeToolPopover();
+    if (SIDEBAR_TOOL_NAMES.has(tool)) setSidebarToolActive(tool);
     if (tool === 'layout') {
       hideBuilderPanel();
       if (HAS_LAYOUT_STRUCTURE) await switchLayer(0);
-      setHeaderActiveTool('layout');
-      focusSidebarSection('.layout-panel, .scene-map');
+      focusSidebarSection('.layout-panel');
       return;
     }
     await ensureDesignLayerForTool();
-    setHeaderActiveTool(tool);
     if (tool === 'insert') {
       hideBuilderPanel();
       setSidebarPanel('insert');
-      openInsertPopover();
+      focusSidebarSection('.element-library');
       return;
     }
     if (tool === 'text') {
@@ -4068,7 +4189,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     getCurrentLayoutForLayer,
     getActiveLayer: () => activeLayer,
     ensureCodeMap,
-    capturePreview: () => captureGridPreview(gridEl),
+    capturePreview: options => captureGridPreview(gridEl, options),
     updateAllWidgetContents,
     getAdminUserId,
     pageId,
@@ -4077,6 +4198,27 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     startAutosave,
     showPreviewHeader,
     hidePreviewHeader,
+    livePreviewController: createLivePreviewController({
+      displayPorts,
+      frameUrl: buildLivePreviewFrameUrl(pageData?.slug || window.PAGE_SLUG || ''),
+      buildPayload: viewport => buildLivePreviewPayload({
+        title: document.querySelector('#layoutNameInput')?.value?.trim() || layoutName || pageData?.title || 'Design Preview',
+        activeLayer,
+        hasLayoutStructure: HAS_LAYOUT_STRUCTURE,
+        gridEl,
+        layoutRoot,
+        layoutLayers,
+        allWidgets,
+        globalLayout: HAS_LAYOUT_STRUCTURE ? layoutLayers[0]?.layout || [] : [],
+        viewport,
+        state,
+        getCurrentLayoutForLayer,
+        ensureCodeMap,
+        updateAllWidgetContents,
+        saveActiveLayer,
+        getSceneSections: getSceneSectionsSnapshot
+      })
+    }),
     undo: undoCurrentDesign,
     redo: redoCurrentDesign
   });

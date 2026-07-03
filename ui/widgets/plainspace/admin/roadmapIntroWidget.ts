@@ -1,10 +1,24 @@
 export async function render(el: HTMLElement | null): Promise<void> {
   if (!el) return;
   el.innerHTML = `
-    <div class="home-update-widget">
-      <h2>Blogposter 0.7 update is here.</h2>
-      <p>It brings the vision of Blogposter a step forward: with workspaces you can create work areas and shape your workflow however you want. Place widgets wherever it suits you and pages exactly the same.</p>
-      <p>Apps now complete the final trinity of Blogposter alongside modules for the backend and widgets for the dashboard. With apps you can run fullscreen applications. The designer app is a good demonstration of how apps should be used. For most use cases widgets are completely sufficient. Apps can only be launched through widgets. The goal is always user friendliness.</p>
+    <div class="home-update-widget home-getting-started-widget">
+      <p class="home-widget-kicker">First steps</p>
+      <h2>Build your first page</h2>
+      <p class="home-widget-copy">Start with the existing content workflow: create a page, shape it in Design Studio, then add media when the layout needs real assets.</p>
+      <div class="home-start-actions" aria-label="Recommended first actions">
+        <a class="home-start-action home-start-action--primary" href="/admin/content" data-home-onboarding-action="create-page">
+          <span>1</span>
+          <strong>Create a page</strong>
+        </a>
+        <a class="home-start-action" href="/admin/content/designer-layouts" data-home-onboarding-action="open-design-studio">
+          <span>2</span>
+          <strong>Open Design Studio</strong>
+        </a>
+        <a class="home-start-action" href="/admin/content/media" data-home-onboarding-action="upload-media">
+          <span>3</span>
+          <strong>Add media</strong>
+        </a>
+      </div>
     </div>
   `;
 }

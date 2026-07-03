@@ -1,5 +1,9 @@
 import * as LR from './envelope/loaderRegistry.js';
 import { getPublicLoaderPaths, isPublicLoaderSource } from './publicLoaderPaths.js';
+const DESIGNER_LIVE_PREVIEW_RUNTIME_PATH = '/ui/designer/app/renderer/livePreviewRuntime.js';
+export async function importDesignerLivePreviewRuntime() {
+    await import(/* webpackIgnore: true */ DESIGNER_LIVE_PREVIEW_RUNTIME_PATH);
+}
 export async function tryImportPublicLoader(src) {
     const paths = getPublicLoaderPaths(src);
     if (!paths.length)

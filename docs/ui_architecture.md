@@ -95,10 +95,12 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   Public login-strategy token issuance, active strategy loading, and
   public/global filtering are owned by `loginStrategiesPublicData.ts`.
   Public registration availability and register payloads are owned by
-  `registerData.ts`. First-install status, user-count checks, and install POST
-  payloads are owned by `installData.ts`; the install shell still applies
-  `userColor.ts` theme mode so Light, Dark and System follow the dashboard
-  token contract.
+  `registerData.ts`. The public login shell uses the same Studio token
+  contract as the dashboard for canvas, card, field, button and icon-control
+  styling; it should not reintroduce login-only accent animations or gradient
+  chrome. First-install status, user-count checks, and install POST payloads
+  are owned by `installData.ts`; the install shell still applies `userColor.ts`
+  theme mode so Light, Dark and System follow the dashboard token contract.
   Dashboard page creation/layout-template event payloads, content-header admin
   page deletion data, page-picker list/order/create/redirect payloads, admin
   search, maintenance-mode setting payloads, theme-mode document token binding, workspace navigation page
@@ -111,7 +113,18 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   Top-header account chrome groups theme mode, profile and logout actions in
   the account menu partial; `topHeaderAccountMenu.ts` owns its
   keyboard/outside-click binding, while `userColor.ts` keeps the theme icon and
-  visible menu label in sync.
+  visible menu label in sync. The top header owns its own overlay stack because
+  its backdrop-filtered surface creates a stacking context; account and search
+  flyouts must render above dashboard widget panels. Top-header project, search
+  and account controls stay borderless on hover; hover feedback should use the
+  existing surface/background shell instead of an accent border. Settings is
+  reached from this account menu, not from the dashboard `workspace-actions`
+  nav.
+  The admin sidebar host owns the navigation bubble shadow layer:
+  `.main-content > #sidebar` stays above `#content`, and `#content` keeps an
+  explicit base stacking layer. The nested `.sidebar` also reserves
+  `--studio-sidebar-shadow-bleed` as right padding so circular nav shadows have
+  paint space before the adjacent content edge begins.
   Dashboard alerts, confirmations, prompts, and custom modal content must use
   `ui/shared/dialogs/bpDialog.ts`; feature code should not call native browser
   dialogs directly when it is running inside the dashboard shell.
@@ -254,6 +267,11 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `/build/designer.js` entry is a small bootloader that lazy-loads the
   Designer app chunk, keeping the shell entry below the production asset budget
   while preserving the single script URL used by the Designer HTML shell.
+- Design Studio Live Preview loads the target public page route with
+  `?designer-live-preview=1`. `ui/runtime/publicEntry.ts` detects that query,
+  imports `ui/designer/app/renderer/livePreviewRuntime`, and receives the
+  current unsaved `DesignDocument` via `postMessage`; Runtime data requests go
+  back through the existing Designer AppLoader bridge.
 - `ui/designer/app/*`: active Designer implementation. The `apps/designer/`
   tree keeps assets, partials and app metadata only. Sandboxed Designer frames
   verify parent origins through the
@@ -351,12 +369,16 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   are owned by
   `ui/widgets/plainspace/admin/pageEditorWidgets/pageContentData.ts`.
   Page statistics lane loading, payload construction, and summary counting are
-  owned by `ui/widgets/plainspace/admin/defaultwidgets/pageStatsData.ts`.
+  owned by `ui/widgets/plainspace/admin/defaultwidgets/pageStatsData.ts`; the
+  widget renderer only formats the existing summary into stable label/value
+  rows and reports missing emitters with a searchable render error code.
   The Pages list owns its table hierarchy derivation in
   `ui/widgets/plainspace/admin/defaultwidgets/pageList/pageList.ts` so filtered
   child pages stay nested under visible parents instead of duplicating as
-  top-level rows. Collections admin loading, parent/child derivation,
-  layout/design indicators, and edit/open URLs are owned by
+  top-level rows. The Content workspace reuses that same Pages list plus Page
+  Stats as its first widgets, while Content Summary remains a secondary
+  designs/uploads overview. Collections admin loading, create-collection page
+  payloads, parent/child derivation, layout/design indicators, and edit/open URLs are owned by
   `ui/widgets/plainspace/admin/defaultwidgets/collectionsList/collectionsListData.ts`.
   Content summary design/page loading, upload filtering, admin-token owner
   extraction, and draft-design creation payloads are owned by

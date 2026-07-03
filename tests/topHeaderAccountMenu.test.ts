@@ -20,6 +20,7 @@ function renderAccountMenu(): void {
           ></button>
           <div id="account-menu-dropdown" class="account-menu__dropdown" role="menu" hidden>
             <button id="theme-mode-toggle" class="account-menu__item" type="button" role="menuitem">Theme mode</button>
+            <a href="/admin/settings" id="settings-link" class="account-menu__item" role="menuitem">Settings</a>
             <a href="#" id="user-link" class="account-menu__item" role="menuitem">Profile</a>
             <button id="logout-icon" class="account-menu__item" type="button" role="menuitem">Log out</button>
           </div>
@@ -42,7 +43,7 @@ describe('top header account menu', () => {
     renderAccountMenu();
   });
 
-  it('groups theme, profile, and logout actions behind one menu trigger', () => {
+  it('groups theme, settings, profile, and logout actions behind one menu trigger', () => {
     bindAccountMenu();
 
     const toggle = document.getElementById('account-menu-toggle') as HTMLButtonElement;
@@ -51,7 +52,7 @@ describe('top header account menu', () => {
 
     expect(panel.hidden).toBe(true);
     expect(toggle.getAttribute('aria-haspopup')).toBe('menu');
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
 
     click(toggle);
 
@@ -70,6 +71,7 @@ describe('top header account menu', () => {
     const toggle = document.getElementById('account-menu-toggle') as HTMLButtonElement;
     const panel = document.getElementById('account-menu-dropdown') as HTMLElement;
     const theme = document.getElementById('theme-mode-toggle') as HTMLButtonElement;
+    const settings = document.getElementById('settings-link') as HTMLAnchorElement;
     const profile = document.getElementById('user-link') as HTMLAnchorElement;
 
     keydown(toggle, 'ArrowDown');
@@ -81,6 +83,9 @@ describe('top header account menu', () => {
     expect(panel.hidden).toBe(false);
 
     keydown(theme, 'ArrowDown');
+    expect(document.activeElement).toBe(settings);
+
+    keydown(settings, 'ArrowDown');
     expect(document.activeElement).toBe(profile);
 
     keydown(profile, 'Escape');

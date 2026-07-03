@@ -363,6 +363,10 @@ describe('UI architecture boundaries', () => {
       path.join(rootDir, 'ui', 'widgets', 'plainspace', 'admin', 'settings', 'settingsPanels.ts'),
       'utf8'
     );
+    const updateCenterSource = fs.readFileSync(
+      path.join(rootDir, 'ui', 'widgets', 'plainspace', 'admin', 'settings', 'updateCenterData.ts'),
+      'utf8'
+    );
 
     expect(source).toContain('EMBEDDED_WIDGET_PANEL_PATHS');
     expect(source).toContain("modules: '/ui/widgets/plainspace/admin/modulesListWidget.js'");
@@ -370,6 +374,8 @@ describe('UI architecture boundaries', () => {
     expect(source).toContain("users: '/ui/widgets/plainspace/admin/usersListWidget.js'");
     expect(source).toContain("access: '/ui/widgets/plainspace/admin/accessSettingsWidget.js'");
     expect(source).not.toContain(['/plainspace', 'widgets/'].join('/'));
+    expect(updateCenterSource).toContain("from '../modulesListData.js'");
+    expect(updateCenterSource).not.toMatch(/from '\.\.\/modulesListData';/);
   });
 
   test('widget renderers resolve dynamic widget modules through the canonical guard', () => {
@@ -2629,12 +2635,15 @@ describe('UI architecture boundaries', () => {
       'utf8'
     );
 
-    expect(runtimeSource).toContain("import { loadPublicRuntimeLoaders } from './publicLoaderImporter.js'");
+    expect(runtimeSource).toContain("from './publicLoaderImporter.js'");
+    expect(runtimeSource).toContain('loadPublicRuntimeLoaders');
+    expect(runtimeSource).toContain('importDesignerLivePreviewRuntime');
     expect(runtimeSource).toContain('await loadPublicRuntimeLoaders(envelope)');
     expect(runtimeSource).not.toContain('import(/* webpackIgnore: true */ path)');
     expect(runtimeSource).not.toContain('getPublicLoaderPaths');
     expect(importerSource).toContain("from './publicLoaderPaths.js'");
     expect(importerSource).toContain('export async function tryImportPublicLoader');
+    expect(importerSource).toContain('export async function importDesignerLivePreviewRuntime');
     expect(importerSource).toContain('import(/* webpackIgnore: true */ path)');
     expect(importerSource).toContain('mod.registerLoaders(LR.register)');
   });

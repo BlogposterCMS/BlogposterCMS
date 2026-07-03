@@ -76,9 +76,12 @@ export function createSaveManager(state, ctx) {
     if (layoutPayload && sceneSections.length) {
       layoutPayload.scenes = sceneSections;
     }
+    // Page cards need an at-a-glance thumbnail, so save the visible viewport
+    // instead of shrinking a full-height canvas into an unreadable image.
+    const thumbnailCaptureOptions = { viewport: true };
     const previewDataUrl = typeof capturePreview === 'function'
-      ? await capturePreview()
-      : gridEl ? await defaultCapturePreview(gridEl) : '';
+      ? await capturePreview(thumbnailCaptureOptions)
+      : gridEl ? await defaultCapturePreview(gridEl, thumbnailCaptureOptions) : '';
     let thumbnailUrl = '';
     if (previewDataUrl && previewDataUrl.startsWith('data:image')) {
       try {
@@ -96,7 +99,7 @@ export function createSaveManager(state, ctx) {
         });
         thumbnailUrl = typeof pubRes?.shareLink === 'string' ? pubRes.shareLink : '';
       } catch (err) {
-        console.warn('[Designer] thumbnail upload failed', err);
+        console.warn('[Designer] DESIGNER_THUMBNAIL_UPLOAD_FAILED', err);
       }
     }
     try {
@@ -150,6 +153,10 @@ export function createSaveManager(state, ctx) {
         })
       }));
       if (events.length) await window.meltdownEmitBatch(events);
+      return {
+        ...(res && typeof res === 'object' ? res : {}),
+        thumbnailUrl
+      };
     } catch (err) {
       if (err.name === 'AbortError') {
         console.error('[Designer] saveDesign timed out', err);

@@ -16,6 +16,7 @@ const state = {
 };
 let hostElement = null;
 let dragItemId = null;
+const NAVIGATION_STUDIO_PANEL_CARD_CLASS = 'navigation-studio__panel navigation-studio__card navigation-studio__card--bordered';
 function escapeHtml(value) {
     const map = {
         '&': '&amp;',
@@ -278,7 +279,7 @@ function renderPreview() {
     const modeClass = `navigation-studio__preview navigation-studio__preview--${state.preview}`;
     const items = previewItemsForMode(state.items);
     return `
-    <section class="navigation-studio__panel navigation-studio__preview-panel">
+    <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__preview-panel">
       <div class="navigation-studio__panel-title">
         <span>Preview</span>
         <div class="navigation-studio__preview-tabs">${renderPreviewTabs()}</div>
@@ -306,7 +307,7 @@ function renderInspector() {
     const item = selectedItem();
     if (!item) {
         return `
-      <section class="navigation-studio__panel navigation-studio__inspector">
+      <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__inspector">
         <div class="navigation-studio__panel-title"><span>Inspector</span></div>
         <div class="navigation-studio__empty">Select a menu item.</div>
       </section>
@@ -328,7 +329,7 @@ function renderInspector() {
   `).join('');
     const developerMeta = JSON.stringify(meta, null, 2);
     return `
-    <section class="navigation-studio__panel navigation-studio__inspector">
+    <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__inspector">
       <div class="navigation-studio__panel-title">
         <span>Inspector</span>
         <button type="button" data-delete-item aria-label="Delete item">${icon('trash-2')}</button>
@@ -431,14 +432,14 @@ function renderShell() {
       </header>
       <div class="navigation-studio__feedback" data-nav-feedback>${escapeHtml(state.feedback)}</div>
       <div class="navigation-studio__layout">
-        <aside class="navigation-studio__panel navigation-studio__menus">
+        <aside class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__menus">
           <div class="navigation-studio__panel-title">
             <span>Menus</span>
             <button type="button" data-create-menu aria-label="Create menu">${icon('plus')}</button>
           </div>
           <div class="navigation-studio__menu-list">${renderMenus()}</div>
         </aside>
-        <main class="navigation-studio__panel navigation-studio__structure">
+        <main class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__structure">
           <div class="navigation-studio__panel-title">
             <span>Structure</span>
             <button type="button" data-generate-pages>${icon('sparkles')}<span>Generate from pages</span></button>
@@ -451,7 +452,7 @@ function renderShell() {
         <aside class="navigation-studio__side">
           ${renderPreview()}
           ${renderInspector()}
-          <section class="navigation-studio__panel navigation-studio__diagnostics">
+          <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__diagnostics">
             <div class="navigation-studio__panel-title"><span>Warnings</span></div>
             ${renderDiagnostics()}
           </section>

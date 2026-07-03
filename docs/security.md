@@ -55,6 +55,15 @@ admin interface using plain HTTP, the login page may simply reload without an
 error because the cookie is ignored. Either use HTTPS (for example via a local
 reverse proxy) or unset `APP_ENV`/`NODE_ENV` while testing locally.
 
+## Module Update Supply Chain
+
+Community module updates are downloaded only from the configured
+`trustedUpdateSource`, currently GitHub releases. Publish a ZIP plus SHA-256
+sidecar for every release and configure a public signing key when possible.
+The updater validates the package with the installer policy, blocks downgrades
+and module-name mismatches, requires admin review for new core access, runs the
+health check before swapping folders and keeps a backup for rollback.
+
 ## Developing Secure Modules
 
 When writing your own modules keep these best practices in mind:

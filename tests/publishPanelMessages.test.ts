@@ -11,7 +11,17 @@ jest.mock('../ui/designer/app/fetchPartial.js', () => ({
   fetchPartial: jest.fn(() =>
     Promise.resolve(`
 <button class="publish-close" type="button" aria-label="Close">&times;</button>
-<h2 class="publish-title">Publish this design</h2>
+<h2 class="publish-title">Publishing</h2>
+<p class="publish-subtitle">Publish this design and see where it is already used.</p>
+<section class="publish-usage" aria-label="Design usage">
+  <div class="publish-section-heading">
+    <h3>Used in</h3>
+    <button class="publish-usage-refresh" type="button">Refresh</button>
+  </div>
+  <div class="publish-usage-status" role="status">Loading usage...</div>
+  <div class="publish-usage-list"></div>
+</section>
+<h3 class="publish-section-title">Publish to page</h3>
 <label class="publish-slug-label">Slug
   <div class="publish-slug-wrap">
     <span class="slug-prefix" aria-hidden="true">/</span>
@@ -52,7 +62,7 @@ jest.mock(
 import { fetchPartial } from '../ui/designer/app/fetchPartial.js';
 import { initPublishPanel } from '../ui/designer/app/renderer/publishPanel';
 
-function createBasicContext(options: { meltdown?: jest.Mock } = {}) {
+function createBasicContext(options: { meltdown?: jest.Mock; saveDesign?: jest.Mock; getDesignId?: jest.Mock } = {}) {
   document.body.innerHTML = '<aside id="publishPanel"></aside>';
   const publishBtn = document.createElement('button');
   publishBtn.id = 'publish-toggle';
@@ -78,7 +88,8 @@ function createBasicContext(options: { meltdown?: jest.Mock } = {}) {
     ensureCodeMap: jest.fn(),
     capturePreview: jest.fn(),
     pageId: null,
-    saveDesign: jest.fn(() => Promise.resolve())
+    saveDesign: options.saveDesign ?? jest.fn(() => Promise.resolve()),
+    getDesignId: options.getDesignId ?? jest.fn(() => null)
   });
 
   return { publishBtn };
@@ -183,6 +194,57 @@ describe('publish panel messaging', () => {
     expect(panel.getAttribute('aria-hidden')).toBe('true');
   });
 
+  test('loads publication usage for linked pages and published bundles', async () => {
+    const meltdownMock = jest.fn((action: string, payload: any) => {
+      if (action !== 'cmsAdminApiRequest') return Promise.resolve(null);
+      const route = `${payload.resource}.${payload.action}`;
+      if (route === 'pages.byLane') {
+        return Promise.resolve([
+          {
+            id: 'page-1',
+            title: 'Home',
+            slug: 'home',
+            lane: 'public',
+            status: 'published',
+            meta: { designId: 'design-1' }
+          },
+          {
+            id: 'page-2',
+            title: 'Other',
+            slug: 'other',
+            lane: 'public',
+            status: 'draft',
+            meta: { layoutTemplate: 'Other design' }
+          }
+        ]);
+      }
+      if (route === 'plainSpace.publishedDesignMeta') {
+        return Promise.resolve({ path: 'builder/home', files: ['index.html', 'style.css'] });
+      }
+      return Promise.resolve(null);
+    });
+
+    const { publishBtn } = createBasicContext({
+      meltdown: meltdownMock,
+      getDesignId: jest.fn(() => 'design-1')
+    });
+    await flushPromises();
+    await flushPromises();
+
+    publishBtn.click();
+    await flushPromises();
+    await flushPromises();
+
+    const panel = document.getElementById('publishPanel')!;
+    const statusEl = panel.querySelector<HTMLDivElement>('.publish-usage-status')!;
+    const usageItems = Array.from(panel.querySelectorAll<HTMLElement>('.publish-usage-item'));
+
+    expect(statusEl.textContent).toBe('Linked to 1 page and published bundle.');
+    expect(usageItems).toHaveLength(2);
+    expect(usageItems[0].textContent).toContain('Home');
+    expect(usageItems[1].textContent).toContain('builder/home');
+  });
+
   test('skips uploading empty bundles and stores filtered metadata', async () => {
     const uploadSpy = jest.fn();
     const saveMetaSpy = jest.fn();
@@ -241,5 +303,87 @@ describe('publish panel messaging', () => {
       expect.objectContaining({ files: ['index.html'] })
     );
     expect(makePublicSpy).toHaveBeenCalled();
+  });
+
+  test('stores the saved viewport thumbnail on newly published page metadata', async () => {
+    const saveDesign = jest.fn(() => Promise.resolve({ thumbnailUrl: '/media/designer-thumb.png' }));
+    const meltdownMock = jest.fn((action: string, payload: any) => {
+      if (action !== 'cmsAdminApiRequest') return Promise.resolve(null);
+      const route = `${payload.resource}.${payload.action}`;
+      if (route === 'pages.search') return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+
+    const { publishBtn } = createBasicContext({ meltdown: meltdownMock, saveDesign });
+    await flushPromises();
+    await flushPromises();
+
+    const panel = document.getElementById('publishPanel')!;
+    const slugInput = panel.querySelector<HTMLInputElement>('.publish-slug-input')!;
+    const confirmBtn = panel.querySelector<HTMLButtonElement>('.publish-confirm')!;
+
+    slugInput.value = 'fresh-page';
+    publishBtn.click();
+    confirmBtn.click();
+
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+
+    expect(saveDesign).toHaveBeenCalled();
+    expect(mockPageService.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'page-1' }),
+      expect.objectContaining({
+        meta: expect.objectContaining({
+          layoutTemplate: 'Example design',
+          designThumbnail: '/media/designer-thumb.png'
+        })
+      })
+    );
+  });
+
+  test('stores the saved design id on newly published page metadata', async () => {
+    const saveDesign = jest.fn(() => Promise.resolve({
+      id: 'design-1',
+      thumbnailUrl: '/media/designer-thumb.png'
+    }));
+    const meltdownMock = jest.fn((action: string, payload: any) => {
+      if (action !== 'cmsAdminApiRequest') return Promise.resolve(null);
+      const route = `${payload.resource}.${payload.action}`;
+      if (route === 'pages.search') return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+
+    const { publishBtn } = createBasicContext({ meltdown: meltdownMock, saveDesign });
+    await flushPromises();
+    await flushPromises();
+
+    const panel = document.getElementById('publishPanel')!;
+    const slugInput = panel.querySelector<HTMLInputElement>('.publish-slug-input')!;
+    const confirmBtn = panel.querySelector<HTMLButtonElement>('.publish-confirm')!;
+
+    slugInput.value = 'fresh-page';
+    publishBtn.click();
+    confirmBtn.click();
+
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+
+    expect(mockPageService.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'page-1' }),
+      expect.objectContaining({
+        meta: expect.objectContaining({
+          layoutTemplate: 'Example design',
+          designId: 'design-1',
+          designTitle: 'Example design',
+          designThumbnail: '/media/designer-thumb.png'
+        })
+      })
+    );
   });
 });

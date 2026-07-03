@@ -84,6 +84,7 @@ describe('dashboard studio styles', () => {
     const installHtml = readProjectFile('public/install.html');
     const loginHtml = readProjectFile('public/login.html');
     const registerHtml = readProjectFile('public/register.html');
+    const loginScss = readProjectFile('public/assets/scss/pages/_login.scss');
     const mainHeaderPartial = readProjectFile('public/plainspace/partials/main-header.html');
     const topHeaderPartial = readProjectFile('public/plainspace/partials/top-header.html');
     const projectGlobeIcon = readProjectFile('public/assets/icons/globe-project.svg');
@@ -95,12 +96,19 @@ describe('dashboard studio styles', () => {
     const installScss = readProjectFile('public/assets/scss/pages/_install.scss');
     const gridModeScss = readProjectFile('public/assets/scss/components/_grid-mode.scss');
     const globalScss = readProjectFile('public/assets/scss/_global.scss');
+    const loginSource = readProjectFile('ui/shell/auth/login.ts');
+    const loginStrategiesPublicSource = readProjectFile('ui/shell/auth/loginStrategiesPublic.ts');
     const externalLinksEntryTs = readProjectFile('ui/shared/entries/externalLinks.ts');
     const externalLinksWrapper = readProjectFile('public/assets/js/externalLinks.js');
     const runtimeWidgetShellTs = readProjectFile('ui/runtime/main/runtimeWidgetShell.ts');
     const adminGridCss = readCssRule(siteCss, '#adminGrid');
+    const pageWorkspaceMainContentCss = readCssRule(siteCss, '.main-content:has(#adminGrid > .dashboard-widget[data-dashboard-slot=page])');
+    const pageWorkspaceGridCss = readCssRule(siteCss, '#adminGrid:has(> .dashboard-widget[data-dashboard-slot=page])');
+    const pageWorkspaceContentCss = readCssRule(siteCss, '#content:has(#adminGrid > .dashboard-widget[data-dashboard-slot=page])');
     const canvasGridContainCss = siteCss.match(/^\.canvas-grid\s*\{[^}]*\}/m)?.[0] ?? '';
+    const pageWorkspaceCanvasGridCss = readCssRule(siteCss, '#adminGrid.canvas-grid:has(> .dashboard-widget[data-dashboard-slot=page])');
     const mainHeaderCss = siteCss.match(/^\.main-header\s*\{[^}]*\}/m)?.[0] ?? '';
+    const topHeaderCss = siteCss.match(/^\.top-header\s*\{[^}]*\}/m)?.[0] ?? '';
     const sidebarCss = readCssRule(siteCss, '.sidebar');
     const sidebarNavCss = readCssRule(siteCss, '.sidebar .sidebar-nav');
     const sidebarItemCss = readCssRule(siteCss, '.sidebar .sidebar-nav .sidebar-item, .sidebar .sidebar-nav .sidebar-add-subpage');
@@ -118,6 +126,13 @@ describe('dashboard studio styles', () => {
     const fieldFocusCss = readCssRule(siteCss, '.app-scope .field input:focus,\n.app-scope .field textarea:focus');
     const externalLinkCss = readCssRule(siteCss, '.app-scope a[data-external-link=true]');
     const externalLinkIconCss = readCssRule(siteCss, '.app-scope a[data-external-link=true]::after');
+    const loginPageCss = readCssRule(siteCss, '.app-scope.login-page');
+    const loginCardCss = readCssRule(siteCss, '.app-scope.login-page .login-form');
+    const loginButtonCss = readCssRule(siteCss, '.app-scope.login-page .button.primary');
+    const passwordToggleCss = readCssRule(siteCss, '.app-scope.login-page .password-toggle');
+    const passwordToggleIconCss = readCssRule(siteCss, '.app-scope.login-page .password-toggle::before');
+    const passwordToggleHoverCss = readCssRule(siteCss, '.app-scope.login-page .password-toggle:hover,\n.app-scope.login-page .password-toggle:focus-visible');
+    const strategyButtonsCss = readCssRule(siteCss, '.app-scope.login-page .strategy-buttons');
     const installPageCss = readCssRule(siteCss, '.app-scope.install-page');
     const installCardCss = readCssRule(siteCss, '.app-scope.install-page .login-form');
     const mainNavHoverCss = readCssRule(siteCss, '.main-header .nav-icons a:hover,\n.main-header .nav-icons .nav-button:hover');
@@ -125,6 +140,7 @@ describe('dashboard studio styles', () => {
     const mainNavActiveCss = readCssRule(siteCss, '.main-header .nav-icons a.active,\n.main-header .nav-icons .nav-button.active');
     const projectLinkCss = readCssRule(siteCss, '.top-header .left-icons a.project-link');
     const projectLinkChromeCss = readCssRule(siteCss, '.top-header .left-icons a.project-link::before');
+    const topHeaderButtonHoverCss = readCssRule(siteCss, '.top-header .top-header__icon-button:hover,\n.top-header .top-header__icon-button:focus-visible,\n.top-header .left-icons a:hover,\n.top-header .left-icons a:focus-visible,\n.top-header .right-icons a:hover,\n.top-header .right-icons a:focus-visible');
     const projectLinkHoverCss = readCssRule(siteCss, '.top-header .left-icons a.project-link:hover,\n.top-header .left-icons a.project-link:focus-visible');
     const projectLinkHoverChromeCss = readCssRule(siteCss, '.top-header .left-icons a.project-link:hover::before,\n.top-header .left-icons a.project-link:focus-visible::before');
     const projectNameCss = readCssRule(siteCss, '.top-header .project-link__name');
@@ -165,11 +181,17 @@ describe('dashboard studio styles', () => {
     expect(adminScss).toContain('--dashboard-placeholder-height');
     expect(adminScss).toContain("[data-dashboard-height-mode='scroll'] .canvas-item-content");
     expect(adminScss).toContain('padding: 0 0 clamp(56px, 6vw, 96px)');
+    expect(adminScss).toContain(".main-content:has(#adminGrid > .dashboard-widget[data-dashboard-slot='page'])");
+    expect(adminScss).toContain("#adminGrid:has(> .dashboard-widget[data-dashboard-slot='page'])");
     expect(adminScss).not.toContain('radial-gradient');
     expect(adminGridCss).toContain('background: var(--studio-canvas)');
     expect(adminGridCss).toContain('display: grid');
     expect(adminGridCss).toContain('grid-auto-flow: row dense');
     expect(adminGridCss).toContain('gap: var(--dashboard-grid-gap)');
+    expect(pageWorkspaceMainContentCss).toContain('min-height: 0');
+    expect(pageWorkspaceGridCss).toContain('min-height: 0');
+    expect(pageWorkspaceGridCss).toContain('padding-bottom: 0');
+    expect(pageWorkspaceGridCss).toContain('overflow: hidden');
     expect(siteCss).toContain('[data-dashboard-column]');
     expect(siteCss).toContain('--dashboard-min-height');
     expect(siteCss).toContain('.dashboard-drop-placeholder');
@@ -184,12 +206,19 @@ describe('dashboard studio styles', () => {
     expect(contentAreaScss).toContain('contain: layout size');
     expect(contentAreaScss).toContain('#adminGrid.canvas-grid');
     expect(contentAreaScss).toContain('contain: none');
+    expect(contentAreaScss).toContain("#content:has(#adminGrid > .dashboard-widget[data-dashboard-slot='page'])");
+    expect(contentAreaScss).toContain("#adminGrid.canvas-grid:has(> .dashboard-widget[data-dashboard-slot='page'])");
     expect(contentAreaScss).toContain('min-height: var(--dashboard-min-height, 0)');
     expect(contentAreaScss).not.toContain('contain: layout paint size');
+    expect(pageWorkspaceContentCss).toContain('overflow: hidden');
     expect(canvasGridContainCss).toContain('contain: layout size');
     expect(canvasGridContainCss).not.toContain('paint');
+    expect(pageWorkspaceCanvasGridCss).toContain('overflow: hidden');
     expect(widgetToggleCss).toContain('var(--studio-surface-solid)');
     expect(widgetToggleCss).toContain('var(--studio-radius-control)');
+    expect(sidebarCss).toContain('--studio-sidebar-shadow-bleed: 16px');
+    expect(sidebarCss).toContain('width: calc(88px + var(--studio-sidebar-shadow-bleed))');
+    expect(sidebarCss).toContain('padding: 28px calc(18px + var(--studio-sidebar-shadow-bleed)) 0 18px');
     expect(sidebarCss).toContain('position: relative');
     expect(sidebarCss).toContain('overflow: visible');
     expect(sidebarNavCss).toContain('z-index: 1');
@@ -235,7 +264,9 @@ describe('dashboard studio styles', () => {
     expect(inlineCreateShellCss).toContain('background: transparent');
     expect(inlineCreateShellCss).toContain('padding: var(--studio-inline-create-padding)');
     expect(inlineCreateShellCss).toContain('box-shadow: var(--studio-inline-create-panel-shadow)');
-    expect(workspacesJs).toContain("DETACHED_WORKSPACE_ACTION_SLUGS = new Set(['settings'])");
+    expect(workspacesJs).toContain("ACCOUNT_MENU_WORKSPACE_SLUGS = new Set(['settings'])");
+    expect(workspacesJs).toContain('DASHBOARD_WORKSPACE_ACTION_SLUGS = new Set()');
+    expect(workspacesJs).toContain('function isAccountMenuWorkspace');
     expect(workspacesJs).toContain('function buildWorkspaceActions');
     expect(workspacesJs).toContain("label.className = 'label'");
     expect(workspacesJs).toContain("anchor.setAttribute('aria-label', title)");
@@ -256,6 +287,29 @@ describe('dashboard studio styles', () => {
     [adminHtml, publicHtml, installHtml, loginHtml, registerHtml].forEach(html => {
       expect(html).toContain('/build/externalLinks.js');
     });
+    expect(loginHtml).toContain('class="button primary block"');
+    expect(loginHtml).toContain('password-toggle__label');
+    expect(loginScss).toContain('background: var(--studio-canvas)');
+    expect(loginScss).toContain('background: var(--studio-surface-solid)');
+    expect(loginScss).toContain('box-shadow: var(--studio-shadow-soft)');
+    expect(loginScss).not.toContain('radial-gradient');
+    expect(loginScss).not.toContain('#3acfd5');
+    expect(loginPageCss).toContain('background: var(--studio-canvas)');
+    expect(loginPageCss).toContain('color: var(--studio-text)');
+    expect(loginCardCss).toContain('background: var(--studio-surface-solid)');
+    expect(loginCardCss).toContain('border: 1px solid var(--studio-border)');
+    expect(loginCardCss).toContain('box-shadow: var(--studio-shadow-soft)');
+    expect(loginButtonCss).toContain('box-shadow: var(--studio-shadow-control)');
+    expect(passwordToggleCss).toContain('border-radius: var(--studio-radius-control)');
+    expect(passwordToggleCss).toContain('color: var(--studio-text-muted)');
+    expect(passwordToggleIconCss).toContain('mask: url("/assets/icons/eye.svg")');
+    expect(siteCss).toContain('.app-scope.login-page .password-toggle.is-password-visible::before');
+    expect(passwordToggleHoverCss).toContain('box-shadow: var(--studio-shadow-control)');
+    expect(strategyButtonsCss).toContain('display: grid');
+    expect(loginSource).not.toContain('presetColors');
+    expect(loginSource).not.toContain('cycleAccentColor');
+    expect(loginStrategiesPublicSource).toContain("btn.type = 'button'");
+    expect(loginStrategiesPublicSource).toContain("btn.className = 'button ghost block oauth-button'");
     expect(installScss).toContain('background: var(--studio-canvas)');
     expect(installScss).toContain('background: var(--studio-surface-solid)');
     expect(installScss).not.toContain('radial-gradient');
@@ -299,6 +353,8 @@ describe('dashboard studio styles', () => {
     expect(projectGlobeIcon).toContain('stroke-width="1.6"');
     expect(topHeaderPartial).toContain('Blogposter');
     expect(topHeaderPartial).not.toContain('title="Open public site');
+    expect(topHeaderCss).toContain('position: relative');
+    expect(topHeaderCss).toContain('z-index: 140');
     expect(contentHeaderPartial).not.toContain(' title=');
     expect(contentHeaderPagesPartial).not.toContain(' title=');
     expect(contentHeaderCss).toContain('position: fixed');
@@ -336,9 +392,11 @@ describe('dashboard studio styles', () => {
     expect(projectLinkCss).toContain('box-shadow: none');
     expect(projectLinkCss).toContain('isolation: isolate');
     expect(projectLinkChromeCss).toContain('transform: scale(1)');
+    expect(topHeaderButtonHoverCss).toContain('background: var(--studio-surface-muted)');
+    expect(topHeaderButtonHoverCss).toContain('border-color: transparent');
     expect(projectLinkHoverCss).toContain('border-color: transparent');
     expect(projectLinkHoverCss).toContain('transform: none');
-    expect(projectLinkHoverChromeCss).toContain('border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border))');
+    expect(projectLinkHoverChromeCss).toContain('border-color: transparent');
     expect(projectLinkHoverChromeCss).toContain('transform: scale(1.015)');
     expect(siteCss).toContain('.top-header .project-link__name');
     expect(siteCss).toContain('text-overflow: ellipsis');
@@ -351,7 +409,7 @@ describe('dashboard studio styles', () => {
     expect(searchContainerChromeCss).toContain('transform-origin: left center');
     expect(searchContainerHoverCss).toContain('border-color: transparent');
     expect(searchContainerHoverCss).toContain('transform: none');
-    expect(searchContainerHoverChromeCss).toContain('border-color: color-mix(in srgb, var(--user-color) 20%, var(--studio-border))');
+    expect(searchContainerHoverChromeCss).toContain('border-color: transparent');
     expect(searchContainerHoverChromeCss).toContain('transform: scale(1.015)');
     expect(searchContainerOpenCss).toContain('width: var(--studio-header-search-open-width)');
     expect(searchContainerOpenCss).toContain('max-width: calc(100vw - 128px)');
@@ -360,6 +418,8 @@ describe('dashboard studio styles', () => {
     expect(searchInputOpenCss).toContain('width: 100%');
     expect(searchInputOpenCss).toContain('padding-right: 12px');
     expect(topHeaderPartial).toContain('id="theme-mode-toggle"');
+    expect(topHeaderPartial).toContain('id="settings-link"');
+    expect(topHeaderPartial).toContain('href="/admin/settings"');
     expect(topHeaderPartial).toContain('id="account-menu-toggle"');
     expect(topHeaderPartial).toContain('id="account-menu-dropdown"');
     expect(topHeaderPartial).toContain('role="menu"');
@@ -381,6 +441,20 @@ describe('dashboard studio styles', () => {
     expect(dialogScss).toContain('@media (prefers-reduced-motion: reduce)');
     expect(siteCss).toContain('.bp-dialog-root');
     expect(siteCss).toContain('var(--studio-shadow-lift)');
+  });
+
+  it('keeps Collections admin styling aligned with Page Management', () => {
+    const pagesScss = readProjectFile('public/assets/scss/pages/_pages.scss');
+    const siteCss = readProjectFile('public/assets/css/site.css');
+
+    expect(pagesScss).toContain('.collections-list-table-wrap');
+    expect(pagesScss).toContain('border-spacing: 0 10px');
+    expect(pagesScss).toContain('tr.collections-list-row:hover');
+    expect(pagesScss).toContain('@include p.page-list-empty-state');
+    expect(siteCss).toContain('.collections-list-table > tbody > tr.collections-list-row > td');
+    expect(siteCss).toContain('background: #fafbfc');
+    expect(siteCss).toContain('border-color: var(--user-color)');
+    expect(siteCss).toContain('.collections-list-empty-row .empty-state');
   });
 
   it('keeps the Designer app on the dashboard Studio theme contract', () => {

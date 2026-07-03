@@ -11,7 +11,12 @@ export function addHitLayer(widget) {
     pointerEvents: 'auto',
     zIndex: '5'
   });
-  widget.style.position = 'relative';
+  if (!widget.classList.contains('canvas-item')) {
+    const position = window.getComputedStyle?.(widget).position || widget.style.position;
+    if (!position || position === 'static') {
+      widget.style.position = 'relative';
+    }
+  }
   widget.appendChild(shield);
 
   const toggle = () => {

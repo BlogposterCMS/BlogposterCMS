@@ -2,17 +2,19 @@
    components/_sidebar-bubble.scss — Bubble-Style Sidebar
    ============================================================================= */
 .sidebar {
+  --studio-sidebar-shadow-bleed: 16px;
 
-  // Keep bubble shadows painted above the adjacent dashboard content plane.
+  // Keep bubble shadows painted above the adjacent dashboard content plane and
+  // reserve a right-side bleed so the content surface does not cover them.
   position: relative;
   left: 0;
   height: 100vh;
-  width: 88px;
+  width: calc(88px + var(--studio-sidebar-shadow-bleed));
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 28px 18px 0;
+  padding: 28px calc(18px + var(--studio-sidebar-shadow-bleed)) 0 18px;
   overflow: visible;
   z-index: 10;
 
@@ -129,8 +131,8 @@
 
 @media (max-width: 700px) {
   .sidebar {
-    width: 64px;
-    padding: 16px 10px 0;
+    width: calc(64px + var(--studio-sidebar-shadow-bleed));
+    padding: 16px calc(10px + var(--studio-sidebar-shadow-bleed)) 0 10px;
   }
   .sidebar .sidebar-nav .sidebar-item {
     margin: 4px 0;

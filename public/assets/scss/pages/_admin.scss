@@ -5,6 +5,15 @@
   background: var(--studio-canvas);
 }
 
+.main-content > #sidebar {
+  // Sidebar bubble shadows extend past the host edge; keep that host above
+  // the content plane instead of letting DOM order cover the soft shadow.
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
 #adminGrid {
   --dashboard-columns: 12;
   --dashboard-grid-gap: clamp(14px, 2vw, 24px);
@@ -21,6 +30,18 @@
   position: relative;
   background: var(--studio-canvas);
   overflow: visible;
+}
+
+#adminGrid:has(> .dashboard-widget[data-dashboard-slot='page']),
+#adminGrid:has(> .dashboard-drop-placeholder[data-dashboard-slot='page']) {
+  min-height: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.main-content:has(#adminGrid > .dashboard-widget[data-dashboard-slot='page']),
+.main-content:has(#adminGrid > .dashboard-drop-placeholder[data-dashboard-slot='page']) {
+  min-height: 0;
 }
 
 #adminGrid::after {

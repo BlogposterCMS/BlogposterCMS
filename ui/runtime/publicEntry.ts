@@ -1,10 +1,29 @@
 import { orchestrate } from './envelope/orchestrator.js';
-import { loadPublicRuntimeLoaders } from './publicLoaderImporter.js';
+import {
+  importDesignerLivePreviewRuntime,
+  loadPublicRuntimeLoaders
+} from './publicLoaderImporter.js';
 import { emitRuntimePublic } from '../shared/api-client/runtimeFacade.js';
 import type { RuntimeEnvelope } from './envelope/orchestrator.js';
 
 interface StartPageResponse {
   slug?: unknown;
+}
+
+const DESIGNER_LIVE_PREVIEW_QUERY = 'designer-live-preview';
+
+function hasDesignerLivePreviewQuery(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).has(DESIGNER_LIVE_PREVIEW_QUERY);
+  } catch {
+    return false;
+  }
+}
+
+async function bootDesignerLivePreviewRuntime(): Promise<boolean> {
+  if (!hasDesignerLivePreviewQuery()) return false;
+  await importDesignerLivePreviewRuntime();
+  return true;
 }
 
 function getMeltdownEmit(): NonNullable<Window['meltdownEmit']> {
@@ -26,6 +45,7 @@ async function ensureToken(): Promise<void> {
 }
 
 export async function bootPublicRuntime(): Promise<void> {
+  if (await bootDesignerLivePreviewRuntime()) return;
   await ensureToken();
   const emit = getMeltdownEmit();
   let slug = location.pathname.replace(/^\/+/, '') || '';

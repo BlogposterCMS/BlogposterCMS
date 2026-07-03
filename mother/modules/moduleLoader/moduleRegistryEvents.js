@@ -322,6 +322,102 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
       callback(ex);
     }
   });
+
+  motherEmitter.on('checkModuleUpdates', async (payload, originalCb) => {
+    const callback = onceCallback(originalCb);
+
+    try {
+      const { jwt, moduleName, moduleType } = payload || {};
+      if (!jwt || moduleName !== 'moduleLoader' || moduleType !== 'core') {
+        return callback(new Error('[REGISTRY EVENTS] checkModuleUpdates => invalid meltdown payload.'));
+      }
+      if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'modules.list')) {
+        return callback(new Error('Forbidden - missing permission: modules.list'));
+      }
+
+      const { checkModuleUpdates } = require('./moduleUpdateService');
+      const result = await checkModuleUpdates(motherEmitter, jwt, {
+        targetModuleName: payload.targetModuleName
+      });
+      callback(null, result);
+    } catch (ex) {
+      callback(ex);
+    }
+  });
+
+  motherEmitter.on('inspectModuleUpdate', async (payload, originalCb) => {
+    const callback = onceCallback(originalCb);
+
+    try {
+      const { jwt, moduleName, moduleType, targetModuleName } = payload || {};
+      if (!jwt || moduleName !== 'moduleLoader' || moduleType !== 'core') {
+        return callback(new Error('[REGISTRY EVENTS] inspectModuleUpdate => invalid meltdown payload.'));
+      }
+      if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'modules.install')) {
+        return callback(new Error('Forbidden - missing permission: modules.install'));
+      }
+
+      const { inspectModuleUpdate } = require('./moduleUpdateService');
+      const result = await inspectModuleUpdate(motherEmitter, jwt, { targetModuleName });
+      callback(null, result);
+    } catch (ex) {
+      callback(ex);
+    }
+  });
+
+  motherEmitter.on('installModuleUpdate', async (payload, originalCb) => {
+    const callback = onceCallback(originalCb);
+
+    try {
+      const { jwt, moduleName, moduleType, targetModuleName } = payload || {};
+      if (!jwt || moduleName !== 'moduleLoader' || moduleType !== 'core') {
+        return callback(new Error('[REGISTRY EVENTS] installModuleUpdate => invalid meltdown payload.'));
+      }
+      if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'modules.install')) {
+        return callback(new Error('Forbidden - missing permission: modules.install'));
+      }
+
+      const { installModuleUpdate } = require('./moduleUpdateService');
+      const result = await installModuleUpdate(motherEmitter, jwt, {
+        targetModuleName,
+        approvedAccess: payload.approvedAccess,
+        grantedBy: payload.decodedJWT?.userId
+      });
+      if (result.wasActive) {
+        await cleanupModuleRuntime(motherEmitter, result.moduleName, 'Module update installed.');
+        const success = await attemptSingleLoad(result.moduleName, motherEmitter, app, jwt);
+        if (!success) {
+          return callback(new Error(`[E_MODULE_UPDATE_RELOAD_FAILED] Updated module "${result.moduleName}" could not be restarted.`));
+        }
+      }
+      callback(null, result);
+    } catch (ex) {
+      callback(ex);
+    }
+  });
+
+  motherEmitter.on('setModuleUpdateSource', async (payload, originalCb) => {
+    const callback = onceCallback(originalCb);
+
+    try {
+      const { jwt, moduleName, moduleType, targetModuleName } = payload || {};
+      if (!jwt || moduleName !== 'moduleLoader' || moduleType !== 'core') {
+        return callback(new Error('[REGISTRY EVENTS] setModuleUpdateSource => invalid meltdown payload.'));
+      }
+      if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'modules.install')) {
+        return callback(new Error('Forbidden - missing permission: modules.install'));
+      }
+
+      const { setModuleUpdateSource } = require('./moduleUpdateService');
+      const result = await setModuleUpdateSource(motherEmitter, jwt, {
+        targetModuleName,
+        trustedUpdateSource: payload.trustedUpdateSource
+      });
+      callback(null, result);
+    } catch (ex) {
+      callback(ex);
+    }
+  });
 }
 
 async function attemptSingleLoad(moduleName, motherEmitter, app, jwt, options = {}) {

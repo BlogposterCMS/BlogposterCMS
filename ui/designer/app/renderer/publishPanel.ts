@@ -8,6 +8,40 @@ import { pageService, sanitizeSlug } from '/ui/widgets/plainspace/admin/defaultw
 
 const publishLogger = createLogger('builder:publish');
 
+function toArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') {
+    if (Array.isArray(value.data)) return value.data;
+    if (Array.isArray(value.pages)) return value.pages;
+    if (Array.isArray(value.rows)) return value.rows;
+  }
+  return [];
+}
+
+function scalarString(value) {
+  if (value === null || value === undefined) return '';
+  const text = String(value).trim();
+  return text && text !== 'null' && text !== 'undefined' ? text : '';
+}
+
+function pageMeta(page) {
+  return page && typeof page.meta === 'object' && page.meta ? page.meta : {};
+}
+
+function pageDesignId(page) {
+  const meta = pageMeta(page);
+  return scalarString(meta.designId || meta.design_id || page?.designId || page?.design_id);
+}
+
+function pageLayoutTemplate(page) {
+  const meta = pageMeta(page);
+  return scalarString(meta.layoutTemplate || meta.layout_template || page?.layoutTemplate || page?.layout_template);
+}
+
+function sameRef(a, b) {
+  return Boolean(a && b && scalarString(a).toLowerCase() === scalarString(b).toLowerCase());
+}
+
 export function initPublishPanel({
   publishBtn,
   nameInput,
@@ -20,7 +54,8 @@ export function initPublishPanel({
   ensureCodeMap,
   capturePreview,
   pageId,
-  saveDesign
+  saveDesign,
+  getDesignId = () => document.body.dataset.designId || null
 }) {
   const publishPanel = document.getElementById('publishPanel');
   if (!publishPanel) {
@@ -38,7 +73,10 @@ export function initPublishPanel({
     draftNote,
     confirmBtn,
     closeBtn,
-    urlEl;
+    urlEl,
+    usageStatusEl,
+    usageListEl,
+    usageRefreshBtn;
   let selectedPage = null;
   fetchPartial('publish-panel', 'builder')
     .then(html => {
@@ -49,7 +87,17 @@ export function initPublishPanel({
       publishLogger.warn('Failed to load publish panel', err);
       publishPanel.innerHTML = `
   <button class="publish-close" type="button" aria-label="Close">&times;</button>
-  <h2 class="publish-title">Publish this design</h2>
+  <h2 class="publish-title">Publishing</h2>
+  <p class="publish-subtitle">Publish this design and see where it is already used.</p>
+  <section class="publish-usage" aria-label="Design usage">
+    <div class="publish-section-heading">
+      <h3>Used in</h3>
+      <button class="publish-usage-refresh" type="button">Refresh</button>
+    </div>
+    <div class="publish-usage-status" role="status">Loading usage...</div>
+    <div class="publish-usage-list"></div>
+  </section>
+  <h3 class="publish-section-title">Publish to page</h3>
   <label class="publish-slug-label">Slug
     <div class="publish-slug-wrap">
       <span class="slug-prefix" aria-hidden="true">/</span>
@@ -107,6 +155,9 @@ export function initPublishPanel({
     confirmBtn = publishPanel.querySelector('.publish-confirm');
     closeBtn = publishPanel.querySelector('.publish-close');
     urlEl = publishPanel.querySelector('.publish-url');
+    usageStatusEl = publishPanel.querySelector('.publish-usage-status');
+    usageListEl = publishPanel.querySelector('.publish-usage-list');
+    usageRefreshBtn = publishPanel.querySelector('.publish-usage-refresh');
 
     if (warningEl) {
       warningEl.setAttribute('role', 'alert');
@@ -122,6 +173,9 @@ export function initPublishPanel({
     draftCb.addEventListener('change', onDraftToggle);
     publishBtn.addEventListener('click', togglePanel);
     closeBtn.addEventListener('click', hidePublishPanel);
+    usageRefreshBtn?.addEventListener('click', () => {
+      void refreshPublicationUsage();
+    });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !publishPanel.classList.contains('hidden')) {
         hidePublishPanel();
@@ -165,7 +219,7 @@ export function initPublishPanel({
         }
 
         const name = nameInput.value.trim();
-        await saveDesign({
+        const saveResult = await saveDesign({
           name,
           gridEl,
           layoutRoot,
@@ -177,13 +231,24 @@ export function initPublishPanel({
           ownerId: getAdminUserId(),
           pageId
         });
+        const thumbnailUrl = typeof saveResult?.thumbnailUrl === 'string' && saveResult.thumbnailUrl
+          ? saveResult.thumbnailUrl
+          : selectedPage.meta?.designThumbnail;
+        const meta = { ...(selectedPage.meta || {}), layoutTemplate: name };
+        const savedDesignId = scalarString(saveResult?.id || saveResult?.designId || getDesignId?.());
+        if (savedDesignId) {
+          meta.designId = savedDesignId;
+          meta.designTitle = name;
+        }
+        if (thumbnailUrl) meta.designThumbnail = thumbnailUrl;
         const patch = {
-          meta: { ...(selectedPage.meta || {}), layoutTemplate: name },
+          meta,
           status: draftCb.checked ? 'draft' : 'published'
         };
         await pageService.update(selectedPage, patch);
         await runPublish(slug);
         showSuccessMessage(slug);
+        void refreshPublicationUsage();
       } catch (err) {
         if (err?.isValidationError) return;
         publishLogger.error('publish flow error', err);
@@ -200,6 +265,7 @@ export function initPublishPanel({
     draftNote.classList.add('hidden');
     draftNote.textContent = '';
     slugInput.focus();
+    void refreshPublicationUsage();
   }
 
   function hidePublishPanel() {
@@ -245,6 +311,124 @@ export function initPublishPanel({
     } catch (err) {
       publishLogger.warn('getPageById failed', err);
       return null;
+    }
+  }
+
+  function currentDesignName() {
+    return scalarString(nameInput?.value || nameInput?.placeholder || '');
+  }
+
+  function currentDesignId() {
+    return scalarString(getDesignId?.() || document.body.dataset.designId || '');
+  }
+
+  async function lookupPublishedMeta(name = currentDesignName()) {
+    if (!name) return null;
+    try {
+      return await emitAdminFacade(meltdownEmit, 'plainSpace', 'publishedDesignMeta', {
+        name
+      });
+    } catch (err) {
+      publishLogger.warn('DESIGNER_PUBLICATION_META_LOAD_FAILED', err);
+      return null;
+    }
+  }
+
+  async function lookupPublicPages() {
+    try {
+      const res = await emitAdminFacade(meltdownEmit, 'pages', 'byLane', {
+        lane: 'public'
+      });
+      return toArray(res).filter(page => (
+        page &&
+        typeof page === 'object' &&
+        (!page.lane || page.lane === 'public')
+      ));
+    } catch (err) {
+      publishLogger.warn('DESIGNER_PUBLICATION_USAGE_LOAD_FAILED', err);
+      return [];
+    }
+  }
+
+  function designUsagePages(pages, { designId = currentDesignId(), name = currentDesignName() } = {}) {
+    return pages.filter(page => (
+      sameRef(pageDesignId(page), designId) ||
+      sameRef(pageLayoutTemplate(page), name)
+    ));
+  }
+
+  function publicPageHref(page) {
+    const slug = sanitizeSlug(page?.slug || '');
+    return slug ? `/${slug}` : '';
+  }
+
+  function renderUsageItem({ title, meta, href, kind }) {
+    const item = document.createElement(href ? 'a' : 'div');
+    item.className = 'publish-usage-item';
+    item.dataset.usageKind = kind || 'page';
+    if (href) {
+      item.href = href;
+      item.target = '_blank';
+      item.rel = 'noopener noreferrer';
+    }
+    item.innerHTML = `
+      <span class="publish-usage-kind">${escapeHtml(kind || 'Page')}</span>
+      <span class="publish-usage-copy">
+        <strong>${escapeHtml(title || 'Untitled')}</strong>
+        <small>${escapeHtml(meta || '')}</small>
+      </span>
+    `;
+    return item;
+  }
+
+  function renderPublicationUsage(pages, publishedMeta = null) {
+    if (!usageStatusEl || !usageListEl) return;
+    const usedPages = designUsagePages(pages);
+    const publishedPath = scalarString(publishedMeta?.path);
+    usageListEl.innerHTML = '';
+    usedPages.forEach(page => {
+      const status = scalarString(page.status || 'draft');
+      const slug = scalarString(page.slug);
+      usageListEl.appendChild(renderUsageItem({
+        title: page.title || slug || `Page ${page.id || ''}`,
+        meta: `${status}${slug ? ` /${slug}` : ''}`,
+        href: publicPageHref(page),
+        kind: 'Page'
+      }));
+    });
+    if (publishedPath) {
+      const fileCount = Array.isArray(publishedMeta?.files) ? publishedMeta.files.length : 0;
+      usageListEl.appendChild(renderUsageItem({
+        title: 'Published bundle',
+        meta: `${publishedPath}${fileCount ? ` · ${fileCount} files` : ''}`,
+        href: `/media/${publishedPath.replace(/^\/+/, '')}/index.html`,
+        kind: 'Bundle'
+      }));
+    }
+    const parts = [];
+    if (usedPages.length) parts.push(`${usedPages.length} page${usedPages.length === 1 ? '' : 's'}`);
+    if (publishedPath) parts.push('published bundle');
+    usageStatusEl.textContent = parts.length
+      ? `Linked to ${parts.join(' and ')}.`
+      : 'Not linked anywhere yet.';
+    usageStatusEl.dataset.state = parts.length ? 'linked' : 'empty';
+  }
+
+  async function refreshPublicationUsage() {
+    if (!usageStatusEl || !usageListEl) return;
+    usageStatusEl.textContent = 'Loading usage...';
+    usageStatusEl.dataset.state = 'loading';
+    usageListEl.innerHTML = '';
+    try {
+      const [pages, publishedMeta] = await Promise.all([
+        lookupPublicPages(),
+        lookupPublishedMeta()
+      ]);
+      renderPublicationUsage(pages, publishedMeta);
+    } catch (err) {
+      publishLogger.warn('DESIGNER_PUBLICATION_USAGE_REFRESH_FAILED', err);
+      usageStatusEl.textContent = 'Usage could not be loaded.';
+      usageStatusEl.dataset.state = 'error';
     }
   }
 

@@ -1,17 +1,24 @@
 <nav class="sidebar-nav builder-sidebar-nav scene-panel-shell" data-active-sidebar-panel="insert" aria-label="Scene builder sidebar">
-  <div class="scene-sidebar-rail" role="tablist" aria-label="Builder panels">
-    <button type="button" class="scene-rail-button active" data-sidebar-panel-target="insert" aria-controls="scenePanelInsert" aria-selected="true" aria-label="Widgets" title="Widgets" role="tab">
-      <img src="/assets/icons/shapes.svg" alt="" class="icon" />
-    </button>
-    <button type="button" class="scene-rail-button" data-sidebar-panel-target="sections" aria-controls="scenePanelSections" aria-selected="false" aria-label="Sections" title="Sections" role="tab">
-      <img src="/assets/icons/layers.svg" alt="" class="icon" />
-    </button>
-    <button type="button" class="scene-rail-button" data-sidebar-panel-target="layers" aria-controls="scenePanelLayers" aria-selected="false" aria-label="Layers" title="Layers" role="tab">
-      <img src="/assets/icons/list.svg" alt="" class="icon" />
-    </button>
-    <button type="button" class="scene-rail-button" data-sidebar-panel-target="layout" aria-controls="scenePanelLayout" aria-selected="false" aria-label="Layout" title="Layout" role="tab">
-      <img src="/assets/icons/panels-top-left.svg" alt="" class="icon" />
-    </button>
+  <div class="scene-sidebar-rail" aria-label="Builder sidebar">
+    <div class="scene-sidebar-tablist" role="tablist" aria-label="Builder panels">
+      <button type="button" class="scene-rail-button active" data-sidebar-panel-target="insert" aria-controls="scenePanelInsert" aria-selected="true" aria-label="Widgets" title="Widgets" role="tab">
+        <img src="/assets/icons/shapes.svg" alt="" class="icon" />
+      </button>
+      <button type="button" class="scene-rail-button" data-sidebar-panel-target="layers" aria-controls="scenePanelLayers" aria-selected="false" aria-label="Layers" title="Layers" role="tab">
+        <img src="/assets/icons/list.svg" alt="" class="icon" />
+      </button>
+      <button type="button" class="scene-rail-button" data-sidebar-panel-target="layout" aria-controls="scenePanelLayout" aria-selected="false" aria-label="Layout" title="Layout" role="tab">
+        <img src="/assets/icons/panels-top-left.svg" alt="" class="icon" />
+      </button>
+    </div>
+    <div class="scene-sidebar-tools" aria-label="Element behavior">
+      <button type="button" class="scene-rail-button scene-rail-button--tool active" data-designer-tool="scroll" aria-pressed="true" aria-label="Scroll" title="Scroll">
+        <img src="/assets/icons/scroll.svg" alt="" class="icon" />
+      </button>
+      <button type="button" class="scene-rail-button scene-rail-button--tool" data-designer-tool="action" aria-pressed="false" aria-label="Action" title="Action">
+        <img src="/assets/icons/mouse-pointer-click.svg" alt="" class="icon" />
+      </button>
+    </div>
   </div>
 
   <div class="scene-sidebar-panels scene-sidebar-flyout" data-sidebar-flyout>
@@ -28,16 +35,6 @@
       <div class="drag-icons" aria-label="Public widgets">
         <!-- Advanced/fallback widgets are intentionally not shown by default. -->
       </div>
-    </section>
-
-    <section id="scenePanelSections" class="scene-sidebar-section scene-sidebar-panel scene-map" data-sidebar-panel="sections" aria-label="Sections" role="tabpanel" hidden>
-      <div class="scene-sidebar-heading">
-        <span>Sections</span>
-        <button type="button" class="scene-add-section" aria-label="Add section">
-          <img src="/assets/icons/plus.svg" alt="" class="icon" />
-        </button>
-      </div>
-      <div class="scene-section-list" role="listbox" aria-label="Page sections"></div>
     </section>
 
     <section id="scenePanelLayers" class="scene-sidebar-section scene-sidebar-panel layer-preview" data-sidebar-panel="layers" aria-label="Layers" role="tabpanel" hidden>

@@ -1,9 +1,16 @@
 import {
+  createCollection,
   errorMessage,
   fetchCollections,
   type CollectionChildView,
   type CollectionView
 } from './collectionsListData.js';
+import { bpDialog } from '/ui/shared/dialogs/bpDialog.js';
+import { sanitizeSlug } from '/ui/widgets/plainspace/admin/defaultwidgets/pageList/pageService.js';
+
+interface RenderCollectionsListOptions {
+  onCreateCollection?: () => Promise<void> | void;
+}
 
 function escapeHtml(value: unknown): string {
   const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -30,6 +37,14 @@ function renderEmpty(tbody: HTMLTableSectionElement): void {
   cell.textContent = 'No collections found.';
   empty.appendChild(cell);
   tbody.appendChild(empty);
+}
+
+function createErrorMessage(err: unknown): string {
+  const coded = err as { code?: string; userMessage?: string };
+  if (coded?.code === 'DUPLICATE_SLUG') {
+    return coded.userMessage || 'This slug is already in use. Please choose another one.';
+  }
+  return `PLAINSPACE_COLLECTIONS_CREATE_FAILED: ${errorMessage(err)}`;
 }
 
 function renderChildPageRows(children: CollectionChildView[]): string {
@@ -104,11 +119,24 @@ function renderCollectionRows(collection: CollectionView): HTMLTableRowElement[]
   return [row, childRow];
 }
 
-export function renderCollectionsList(el: HTMLElement, collections: CollectionView[]): void {
+export function renderCollectionsList(
+  el: HTMLElement,
+  collections: CollectionView[],
+  options: RenderCollectionsListOptions = {}
+): void {
   el.innerHTML = '';
 
   const card = document.createElement('div');
   card.className = 'collections-list-card page-list-card';
+  const inlineError = document.createElement('div');
+  inlineError.className = 'collections-list-inline-error page-list-inline-error';
+  inlineError.hidden = true;
+  inlineError.setAttribute('role', 'alert');
+
+  const setInlineError = (message: string) => {
+    inlineError.hidden = !message;
+    inlineError.textContent = message || '';
+  };
 
   const titleBar = document.createElement('div');
   titleBar.className = 'collections-list-title-bar page-title-bar';
@@ -116,7 +144,26 @@ export function renderCollectionsList(el: HTMLElement, collections: CollectionVi
   title.className = 'collections-list-title page-title';
   title.textContent = 'Collections';
   titleBar.appendChild(title);
+
+  if (options.onCreateCollection) {
+    const addBtn = document.createElement('img');
+    addBtn.src = '/assets/icons/plus.svg';
+    addBtn.alt = 'Add collection';
+    addBtn.title = 'Add new collection';
+    addBtn.className = 'icon add-page-btn add-collection-btn';
+    addBtn.addEventListener('click', async () => {
+      setInlineError('');
+      try {
+        await options.onCreateCollection?.();
+      } catch (err) {
+        setInlineError(createErrorMessage(err));
+      }
+    });
+    titleBar.appendChild(addBtn);
+  }
+
   card.appendChild(titleBar);
+  card.appendChild(inlineError);
 
   const tableWrap = document.createElement('div');
   tableWrap.className = 'collections-list-table-wrap';
@@ -148,8 +195,27 @@ export function renderCollectionsList(el: HTMLElement, collections: CollectionVi
 export async function render(el: HTMLElement | null): Promise<void> {
   if (!el) return;
   try {
-    const collections = await fetchCollections(window.meltdownEmit, window.ADMIN_TOKEN);
-    renderCollectionsList(el, collections);
+    let renderCurrent: () => Promise<void>;
+    const handleCreateCollection = async () => {
+      const title = await bpDialog.prompt('New collection title:');
+      const trimmedTitle = title?.trim();
+      if (!trimmedTitle) return;
+      const slugInput = await bpDialog.prompt('Slug (optional):');
+      const slug = slugInput ? sanitizeSlug(slugInput) : '';
+
+      await createCollection(window.meltdownEmit, window.ADMIN_TOKEN, {
+        title: trimmedTitle,
+        slug
+      });
+      await renderCurrent();
+    };
+
+    renderCurrent = async () => {
+      const collections = await fetchCollections(window.meltdownEmit, window.ADMIN_TOKEN);
+      renderCollectionsList(el, collections, { onCreateCollection: handleCreateCollection });
+    };
+
+    await renderCurrent();
   } catch (err) {
     el.innerHTML = `<div class="error">PLAINSPACE_COLLECTIONS_LOAD_FAILED: ${escapeHtml(errorMessage(err))}</div>`;
   }

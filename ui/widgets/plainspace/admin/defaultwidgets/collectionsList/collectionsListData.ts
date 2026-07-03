@@ -34,6 +34,12 @@ export interface CollectionChildView {
   publicUrl: string;
 }
 
+export interface CreateCollectionInput {
+  title: string;
+  slug: string;
+  status?: string;
+}
+
 interface PageListPayload {
   data?: unknown[];
 }
@@ -67,6 +73,16 @@ function unwrapRuntimeFacadeData<T = unknown>(value: unknown): T {
     return (value as { data?: T }).data as T;
   }
   return value as T;
+}
+
+function readCreatedPageId(value: unknown): string | number | undefined {
+  const result = unwrapRuntimeFacadeData<{ pageId?: string | number; data?: unknown }>(value);
+  if (!result || typeof result !== 'object') return undefined;
+  if (result.pageId !== undefined) return result.pageId;
+  const nested = result.data;
+  return nested && typeof nested === 'object'
+    ? (nested as { pageId?: string | number }).pageId
+    : undefined;
 }
 
 function runtimeAdminPayload(
@@ -139,6 +155,21 @@ export function toPages(value: unknown): PageRecord[] {
 
 export function buildCollectionsPayload(jwt: string | null | undefined): Record<string, unknown> {
   return runtimeAdminPayload(jwt, 'pages', 'byLane', { lane: 'public' });
+}
+
+export function buildCreateCollectionPayload(
+  jwt: string | null | undefined,
+  input: CreateCollectionInput
+): Record<string, unknown> {
+  // Collections remain Pages-owned parent records so child-page rendering and editing stay on the existing facade.
+  return runtimeAdminPayload(jwt, 'pages', 'create', {
+    title: input.title.trim(),
+    slug: input.slug,
+    lane: 'public',
+    status: input.status || 'published',
+    parent_id: null,
+    meta: { isCollection: true }
+  });
 }
 
 function isVisiblePublicPage(page: PageRecord): boolean {
@@ -223,4 +254,17 @@ export async function fetchCollections(
   const meltdownEmit = requireEmitter(emit);
   const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane: 'public' });
   return deriveCollections(toPages(response));
+}
+
+export async function createCollection(
+  emit: CollectionsEmitter,
+  jwt: string | null | undefined,
+  input: CreateCollectionInput
+): Promise<string | number> {
+  const meltdownEmit = requireEmitter(emit);
+  const pageId = readCreatedPageId(await meltdownEmit('cmsAdminApiRequest', buildCreateCollectionPayload(jwt, input)));
+  if (pageId === undefined) {
+    throw new Error('PLAINSPACE_COLLECTIONS_CREATED_PAGE_ID_UNAVAILABLE: Page creation did not return a pageId');
+  }
+  return pageId;
 }

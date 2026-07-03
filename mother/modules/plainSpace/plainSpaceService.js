@@ -90,6 +90,14 @@ function getSeedWidgetIds(widgets = []) {
   return getSeedWidgetEntries(widgets).map(entry => entry.widgetId);
 }
 
+function getRetiredSeedWidgetIds(page) {
+  return Array.isArray(page?.config?.retiredWidgets)
+    ? page.config.retiredWidgets
+      .filter(id => typeof id === 'string' && id.trim())
+      .map(id => id.trim())
+    : [];
+}
+
 function buildDashboardLayoutFromWidgets(widgets = [], widgetSlots = {}, startIndex = 0) {
   return getSeedWidgetEntries(widgets, widgetSlots).map((entry, index) => {
     const orderIndex = startIndex + index;
@@ -283,12 +291,19 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       }
 
       let missingWidgets = [];
+      let retiredWidgets = [];
       if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
         const seedWidgetIds = getSeedWidgetIds(page.config.widgets);
+        const retiredSeedWidgetIds = getRetiredSeedWidgetIds(page);
         const existingWidgets = Array.isArray(newMeta.widgets) ? newMeta.widgets.slice() : [];
-        missingWidgets = seedWidgetIds.filter(w => !existingWidgets.includes(w));
-        if (missingWidgets.length) {
-          newMeta.widgets = [...existingWidgets, ...missingWidgets];
+        retiredWidgets = existingWidgets.filter(w => retiredSeedWidgetIds.includes(w));
+        const activeExistingWidgets = retiredSeedWidgetIds.length
+          ? existingWidgets.filter(w => !retiredSeedWidgetIds.includes(w))
+          : existingWidgets;
+        missingWidgets = seedWidgetIds.filter(w => !activeExistingWidgets.includes(w));
+        const nextWidgets = [...activeExistingWidgets, ...missingWidgets];
+        if (retiredWidgets.length || missingWidgets.length) {
+          newMeta.widgets = nextWidgets;
           metaChanged = true;
         }
       }
@@ -315,7 +330,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
         }
       }
 
-      if (missingWidgets.length) {
+      if (missingWidgets.length || retiredWidgets.length) {
         try {
           const layoutRes = await meltdownEmit(motherEmitter, 'getLayoutForViewport', {
             jwt,
@@ -326,6 +341,9 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
             viewport: 'desktop'
           });
           let layout = Array.isArray(layoutRes?.layout) ? layoutRes.layout : [];
+          if (retiredWidgets.length) {
+            layout = layout.filter(entry => !retiredWidgets.includes(entry?.widgetId));
+          }
           const existingIds = layout.map(l => l.widgetId);
           const missingLayoutEntries = buildDashboardLayoutFromWidgets(
             missingWidgets.filter(w => !existingIds.includes(w)),

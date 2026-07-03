@@ -41,26 +41,6 @@ function buildFallbackHeader() {
     nameShell.appendChild(nameInput);
     nameShell.insertAdjacentHTML('beforeend', '<img src="/assets/icons/chevron-down.svg" alt="" class="icon layout-name-chevron" />');
     brand.appendChild(nameShell);
-    const toolStrip = document.createElement('nav');
-    toolStrip.className = 'builder-tool-strip';
-    toolStrip.setAttribute('aria-label', 'Builder tools');
-    [
-        ['insert', 'plus', 'Insert'],
-        ['layout', 'panels-top-left', 'Layout'],
-        ['text', 'type', 'Text'],
-        ['media', 'image', 'Media'],
-        ['shape', 'diamond', 'Shape'],
-        ['scroll', 'scroll', 'Scroll'],
-        ['action', 'mouse-pointer-click', 'Action']
-    ].forEach(([tool, icon, label]) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = `builder-tool${label === 'Scroll' ? ' builder-tool--active' : ''}`;
-        button.dataset.tool = tool;
-        button.innerHTML = `<img src="/assets/icons/${icon}.svg" class="icon" alt="" /><span>${label}</span>`;
-        toolStrip.appendChild(button);
-    });
-    header.appendChild(toolStrip);
     const headerActions = document.createElement('div');
     headerActions.className = 'header-actions';
     header.appendChild(headerActions);
@@ -118,7 +98,8 @@ function buildFallbackHeader() {
         id: 'publishLayoutBtn',
         className: 'builder-publish-btn',
         icon: '/assets/icons/upload.svg',
-        label: 'Publish'
+        label: 'Publish',
+        alt: 'Open publishing'
     }));
     headerActions.appendChild(createActionButton({
         className: 'header-icon-btn builder-menu-btn',
@@ -198,7 +179,7 @@ async function loadHeaderPartial(existing) {
         return existing ?? ensureHeaderMount();
     }
 }
-export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, undo, redo }) {
+export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, livePreviewController, undo, redo }) {
     let topBar = null;
     let layoutName = initialLayoutName;
     let headerResizeObserver = null;
@@ -219,20 +200,6 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
             });
             headerResizeObserver.observe(el);
         }
-    }
-    function wireToolStrip() {
-        const toolButtons = Array.from(topBar.querySelectorAll('[data-tool]'));
-        if (!toolButtons.length)
-            return;
-        toolButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tool = button.dataset.tool || '';
-                toolButtons.forEach(item => item.classList.toggle('builder-tool--active', item === button));
-                document.dispatchEvent(new CustomEvent('designerToolSelected', {
-                    detail: { tool }
-                }));
-            });
-        });
     }
     async function renderHeader({ reload = false } = {}) {
         try {
@@ -283,7 +250,6 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                     layoutName = nameInput.value;
                 });
             }
-            wireToolStrip();
             const headerActions = topBar.querySelector('.header-actions') || topBar;
             const saveBtn = topBar.querySelector('#saveLayoutBtn');
             const previewBtn = topBar.querySelector('#previewLayoutBtn');
@@ -360,7 +326,12 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                 });
             }
             if (previewBtn) {
+                livePreviewController?.setTrigger?.(previewBtn);
                 previewBtn.addEventListener('click', () => {
+                    if (livePreviewController && typeof livePreviewController.toggle === 'function') {
+                        livePreviewController.toggle();
+                        return;
+                    }
                     const active = document.body.classList.toggle('preview-mode');
                     if (window.featherIcon) {
                         previewBtn.innerHTML = window.featherIcon(active ? 'eye-off' : 'eye');
@@ -377,10 +348,7 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                     }
                 });
             }
-            if (getActiveLayer() === 0 && publishBtn) {
-                publishBtn.remove();
-            }
-            else if (publishBtn) {
+            if (publishBtn) {
                 initPublishPanel({
                     publishBtn,
                     nameInput,
@@ -393,7 +361,8 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                     ensureCodeMap,
                     capturePreview,
                     pageId,
-                    saveDesign
+                    saveDesign,
+                    getDesignId: () => state.designId || document.body.dataset.designId || null
                 });
             }
         }

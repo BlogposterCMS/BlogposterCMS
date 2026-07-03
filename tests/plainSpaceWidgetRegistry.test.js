@@ -236,25 +236,44 @@ test('plainSpace default public widget metadata exposes Design Studio essentials
   assert.strictEqual(htmlBlock.metadata.advanced, true);
 });
 
-test('plainSpace default admin widgets include Navigation Studio contracts', () => {
-  const widget = DEFAULT_WIDGETS.find(item => item.widgetId === 'navigationStudio');
+test('plainSpace default admin widgets include full-page workspace contracts', () => {
+  const pageWidgets = [
+    ['navigationStudio', '/ui/widgets/plainspace/admin/navigationStudioWidget.js'],
+    ['layoutTemplates', '/ui/widgets/plainspace/admin/layoutTemplatesWidget.js'],
+    ['designerLayouts', '/ui/widgets/plainspace/admin/designerLayoutsWidget.js']
+  ];
 
-  assert(widget);
-  assert.strictEqual(widget.content, '/ui/widgets/plainspace/admin/navigationStudioWidget.js');
-  assert(widget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'menus'));
-  assert(widget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'tree'));
-  assert(widget.metadata.apiActions.some(action => action.resource === 'designer' && action.action === 'save'));
-  assert.strictEqual(widget.metadata.seedOptions, undefined);
-  assert.strictEqual(widget.metadata.layout.defaultSlot, 'page');
-  assert.strictEqual(widget.metadata.layout.heightMode, 'scroll');
-  assert.deepStrictEqual(widget.metadata.layout.height.minHeight, {
-    mobile: 'calc(100dvh - 120px)',
-    tablet: 'calc(100dvh - 140px)',
-    desktop: 'calc(100dvh - 160px)'
-  });
-  assert.deepStrictEqual(widget.metadata.layout.supportedSlots, [
-    { name: 'page', minCols: 12, maxCols: 12, exclusive: true }
-  ]);
+  for (const [widgetId, content] of pageWidgets) {
+    const widget = DEFAULT_WIDGETS.find(item => item.widgetId === widgetId);
+
+    assert(widget);
+    assert.strictEqual(widget.content, content);
+    assert.strictEqual(widget.metadata.seedOptions, undefined);
+    assert.strictEqual(widget.metadata.layout.defaultSlot, 'page');
+    assert.strictEqual(widget.metadata.layout.heightMode, 'scroll');
+    assert.deepStrictEqual(widget.metadata.layout.height.minHeight, {
+      mobile: 'calc(100dvh - 120px)',
+      tablet: 'calc(100dvh - 140px)',
+      desktop: 'calc(100dvh - 160px)'
+    });
+    assert.deepStrictEqual(widget.metadata.layout.supportedSlots, [
+      { name: 'page', minCols: 12, maxCols: 12, exclusive: true }
+    ]);
+  }
+
+  const navigationWidget = DEFAULT_WIDGETS.find(item => item.widgetId === 'navigationStudio');
+  const layoutsWidget = DEFAULT_WIDGETS.find(item => item.widgetId === 'layoutTemplates');
+  const designerWidget = DEFAULT_WIDGETS.find(item => item.widgetId === 'designerLayouts');
+
+  assert(navigationWidget);
+  assert(layoutsWidget);
+  assert(designerWidget);
+  assert(navigationWidget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'menus'));
+  assert(navigationWidget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'tree'));
+  assert(navigationWidget.metadata.apiActions.some(action => action.resource === 'designer' && action.action === 'save'));
+  assert(layoutsWidget.metadata.apiActions.some(action => action.resource === 'plainSpace' && action.action === 'layoutTemplateNames'));
+  assert(layoutsWidget.metadata.apiActions.some(action => action.resource === 'plainSpace' && action.action === 'saveLayoutTemplate'));
+  assert(designerWidget.metadata.apiActions.some(action => action.resource === 'designer' && action.action === 'list'));
 });
 
 test('plainSpace default widgets no longer seed the retired page editor alias', () => {

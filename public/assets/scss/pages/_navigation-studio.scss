@@ -1,4 +1,8 @@
 .navigation-studio {
+  --navigation-studio-card-border: rgba(107, 114, 128, 0.32);
+  --navigation-studio-card-border-strong: rgba(75, 85, 99, 0.52);
+  --navigation-studio-card-border-width: 2px;
+
   display: grid;
   gap: 14px;
   min-height: 620px;
@@ -66,7 +70,7 @@
 .navigation-studio__preview-tab.is-active {
   background: var(--studio-surface-solid);
   color: var(--studio-text);
-  box-shadow: var(--studio-shadow-control);
+  box-shadow: none;
 }
 
 .navigation-studio__feedback {
@@ -86,12 +90,20 @@
   gap: 12px;
 }
 
+/* Local card utility keeps this widget shadowless without changing global .card. */
+.navigation-studio__card,
 .navigation-studio__panel {
+  box-sizing: border-box;
   min-width: 0;
-  border: 1px solid var(--studio-border);
+  border: 0;
   border-radius: 8px;
   background: var(--studio-surface-solid);
-  box-shadow: var(--studio-shadow-soft);
+  box-shadow: none;
+}
+
+.navigation-studio__card--bordered,
+.navigation-studio__panel {
+  border: var(--navigation-studio-card-border-width) solid var(--navigation-studio-card-border);
 }
 
 .navigation-studio__panel-title {
@@ -99,7 +111,7 @@
   gap: 10px;
   min-height: 42px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--studio-border);
+  border-bottom: 1px solid var(--navigation-studio-card-border);
   font-weight: 700;
 }
 
@@ -204,15 +216,16 @@
 .navigation-studio__item {
   gap: 8px;
   min-height: 44px;
-  border: 1px solid var(--studio-border);
+  border: var(--navigation-studio-card-border-width) solid var(--navigation-studio-card-border);
   border-radius: 8px;
   background: var(--studio-surface-solid);
+  box-shadow: none;
   padding: 7px;
 }
 
 .navigation-studio__item.is-selected {
-  border-color: var(--studio-border-strong);
-  box-shadow: var(--studio-shadow-control);
+  border-color: var(--navigation-studio-card-border-strong);
+  box-shadow: none;
 }
 
 .navigation-studio__item-grip,

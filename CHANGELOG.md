@@ -6,6 +6,9 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Clarified the agent safety guidance so security-sensitive changes require
+  reviewing the applicable security policy, keeping changed threat models and
+  trust boundaries documented, and testing fail-closed exceptions.
 - Added a local-only agent worklog convention with a Git-ignored
   `.agent-worklog/` scratch directory, helper command, docs and policy tests so
   parallel coding agents can coordinate touched paths without committing

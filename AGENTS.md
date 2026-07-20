@@ -108,6 +108,10 @@ instruction in a subdirectory says otherwise.
 ## Safety
 
 - Do not remove or rewrite unrelated files.
+- Before making security-sensitive changes, read the applicable `SECURITY.md`.
+  If a change alters the threat model or a supported trust boundary, update
+  that same file. Implement intended exceptions so they fail closed, and cover
+  them with tests.
 - Do not bypass security, permission, token, or sandbox boundaries.
 - Prefer failing closed for auth, transport, sanitization, and permission
   checks.

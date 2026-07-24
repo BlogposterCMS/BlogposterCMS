@@ -10,6 +10,13 @@ instruction in a subdirectory says otherwise.
 - Search for similar code, helpers, tests, and documentation before adding new
   patterns.
 - Prefer reusing existing modules, contracts, components, and design language.
+- Treat the repository's current architecture and domain boundaries as
+  constraints for implementation. Do not introduce an alternative state owner,
+  service boundary, transport path, public runtime, or parallel UI system
+  without the user's explicit approval.
+- When a materially better architecture is available, explain the concrete
+  benefit, cost, migration impact, and affected boundaries to the user first.
+  A proposal is welcome; implementing it requires the user's decision.
 - Do not introduce new features, new product behavior, or new visual designs
   unless the task explicitly asks for them.
 - Keep changes focused on the requested problem. Avoid unrelated refactors,

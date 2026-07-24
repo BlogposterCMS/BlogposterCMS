@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 
 function createPublicPageRoutes({
-  activeTheme,
   motherEmitter,
   plainSpaceVersion,
   renderMode,
@@ -119,7 +118,6 @@ function createPublicPageRoutes({
       window.PAGE_SLUG = ${JSON.stringify(slugToUse)};
       window.LANE    = ${JSON.stringify(lane)};
       window.PUBLIC_TOKEN = ${JSON.stringify(token)};
-      window.ACTIVE_THEME = ${JSON.stringify(activeTheme)};
       window.PLAINSPACE_VERSION = ${JSON.stringify(plainSpaceVersion)};
       window.NONCE  = ${JSON.stringify(nonce)};
     </script>`;

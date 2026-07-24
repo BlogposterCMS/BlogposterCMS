@@ -30,11 +30,12 @@ It separates responsibilities:
   system.
 - **Widgets** render public or admin UI blocks.
 - **Apps** provide larger admin/tool surfaces in isolated frames.
-- **Themes** control presentation and must not become executable backend code.
+- **Site Presets** configure central Builder, color and typography defaults
+  without becoming a public runtime.
 
 That separation matters because it keeps authority visible. A widget cannot
-quietly become a backend module, a theme cannot mutate users, and a community
-module does not receive the raw Express app.
+quietly become a backend module, a preset cannot introduce executable behavior,
+and a community module does not receive the raw Express app.
 
 The core communicates through `motherEmitter`, a JWT-secured event bus.
 Community modules use a scoped `moduleHost` facade and run outside the CMS host
@@ -47,10 +48,10 @@ grants.
 BlogposterCMS is designed so public page delivery stays thin.
 
 The public route serves a small HTML shell and injects only the runtime facts a
-page needs: page id, slug, lane, public token, active theme and nonce. Static
-assets are served directly from guarded `/assets`, `/build`, `/themes`,
-`/widgets` and `/apps` routes. The browser runtime then composes the page from
-structured page, layout and widget data.
+page needs: page id, slug, lane, public token and nonce. Static assets are served
+directly from guarded `/assets`, `/build`, `/widgets` and `/apps` routes. The
+browser runtime then composes the page from structured page, layout and widget
+data plus the active central color and font defaults.
 
 This avoids running the full admin/editor environment for every public page
 request. The heavy surfaces, such as Design Studio and admin widgets, stay on
@@ -79,7 +80,7 @@ from the admin builder.
 - Visual page building through Design Studio and the shared runtime layout
   system.
 - Nested pages, content entries, media, comments, navigation, SEO, workflow,
-  revisions, previews, themes and translations.
+  revisions, previews, Site Presets and translations.
 - First-party public widgets such as text, media, buttons, navigation menus,
   breadcrumbs and galleries.
 - WordPress WXR import plus a visual site-package importer/exporter path for

@@ -16,7 +16,6 @@ describe('runtimeWidgetShell', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
-    window.ACTIVE_THEME = 'minimal';
     (globalThis as typeof globalThis & { CSSStyleSheet?: unknown }).CSSStyleSheet = CSSStyleSheetMock;
     Object.defineProperty(ShadowRoot.prototype, 'adoptedStyleSheets', {
       configurable: true,
@@ -28,7 +27,6 @@ describe('runtimeWidgetShell', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-    delete window.ACTIVE_THEME;
   });
 
   it('creates the widget shadow shell with global css, container, and resize slot', () => {

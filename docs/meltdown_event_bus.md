@@ -71,7 +71,7 @@ AgentManager has its own `/admin/api/agent` HTTP facade and an app-loader
 
 The HTTP adapter no longer translates old browser event names. Content, page,
 media, widget, PlainSpace, navigation, search, setting, auth, font, user,
-role, app, importer, exporter, theme, Designer and preview-token operations
+role, app, importer, exporter, Site Preset, Designer and preview-token operations
 must enter through `cmsAdminApiRequest`, `cmsPublicRuntimeRequest`, AppLoader or
 a purpose-built HTTP adapter such as auth/install/upload.
 

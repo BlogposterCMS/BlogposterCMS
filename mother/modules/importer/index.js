@@ -2,7 +2,7 @@
  * modules/importer/index.js
  *
  * Loads importer mappings from ./importers and exposes them via meltdown events.
- * Importers can handle WordPress, HTML themes, and more.
+ * Importers can handle content and strict site packages.
  */
 const fs = require('fs');
 const path = require('path');
@@ -20,8 +20,7 @@ const CONTROL_OPTION_KEYS = new Set([
   'motherEmitter',
   'jwt',
   'decodedJWT',
-  'importPayload',
-  'themeBaseDir'
+  'importPayload'
 ]);
 
 function importerEnv() {
@@ -90,17 +89,6 @@ function sanitizeRunImportOptions(importerName, options = {}) {
   if (importerName === 'wordpress') {
     if (sanitized.filePath) {
       sanitized.filePath = assertInsideImportRoots(sanitized.filePath, 'options.filePath');
-    }
-    if (sanitized.path) {
-      sanitized.path = assertInsideImportRoots(sanitized.path, 'options.path');
-    }
-  }
-  if (importerName === 'htmlTheme') {
-    if (sanitized.sourceDir) {
-      sanitized.sourceDir = assertInsideImportRoots(sanitized.sourceDir, 'options.sourceDir');
-    }
-    if (sanitized.dir) {
-      sanitized.dir = assertInsideImportRoots(sanitized.dir, 'options.dir');
     }
     if (sanitized.path) {
       sanitized.path = assertInsideImportRoots(sanitized.path, 'options.path');

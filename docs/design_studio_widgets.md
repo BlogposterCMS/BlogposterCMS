@@ -63,9 +63,9 @@ is marked as advanced and hidden from normal catalogs.
 - `buttonLink`: primary, secondary and plain link actions with safe URL
   normalization.
 - `navigationMenu`: public navigation menu rendering from
-  `/api/public/navigation/:locationKey` or manually supplied links. Theme
-  styles own the default menu appearance; Mega Menu item metadata can point to
-  a Design Studio panel and falls back to child links.
+  `/api/public/navigation/:locationKey` or manually supplied links. Central
+  widget settings own the default menu appearance; Mega Menu item metadata can
+  point to a Design Studio panel and falls back to child links.
 - `breadcrumb`: current-path or manually supplied breadcrumb trail.
 - `gallery`: ordered media gallery with grid, masonry and carousel modes plus
   per-image fit/focus metadata.
@@ -86,8 +86,8 @@ is marked as advanced and hidden from normal catalogs.
 ### P0 Navigation
 
 - Menu: renders a selected page tree or manually curated links. The menu
-  structure is curated in Navigation Studio; the public widget renders theme
-  defaults and exposes optional Mega Menu metadata.
+  structure is curated in Navigation Studio; the public widget renders central
+  Builder defaults and exposes optional Mega Menu metadata.
 - Breadcrumb: shows the current page path for nested content.
 - Collection Archive: renders public child pages from a selected collection
   parent. This is separate from the admin dashboard page-list widget.
@@ -96,9 +96,11 @@ is marked as advanced and hidden from normal catalogs.
 
 - Navigation Studio owns menu structure, item targets, visibility, status,
   warnings and Generate from pages.
-- Themes own normal header, mobile, footer and dropdown styling.
+- Central widgets and Builder settings own normal header, mobile, footer and
+  dropdown styling.
 - Design Studio is optional and scoped to Mega Menu panel content only. The
-  header frame, positioning, animation and mobile behavior stay with the theme.
+  header frame, positioning, animation and mobile behavior stay with the
+  central navigation widgets and settings.
 
 ### P1 Forms And Conversion
 

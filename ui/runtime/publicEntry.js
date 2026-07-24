@@ -1,6 +1,8 @@
 import { orchestrate } from './envelope/orchestrator.js';
 import { importDesignerLivePreviewRuntime, loadPublicRuntimeLoaders } from './publicLoaderImporter.js';
 import { emitRuntimePublic } from '../shared/api-client/runtimeFacade.js';
+import { configureColorLibraryClient, refreshColorLibrary } from '../shared/colors/colorLibrary.js';
+import { configureFontPackagesClient, refreshFontPackages } from '../shared/fonts/fontPackages.js';
 const DESIGNER_LIVE_PREVIEW_QUERY = 'designer-live-preview';
 function hasDesignerLivePreviewQuery() {
     try {
@@ -9,12 +11,6 @@ function hasDesignerLivePreviewQuery() {
     catch {
         return false;
     }
-}
-async function bootDesignerLivePreviewRuntime() {
-    if (!hasDesignerLivePreviewQuery())
-        return false;
-    await importDesignerLivePreviewRuntime();
-    return true;
 }
 function getMeltdownEmit() {
     const emit = window.meltdownEmit;
@@ -33,10 +29,29 @@ async function ensureToken() {
     }
 }
 export async function bootPublicRuntime() {
-    if (await bootDesignerLivePreviewRuntime())
-        return;
+    const livePreview = hasDesignerLivePreviewQuery();
     await ensureToken();
     const emit = getMeltdownEmit();
+    configureColorLibraryClient({
+        emit,
+        token: window.PUBLIC_TOKEN,
+        lane: 'public'
+    });
+    configureFontPackagesClient({
+        emit,
+        token: window.PUBLIC_TOKEN,
+        lane: 'public'
+    });
+    await refreshColorLibrary().catch(error => {
+        console.warn('COLOR_LIBRARY_PUBLIC_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
+    });
+    await refreshFontPackages().catch(error => {
+        console.warn('FONT_PACKAGES_PUBLIC_LOAD_FAILED: Content will use browser typography.', error);
+    });
+    if (livePreview) {
+        await importDesignerLivePreviewRuntime();
+        return;
+    }
     let slug = location.pathname.replace(/^\/+/, '') || '';
     if (!slug) {
         const start = await emitRuntimePublic(emit, window.PUBLIC_TOKEN, 'pages', 'start', {

@@ -3,12 +3,12 @@
 ## Boundaries
 
 Navigation Manager owns menu and location state as a core module. Public
-themes and UI surfaces read navigation through Runtime Manager's public route
+renderers and UI surfaces read navigation through Runtime Manager's public route
 or admin facade; they do not emit write events directly. Writes require the
 navigation permission and a scoped `navigationManager` core payload. Public
 runtime responses are filtered to active navigation items.
 
-Core navigation and menu domain for theme locations and structured menu trees.
+Core navigation and menu domain for public locations and structured menu trees.
 The core module stays backend-only. The admin-facing editing surface is the
 PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
 
@@ -18,7 +18,7 @@ PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
 - Seeds default locations: `primary`, `footer` and `admin`.
 
 ## Purpose
-- Registers theme/menu locations.
+- Registers public menu locations.
 - Stores named navigation menus.
 - Stores ordered menu items with optional parent-child nesting.
 - Allows menu items to point to custom URLs, Content Engine entries or source-owned
@@ -43,15 +43,15 @@ PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
   `getNavigationTree`.
 
 ## Public Runtime
-- `runtimeManager` exposes `GET /api/public/navigation/:locationKey` for themes
-  and frontend shells.
+- `runtimeManager` exposes `GET /api/public/navigation/:locationKey` for public
+  widgets and frontend shells.
 - The route requests `status: "active"` and performs an additional runtime
   filter so hidden or draft items are not returned even if a lower layer sends
   them back.
-- Public menu widgets receive safe `meta` values. Theme code owns the normal
-  header/footer/mobile menu styling, while Mega Menu items can carry
+- Public menu widgets receive safe `meta` values. Central widgets and Builder
+  settings own normal header/footer/mobile menu rendering, while Mega Menu items can carry
   `meta.mega.layoutId` as an optional Design Studio panel reference and still
-  fall back to child links when no loader or theme support is present.
+  fall back to child links when no optional panel loader is present.
 
 ## Navigation Studio
 - The admin widget reuses Navigation Manager events for all writes:
@@ -65,7 +65,7 @@ PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
   menu is independent and can be manually curated.
 - Item `meta` carries UI-layer details such as icon, desktop/mobile
   visibility, and optional Mega Menu references. These fields do not make the
-  menu a page or move menu design ownership away from the theme.
+  menu a page or move menu design ownership out of central widgets and settings.
 - The Studio chrome uses its own shadowless local card utility:
   `navigation-studio__card` is borderless by default, while
   `navigation-studio__card--bordered` adds the grey 2px panel border used by

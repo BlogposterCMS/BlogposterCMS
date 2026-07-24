@@ -16,7 +16,6 @@ describe('designer live preview frame', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
-    delete window.ACTIVE_THEME;
     delete window.PAGE_SLUG;
   });
 
@@ -48,8 +47,6 @@ describe('designer live preview frame', () => {
       hPercent: 40
     };
 
-    window.ACTIVE_THEME = 'minimal';
-
     const payload = buildLivePreviewPayload({
       title: 'Landing Page',
       activeLayer: 1,
@@ -71,7 +68,7 @@ describe('designer live preview frame', () => {
     });
 
     expect(payload.lane).toBe('public');
-    expect(payload.activeTheme).toBe('minimal');
+    expect(payload).not.toHaveProperty('activeTheme');
     expect(payload.design).toMatchObject({
       id: 'design-1',
       version: 3,
@@ -249,7 +246,6 @@ describe('designer live preview frame', () => {
         lane: 'public',
         generatedAt: '2026-07-03T00:00:00.000Z',
         activeLayer: 1,
-        activeTheme: 'default',
         viewport: { id: 'desktop', label: 'Desktop', width: '100%' },
         design: { id: null, title: 'Preview', version: 0 },
         document: {

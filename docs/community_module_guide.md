@@ -26,13 +26,13 @@ given.
 BlogposterCMS intentionally does not have a catch-all extension type.
 
 The broad WordPress add-on model can mean backend logic, admin UI,
-frontend widgets, cron jobs, database tables, theme helpers or almost anything
+frontend widgets, cron jobs, database tables, preset helpers or almost anything
 else. Blogposter splits those responsibilities into clearer add-on types:
 
 - **Modules** add backend capability and own server-side contracts.
 - **Widgets** render small public or admin UI blocks.
 - **Apps** provide larger isolated admin/tool surfaces.
-- **Themes** change presentation, not behavior.
+- **Site Presets** configure central Builder defaults, not behavior.
 
 So when someone asks how to build a WordPress-style add-on, the Blogposter answer is:
 choose the type by what you are building.
@@ -42,10 +42,10 @@ choose the type by what you are building.
 | Backend logic, custom data, background sync, API/event contracts | Module |
 | A reusable page block or dashboard block | Widget |
 | A larger admin tool with its own screen | App |
-| A visual skin or frontend styling package | Theme |
+| A reusable Builder/color/font/page-demo package | Site Preset |
 
 This keeps permissions and security understandable. A public widget cannot
-quietly become backend code, a theme cannot mutate users, and a community
+quietly become backend code, a preset cannot mutate users, and a community
 module cannot pretend to be a core module. If a module needs access to a core
 event, it must declare `requestedAccess` and the admin must approve it during
 install, activation or a one-time runtime prompt.

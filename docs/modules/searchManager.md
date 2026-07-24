@@ -39,7 +39,7 @@ records. It is backend-only and does not add UI screens by itself.
 
 ## Public Runtime
 - `runtimeManager` exposes `GET /api/public/search?q=term&type=post` for
-  frontend and theme search.
+  frontend and public-widget search.
 - Runtime sends an explicit public principal and also filters results to
   `status: "published"` and `visibility: "public"` before returning them.
 - Private-looking metadata keys are stripped from public search responses.

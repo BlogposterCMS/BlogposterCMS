@@ -297,7 +297,6 @@ export function buildLivePreviewPayload({
     lane: 'public',
     generatedAt: new Date().toISOString(),
     activeLayer,
-    activeTheme: String(window.ACTIVE_THEME || 'default'),
     viewport,
     design: {
       id: state.designId || null,

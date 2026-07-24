@@ -2001,13 +2001,13 @@ describe('UI architecture boundaries', () => {
       '/build',
       '/ui',
       '/plainspace',
-      '/themes',
       '/apps',
       '/widgets',
       '/fonts'
     ].forEach(route => {
       expect(allowedBlock).toContain(`'${route}'`);
     });
+    expect(allowedBlock).not.toContain("'/themes'");
   });
 
   test('retired PlainSpace browser URLs are not runtime TypeScript routes', () => {
@@ -2708,7 +2708,8 @@ describe('UI architecture boundaries', () => {
   test('jest module aliases do not resolve retired browser implementation paths', () => {
     const source = fs.readFileSync(path.join(rootDir, 'jest.config.js'), 'utf8');
     expect(source).toContain("'^/ui/(.*)$': '<rootDir>/ui/$1'");
-    expect(source).toContain('controls|dev|dialogs|grid|icons|layout|loaders|media|module-access|sanitize|utils');
+    expect(source).toContain('colors|contracts|controls');
+    expect(source).toContain('module-access|partials|presets|sanitize');
     expect(source).not.toMatch(/\^\/plainspace\//);
     expect(source).not.toMatch(/\^\/assets\//);
   });

@@ -4,6 +4,14 @@ import {
   loadPublicRuntimeLoaders
 } from './publicLoaderImporter.js';
 import { emitRuntimePublic } from '../shared/api-client/runtimeFacade.js';
+import {
+  configureColorLibraryClient,
+  refreshColorLibrary
+} from '../shared/colors/colorLibrary.js';
+import {
+  configureFontPackagesClient,
+  refreshFontPackages
+} from '../shared/fonts/fontPackages.js';
 import type { RuntimeEnvelope } from './envelope/orchestrator.js';
 
 interface StartPageResponse {
@@ -18,12 +26,6 @@ function hasDesignerLivePreviewQuery(): boolean {
   } catch {
     return false;
   }
-}
-
-async function bootDesignerLivePreviewRuntime(): Promise<boolean> {
-  if (!hasDesignerLivePreviewQuery()) return false;
-  await importDesignerLivePreviewRuntime();
-  return true;
 }
 
 function getMeltdownEmit(): NonNullable<Window['meltdownEmit']> {
@@ -45,9 +47,29 @@ async function ensureToken(): Promise<void> {
 }
 
 export async function bootPublicRuntime(): Promise<void> {
-  if (await bootDesignerLivePreviewRuntime()) return;
+  const livePreview = hasDesignerLivePreviewQuery();
   await ensureToken();
   const emit = getMeltdownEmit();
+  configureColorLibraryClient({
+    emit,
+    token: window.PUBLIC_TOKEN,
+    lane: 'public'
+  });
+  configureFontPackagesClient({
+    emit,
+    token: window.PUBLIC_TOKEN,
+    lane: 'public'
+  });
+  await refreshColorLibrary().catch(error => {
+    console.warn('COLOR_LIBRARY_PUBLIC_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
+  });
+  await refreshFontPackages().catch(error => {
+    console.warn('FONT_PACKAGES_PUBLIC_LOAD_FAILED: Content will use browser typography.', error);
+  });
+  if (livePreview) {
+    await importDesignerLivePreviewRuntime();
+    return;
+  }
   let slug = location.pathname.replace(/^\/+/, '') || '';
   if (!slug) {
     const start = await emitRuntimePublic<StartPageResponse | null>(emit, window.PUBLIC_TOKEN, 'pages', 'start', {

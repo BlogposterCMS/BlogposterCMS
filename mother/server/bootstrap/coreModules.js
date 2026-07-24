@@ -5,6 +5,9 @@ function coreModulesForApp({ app, authModuleSecret }) {
     { name: 'databaseManager', path: 'mother/modules/databaseManager', extra: { app } },
     { name: 'notificationManager', path: 'mother/modules/notificationManager', extra: { app } },
     { name: 'settingsManager', path: 'mother/modules/settingsManager', extra: {} },
+    { name: 'colorLibrary', path: 'mother/modules/colorLibrary', extra: {} },
+    { name: 'fontPackages', path: 'mother/modules/fontPackages', extra: {} },
+    { name: 'sitePresets', path: 'mother/modules/sitePresets', extra: {} },
     { name: 'widgetManager', path: 'mother/modules/widgetManager', extra: {} },
     { name: 'appLoader', path: 'mother/modules/appLoader', extra: {} },
     { name: 'agentManager', path: 'mother/modules/agentManager', extra: {} },
@@ -30,7 +33,6 @@ function coreModulesForApp({ app, authModuleSecret }) {
     { name: 'plainSpace', path: 'mother/modules/plainSpace', extra: { app } },
     { name: 'importer', path: 'mother/modules/importer', extra: {} },
     { name: 'exportManager', path: 'mother/modules/exportManager', extra: {} },
-    { name: 'themeManager', path: 'mother/modules/themeManager', extra: {} },
     { name: 'runtimeManager', path: 'mother/modules/runtimeManager', extra: { app } },
     { name: 'fontsManager', path: 'mother/modules/fontsManager', extra: {} }
   ];

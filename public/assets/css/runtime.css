@@ -1,0 +1,16 @@
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+#content {
+  min-width: 0;
+}

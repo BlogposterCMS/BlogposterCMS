@@ -9,6 +9,7 @@ import { hydrateRuntimeShellPartials } from './runtimeShellPartials.js';
 import {
   fetchRuntimePageBySlug,
   fetchRuntimeWidgetRegistry,
+  initializeRuntimeDesignDefaults,
   loadRuntimeGlobalLayout,
   resolveRuntimeWidgetLane
 } from './runtimePageData.js';
@@ -131,6 +132,9 @@ export async function renderRuntimePage(
 export async function bootPageRenderer(): Promise<void> {
   try {
     const context = resolveRuntimePageContext();
+    if (typeof window.meltdownEmit === 'function') {
+      await initializeRuntimeDesignDefaults(window.meltdownEmit, context.lane);
+    }
     await renderRuntimePage(context);
     if (context.lane === 'admin' && !unbindAdminNavigation) {
       unbindAdminNavigation = bindAdminContentNavigation({

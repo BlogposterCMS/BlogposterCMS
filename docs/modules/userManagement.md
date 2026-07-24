@@ -74,7 +74,7 @@ that current modules use and the retired key is removed.
 - builder and publishing
 - content types, entries, publishing and trash/restore
 - comments, navigation, SEO, search, redirects, media and metadata
-- pages, PlainSpace, widgets, modules, app discovery, importers, exporters, themes, users, roles, server locations, sharing and translations
+- pages, PlainSpace, widgets, modules, app discovery, importers, exporters, users, roles, server locations, sharing and translations
 
 The seed step is idempotent: existing permission records are not inserted again, so custom labels or role assignments remain untouched.
 

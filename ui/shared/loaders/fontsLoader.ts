@@ -1,3 +1,8 @@
+import {
+  emitRuntimeAdmin,
+  emitRuntimePublic
+} from '../api-client/runtimeFacade.js';
+
 interface FontRecord {
   name?: unknown;
   url?: unknown;
@@ -5,43 +10,6 @@ interface FontRecord {
 
 interface FontProviderRecord {
   name?: unknown;
-}
-
-const RUNTIME_MANAGER_MODULE = {
-  moduleName: 'runtimeManager',
-  moduleType: 'core'
-} as const;
-
-function objectParams(value: Record<string, unknown> = {}): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function unwrapRuntimeFacadeData<T = unknown>(value: unknown): T {
-  if (
-    value &&
-    typeof value === 'object' &&
-    'resource' in value &&
-    'action' in value &&
-    'data' in value
-  ) {
-    return (value as { data?: T }).data as T;
-  }
-  return value as T;
-}
-
-function runtimePublicPayload(
-  jwt: string | null | undefined,
-  resource: string,
-  action: string,
-  params: Record<string, unknown> = {}
-): Record<string, unknown> {
-  return {
-    jwt,
-    ...RUNTIME_MANAGER_MODULE,
-    resource,
-    action,
-    params: objectParams(params)
-  };
 }
 
 function unwrapData<T>(value: T[] | { data?: unknown } | unknown): T[] {
@@ -105,30 +73,38 @@ function publishAvailableFonts(fonts: string[], list: FontRecord[] = []): void {
 export async function loadFonts(): Promise<void> {
   let fonts: string[] = [];
   if (typeof window.meltdownEmit !== 'function') return;
-  if (isAppBridgeFrameReady()) {
-    publishAvailableFonts([]);
-    return;
-  }
   try {
-    const jwt = await window.meltdownEmit<string | null>('issuePublicToken', {
-      purpose: 'fonts',
-      moduleName: 'auth'
-    });
-    const rawList = await window.meltdownEmit<FontRecord[] | { data?: unknown }>(
-      'cmsPublicRuntimeRequest',
-      runtimePublicPayload(jwt, 'fonts', 'list')
-    );
-    const list = unwrapData<FontRecord>(unwrapRuntimeFacadeData(rawList));
+    const emitter = window.meltdownEmit;
+    const appBridgeReady = isAppBridgeFrameReady();
+    let list: FontRecord[];
+    let providers: FontProviderRecord[];
+
+    if (appBridgeReady) {
+      // Sandboxed apps already have a validated admin bridge. Reuse its read-only
+      // font catalog contract instead of minting a public token inside the frame.
+      list = unwrapData<FontRecord>(
+        await emitRuntimeAdmin(emitter, window.ADMIN_TOKEN, 'fonts', 'list')
+      );
+      providers = unwrapData<FontProviderRecord>(
+        await emitRuntimeAdmin(emitter, window.ADMIN_TOKEN, 'fonts', 'listProviders')
+      );
+    } else {
+      const jwt = await emitter<string | null>('issuePublicToken', {
+        purpose: 'fonts',
+        moduleName: 'auth'
+      });
+      list = unwrapData<FontRecord>(
+        await emitRuntimePublic(emitter, jwt, 'fonts', 'list')
+      );
+      providers = unwrapData<FontProviderRecord>(
+        await emitRuntimePublic(emitter, jwt, 'fonts', 'listProviders')
+      );
+    }
+
     fonts = list
       .map(font => font?.name)
       .filter((name): name is string => typeof name === 'string' && Boolean(name));
     publishAvailableFonts(fonts, list);
-
-    const rawProviders = await window.meltdownEmit<FontProviderRecord[] | { data?: unknown }>(
-      'cmsPublicRuntimeRequest',
-      runtimePublicPayload(jwt, 'fonts', 'listProviders')
-    );
-    const providers = unwrapData<FontProviderRecord>(unwrapRuntimeFacadeData(rawProviders));
     providers.find(provider => provider.name === 'googleFonts');
   } catch (err) {
     console.error('[fontsLoader] Failed to load fonts', err);

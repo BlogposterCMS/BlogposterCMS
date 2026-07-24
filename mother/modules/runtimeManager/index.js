@@ -176,6 +176,25 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
     bulk: { eventName: 'setSettings', moduleName: 'settingsManager', permission: 'settings.core.edit' },
     delete: { eventName: 'deleteSetting', moduleName: 'settingsManager', permission: 'settings.core.edit' }
   },
+  colors: {
+    list: { eventName: 'colorLibrary.list', moduleName: 'colorLibrary', permission: 'builder.use' },
+    create: { eventName: 'colorLibrary.create', moduleName: 'colorLibrary', permission: 'builder.publish' },
+    update: { eventName: 'colorLibrary.update', moduleName: 'colorLibrary', permission: 'builder.publish' },
+    delete: { eventName: 'colorLibrary.delete', moduleName: 'colorLibrary', permission: 'builder.publish' },
+    createScheme: { eventName: 'colorLibrary.createScheme', moduleName: 'colorLibrary', permission: 'builder.publish' },
+    updateScheme: { eventName: 'colorLibrary.updateScheme', moduleName: 'colorLibrary', permission: 'builder.publish' },
+    activateScheme: { eventName: 'colorLibrary.activateScheme', moduleName: 'colorLibrary', permission: 'builder.publish' },
+    deleteScheme: { eventName: 'colorLibrary.deleteScheme', moduleName: 'colorLibrary', permission: 'builder.publish' }
+  },
+  fontPackages: {
+    list: { eventName: 'fontPackages.list', moduleName: 'fontPackages', permission: 'builder.use' },
+    create: { eventName: 'fontPackages.create', moduleName: 'fontPackages', permission: 'builder.publish' },
+    update: { eventName: 'fontPackages.update', moduleName: 'fontPackages', permission: 'builder.publish' },
+    updateRole: { eventName: 'fontPackages.updateRole', moduleName: 'fontPackages', permission: 'builder.publish' },
+    resetRole: { eventName: 'fontPackages.resetRole', moduleName: 'fontPackages', permission: 'builder.publish' },
+    activate: { eventName: 'fontPackages.activate', moduleName: 'fontPackages', permission: 'builder.publish' },
+    delete: { eventName: 'fontPackages.delete', moduleName: 'fontPackages', permission: 'builder.publish' }
+  },
   auth: {
     loginStrategies: { eventName: 'listLoginStrategies', moduleName: 'auth', permission: 'auth.strategies.view' },
     setStrategyEnabled: { eventName: 'setLoginStrategyEnabled', moduleName: 'auth', permission: 'auth.strategies.manage' }
@@ -270,11 +289,11 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
     bulk: { eventName: 'updateModuleSettings', moduleName: 'unifiedSettings', permission: 'settings.unified.editSettings' },
     delete: { eventName: 'deleteModuleSetting', moduleName: 'unifiedSettings', permission: 'settings.unified.editSettings' }
   },
-  themes: {
-    list: { eventName: 'listThemes', moduleName: 'themeManager', permission: 'themes.list' },
-    get: { eventName: 'getTheme', moduleName: 'themeManager', permission: 'themes.list' },
-    active: { eventName: 'getActiveTheme', moduleName: 'themeManager', permission: 'themes.list' },
-    activate: { eventName: 'activateTheme', moduleName: 'themeManager', permission: 'themes.activate' }
+  sitePresets: {
+    list: { eventName: 'sitePresets.list', moduleName: 'sitePresets', permission: 'builder.use' },
+    create: { eventName: 'sitePresets.create', moduleName: 'sitePresets', permission: 'builder.publish' },
+    apply: { eventName: 'sitePresets.apply', moduleName: 'sitePresets', permission: 'builder.publish' },
+    delete: { eventName: 'sitePresets.delete', moduleName: 'sitePresets', permission: 'builder.publish' }
   },
   translations: {
     create: { eventName: 'createTranslatedText', moduleName: 'translationManager', permission: 'translations.create' },
@@ -303,6 +322,12 @@ const CMS_ADMIN_ACTIONS = Object.freeze({
 const CMS_PUBLIC_RUNTIME_ACTIONS = Object.freeze({
   settings: {
     public: { eventName: 'getPublicSettings', moduleName: 'settingsManager' }
+  },
+  colors: {
+    list: { eventName: 'colorLibrary.listPublic', moduleName: 'colorLibrary' }
+  },
+  fontPackages: {
+    active: { eventName: 'fontPackages.getPublic', moduleName: 'fontPackages' }
   },
   users: {
     count: { eventName: 'getUserCount', moduleName: 'userManagement' },
@@ -357,7 +382,10 @@ const APP_CONTEXT_READ_ACTIONS = Object.freeze({
   navigation: new Set(['locations', 'menus', 'getMenu', 'tree']),
   seo: new Set(['defaults', 'get', 'list', 'resolve']),
   settings: new Set(['public']),
-  themes: new Set(['list', 'get', 'active']),
+  colors: new Set(['list']),
+  fonts: new Set(['list', 'listProviders']),
+  fontPackages: new Set(['active']),
+  sitePresets: new Set(['list']),
   translations: new Set(['get', 'list', 'listLanguages', 'getLanguage'])
 });
 const APP_CONTEXT_CORE_OWNED_WRITE_BRIDGE_EVENTS = new Set([
@@ -382,7 +410,6 @@ const REDIRECT_SKIP_PREFIXES = [
   '/register',
   '/favicon.ico',
   '/plainspace',
-  '/themes',
   '/apps',
   '/fonts',
   '/widgets'

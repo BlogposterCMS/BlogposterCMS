@@ -18,7 +18,6 @@ describe('runtimeWidgetRenderer', () => {
     document.head.innerHTML = '';
     delete window.ADMIN_TOKEN;
     delete window.PUBLIC_TOKEN;
-    delete window.ACTIVE_THEME;
     delete window.meltdownEmit;
     delete window.meltdownEmitBatch;
     (globalThis as typeof globalThis & { CSSStyleSheet?: unknown }).CSSStyleSheet = CSSStyleSheetMock;
@@ -35,7 +34,6 @@ describe('runtimeWidgetRenderer', () => {
     jest.restoreAllMocks();
     delete window.ADMIN_TOKEN;
     delete window.PUBLIC_TOKEN;
-    delete window.ACTIVE_THEME;
     delete window.meltdownEmit;
     delete window.meltdownEmitBatch;
   });
@@ -53,7 +51,6 @@ describe('runtimeWidgetRenderer', () => {
 
   it('renders inline widget code in an isolated shadow root and registers widget events', async () => {
     const wrapper = makeWrapper();
-    window.ACTIVE_THEME = 'minimal';
     window.PUBLIC_TOKEN = 'public-token';
     window.meltdownEmit = jest.fn().mockResolvedValue(undefined);
 
@@ -80,7 +77,7 @@ describe('runtimeWidgetRenderer', () => {
     const styles = Array.from(root.querySelectorAll('style')).map(style => style.textContent || '');
     const container = root.querySelector('.widget-container') as HTMLElement;
 
-    expect(styles[0]).toContain("@import url('/themes/minimal/theme.css')");
+    expect(styles[0]).toContain("@import url('/assets/css/runtime.css')");
     expect(styles.join('\n')).toContain('color: red');
     expect(container.innerHTML).toContain('<p>Hello</p>');
     expect(container.innerHTML).not.toContain('onerror');

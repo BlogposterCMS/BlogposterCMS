@@ -42,23 +42,6 @@ function blockBrowserSourceFiles(req, res, next) {
   next();
 }
 
-function blockThemeExecutableAssets(req, res, next) {
-  const rawPath = String(req.path || '');
-  let requestPath = rawPath;
-  try {
-    requestPath = decodeURIComponent(rawPath);
-  } catch {
-    requestPath = rawPath;
-  }
-
-  // Themes are presentation-only; executable assets belong in widgets, modules or apps.
-  if (/\.(?:asp|aspx|cjs|js|jsx|jsp|mjs|php|phtml|py|rb|sh|ts|tsx|vue|svelte)$/i.test(requestPath)) {
-    res.status(404).send('Not found');
-    return;
-  }
-  next();
-}
-
 function makeStaticRealpathGuard(rootPath, label) {
   const root = path.resolve(rootPath);
   const rootPrefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
@@ -171,10 +154,8 @@ function mountStaticAssetRoutes(app, { rootDir, securityConfig }) {
   const designerManagersTs = path.join(rootDir, 'ui', 'designer', 'app', 'managers');
   const modulePublicLoaderRoot = path.join(rootDir, 'modules');
   const appStaticPath = path.join(rootDir, 'apps');
-  const themesPath = path.join(publicPath, 'themes');
   const guardAppStaticRoot = makeStaticRealpathGuard(appStaticPath, 'apps');
   const guardWidgetStaticRoot = makeStaticRealpathGuard(widgetsPath, 'widgets');
-  const guardThemeStaticRoot = makeStaticRealpathGuard(themesPath, 'themes');
 
   app.get('/apps/designer/main/:moduleName.js', makeParamTsHandler(designerMainTs, 'moduleName'));
   app.head('/apps/designer/main/:moduleName.js', makeParamTsHandler(designerMainTs, 'moduleName'));
@@ -212,7 +193,6 @@ function mountStaticAssetRoutes(app, { rootDir, securityConfig }) {
   });
 
   app.use('/assets', setStaticCorsHeaders, blockBrowserSourceFiles, express.static(assetsPath));
-  app.use('/themes', setStaticCorsHeaders, guardThemeStaticRoot, blockThemeExecutableAssets, express.static(themesPath));
   app.use('/favicon.ico', express.static(path.join(publicPath, 'favicon.ico')));
   app.use('/fonts', setStaticCorsHeaders, express.static(path.join(publicPath, 'fonts')));
 
@@ -227,7 +207,6 @@ function mountStaticAssetRoutes(app, { rootDir, securityConfig }) {
 module.exports = {
   STATIC_BLOCKED_FILENAMES,
   blockBrowserSourceFiles,
-  blockThemeExecutableAssets,
   makeStaticRealpathGuard,
   mountModulePublicLoaderRoutes,
   mountStaticAssetRoutes,

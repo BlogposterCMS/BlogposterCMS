@@ -1,0 +1,6 @@
+{
+  "moduleName": "fontPackages",
+  "version": "0.1.0",
+  "description": "Stores reusable typography packages independently from font providers and color tokens.",
+  "developer": "Blogposter Team"
+}

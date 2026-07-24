@@ -2,7 +2,7 @@ import { renderAdminSettingsSurface } from './widgetRuntimeGateway.js';
 import { bpDialog } from '../../shared/dialogs/bpDialog.js';
 import { ensureGlobalStyle, ensureLayout, resolveRuntimeShellConfig } from './runtimePageShell.js';
 import { hydrateRuntimeShellPartials } from './runtimeShellPartials.js';
-import { fetchRuntimePageBySlug, fetchRuntimeWidgetRegistry, loadRuntimeGlobalLayout, resolveRuntimeWidgetLane } from './runtimePageData.js';
+import { fetchRuntimePageBySlug, fetchRuntimeWidgetRegistry, initializeRuntimeDesignDefaults, loadRuntimeGlobalLayout, resolveRuntimeWidgetLane } from './runtimePageData.js';
 import { renderPublicRuntimePageContent } from './runtimePageComposition.js';
 import { renderAdminRuntimeGrid } from './runtimeAdminGrid.js';
 import { bindAdminContentNavigation } from './runtimeAdminNavigation.js';
@@ -97,6 +97,9 @@ export async function renderRuntimePage(context, mode = 'full') {
 export async function bootPageRenderer() {
     try {
         const context = resolveRuntimePageContext();
+        if (typeof window.meltdownEmit === 'function') {
+            await initializeRuntimeDesignDefaults(window.meltdownEmit, context.lane);
+        }
         await renderRuntimePage(context);
         if (context.lane === 'admin' && !unbindAdminNavigation) {
             unbindAdminNavigation = bindAdminContentNavigation({

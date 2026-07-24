@@ -286,8 +286,8 @@ test('meltdown HTTP policy blocks direct app management and inventory events', (
   }
 });
 
-test('meltdown HTTP policy blocks direct import export and theme writes', () => {
-  for (const eventName of ['runImport', 'runExport', 'activateTheme', 'listImporters', 'listExporters', 'listThemes', 'getTheme', 'getActiveTheme']) {
+test('meltdown HTTP policy blocks direct import export and Site Preset access', () => {
+  for (const eventName of ['runImport', 'runExport', 'sitePresets.apply', 'sitePresets.create', 'sitePresets.delete', 'sitePresets.list', 'listImporters', 'listExporters']) {
     assert.strictEqual(HTTP_FORBIDDEN_EXTERNAL_EVENTS.has(eventName), true);
     assert.match(explainExternalEventRejection(eventName, {
       slug: 'example'
@@ -687,7 +687,7 @@ test('app bridge policy blocks sensitive system query contracts', () => {
   assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS.has('listLoginStrategies'), true);
   assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS.has('getSetting'), true);
   assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS.has('getPublicSettings'), true);
-  assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS.has('listThemes'), true);
+  assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS.has('sitePresets.list'), true);
   assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS.has('listImporters'), true);
   assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS.has('searchPages'), false);
 });
@@ -695,7 +695,7 @@ test('app bridge policy blocks sensitive system query contracts', () => {
 test('module and app boundaries share sensitive system query policy', () => {
   assert.strictEqual(APP_FORBIDDEN_SENSITIVE_QUERY_EVENTS, SENSITIVE_SYSTEM_QUERY_EVENTS);
   assert.strictEqual(SENSITIVE_SYSTEM_QUERY_EVENTS.has('getAllPermissions'), true);
-  assert.strictEqual(SENSITIVE_SYSTEM_QUERY_EVENTS.has('getTheme'), true);
+  assert.strictEqual(SENSITIVE_SYSTEM_QUERY_EVENTS.has('sitePresets.list'), true);
   assert.strictEqual(SENSITIVE_SYSTEM_QUERY_EVENTS.has('listActiveStaticFrontends'), true);
   assert.strictEqual(COMMUNITY_FORBIDDEN_DIRECT_EVENTS.has('cmsAdminApiRequest'), true);
   assert.strictEqual(COMMUNITY_FORBIDDEN_DIRECT_EVENTS.has('cmsPublicRuntimeRequest'), true);

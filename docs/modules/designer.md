@@ -43,6 +43,30 @@ visual stage preview and an action catalog for scene, element and behavior
 commands. Agent controllers enqueue commands through `agentManager`; Designer
 polls and acknowledges them like any other surface.
 
+The same surface exposes central Color Schemes through `state.colorLibrary`,
+`meta.colorLibrary` and command-based `colorLibrary.*` actions. Design Studio
+loads them through Runtime Manager, applies stable numbered CSS variables and
+stores linked Default selections with literal fallbacks. The visible picker,
+public runtime and agent surface all use
+`ui/shared/colors/colorLibrary.ts`; direct colors, `userColor` and Style Sources
+remain separate domains.
+
+Font resources and typography defaults remain separate. `fontsManager` provides
+the available families, while the `fontPackages` resource stores named semantic
+defaults for Body, H1-H6, Paragraph, Link, Button, Label, Small, Quote and Code.
+The sidebar presents `Color scheme` and `Font packages` as independent panels.
+`state.fontPackages`, `meta.fontPackages` and command-based `fontPackages.*`
+actions mirror the same package service. The text toolbar keeps direct font
+selection; its `Default` choice removes the inline family so the active package
+role applies again.
+
+The Layout panel also exposes Site Presets without adding another primary rail
+mode. Installed and user-created packages use the same declarative contract for
+Builder settings, one Color Scheme, one Font Package and optional page demos
+composed from central presets. `state.sitePresets`, `meta.sitePresets` and
+command-based `sitePresets.*` actions mirror that service; applying a preset
+updates the central systems and does not add a public runtime dependency.
+
 Design Studio agent feedback extends that same surface instead of adding
 DOM-scraping helpers. Each snapshot now carries a versioned
 `design-studio.agent-feedback` block as `feedback`, `state.feedback` and

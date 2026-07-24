@@ -6,6 +6,15 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Replaced the executable Theme runtime with declarative Site Presets that use
+  one contract for installed and user-created packages. Presets can apply
+  existing Builder settings, a numbered Color Scheme, a numbered semantic Font
+  Package and confirmed page demos composed from central element presets; the
+  public runtime no longer depends on a Theme id, Theme CSS or `/themes`.
+- Added separate Design Studio `Color scheme` and `Font packages` panels with
+  editable `Default 1`, `Default 2`, and later slots. Linked defaults follow
+  the active scheme/package, while the existing color and font controls retain
+  per-element overrides and expose `Default` to return text to inheritance.
 - Clarified the agent safety guidance so security-sensitive changes require
   reviewing the applicable security policy, keeping changed threat models and
   trust boundaries documented, and testing fail-closed exceptions.

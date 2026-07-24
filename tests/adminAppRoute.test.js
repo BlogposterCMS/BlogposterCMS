@@ -151,14 +151,10 @@ test('real app static route is guarded before serving files', () => {
   );
 });
 
-test('real theme static route blocks executable theme assets', () => {
+test('Site Presets are not exposed as a public static runtime', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/staticAssets.js'), 'utf8');
-  expect(source).toContain('blockThemeExecutableAssets');
-  expect(source).toContain('Themes are presentation-only');
-  expect(source).toMatch(/const themesPath = path\.join\(publicPath, 'themes'\)/);
-  expect(source).toMatch(/const guardThemeStaticRoot = makeStaticRealpathGuard\(themesPath, 'themes'\)/);
-  expect(source).toMatch(/\?\:asp\|aspx\|cjs\|js\|jsx\|jsp\|mjs\|php\|phtml\|py\|rb\|sh\|ts\|tsx\|vue\|svelte/);
-  expect(source).toMatch(
-    /app\.use\(\s*['"]\/themes['"]\s*,\s*setStaticCorsHeaders\s*,\s*guardThemeStaticRoot\s*,\s*blockThemeExecutableAssets\s*,\s*express\.static\(themesPath\)/
-  );
+  expect(source).not.toContain("app.use('/themes'");
+  expect(source).not.toContain("app.use('/presets'");
+  expect(source).toContain("app.use('/assets'");
+  expect(fs.existsSync(path.join(__dirname, '..', 'public/assets/css/runtime.css'))).toBe(true);
 });

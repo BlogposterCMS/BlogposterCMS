@@ -1,8 +1,7 @@
 export function getGlobalCssUrl(lane) {
     if (lane === 'admin')
         return '/assets/css/site.css';
-    const theme = window.ACTIVE_THEME || 'default';
-    return `/themes/${theme}/theme.css`;
+    return '/assets/css/runtime.css';
 }
 export function ensureGlobalStyle(lane) {
     const url = getGlobalCssUrl(lane);

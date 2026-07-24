@@ -53,58 +53,46 @@ individual cards into Issues or Projects when work becomes active.
 
 ## Current Lanes
 
-### Theme Contract And Styling Boundary
+### Site Presets And Central Design Defaults
 
-Theme packages should stay presentation-only. Styling belongs to themes;
-features belong to widgets, modules or apps.
+Site Presets configure central Builder systems without becoming executable
+public runtimes.
 
-#### Theme contract documentation
+#### Declarative Site Preset contract
 
 - Status: Done
-- Type: architecture, docs
-- Area: themes, module boundaries
-- Context: Document the rule that themes provide CSS, tokens and static
-  presentation assets, while widgets/modules/apps own behavior and data.
-- Acceptance: Theme responsibility is documented and linked from the docs index
-  and Theme Manager reference.
-- Tests: Not required for docs-only work.
-- Docs: `docs/theme_contract.md`, `docs/modules/themeManager.md`
-- Risks: If the rule stays documentation-only forever, imports may still create
-  theme packages with too much responsibility.
+- Type: architecture, Builder
+- Area: `sitePresets`, Color Schemes, Font Packages
+- Context: Installed packages and user-created packages use one strict contract
+  for Builder settings, numbered defaults and central page-demo presets.
+- Acceptance: Unknown or executable fields fail validation, installed packages
+  remain read-only, user packages use the same normalized shape, and public
+  rendering has no preset dependency.
+- Tests: Site Preset manager, browser client, Builder boundary and agent-surface
+  contracts.
+- Docs: `docs/site-presets.md`, `docs/modules/sitePresets.md`
+- Risks: Import conflict and staged-preview behavior may need a later explicit
+  product decision.
 
-#### Theme manifest validation policy
+#### Numbered Color and Font defaults
 
-- Status: Review
-- Type: architecture, security
-- Area: `themeManager`, `htmlTheme` importer
-- Context: `theme.json` is strict metadata and cannot declare capabilities,
-  JavaScript assets or hidden runtime behavior.
-- Acceptance: Allowed fields are explicit, unsupported fields produce clear
-  diagnostics, invalid manifests are unavailable, and imported themes cannot
-  declare module/app/widget behavior.
-- Tests: Theme Manager boundary tests and HTML theme importer tests.
-- Docs: Theme Contract and Theme Manager reference.
-- Risks: Too strict too early may break existing imported themes; too loose may
-  invite feature/theme overlap.
-
-#### `theme.js` execution policy
-
-- Status: Review
-- Type: architecture
-- Area: public themes
-- Context: Blogposter is a fresh platform and imported themes should not bring
-  executable JavaScript into the theme layer.
-- Acceptance: Theme imports do not generate `theme.js`, Theme Manager does not
-  expose JS theme assets, and `/themes` does not serve executable assets.
-- Tests: Runtime theme loading and Theme Manager metadata tests.
-- Docs: Theme Contract.
-- Risks: Existing manually copied experimental themes may need behavior moved
-  into widgets, modules or apps.
+- Status: Done
+- Type: architecture, Builder UX
+- Area: `colorLibrary`, `fontPackages`, Design Studio
+- Context: Active schemes expose stable `Default N` slots while existing direct
+  color and font controls remain available for element-specific exceptions.
+- Acceptance: Linked values follow the active scheme/package, literal values
+  remain local overrides, and Color Schemes and Font Packages stay separate in
+  the UI and domain model.
+- Tests: Color/Font service, client, picker, toolbar and panel regression tests.
+- Docs: `docs/color-library.md`, `docs/font-packages.md`
+- Risks: A future Brand convenience must compose these systems without becoming
+  another source of truth.
 
 ### WordPress And Site Migration
 
 Whole-site imports should split rendered output, content, media and behavior
-instead of stuffing everything into a theme.
+instead of creating another runtime package.
 
 #### WordPress site package manifest
 
@@ -115,8 +103,8 @@ instead of stuffing everything into a theme.
   include rendered pages, global styles, content records, media, menus, SEO and
   mapping reports.
 - Acceptance: Manifest fields are documented, responsibilities are split
-  between theme assets, content import, full local asset inventory, media
-  import and widget/module mapping, and unsafe executable theme behavior is
+  between WordPress style hints, content import, full local asset inventory,
+  media import and widget/module mapping, and unsafe executable behavior is
   excluded by default.
 - Tests: `tests/themeImporter.test.js`
 - Docs: Importer module reference.
@@ -128,13 +116,13 @@ instead of stuffing everything into a theme.
 - Status: Review
 - Type: feature, migration
 - Area: `mother/modules/importer`
-- Context: Add `wordpressSitePackage` beside `wordpress` and `htmlTheme` for
-  full WordPress-exporter packages.
+- Context: Use `wordpressSitePackage` beside the content-only `wordpress`
+  importer for full WordPress-exporter packages.
 - Acceptance: Dry-run first, then import media and rendered page fallbacks
   through existing events, publish captured local assets, report page scripts as
-  blocked behavior, and block packages that try to put scripts into the theme
-  layer.
-- Tests: Importer unit tests for dry-run, blocked theme scripts, asset/media
+  blocked behavior, and block packages that try to put scripts into the public
+  rendering layer.
+- Tests: Importer unit tests for dry-run, blocked scripts, asset/media
   events and rendered page fallback events.
 - Docs: Importer module reference and migration guide.
 - Risks: WXR/page duplicate handling and richer widget mapping still need
@@ -367,7 +355,7 @@ second product or bypassing the event-driven architecture.
 - Type: architecture, docs
 - Area: modules, permissions, runtime contracts
 - Context: Document which core modules own identity, permissions, media,
-  content, workflow, SEO, search, themes and imports.
+  content, workflow, SEO, search, Site Presets and imports.
 - Acceptance: Contributors can tell where a feature belongs before coding.
 - Tests: Not required for docs-only work.
 - Docs: Architecture and module overview.

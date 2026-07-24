@@ -116,7 +116,6 @@ function previewRuntimeDataEmit(payload) {
     };
 }
 export async function renderLivePreviewPayload(payload) {
-    window.ACTIVE_THEME = payload.activeTheme || 'default';
     ensureGlobalStyle('public');
     ensureLayout({}, 'public');
     const contentEl = document.getElementById('content');

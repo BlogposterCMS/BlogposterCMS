@@ -6,6 +6,14 @@ import {
   unwrapData,
   type LooseRecord
 } from './runtimePageDataHelpers.js';
+import {
+  configureColorLibraryClient,
+  refreshColorLibrary
+} from '../../shared/colors/colorLibrary.js';
+import {
+  configureFontPackagesClient,
+  refreshFontPackages
+} from '../../shared/fonts/fontPackages.js';
 
 export {
   adminLaneAuthPayload,
@@ -21,6 +29,29 @@ export type RuntimeEmitter = (
   eventName: string,
   payload?: LooseRecord
 ) => Promise<any>;
+
+export async function initializeRuntimeDesignDefaults(
+  emit: RuntimeEmitter,
+  lane: string
+): Promise<void> {
+  const normalizedLane = lane === 'admin' ? 'admin' : 'public';
+  const token = normalizedLane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
+  configureColorLibraryClient({ emit, token, lane: normalizedLane });
+  configureFontPackagesClient({ emit, token, lane: normalizedLane });
+
+  await refreshColorLibrary().catch(error => {
+    console.warn(
+      'COLOR_LIBRARY_RUNTIME_LOAD_FAILED: Linked colors will use serialized fallbacks.',
+      error
+    );
+  });
+  await refreshFontPackages().catch(error => {
+    console.warn(
+      'FONT_PACKAGES_RUNTIME_LOAD_FAILED: Content will use its serialized or browser typography.',
+      error
+    );
+  });
+}
 
 function cmsPublicRuntimePayload(resource: string, action: string, params: LooseRecord = {}): LooseRecord {
   return {

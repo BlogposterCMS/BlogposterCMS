@@ -743,8 +743,6 @@ function setupPagesManagerEvents(motherEmitter) {
           if (err) return cb(err);
           if (!page) return cb(new Error('Page not found'));
 
-          const pageMeta = parsePageMeta(page?.meta);
-          const theme = pageMeta.theme || 'default';
           const { layoutRef, hasLinkedDesign } = designLayoutForPage(page);
 
           const envelope = {
@@ -762,9 +760,8 @@ function setupPagesManagerEvents(motherEmitter) {
                 type: 'design',
                 source: 'designerManager',
                 descriptor: {
-                  theme,
                   engine: 'grid-v2',
-                  css: [`/themes/${theme}/theme.css`],
+                  css: ['/assets/css/runtime.css'],
                   layoutRef
                 },
                 priority: 10,

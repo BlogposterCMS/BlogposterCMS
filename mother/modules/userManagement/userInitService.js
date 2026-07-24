@@ -91,9 +91,6 @@ const DEFAULT_PERMISSION_DEFINITIONS = Object.freeze([
   { permission_key: 'importers.run', description: 'Run content imports' },
   { permission_key: 'exporters.list', description: 'List available content exporters' },
   { permission_key: 'exporters.run', description: 'Run content exports and backups' },
-  { permission_key: 'themes.list', description: 'List installed themes' },
-  { permission_key: 'themes.activate', description: 'Activate installed themes' },
-
   { permission_key: 'userManagement.createRole', description: 'Create roles' },
   { permission_key: 'userManagement.editRole', description: 'Edit roles' },
   { permission_key: 'userManagement.deleteRole', description: 'Delete roles' },

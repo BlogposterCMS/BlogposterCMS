@@ -392,8 +392,8 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
 ## Public Entry Points
 
 HTML shells and server-rendered app shells should load `/build/` bundles
-directly. Static files such as theme assets may remain under `public/`, but
-browser vendor libraries are owned from `ui/shared/vendor`. TypeScript sources
+directly. Central runtime assets may remain under `public/`, but browser vendor
+libraries are owned from `ui/shared/vendor`. TypeScript sources
 belong in `ui/` and are emitted through `/build` bundles or explicit runtime
 transpiler routes. Direct `.ts` and `.tsx` requests on browser static mounts are
 blocked.

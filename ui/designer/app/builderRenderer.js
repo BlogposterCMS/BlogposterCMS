@@ -11,7 +11,6 @@ import { initLayoutMode, populateWidgetsPanel, startLayoutMode, stopLayoutMode }
 import { attachContainerBar } from './ux/containerActionBar.js';
 import { renderLayoutTreeSidebar } from './renderer/layoutTreeView.js';
 import { activateArrange as enableArrange, deactivateArrange as disableArrange } from './managers/layoutArrange.js';
-import { applyDesignerTheme } from './utils.js';
 import { createLogger } from './utils/logger';
 import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
@@ -178,7 +177,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         { id: 'instant', title: 'Instant' }
     ];
     const sceneInspector = ensureSceneInspector();
-    const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layers', 'layout']);
+    const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layers', 'layout', 'colors', 'fonts']);
     const SIDEBAR_TOOL_NAMES = new Set(['scroll', 'action']);
     const SIDEBAR_PANEL_BY_SELECTOR = [
         { selector: 'layout-panel', panel: 'layout' },
@@ -3024,7 +3023,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP, HAS_LAYOUT_STRUCTURE ? () => switchLayer(0) : null, INSERT_TOOL_ITEMS);
     setSidebarPanel(sidebarEl.dataset.activeSidebarPanel || 'insert');
     renderSceneNavigation();
-    await applyDesignerTheme();
     // Allow overlapping widgets for layered layouts
     grid = initGrid(gridEl, state, selectWidget, {
         scrollContainer: gridViewportEl,
@@ -4154,6 +4152,82 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         });
         markInactiveWidgets();
     };
+    Object.assign(layoutCtx, {
+        getSitePresetSettings: () => {
+            const container = layoutRoot?.querySelector('.layout-container') || layoutRoot;
+            const numberFromCss = (value, fallback = 0) => {
+                const numeric = Number.parseFloat(String(value || ''));
+                return Number.isFinite(numeric) ? Math.round(numeric) : fallback;
+            };
+            return {
+                layoutMode: container?.dataset?.layoutMode || 'free',
+                gap: numberFromCss(container?.dataset?.layoutGap),
+                padding: numberFromCss(container?.dataset?.layoutPadding),
+                sceneBackground: getSceneBackground()
+            };
+        },
+        applySitePresetSettings: settings => {
+            const source = settings && typeof settings === 'object' ? settings : {};
+            const container = layoutRoot?.querySelector('.layout-container') || layoutRoot;
+            setContainerLayoutMode(container, source.layoutMode || 'free');
+            setContainerSettings(container, {
+                gap: `${Math.max(0, Number(source.gap) || 0)}px`,
+                padding: `${Math.max(0, Number(source.padding) || 0)}px`
+            });
+            applySceneBackground(getActiveScene(), source.sceneBackground);
+            renderSceneNavigation();
+            requestSceneChangePersist();
+        },
+        captureSitePresetDemo: () => {
+            const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
+            const elements = layout.map(item => {
+                const presetId = String(item.code?.meta?.presetId || '');
+                if (!presetId || !getInsertPreset(presetId))
+                    return null;
+                return {
+                    presetId,
+                    x: Math.max(0, Math.min(11, Math.round((Number(item.xPercent) || 0) * 0.12))),
+                    y: Math.max(0, Math.round((Number(item.yPercent) || 0) * 10)),
+                    w: Math.max(1, Math.min(12, Math.round((Number(item.wPercent) || 25) * 0.12))),
+                    h: Math.max(1, Math.round((Number(item.hPercent) || 8) * 10))
+                };
+            }).filter(Boolean);
+            return {
+                id: 'current-scene',
+                name: getActiveScene()?.title || 'Current scene',
+                scene: {
+                    title: getActiveScene()?.title || 'Scene',
+                    background: getSceneBackground()
+                },
+                elements
+            };
+        },
+        applySitePresetDemo: async (demo) => {
+            const source = demo && typeof demo === 'object' ? demo : {};
+            const elements = Array.isArray(source.elements) ? source.elements : [];
+            await ensureDesignLayerForTool();
+            applySnapshot([]);
+            const scene = getActiveScene();
+            if (scene && source.scene) {
+                scene.title = String(source.scene.title || scene.title).trim() || scene.title;
+                applySceneBackground(scene, source.scene.background);
+                renderSceneNavigation();
+            }
+            const columns = Math.max(1, Number(grid?.options?.columns) || gridEl?.clientWidth || 1200);
+            for (const element of elements) {
+                const x = Math.round((Math.max(0, Number(element.x) || 0) / 12) * columns);
+                const w = Math.max(1, Math.round((Math.max(1, Number(element.w) || 4) / 12) * columns));
+                await insertPresetElement(element.presetId, {
+                    x,
+                    y: Math.max(0, Number(element.y) || 0),
+                    w,
+                    h: Math.max(1, Number(element.h) || DEFAULT_ROWS)
+                });
+            }
+            markInactiveWidgets();
+            requestSceneChangePersist();
+        }
+    });
     const undoCurrentDesign = () => {
         const shouldAutosave = Boolean(pageId && state.autosaveEnabled);
         undoDesign(currentDesignId, {

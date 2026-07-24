@@ -31,39 +31,6 @@ export function addHitLayer(widget) {
   widget.addEventListener('deselected', toggle);
 }
 
-export function scopeThemeCss(css, rootPrefix, contentPrefix) {
-  return css.replace(/(^|\})([^@{}]+)\{/g, (m, brace, selectors) => {
-    selectors = selectors.trim();
-    if (!selectors || selectors.startsWith('@')) return m;
-    const scoped = selectors.split(',').map(s => {
-      s = s.trim();
-      if ([":root", "html", "body"].includes(s)) return rootPrefix;
-      return `${contentPrefix} ${s}`;
-    }).join(', ');
-    return `${brace}${scoped}{`;
-  });
-}
-
-export async function applyDesignerTheme() {
-  const theme = window.ACTIVE_THEME;
-  if (!theme) return;
-  try {
-    const res = await window.fetchWithTimeout(`/themes/${theme}/theme.css`);
-    if (!res.ok) {
-      console.warn(`[Designer] missing theme "${theme}" css (${res.status})`);
-      return;
-    }
-    const css = await res.text();
-    const scoped = scopeThemeCss(css, '#workspaceMain', '#workspaceMain .builder-themed');
-    const style = document.createElement('style');
-    style.dataset.builderTheme = theme;
-    style.textContent = scoped;
-    document.head.appendChild(style);
-  } catch (err) {
-    console.warn('[Designer] failed to apply theme', err);
-  }
-}
-
 export function wrapCss(css, selector) {
   const trimmed = css.trim();
   if (!trimmed) return '';

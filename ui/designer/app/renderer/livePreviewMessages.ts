@@ -17,7 +17,6 @@ export type DesignerLivePreviewPayload = {
   lane: 'public';
   generatedAt: string;
   activeLayer: number;
-  activeTheme: string;
   viewport: DesignerLivePreviewViewport;
   design: Record<string, unknown>;
   document: {

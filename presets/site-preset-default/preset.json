@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "site-preset-default",
+  "name": "Default",
+  "version": "1.0.0",
+  "developer": "Blogposter Team",
+  "builderSettings": {
+    "layoutMode": "free",
+    "gap": 0,
+    "padding": 0,
+    "sceneBackground": "#FFFFFF"
+  },
+  "colorScheme": {
+    "id": "color-scheme-default",
+    "name": "Default",
+    "colors": [
+      { "id": "default-1", "name": "Primary", "value": "#00C4CC" },
+      { "id": "default-2", "name": "Text", "value": "#111827" },
+      { "id": "default-3", "name": "Background", "value": "#FFFFFF" },
+      { "id": "default-4", "name": "Muted", "value": "#6B7280" },
+      { "id": "default-5", "name": "Accent", "value": "#2563EB" }
+    ]
+  },
+  "fontPackage": {
+    "id": "font-package-default",
+    "name": "Default",
+    "roles": {}
+  },
+  "pageDemos": [
+    {
+      "id": "starter",
+      "name": "Starter",
+      "scene": {
+        "title": "Hero",
+        "background": "#FFFFFF"
+      },
+      "elements": [
+        { "presetId": "text.heading", "x": 1, "y": 120, "w": 7, "h": 96 },
+        { "presetId": "text.paragraph", "x": 1, "y": 230, "w": 6, "h": 88 },
+        { "presetId": "button.primary", "x": 1, "y": 335, "w": 3, "h": 56 }
+      ]
+    }
+  ]
+}

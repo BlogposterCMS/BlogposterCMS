@@ -520,10 +520,9 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
             });
             bodyHtml = gridClone.innerHTML;
         }
-        const theme = window.ACTIVE_THEME || 'default';
         const headLinks = [
             `<link rel="canonical" href="/${subSlug || `p/${safeName}`}">`,
-            `<link rel="stylesheet" href="/themes/${theme}/theme.css">`,
+            '<link rel="stylesheet" href="/assets/css/runtime.css">',
             ...externalStyles.map(href => `<link rel="stylesheet" href="${href}">`)
         ];
         const files = [

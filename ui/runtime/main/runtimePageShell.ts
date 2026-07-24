@@ -14,8 +14,7 @@ type RuntimeShellContextSource = {
 
 export function getGlobalCssUrl(lane: string): string {
   if (lane === 'admin') return '/assets/css/site.css';
-  const theme = window.ACTIVE_THEME || 'default';
-  return `/themes/${theme}/theme.css`;
+  return '/assets/css/runtime.css';
 }
 
 export function ensureGlobalStyle(lane: string): void {

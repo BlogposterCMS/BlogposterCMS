@@ -1,0 +1,6 @@
+{
+  "moduleName": "sitePresets",
+  "version": "1.0.0",
+  "description": "Provides declarative Builder presets backed by central color, font and widget systems.",
+  "developer": "Blogposter Team"
+}

@@ -1,5 +1,19 @@
 import { normalizeDataList, normalizeLayoutResponse, unwrapData } from './runtimePageDataHelpers.js';
+import { configureColorLibraryClient, refreshColorLibrary } from '../../shared/colors/colorLibrary.js';
+import { configureFontPackagesClient, refreshFontPackages } from '../../shared/fonts/fontPackages.js';
 export { adminLaneAuthPayload, laneAuthPayload, normalizeDataList, normalizeLayoutResponse, resolveRuntimeWidgetLane, unwrapData } from './runtimePageDataHelpers.js';
+export async function initializeRuntimeDesignDefaults(emit, lane) {
+    const normalizedLane = lane === 'admin' ? 'admin' : 'public';
+    const token = normalizedLane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
+    configureColorLibraryClient({ emit, token, lane: normalizedLane });
+    configureFontPackagesClient({ emit, token, lane: normalizedLane });
+    await refreshColorLibrary().catch(error => {
+        console.warn('COLOR_LIBRARY_RUNTIME_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
+    });
+    await refreshFontPackages().catch(error => {
+        console.warn('FONT_PACKAGES_RUNTIME_LOAD_FAILED: Content will use its serialized or browser typography.', error);
+    });
+}
 function cmsPublicRuntimePayload(resource, action, params = {}) {
     return {
         moduleName: 'runtimeManager',

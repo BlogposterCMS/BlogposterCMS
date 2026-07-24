@@ -9,7 +9,6 @@ const MAINTENANCE_ALLOWED_PREFIXES = [
   '/login',
   '/favicon.ico',
   '/plainspace',
-  '/themes',
   '/apps',
   '/widgets',
   '/fonts'

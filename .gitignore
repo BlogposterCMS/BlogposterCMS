@@ -34,6 +34,9 @@ modulePasswords.json
 # Local agent coordination scratch files
 /.agent-worklog/
 
+# Durable local product workpapers and private notes
+/.local-worknotes/
+
 # Sensitive files
 .pgpass
 cookies.txt

@@ -52,6 +52,33 @@ The header Publish button is exposed as a `publication-center-command`; the
 visible Publishing panel state is mirrored in the feedback `publishing` block
 instead of requiring agents to scrape the sidebar.
 
+The central Color Schemes are exposed beside the feedback block as
+`state.colorLibrary` and `meta.colorLibrary`. They include load status, active
+scheme identity and stable numbered Default slots with names, values and CSS
+token names. The surface action catalog exposes refresh, scheme
+create/update/activation/deletion and numbered-slot mutations through the same
+core service and permissions as the visible picker. The concrete actions remain
+`colorLibrary.refresh`, `colorLibrary.create`, `colorLibrary.update`,
+`colorLibrary.delete`, `colorLibrary.createScheme`,
+`colorLibrary.updateScheme`, `colorLibrary.activateScheme` and
+`colorLibrary.deleteScheme`.
+
+Reusable typography is exposed separately as `state.fontPackages` and
+`meta.fontPackages`. The state includes package count, active package identity,
+the active semantic role settings and load errors. The action catalog exposes
+`fontPackages.refresh`, `fontPackages.create`, `fontPackages.rename`,
+`fontPackages.updateRole`, `fontPackages.resetRole`, `fontPackages.activate`
+and `fontPackages.delete`. These commands use the same Font Packages core
+module and permissions as the visible sidebar editor. Direct per-text font
+overrides remain valid; an empty inline font family means the active package
+default.
+
+Declarative Builder packages are exposed separately as `state.sitePresets` and
+`meta.sitePresets`. The state distinguishes installed and user-created packages,
+includes the last applied preset, and uses command actions for refresh, apply
+and user-preset deletion. Applying a package refreshes the central Color Scheme
+and Font Package state; it never introduces a separate runtime or agent API.
+
 ## Contributor Checklist
 
 - If a Design Studio change alters canvas rendering, layout containers, widget

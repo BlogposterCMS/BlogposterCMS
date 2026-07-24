@@ -3,7 +3,7 @@
 ## Boundaries
 
 SEO Manager owns metadata, sitemap and robots contracts as a core module.
-Themes and public routes consume resolved SEO through Runtime Manager; admin
+Public renderers and routes consume resolved SEO through Runtime Manager; admin
 surfaces mutate SEO through allowlisted facade actions. Direct SEO writes
 require `moduleName: "seoManager"`, `moduleType: "core"`, a valid JWT and
 `seo.manage`.

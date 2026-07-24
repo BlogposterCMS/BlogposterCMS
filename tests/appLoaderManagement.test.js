@@ -292,9 +292,9 @@ test('app loader marks invalid app manifests inactive during scan', async () => 
       { eventName: 'getPublicSettings', moduleName: 'settingsManager', moduleType: 'core', access: 'read' }
     ]
   });
-  createAppFolder(appsRoot, 'themeDirectoryApp', {
+  createAppFolder(appsRoot, 'sitePresetDirectoryApp', {
     allowedEvents: [
-      { eventName: 'listThemes', moduleName: 'themeManager', moduleType: 'core', access: 'read' }
+      { eventName: 'sitePresets.list', moduleName: 'sitePresets', moduleType: 'core', access: 'read' }
     ]
   });
   createAppFolder(appsRoot, 'missingAccessApp', {
@@ -350,10 +350,10 @@ test('app loader marks invalid app manifests inactive during scan', async () => 
     assert.strictEqual(publicSettingsEntry.result.isActive, false);
     assert.match(publicSettingsEntry.result.lastError, /internal event: getPublicSettings/);
 
-    const themeDirectoryEntry = await emitAsync(emitter, 'getApp', appPayload({ appName: 'themeDirectoryApp' }));
-    assert.ifError(themeDirectoryEntry.err);
-    assert.strictEqual(themeDirectoryEntry.result.isActive, false);
-    assert.match(themeDirectoryEntry.result.lastError, /internal event: listThemes/);
+    const sitePresetDirectoryEntry = await emitAsync(emitter, 'getApp', appPayload({ appName: 'sitePresetDirectoryApp' }));
+    assert.ifError(sitePresetDirectoryEntry.err);
+    assert.strictEqual(sitePresetDirectoryEntry.result.isActive, false);
+    assert.match(sitePresetDirectoryEntry.result.lastError, /internal event: sitePresets\.list/);
 
     const missingAccessEntry = await emitAsync(emitter, 'getApp', appPayload({ appName: 'missingAccessApp' }));
     assert.ifError(missingAccessEntry.err);

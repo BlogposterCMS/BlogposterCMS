@@ -153,7 +153,6 @@ function previewRuntimeDataEmit(payload: DesignerLivePreviewPayload) {
 }
 
 export async function renderLivePreviewPayload(payload: DesignerLivePreviewPayload): Promise<void> {
-  window.ACTIVE_THEME = payload.activeTheme || 'default';
   ensureGlobalStyle('public');
   ensureLayout({}, 'public');
 

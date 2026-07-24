@@ -9,6 +9,31 @@ import {
 } from '/ui/shared/agent/agentSurfaceClient.js';
 import { capturePreview } from './renderer/capturePreview.js';
 import { livePreviewFeedbackState } from './renderer/livePreviewFrame.js';
+import {
+  colorLibraryAgentState,
+  createLibraryColor,
+  deleteLibraryColor,
+  refreshColorLibrary,
+  updateLibraryColor
+} from '/ui/shared/colors/colorLibrary.js';
+import {
+  activateFontPackage,
+  createFontPackage,
+  deleteFontPackage,
+  fontPackagesAgentState,
+  refreshFontPackages,
+  renameFontPackage,
+  resetFontPackageRole,
+  updateFontPackageRole,
+  type FontPackageRole,
+  type FontRoleStyles
+} from '/ui/shared/fonts/fontPackages.js';
+import {
+  applySitePreset,
+  deleteSitePreset,
+  refreshSitePresets,
+  sitePresetsAgentState
+} from '/ui/shared/presets/sitePresets.js';
 
 const SURFACE_ID = 'studio.designer';
 const APP_NAME = 'designer';
@@ -128,6 +153,126 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
       { name: 'label', type: 'string', required: false },
       { name: 'href', type: 'string', required: false }
     ]
+  },
+  {
+    action: 'colorLibrary.refresh',
+    label: 'Refresh color schemes',
+    category: 'color',
+    description: 'Refreshes numbered Default slots and reapplies the active color scheme.'
+  },
+  {
+    action: 'colorLibrary.create',
+    label: 'Add color Default',
+    category: 'color',
+    description: 'Appends a named Default slot to a color scheme.',
+    params: [
+      { name: 'name', type: 'string', required: true },
+      { name: 'value', type: 'color', required: true },
+      { name: 'schemeId', type: 'string', required: false }
+    ]
+  },
+  {
+    action: 'colorLibrary.update',
+    label: 'Update saved color',
+    category: 'color',
+    description: 'Renames a saved color or updates its value while retaining its stable id.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'schemeId', type: 'string', required: false },
+      { name: 'name', type: 'string', required: false },
+      { name: 'value', type: 'color', required: false }
+    ]
+  },
+  {
+    action: 'colorLibrary.delete',
+    label: 'Delete saved color',
+    category: 'color',
+    description: 'Removes the last Default slot; linked design values retain their serialized fallback.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'schemeId', type: 'string', required: false }
+    ]
+  },
+  {
+    action: 'fontPackages.refresh',
+    label: 'Refresh font packages',
+    category: 'typography',
+    description: 'Refreshes reusable font packages and reapplies the active semantic typography.'
+  },
+  {
+    action: 'fontPackages.create',
+    label: 'Create font package',
+    category: 'typography',
+    description: 'Creates a named package by copying an existing or active font package.',
+    params: [
+      { name: 'name', type: 'string', required: true },
+      { name: 'copyFromId', type: 'string', required: false }
+    ]
+  },
+  {
+    action: 'fontPackages.rename',
+    label: 'Rename font package',
+    category: 'typography',
+    description: 'Renames a font package while retaining its stable id.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'name', type: 'string', required: true }
+    ]
+  },
+  {
+    action: 'fontPackages.updateRole',
+    label: 'Update font package role',
+    category: 'typography',
+    description: 'Updates Body, H1-H6, Paragraph, Link, Button, Label, Small, Quote or Code defaults.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'role', type: 'string', required: true },
+      { name: 'settings', type: 'object', required: true }
+    ]
+  },
+  {
+    action: 'fontPackages.resetRole',
+    label: 'Reset font package role',
+    category: 'typography',
+    description: 'Resets one semantic text role to the system baseline.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'role', type: 'string', required: true }
+    ]
+  },
+  {
+    action: 'fontPackages.activate',
+    label: 'Activate font package',
+    category: 'typography',
+    description: 'Makes a font package the default for text without a direct font override.',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'fontPackages.delete',
+    label: 'Delete font package',
+    category: 'typography',
+    description: 'Deletes a font package; at least one package must remain.',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'sitePresets.refresh',
+    label: 'Refresh Site Presets',
+    category: 'preset',
+    description: 'Refreshes installed and user Site Presets.'
+  },
+  {
+    action: 'sitePresets.apply',
+    label: 'Apply Site Preset',
+    category: 'preset',
+    description: 'Applies one declarative preset to the central color and font defaults.',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'sitePresets.delete',
+    label: 'Delete user Site Preset',
+    category: 'preset',
+    description: 'Deletes a user-created Site Preset. Installed presets stay read-only.',
+    params: [{ name: 'id', type: 'string', required: true }]
   }
 ]);
 
@@ -790,6 +935,9 @@ export async function buildDesignerAgentSnapshot(
   const feedbackWarnings = Array.isArray(feedback.warnings) ? feedback.warnings.length : 0;
   const feedbackLayoutTree = feedback.layoutTree as Record<string, unknown>;
   const feedbackWidgetPlacements = Array.isArray(feedback.widgetPlacements) ? feedback.widgetPlacements : [];
+  const colorLibrary = colorLibraryAgentState();
+  const fontPackages = fontPackagesAgentState();
+  const sitePresets = sitePresetsAgentState();
   return {
     appName: APP_NAME,
     surfaceId: SURFACE_ID,
@@ -804,6 +952,11 @@ export async function buildDesignerAgentSnapshot(
       behaviorElementCount: behaviorMap.behaviorElementCount,
       effectElementCount: behaviorMap.effectElementCount,
       hasSelection: Boolean(selectedCanvasItem()),
+      savedColorCount: Number(colorLibrary.colorCount || 0),
+      fontPackageCount: Number(fontPackages.packageCount || 0),
+      activeFontPackage: fontPackages.activePackageName || null,
+      sitePresetCount: Number(sitePresets.presetCount || 0),
+      lastAppliedSitePreset: sitePresets.lastAppliedId || null,
       feedbackStatus: feedback.status,
       feedbackWarningCount: feedbackWarnings
     },
@@ -814,6 +967,9 @@ export async function buildDesignerAgentSnapshot(
       designVersion: document.body.dataset.designVersion || null,
       mode: document.body.classList.contains('builder-mode') ? 'builder' : 'unknown',
       behaviorMap,
+      colorLibrary,
+      fontPackages,
+      sitePresets,
       feedback
     },
     selection: selectionState(),
@@ -842,6 +998,21 @@ export async function buildDesignerAgentSnapshot(
         status: feedback.status,
         warningCount: feedbackWarnings,
         guide: 'docs/design-studio-agent-feedback.md'
+      },
+      colorLibrary: {
+        contract: 'numbered-color-schemes',
+        linkedValueFormat: 'var(--bp-color-default-<slot>, <fallback>)',
+        directColorOverride: 'supported; literal values override the active Default slot locally'
+      },
+      fontPackages: {
+        contract: 'numbered-semantic-font-packages',
+        roles: 'body,h1,h2,h3,h4,h5,h6,paragraph,link,button,label,small,blockquote,code',
+        directFontOverride: 'supported; empty font-family means active package default'
+      },
+      sitePresets: {
+        contract: 'declarative-site-presets-v1',
+        sources: 'installed,user',
+        runtimeDependency: 'none'
       }
     },
     metrics: {
@@ -919,6 +1090,118 @@ function handleElementCommand(action: string, command: AgentSurfaceCommand): Rec
   return { handled: false };
 }
 
+async function handleColorLibraryCommand(
+  action: string,
+  command: AgentSurfaceCommand
+): Promise<Record<string, unknown>> {
+  if (action === 'colorLibrary.refresh') {
+    return { handled: true, library: await refreshColorLibrary() };
+  }
+  if (action === 'colorLibrary.create') {
+    const name = String(commandParam(command, 'name') || '').trim();
+    const value = String(commandParam(command, 'value') || command.value || '').trim();
+    const schemeId = String(commandParam(command, 'schemeId') || '').trim();
+    if (!name || !value) return { handled: false, reason: 'missing-color-name-or-value' };
+    return {
+      handled: true,
+      color: await createLibraryColor({ name, value, ...(schemeId ? { schemeId } : {}) })
+    };
+  }
+  if (action === 'colorLibrary.update') {
+    const id = String(commandParam(command, 'id') || command.target || '').trim();
+    if (!id) return { handled: false, reason: 'missing-color-id' };
+    const nameValue = commandParam(command, 'name');
+    const colorValue = commandParam(command, 'value');
+    const schemeId = String(commandParam(command, 'schemeId') || '').trim();
+    const update: { id: string; name?: string; value?: string; schemeId?: string } = { id };
+    if (typeof nameValue === 'string') update.name = nameValue;
+    if (typeof colorValue === 'string') update.value = colorValue;
+    if (schemeId) update.schemeId = schemeId;
+    return { handled: true, color: await updateLibraryColor(update) };
+  }
+  if (action === 'colorLibrary.delete') {
+    const id = String(commandParam(command, 'id') || command.target || '').trim();
+    if (!id) return { handled: false, reason: 'missing-color-id' };
+    const schemeId = String(commandParam(command, 'schemeId') || '').trim();
+    return { handled: true, result: await deleteLibraryColor(id, schemeId || undefined) };
+  }
+  return { handled: false, reason: 'unsupported-color-library-command', action };
+}
+
+async function handleFontPackagesCommand(
+  action: string,
+  command: AgentSurfaceCommand
+): Promise<Record<string, unknown>> {
+  const id = String(commandParam(command, 'id') || command.target || '').trim();
+  if (action === 'fontPackages.refresh') {
+    return { handled: true, library: await refreshFontPackages() };
+  }
+  if (action === 'fontPackages.create') {
+    const name = String(commandParam(command, 'name') || '').trim();
+    const copyFromId = String(commandParam(command, 'copyFromId') || '').trim();
+    if (!name) return { handled: false, reason: 'missing-font-package-name' };
+    return {
+      handled: true,
+      package: await createFontPackage({
+        name,
+        ...(copyFromId ? { copyFromId } : {})
+      })
+    };
+  }
+  if (!id) return { handled: false, reason: 'missing-font-package-id' };
+  if (action === 'fontPackages.rename') {
+    const name = String(commandParam(command, 'name') || '').trim();
+    if (!name) return { handled: false, reason: 'missing-font-package-name' };
+    return { handled: true, package: await renameFontPackage(id, name) };
+  }
+  if (action === 'fontPackages.updateRole') {
+    const role = String(commandParam(command, 'role') || '').trim() as FontPackageRole;
+    const settingsValue = commandParam(command, 'settings');
+    const settings = settingsValue && typeof settingsValue === 'object' && !Array.isArray(settingsValue)
+      ? settingsValue as Partial<FontRoleStyles>
+      : null;
+    if (!role || !settings) {
+      return { handled: false, reason: 'missing-font-package-role-or-settings' };
+    }
+    return {
+      handled: true,
+      package: await updateFontPackageRole({ id, role, settings })
+    };
+  }
+  if (action === 'fontPackages.resetRole') {
+    const role = String(commandParam(command, 'role') || '').trim() as FontPackageRole;
+    if (!role) return { handled: false, reason: 'missing-font-package-role' };
+    return { handled: true, package: await resetFontPackageRole(id, role) };
+  }
+  if (action === 'fontPackages.activate') {
+    return { handled: true, package: await activateFontPackage(id) };
+  }
+  if (action === 'fontPackages.delete') {
+    return { handled: true, result: await deleteFontPackage(id) };
+  }
+  return { handled: false, reason: 'unsupported-font-packages-command', action };
+}
+
+async function handleSitePresetsCommand(
+  action: string,
+  command: AgentSurfaceCommand
+): Promise<Record<string, unknown>> {
+  if (action === 'sitePresets.refresh') {
+    return { handled: true, library: await refreshSitePresets() };
+  }
+  const id = String(commandParam(command, 'id') || command.target || '').trim();
+  if (!id) return { handled: false, reason: 'missing-site-preset-id' };
+  if (action === 'sitePresets.apply') {
+    const result = await applySitePreset(id);
+    await Promise.all([refreshColorLibrary(), refreshFontPackages()]);
+    return { handled: true, result };
+  }
+  if (action === 'sitePresets.delete') {
+    return { handled: true, preset: await deleteSitePreset(id) };
+  }
+  return { handled: false, reason: 'unsupported-site-presets-command', action };
+}
+
 export async function handleDesignerAgentCommand(command: AgentSurfaceCommand): Promise<Record<string, unknown>> {
   const commandPort = window.blogposterDesignerCommands;
   if (commandPort && typeof commandPort.execute === 'function') {
@@ -927,6 +1210,9 @@ export async function handleDesignerAgentCommand(command: AgentSurfaceCommand): 
   }
   const action = commandAction(command);
   if (action === 'feedback.refresh') return { handled: true, feedback: 'refresh-requested' };
+  if (action.startsWith('colorLibrary.')) return handleColorLibraryCommand(action, command);
+  if (action.startsWith('fontPackages.')) return handleFontPackagesCommand(action, command);
+  if (action.startsWith('sitePresets.')) return handleSitePresetsCommand(action, command);
   if (action.startsWith('scene.')) return handleSceneCommand(action, command);
   if (action === 'insert' || action === 'insert.element') return handleInsertCommand(command);
   if (action.startsWith('element.') || action.startsWith('behavior.')) return handleElementCommand(action, command);

@@ -62,10 +62,6 @@ function loadPlainSpaceVersion({ rootDir }) {
   }
 }
 
-function activeThemeFromEnv(env = process.env) {
-  return (env.ACTIVE_THEME || 'default').replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
-}
-
 function createTokenConfig(env = process.env) {
   return {
     jwtSecret: env.JWT_SECRET,
@@ -87,7 +83,6 @@ function createTokenConfig(env = process.env) {
 
 module.exports = {
   abortConfigError,
-  activeThemeFromEnv,
   createTokenConfig,
   ensureRequiredEnv,
   loadPlainSpaceVersion,

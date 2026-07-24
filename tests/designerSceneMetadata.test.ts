@@ -103,7 +103,7 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain("builder-sidebar--compact");
     expect(rendererSource).toContain('data-sidebar-panel-target');
     expect(rendererSource).toContain('setSidebarPanel(sidebarEl.dataset.activeSidebarPanel || \'insert\')');
-    expect(rendererSource).toContain("const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layers', 'layout'])");
+    expect(rendererSource).toContain("const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layers', 'layout', 'colors', 'fonts'])");
     expect(rendererSource).not.toContain("{ selector: 'scene-map', panel: 'sections' }");
     expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('layout')");
     expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('insert')");

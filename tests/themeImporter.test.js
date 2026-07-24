@@ -5,7 +5,6 @@ const os = require('os');
 const path = require('path');
 const EventEmitter = require('events');
 
-const htmlThemeImporter = require('../mother/modules/importer/importers/htmlTheme');
 const wordpressImporter = require('../mother/modules/importer/importers/wordpress');
 const wordpressSitePackageImporter = require('../mother/modules/importer/importers/wordpressSitePackage');
 
@@ -145,99 +144,6 @@ test('wordpress importer builds a WXR dry-run plan', async () => {
   assert.deepStrictEqual(plan.entries[0].metadata.wordpress.translation, { groupId: 'group-42' });
   assert.strictEqual(plan.entries[0].metadata.wordpress.terms.length, 2);
   assert.strictEqual(plan.attachments[0].mimeType, 'image/png');
-});
-
-test('htmlTheme importer plans and installs a static theme safely', async () => {
-  const tmpRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'bp-html-theme-'));
-  const sourceDir = path.join(tmpRoot, 'source-theme');
-  const themeBaseDir = path.join(tmpRoot, 'themes');
-
-  try {
-    await fs.promises.mkdir(path.join(sourceDir, 'assets'), { recursive: true });
-    await fs.promises.writeFile(path.join(sourceDir, 'index.html'), [
-      '<!doctype html>',
-      '<html><head>',
-      '<title>Landing Theme</title>',
-      '<link rel="stylesheet" href="assets/site.css">',
-      '</head><body><img src="assets/hero.png"></body></html>'
-    ].join(''), 'utf8');
-    await fs.promises.writeFile(path.join(sourceDir, 'assets', 'site.css'), 'body { color: #111; }', 'utf8');
-    await fs.promises.writeFile(path.join(sourceDir, 'assets', 'hero.png'), Buffer.from([0, 1, 2, 3]));
-
-    const plan = await htmlThemeImporter._internals.buildImportPlan({ sourceDir });
-    assert.strictEqual(plan.installable, true);
-    assert.strictEqual(plan.theme.slug, 'landing-theme');
-    assert.strictEqual(plan.entrypoints.html, 'index.html');
-    assert.strictEqual(plan.entrypoints.css, 'assets/site.css');
-    assert.strictEqual(plan.entrypoints.script, undefined);
-    assert.deepStrictEqual(plan.policy.blocked, []);
-    assert(plan.references.includes('assets/site.css'));
-    assert(plan.references.includes('assets/hero.png'));
-
-    const installed = await htmlThemeImporter.import({
-      sourceDir,
-      themeBaseDir,
-      dryRun: false
-    });
-    assert.strictEqual(installed.success, true);
-    assert.strictEqual(installed.installed.slug, 'landing-theme');
-    assert.strictEqual(
-      fs.existsSync(path.join(themeBaseDir, 'landing-theme', 'theme.json')),
-      true
-    );
-    assert.strictEqual(
-      fs.existsSync(path.join(themeBaseDir, 'landing-theme', 'theme.js')),
-      false
-    );
-    assert.strictEqual(
-      fs.existsSync(path.join(themeBaseDir, 'landing-theme', 'source', 'index.html')),
-      true
-    );
-    const themeJson = JSON.parse(await fs.promises.readFile(path.join(themeBaseDir, 'landing-theme', 'theme.json'), 'utf8'));
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(themeJson, 'slug'), false);
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(themeJson.assets || {}, 'js'), false);
-  } finally {
-    await fs.promises.rm(tmpRoot, { recursive: true, force: true });
-  }
-});
-
-test('htmlTheme importer blocks executable theme behavior', async () => {
-  const tmpRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'bp-html-theme-blocked-'));
-  const sourceDir = path.join(tmpRoot, 'source-theme');
-  const themeBaseDir = path.join(tmpRoot, 'themes');
-
-  try {
-    await fs.promises.mkdir(path.join(sourceDir, 'assets'), { recursive: true });
-    await fs.promises.writeFile(path.join(sourceDir, 'index.html'), [
-      '<!doctype html>',
-      '<html><head>',
-      '<title>Interactive Theme</title>',
-      '<link rel="stylesheet" href="assets/site.css">',
-      '</head><body onclick="openMenu()"><script src="assets/theme.js"></script></body></html>'
-    ].join(''), 'utf8');
-    await fs.promises.writeFile(path.join(sourceDir, 'assets', 'site.css'), '@import url("https://cdn.example.test/theme.css");', 'utf8');
-    await fs.promises.writeFile(path.join(sourceDir, 'assets', 'theme.js'), 'fetch("/api/theme-feature");', 'utf8');
-    await fs.promises.writeFile(path.join(sourceDir, 'template.php'), '<?php echo "feature"; ?>', 'utf8');
-
-    const plan = await htmlThemeImporter._internals.buildImportPlan({ sourceDir });
-    assert.strictEqual(plan.installable, false);
-    assert(plan.policy.blocked.some(item => item.includes('THEME_SCRIPT_FILE')));
-    assert(plan.policy.blocked.some(item => item.includes('THEME_SCRIPT_TAG')));
-    assert(plan.policy.blocked.some(item => item.includes('THEME_INLINE_HANDLER')));
-    assert(plan.policy.blocked.some(item => item.includes('THEME_CSS_IMPORT')));
-    assert(plan.policy.blocked.some(item => item.includes('THEME_EXECUTABLE_FILE')));
-
-    await assert.rejects(
-      htmlThemeImporter.import({
-        sourceDir,
-        themeBaseDir,
-        dryRun: false
-      }),
-      /Theme import blocked/
-    );
-  } finally {
-    await fs.promises.rm(tmpRoot, { recursive: true, force: true });
-  }
 });
 
 test('wordpressSitePackage importer plans and applies rendered site packages', async () => {
@@ -865,77 +771,6 @@ test('importer module lists, dry-runs and applies WordPress imports through core
   assert.strictEqual(entryPayload.meta.blogposter.primaryCollection.slug, 'news');
 });
 
-test('theme manager lists themes with permission checks', async () => {
-  const themeManager = loadModule('mother/modules/themeManager');
-  const em = new EventEmitter();
-  let activeTheme = 'default';
-  let settingPayload = null;
-
-  em.on('getSetting', (payload, cb) => {
-    assert.strictEqual(payload.moduleName, 'settingsManager');
-    assert.strictEqual(payload.key, 'ACTIVE_THEME');
-    cb(null, activeTheme);
-  });
-  em.on('setSetting', (payload, cb) => {
-    settingPayload = payload;
-    activeTheme = payload.value;
-    cb(null, { done: true });
-  });
-
-  await themeManager.initialize({ motherEmitter: em, isCore: true, jwt: 't' });
-
-  const themes = await emitAsync(em, 'listThemes', {
-    jwt: 't',
-    moduleName: 'themeManager',
-    moduleType: 'core',
-    decodedJWT: { permissions: { themes: { list: true } } }
-  });
-  assert(Array.isArray(themes));
-
-  const theme = await emitAsync(em, 'getTheme', {
-    jwt: 't',
-    moduleName: 'themeManager',
-    moduleType: 'core',
-    decodedJWT: { permissions: { themes: { list: true } } },
-    slug: 'default'
-  });
-  assert.strictEqual(theme.slug, 'default');
-  assert.strictEqual(theme.assets.css, '/themes/default/theme.css');
-
-  const current = await emitAsync(em, 'getActiveTheme', {
-    jwt: 't',
-    moduleName: 'themeManager',
-    moduleType: 'core',
-    decodedJWT: { permissions: { themes: { list: true } } }
-  });
-  assert.strictEqual(current.slug, 'default');
-
-  const activated = await emitAsync(em, 'activateTheme', {
-    jwt: 't',
-    moduleName: 'themeManager',
-    moduleType: 'core',
-    decodedJWT: { permissions: { themes: { activate: true } } },
-    slug: 'default'
-  });
-  assert.strictEqual(activated.done, true);
-  assert.strictEqual(activated.theme.slug, 'default');
-  assert.strictEqual(settingPayload.moduleName, 'settingsManager');
-  assert.strictEqual(settingPayload.key, 'ACTIVE_THEME');
-  assert.strictEqual(settingPayload.value, 'default');
-
-  await new Promise(resolve => {
-    em.emit('listThemes', {
-      jwt: 't',
-      moduleName: 'themeManager',
-      moduleType: 'core',
-      decodedJWT: { permissions: {} }
-    }, err => {
-      assert(err);
-      resolve();
-    });
-  });
-});
-
 test('importer module rejects missing core JWT payload', async () => {
   const imp = loadModule('mother/modules/importer');
   const em = new EventEmitter();
@@ -959,15 +794,14 @@ test('importer module rejects operational option overrides from runImport', asyn
       jwt: 't',
       moduleName: 'importer',
       moduleType: 'core',
-      importerName: 'htmlTheme',
+      importerName: 'wordpress',
       decodedJWT: { permissions: { importers: { run: true } } },
       options: {
-        sourceDir: path.join(os.tmpdir(), 'theme-source'),
-        themeBaseDir: path.join(os.tmpdir(), 'outside-themes')
+        motherEmitter: {}
       }
     }, err => {
       assert(err);
-      assert.match(err.message, /cannot override themeBaseDir/);
+      assert.match(err.message, /cannot override motherEmitter/);
       resolve();
     });
   });

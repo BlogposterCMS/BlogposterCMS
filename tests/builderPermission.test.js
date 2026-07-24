@@ -73,8 +73,8 @@ test('ensureDefaultPermissions seeds the core permission catalog', async () => {
   assert(insertedKeys.includes('media.manage'));
   assert(insertedKeys.includes('metadata.manage'));
   assert(insertedKeys.includes('importers.run'));
-  assert(insertedKeys.includes('themes.list'));
-  assert(insertedKeys.includes('themes.activate'));
+  assert(!insertedKeys.includes('themes.list'));
+  assert(!insertedKeys.includes('themes.activate'));
 });
 
 test('ensureDefaultPermissions does not reinsert existing permissions', async () => {

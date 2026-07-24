@@ -126,7 +126,10 @@ export function initBackgroundToolbar() {
   colorBtn.addEventListener('click', async ev => {
     ev.stopPropagation();
     const grid = getWorkspaceEl();
-    const currentBg = getComputedStyle(grid || document.body).backgroundColor;
+    // Keep the authored CSS variable reference when a saved color is linked;
+    // computed style would collapse it back to an anonymous rgb value.
+    const currentBg = grid?.style.backgroundColor ||
+      getComputedStyle(grid || document.body).backgroundColor;
     state.colorPicker.updateOptions({
       initialColor: currentBg || '#ffffff',
       onSelect: c => {

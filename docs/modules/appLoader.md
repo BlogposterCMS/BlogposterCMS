@@ -112,7 +112,7 @@ points are known ahead of time.
   changes or `validateToken` through `allowedEvents`; they must use documented
   runtime/admin facade actions instead.
 - Sensitive system query events such as user/role/permission lists, auth
-  strategy management, app/module registries, settings, theme/import/export
+  strategy management, app/module registries, settings, preset/import/export
   directories and other system inventories are also not valid direct app bridge
   contracts. Apps must use audited runtime/admin facade resources or app-owned
   events instead.

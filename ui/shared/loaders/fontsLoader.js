@@ -1,29 +1,4 @@
-const RUNTIME_MANAGER_MODULE = {
-    moduleName: 'runtimeManager',
-    moduleType: 'core'
-};
-function objectParams(value = {}) {
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-function unwrapRuntimeFacadeData(value) {
-    if (value &&
-        typeof value === 'object' &&
-        'resource' in value &&
-        'action' in value &&
-        'data' in value) {
-        return value.data;
-    }
-    return value;
-}
-function runtimePublicPayload(jwt, resource, action, params = {}) {
-    return {
-        jwt,
-        ...RUNTIME_MANAGER_MODULE,
-        resource,
-        action,
-        params: objectParams(params)
-    };
-}
+import { emitRuntimeAdmin, emitRuntimePublic } from '../api-client/runtimeFacade.js';
 function unwrapData(value) {
     if (Array.isArray(value))
         return value;
@@ -80,23 +55,29 @@ export async function loadFonts() {
     let fonts = [];
     if (typeof window.meltdownEmit !== 'function')
         return;
-    if (isAppBridgeFrameReady()) {
-        publishAvailableFonts([]);
-        return;
-    }
     try {
-        const jwt = await window.meltdownEmit('issuePublicToken', {
-            purpose: 'fonts',
-            moduleName: 'auth'
-        });
-        const rawList = await window.meltdownEmit('cmsPublicRuntimeRequest', runtimePublicPayload(jwt, 'fonts', 'list'));
-        const list = unwrapData(unwrapRuntimeFacadeData(rawList));
+        const emitter = window.meltdownEmit;
+        const appBridgeReady = isAppBridgeFrameReady();
+        let list;
+        let providers;
+        if (appBridgeReady) {
+            // Sandboxed apps already have a validated admin bridge. Reuse its read-only
+            // font catalog contract instead of minting a public token inside the frame.
+            list = unwrapData(await emitRuntimeAdmin(emitter, window.ADMIN_TOKEN, 'fonts', 'list'));
+            providers = unwrapData(await emitRuntimeAdmin(emitter, window.ADMIN_TOKEN, 'fonts', 'listProviders'));
+        }
+        else {
+            const jwt = await emitter('issuePublicToken', {
+                purpose: 'fonts',
+                moduleName: 'auth'
+            });
+            list = unwrapData(await emitRuntimePublic(emitter, jwt, 'fonts', 'list'));
+            providers = unwrapData(await emitRuntimePublic(emitter, jwt, 'fonts', 'listProviders'));
+        }
         fonts = list
             .map(font => font?.name)
             .filter((name) => typeof name === 'string' && Boolean(name));
         publishAvailableFonts(fonts, list);
-        const rawProviders = await window.meltdownEmit('cmsPublicRuntimeRequest', runtimePublicPayload(jwt, 'fonts', 'listProviders'));
-        const providers = unwrapData(unwrapRuntimeFacadeData(rawProviders));
         providers.find(provider => provider.name === 'googleFonts');
     }
     catch (err) {

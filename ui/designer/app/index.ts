@@ -5,6 +5,19 @@ import { enableAutoEdit } from './editor/editor.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
 import { initBuilderPanel } from './managers/panelManager.js';
 import { applyThemeMode, applyUserColor } from '/ui/shell/theme/userColor.js';
+import {
+  configureColorLibraryClient,
+  refreshColorLibrary
+} from '/ui/shared/colors/colorLibrary.js';
+import {
+  configureFontPackagesClient,
+  refreshFontPackages
+} from '/ui/shared/fonts/fontPackages.js';
+import {
+  configureSitePresetsClient,
+  refreshSitePresets
+} from '/ui/shared/presets/sitePresets.js';
+import { initStyleLibrariesPanel } from './managers/styleLibrariesPanel.js';
 import { startDesignerAgentSurface } from './agentSurface';
 import { createLogger } from './utils/logger';
 
@@ -385,6 +398,31 @@ async function bootstrap() {
   // theme directly instead of relying only on shell header events.
   applyThemeMode();
   await applyUserColor(true);
+  if (typeof window.meltdownEmit === 'function') {
+    configureColorLibraryClient({
+      emit: window.meltdownEmit,
+      token: bootstrapWindow.ADMIN_TOKEN,
+      lane: 'admin'
+    });
+    configureFontPackagesClient({
+      emit: window.meltdownEmit,
+      token: bootstrapWindow.ADMIN_TOKEN,
+      lane: 'admin'
+    });
+    configureSitePresetsClient({
+      emit: window.meltdownEmit,
+      token: bootstrapWindow.ADMIN_TOKEN
+    });
+    await refreshColorLibrary().catch(err => {
+      appLogger.warn('COLOR_LIBRARY_LOAD_FAILED: Designer will keep literal color controls.', err);
+    });
+    await refreshFontPackages().catch(err => {
+      appLogger.warn('FONT_PACKAGES_LOAD_FAILED: Designer will keep browser typography defaults.', err);
+    });
+    await refreshSitePresets().catch(err => {
+      appLogger.warn('SITE_PRESETS_LOAD_FAILED: Builder presets are unavailable.', err);
+    });
+  }
   const sidebarEl = document.getElementById('sidebar');
   const contentEl = document.getElementById('builderMain');
   const rowEl = document.getElementById('builderRow');
@@ -408,6 +446,7 @@ async function bootstrap() {
   } finally {
     sidebarLoader.remove();
   }
+  initStyleLibrariesPanel(sidebarEl);
 
   let panelContainer = null;
   const contentAnchor = document.getElementById('content');

@@ -13,7 +13,7 @@ Builds portable exports from existing core CMS events.
 
 ## Startup
 
-- Core module loaded after the importer and before `themeManager`.
+- Core module loaded after the importer and before the runtime facade.
 - Requires a valid core JWT.
 - Owns no storage; it orchestrates content, media, metadata and settings events.
 

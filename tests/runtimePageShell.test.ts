@@ -15,19 +15,15 @@ describe('runtimePageShell', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
-    delete window.ACTIVE_THEME;
     jest.restoreAllMocks();
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    delete window.ACTIVE_THEME;
   });
 
   it('resolves and installs lane-specific global styles once', () => {
-    window.ACTIVE_THEME = 'midnight';
-
-    expect(getGlobalCssUrl('public')).toBe('/themes/midnight/theme.css');
+    expect(getGlobalCssUrl('public')).toBe('/assets/css/runtime.css');
     expect(getGlobalCssUrl('admin')).toBe('/assets/css/site.css');
 
     ensureGlobalStyle('public');
@@ -35,7 +31,7 @@ describe('runtimePageShell', () => {
 
     const links = document.querySelectorAll('link[data-global-style="public"]');
     expect(links).toHaveLength(1);
-    expect((links[0] as HTMLLinkElement).href).toContain('/themes/midnight/theme.css');
+    expect((links[0] as HTMLLinkElement).href).toContain('/assets/css/runtime.css');
   });
 
   it('allows only same-origin absolute paths and http urls for media backgrounds', () => {

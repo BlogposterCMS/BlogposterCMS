@@ -241,6 +241,11 @@ body.builder-mode .builder-row {
   --sidebar-width: var(--scene-sidebar-rail-width, 58px);
 }
 
+.builder-sidebar--flyout-open {
+  // Keep the existing sidebar flyout above selected-widget controls.
+  z-index: 1001;
+}
+
 .builder-sidebar .builder-sidebar-nav {
   width: 100%;
   min-height: 100%;

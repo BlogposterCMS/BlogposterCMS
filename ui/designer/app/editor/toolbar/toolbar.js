@@ -1,5 +1,12 @@
 import { createColorPicker } from '/ui/shared/controls/colorPicker.js';
 import {
+  createLibraryColor,
+  deleteLibraryColor,
+  getColorPickerSavedColors,
+  subscribeColorLibrary,
+  updateLibraryColor
+} from '/ui/shared/colors/colorLibrary.js';
+import {
   state,
   applyColor,
   applySize,
@@ -478,9 +485,6 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   colorIcon.textContent = 'A';
   colorIcon.style.textDecorationColor = state.currentColor;
   colorBtn.appendChild(colorIcon);
-  const themeColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--accent-color')
-    .trim();
   state.colorPicker = createColorPicker({
     presetColors: [
       '#FF0000', '#FF4040', '#FFC0CB', '#FF00FF', '#800080', '#8A2BE2',
@@ -489,7 +493,27 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       '#000000', '#A9A9A9', '#808080'
     ],
     documentColors: collectDocumentColors(),
-    themeColors: themeColor ? [themeColor] : []
+    savedColors: getColorPickerSavedColors(),
+    linkSavedColors: true,
+    onCreateSavedColor: async input => {
+      const created = await createLibraryColor(input);
+      return created
+        ? getColorPickerSavedColors().find(color => color.id === created.id) || null
+        : null;
+    },
+    onUpdateSavedColor: async input => {
+      const updated = await updateLibraryColor(input);
+      return updated
+        ? getColorPickerSavedColors().find(color => color.id === updated.id) || null
+        : null;
+    },
+    onDeleteSavedColor: async id => deleteLibraryColor(id)
+  });
+  state.colorLibraryUnsubscribe?.();
+  state.colorLibraryUnsubscribe = subscribeColorLibrary(() => {
+    state.colorPicker?.updateOptions({
+      savedColors: getColorPickerSavedColors()
+    });
   });
   // Prepare color picker for panel usage; keep hidden until panel opens.
   state.colorPicker.el.classList.add('hidden');
@@ -504,7 +528,10 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     }
   }, true);
   async function openColorSidebar() {
-    state.colorPicker.updateOptions({ documentColors: collectDocumentColors() });
+    state.colorPicker.updateOptions({
+      documentColors: collectDocumentColors(),
+      savedColors: getColorPickerSavedColors()
+    });
     const panelContainer = document.getElementById('builderPanel');
     if (!panelContainer) return false;
 
@@ -522,6 +549,8 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       }
     }
 
+    const panelTitle = colorPanel.querySelector('h4');
+    if (panelTitle) panelTitle.textContent = 'Text color';
     showBuilderPanel('color-panel');
 
     // Mount the color picker inside the panel content container
@@ -554,9 +583,14 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   colorBtn.addEventListener('click', async () => {
     saveSelection();
+    const authoredColor = state.activeEl?.style?.color ||
+      (state.activeEl ? getComputedStyle(state.activeEl).color : '') ||
+      state.currentColor;
+    state.currentColor = authoredColor;
     state.colorPicker.updateOptions({
-      initialColor: state.currentColor,
+      initialColor: authoredColor,
       onSelect: c => {
+        state.currentColor = c;
         applyColor(c);
         colorIcon.style.textDecorationColor = c;
       },
@@ -743,6 +777,10 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     try {
       const carrier = resolveActiveFontCarrier();
       if (!carrier) return;
+      if (!carrier.style.fontFamily) {
+        ffLabel.textContent = 'Default';
+        return;
+      }
       const fam = getComputedStyle(carrier).fontFamily;
       const name = extractFirstFontFamily(fam) || 'Font';
       ffLabel.textContent = name;
@@ -751,24 +789,20 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   const populateFonts = () => {
     const fonts = Array.isArray(window.AVAILABLE_FONTS) ? window.AVAILABLE_FONTS : [];
-    ffOptions.innerHTML = fonts
-      .map(f => `<span data-font="${f}" style="font-family:'${f}'">${f}</span>`)
-      .join('');
-    if (!fonts.length) {
-      ffLabel.textContent = 'No fonts';
-      ffBtn.disabled = true;
-      ffBtn.title = 'No font providers configured. Add one in Font Manager.';
-      closeFfDropdown();
-    } else {
-      ffBtn.disabled = false;
-      ffBtn.title = '';
-      // Prefer current selection font if present; otherwise first available
-      const carrier = resolveActiveFontCarrier();
-      const fam = carrier ? getComputedStyle(carrier).fontFamily : '';
-      const current = extractFirstFontFamily(fam);
-      const pick = fonts.find(f => f.toLowerCase() === String(current || '').toLowerCase());
-      ffLabel.textContent = pick || fonts[0];
+    ffOptions.innerHTML = [
+      '<span data-font="" data-font-default="true">Default</span>',
+      ...fonts.map(f => `<span data-font="${f}" style="font-family:'${f}'">${f}</span>`)
+    ].join('');
+    ffBtn.disabled = false;
+    ffBtn.title = 'Default follows the active Font Package for this text role.';
+    const carrier = resolveActiveFontCarrier();
+    if (!carrier?.style?.fontFamily) {
+      ffLabel.textContent = 'Default';
+      return;
     }
+    const current = extractFirstFontFamily(carrier.style.fontFamily);
+    const pick = fonts.find(f => f.toLowerCase() === String(current || '').toLowerCase());
+    ffLabel.textContent = pick || current || 'Default';
   };
   populateFonts();
   document.addEventListener('fontsUpdated', populateFonts);
@@ -838,7 +872,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     if (!opt) return;
     try { window.loadFontCss?.(opt.dataset.font); } catch (_) {}
     applyFont(opt.dataset.font);
-    ffLabel.textContent = opt.dataset.font;
+    ffLabel.textContent = opt.dataset.font || 'Default';
     closeFfDropdown();
   });
 
@@ -852,7 +886,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     ev.stopPropagation();
     try { window.loadFontCss?.(opt.dataset.font); } catch (_) {}
     applyFont(opt.dataset.font);
-    ffLabel.textContent = opt.dataset.font;
+    ffLabel.textContent = opt.dataset.font || 'Default';
     closeFfDropdown();
   }, true);
 

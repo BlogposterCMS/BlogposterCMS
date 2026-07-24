@@ -20,7 +20,7 @@ Composition order is explicit because Express route order is security-relevant:
 ## Ownership
 
 - `mother/server/http/staticAssets.js` owns asset serving, static realpath
-  guards, TypeScript source blocking and theme executable-asset blocking.
+  guards and TypeScript source blocking.
 - `mother/server/http/runtimeBrowserModules.js` owns the small runtime
   TypeScript compiler used for allowlisted browser modules.
 - `mother/server/http/securityMiddleware.js` owns trust proxy, Helmet, HTTPS

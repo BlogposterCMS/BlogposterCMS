@@ -831,9 +831,12 @@ test('runtime CMS admin facade dispatches allowlisted module actions', async () 
     routed.push({ eventName: 'listSettings', payload });
     cb(null, [{ key: 'SITE_TITLE', value: 'Blogposter' }]);
   });
-  emitter.on('listThemes', (payload, cb) => {
-    routed.push({ eventName: 'listThemes', payload });
-    cb(null, [{ slug: 'default', name: 'Default Theme' }]);
+  emitter.on('sitePresets.list', (payload, cb) => {
+    routed.push({ eventName: 'sitePresets.list', payload });
+    cb(null, {
+      version: 1,
+      presets: [{ id: 'site-preset-default', name: 'Default' }]
+    });
   });
   emitter.on('listTranslatedTexts', (payload, cb) => {
     routed.push({ eventName: 'listTranslatedTexts', payload });
@@ -848,7 +851,7 @@ test('runtime CMS admin facade dispatches allowlisted module actions', async () 
     permissions: {
       content: { update: true },
       settings: { core: { view: true }, unified: { viewSettings: true } },
-      themes: { list: true },
+      builder: { use: true },
       translations: { read: true },
       media: { manage: true }
     },
@@ -935,19 +938,19 @@ test('runtime CMS admin facade dispatches allowlisted module actions', async () 
   assert.strictEqual(routed[3].payload.moduleName, 'settingsManager');
   assert.strictEqual(routed[3].payload.prefix, 'SITE_');
 
-  const themes = await new Promise((resolve, reject) => {
+  const presets = await new Promise((resolve, reject) => {
     emitter.emit('cmsAdminApiRequest', {
       jwt: 'admin-token',
       moduleName: 'runtimeManager',
       moduleType: 'core',
       decodedJWT,
-      resource: 'themes',
+      resource: 'sitePresets',
       action: 'list'
     }, (err, result) => (err ? reject(err) : resolve(result)));
   });
-  assert.strictEqual(themes.eventName, 'listThemes');
-  assert.strictEqual(themes.data[0].slug, 'default');
-  assert.strictEqual(routed[4].payload.moduleName, 'themeManager');
+  assert.strictEqual(presets.eventName, 'sitePresets.list');
+  assert.strictEqual(presets.data.presets[0].id, 'site-preset-default');
+  assert.strictEqual(routed[4].payload.moduleName, 'sitePresets');
 
   const translations = await new Promise((resolve, reject) => {
     emitter.emit('cmsAdminApiRequest', {
@@ -1190,7 +1193,7 @@ test('runtime CMS admin facade dispatches identity, module, import and export ac
   route('getAllPermissions', [{ permission_key: 'users.read' }]);
   route('getModuleRegistry', [{ module_name: 'example', is_active: true }]);
   route('listApps', [{ appName: 'designer', isActive: true }]);
-  route('listImporters', ['wordpress', 'htmlTheme']);
+  route('listImporters', ['wordpress', 'wordpressSitePackage']);
   route('listExporters', [{ name: 'blogposterJson' }]);
 
   const decodedJWT = {
@@ -1305,7 +1308,7 @@ test('runtime CMS admin facade dispatches identity, module, import and export ac
     }, (err, result) => (err ? reject(err) : resolve(result)));
   });
   assert.strictEqual(importers.eventName, 'listImporters');
-  assert.deepStrictEqual(importers.data, ['wordpress', 'htmlTheme']);
+  assert.deepStrictEqual(importers.data, ['wordpress', 'wordpressSitePackage']);
   assert.strictEqual(routed[5].payload.moduleName, 'importer');
 
   const exporters = await new Promise((resolve, reject) => {
@@ -1739,6 +1742,10 @@ test('runtime CMS admin facade limits app-origin requests to query actions', asy
     routed.push({ eventName: 'getLayoutForViewport', payload });
     cb(null, { layout: [{ widgetId: 'hero' }], viewport: payload.viewport });
   });
+  emitter.on('listFonts', (payload, cb) => {
+    routed.push({ eventName: 'listFonts', payload });
+    cb(null, [{ name: 'Work Sans' }]);
+  });
   emitter.on('saveLayoutForViewport', (payload, cb) => {
     routed.push({ eventName: 'saveLayoutForViewport', payload });
     cb(null, { saved: true });
@@ -1842,6 +1849,21 @@ test('runtime CMS admin facade limits app-origin requests to query actions', asy
   assert.strictEqual(allowedLayout.data.viewport, 'desktop');
   assert.strictEqual(routed[3].payload.moduleName, 'plainspace');
 
+  const allowedFonts = await new Promise((resolve, reject) => {
+    emitter.emit('cmsAdminApiRequest', {
+      jwt: 'admin-token',
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      decodedJWT,
+      resource: 'fonts',
+      action: 'list',
+      appContext
+    }, (err, result) => (err ? reject(err) : resolve(result)));
+  });
+  assert.strictEqual(allowedFonts.eventName, 'listFonts');
+  assert.strictEqual(allowedFonts.data[0].name, 'Work Sans');
+  assert.strictEqual(routed[4].payload.moduleName, 'fontsManager');
+
   const deniedLayoutWrite = await new Promise(resolve => {
     emitter.emit('cmsAdminApiRequest', {
       jwt: 'admin-token',
@@ -1899,7 +1921,13 @@ test('runtime CMS admin facade limits app-origin requests to query actions', asy
   });
   assert(deniedUninstall.err);
   assert.match(deniedUninstall.err.message, /Unknown CMS admin API action: apps\.uninstall/);
-  assert.deepStrictEqual(routed.map(entry => entry.eventName), ['listContentEntries', 'getPublicSettings', 'getPageById', 'getLayoutForViewport']);
+  assert.deepStrictEqual(routed.map(entry => entry.eventName), [
+    'listContentEntries',
+    'getPublicSettings',
+    'getPageById',
+    'getLayoutForViewport',
+    'listFonts'
+  ]);
 });
 
 test('runtime CMS admin facade allows writes only for core-owned app bridges', async () => {

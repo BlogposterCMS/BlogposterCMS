@@ -5,15 +5,36 @@ export const presetColors: string[] = [
   '#000000', '#A9A9A9', '#808080'
 ];
 
+export interface SavedColorOption {
+  id: string;
+  name: string;
+  value: string;
+  cssValue?: string;
+}
+
+export interface ColorSelection {
+  value: string;
+  output: string;
+  source: 'literal' | 'saved';
+  linked: boolean;
+  refId?: string;
+  name?: string;
+}
+
 export interface ColorPickerOptions {
   presetColors?: string[];
   recentColors?: string[];
   userColors?: string[];
   documentColors?: string[];
   themeColors?: string[];
+  savedColors?: SavedColorOption[];
+  linkSavedColors?: boolean;
   initialColor?: string;
-  onSelect?: (color: string) => void;
+  onSelect?: (color: string, selection?: ColorSelection) => void;
   onClose?: () => void;
+  onCreateSavedColor?: (input: { name: string; value: string }) => Promise<SavedColorOption | null | void>;
+  onUpdateSavedColor?: (input: { id: string; name: string; value: string }) => Promise<SavedColorOption | null | void>;
+  onDeleteSavedColor?: (id: string) => Promise<unknown>;
 }
 
 export interface ColorPickerInstance {
@@ -45,10 +66,17 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   const recentColors = options.recentColors ?? options.userColors ?? [];
   const documentColors = options.documentColors ?? [];
   const themeColors = options.themeColors ?? [];
+  const savedColors = [...(options.savedColors ?? [])];
 
   let selectedColor = options.initialColor || customPresets[0] || '#000000';
+  let selectedOutput = selectedColor;
+  let selectedSavedColorId: string | null = null;
+  let linkSavedColors = options.linkSavedColors !== false;
   let onSelect = options.onSelect || (() => {});
   let onClose = options.onClose || (() => {});
+  let onCreateSavedColor = options.onCreateSavedColor;
+  let onUpdateSavedColor = options.onUpdateSavedColor;
+  let onDeleteSavedColor = options.onDeleteSavedColor;
   const container = document.createElement('div');
   container.className = 'color-picker';
 
@@ -80,9 +108,17 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     if (c === selectedColor) circle.classList.add('active');
     circle.addEventListener('click', () => {
       selectedColor = c;
+      selectedOutput = c;
+      selectedSavedColorId = null;
       container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
+      container.querySelectorAll('.saved-color-item').forEach(n => n.classList.remove('active'));
       circle.classList.add('active');
-      onSelect(selectedColor);
+      onSelect(selectedOutput, {
+        value: selectedColor,
+        output: selectedOutput,
+        source: 'literal',
+        linked: false
+      });
       if (editable) {
         editingCircle = circle;
         editingIndex = recentColors.indexOf(c);
@@ -303,9 +339,12 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
 
   const handleColorChange = (color: string): void => {
     selectedColor = color;
+    selectedOutput = color;
+    selectedSavedColorId = null;
     hexInput.value = color;
     previewColor.style.backgroundColor = color;
     container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
+    container.querySelectorAll('.saved-color-item').forEach(n => n.classList.remove('active'));
     if (editingCircle) {
       const prev = editingCircle.dataset.color ?? '';
       editingCircle.dataset.color = color;
@@ -322,7 +361,12 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
       const circle = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
       if (circle) circle.classList.add('active');
     }
-    onSelect(selectedColor);
+    onSelect(selectedOutput, {
+      value: selectedColor,
+      output: selectedOutput,
+      source: 'literal',
+      linked: false
+    });
   };
 
   function updateFromState(trigger = true): void {
@@ -434,6 +478,237 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   });
   container.appendChild(search);
 
+  const libraryWrapper = document.createElement('section');
+  libraryWrapper.className = 'saved-color-library';
+  const libraryHeader = document.createElement('div');
+  libraryHeader.className = 'saved-color-library__header';
+  const libraryLabel = document.createElement('span');
+  libraryLabel.className = 'color-section-label';
+  libraryLabel.textContent = 'Color scheme';
+  const linkLabel = document.createElement('label');
+  linkLabel.className = 'saved-color-library__link';
+  const linkToggle = document.createElement('input');
+  linkToggle.type = 'checkbox';
+  linkToggle.checked = linkSavedColors;
+  const linkText = document.createElement('span');
+  linkText.textContent = 'Linked';
+  linkLabel.append(linkToggle, linkText);
+  libraryHeader.append(libraryLabel, linkLabel);
+  libraryWrapper.appendChild(libraryHeader);
+
+  const savedColorList = document.createElement('div');
+  savedColorList.className = 'saved-color-list';
+  libraryWrapper.appendChild(savedColorList);
+
+  const libraryError = document.createElement('p');
+  libraryError.className = 'saved-color-library__error hidden';
+  libraryError.setAttribute('role', 'alert');
+  libraryWrapper.appendChild(libraryError);
+
+  const libraryForm = document.createElement('form');
+  libraryForm.className = 'saved-color-form hidden';
+  const colorNameInput = document.createElement('input');
+  colorNameInput.type = 'text';
+  colorNameInput.maxLength = 80;
+  colorNameInput.placeholder = 'Color name';
+  colorNameInput.className = 'saved-color-form__name';
+  colorNameInput.setAttribute('aria-label', 'Default color name');
+  const colorValueInput = document.createElement('input');
+  colorValueInput.type = 'text';
+  colorValueInput.placeholder = '#000000';
+  colorValueInput.className = 'saved-color-form__value';
+  colorValueInput.setAttribute('aria-label', 'Saved color value');
+  const formActions = document.createElement('div');
+  formActions.className = 'saved-color-form__actions';
+  const saveColorBtn = document.createElement('button');
+  saveColorBtn.type = 'submit';
+  saveColorBtn.className = 'saved-color-form__save';
+  saveColorBtn.textContent = 'Save';
+  const cancelColorBtn = document.createElement('button');
+  cancelColorBtn.type = 'button';
+  cancelColorBtn.className = 'saved-color-form__cancel';
+  cancelColorBtn.textContent = 'Cancel';
+  formActions.append(saveColorBtn, cancelColorBtn);
+  libraryForm.append(colorNameInput, colorValueInput, formActions);
+  libraryWrapper.appendChild(libraryForm);
+
+  const addSavedColorBtn = document.createElement('button');
+  addSavedColorBtn.type = 'button';
+  addSavedColorBtn.className = 'saved-color-library__add';
+  addSavedColorBtn.textContent = 'Add as next default';
+  libraryWrapper.appendChild(addSavedColorBtn);
+  container.appendChild(libraryWrapper);
+
+  let editingSavedColorId: string | null = null;
+
+  function savedColorOutput(color: SavedColorOption): string {
+    return linkSavedColors && color.cssValue ? color.cssValue : color.value;
+  }
+
+  function showLibraryError(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error || 'Unable to update saved colors.');
+    libraryError.textContent = message;
+    libraryError.classList.remove('hidden');
+  }
+
+  function clearLibraryError(): void {
+    libraryError.textContent = '';
+    libraryError.classList.add('hidden');
+  }
+
+  function closeLibraryForm(): void {
+    editingSavedColorId = null;
+    libraryForm.classList.add('hidden');
+    addSavedColorBtn.classList.remove('hidden');
+    colorNameInput.value = '';
+    colorValueInput.value = '';
+    clearLibraryError();
+  }
+
+  function openLibraryForm(color?: SavedColorOption): void {
+    editingSavedColorId = color?.id || null;
+    colorNameInput.value = color?.name || '';
+    colorValueInput.value = color?.value || selectedColor;
+    saveColorBtn.textContent = color ? 'Update' : 'Save';
+    addSavedColorBtn.classList.add('hidden');
+    libraryForm.classList.remove('hidden');
+    clearLibraryError();
+    colorNameInput.focus();
+  }
+
+  function selectSavedColor(color: SavedColorOption): void {
+    selectedColor = color.value;
+    selectedOutput = savedColorOutput(color);
+    selectedSavedColorId = color.id;
+    setFromHex(color.value, false);
+    container.querySelectorAll('.color-circle').forEach(node => node.classList.remove('active'));
+    container.querySelectorAll('.saved-color-item').forEach(node => {
+      node.classList.toggle('active', (node as HTMLElement).dataset.colorId === color.id);
+    });
+    onSelect(selectedOutput, {
+      value: color.value,
+      output: selectedOutput,
+      source: 'saved',
+      linked: selectedOutput !== color.value,
+      refId: color.id,
+      name: color.name
+    });
+  }
+
+  function renderSavedColors(): void {
+    savedColorList.replaceChildren();
+    if (!savedColors.length) {
+      const empty = document.createElement('p');
+      empty.className = 'saved-color-library__empty';
+      empty.textContent = 'This scheme has no Default colors.';
+      savedColorList.appendChild(empty);
+      return;
+    }
+    savedColors.forEach((color, index) => {
+      const row = document.createElement('div');
+      row.className = 'saved-color-row';
+      const selectBtn = document.createElement('button');
+      selectBtn.type = 'button';
+      selectBtn.className = 'saved-color-item';
+      selectBtn.dataset.colorId = color.id;
+      selectBtn.classList.toggle('active', selectedSavedColorId === color.id);
+      selectBtn.title = `${color.name} · ${color.value}`;
+      const swatch = document.createElement('span');
+      swatch.className = 'saved-color-item__swatch';
+      swatch.style.backgroundColor = color.value;
+      const text = document.createElement('span');
+      text.className = 'saved-color-item__text';
+      const name = document.createElement('strong');
+      name.textContent = `Default ${index + 1} · ${color.name}`;
+      const value = document.createElement('small');
+      value.textContent = color.value;
+      text.append(name, value);
+      selectBtn.append(swatch, text);
+      selectBtn.addEventListener('click', () => selectSavedColor(color));
+      row.appendChild(selectBtn);
+
+      if (onUpdateSavedColor || onDeleteSavedColor) {
+        const actions = document.createElement('div');
+        actions.className = 'saved-color-row__actions';
+        if (onUpdateSavedColor) {
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.textContent = 'Edit';
+          editBtn.setAttribute('aria-label', `Edit ${color.name}`);
+          editBtn.addEventListener('click', () => openLibraryForm(color));
+          actions.appendChild(editBtn);
+        }
+        if (onDeleteSavedColor) {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.type = 'button';
+          deleteBtn.textContent = 'Delete';
+          deleteBtn.setAttribute('aria-label', `Delete ${color.name}`);
+          deleteBtn.addEventListener('click', async () => {
+            if (!window.confirm(`Delete "${color.name}"? Linked uses will keep their fallback color.`)) return;
+            clearLibraryError();
+            deleteBtn.disabled = true;
+            try {
+              await onDeleteSavedColor?.(color.id);
+              const index = savedColors.findIndex(entry => entry.id === color.id);
+              if (index >= 0) savedColors.splice(index, 1);
+              if (selectedSavedColorId === color.id) selectedSavedColorId = null;
+              renderSavedColors();
+            } catch (error) {
+              showLibraryError(error);
+            } finally {
+              deleteBtn.disabled = false;
+            }
+          });
+          actions.appendChild(deleteBtn);
+        }
+        row.appendChild(actions);
+      }
+      savedColorList.appendChild(row);
+    });
+  }
+
+  linkToggle.addEventListener('change', () => {
+    linkSavedColors = linkToggle.checked;
+    const selected = savedColors.find(color => color.id === selectedSavedColorId);
+    if (selected) selectSavedColor(selected);
+  });
+  addSavedColorBtn.addEventListener('click', () => openLibraryForm());
+  cancelColorBtn.addEventListener('click', closeLibraryForm);
+  libraryForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    clearLibraryError();
+    saveColorBtn.disabled = true;
+    const input = {
+      name: colorNameInput.value,
+      value: colorValueInput.value
+    };
+    try {
+      if (editingSavedColorId && onUpdateSavedColor) {
+        const updated = await onUpdateSavedColor({ id: editingSavedColorId, ...input });
+        if (updated) {
+          const index = savedColors.findIndex(color => color.id === updated.id);
+          if (index >= 0) savedColors[index] = updated;
+          else savedColors.push(updated);
+          renderSavedColors();
+        }
+      } else if (onCreateSavedColor) {
+        const created = await onCreateSavedColor(input);
+        if (created && !savedColors.some(color => color.id === created.id)) {
+          savedColors.push(created);
+          renderSavedColors();
+        }
+      }
+      closeLibraryForm();
+    } catch (error) {
+      showLibraryError(error);
+    } finally {
+      saveColorBtn.disabled = false;
+    }
+  });
+
+  addSavedColorBtn.classList.toggle('hidden', !onCreateSavedColor);
+  renderSavedColors();
+
   let recentHidden: HTMLButtonElement[] = [];
   let recentMoreBtn: HTMLButtonElement | null = null;
   function addRecentColor(color: string, { dedupe = true }: { dedupe?: boolean } = {}): void {
@@ -478,7 +753,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     const wrapper = document.createElement('div');
     const lbl = document.createElement('span');
     lbl.className = 'color-section-label';
-    lbl.textContent = 'Custom colours';
+    lbl.textContent = 'Recent & custom';
     wrapper.appendChild(lbl);
     const section = document.createElement('div');
     section.className = 'color-section';
@@ -520,16 +795,43 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     return section;
   })();
 
-  createSection(documentColors, 'Document colours');
-  createSection(customPresets, 'Default solid colours');
-  createSection(themeColors, 'Brand Kit');
+  createSection(documentColors, 'Document colors');
+  createSection(customPresets, 'Quick colors');
+  createSection(themeColors, 'Interface colors');
 
   function updateOptions(newOpts: ColorPickerOptions = {}): void {
     if (newOpts.onSelect) onSelect = newOpts.onSelect;
     if (newOpts.onClose) onClose = newOpts.onClose;
+    if (Object.prototype.hasOwnProperty.call(newOpts, 'onCreateSavedColor')) {
+      onCreateSavedColor = newOpts.onCreateSavedColor;
+    }
+    if (Object.prototype.hasOwnProperty.call(newOpts, 'onUpdateSavedColor')) {
+      onUpdateSavedColor = newOpts.onUpdateSavedColor;
+    }
+    if (Object.prototype.hasOwnProperty.call(newOpts, 'onDeleteSavedColor')) {
+      onDeleteSavedColor = newOpts.onDeleteSavedColor;
+    }
+    if (typeof newOpts.linkSavedColors === 'boolean') {
+      linkSavedColors = newOpts.linkSavedColors;
+      linkToggle.checked = linkSavedColors;
+    }
+    if (newOpts.savedColors) {
+      savedColors.splice(0, savedColors.length, ...newOpts.savedColors);
+      renderSavedColors();
+    }
+    addSavedColorBtn.classList.toggle('hidden', !onCreateSavedColor);
     if (newOpts.initialColor) {
-      const hex = sanitize(newOpts.initialColor) || normalizeColor(newOpts.initialColor);
-      selectedColor = hex || newOpts.initialColor;
+      const linkedMatch = newOpts.initialColor.match(
+        /^var\(\s*--bp-color-([a-z0-9-]+)\s*,\s*(#[0-9a-f]{6}(?:[0-9a-f]{2})?)\s*\)$/i
+      );
+      const linked = linkedMatch
+        ? savedColors.find(color => color.id === linkedMatch[1])
+        : null;
+      const initialValue = linked?.value || linkedMatch?.[2] || newOpts.initialColor;
+      const hex = sanitize(initialValue) || normalizeColor(initialValue);
+      selectedColor = hex || initialValue;
+      selectedOutput = linked ? savedColorOutput(linked) : newOpts.initialColor;
+      selectedSavedColorId = linked?.id || null;
       addRecentColor(selectedColor);
       const circles = Array.from(container.querySelectorAll<HTMLButtonElement>('.color-circle'));
       let found = false;
@@ -541,6 +843,9 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
       if (!found) {
         circles.forEach(btn => btn.classList.remove('active'));
       }
+      container.querySelectorAll<HTMLElement>('.saved-color-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.colorId === selectedSavedColorId);
+      });
       if (hex) {
         setFromHex(selectedColor, false);
       } else {
@@ -564,7 +869,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   return {
     el: container,
     getColor() {
-      return selectedColor;
+      return selectedOutput;
     },
     showAt,
     hide,

@@ -8,7 +8,6 @@ const { hasPermission } = require('../../modules/userManagement/permissionUtils'
 const { createOriginToken } = require('../security/originToken');
 
 function prepareAdminShellHtml({
-  activeTheme,
   adminToken,
   csrfToken,
   escapeHtml,
@@ -36,7 +35,6 @@ function prepareAdminShellHtml({
         window.PAGE_ID     = ${JSON.stringify(pageId ?? null)};
         window.PAGE_SLUG   = ${JSON.stringify(slug)};
         window.ADMIN_TOKEN = ${JSON.stringify(adminToken)};
-        window.ACTIVE_THEME = ${JSON.stringify(activeTheme)};
         window.PLAINSPACE_VERSION = ${JSON.stringify(plainSpaceVersion)};
         window.NONCE       = ${JSON.stringify(nonce)};
       </script>
@@ -96,7 +94,6 @@ function createAdminAppFrameHtml({
 }
 
 function createAdminShellRoutes({
-  activeTheme,
   csrfProtection,
   dispatchAppLoaderEvent,
   escapeHtml,
@@ -151,7 +148,6 @@ function createAdminShellRoutes({
           }
 
           const { html, nonce } = prepareAdminShellHtml({
-            activeTheme,
             adminToken: req.cookies.admin_jwt,
             csrfToken: req.csrfToken(),
             escapeHtml,
@@ -395,7 +391,6 @@ function createAdminShellRoutes({
       if (!page?.id || page.lane !== 'admin') return next();
 
       const { html, nonce } = prepareAdminShellHtml({
-        activeTheme,
         adminToken: adminJwt,
         csrfToken: req.csrfToken(),
         escapeHtml,

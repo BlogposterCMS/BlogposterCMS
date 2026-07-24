@@ -6,7 +6,7 @@ BlogposterCMS follows a modular design. Core features and optional backend capab
 - **Optional modules** can be placed in the top-level `modules/` directory. The Module Loader validates them, health-checks them in a short-lived runner process and starts them in a fresh runtime process. Community code is not required into the CMS host process.
 - **Widgets** are renderable UI blocks. They should not own server capabilities; they use UI contracts and public/admin API facades.
 - **Apps** are isolated admin or tool surfaces. They should call stable CMS facades instead of importing backend internals.
-- **Events** are used instead of direct function calls. Modules emit events to perform actions such as database operations, authentication or theme management. Tokens in the payload ensure that only authorised modules can request sensitive operations.
+- **Events** are used instead of direct function calls. Modules emit events to perform actions such as database operations, authentication or preset management. Tokens in the payload ensure that only authorised modules can request sensitive operations.
 
 When creating your own modules, start by exporting an `initialize` function that receives `{ motherEmitter, eventBus, moduleHost, moduleInfo, app, isCore }`. Community modules do not receive raw loader tokens; the process runner keeps the JWT and nonce on the host side and injects them when IPC-backed event calls are accepted. Core modules still receive high-trust host integration through the core bootstrap path.
 
@@ -91,6 +91,7 @@ important security notes.
 - [agentManager](modules/agentManager.md)
 - [appLoader](modules/appLoader.md)
 - [commentsManager](modules/commentsManager.md)
+- [colorLibrary](modules/colorLibrary.md)
 - [contentEngine](modules/contentEngine.md)
 - [databaseManager](modules/databaseManager.md)
 - [dependencyLoader](modules/dependencyLoader.md)
@@ -112,7 +113,7 @@ important security notes.
 - [seoManager](modules/seoManager.md)
 - [searchManager](modules/searchManager.md)
 - [shareManager](modules/shareManager.md)
-- [themeManager](modules/themeManager.md)
+- [sitePresets](modules/sitePresets.md)
 - [translationManager](modules/translationManager.md)
 - [unifiedSettings](modules/unifiedSettings.md)
 - [userManagement](modules/userManagement.md)
@@ -120,4 +121,5 @@ important security notes.
 - [widgetManager](modules/widgetManager.md)
 - [dummyModule](modules/dummyModule.md)
 - [fontsManager](modules/fontsManager.md)
+- [fontPackages](modules/fontPackages.md)
 - [Choosing a Database Engine](choosing_database_engine.md)

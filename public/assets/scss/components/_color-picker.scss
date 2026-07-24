@@ -153,6 +153,158 @@
     font-size: 12px;
     color: var(--color-text);
   }
+
+  .saved-color-library {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--user-color) 16%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--user-color) 4%, var(--color-white));
+  }
+
+  .saved-color-library__header,
+  .saved-color-row,
+  .saved-color-item,
+  .saved-color-library__link,
+  .saved-color-row__actions,
+  .saved-color-form__actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .saved-color-library__header {
+    justify-content: space-between;
+    gap: 12px;
+
+    .color-section-label {
+      margin: 0;
+    }
+  }
+
+  .saved-color-library__link {
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .saved-color-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .saved-color-row {
+    gap: 6px;
+  }
+
+  .saved-color-item {
+    flex: 1;
+    gap: 10px;
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: var(--color-white);
+    color: var(--color-text);
+    text-align: left;
+
+    &.active {
+      border-color: var(--user-color);
+    }
+  }
+
+  .saved-color-item__swatch {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+  }
+
+  .saved-color-item__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong,
+    small {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    small {
+      opacity: 0.68;
+    }
+  }
+
+  .saved-color-row__actions {
+    gap: 2px;
+
+    button {
+      border: 0;
+      background: transparent;
+      color: var(--color-text);
+      font-size: 10px;
+    }
+  }
+
+  .saved-color-library__add,
+  .saved-color-form button,
+  .saved-color-form input {
+    min-height: 32px;
+    border-radius: 8px;
+  }
+
+  .saved-color-library__add {
+    border: 1px dashed var(--user-color);
+    background: transparent;
+    color: var(--user-color);
+  }
+
+  .saved-color-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 90px;
+    gap: 7px;
+
+    &.hidden {
+      display: none;
+    }
+
+    input {
+      min-width: 0;
+      padding: 0 9px;
+      border: 1px solid var(--color-border);
+    }
+  }
+
+  .saved-color-form__actions {
+    grid-column: 1 / -1;
+    gap: 7px;
+  }
+
+  .saved-color-form__save {
+    flex: 1;
+    border: 1px solid var(--user-color);
+    background: var(--user-color);
+    color: var(--color-white);
+  }
+
+  .saved-color-library__empty,
+  .saved-color-library__error {
+    margin: 0;
+    font-size: 11px;
+  }
+
+  .saved-color-library__error {
+    color: #b42318;
+  }
+
+  .saved-color-library__error.hidden,
+  .saved-color-library__add.hidden {
+    display: none;
+  }
 }
 
 .color-picker.floating {

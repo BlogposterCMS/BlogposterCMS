@@ -7,7 +7,6 @@ interface Window {
   PUBLIC_TOKEN?: string | null;
   CSRF_TOKEN?: string | null;
   USER_COLOR?: string | null;
-  ACTIVE_THEME?: string | null;
   LANG?: string | null;
   PAGE_ID?: string | number | null;
   PAGE_SLUG?: string | null;

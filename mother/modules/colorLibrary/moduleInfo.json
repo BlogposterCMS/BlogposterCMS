@@ -1,0 +1,6 @@
+{
+  "moduleName": "colorLibrary",
+  "version": "0.1.0",
+  "description": "Owns the central named color library independently of presentation packages.",
+  "developer": "Blogposter Team"
+}

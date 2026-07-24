@@ -8,7 +8,6 @@ const { loginLimiter } = require('../utils/rateLimiters');
 const { isProduction, features } = require('../../config/runtime');
 const securityConfig = require('../../config/security');
 const {
-  activeThemeFromEnv,
   createTokenConfig,
   loadPlainSpaceVersion
 } = require('./config/environment');
@@ -37,7 +36,6 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   const port = process.env.PORT || 3000;
   const installLockPath = path.join(rootDir, 'install.lock');
   const renderMode = features?.renderMode || 'client';
-  const activeTheme = activeThemeFromEnv(process.env);
   const plainSpaceVersion = loadPlainSpaceVersion({ rootDir });
   const tokenConfig = createTokenConfig(process.env);
 
@@ -103,7 +101,6 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   });
 
   app.use(createAdminShellRoutes({
-    activeTheme,
     csrfProtection,
     dispatchAppLoaderEvent: authContext.dispatchAppLoaderEvent,
     escapeHtml,
@@ -137,7 +134,6 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     motherEmitter
   }));
   app.use(createPublicPageRoutes({
-    activeTheme,
     motherEmitter,
     plainSpaceVersion,
     renderMode,

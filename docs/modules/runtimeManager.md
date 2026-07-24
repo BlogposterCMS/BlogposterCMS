@@ -12,7 +12,7 @@ Connects public HTTP behavior to backend core events.
 
 ## Startup
 
-- Core module loaded after `themeManager`.
+- Core module loaded after the central Builder preset services.
 - Requires the Express `app`, `motherEmitter` and a core JWT.
 - Does not own storage; it delegates to existing core modules.
 
@@ -119,7 +119,7 @@ actions across content, content types, media, widgets, workflow,
 PlainSpace layout/presentation, navigation, SEO, comments, metadata, redirects,
 search, settings, unified settings, translations, fonts, server locations,
 shares, preview tokens, identity, app/module management, importers, exporters,
-notifications, themes and Designer persistence. HTTP callers that send those
+notifications, Site Presets and Designer persistence. HTTP callers that send those
 low-level event names are rejected; callers must use the facade request shape
 directly.
 
@@ -140,7 +140,8 @@ iframe app.
 
 App-origin read access is limited to content and presentation contracts:
 `content`, `pages`, `contentTypes`, `media`, `navigation`, `seo`,
-`plainSpace`, `settings.public`, `themes` and `translations`.
+`plainSpace`, `settings.public`, `colors`, `fontPackages`, `sitePresets` and
+`translations`.
 
 Allowed resources:
 
@@ -172,7 +173,9 @@ Allowed resources:
 - `serverLocations`: create/get/list/update/delete
 - `shares`: create/get/revoke
 - `unifiedSettings`: schema registry, module settings bundle and value updates
-- `themes`: list/get/active/activate
+- `colors`: list/create/update/delete/createScheme/updateScheme/activateScheme/deleteScheme
+- `fontPackages`: list/create/update/updateRole/resetRole/activate/delete
+- `sitePresets`: list/create/apply/delete
 - `translations`: text CRUD and language CRUD
 - `designer`: get/list/layout reads and save through builder permissions
 - `preview`: token
@@ -204,7 +207,7 @@ direct HTTP core events.
 ## Runtime Rules
 
 Redirect checks skip admin/API/static paths such as `/admin`, `/api`,
-`/assets`, `/build`, `/ui`, `/themes`, `/apps`, `/widgets` and `/fonts`.
+`/assets`, `/build`, `/ui`, `/apps`, `/widgets` and `/fonts`.
 When maintenance mode is active, redirects are skipped so the existing
 maintenance middleware can decide the public response.
 

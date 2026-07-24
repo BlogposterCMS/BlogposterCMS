@@ -184,19 +184,23 @@ Click **Publish** again or use the panel's close button to dismiss it.
 
 ### Widget CSS Layers
 
-Each widget is rendered inside a Shadow DOM to isolate its styles. The builder injects three CSS layers in this order:
+Each widget is rendered inside a Shadow DOM to isolate its styles. The public
+runtime supplies `/assets/css/runtime.css` as the central baseline, then applies
+the active Color Scheme and Font Package defaults before a widget's own
+validated styles. Site Presets do not add CSS or become a runtime layer.
 
-1. **Admin styles** – `/assets/css/site.css` provides baseline rules for the dashboard and is imported first.
-2. **Widget styles** – any custom CSS defined for the widget itself is added next inside the shadow root.
-3. **Active theme** – the current theme’s `theme.css` is imported last so themes can override previous layers.
-
-This layering keeps widgets secure from style collisions while allowing themes to customize their appearance. When using the page builder, the active theme is scoped to the preview grid so you can see changes live without the builder interface inheriting those styles.
-
-Themes are intentionally limited to presentation. Feature behavior belongs in widgets, modules or apps, not in theme packages. See the [Theme Contract](theme_contract.md) for the responsibility boundary.
+The Builder uses the same central defaults without applying them to the editor
+chrome. Linked values follow the active numbered defaults; direct element
+styles remain local overrides. See [Site Presets](site-presets.md),
+[Color Schemes](color-library.md) and [Font Packages](font-packages.md).
 
 ### Color Picker
 
-The builder's colour picker now scans only the active builder grid, listing colours actually used in your layout instead of the whole page. Your most recent selection always appears first in the **Custom colours** row and is pre‑selected when reopening the picker. Clicking the “plus” button opens a pop‑in hue editor directly beneath the chosen swatch, where you can fine‑tune the hex value or pick a new shade. Adjustments update the swatch live; closing the editor and opening it again spawns a new swatch for the next colour. A search field still accepts hex or common colour names to jump straight to a specific value.
+The builder's colour picker offers linked colors from the active Color Scheme
+alongside document, recent and literal custom colors. Linked `Default N` values
+follow the active scheme; selecting or entering a literal value keeps that
+element as a local override. Schemes and numbered defaults are managed in the
+separate **Color scheme** panel.
 
 ## New Features in v0.5.0
 

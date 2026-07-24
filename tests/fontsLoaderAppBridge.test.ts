@@ -21,6 +21,7 @@ describe('fonts loader app bridge startup', () => {
       value: {}
     });
     delete (window as any).__BLOGPOSTER_APP_INIT_TOKENS__;
+    window.history.replaceState(null, '', '/');
   });
 
   afterEach(() => {
@@ -28,6 +29,11 @@ describe('fonts loader app bridge startup', () => {
     delete (window as any).meltdownEmit;
     delete (window as any).__BLOGPOSTER_APP_INIT_TOKENS__;
     delete (window as any).ADMIN_TOKEN;
+    delete (window as any).AVAILABLE_FONTS;
+    delete (window as any).FONT_SOURCES;
+    delete (window as any).LOADED_FONT_CSS;
+    delete (window as any).loadFontCss;
+    window.history.replaceState(null, '', '/');
     if (originalParent) {
       Object.defineProperty(window, 'parent', originalParent);
     }
@@ -87,5 +93,20 @@ describe('fonts loader app bridge startup', () => {
     expect(fontsUpdated).toHaveBeenCalledWith(expect.objectContaining({
       detail: { fonts: ['Work Sans'] }
     }));
+  });
+
+  test('installs the font CSS hook without a direct API request in live preview', async () => {
+    document.querySelector('script[src*="/build/appBridge.js"]')?.remove();
+    window.history.replaceState(null, '', '/?designer-live-preview=1');
+    const emit = jest.fn();
+    (window as any).meltdownEmit = emit;
+
+    await import('../ui/shared/loaders/fontsLoader');
+    await Promise.resolve();
+
+    expect(emit).not.toHaveBeenCalled();
+    expect((window as any).AVAILABLE_FONTS).toEqual([]);
+    expect((window as any).FONT_SOURCES).toEqual({});
+    expect(typeof (window as any).loadFontCss).toBe('function');
   });
 });

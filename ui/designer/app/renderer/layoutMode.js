@@ -361,5 +361,11 @@ export function stopLayoutMode(ctx) {
   }
   ctx.setSidebarPanel?.('insert');
   if (ctx.gridEl) ctx.gridEl.style.pointerEvents = '';
-  ctx.showToolbar();
+  // Returning to the design layer must respect the current selection; a
+  // toolbar without a selected editable element creates phantom local styles.
+  if (typeof ctx.syncToolbarForSelection === 'function') {
+    ctx.syncToolbarForSelection();
+  } else {
+    ctx.showToolbar();
+  }
 }

@@ -95,7 +95,17 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain("action: 'range.set'");
   expect(agentSurfaceSource).toContain("action: 'effect.set'");
   expect(agentSurfaceSource).toContain("action: 'element.update'");
+  expect(agentSurfaceSource).toContain("action: 'element.geometry.set'");
+  expect(agentSurfaceSource).toContain("action: 'element.duplicate'");
+  expect(agentSurfaceSource).toContain("action: 'text.update'");
+  expect(agentSurfaceSource).toContain("action: 'viewport.set'");
+  expect(agentSurfaceSource).toContain("action: 'container.create'");
+  expect(agentSurfaceSource).toContain("action: 'container.styleSource.link'");
+  expect(agentSurfaceSource).toContain("action: 'design.save'");
+  expect(agentSurfaceSource).toContain("action: 'design.publish'");
   expect(agentSurfaceSource).toContain("action: 'colorLibrary.create'");
+  expect(agentSurfaceSource).toContain("action: 'colorLibrary.createScheme'");
+  expect(agentSurfaceSource).toContain("action: 'colorLibrary.activateScheme'");
   expect(agentSurfaceSource).toContain("action: 'colorLibrary.update'");
   expect(agentSurfaceSource).toContain("action: 'colorLibrary.delete'");
   expect(agentSurfaceSource).toContain('colorLibraryAgentState');
@@ -105,6 +115,7 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain("action: 'fontPackages.activate'");
   expect(agentSurfaceSource).toContain('fontPackagesAgentState');
   expect(agentSurfaceSource).toContain('activeFontPackage');
+  expect(agentSurfaceSource).toContain("action: 'sitePresets.create'");
   expect(agentSurfaceSource).toContain('actions: DESIGNER_AGENT_ACTIONS');
   expect(agentSurfaceSource).toContain('behaviorElementCount: behaviorMap.behaviorElementCount');
   expect(agentSurfaceSource).toContain('effectElementCount: behaviorMap.effectElementCount');
@@ -126,6 +137,9 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(builderRendererSource).toContain("action === 'effect.set'");
   expect(builderRendererSource).toContain("action === 'element.update'");
   expect(builderRendererSource).toContain("action === 'scene.update'");
+  expect(builderRendererSource).toContain("action === 'viewport.set'");
+  expect(builderRendererSource).toContain("action === 'design.save'");
+  expect(builderRendererSource).toContain('getBuilderViewportState()');
   expect(sharedClientSource).toContain('agent.publishSurfaceSnapshot');
   expect(sharedClientSource).toContain('agent.getApiDefinition');
   expect(sharedClientSource).toContain('agent.pollSurfaceCommands');

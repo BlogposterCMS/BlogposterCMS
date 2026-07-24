@@ -11,12 +11,15 @@ import {
 } from '../ui/designer/app/renderer/livePreviewFrame';
 import fs from 'fs';
 import path from 'path';
+import { resetBuilderViewportStateForTests } from '../ui/designer/app/renderer/viewportState';
 
 describe('designer live preview frame', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
     delete window.PAGE_SLUG;
+    window.history.replaceState(null, '', '/');
+    resetBuilderViewportStateForTests();
   });
 
   function makeLayoutRoot() {
@@ -82,6 +85,14 @@ describe('designer live preview frame', () => {
     });
     expect(payload.document.placements).toEqual([activePlacement]);
     expect(payload.widgets).toEqual([{ id: 'textBox' }]);
+    expect(payload.document.styles).toMatchObject({
+      colorLibrary: expect.objectContaining({ schemes: expect.any(Array) }),
+      fontPackages: expect.objectContaining({ packages: expect.any(Array) }),
+      fontCatalog: expect.objectContaining({
+        available: expect.any(Array),
+        sources: expect.any(Object)
+      })
+    });
   });
 
   it('uses the stored design layer when authors preview from the layout layer', () => {
@@ -212,6 +223,14 @@ describe('designer live preview frame', () => {
     expect(buildLivePreviewFrameUrl('/Products/Big Launch/')).toBe('/products/big-launch?designer-live-preview=1');
   });
 
+  it('forwards the signed Designer origin token without exposing another credential', () => {
+    window.history.replaceState(null, '', '/apps/designer?originToken=signed.token&adminToken=secret');
+
+    expect(buildLivePreviewFrameUrl('home')).toBe(
+      '/home?designer-live-preview=1&originToken=signed.token'
+    );
+  });
+
   it('boots the live preview through the public runtime route without a standalone shell', () => {
     const publicEntrySource = fs.readFileSync(
       path.join(__dirname, '../ui/runtime/publicEntry.ts'),
@@ -227,11 +246,16 @@ describe('designer live preview frame', () => {
     );
 
     expect(publicEntrySource).toContain('await importDesignerLivePreviewRuntime()');
+    expect(publicEntrySource.indexOf('if (livePreview)')).toBeLessThan(
+      publicEntrySource.indexOf('await ensureToken()')
+    );
     expect(publicEntrySource).not.toContain('webpackIgnore: true');
     expect(importerSource).toContain('export async function importDesignerLivePreviewRuntime');
     expect(importerSource).toContain('import(/* webpackIgnore: true */ DESIGNER_LIVE_PREVIEW_RUNTIME_PATH)');
     expect(runtimeSource).toContain('renderPublicRuntimePageContent');
     expect(runtimeSource).toContain('previewRuntimeDataEmit');
+    expect(runtimeSource).toContain('applyColorLibraryVariables');
+    expect(runtimeSource).toContain('applyActiveFontPackage');
     expect(runtimeSource).not.toContain('designerLivePreview ===');
     expect(fs.existsSync(path.join(__dirname, '../apps/designer/live-preview.html'))).toBe(false);
   });
@@ -276,5 +300,42 @@ describe('designer live preview frame', () => {
     expect(trigger.getAttribute('aria-pressed')).toBe('false');
 
     controller.destroy();
+  });
+
+  it('reports a searchable error when the public runtime never becomes ready', () => {
+    jest.useFakeTimers();
+    const controller = createLivePreviewController({
+      loadTimeoutMs: 100,
+      buildPayload: jest.fn(() => ({
+        version: 1,
+        title: 'Preview',
+        lane: 'public',
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        activeLayer: 1,
+        viewport: { id: 'desktop', label: 'Desktop', width: '1280px' },
+        design: { id: null, title: 'Preview', version: 0 },
+        document: {
+          version: 1,
+          layoutTree: { type: 'leaf', workarea: true },
+          placements: [],
+          scenes: [],
+          styles: {},
+          metadata: { source: 'test' }
+        },
+        widgets: [],
+        globalLayout: []
+      }))
+    });
+
+    controller.open();
+    jest.advanceTimersByTime(101);
+
+    expect(livePreviewFeedbackState()).toMatchObject({
+      status: 'error',
+      errorCode: 'DESIGNER_LIVE_PREVIEW_TIMEOUT'
+    });
+
+    controller.destroy();
+    jest.useRealTimers();
   });
 });

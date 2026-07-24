@@ -8,6 +8,11 @@ import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
 const headerLogger = createLogger('builder:header');
 const HEADER_HEIGHT_VAR = '--builder-header-height';
 const DEFAULT_HEADER_HEIGHT = 64;
+const VIEWPORT_PRESETS = [
+  { id: 'desktop', label: 'Desktop', icon: 'monitor' },
+  { id: 'tablet', label: 'Tablet', icon: 'tablet' },
+  { id: 'mobile', label: 'Mobile', icon: 'smartphone' }
+] as const;
 
 function getAppScope(): HTMLElement {
   const scope = document.querySelector<HTMLElement>('.app-scope');
@@ -17,6 +22,24 @@ function getAppScope(): HTMLElement {
 function setHeaderHeightVariable(height?: number) {
   const numericHeight = Number.isFinite(height) && height ? Number(height) : DEFAULT_HEADER_HEIGHT;
   document.body.style.setProperty(HEADER_HEIGHT_VAR, `${numericHeight}px`);
+}
+
+function buildViewportPresetSwitcher(): HTMLElement {
+  const switcher = document.createElement('div');
+  switcher.className = 'scene-device-switcher builder-header-viewport-presets';
+  switcher.setAttribute('role', 'group');
+  switcher.setAttribute('aria-label', 'Viewport presets');
+  VIEWPORT_PRESETS.forEach((preset, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.builderViewportPreset = preset.id;
+    button.setAttribute('aria-label', preset.label);
+    button.setAttribute('aria-pressed', index === 0 ? 'true' : 'false');
+    button.classList.toggle('active', index === 0);
+    button.innerHTML = `<img src="/assets/icons/${preset.icon}.svg" alt="" class="icon" />`;
+    switcher.appendChild(button);
+  });
+  return switcher;
 }
 
 function buildFallbackHeader(): HTMLElement {
@@ -140,7 +163,7 @@ function buildFallbackHeader(): HTMLElement {
   range.setAttribute('aria-label', 'Viewport width');
   const valueDisplay = document.createElement('span');
   valueDisplay.className = 'viewport-value';
-  viewportSlider.append(range, valueDisplay);
+  viewportSlider.append(buildViewportPresetSwitcher(), range, valueDisplay);
   header.appendChild(viewportSlider);
 
   const optionsMenu = document.createElement('div');
@@ -232,6 +255,7 @@ export function createBuilderHeader({
   let topBar = null;
   let layoutName = initialLayoutName;
   let headerResizeObserver: ResizeObserver | null = null;
+  let disposeHeaderControls: (() => void) | null = null;
 
   setHeaderHeightVariable(DEFAULT_HEADER_HEIGHT);
 
@@ -257,6 +281,8 @@ export function createBuilderHeader({
     try {
       const mount = ensureHeaderMount();
       if (reload) {
+        disposeHeaderControls?.();
+        disposeHeaderControls = null;
         headerResizeObserver?.disconnect();
         headerResizeObserver = null;
         if (mount) {
@@ -311,7 +337,10 @@ export function createBuilderHeader({
       }
 
       const saveMenuBtn = document.createElement('button');
+      saveMenuBtn.type = 'button';
       saveMenuBtn.className = 'builder-save-dropdown-toggle';
+      saveMenuBtn.setAttribute('aria-label', 'Save options');
+      saveMenuBtn.title = 'Save options';
       saveMenuBtn.innerHTML = window.featherIcon
         ? window.featherIcon('chevron-down')
         : '<img src="/assets/icons/chevron-down.svg" alt="more" />';
@@ -322,7 +351,7 @@ export function createBuilderHeader({
       saveDropdown.innerHTML = '<label class="autosave-option"><input type="checkbox" class="autosave-toggle" checked /> Autosave</label>';
       saveWrapper.appendChild(saveDropdown);
 
-      initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
+      disposeHeaderControls = initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
         undo,
         redo
       });

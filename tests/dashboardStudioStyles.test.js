@@ -475,7 +475,9 @@ describe('dashboard studio styles', () => {
     expect(sceneBuilderScss).toContain('--scene-ink: var(--designer-text)');
     expect(sceneBuilderScss).toContain('background: var(--scene-surface-glass)');
     expect(sceneBuilderScss).toContain('background: var(--scene-surface)');
-    expect(designerApp).toContain('applyThemeMode();');
+    expect(designerApp).toContain(
+      'applyThemeMode(bootstrapWindow.__BLOGPOSTER_APP_INIT_TOKENS__?.themeMode);'
+    );
     expect(themeModeSource).toContain('bindThemeModeStorageSync');
     expect(themeModeSource).toContain("event.key !== THEME_MODE_STORAGE_KEY");
 

@@ -17,7 +17,7 @@ The feedback block is versioned and should expose:
   `designRef`, Style Source metadata and visible bounds.
 - `widgetPlacements`: stable widget instance ids, widget ids, scene/workarea
   ids, selection, behavior, ranges, effects, Style Source metadata and visible
-  bounds.
+  bounds plus exact edit-grid coordinates and z-index.
 - `styleSources`: source, follower and disabled relationships for containers
   and widget placements.
 - `selection`: selected object id, widget id, scene id, behavior/range/effect
@@ -27,13 +27,14 @@ The feedback block is versioned and should expose:
   count, tolerance, source ids, spacing distance and transient guide bounds
   while a drag is in progress.
 - `livePreview`: whether the public-page Runtime preview frame is open, which
-  viewport it renders, its frame URL and whether it is loading, ready or in an
-  error state.
+  viewport it renders, its frame URL, searchable error code/message and whether
+  it is loading, ready or in an error state.
 - `publishing`: whether the Publishing panel is available/open, its active slug,
   usage status, page usage count, published-bundle state and visible usage
   entries.
-- `viewport` and `visual`: viewport size, device pixel ratio and optional
-  stage-preview metadata.
+- `viewport` and `visual`: shared Builder width, preset and zoom, separate
+  browser-frame dimensions, device pixel ratio and optional stage-preview
+  metadata.
 - `warnings`: searchable `DESIGNER_AGENT_FEEDBACK_*` entries when a structured
   adapter, command port, layout root, bounds signal or visual preview is
   missing.
@@ -75,9 +76,39 @@ default.
 
 Declarative Builder packages are exposed separately as `state.sitePresets` and
 `meta.sitePresets`. The state distinguishes installed and user-created packages,
-includes the last applied preset, and uses command actions for refresh, apply
-and user-preset deletion. Applying a package refreshes the central Color Scheme
-and Font Package state; it never introduces a separate runtime or agent API.
+includes the last applied preset, and uses command actions for refresh,
+current-state creation, apply and user-preset deletion. Applying a package
+refreshes the central Color Scheme and Font Package state; it never introduces
+a separate runtime or agent API.
+
+## Command Families
+
+All writes first use `window.blogposterDesignerCommands.execute` and stay
+behind the existing AgentManager/AppLoader command transport:
+
+- `viewport.set`, `viewport.preset`, `viewport.zoom.set`
+- `scene.add`, `scene.select`, `scene.update`, `scene.move`, `scene.delete`
+- `insert.element`, `element.select`, `element.update`,
+  `element.geometry.set`, `element.move`, `element.resize`,
+  `element.zIndex.set`, `element.duplicate`, `element.delete`
+- `text.update`, `behavior.set`, `range.set`, `effect.set`
+- `container.create`, `container.move`, `container.delete`,
+  `container.mode.set`, `container.settings.set`,
+  `container.styleSource.link`, `container.styleSource.unlink`
+- `design.save`, `design.publish`
+- `sitePresets.refresh`, `sitePresets.create`, `sitePresets.apply`,
+  `sitePresets.delete`
+
+The geometry contract uses the same edit-grid units returned as
+`widgetPlacements[].grid`; persisted/runtime percentage bounds remain visible
+under `bounds`. Empty direct `fontFamily` or `color` values restore the active
+Font Package or Color Scheme default.
+
+When sandboxed cross-origin stylesheets prevent a pixel capture, the agent
+surface publishes a same-document PNG structure preview drawn from stable
+element bounds and labels. This stays inside AgentManager's raster image
+allowlist; Design thumbnails still fail closed instead of substituting that
+diagnostic image.
 
 ## Contributor Checklist
 

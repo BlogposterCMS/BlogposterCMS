@@ -131,10 +131,31 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('closeSidebarPanel();');
     expect(rendererSource).toContain("document.addEventListener('click', event => {");
     expect(rendererSource).toContain('!isSidebarFlyoutOpen() || !(target instanceof Node) || sidebarEl.contains(target)');
+    expect(rendererSource).toContain("target.closest('.builder-header, .designer-live-preview')");
     expect(rendererSource).toContain('}, true);');
     expect(rendererSource).toContain('flyout.hidden = !shouldOpen;');
     expect(rendererSource).toContain("flyout.style.display = shouldOpen ? '' : 'none';");
     expect(rendererSource).toContain("flyout.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');");
+  });
+
+  it('keeps viewport presets in the header control instead of every sidebar panel', () => {
+    const sidebarHtml = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/partials/sidebar-builder.html'),
+      'utf8'
+    );
+    const headerHtml = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/partials/builder-header.html'),
+      'utf8'
+    );
+    const headerSource = fs.readFileSync(
+      path.join(__dirname, '../ui/designer/app/renderer/builderHeader.ts'),
+      'utf8'
+    );
+
+    expect(sidebarHtml).not.toContain('data-builder-viewport-preset');
+    expect(headerHtml.match(/data-builder-viewport-preset/g)).toHaveLength(3);
+    expect(headerHtml).toContain('aria-label="Viewport presets"');
+    expect(headerSource).toContain("saveMenuBtn.setAttribute('aria-label', 'Save options')");
   });
 
   it('keeps native background as a section-level tool', () => {

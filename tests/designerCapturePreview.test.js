@@ -10,6 +10,20 @@ describe('designer preview capture', () => {
 
   test('skips capture when sandboxed stylesheets cannot expose cssRules', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const context = {
+      scale: jest.fn(),
+      fillRect: jest.fn(),
+      strokeRect: jest.fn(),
+      fillText: jest.fn(),
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 1,
+      font: '',
+      textBaseline: ''
+    };
+    jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
+    jest.spyOn(HTMLCanvasElement.prototype, 'toDataURL')
+      .mockReturnValue('data:image/png;base64,structural');
     Object.defineProperty(document, 'styleSheets', {
       configurable: true,
       value: [
@@ -21,9 +35,16 @@ describe('designer preview capture', () => {
       ]
     });
     const gridEl = document.createElement('div');
+    const item = document.createElement('div');
+    item.className = 'canvas-item';
+    item.dataset.widgetId = 'textBox';
+    gridEl.appendChild(item);
     const { capturePreview } = await import('../ui/designer/app/renderer/capturePreview.js');
 
     await expect(capturePreview(gridEl)).resolves.toBe('');
+    await expect(capturePreview(gridEl, { structuralFallback: true }))
+      .resolves.toBe('data:image/png;base64,structural');
+    expect(context.fillText).toHaveBeenCalledWith('textBox', 8, 7, 64);
     expect(errorSpy).not.toHaveBeenCalled();
   });
 

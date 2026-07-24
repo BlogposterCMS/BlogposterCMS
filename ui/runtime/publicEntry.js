@@ -30,6 +30,14 @@ async function ensureToken() {
 }
 export async function bootPublicRuntime() {
     const livePreview = hasDesignerLivePreviewQuery();
+    if (livePreview) {
+        // The sandboxed preview has an opaque origin, so its data channel is the
+        // parent Designer bridge. Boot that adapter before any direct public API
+        // request; the current Color Scheme and Font Package arrive in the render
+        // payload and do not need a second state owner.
+        await importDesignerLivePreviewRuntime();
+        return;
+    }
     await ensureToken();
     const emit = getMeltdownEmit();
     configureColorLibraryClient({
@@ -48,10 +56,6 @@ export async function bootPublicRuntime() {
     await refreshFontPackages().catch(error => {
         console.warn('FONT_PACKAGES_PUBLIC_LOAD_FAILED: Content will use browser typography.', error);
     });
-    if (livePreview) {
-        await importDesignerLivePreviewRuntime();
-        return;
-    }
     let slug = location.pathname.replace(/^\/+/, '') || '';
     if (!slug) {
         const start = await emitRuntimePublic(emit, window.PUBLIC_TOKEN, 'pages', 'start', {

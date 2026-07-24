@@ -9,6 +9,14 @@ import {
   type DesignerLivePreviewPayload,
   type DesignerLivePreviewViewport
 } from './livePreviewMessages.js';
+import {
+  BUILDER_VIEWPORT_PRESETS,
+  getBuilderViewportState,
+  setBuilderViewportPreset,
+  subscribeBuilderViewport
+} from './viewportState.js';
+import { getColorLibrarySnapshot } from '/ui/shared/colors/colorLibrary.js';
+import { getFontPackagesSnapshot } from '/ui/shared/fonts/fontPackages.js';
 
 type RuntimeEmit = (eventName: string, payload?: Record<string, unknown>, timeout?: number) => Promise<unknown>;
 type LooseRecord = Record<string, any>;
@@ -48,10 +56,12 @@ type LivePreviewControllerOptions = {
   buildPayload: (viewport: DesignerLivePreviewViewport) => DesignerLivePreviewPayload;
   emit?: RuntimeEmit;
   renderDebounceMs?: number;
+  loadTimeoutMs?: number;
 };
 
 const DESIGNER_LIVE_PREVIEW_QUERY = 'designer-live-preview';
 const DEFAULT_RENDER_DEBOUNCE_MS = 180;
+const DEFAULT_LOAD_TIMEOUT_MS = 8000;
 const FALLBACK_VIEWPORT: DesignerLivePreviewViewport = { id: 'desktop', label: 'Desktop', width: '100%' };
 const DEFAULT_VIEWPORTS: DesignerLivePreviewViewport[] = [
   FALLBACK_VIEWPORT,
@@ -108,6 +118,8 @@ export function buildLivePreviewFrameUrl(slug: unknown = ''): string {
     : '/';
   const url = new URL(path, window.location.origin);
   url.searchParams.set(DESIGNER_LIVE_PREVIEW_QUERY, '1');
+  const originToken = new URLSearchParams(window.location.search).get('originToken');
+  if (originToken) url.searchParams.set('originToken', originToken);
   return `${url.pathname}${url.search}`;
 }
 
@@ -216,6 +228,18 @@ function currentDesignBackground(gridEl: HTMLElement | null): Record<string, unk
   };
 }
 
+function currentFontCatalog(): Record<string, unknown> {
+  const available = Array.isArray(window.AVAILABLE_FONTS)
+    ? window.AVAILABLE_FONTS.filter(font => typeof font === 'string' && font.trim())
+    : [];
+  const sources = window.FONT_SOURCES && typeof window.FONT_SOURCES === 'object'
+    ? Object.fromEntries(Object.entries(window.FONT_SOURCES).filter(([name, url]) => (
+      Boolean(name.trim()) && typeof url === 'string' && Boolean(url.trim())
+    )))
+    : {};
+  return { available, sources };
+}
+
 function rootLayoutContainer(layoutRoot: HTMLElement | null): HTMLElement | null {
   if (!layoutRoot) return null;
   if (layoutRoot.classList.contains('layout-container')) return layoutRoot;
@@ -310,7 +334,11 @@ export function buildLivePreviewPayload({
       layoutTree,
       placements,
       scenes,
-      styles: {},
+      styles: {
+        colorLibrary: getColorLibrarySnapshot(),
+        fontPackages: getFontPackagesSnapshot(),
+        fontCatalog: currentFontCatalog()
+      },
       metadata: {
         source: 'design-studio-live-preview',
         generatedFrom: 'ui/designer/app/renderer/livePreviewFrame.ts'
@@ -362,6 +390,8 @@ export function livePreviewFeedbackState(): Record<string, unknown> {
     viewport: panel?.dataset.viewport || document.body.dataset.livePreviewViewport || null,
     source: open ? 'designer-live-preview-frame' : null,
     frameUrl: frame?.getAttribute('src') || null,
+    errorCode: panel?.dataset.errorCode || null,
+    errorMessage: panel?.dataset.errorMessage || null,
     runtime: 'public'
   };
 }
@@ -371,15 +401,22 @@ export function createLivePreviewController({
   frameUrl = buildLivePreviewFrameUrl(),
   buildPayload,
   emit,
-  renderDebounceMs = DEFAULT_RENDER_DEBOUNCE_MS
+  renderDebounceMs = DEFAULT_RENDER_DEBOUNCE_MS,
+  loadTimeoutMs = DEFAULT_LOAD_TIMEOUT_MS
 }: LivePreviewControllerOptions) {
   const viewports = normalizeLivePreviewViewports(displayPorts);
-  let activeViewport: DesignerLivePreviewViewport = viewports[0] || FALLBACK_VIEWPORT;
+  const initialViewportState = getBuilderViewportState();
+  let activeViewport: DesignerLivePreviewViewport = {
+    id: initialViewportState.presetId,
+    label: BUILDER_VIEWPORT_PRESETS.find(preset => preset.id === initialViewportState.presetId)?.label || 'Custom',
+    width: `${initialViewportState.width}px`
+  };
   let panel: HTMLElement | null = null;
   let frame: HTMLIFrameElement | null = null;
   let trigger: HTMLElement | null = null;
   let open = false;
   let renderTimer = 0;
+  let loadTimer = 0;
   let nextRequestId = 1;
 
   const runtimeEmit: RuntimeEmit = emit || ((eventName, payload, timeout) => {
@@ -389,9 +426,37 @@ export function createLivePreviewController({
     return window.meltdownEmit(eventName, payload, timeout);
   });
 
-  function setStatus(status: string): void {
-    if (panel) panel.dataset.status = status;
+  function clearLoadTimeout(): void {
+    window.clearTimeout(loadTimer);
+    loadTimer = 0;
+  }
+
+  function setStatus(status: string, errorCode = '', errorMessage = ''): void {
+    clearLoadTimeout();
+    if (panel) {
+      panel.dataset.status = status;
+      if (errorCode) panel.dataset.errorCode = errorCode;
+      else delete panel.dataset.errorCode;
+      if (errorMessage) panel.dataset.errorMessage = errorMessage;
+      else delete panel.dataset.errorMessage;
+      const statusEl = panel.querySelector<HTMLElement>('[data-live-preview-status]');
+      if (statusEl) {
+        statusEl.hidden = status === 'ready';
+        statusEl.textContent = status === 'error'
+          ? `${errorMessage || 'Preview unavailable'} (${errorCode || 'DESIGNER_LIVE_PREVIEW_FAILED'})`
+          : 'Loading public runtime…';
+      }
+    }
     setBodyPreviewDataset(open, status, activeViewport.id);
+    if (status === 'loading' && open) {
+      loadTimer = window.setTimeout(() => {
+        setStatus(
+          'error',
+          'DESIGNER_LIVE_PREVIEW_TIMEOUT',
+          'The public runtime did not become ready in time.'
+        );
+      }, Math.max(100, loadTimeoutMs));
+    }
   }
 
   function updateTrigger(): void {
@@ -444,10 +509,7 @@ export function createLivePreviewController({
   }
 
   function setViewport(viewportId: string): void {
-    activeViewport = viewports.find(viewport => viewport.id === viewportId) || activeViewport;
-    markViewportButtons();
-    setFrameWidth();
-    scheduleRender(0);
+    setBuilderViewportPreset(viewportId);
   }
 
   function buildPanel(): HTMLElement {
@@ -465,6 +527,12 @@ export function createLivePreviewController({
     title.className = 'designer-live-preview__title';
     title.textContent = 'Live Preview';
     bar.appendChild(title);
+    const status = document.createElement('div');
+    status.className = 'designer-live-preview__status';
+    status.dataset.livePreviewStatus = 'true';
+    status.setAttribute('role', 'status');
+    status.textContent = 'Loading public runtime…';
+    bar.appendChild(status);
 
     const viewportGroup = document.createElement('div');
     viewportGroup.className = 'designer-live-preview__viewport-group';
@@ -545,7 +613,11 @@ export function createLivePreviewController({
       return;
     }
     if (message.type === DESIGNER_LIVE_PREVIEW_FAILED) {
-      setStatus('error');
+      setStatus(
+        'error',
+        String(message.code || 'DESIGNER_LIVE_PREVIEW_RUNTIME_FAILED'),
+        String(message.error || message.message || 'The public runtime rejected the preview payload.')
+      );
       return;
     }
     if (message.type === DESIGNER_LIVE_PREVIEW_RUNTIME_REQUEST) {
@@ -570,6 +642,7 @@ export function createLivePreviewController({
   function closePreview(): void {
     open = false;
     window.clearTimeout(renderTimer);
+    clearLoadTimeout();
     // Remove the iframe instead of only hiding it so stale public-runtime
     // messages cannot keep the overlay in a confusing half-open state.
     panel?.remove();
@@ -581,6 +654,17 @@ export function createLivePreviewController({
 
   window.addEventListener('message', handlePreviewMessage);
   document.addEventListener('designerContentChanged', () => scheduleRender());
+  const unsubscribeViewport = subscribeBuilderViewport(next => {
+    activeViewport = {
+      id: next.presetId,
+      label: BUILDER_VIEWPORT_PRESETS.find(preset => preset.id === next.presetId)?.label || 'Custom',
+      width: `${next.width}px`
+    };
+    if (panel) panel.dataset.viewport = activeViewport.id;
+    markViewportButtons();
+    setFrameWidth();
+    scheduleRender(0);
+  });
 
   return {
     open: openPreview,
@@ -595,6 +679,7 @@ export function createLivePreviewController({
     getActiveViewport: () => activeViewport,
     destroy(): void {
       closePreview();
+      unsubscribeViewport();
       window.removeEventListener('message', handlePreviewMessage);
       panel?.remove();
       panel = null;

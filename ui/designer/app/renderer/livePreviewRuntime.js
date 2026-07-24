@@ -1,6 +1,8 @@
 import { fetchRuntimeWidgetRegistry } from '/ui/runtime/main/runtimePageData.js';
 import { renderPublicRuntimePageContent } from '/ui/runtime/main/runtimePageComposition.js';
 import { ensureGlobalStyle, ensureLayout } from '/ui/runtime/main/runtimePageShell.js';
+import { applyColorLibraryVariables, normalizeColorLibrarySnapshot } from '/ui/shared/colors/colorLibrary.js';
+import { applyActiveFontPackage, normalizeFontPackagesSnapshot } from '/ui/shared/fonts/fontPackages.js';
 import { DESIGNER_LIVE_PREVIEW_FAILED, DESIGNER_LIVE_PREVIEW_READY, DESIGNER_LIVE_PREVIEW_RENDER, DESIGNER_LIVE_PREVIEW_RENDERED, DESIGNER_LIVE_PREVIEW_RUNTIME_REQUEST, DESIGNER_LIVE_PREVIEW_RUNTIME_RESPONSE } from './livePreviewMessages.js';
 const RUNTIME_REQUEST_TIMEOUT_MS = 12000;
 const DESIGNER_LIVE_PREVIEW_QUERY = 'designer-live-preview';
@@ -115,9 +117,25 @@ function previewRuntimeDataEmit(payload) {
         return previewRuntimeEmit(eventName, requestPayload);
     };
 }
+function applyPreviewBrandStyles(payload) {
+    const styles = isRecord(payload.document.styles) ? payload.document.styles : {};
+    const fontCatalog = isRecord(styles.fontCatalog) ? styles.fontCatalog : {};
+    const sources = isRecord(fontCatalog.sources)
+        ? Object.fromEntries(Object.entries(fontCatalog.sources).filter(([name, url]) => (Boolean(name.trim()) && typeof url === 'string' && Boolean(url.trim()))))
+        : {};
+    const available = Array.isArray(fontCatalog.available)
+        ? fontCatalog.available.filter((font) => typeof font === 'string' && Boolean(font.trim()))
+        : Object.keys(sources);
+    window.FONT_SOURCES = sources;
+    window.AVAILABLE_FONTS = available;
+    document.documentElement.dataset.bpFontPackagesLane = 'public';
+    applyColorLibraryVariables(normalizeColorLibrarySnapshot(styles.colorLibrary));
+    applyActiveFontPackage(normalizeFontPackagesSnapshot(styles.fontPackages));
+}
 export async function renderLivePreviewPayload(payload) {
     ensureGlobalStyle('public');
     ensureLayout({}, 'public');
+    applyPreviewBrandStyles(payload);
     const contentEl = document.getElementById('content');
     if (!contentEl) {
         throw new Error('DESIGNER_LIVE_PREVIEW_CONTENT_MISSING: #content was not created');

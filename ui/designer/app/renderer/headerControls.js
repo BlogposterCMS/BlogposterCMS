@@ -1,3 +1,10 @@
+import {
+  getBuilderViewportState,
+  setBuilderViewportPreset,
+  setBuilderViewportWidth,
+  subscribeBuilderViewport
+} from '/ui/designer/app/renderer/viewportState.js';
+
 export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo, redo }) {
   const viewportBtn = topBar.querySelector('#viewportControlBtn');
   const viewportPanel = topBar.querySelector('.viewport-slider');
@@ -8,12 +15,13 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
   }
 
   const viewportEl = grid?.scrollContainer || gridEl.parentElement || gridEl;
-  const DEFAULT_VIEWPORT = 1280;
-  function setViewportWidth(val) {
+  function applyViewportState(next) {
+    const val = next.width;
     if (viewportEl) {
       viewportEl.style.width = `${val}px`;
       viewportEl.style.margin = '0 auto';
     }
+    if (viewportRange) viewportRange.value = String(val);
     if (viewportValue) viewportValue.textContent = `${val}px`;
     viewportSizeEl.textContent = `${val}px`;
     if (grid && typeof grid.setScale === 'function') {
@@ -22,10 +30,22 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
       );
       grid.setScale(current);
     }
+    document.querySelectorAll('[data-builder-viewport-preset]').forEach(button => {
+      const active = button.dataset.builderViewportPreset === next.presetId;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
   }
 
-  if (viewportRange) viewportRange.value = String(DEFAULT_VIEWPORT);
-  setViewportWidth(DEFAULT_VIEWPORT);
+  const unsubscribeViewport = subscribeBuilderViewport(applyViewportState);
+  const presetButtons = Array.from(document.querySelectorAll('[data-builder-viewport-preset]'));
+  presetButtons.forEach(button => {
+    if (button.dataset.builderViewportBound === 'true') return;
+    button.dataset.builderViewportBound = 'true';
+    button.addEventListener('click', () => {
+      setBuilderViewportPreset(button.dataset.builderViewportPreset);
+    });
+  });
 
   function hideViewportPanel() {
     if (!viewportPanel) return;
@@ -59,19 +79,8 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
 
   viewportRange?.addEventListener('input', () => {
     const val = parseInt(viewportRange.value, 10);
-    if (Number.isFinite(val)) setViewportWidth(val);
+    if (Number.isFinite(val)) setBuilderViewportWidth(val);
   });
-
-  if (window.ResizeObserver && viewportEl) {
-    const resizeObserver = new ResizeObserver(entries => {
-      const entry = entries[0];
-      const width = Math.round(entry.contentRect.width);
-      if (viewportRange) viewportRange.value = String(width);
-      if (viewportValue) viewportValue.textContent = `${width}px`;
-      viewportSizeEl.textContent = `${width}px`;
-    });
-    resizeObserver.observe(viewportEl);
-  }
 
   const headerMenuBtn = topBar.querySelector('.builder-menu-btn');
   const headerMenu = topBar.querySelector('.builder-options-menu');
@@ -104,10 +113,10 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
     document.addEventListener('click', outsideHeaderHandler);
   });
 
-  topBar.querySelectorAll('.menu-undo').forEach(btn => {
+  topBar.querySelectorAll('.header-actions .menu-undo').forEach(btn => {
     btn.addEventListener('click', () => { hideHeaderMenu(); undo(); });
   });
-  topBar.querySelectorAll('.menu-redo').forEach(btn => {
+  topBar.querySelectorAll('.header-actions .menu-redo').forEach(btn => {
     btn.addEventListener('click', () => { hideHeaderMenu(); redo(); });
   });
 
@@ -134,4 +143,10 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
   }
 
   applyProMode();
+  applyViewportState(getBuilderViewportState());
+  return () => {
+    unsubscribeViewport();
+    hideViewportPanel();
+    hideHeaderMenu();
+  };
 }

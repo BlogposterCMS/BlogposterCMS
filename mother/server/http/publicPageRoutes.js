@@ -4,13 +4,15 @@ const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { verifyOriginToken } = require('../security/originToken');
 
 function createPublicPageRoutes({
   motherEmitter,
   plainSpaceVersion,
   renderMode,
   rootDir,
-  sanitizeSlug
+  sanitizeSlug,
+  securityConfig
 }) {
   const router = express.Router();
   const pageHtmlPath = path.join(rootDir, 'public', 'index.html');
@@ -65,6 +67,22 @@ function createPublicPageRoutes({
 
   router.get('/:slug?', async (req, res, next) => {
     try {
+      const livePreviewRequested = String(req.query?.['designer-live-preview'] || '') === '1';
+      if (livePreviewRequested) {
+        const verification = verifyOriginToken(req.query?.originToken, securityConfig);
+        if (!verification.valid) {
+          res.setHeader('Cache-Control', 'no-store');
+          return res.status(403).json({
+            error: 'Live Preview authorization failed.',
+            code: verification.code
+          });
+        }
+        // The signed, expiring Designer token is the only exception to the
+        // global SAMEORIGIN frame policy. The outer app iframe remains sandboxed.
+        res.removeHeader('X-Frame-Options');
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('Referrer-Policy', 'no-referrer');
+      }
       const requestedSlug = req.params.slug;
       const slug = sanitizeSlug(typeof requestedSlug === 'string' ? requestedSlug : '');
 

@@ -138,7 +138,8 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     plainSpaceVersion,
     renderMode,
     rootDir,
-    sanitizeSlug
+    sanitizeSlug,
+    securityConfig
   }));
 
   await reconcileFirstInstallDone({

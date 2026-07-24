@@ -11,7 +11,7 @@ describe('designer timeline effects preview', () => {
     const content = document.createElement('div');
 
     gridEl.className = 'canvas-grid';
-    item.className = 'canvas-item';
+    item.className = 'canvas-item selected';
     item.dataset.effects = JSON.stringify([
       { id: 'fadeIn', enabled: true, start: 10, end: 30 },
       { id: 'moveY', enabled: true, start: 10, end: 50 }
@@ -47,7 +47,7 @@ describe('designer timeline effects preview', () => {
     const item = document.createElement('div');
     const content = document.createElement('div');
 
-    item.className = 'canvas-item';
+    item.className = 'canvas-item selected';
     item.dataset.behavior = 'sticky';
     item.dataset.scrollStart = '10';
     item.dataset.scrollEnd = '60';
@@ -85,7 +85,7 @@ describe('designer timeline effects preview', () => {
     const item = document.createElement('div');
     const content = document.createElement('div');
 
-    item.className = 'canvas-item';
+    item.className = 'canvas-item selected';
     item.dataset.behavior = 'sticky';
     item.dataset.scrollStart = '10';
     item.dataset.scrollEnd = '60';
@@ -146,5 +146,37 @@ describe('designer timeline effects preview', () => {
     expect(marker.dataset.previewProgress).toBe('75');
     expect(marker.style.getPropertyValue('--scene-preview-progress')).toBe('75%');
     expect(marker.textContent).toBe('75%');
+  });
+
+  it('keeps timeline controls inactive until an element is selected', () => {
+    document.body.innerHTML = '';
+    const footer = document.createElement('footer');
+    const gridEl = document.createElement('div');
+    const item = document.createElement('div');
+    item.className = 'canvas-item';
+    gridEl.appendChild(item);
+    document.body.append(gridEl, footer);
+
+    buildLayoutBar({ footer, grid: null, gridEl });
+    const range = footer.querySelector<HTMLInputElement>('.scene-timeline-range')!;
+    const play = footer.querySelector<HTMLButtonElement>('.scene-timeline-play')!;
+    const zoomOut = footer.querySelector<HTMLButtonElement>('.zoom-controls button:first-child')!;
+    const zoomIn = footer.querySelector<HTMLButtonElement>('.zoom-controls button:last-child')!;
+
+    expect(range.disabled).toBe(true);
+    expect(play.disabled).toBe(true);
+    expect(play.getAttribute('aria-label')).toBe('Play scroll preview');
+    expect(zoomOut.getAttribute('aria-label')).toBe('Zoom out');
+    expect(zoomIn.getAttribute('aria-label')).toBe('Zoom in');
+    expect(footer.querySelector('.scene-timeline-label')?.textContent).toBe('Select an element');
+
+    item.classList.add('selected');
+    document.dispatchEvent(new CustomEvent('designerSelectionChanged', {
+      detail: { selected: true, id: 'selected-1' }
+    }));
+
+    expect(range.disabled).toBe(false);
+    expect(play.disabled).toBe(false);
+    expect(footer.querySelector('.scene-timeline-label')?.textContent).toBe('Scroll timeline');
   });
 });

@@ -65,11 +65,35 @@ function fieldLabel(text, control) {
     label.append(caption, control);
     return label;
 }
+function scopeIntro(text) {
+    const intro = document.createElement('p');
+    intro.className = 'style-library-intro';
+    intro.textContent = text;
+    return intro;
+}
 function setInitialInputValue(input, value) {
     // Dynamic Designer panels can be restored from browser form history after
     // insertion. Keep the editable value and its reset baseline in sync.
+    input.autocomplete = 'off';
     input.defaultValue = value;
     input.value = value;
+}
+function stabilizeMountedInputValue(input, value) {
+    setInitialInputValue(input, value);
+    window.setTimeout(() => {
+        // Chromium may restore the previous control value after the current change
+        // event finishes. Disconnected controls belong to a newer panel render.
+        if (input.isConnected)
+            setInitialInputValue(input, value);
+    }, 0);
+}
+function stabilizeMountedSelectValue(select, value) {
+    select.autocomplete = 'off';
+    select.value = value;
+    window.setTimeout(() => {
+        if (select.isConnected)
+            select.value = value;
+    }, 0);
 }
 function showError(host, error) {
     const errorNode = host.querySelector('[data-font-package-error]');
@@ -192,17 +216,34 @@ function mountColorSchemePanel(host) {
             errorNode.textContent = error instanceof Error ? error.message : String(error || 'Unable to update color scheme.');
             errorNode.classList.remove('hidden');
         };
-        host.append(schemeBar, fieldLabel('Scheme name', schemeName), schemeActions, createForm, fieldLabel('Default slot', slotSelect), fieldLabel('Name', slotName), fieldLabel('Color', colorRow), slotActions, errorNode);
-        schemeSelect.value = scheme.id;
-        slotSelect.value = selectedSlot.id;
+        host.append(scopeIntro('Global color defaults. Individual elements can still override a color locally.'), schemeBar, fieldLabel('Scheme name', schemeName), schemeActions, createForm, fieldLabel('Default slot', slotSelect), fieldLabel('Name', slotName), fieldLabel('Color', colorRow), slotActions, errorNode);
+        // Chromium may restore form-history values when these dynamic controls are
+        // inserted. Reapply the selected scheme after insertion so the visible
+        // editor and the shared library snapshot cannot diverge.
+        stabilizeMountedInputValue(schemeName, scheme.name);
+        stabilizeMountedInputValue(slotName, selectedSlot.name);
+        stabilizeMountedInputValue(slotValue, selectedSlot.value);
+        stabilizeMountedInputValue(colorControl, selectedSlot.value.slice(0, 7));
+        stabilizeMountedSelectValue(schemeSelect, scheme.id);
+        stabilizeMountedSelectValue(slotSelect, selectedSlot.id);
         schemeSelect.addEventListener('change', () => {
             selectedSchemeId = schemeSelect.value;
             selectedSlotId = 'default-1';
             render();
         });
         slotSelect.addEventListener('change', () => {
-            selectedSlotId = slotSelect.value;
-            render();
+            const nextSlot = scheme.colors.find(color => color.id === slotSelect.value);
+            if (!nextSlot)
+                return;
+            selectedSlotId = nextSlot.id;
+            // Keep the native select mounted. Replacing it during its own change
+            // event lets browsers reapply the new option to a panel rendered with
+            // the previous slot, leaving the visible editor out of sync.
+            setInitialInputValue(slotName, nextSlot.name);
+            setInitialInputValue(slotValue, nextSlot.value);
+            setInitialInputValue(colorControl, nextSlot.value.slice(0, 7));
+            deleteSlotButton.disabled = scheme.colors.length <= 1
+                || nextSlot.id !== `default-${scheme.colors.length}`;
         });
         colorControl.addEventListener('input', () => {
             slotValue.value = colorControl.value.toUpperCase();
@@ -401,7 +442,10 @@ function mountFontPackagesPanel(host) {
         const controls = new Map();
         const familySelect = document.createElement('select');
         familySelect.setAttribute('aria-label', 'Font family');
-        const familyChoices = Array.from(new Set(['inherit', roleStyles.fontFamily, ...fontCatalog]));
+        // Put the stored role family first. Chromium can restore a dynamic select
+        // to its first option after insertion; the package default must remain the
+        // safe fallback while "Inherit from parent" stays available explicitly.
+        const familyChoices = Array.from(new Set([roleStyles.fontFamily, 'inherit', ...fontCatalog]));
         familyChoices.forEach(family => {
             const option = document.createElement('option');
             option.value = family;
@@ -471,11 +515,22 @@ function mountFontPackagesPanel(host) {
         errorNode.className = 'font-package-error hidden';
         errorNode.dataset.fontPackageError = 'true';
         errorNode.setAttribute('role', 'alert');
-        host.append(packageBar, fieldLabel('Package name', packageName), packageActions, newPackageForm, fieldLabel('Text role', roleSelect), editor, preview, roleActions, errorNode);
-        packageSelect.value = pkg.id;
-        roleSelect.value = selectedRole;
-        familySelect.value = roleStyles.fontFamily;
-        colorSelect.value = linked?.id || 'literal';
+        host.append(scopeIntro('Global typography defaults. Text set to Default follows the selected role.'), packageBar, fieldLabel('Package name', packageName), packageActions, newPackageForm, fieldLabel('Text role', roleSelect), editor, preview, roleActions, errorNode);
+        // As with Color Schemes, form restoration happens at insertion time in
+        // Chromium. The active package role must win over those stale values.
+        stabilizeMountedInputValue(packageName, pkg.name);
+        controls.forEach((control, key) => {
+            if (control instanceof HTMLInputElement) {
+                stabilizeMountedInputValue(control, roleStyles[key]);
+            }
+            else {
+                stabilizeMountedSelectValue(control, roleStyles[key]);
+            }
+        });
+        stabilizeMountedSelectValue(packageSelect, pkg.id);
+        stabilizeMountedSelectValue(roleSelect, selectedRole);
+        stabilizeMountedSelectValue(familySelect, roleStyles.fontFamily);
+        stabilizeMountedSelectValue(colorSelect, linked?.id || 'literal');
         const readFormStyles = () => Object.fromEntries(Array.from(controls.entries()).map(([key, control]) => [key, control.value]));
         const updatePreview = () => {
             const previewStyles = readFormStyles();
@@ -489,8 +544,35 @@ function mountFontPackagesPanel(host) {
             render();
         });
         roleSelect.addEventListener('change', () => {
-            selectedRole = roleSelect.value;
-            render();
+            const nextRole = roleSelect.value;
+            const nextStyles = pkg.roles[nextRole];
+            if (!nextStyles)
+                return;
+            selectedRole = nextRole;
+            // A role switch updates the current editor in place for the same reason
+            // as Color Scheme slots: the native select remains the source of truth
+            // throughout its change event instead of being replaced mid-event.
+            controls.forEach((control, key) => {
+                const nextValue = nextStyles[key];
+                if (control instanceof HTMLInputElement) {
+                    setInitialInputValue(control, nextValue);
+                    return;
+                }
+                if (!Array.from(control.options).some(option => option.value === nextValue)) {
+                    const option = document.createElement('option');
+                    option.value = nextValue;
+                    option.textContent = nextValue;
+                    control.appendChild(option);
+                }
+                control.value = nextValue;
+            });
+            const nextLinkedColor = parseLinkedColorValue(nextStyles.color);
+            colorSelect.value = nextLinkedColor?.id || 'literal';
+            colorInput.disabled = Boolean(nextLinkedColor);
+            preview.textContent = selectedRole.startsWith('h')
+                ? `${ROLE_LABELS[selectedRole]} preview`
+                : 'The quick brown fox jumps over the lazy dog.';
+            setRolePreview(preview, nextStyles);
         });
         colorSelect.addEventListener('change', () => {
             const selectedCssValue = colorSelect.selectedOptions[0]?.dataset.cssValue;

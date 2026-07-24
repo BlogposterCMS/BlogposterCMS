@@ -40,12 +40,21 @@
     </button>
   </div>
   <div class="viewport-slider">
-    <input type="range" class="viewport-range" min="320" max="3840" step="10" />
+    <div class="scene-device-switcher builder-header-viewport-presets" role="group" aria-label="Viewport presets">
+      <button type="button" class="active" data-builder-viewport-preset="desktop" aria-label="Desktop" aria-pressed="true">
+        <img src="/assets/icons/monitor.svg" alt="" class="icon" />
+      </button>
+      <button type="button" data-builder-viewport-preset="tablet" aria-label="Tablet" aria-pressed="false">
+        <img src="/assets/icons/tablet.svg" alt="" class="icon" />
+      </button>
+      <button type="button" data-builder-viewport-preset="mobile" aria-label="Mobile" aria-pressed="false">
+        <img src="/assets/icons/smartphone.svg" alt="" class="icon" />
+      </button>
+    </div>
+    <input type="range" class="viewport-range" min="320" max="3840" step="10" aria-label="Builder viewport width" />
     <span class="viewport-value"></span>
   </div>
   <div class="builder-options-menu">
-    <button class="menu-undo"><img src="/assets/icons/rotate-ccw.svg" class="icon" alt="undo" /> Undo</button>
-    <button class="menu-redo"><img src="/assets/icons/rotate-cw.svg" class="icon" alt="redo" /> Redo</button>
     <label class="menu-pro"><input type="checkbox" class="pro-toggle" checked /> Pro Mode</label>
   </div>
 </header>

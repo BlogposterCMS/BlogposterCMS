@@ -51,6 +51,7 @@ describe('appFrameLoader postMessage security', () => {
       adminToken: null,
       appBridge: true,
       appName: 'designer',
+      themeMode: 'system',
       allowedOrigins: ['https://admin.example.com']
     }, '*');
     frame.contentWindow.postMessage.mockClear();
@@ -123,6 +124,117 @@ describe('appFrameLoader postMessage security', () => {
       ok: true,
       data: { id: 'design-1' }
     }, '*');
+  });
+
+  test('persists sandboxed app preferences only inside the current app namespace', async () => {
+    document.head.innerHTML = [
+      '<meta name="csrf-token" content="csrf123">',
+      '<meta name="admin-token" content="admin456">',
+      '<meta name="app-name" content="designer">'
+    ].join('');
+    window.localStorage.clear();
+
+    const frame = document.createElement('iframe');
+    frame.id = 'app-frame';
+    frame.setAttribute('src', '/apps/designer/index.html');
+    frame.setAttribute('sandbox', 'allow-scripts allow-forms');
+    Object.defineProperty(frame, 'contentWindow', {
+      configurable: true,
+      value: {
+        postMessage: jest.fn(),
+        close: jest.fn()
+      }
+    });
+    document.body.appendChild(frame);
+
+    require(path.join(__dirname, '..', 'public', 'assets', 'js', 'appFrameLoader.js'));
+    frame.contentWindow.postMessage.mockClear();
+
+    window.dispatchEvent(new window.MessageEvent('message', {
+      data: {
+        type: 'cms-app-runtime-request',
+        requestId: 41,
+        eventName: 'appPreference.set',
+        payload: { key: 'viewport', value: { width: 820, zoom: 125 } }
+      },
+      origin: 'null',
+      source: frame.contentWindow
+    }));
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(JSON.parse(window.localStorage.getItem(
+      'blogposter.appPreference.v1.designer.viewport'
+    ))).toEqual({ width: 820, zoom: 125 });
+    expect(window.meltdownEmit).not.toHaveBeenCalled();
+    expect(frame.contentWindow.postMessage).toHaveBeenCalledWith({
+      type: 'cms-app-runtime-response',
+      requestId: 41,
+      ok: true,
+      data: { stored: true }
+    }, '*');
+
+    frame.contentWindow.postMessage.mockClear();
+    window.dispatchEvent(new window.MessageEvent('message', {
+      data: {
+        type: 'cms-app-runtime-request',
+        requestId: 42,
+        eventName: 'appPreference.get',
+        payload: { key: 'viewport' }
+      },
+      origin: 'null',
+      source: frame.contentWindow
+    }));
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(frame.contentWindow.postMessage).toHaveBeenCalledWith({
+      type: 'cms-app-runtime-response',
+      requestId: 42,
+      ok: true,
+      data: {
+        found: true,
+        value: { width: 820, zoom: 125 }
+      }
+    }, '*');
+
+    frame.contentWindow.postMessage.mockClear();
+    window.dispatchEvent(new window.MessageEvent('message', {
+      data: {
+        type: 'cms-app-runtime-request',
+        requestId: 43,
+        eventName: 'appPreference.set',
+        payload: { key: '../theme', value: 'dark' }
+      },
+      origin: 'null',
+      source: frame.contentWindow
+    }));
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(frame.contentWindow.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'cms-app-runtime-response',
+      requestId: 43,
+      ok: false,
+      error: expect.stringContaining('SHELL_APP_PREFERENCE_KEY_INVALID')
+    }), '*');
+
+    frame.contentWindow.postMessage.mockClear();
+    window.dispatchEvent(new window.MessageEvent('message', {
+      data: {
+        type: 'cms-app-runtime-request',
+        requestId: 44,
+        eventName: 'appPreference.set',
+        payload: { key: 'viewport', value: 'x'.repeat(4097) }
+      },
+      origin: 'null',
+      source: frame.contentWindow
+    }));
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(frame.contentWindow.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'cms-app-runtime-response',
+      requestId: 44,
+      ok: false,
+      error: expect.stringContaining('SHELL_APP_PREFERENCE_VALUE_INVALID')
+    }), '*');
   });
 
   test('passes manifest agentSurface config to app iframes', () => {

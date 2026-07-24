@@ -66,6 +66,21 @@ import {
   redoDesign,
   resetDesignHistory
 } from './managers/historyManager.js';
+import {
+  getBuilderViewportState,
+  setBuilderViewportPreset,
+  setBuilderViewportWidth,
+  setBuilderZoom
+} from './renderer/viewportState.js';
+import {
+  createSitePreset
+} from '/ui/shared/presets/sitePresets.js';
+import {
+  getActiveColorScheme
+} from '/ui/shared/colors/colorLibrary.js';
+import {
+  getActiveFontPackage
+} from '/ui/shared/fonts/fontPackages.js';
 
 const builderLogger = createLogger('builder');
 const backgroundLogger = builderLogger.child('background');
@@ -1899,6 +1914,23 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   function updateSceneInspector(el = null, widgetDef = null) {
     if (!sceneInspector) return;
     if (!el) setInspectorMode('content');
+    sceneInspector.dataset.hasSelection = el ? 'true' : 'false';
+    sceneInspector.querySelectorAll('[data-inspector-mode="behavior"], [data-inspector-mode="style"]').forEach(btn => {
+      btn.disabled = !el;
+      btn.setAttribute('aria-disabled', el ? 'false' : 'true');
+    });
+    sceneInspector.querySelectorAll('[data-inspector-panel="behavior"], [data-inspector-panel="style"]').forEach(panel => {
+      panel.setAttribute('aria-disabled', el ? 'false' : 'true');
+      panel.querySelectorAll('button, input, select, textarea').forEach(control => {
+        control.disabled = !el;
+      });
+    });
+    sceneInspector.querySelectorAll('[data-inspector-panel="content"]:not(.scene-section-settings)').forEach(panel => {
+      panel.setAttribute('aria-disabled', el ? 'false' : 'true');
+      panel.querySelectorAll('button, input, select, textarea').forEach(control => {
+        control.disabled = !el;
+      });
+    });
     const activeScene = sceneSections.find(section => section.id === activeSceneId) || sceneSections[0];
     const titleEl = sceneInspector.querySelector('.scene-inspector-title');
     const kickerEl = sceneInspector.querySelector('.scene-inspector-kicker');
@@ -1934,6 +1966,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (xEl) xEl.value = '50 %';
       if (yEl) yEl.value = '40 %';
     }
+    document.dispatchEvent(new CustomEvent('designerSelectionChanged', {
+      detail: {
+        selected: Boolean(el),
+        id: el?.dataset?.instanceId || el?.id || null,
+        textEditable: Boolean(el && getRegisteredEditable(el))
+      }
+    }));
   }
 
   function getActiveScene() {
@@ -2598,6 +2637,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   document.addEventListener('click', event => {
     const target = event.target;
     if (!isSidebarFlyoutOpen() || !(target instanceof Node) || sidebarEl.contains(target)) return;
+    if (
+      target instanceof Element
+      && target.closest('.builder-header, .designer-live-preview')
+    ) {
+      return;
+    }
     closeSidebarPanel();
   }, true);
 
@@ -2726,7 +2771,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         <div id="workspaceMain" class="builder-grid"></div>
         <div class="scene-empty-state" hidden>
           <span class="scene-empty-title">Hero Scene</span>
-          <span class="scene-empty-actions" aria-label="Add element">
+          <span class="scene-empty-actions" role="group" aria-label="Quick add to empty scene">
             <button type="button" data-empty-insert="text" aria-label="Add text">
               <img src="/assets/icons/type.svg" alt="" class="icon" />
               <span>Text</span>
@@ -3017,6 +3062,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     ICON_MAP,
     hideToolbar,
     showToolbar,
+    syncToolbarForSelection: () => {
+      const editable = state.activeWidgetEl
+        ? getRegisteredEditable(state.activeWidgetEl)
+        : null;
+      if (editable) showToolbar();
+      else hideToolbar();
+    },
     saveDesign,
     getCurrentLayoutForLayer,
     getActiveLayer: () => activeLayer,
@@ -3069,6 +3121,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (!el) {
       removeStageBehaviorHuds();
       updateSceneInspector(null);
+      setActiveElement(null);
+      hideToolbar();
       return;
     }
     if (!el.dataset.behavior) el.dataset.behavior = 'scroll';
@@ -3091,7 +3145,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       editable = el.querySelector('[data-text-editable], .editable');
     }
     setActiveElement(editable);
-    showToolbar();
+    if (editable) showToolbar();
+    else hideToolbar();
     builderLogger.debug('selectWidget', { widgetId: el?.id, editableId: editable?.id });
   }
   const shouldAutosaveNow = () => Boolean(pageId && state.autosaveEnabled);
@@ -3712,6 +3767,285 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     return { handled: true, scene: sceneSummary(scene) };
   }
 
+  function findLayoutContainerByCommand(command = {}, key = 'id') {
+    if (!layoutRoot) return null;
+    const raw = String(commandValue(command, key, '') || '').trim();
+    const containers = [
+      ...(layoutRoot.classList?.contains('layout-container') ? [layoutRoot] : []),
+      ...Array.from(layoutRoot.querySelectorAll('.layout-container'))
+    ];
+    if (!raw) return getActiveWorkareaContainer() || containers[0] || null;
+    return containers.find(container => (
+      container.dataset.nodeId === raw || container.id === raw
+    )) || null;
+  }
+
+  function updateElementGeometry(command = {}) {
+    const selectResult = command.target || commandValue(command, 'id') ? selectElementByCommand(command) : null;
+    if (selectResult && !selectResult.handled) return selectResult;
+    const el = state.activeWidgetEl;
+    if (!el) return { handled: false, reason: 'no-active-element' };
+    const current = {
+      x: Number(el.dataset.x || 0),
+      y: Number(el.dataset.y || 0),
+      w: Number(el.getAttribute('gs-w') || 1),
+      h: Number(el.getAttribute('gs-h') || 1)
+    };
+    const geometry = {
+      x: Number(commandValue(command, 'x', current.x)),
+      y: Number(commandValue(command, 'y', current.y)),
+      w: Math.max(1, Number(commandValue(command, 'w', current.w))),
+      h: Math.max(1, Number(commandValue(command, 'h', current.h)))
+    };
+    grid.update(el, geometry);
+    selectWidget(el);
+    renderSceneLayers();
+    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    return { handled: true, geometry, selection: selectedElementSummary(el) };
+  }
+
+  function setElementStack(command = {}) {
+    const selectResult = command.target || commandValue(command, 'id') ? selectElementByCommand(command) : null;
+    if (selectResult && !selectResult.handled) return selectResult;
+    const el = state.activeWidgetEl;
+    if (!el) return { handled: false, reason: 'no-active-element' };
+    const direction = String(commandValue(command, 'direction', '') || '').trim();
+    if (direction === 'forward' || direction === 'backward') {
+      const moved = arrangeSceneWidget(el, direction);
+      return { handled: moved, direction, selection: selectedElementSummary(el) };
+    }
+    const zIndex = Math.max(1, Math.round(Number(commandValue(command, 'zIndex', layerStackIndex(el))) || 1));
+    el.style.zIndex = String(zIndex);
+    el.dataset.layerOrder = String(zIndex);
+    renderSceneLayers();
+    requestSceneChangePersist();
+    return { handled: true, zIndex, selection: selectedElementSummary(el) };
+  }
+
+  function deleteElementFromCommand(command = {}) {
+    const el = findCanvasItemByCommand(command);
+    if (!el) return { handled: false, reason: 'element-not-found' };
+    const id = el.dataset.instanceId || el.id || '';
+    grid.removeWidget(el);
+    if (state.activeWidgetEl === el) {
+      state.activeWidgetEl = null;
+      actionBar.style.display = 'none';
+      setActiveElement(null);
+      hideToolbar();
+      updateSceneInspector(null);
+    }
+    renderSceneLayers();
+    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    return { handled: true, deletedId: id };
+  }
+
+  async function duplicateElementFromCommand(command = {}) {
+    const source = findCanvasItemByCommand(command);
+    if (!source) return { handled: false, reason: 'element-not-found' };
+    updateAllWidgetContents();
+    const widgetDef = allWidgets.find(widget => widget.id === source.dataset.widgetId);
+    if (!widgetDef) return { handled: false, reason: 'widget-definition-not-found' };
+    const sourceCode = ensureCodeMap()[source.dataset.instanceId];
+    const code = sourceCode ? JSON.parse(JSON.stringify(sourceCode)) : null;
+    const duplicate = await createSceneWidget(widgetDef, {
+      x: Number(source.dataset.x || 0) + 1,
+      y: Number(source.dataset.y || 0) + 1,
+      w: Number(source.getAttribute('gs-w') || 1),
+      h: Number(source.getAttribute('gs-h') || DEFAULT_ROWS),
+      code,
+      behavior: source.dataset.behavior,
+      elementName: source.dataset.elementName
+    });
+    if (!duplicate) return { handled: false, reason: 'duplicate-create-failed' };
+    ['scrollStart', 'scrollEnd', 'effects', 'opacity', 'radius'].forEach(key => {
+      if (source.dataset[key] !== undefined) duplicate.dataset[key] = source.dataset[key];
+    });
+    renderSceneLayers();
+    return { handled: true, selection: selectedElementSummary(duplicate) };
+  }
+
+  function updateTextFromCommand(command = {}) {
+    const selectResult = command.target || commandValue(command, 'id') ? selectElementByCommand(command) : null;
+    if (selectResult && !selectResult.handled) return selectResult;
+    const widget = state.activeWidgetEl;
+    if (!widget) return { handled: false, reason: 'no-active-element' };
+    const editable = getRegisteredEditable(widget)
+      || widget.querySelector('[data-text-editable], .editable');
+    if (!editable) return { handled: false, reason: 'selected-element-is-not-text-editable' };
+    const content = commandValue(command, 'content', undefined);
+    if (content !== undefined) editable.textContent = String(content);
+    const styleValues = {
+      fontFamily: commandValue(command, 'fontFamily', undefined),
+      color: commandValue(command, 'color', undefined),
+      fontSize: commandValue(command, 'fontSize', undefined),
+      fontWeight: commandValue(command, 'fontWeight', undefined),
+      fontStyle: commandValue(command, 'fontStyle', undefined),
+      textDecoration: commandValue(command, 'textDecoration', undefined),
+      textAlign: commandValue(command, 'textAlign', undefined)
+    };
+    Object.entries(styleValues).forEach(([property, value]) => {
+      if (value !== undefined) editable.style[property] = String(value || '');
+    });
+    editable.dispatchEvent(new Event('input', { bubbles: true }));
+    document.dispatchEvent(new CustomEvent('designerContentChanged', {
+      detail: { source: 'agent-text-update', elementId: widget.dataset.instanceId || widget.id }
+    }));
+    updateAllWidgetContents();
+    return {
+      handled: true,
+      defaultTypography: !editable.style.fontFamily,
+      defaultColor: !editable.style.color,
+      selection: selectedElementSummary(widget)
+    };
+  }
+
+  function updateContainerFromCommand(action, command = {}) {
+    const target = findLayoutContainerByCommand(command, 'id');
+    if (!target) return { handled: false, reason: 'container-not-found' };
+    if (action === 'container.create') {
+      placeContainer(target, commandValue(command, 'position', 'inside'));
+    } else if (action === 'container.delete') {
+      deleteContainer(target);
+    } else if (action === 'container.mode.set') {
+      setContainerLayoutMode(target, commandValue(command, 'mode', 'free'));
+    } else if (action === 'container.settings.set') {
+      const settings = commandValue(command, 'settings', {});
+      setContainerSettings(target, settings && typeof settings === 'object' ? settings : {});
+    } else if (action === 'container.move') {
+      const source = findLayoutContainerByCommand(command, 'sourceId');
+      const destination = findLayoutContainerByCommand(command, 'targetId');
+      if (!source || !destination) return { handled: false, reason: 'container-source-or-target-not-found' };
+      moveContainer(source, destination, commandValue(command, 'position', 'inside'));
+    } else if (action === 'container.styleSource.link') {
+      const source = findLayoutContainerByCommand(command, 'sourceId');
+      if (source && source !== target) {
+        source.dataset.styleSourceEnabled = 'true';
+        source.dataset.styleSourceRole = 'source';
+        source.dataset.styleSyncLayout = 'true';
+        source.dataset.styleSyncDesign = 'true';
+        if (
+          target.dataset.styleSourceEnabled !== 'true'
+          || target.dataset.styleSourceId !== source.dataset.nodeId
+        ) {
+          target.dataset.styleSourceEnabled = 'false';
+          delete target.dataset.styleSourceId;
+          toggleContainerStyleSource(target);
+        }
+      } else if (target.dataset.styleSourceEnabled !== 'true' || !target.dataset.styleSourceId) {
+        toggleContainerStyleSource(target);
+      }
+    } else if (action === 'container.styleSource.unlink') {
+      if (target.dataset.styleSourceEnabled !== 'false') {
+        if (target.dataset.styleSourceId) toggleContainerStyleSource(target);
+        else {
+          target.dataset.styleSourceEnabled = 'false';
+          handleContainerMutation();
+        }
+      }
+    } else {
+      return { handled: false, reason: 'unsupported-container-command', action };
+    }
+    return { handled: true, action, container: containerDebugInfo(target) };
+  }
+
+  async function createCurrentSitePreset(command = {}) {
+    const name = String(commandValue(command, 'name', '') || '').trim();
+    if (!name) return { handled: false, reason: 'missing-site-preset-name' };
+    const colorScheme = getActiveColorScheme();
+    const fontPackage = getActiveFontPackage();
+    if (!colorScheme || !fontPackage) {
+      return { handled: false, reason: 'site-preset-defaults-unavailable' };
+    }
+    const demo = layoutCtx.captureSitePresetDemo?.();
+    const preset = await createSitePreset({
+      name,
+      version: String(commandValue(command, 'version', '1.0.0')),
+      developer: String(commandValue(command, 'developer', 'User')),
+      builderSettings: layoutCtx.getSitePresetSettings?.() || {},
+      colorScheme,
+      fontPackage,
+      pageDemos: demo ? [demo] : []
+    });
+    return { handled: Boolean(preset), preset };
+  }
+
+  async function saveDesignFromCommand(command = {}) {
+    const nameInput = document.querySelector('#layoutNameInput');
+    const name = String(commandValue(command, 'name', nameInput?.value || layoutName || '') || '').trim();
+    if (!name) return { handled: false, reason: 'missing-design-name' };
+    const result = await saveDesign({
+      name,
+      description: String(commandValue(command, 'description', '') || ''),
+      gridEl,
+      layoutRoot,
+      getCurrentLayoutForLayer,
+      getActiveLayer: () => activeLayer,
+      ensureCodeMap,
+      capturePreview: options => captureGridPreview(gridEl, options),
+      updateAllWidgetContents,
+      ownerId: getAdminUserId(),
+      pageId,
+      isLayout: activeLayer === 0,
+      isGlobal: activeLayer === 0
+    });
+    return { handled: true, result };
+  }
+
+  async function startPublishFromCommand(command = {}) {
+    document.getElementById('publishLayoutBtn')?.click();
+    const deadline = Date.now() + 4000;
+    let slugInput = null;
+    let confirmButton = null;
+    while (Date.now() < deadline && (!slugInput || !confirmButton)) {
+      slugInput = document.querySelector('.publish-slug-input');
+      confirmButton = document.querySelector('.publish-confirm');
+      if (!slugInput || !confirmButton) await new Promise(resolve => window.setTimeout(resolve, 25));
+    }
+    if (!slugInput || !confirmButton) {
+      return { handled: false, reason: 'publish-panel-unavailable', code: 'DESIGNER_AGENT_PUBLISH_PANEL_UNAVAILABLE' };
+    }
+    const slug = String(commandValue(command, 'slug', slugInput.value || '') || '').trim();
+    if (!slug) return { handled: false, reason: 'missing-publish-slug' };
+    slugInput.value = slug;
+    slugInput.dispatchEvent(new Event('input', { bubbles: true }));
+    const draft = commandValue(command, 'draft', undefined);
+    const draftInput = document.querySelector('.publish-draft-checkbox');
+    if (draftInput && draft !== undefined) {
+      draftInput.checked = Boolean(draft);
+      draftInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    confirmButton.click();
+    const publishDeadline = Date.now() + 30000;
+    while (Date.now() < publishDeadline) {
+      const success = document.querySelector('.publish-info[data-variant="success"]:not(.hidden)');
+      if (success) {
+        return {
+          handled: true,
+          published: true,
+          slug,
+          draft: draftInput?.checked ?? null,
+          message: success.textContent?.trim() || 'Design published successfully.'
+        };
+      }
+      const warning = document.querySelector('.publish-warning:not(.hidden)');
+      if (warning?.textContent?.trim()) {
+        return {
+          handled: false,
+          reason: 'publish-failed',
+          code: 'DESIGNER_AGENT_PUBLISH_FAILED',
+          message: warning.textContent.trim()
+        };
+      }
+      await new Promise(resolve => window.setTimeout(resolve, 50));
+    }
+    return {
+      handled: false,
+      reason: 'publish-timeout',
+      code: 'DESIGNER_AGENT_PUBLISH_TIMEOUT',
+      slug
+    };
+  }
+
   async function executeDesignerAgentCommand(command = {}) {
     const action = commandAction(command);
     if (action === 'scene.next') return stepSceneBy(1);
@@ -3719,6 +4053,24 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (action === 'scene.add') return { handled: true, scene: sceneSummary(createSceneFromUi({ edit: false })) };
     if (action === 'scene.select') return activateSceneById(commandValue(command, 'sceneId', command.target), false);
     if (action === 'scene.rename' || action === 'scene.update' || action === 'scene.background') return updateSceneFromCommand(command);
+    if (action === 'scene.move' || action === 'scene.reorder') {
+      const sceneId = String(commandValue(command, 'sceneId', activeSceneId));
+      const currentIndex = sceneSections.findIndex(scene => scene.id === sceneId);
+      const requestedIndex = commandValue(command, 'index', undefined);
+      const delta = requestedIndex === undefined
+        ? Number(commandValue(command, 'delta', 0))
+        : Number(requestedIndex) - currentIndex;
+      if (currentIndex < 0 || !delta) return { handled: false, reason: currentIndex < 0 ? 'scene-not-found' : 'scene-position-unchanged' };
+      const direction = delta > 0 ? 1 : -1;
+      for (let step = 0; step < Math.abs(delta); step += 1) moveScene(sceneId, direction);
+      return { handled: true, scene: sceneSummary(sceneSections.find(scene => scene.id === sceneId)) };
+    }
+    if (action === 'scene.delete') {
+      const sceneId = String(commandValue(command, 'sceneId', activeSceneId));
+      const before = sceneSections.length;
+      removeScene(sceneId);
+      return { handled: sceneSections.length < before, deletedSceneId: sceneId };
+    }
     if (action === 'insert' || action === 'insert.element') {
       const type = commandValue(command, 'type', command.value || command.target);
       const inserted = await insertByTypeOrPreset(type);
@@ -3726,6 +4078,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       return { handled: Boolean(inserted), type, result: inserted, selection: selectedElementSummary(insertedEl) };
     }
     if (action === 'element.select') return selectElementByCommand(command);
+    if (action === 'element.move' || action === 'element.resize' || action === 'element.geometry.set') return updateElementGeometry(command);
+    if (action === 'element.zIndex.set' || action === 'element.arrange') return setElementStack(command);
+    if (action === 'element.delete') return deleteElementFromCommand(command);
+    if (action === 'element.duplicate') return duplicateElementFromCommand(command);
+    if (action === 'text.update' || action === 'text.format.set') return updateTextFromCommand(command);
     if (action === 'behavior.set') {
       const selectResult = command.target || commandValue(command, 'id') ? selectElementByCommand(command) : null;
       if (selectResult && !selectResult.handled) return selectResult;
@@ -3735,6 +4092,23 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (action === 'range.set' || action === 'behavior.range.set') return updateActiveElementRange(command);
     if (action === 'effect.set' || action === 'effects.set') return updateActiveElementEffects(command);
     if (action === 'element.update' || action === 'element.appearance.set') return updateActiveElementAppearance(command);
+    if (action.startsWith('container.')) return updateContainerFromCommand(action, command);
+    if (action === 'viewport.set') {
+      return { handled: true, viewport: setBuilderViewportWidth(commandValue(command, 'width', 1280)) };
+    }
+    if (action === 'viewport.preset') {
+      return { handled: true, viewport: setBuilderViewportPreset(commandValue(command, 'preset', command.target)) };
+    }
+    if (action === 'viewport.zoom.set') {
+      return { handled: true, viewport: setBuilderZoom(commandValue(command, 'zoom', 100)) };
+    }
+    if (action === 'sitePresets.create') return createCurrentSitePreset(command);
+    if (action === 'design.save') return saveDesignFromCommand(command);
+    if (action === 'design.publish') return startPublishFromCommand(command);
+    if (action === 'publishing.open') {
+      document.getElementById('publishLayoutBtn')?.click();
+      return { handled: true };
+    }
     return { handled: false, reason: 'unsupported-command', action };
   }
 
@@ -3743,7 +4117,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     snapshot: () => ({
       activeScene: sceneSummary(),
       sections: getSceneSectionsSnapshot(),
-      selection: selectedElementSummary()
+      selection: selectedElementSummary(),
+      viewport: getBuilderViewportState()
     })
   };
 

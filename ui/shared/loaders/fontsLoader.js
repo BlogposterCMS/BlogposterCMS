@@ -22,6 +22,14 @@ function isAppBridgeFrameWaitingForInit() {
 function isAppBridgeFrameReady() {
     return hasAppBridgeScript() && Boolean(window.__BLOGPOSTER_APP_INIT_TOKENS__);
 }
+function isDesignerLivePreview() {
+    try {
+        return new URLSearchParams(window.location.search).has('designer-live-preview');
+    }
+    catch {
+        return false;
+    }
+}
 function publishAvailableFonts(fonts, list = []) {
     window.AVAILABLE_FONTS = fonts;
     window.FONT_SOURCES = Object.fromEntries(list
@@ -55,6 +63,13 @@ export async function loadFonts() {
     let fonts = [];
     if (typeof window.meltdownEmit !== 'function')
         return;
+    if (isDesignerLivePreview()) {
+        // The signed preview payload supplies the parent frame's validated font
+        // catalog. Install the existing CSS loader without making a request from
+        // the sandbox's opaque origin.
+        publishAvailableFonts([], []);
+        return;
+    }
     try {
         const emitter = window.meltdownEmit;
         const appBridgeReady = isAppBridgeFrameReady();

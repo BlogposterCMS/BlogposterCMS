@@ -10,10 +10,14 @@ import {
 import { capturePreview } from './renderer/capturePreview.js';
 import { livePreviewFeedbackState } from './renderer/livePreviewFrame.js';
 import {
+  activateColorScheme,
   colorLibraryAgentState,
+  createColorScheme,
   createLibraryColor,
+  deleteColorScheme,
   deleteLibraryColor,
   refreshColorLibrary,
+  renameColorScheme,
   updateLibraryColor
 } from '/ui/shared/colors/colorLibrary.js';
 import {
@@ -34,6 +38,7 @@ import {
   refreshSitePresets,
   sitePresetsAgentState
 } from '/ui/shared/presets/sitePresets.js';
+import { getBuilderViewportState } from './renderer/viewportState.js';
 
 const SURFACE_ID = 'studio.designer';
 const APP_NAME = 'designer';
@@ -87,6 +92,24 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
       { name: 'title', type: 'string', required: false },
       { name: 'background', type: 'color', required: false }
     ]
+  },
+  {
+    action: 'scene.move',
+    label: 'Move scene',
+    category: 'scene',
+    description: 'Moves a scene by delta or to an exact zero-based index.',
+    params: [
+      { name: 'sceneId', type: 'string', required: true },
+      { name: 'delta', type: 'number', required: false },
+      { name: 'index', type: 'number', required: false }
+    ]
+  },
+  {
+    action: 'scene.delete',
+    label: 'Delete scene',
+    category: 'scene',
+    description: 'Deletes a scene while preserving the required final scene.',
+    params: [{ name: 'sceneId', type: 'string', required: true }]
   },
   {
     action: 'insert.element',
@@ -155,10 +178,230 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     ]
   },
   {
+    action: 'element.geometry.set',
+    label: 'Set element geometry',
+    category: 'element',
+    description: 'Moves or resizes an element using exact Builder grid coordinates.',
+    requiresSelection: true,
+    params: [
+      { name: 'id', type: 'string', required: false },
+      { name: 'x', type: 'number', required: false },
+      { name: 'y', type: 'number', required: false },
+      { name: 'w', type: 'number', required: false },
+      { name: 'h', type: 'number', required: false }
+    ]
+  },
+  {
+    action: 'element.move',
+    label: 'Move element',
+    category: 'element',
+    description: 'Moves an element to exact Builder grid coordinates.',
+    requiresSelection: true,
+    params: [
+      { name: 'id', type: 'string', required: false },
+      { name: 'x', type: 'number', required: true },
+      { name: 'y', type: 'number', required: true }
+    ]
+  },
+  {
+    action: 'element.resize',
+    label: 'Resize element',
+    category: 'element',
+    description: 'Resizes an element to exact Builder grid dimensions.',
+    requiresSelection: true,
+    params: [
+      { name: 'id', type: 'string', required: false },
+      { name: 'w', type: 'number', required: true },
+      { name: 'h', type: 'number', required: true }
+    ]
+  },
+  {
+    action: 'element.zIndex.set',
+    label: 'Set element stack',
+    category: 'element',
+    description: 'Sets an exact z-index or moves the element one step forward or backward.',
+    requiresSelection: true,
+    params: [
+      { name: 'id', type: 'string', required: false },
+      { name: 'zIndex', type: 'number', required: false },
+      { name: 'direction', type: 'forward|backward', required: false }
+    ]
+  },
+  {
+    action: 'element.duplicate',
+    label: 'Duplicate element',
+    category: 'element',
+    description: 'Duplicates an element through the existing widget creation path.',
+    requiresSelection: true
+  },
+  {
+    action: 'element.delete',
+    label: 'Delete element',
+    category: 'element',
+    description: 'Deletes an element through the active Builder grid.',
+    requiresSelection: true
+  },
+  {
+    action: 'text.update',
+    label: 'Update text',
+    category: 'content',
+    description: 'Updates text content and optional direct font or color overrides; empty values restore defaults.',
+    requiresSelection: true,
+    params: [
+      { name: 'id', type: 'string', required: false },
+      { name: 'content', type: 'string', required: false },
+      { name: 'fontFamily', type: 'string', required: false },
+      { name: 'color', type: 'color', required: false },
+      { name: 'fontSize', type: 'string', required: false },
+      { name: 'fontWeight', type: 'string', required: false },
+      { name: 'textAlign', type: 'string', required: false }
+    ]
+  },
+  {
+    action: 'viewport.set',
+    label: 'Set viewport width',
+    category: 'viewport',
+    description: 'Sets the exact shared Builder and Live Preview viewport width.',
+    params: [{ name: 'width', type: 'number', required: true }]
+  },
+  {
+    action: 'viewport.preset',
+    label: 'Set viewport preset',
+    category: 'viewport',
+    description: 'Selects Desktop, Tablet or Mobile in every Builder viewport control.',
+    params: [{ name: 'preset', type: 'desktop|tablet|mobile', required: true }]
+  },
+  {
+    action: 'viewport.zoom.set',
+    label: 'Set Builder zoom',
+    category: 'viewport',
+    description: 'Sets the shared Builder zoom percentage.',
+    params: [{ name: 'zoom', type: 'number', required: true }]
+  },
+  {
+    action: 'container.create',
+    label: 'Create layout container',
+    category: 'layout',
+    description: 'Creates a container through the existing layout container manager.',
+    params: [
+      { name: 'id', type: 'string', required: false },
+      { name: 'position', type: 'string', required: true }
+    ]
+  },
+  {
+    action: 'container.move',
+    label: 'Move layout container',
+    category: 'layout',
+    description: 'Moves a container relative to another container.',
+    params: [
+      { name: 'sourceId', type: 'string', required: true },
+      { name: 'targetId', type: 'string', required: true },
+      { name: 'position', type: 'string', required: true }
+    ]
+  },
+  {
+    action: 'container.delete',
+    label: 'Delete layout container',
+    category: 'layout',
+    description: 'Deletes a container through the existing layout container manager.',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'container.mode.set',
+    label: 'Set container mode',
+    category: 'layout',
+    description: 'Sets free, stack, row or grid mode on a layout container.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'mode', type: 'free|stack|row|grid', required: true }
+    ]
+  },
+  {
+    action: 'container.settings.set',
+    label: 'Set container settings',
+    category: 'layout',
+    description: 'Updates existing typed container settings such as gap and padding.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'settings', type: 'object', required: true }
+    ]
+  },
+  {
+    action: 'container.styleSource.link',
+    label: 'Link Style Source',
+    category: 'layout',
+    description: 'Links a layout container to an existing sibling Style Source.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'sourceId', type: 'string', required: false }
+    ]
+  },
+  {
+    action: 'container.styleSource.unlink',
+    label: 'Unlink Style Source',
+    category: 'layout',
+    description: 'Disables a layout container Style Source relationship.',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'design.save',
+    label: 'Save design',
+    category: 'document',
+    description: 'Saves the current design through the existing Designer save manager.',
+    params: [
+      { name: 'name', type: 'string', required: false },
+      { name: 'description', type: 'string', required: false }
+    ]
+  },
+  {
+    action: 'design.publish',
+    label: 'Publish design',
+    category: 'document',
+    description: 'Starts the existing publishing flow for an explicit slug and draft state.',
+    params: [
+      { name: 'slug', type: 'string', required: true },
+      { name: 'draft', type: 'boolean', required: false }
+    ]
+  },
+  {
     action: 'colorLibrary.refresh',
     label: 'Refresh color schemes',
     category: 'color',
     description: 'Refreshes numbered Default slots and reapplies the active color scheme.'
+  },
+  {
+    action: 'colorLibrary.createScheme',
+    label: 'Create color scheme',
+    category: 'color',
+    description: 'Creates a named scheme by copying an existing or active scheme.',
+    params: [
+      { name: 'name', type: 'string', required: true },
+      { name: 'copyFromId', type: 'string', required: false }
+    ]
+  },
+  {
+    action: 'colorLibrary.updateScheme',
+    label: 'Rename color scheme',
+    category: 'color',
+    description: 'Renames a color scheme while retaining its stable id.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'name', type: 'string', required: true }
+    ]
+  },
+  {
+    action: 'colorLibrary.activateScheme',
+    label: 'Activate color scheme',
+    category: 'color',
+    description: 'Makes a scheme the default source for linked color slots.',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'colorLibrary.deleteScheme',
+    label: 'Delete color scheme',
+    category: 'color',
+    description: 'Deletes a color scheme while preserving the required final scheme.',
+    params: [{ name: 'id', type: 'string', required: true }]
   },
   {
     action: 'colorLibrary.create',
@@ -266,6 +509,17 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     category: 'preset',
     description: 'Applies one declarative preset to the central color and font defaults.',
     params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'sitePresets.create',
+    label: 'Create Site Preset',
+    category: 'preset',
+    description: 'Captures current Builder settings, active defaults and the current page demo.',
+    params: [
+      { name: 'name', type: 'string', required: true },
+      { name: 'version', type: 'string', required: false },
+      { name: 'developer', type: 'string', required: false }
+    ]
   },
   {
     action: 'sitePresets.delete',
@@ -457,6 +711,13 @@ function widgetPlacementFeedback(): Record<string, unknown>[] {
       selected: el.classList.contains('selected'),
       global: el.dataset.global === 'true',
       layer: el.dataset.layer || null,
+      zIndex: Number.parseInt(el.style.zIndex || el.dataset.layerOrder || '0', 10) || 0,
+      grid: {
+        x: Number.parseFloat(el.dataset.x || '0') || 0,
+        y: Number.parseFloat(el.dataset.y || '0') || 0,
+        w: Number.parseFloat(el.getAttribute('gs-w') || '1') || 1,
+        h: Number.parseFloat(el.getAttribute('gs-h') || '1') || 1
+      },
       behavior: behaviorOf(el),
       range: rangeOf(el),
       effects: effectsOf(el),
@@ -625,6 +886,7 @@ function buildDesignerAgentFeedback(
   const widgetPlacements = widgetPlacementFeedback();
   const warnings = designerFeedbackWarnings(visual, layoutNodes, widgetPlacements);
   const status = feedbackStatus(warnings);
+  const builderViewport = getBuilderViewportState();
   return {
     version: 1,
     channel: 'design-studio.agent-feedback',
@@ -644,8 +906,11 @@ function buildDesignerAgentFeedback(
       publishingCenter: true
     },
     viewport: {
-      width: window.innerWidth,
-      height: window.innerHeight,
+      width: builderViewport.width,
+      presetId: builderViewport.presetId,
+      zoom: builderViewport.zoom,
+      browserWidth: window.innerWidth,
+      browserHeight: window.innerHeight,
       devicePixelRatio: window.devicePixelRatio || 1
     },
     document: {
@@ -800,6 +1065,14 @@ function selectionState(): Record<string, unknown> | null {
 
 function availableControls(): Record<string, unknown>[] {
   const controls: Record<string, unknown>[] = [];
+  document.querySelectorAll<HTMLElement>('[data-builder-viewport-preset]').forEach(button => {
+    controls.push({
+      id: `viewport.${button.dataset.builderViewportPreset}`,
+      role: 'viewport-preset-command',
+      label: button.getAttribute('aria-label') || textOf(button),
+      active: button.getAttribute('aria-pressed') === 'true'
+    });
+  });
   document.querySelectorAll<HTMLElement>('[data-stage-scene-action]').forEach(button => {
     controls.push({
       id: `scene.${button.dataset.stageSceneAction}`,
@@ -898,7 +1171,7 @@ async function captureStageVisual(reason: string): Promise<Record<string, unknow
     return { ...lastVisualSnapshot, reused: true, reuseReason: 'rate-limit' };
   }
 
-  const previewDataUrl = await capturePreview(gridEl);
+  const previewDataUrl = await capturePreview(gridEl, { structuralFallback: true });
   if (!previewDataUrl) {
     return {
       available: false,
@@ -910,7 +1183,9 @@ async function captureStageVisual(reason: string): Promise<Record<string, unknow
   lastVisualSnapshot = {
     available: true,
     kind: 'stage-preview',
-    source: 'designer.capturePreview',
+    source: previewDataUrl.startsWith('data:image/svg+xml')
+      ? 'designer.structuralPreview'
+      : 'designer.capturePreview',
     capturedAt: new Date().toISOString(),
     previewDataUrl,
     width: Math.round(gridEl.getBoundingClientRect().width || gridEl.clientWidth || 0),
@@ -938,6 +1213,7 @@ export async function buildDesignerAgentSnapshot(
   const colorLibrary = colorLibraryAgentState();
   const fontPackages = fontPackagesAgentState();
   const sitePresets = sitePresetsAgentState();
+  const builderViewport = getBuilderViewportState();
   return {
     appName: APP_NAME,
     surfaceId: SURFACE_ID,
@@ -1016,8 +1292,11 @@ export async function buildDesignerAgentSnapshot(
       }
     },
     metrics: {
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
+      viewportWidth: builderViewport.width,
+      viewportPreset: builderViewport.presetId,
+      viewportZoom: builderViewport.zoom,
+      browserViewportWidth: window.innerWidth,
+      browserViewportHeight: window.innerHeight,
       visualPreviewAvailable: Boolean(visual.available),
       visualPreviewBytes: Number(visual.previewDataUrl ? String(visual.previewDataUrl).length : visual.previewBytes || 0),
       feedbackWarningCount: feedbackWarnings,
@@ -1096,6 +1375,32 @@ async function handleColorLibraryCommand(
 ): Promise<Record<string, unknown>> {
   if (action === 'colorLibrary.refresh') {
     return { handled: true, library: await refreshColorLibrary() };
+  }
+  if (action === 'colorLibrary.createScheme') {
+    const name = String(commandParam(command, 'name') || '').trim();
+    const copyFromId = String(commandParam(command, 'copyFromId') || '').trim();
+    if (!name) return { handled: false, reason: 'missing-color-scheme-name' };
+    return {
+      handled: true,
+      scheme: await createColorScheme({
+        name,
+        ...(copyFromId ? { copyFromId } : {})
+      })
+    };
+  }
+  const schemeId = String(commandParam(command, 'id') || command.target || '').trim();
+  if (action === 'colorLibrary.updateScheme') {
+    const name = String(commandParam(command, 'name') || '').trim();
+    if (!schemeId || !name) return { handled: false, reason: 'missing-color-scheme-id-or-name' };
+    return { handled: true, scheme: await renameColorScheme(schemeId, name) };
+  }
+  if (action === 'colorLibrary.activateScheme') {
+    if (!schemeId) return { handled: false, reason: 'missing-color-scheme-id' };
+    return { handled: true, scheme: await activateColorScheme(schemeId) };
+  }
+  if (action === 'colorLibrary.deleteScheme') {
+    if (!schemeId) return { handled: false, reason: 'missing-color-scheme-id' };
+    return { handled: true, result: await deleteColorScheme(schemeId) };
   }
   if (action === 'colorLibrary.create') {
     const name = String(commandParam(command, 'name') || '').trim();

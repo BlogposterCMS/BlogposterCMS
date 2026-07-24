@@ -18,6 +18,7 @@ import {
   refreshSitePresets
 } from '/ui/shared/presets/sitePresets.js';
 import { initStyleLibrariesPanel } from './managers/styleLibrariesPanel.js';
+import { hydrateBuilderViewportState } from './renderer/viewportState.js';
 import { startDesignerAgentSurface } from './agentSurface';
 import { createLogger } from './utils/logger';
 
@@ -35,6 +36,7 @@ type InitTokensMessage = {
   allowedOrigins?: string[];
   allowedOrigin?: string;
   originToken?: string;
+  themeMode?: 'system' | 'light' | 'dark';
 };
 
 type RefreshMessage = {
@@ -396,8 +398,9 @@ async function bootstrap() {
   bootState.bootstrapped = true;
   // Designer chunks can load after DOMContentLoaded, so sync the document
   // theme directly instead of relying only on shell header events.
-  applyThemeMode();
+  applyThemeMode(bootstrapWindow.__BLOGPOSTER_APP_INIT_TOKENS__?.themeMode);
   await applyUserColor(true);
+  await hydrateBuilderViewportState();
   if (typeof window.meltdownEmit === 'function') {
     configureColorLibraryClient({
       emit: window.meltdownEmit,

@@ -6,6 +6,31 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Unified the Design Studio viewport slider, Desktop/Tablet/Mobile controls,
+  footer zoom, Live Preview frame and agent feedback behind one persisted
+  viewport state. The sandboxed app now persists that state through the existing
+  parent AppBridge without adding `allow-same-origin`; header and full page
+  reloads no longer reset the canvas width, displayed values match the applied
+  width, and the public-runtime iframe receives the same exact width for
+  responsive CSS evaluation. Global viewport presets now live only in the
+  header instead of being repeated below every sidebar panel.
+- Made Design Studio tools selection-aware: non-text selections no longer open
+  the text toolbar, behavior/style controls and the scroll timeline stay
+  disabled without an element, and text controls now expose `Default` versus
+  `Local override` with a reset to the active Font Package and Color Scheme.
+- Secured nested Design Studio Live Preview framing with the existing signed,
+  expiring app-origin token. Only authorized preview requests can remove the
+  global `SAMEORIGIN` response header; invalid requests fail with searchable
+  `DESIGNER_LIVE_PREVIEW_ORIGIN_TOKEN_*` codes, and stalled runtimes report
+  `DESIGNER_LIVE_PREVIEW_TIMEOUT` instead of remaining in `loading`.
+  Maintenance mode now passes signed Preview requests unchanged to that
+  verifier instead of redirecting away the token. The sandboxed runtime receives
+  the active Color Scheme, Font Package and validated font catalog in the draft
+  payload instead of attempting direct API requests from its opaque origin.
+- Expanded the existing Design Studio AgentManager command port with shared
+  viewport controls, scene reorder/delete, exact element geometry and stacking,
+  duplicate/delete/text formatting, layout container and Style Source
+  operations, current Site Preset capture, and explicit save/publish actions.
 - Replaced the executable Theme runtime with declarative Site Presets that use
   one contract for installed and user-created packages. Presets can apply
   existing Builder settings, a numbered Color Scheme, a numbered semantic Font
@@ -15,6 +40,14 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
   editable `Default 1`, `Default 2`, and later slots. Linked defaults follow
   the active scheme/package, while the existing color and font controls retain
   per-element overrides and expose `Default` to return text to inheritance.
+  Panel copy now distinguishes global defaults from local overrides, and slot/
+  typography-role switches explicitly restore the selected stored values
+  instead of stale browser form-history values.
+- Kept an open Design Studio sidebar panel intact while using header or Live
+  Preview controls, added meaningful labels to save/timeline/zoom icon buttons
+  and clarified the empty-scene actions as quick inserts. Agent visual fallback
+  now draws a raster PNG that the existing preview endpoint can serve instead
+  of publishing an unsupported SVG data URL.
 - Clarified the agent safety guidance so security-sensitive changes require
   reviewing the applicable security policy, keeping changed threat models and
   trust boundaries documented, and testing fail-closed exceptions.

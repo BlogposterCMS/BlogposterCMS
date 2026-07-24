@@ -1,3 +1,9 @@
+import {
+  getBuilderViewportState,
+  setBuilderZoom,
+  subscribeBuilderViewport
+} from '/ui/designer/app/renderer/viewportState.js';
+
 function parseEffects(value) {
   if (!value) return [];
   try {
@@ -114,7 +120,9 @@ function syncStagePreviewMarker(progress) {
 function collectTimelineLanes(gridEl) {
   if (!gridEl) return [];
   const lanes = [];
-  gridEl.querySelectorAll('.canvas-item').forEach(item => {
+  const selected = gridEl.querySelector('.canvas-item.selected');
+  if (!selected) return lanes;
+  [selected].forEach(item => {
     const label = itemLabel(item);
     const behavior = normalizeBehavior(item.dataset.behavior);
     if (behavior !== 'scroll') {
@@ -183,7 +191,9 @@ function renderTimelineLanes(gridEl, laneWrap, progress) {
 function applyEffectPreview(gridEl, progress) {
   syncStagePreviewMarker(progress);
   if (!gridEl) return;
-  gridEl.querySelectorAll('.canvas-item').forEach(item => {
+  const selected = gridEl.querySelector('.canvas-item.selected');
+  if (!selected) return;
+  [selected].forEach(item => {
     const effects = parseEffects(item.dataset.effects);
     const behavior = normalizeBehavior(item.dataset.behavior);
     if (!effects.length && behavior === 'scroll') return;
@@ -223,6 +233,7 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
   playBtn.type = 'button';
   playBtn.className = 'scene-timeline-play';
   playBtn.title = 'Play scroll preview';
+  playBtn.setAttribute('aria-label', 'Play scroll preview');
   playBtn.innerHTML = window.featherIcon ? window.featherIcon('play') : '<img src="/assets/icons/play.svg" alt="Play" />';
 
   const timeStart = document.createElement('span');
@@ -265,7 +276,9 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
   const zoomWrap = document.createElement('div');
   zoomWrap.className = 'zoom-controls';
   const zoomOut = document.createElement('button');
+  zoomOut.type = 'button';
   zoomOut.title = 'Zoom out';
+  zoomOut.setAttribute('aria-label', 'Zoom out');
   zoomOut.innerHTML = window.featherIcon ? window.featherIcon('minus') : '<img src="/assets/icons/zoom-out.svg" alt="-" />';
   const zoomLevel = document.createElement('span');
   zoomLevel.className = 'zoom-level';
@@ -276,8 +289,11 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
   zoomSlider.step = '1';
   zoomSlider.value = '100';
   zoomSlider.style.width = '180px';
+  zoomSlider.setAttribute('aria-label', 'Builder zoom');
   const zoomIn = document.createElement('button');
+  zoomIn.type = 'button';
   zoomIn.title = 'Zoom in';
+  zoomIn.setAttribute('aria-label', 'Zoom in');
   zoomIn.innerHTML = window.featherIcon ? window.featherIcon('plus') : '<img src="/assets/icons/zoom-in.svg" alt="+" />';
 
   let zoomPct = 100;
@@ -296,16 +312,20 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
       gridEl.style.setProperty('--canvas-scale', String(scale));
       gridEl.dispatchEvent(new Event('zoom', { bubbles: true }));
     }
+    document.body.dataset.builderZoom = String(zoomPct);
   }
 
-  applyZoom(100);
+  const unsubscribeViewport = subscribeBuilderViewport(next => {
+    if (next.zoom !== zoomPct) applyZoom(next.zoom);
+  });
+  applyZoom(getBuilderViewportState().zoom);
   const initialProgress = Number.parseInt(progress.value, 10) || 50;
   applyEffectPreview(gridEl, initialProgress);
   renderTimelineLanes(gridEl, laneWrap, initialProgress);
 
-  zoomOut.addEventListener('click', () => applyZoom(zoomPct - 10));
-  zoomIn.addEventListener('click', () => applyZoom(zoomPct + 10));
-  zoomSlider.addEventListener('input', () => applyZoom(parseInt(zoomSlider.value, 10) || 100));
+  zoomOut.addEventListener('click', () => setBuilderZoom(zoomPct - 10));
+  zoomIn.addEventListener('click', () => setBuilderZoom(zoomPct + 10));
+  zoomSlider.addEventListener('input', () => setBuilderZoom(parseInt(zoomSlider.value, 10) || 100));
   progress.addEventListener('input', () => {
     const pct = Number.parseInt(progress.value, 10) || 0;
     applyEffectPreview(gridEl, pct);
@@ -315,6 +335,20 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
   document.addEventListener('designerContentChanged', () => {
     renderTimelineLanes(gridEl, laneWrap, Number.parseInt(progress.value, 10) || 0);
   });
+  function syncTimelineAvailability() {
+    const selected = Boolean(gridEl?.querySelector('.canvas-item.selected'));
+    timeline.classList.toggle('is-disabled', !selected);
+    playBtn.disabled = !selected;
+    progress.disabled = !selected;
+    timelineLabel.textContent = selected ? 'Scroll timeline' : 'Select an element';
+    if (!selected && playRaf) {
+      cancelAnimationFrame(playRaf);
+      playRaf = 0;
+    }
+    renderTimelineLanes(gridEl, laneWrap, Number.parseInt(progress.value, 10) || 0);
+  }
+  document.addEventListener('designerSelectionChanged', syncTimelineAvailability);
+  syncTimelineAvailability();
   playBtn.addEventListener('click', () => {
     if (playRaf) {
       cancelAnimationFrame(playRaf);
@@ -356,5 +390,9 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
   layoutBar.appendChild(zoomWrap);
 
   (footer || document.body).appendChild(layoutBar);
+  layoutBar.__dispose = () => {
+    unsubscribeViewport();
+    document.removeEventListener('designerSelectionChanged', syncTimelineAvailability);
+  };
   return layoutBar;
 }

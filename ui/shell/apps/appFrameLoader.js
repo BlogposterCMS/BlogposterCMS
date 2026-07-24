@@ -10,6 +10,11 @@ const frame = document.getElementById('app-frame');
 // Module scripts can attach after a very fast same-host iframe has already
 // fired load, so retry the bootstrap token message briefly after registration.
 const INIT_TOKEN_RETRY_DELAYS_MS = [0, 150, 750, 1500, 3000, 6000];
+const APP_PREFERENCE_EVENT_GET = 'appPreference.get';
+const APP_PREFERENCE_EVENT_SET = 'appPreference.set';
+const APP_PREFERENCE_STORAGE_PREFIX = 'blogposter.appPreference.v1';
+const APP_PREFERENCE_KEY_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/i;
+const APP_PREFERENCE_MAX_JSON_LENGTH = 4096;
 function normalizeOrigin(value) {
     if (!value)
         return null;
@@ -74,7 +79,70 @@ function postFrameMessage(message, targetOrigin) {
         return;
     frame.contentWindow.postMessage(message, targetOrigin);
 }
+function normalizeThemeMode(value) {
+    return value === 'light' || value === 'dark' ? value : 'system';
+}
+function appPreferencePayload(payload) {
+    return payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? payload
+        : {};
+}
+function appPreferenceStorageKey(keyValue) {
+    const key = String(keyValue || '').trim();
+    if (!APP_PREFERENCE_KEY_PATTERN.test(key)) {
+        throw new Error('SHELL_APP_PREFERENCE_KEY_INVALID: preference key must be 1-64 safe characters');
+    }
+    if (!APP_PREFERENCE_KEY_PATTERN.test(appName)) {
+        throw new Error('SHELL_APP_PREFERENCE_APP_INVALID: app name cannot own browser preferences');
+    }
+    // Each app receives a private namespace. Sandboxed children never receive
+    // raw localStorage access and cannot read or overwrite another app's values.
+    return `${APP_PREFERENCE_STORAGE_PREFIX}.${appName}.${key}`;
+}
+function readAppPreference(payload) {
+    const options = appPreferencePayload(payload);
+    const storageKey = appPreferenceStorageKey(options.key);
+    try {
+        const raw = window.localStorage.getItem(storageKey);
+        if (raw === null)
+            return { found: false, value: null };
+        return { found: true, value: JSON.parse(raw) };
+    }
+    catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`SHELL_APP_PREFERENCE_READ_FAILED: ${detail}`);
+    }
+}
+function writeAppPreference(payload) {
+    const options = appPreferencePayload(payload);
+    const storageKey = appPreferenceStorageKey(options.key);
+    let serialized = '';
+    try {
+        serialized = JSON.stringify(options.value);
+    }
+    catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`SHELL_APP_PREFERENCE_VALUE_INVALID: ${detail}`);
+    }
+    if (!serialized || serialized.length > APP_PREFERENCE_MAX_JSON_LENGTH) {
+        throw new Error(`SHELL_APP_PREFERENCE_VALUE_INVALID: value exceeds ${APP_PREFERENCE_MAX_JSON_LENGTH} bytes`);
+    }
+    try {
+        window.localStorage.setItem(storageKey, serialized);
+        return { stored: true };
+    }
+    catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`SHELL_APP_PREFERENCE_WRITE_FAILED: ${detail}`);
+    }
+}
 async function runParentLocalEvent(eventName, payload) {
+    if (eventName === APP_PREFERENCE_EVENT_GET) {
+        return readAppPreference(payload);
+    }
+    if (eventName === APP_PREFERENCE_EVENT_SET) {
+        return writeAppPreference(payload);
+    }
     if ((eventName === 'openExplorer' || eventName === 'openMediaExplorer') &&
         typeof window._openMediaExplorer === 'function') {
         const options = payload && typeof payload === 'object'
@@ -135,6 +203,7 @@ export function initAppFrameLoader() {
             adminToken: null,
             appBridge: true,
             appName,
+            themeMode: normalizeThemeMode(document.documentElement.dataset.themeMode),
             allowedOrigins
         };
         if (agentSurfaceConfig !== null) {

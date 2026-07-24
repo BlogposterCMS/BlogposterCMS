@@ -9,6 +9,14 @@ import {
   ensureLayout
 } from '/ui/runtime/main/runtimePageShell.js';
 import {
+  applyColorLibraryVariables,
+  normalizeColorLibrarySnapshot
+} from '/ui/shared/colors/colorLibrary.js';
+import {
+  applyActiveFontPackage,
+  normalizeFontPackagesSnapshot
+} from '/ui/shared/fonts/fontPackages.js';
+import {
   DESIGNER_LIVE_PREVIEW_FAILED,
   DESIGNER_LIVE_PREVIEW_READY,
   DESIGNER_LIVE_PREVIEW_RENDER,
@@ -152,9 +160,29 @@ function previewRuntimeDataEmit(payload: DesignerLivePreviewPayload) {
   };
 }
 
+function applyPreviewBrandStyles(payload: DesignerLivePreviewPayload): void {
+  const styles = isRecord(payload.document.styles) ? payload.document.styles : {};
+  const fontCatalog = isRecord(styles.fontCatalog) ? styles.fontCatalog : {};
+  const sources = isRecord(fontCatalog.sources)
+    ? Object.fromEntries(Object.entries(fontCatalog.sources).filter(([name, url]) => (
+      Boolean(name.trim()) && typeof url === 'string' && Boolean(url.trim())
+    )))
+    : {};
+  const available = Array.isArray(fontCatalog.available)
+    ? fontCatalog.available.filter((font): font is string => typeof font === 'string' && Boolean(font.trim()))
+    : Object.keys(sources);
+
+  window.FONT_SOURCES = sources;
+  window.AVAILABLE_FONTS = available;
+  document.documentElement.dataset.bpFontPackagesLane = 'public';
+  applyColorLibraryVariables(normalizeColorLibrarySnapshot(styles.colorLibrary));
+  applyActiveFontPackage(normalizeFontPackagesSnapshot(styles.fontPackages));
+}
+
 export async function renderLivePreviewPayload(payload: DesignerLivePreviewPayload): Promise<void> {
   ensureGlobalStyle('public');
   ensureLayout({}, 'public');
+  applyPreviewBrandStyles(payload);
 
   const contentEl = document.getElementById('content');
   if (!contentEl) {

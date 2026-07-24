@@ -27,12 +27,20 @@ function styles(): FontRoleStyles {
 }
 
 function pkg(): FontPackage {
+  const roles = Object.fromEntries(
+    FONT_PACKAGE_ROLES.map(role => [role, styles()])
+  ) as FontPackage['roles'];
+  roles.h1 = {
+    ...styles(),
+    fontFamily: 'Manrope',
+    fontSize: '48px',
+    fontWeight: '700',
+    lineHeight: '1.1'
+  };
   return {
     id: 'font-package-default',
     name: 'Default',
-    roles: Object.fromEntries(
-      FONT_PACKAGE_ROLES.map(role => [role, styles()])
-    ) as FontPackage['roles']
+    roles
   };
 }
 
@@ -89,9 +97,13 @@ test('designer exposes separate Color scheme and Font packages management surfac
   expect(document.querySelector('[aria-label="Color scheme"]')).not.toBeNull();
   expect(document.querySelector('[data-color-scheme-host]')?.textContent).toContain('Default 1 · Primary');
   expect(document.querySelector('[data-color-scheme-host]')?.textContent).toContain('Add default');
+  expect(document.querySelector('[data-color-scheme-host]')?.textContent)
+    .toContain('Individual elements can still override a color locally.');
   expect(document.querySelector('[data-font-packages-host]')?.textContent).toContain('Create copy');
   expect(document.querySelector('[data-font-packages-host]')?.textContent).toContain('Heading 6');
   expect(document.querySelector('[data-font-packages-host]')?.textContent).toContain('Default 1 · Body');
+  expect(document.querySelector('[data-font-packages-host]')?.textContent)
+    .toContain('Text set to Default follows the selected role.');
   expect(document.querySelectorAll('[aria-label="Typography role"] option')).toHaveLength(
     FONT_PACKAGE_ROLES.length
   );
@@ -107,10 +119,32 @@ test('designer exposes separate Color scheme and Font packages management surfac
     .toBe('#00c4cc');
   expect((document.querySelector('[aria-label="Font package name"]') as HTMLInputElement).value)
     .toBe('Default');
+  expect((document.querySelector('[aria-label="Font family"]') as HTMLSelectElement).options[0].value)
+    .toBe('Work Sans');
   expect((document.querySelector('[aria-label="Role color"]') as HTMLInputElement).value)
     .toBe('#111827');
   expect((document.querySelector('[aria-label="Size"]') as HTMLInputElement).value)
     .toBe('16px');
+
+  const colorSlot = document.querySelector('[aria-label="Default color slot"]') as HTMLSelectElement;
+  colorSlot.value = 'default-2';
+  colorSlot.dispatchEvent(new Event('change', { bubbles: true }));
+  expect((document.querySelector('[aria-label="Default color name"]') as HTMLInputElement).value)
+    .toBe('Text');
+  expect((document.querySelector('[aria-label="Default color value"]') as HTMLInputElement).value)
+    .toBe('#111827');
+
+  const roleSelect = document.querySelector('[aria-label="Typography role"]') as HTMLSelectElement;
+  roleSelect.value = 'h1';
+  roleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  expect((document.querySelector('[aria-label="Font family"]') as HTMLSelectElement).value)
+    .toBe('Manrope');
+  expect((document.querySelector('[aria-label="Size"]') as HTMLInputElement).value)
+    .toBe('48px');
+  expect((document.querySelector('[aria-label="Weight"]') as HTMLInputElement).value)
+    .toBe('700');
+  expect((document.querySelector('[aria-label="Line height"]') as HTMLInputElement).value)
+    .toBe('1.1');
 
   cleanup();
 });

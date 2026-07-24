@@ -19,6 +19,7 @@ type AppBridgeMessage = {
   appName?: string;
   csrfToken?: string | null;
   adminToken?: string | null;
+  themeMode?: 'system' | 'light' | 'dark';
   agentSurface?: boolean | Record<string, unknown>;
   allowedOrigins?: string[];
   originToken?: string;

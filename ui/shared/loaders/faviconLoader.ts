@@ -5,7 +5,18 @@ import {
 
 type PublicSettings = Record<string, unknown>;
 
+function isDesignerLivePreview(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).has('designer-live-preview');
+  } catch {
+    return false;
+  }
+}
+
 export async function loadFavicon(): Promise<void> {
+  // A nested draft preview does not own public-site chrome and must not mint
+  // tokens from its sandboxed opaque origin.
+  if (isDesignerLivePreview()) return;
   if (typeof window.meltdownEmit !== 'function') return;
   try {
     const jwt = await window.meltdownEmit<string | null>('issuePublicToken', {

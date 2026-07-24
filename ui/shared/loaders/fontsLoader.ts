@@ -42,6 +42,14 @@ function isAppBridgeFrameReady(): boolean {
   return hasAppBridgeScript() && Boolean((window as AppBridgeFontWindow).__BLOGPOSTER_APP_INIT_TOKENS__);
 }
 
+function isDesignerLivePreview(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).has('designer-live-preview');
+  } catch {
+    return false;
+  }
+}
+
 function publishAvailableFonts(fonts: string[], list: FontRecord[] = []): void {
   window.AVAILABLE_FONTS = fonts;
   window.FONT_SOURCES = Object.fromEntries(
@@ -73,6 +81,13 @@ function publishAvailableFonts(fonts: string[], list: FontRecord[] = []): void {
 export async function loadFonts(): Promise<void> {
   let fonts: string[] = [];
   if (typeof window.meltdownEmit !== 'function') return;
+  if (isDesignerLivePreview()) {
+    // The signed preview payload supplies the parent frame's validated font
+    // catalog. Install the existing CSS loader without making a request from
+    // the sandbox's opaque origin.
+    publishAvailableFonts([], []);
+    return;
+  }
   try {
     const emitter = window.meltdownEmit;
     const appBridgeReady = isAppBridgeFrameReady();

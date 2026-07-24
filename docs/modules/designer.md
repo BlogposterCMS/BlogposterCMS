@@ -43,6 +43,14 @@ visual stage preview and an action catalog for scene, element and behavior
 commands. Agent controllers enqueue commands through `agentManager`; Designer
 polls and acknowledges them like any other surface.
 
+The catalog uses the existing
+`window.blogposterDesignerCommands.execute` adapter. It includes shared
+viewport controls, scene reorder/delete, exact element grid geometry,
+stacking/duplicate/delete, direct text formatting, layout container and Style
+Source operations, current Site Preset capture and save/publish commands.
+These commands call the existing Builder managers and services; they are not a
+second Designer state owner or transport.
+
 The same surface exposes central Color Schemes through `state.colorLibrary`,
 `meta.colorLibrary` and command-based `colorLibrary.*` actions. Design Studio
 loads them through Runtime Manager, applies stable numbered CSS variables and
@@ -58,7 +66,11 @@ The sidebar presents `Color scheme` and `Font packages` as independent panels.
 `state.fontPackages`, `meta.fontPackages` and command-based `fontPackages.*`
 actions mirror the same package service. The text toolbar keeps direct font
 selection; its `Default` choice removes the inline family so the active package
-role applies again.
+role applies again. It also shows `Default` versus `Local override`; resetting
+clears direct typography and text-color styles so the active Font Package and
+Color Scheme apply again. Both panels identify themselves as global defaults,
+while their editors explicitly reapply stored values on role or slot changes so
+browser form restoration cannot replace the selected scheme data.
 
 The Layout panel also exposes Site Presets without adding another primary rail
 mode. Installed and user-created packages use the same declarative contract for
@@ -66,6 +78,9 @@ Builder settings, one Color Scheme, one Font Package and optional page demos
 composed from central presets. `state.sitePresets`, `meta.sitePresets` and
 command-based `sitePresets.*` actions mirror that service; applying a preset
 updates the central systems and does not add a public runtime dependency.
+`sitePresets.create` captures the current Builder settings, active Color
+Scheme, active Font Package and current central-preset page demo through the
+same service as the visible Layout panel.
 
 Design Studio agent feedback extends that same surface instead of adding
 DOM-scraping helpers. Each snapshot now carries a versioned
@@ -77,8 +92,8 @@ optional preview image plus structured bounds so an agent can compare what it
 sees with the editable contract. Agent writes stay command-based through
 AgentManager/AppLoader actions such as select, insert, set properties, link or
 unlink a Style Source, save and publish. Do not expose every internal Designer
-function as an agent action; if a command family such as exact move/resize
-bounds is missing, document that missing adapter in
+function as an agent action; if a future command family is missing, document
+that adapter in
 `docs/design-studio-agent-feedback.md` and keep the core domain logic behind the
 existing service and permission boundaries.
 
@@ -157,6 +172,10 @@ entry point coordinates features instead of re-implementing them inline:
   route with `?designer-live-preview=1`, serializes the current layout tree and
   widget placements, and bridges Runtime data requests back through the
   existing app bridge.
+- `ui/designer/app/renderer/viewportState.ts` is the single persisted owner for
+  Builder width, Desktop/Tablet/Mobile/custom state and zoom. The sandboxed
+  Designer hydrates and persists it through the existing parent AppBridge;
+  header, footer, Live Preview and agent feedback subscribe to it.
 - `ui/designer/app/renderer/layoutBar.js` renders the zoom controls that live in the footer.
 - `ui/designer/app/renderer/layoutStructureHandlers.js` refreshes container bars and the
   layout tree sidebar whenever containers change.
@@ -241,7 +260,19 @@ These listeners register during module initialization; seeing "No listeners for 
 The app loader verifies these events before launching the designer. If any required event is missing, the loader halts startup and informs the user instead of letting requests hang. The designer's `app.json` lists these under `requiredEvents`.
 
 ## Preview Capture
+- The header slider changes the editable canvas width.
+  The header's Desktop/Tablet/Mobile buttons and footer zoom update the same
+  state and survive Layout/Design header rebuilds and full page reloads. The
+  sidebar does not duplicate those global controls. The canvas remains part of
+  the Builder document; the Live Preview public-runtime iframe is the faithful
+  surface for CSS media queries, viewport units and actual public page
+  composition.
 - The builder fetches external font stylesheets (currently allowing only same-origin and Google Fonts) before calling `html-to-image` so previews render with correct typography without touching cross-origin stylesheets.
+- If sandbox policy prevents a DOM pixel capture, agent feedback draws a local
+  PNG structure preview from stable element bounds and labels. Keeping the
+  fallback rasterized matches AgentManager's existing image allowlist instead
+  of widening the server to active SVG content. Saved design thumbnails do not
+  use this diagnostic fallback.
 - The header Preview button opens the page's public route with
   `?designer-live-preview=1`. That route loads the normal public frontend shell,
   then the preview adapter renders the current unsaved design through
@@ -253,6 +284,18 @@ The app loader verifies these events before launching the designer. If any requi
   percent-bound fields.
 - Closing the Live Preview removes the isolated frame from the editor DOM so
   stale public-runtime messages cannot keep the preview surface half-open.
+- Live Preview forwards only the existing signed `originToken` to the public
+  route. A valid, unexpired token allows that request to remove
+  `X-Frame-Options`; invalid requests stay blocked and return
+  `DESIGNER_LIVE_PREVIEW_ORIGIN_TOKEN_*`. The Designer app iframe itself stays
+  sandboxed without `allow-same-origin`.
+- The draft payload carries the already-loaded Color Scheme, Font Package and
+  validated font catalog into the public frame. The preview applies those
+  central defaults locally and does not mint a second token or make direct API
+  calls from the sandbox's opaque origin.
+- The frame reports `loading`, `ready` or `error` to agent feedback. A runtime
+  that does not answer before the load deadline reports
+  `DESIGNER_LIVE_PREVIEW_TIMEOUT`.
 - Design saves capture the visible viewport region for thumbnails and cap the
   generated image dimensions, so small cards stay recognizable instead of
   shrinking a full-height 1:1 page capture.

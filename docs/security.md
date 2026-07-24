@@ -38,6 +38,26 @@ Startup aborts if either value is missing so deployments cannot fall back to an 
 
 Origins reported as `null` (from sandboxed or `about:blank` documents) or using non-HTTP(S) schemes remain blocked even if the origin token lists them.
 
+Sandboxed apps that need small browser-local UI preferences use the existing
+request/response AppBridge events `appPreference.get` and
+`appPreference.set`. The dashboard validates the key, limits serialized values
+to 4096 bytes and stores them below an app-specific namespace. The child never
+receives raw `localStorage` access and cannot select another app's namespace.
+These preferences are non-sensitive UI state only; tokens, permissions and
+server-owned settings must not use this contract.
+
+The same signed token authorizes the nested Design Studio Live Preview without
+weakening the outer app-frame sandbox. Designer forwards `originToken` to the
+normal public page route only with `designer-live-preview=1`. The server
+verifies the RSA signature, issue/expiry timestamps and configured origin scope
+before removing `X-Frame-Options: SAMEORIGIN` for that one response. Invalid or
+expired requests fail closed with
+`DESIGNER_LIVE_PREVIEW_ORIGIN_TOKEN_*`, keep the frame header and use
+`Cache-Control: no-store`. Maintenance middleware lets these requests reach
+the public-route verifier without redirecting or stripping the signed query;
+ordinary public requests still follow the configured maintenance page. Never
+add `allow-same-origin` to the admin app iframe as a Preview workaround.
+
 For local development you can generate a key pair with:
 
 ```bash

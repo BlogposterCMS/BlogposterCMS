@@ -39,6 +39,53 @@ function ensureActiveEditable() {
 let updateButtonStates = () => {};
 
 let toolbarPositionListenersAttached = false;
+const DIRECT_TEXT_STYLE_PROPERTIES = [
+  'fontFamily',
+  'fontSize',
+  'fontWeight',
+  'fontStyle',
+  'textDecoration',
+  'textAlign',
+  'color'
+];
+
+function directTextStyleCarriers() {
+  const editable = ensureActiveEditable();
+  if (!editable) return [];
+  return [editable, ...Array.from(editable.querySelectorAll('[style]'))];
+}
+
+function syncTextStyleSourceStatus() {
+  const shell = state.toolbar?.querySelector('.text-style-source');
+  const label = shell?.querySelector('.text-style-source-status');
+  const reset = shell?.querySelector('.text-style-reset');
+  if (!shell || !label || !reset) return;
+  const overridden = directTextStyleCarriers().some(carrier => (
+    DIRECT_TEXT_STYLE_PROPERTIES.some(property => Boolean(carrier.style?.[property]))
+  ));
+  shell.classList.toggle('is-overridden', overridden);
+  label.textContent = overridden ? 'Local override' : 'Default';
+  reset.hidden = !overridden;
+}
+
+function resetDirectTextStyles() {
+  const editable = ensureActiveEditable();
+  if (!editable) return;
+  directTextStyleCarriers().forEach(carrier => {
+    DIRECT_TEXT_STYLE_PROPERTIES.forEach(property => {
+      carrier.style[property] = '';
+    });
+    if (carrier.tagName === 'SPAN' && !carrier.getAttribute('style')) {
+      carrier.replaceWith(...carrier.childNodes);
+    }
+  });
+  editable.dispatchEvent(new Event('input', { bubbles: true }));
+  document.dispatchEvent(new CustomEvent('designerContentChanged', {
+    detail: { source: 'text-default-reset' }
+  }));
+  syncTextStyleSourceStatus();
+  updateButtonStates();
+}
 
 export function updateToolbarPosition() {
   if (!state.toolbar) return;
@@ -280,6 +327,10 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
           '<input type="range" class="opacity-range" min="0" max="100" value="100" />' +
           '<span class="opacity-value">100%</span>' +
         '</div>' +
+      '</div>',
+      '<div class="text-style-source">' +
+        '<span class="text-style-source-status">Default</span>' +
+        '<button type="button" class="text-style-reset" aria-label="Reset text to Font Package and Color Scheme defaults" hidden>Reset</button>' +
       '</div>'
     ].join('');
     const contentEl = document.getElementById('content');
@@ -290,6 +341,9 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     }
   }
   state.toolbar.style.display = 'none';
+  state.toolbar.querySelector('.text-style-reset')?.addEventListener('click', resetDirectTextStyles);
+  state.toolbar.addEventListener('input', () => queueMicrotask(syncTextStyleSourceStatus));
+  state.toolbar.addEventListener('click', () => queueMicrotask(syncTextStyleSourceStatus));
 
   state.toolbar.addEventListener('pointerdown', ev => {
     saveSelection();
@@ -962,6 +1016,7 @@ export function showToolbar() {
   }
   state.toolbar.style.display = 'flex';
   updateButtonStates();
+  syncTextStyleSourceStatus();
 }
 
 export function hideToolbar() {

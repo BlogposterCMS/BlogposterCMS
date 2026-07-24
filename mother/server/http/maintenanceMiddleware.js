@@ -20,6 +20,14 @@ function createMaintenanceMiddleware({ getCachedCoreToken, motherEmitter }) {
       return next();
     }
 
+    // A signed Design Studio preview must reach the public route unchanged so
+    // that the origin token can be verified there. Redirecting it to the
+    // maintenance slug would discard the token and make the sandboxed frame
+    // fail with X-Frame-Options instead of rendering the current draft.
+    if (String(req.query?.['designer-live-preview'] || '') === '1') {
+      return next();
+    }
+
     const settingsManagerToken = await getCachedCoreToken('settingsManager');
     const pagesManagerToken = await getCachedCoreToken('pagesManager');
 

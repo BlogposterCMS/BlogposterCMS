@@ -1,28 +1,16 @@
 /**
  * mother/modules/notificationManager/integrations/smtp.js
  */
-// nodemailer is optional because the environment may not have it installed
-let nodemailer = null;
-try {
-  nodemailer = require('nodemailer');
-} catch (err) {
-  console.warn('[SMTP Integration] nodemailer not installed => e-mail notifications disabled');
-}
+// SMTP is an existing first-party integration, so its transport belongs to the
+// normal runtime dependency set instead of silently degrading to a no-op.
+const nodemailer = require('nodemailer');
 
 module.exports = {
   integrationName: 'SMTP',
 
   initialize: async (config) => {
-    if (!nodemailer) {
-      // If nodemailer isn't available we return a no-op notifier
-      return {
-        notify: async () => {
-          console.warn('[SMTP Integration] notify() called but nodemailer is missing');
-        }
-      };
-    }
-
-    // transporter erstellen
+    // Transport creation remains lazy until the integration is activated by
+    // Notification Manager, so inactive SMTP configuration performs no I/O.
     const transporter = nodemailer.createTransport({
       host: config.host,
       port: config.port,
@@ -34,12 +22,13 @@ module.exports = {
     });
 
     return {
-      // "notify" => eigentliche Versand-Logik
+      // Notification Manager owns dispatch; this adapter only translates the
+      // existing notification payload into an SMTP message.
       notify: async ({ message, priority, recipient, subject, timestamp }) => {
-        if (!recipient) return; // o. subject ...
+        if (!recipient) return;
         const finalSubject = subject || `[${priority.toUpperCase()}] Notification`;
         const finalBody = `${message}\nTime: ${timestamp}`;
-        
+
         await transporter.sendMail({
           from: config.user,
           to: recipient,

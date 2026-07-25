@@ -31,6 +31,10 @@ and `TMP` may also be passed so the child process can start.
   `moduleRunnerProcess.js`.
 - Runs health checks in a short-lived process, then starts a fresh runtime
   process after success.
+- Acknowledges an unclaimed `<moduleName>.ready` lifecycle signal once during
+  runtime startup. A core listener registered for that event takes precedence;
+  the fallback only prevents documented readiness announcements from becoming
+  misleading unhandled-event warnings.
 - Passes community modules a scoped `moduleHost` and event bus over IPC instead
   of the raw Express app or host objects.
 - Allows community modules to emit only module-owned query/lifecycle signals,

@@ -6,6 +6,16 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Fixed noisy and incomplete development startup paths: the existing SMTP
+  integration now ships with its Nodemailer runtime transport, identical
+  custom-placeholder registrations are idempotent instead of warning and
+  rewriting storage on every boot, Module Loader acknowledges unclaimed
+  module-owned `ready` lifecycle signals during process startup, and recurring
+  event/auth success traces are opt-in instead of flooding the terminal.
+  User lookup diagnostics no longer print credential fields.
+- Routed the Design Studio admin app-frame title lookup through the existing
+  App Loader and Runtime Manager facade, preserving admin permission checks and
+  preventing scope-less `designer.getDesign` events from polluting live logs.
 - Unified local development reloads behind `npm run dev`: Sass and Webpack now
   watch their existing source contracts, Nodemon remains responsible for the
   server, and a development-only SSE channel refreshes changed CSS in place or

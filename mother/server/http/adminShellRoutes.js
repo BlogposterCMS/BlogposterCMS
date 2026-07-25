@@ -62,6 +62,39 @@ function fetchAdminPageBySlug({ adminJwt, motherEmitter, slug }) {
   });
 }
 
+/**
+ * Resolve Design Studio frame metadata through the same AppLoader and Runtime
+ * Manager facade used by the sandboxed app. The HTTP shell must not emit
+ * Designer Manager's internal event without its core scope and permission
+ * checks.
+ */
+async function fetchDesignerAppFrameDesign({
+  adminJwt,
+  decodedAdmin,
+  designId,
+  dispatchAppLoaderEvent
+}) {
+  const result = await dispatchAppLoaderEvent(
+    adminJwt,
+    decodedAdmin,
+    'dispatchAppEvent',
+    {
+      appName: 'designer',
+      event: 'cms-app-runtime-request',
+      data: {
+        eventName: 'cmsAdminApiRequest',
+        payload: {
+          resource: 'designer',
+          action: 'get',
+          params: { id: designId }
+        }
+      }
+    }
+  );
+
+  return result?.data?.data || null;
+}
+
 function createAdminAppFrameHtml({
   adminJwt,
   appName,
@@ -279,11 +312,11 @@ function createAdminShellRoutes({
     if (appName === 'designer' && idParam) {
       designId = idParam;
       try {
-        const design = await new Promise((resolve, reject) => {
-          motherEmitter.emit('designer.getDesign', { id: designId }, (err, result) => {
-            if (err) return reject(err);
-            resolve(result);
-          });
+        const design = await fetchDesignerAppFrameDesign({
+          adminJwt,
+          decodedAdmin: decoded,
+          designId,
+          dispatchAppLoaderEvent
         });
         if (design?.design?.title) pageTitle = design.design.title;
         const dv = parseInt(design?.design?.version, 10);
@@ -417,5 +450,6 @@ module.exports = {
   createAdminAppFrameHtml,
   createAdminShellRoutes,
   fetchAdminPageBySlug,
+  fetchDesignerAppFrameDesign,
   prepareAdminShellHtml
 };

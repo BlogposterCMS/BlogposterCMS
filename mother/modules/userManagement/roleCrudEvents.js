@@ -17,6 +17,7 @@ const TIMEOUT_DURATION = 5000;
 
 // meltdown meltdown...
 const { onceCallback } = require('../../emitters/motherEmitter');
+const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 const { hasPermission } = require('./permissionUtils');
 const { getDbType } = require('../databaseManager/helpers/dbTypeHelpers');
 const {
@@ -44,7 +45,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('createRole', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "createRole" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "createRole" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, roleName, description, permissions } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -84,7 +85,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('getAllRoles', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "getAllRoles" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "getAllRoles" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -101,7 +102,7 @@ function setupRoleCrudEvents(motherEmitter) {
       table: 'roles'
     }, (err, rows) => {
       if (err) return callback(err);
-      console.log('[DEBUG] all roles from DB:', rows); 
+      traceRuntimeEvent('[USER MGMT] getAllRoles => count:', rows?.length || 0);
       // Sort by name
       rows.sort((a, b) => (a.role_name || '').localeCompare(b.role_name || ''));
       callback(null, rows);
@@ -112,7 +113,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('getUserAccess', async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "getUserAccess" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "getUserAccess" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -140,7 +141,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('setUserAccess', async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "setUserAccess" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "setUserAccess" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId, roleIds, directPermissions } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -164,7 +165,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('updateRole', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "updateRole" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "updateRole" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, roleId, newRoleName, newDescription, newPermissions } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -219,7 +220,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('deleteRole', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "deleteRole" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "deleteRole" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, roleId } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -276,7 +277,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('assignRoleToUser', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "assignRoleToUser" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "assignRoleToUser" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId, roleId } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -327,7 +328,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('getRolesForUser', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "getRolesForUser" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "getRolesForUser" event triggered. Payload:', sanitizePayload(payload));
 
     const { jwt, moduleName, moduleType, userId } = payload || {};
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -343,7 +344,7 @@ function setupRoleCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.listRoles'));
     }
 
-    console.log('[USER MGMT] getRolesForUser => Emitting "dbSelect" on user_roles for userId:', userId);
+    traceRuntimeEvent('[USER MGMT] getRolesForUser => selecting roles for userId:', userId);
     motherEmitter.emit('dbSelect', {
       jwt,
       moduleName: 'userManagement',
@@ -361,7 +362,7 @@ function setupRoleCrudEvents(motherEmitter) {
 
       // Normalize to string to avoid ObjectId strict equality issues
       const roleIds = userRoles.map(ur => String(ur.role_id));
-      console.log('[USER MGMT] getRolesForUser => user_roles found. Role IDs:', roleIds);
+      traceRuntimeEvent('[USER MGMT] getRolesForUser => role IDs:', roleIds);
 
       // Now select from 'roles' to return role objects
       motherEmitter.emit('dbSelect', {
@@ -374,7 +375,7 @@ function setupRoleCrudEvents(motherEmitter) {
           return callback(err2);
         }
         const matched = (allRoles || []).filter(r => roleIds.includes(String(r.id)));
-        console.log('[USER MGMT] getRolesForUser => Matched roles count:', matched?.length || 0);
+        traceRuntimeEvent('[USER MGMT] getRolesForUser => matched roles:', matched?.length || 0);
         callback(null, matched);
       });
     });
@@ -384,7 +385,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('removeRoleFromUser', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "removeRoleFromUser" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "removeRoleFromUser" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId, roleId } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -428,7 +429,7 @@ function setupRoleCrudEvents(motherEmitter) {
   motherEmitter.on('incrementUserTokenVersion', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] incrementUserTokenVersion => Event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] incrementUserTokenVersion => Event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core' || !userId) {
@@ -440,7 +441,7 @@ function setupRoleCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.editUser'));
     }
 
-    console.log('[USER MGMT] incrementUserTokenVersion => Fetching current token_version for userId:', userId);
+    traceRuntimeEvent('[USER MGMT] incrementUserTokenVersion => fetching current version for userId:', userId);
     const idField = getDbType() === 'mongodb' ? '_id' : 'id';
     motherEmitter.emit('dbSelect', {
       jwt,
@@ -455,7 +456,7 @@ function setupRoleCrudEvents(motherEmitter) {
       }
 
       const currentTokenVersion = users[0].token_version || 0;
-      console.log(`[USER MGMT] incrementUserTokenVersion => Current token_version is ${currentTokenVersion}. Incrementing...`);
+      traceRuntimeEvent(`[USER MGMT] incrementUserTokenVersion => current version is ${currentTokenVersion}`);
 
       motherEmitter.emit('dbUpdate', {
         jwt,
@@ -469,7 +470,7 @@ function setupRoleCrudEvents(motherEmitter) {
           console.error('[USER MGMT] incrementUserTokenVersion => Error updating token_version:', updateErr.message);
           return callback(updateErr);
         }
-        console.log('[USER MGMT] incrementUserTokenVersion => token_version incremented successfully.');
+        traceRuntimeEvent('[USER MGMT] incrementUserTokenVersion => version incremented successfully.');
         callback(null, { success: true });
       });
     });

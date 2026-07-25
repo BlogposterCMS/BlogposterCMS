@@ -20,8 +20,10 @@ or tool surfaces.
   with the module identity and token by the host.
 
 ## Purpose
-- Emits a safe `dummyModule.ready` event during startup so health checks can
-  verify that the module uses the scoped event bus.
+- Emits a safe `dummyModule.ready` lifecycle event during startup. Module
+  Loader acknowledges it when no core consumer has registered its own listener,
+  so the example demonstrates the scoped event bus without producing an
+  unhandled-event warning.
 - Listens for `dummyModule.pagePublished` and logs sanitized page metadata.
 - Listens for the module-owned `dummyModule.dummyAction` event and returns a
   simple response.

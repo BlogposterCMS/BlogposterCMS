@@ -7,6 +7,7 @@
  *
  * For handling the role permissions merging logic.
  */
+const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 function deepMerge(target, source) {
   if (!source || typeof source !== 'object') return target;
@@ -33,7 +34,7 @@ function deepMerge(target, source) {
  *   If invalid JSON found => fallback perms + attempts DB fix.
  */
 function mergeAllPermissions(motherEmitter, jwt, rolesArr, doneCallback) {
-  console.log('[USER MGMT] mergeAllPermissions => Starting to merge. rolesArr:', rolesArr);
+  traceRuntimeEvent('[USER MGMT] mergeAllPermissions => role count:', rolesArr?.length || 0);
 
   const merged = {};
   if (!rolesArr || !rolesArr.length) {
@@ -43,7 +44,7 @@ function mergeAllPermissions(motherEmitter, jwt, rolesArr, doneCallback) {
 
   const invalidRoles = [];
   for (const role of rolesArr) {
-    console.log(`[USER MGMT] mergeAllPermissions => Processing role with id: ${role.id}`);
+    traceRuntimeEvent(`[USER MGMT] mergeAllPermissions => processing role id: ${role.id}`);
     try {
       let perms;
       if (typeof role.permissions === 'string') {
@@ -64,7 +65,7 @@ function mergeAllPermissions(motherEmitter, jwt, rolesArr, doneCallback) {
   }
 
   if (!invalidRoles.length) {
-    console.log('[USER MGMT] mergeAllPermissions => No invalid roles, returning merged perms:', merged);
+    traceRuntimeEvent('[USER MGMT] mergeAllPermissions => merged permissions:', merged);
     return doneCallback(merged);
   }
 

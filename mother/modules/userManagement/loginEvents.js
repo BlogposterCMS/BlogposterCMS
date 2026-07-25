@@ -6,6 +6,7 @@
  */
 const bcrypt = require('bcryptjs');
 const { mergeAllPermissions } = require('./permissionUtils');
+const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 // Because meltdown meltdown can cause double-callback fiasco
 const { onceCallback } = require('../../emitters/motherEmitter');
@@ -26,7 +27,7 @@ function setupLoginEvents(motherEmitter) {
     const callback = onceCallback(originalCb);
 
     const sanitized = sanitizePayload(payload, ['password']);
-    console.log('[USER MGMT] "userLogin" event triggered. Payload:', sanitized);
+    traceRuntimeEvent('[USER MGMT] "userLogin" event triggered. Payload:', sanitized);
     const { jwt, moduleName, moduleType, username, password } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -75,7 +76,7 @@ function setupLoginEvents(motherEmitter) {
   motherEmitter.on('finalizeUserLogin', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "finalizeUserLogin" event =>', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "finalizeUserLogin" event =>', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId, extraData } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {

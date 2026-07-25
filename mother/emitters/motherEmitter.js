@@ -14,6 +14,7 @@ const EventEmitter = require('events');
 const jwt = require('jsonwebtoken');
 
 const notificationEmitter = require('./notificationEmitter');
+const { traceRuntimeEvent } = require('../utils/runtimeLogging');
 
 // Secrets must be provided via environment variables
 const JWT_SECRET         = process.env.JWT_SECRET;
@@ -244,7 +245,7 @@ class MotherEmitter extends EventEmitter {
 
   registerModuleType(moduleName, type) {
     this._moduleTypes[moduleName] = type;
-    console.log('[MotherEmitter] Registered module="%s" => type="%s"', moduleName, type);
+    traceRuntimeEvent('[MotherEmitter] Registered module="%s" => type="%s"', moduleName, type);
   }
 
   /** merges JWT_SECRET with salt depending on trustLevel */
@@ -282,7 +283,7 @@ class MotherEmitter extends EventEmitter {
         return false;
       }
       const safeArgs = maskJwtInArgs(args);
-      console.log('[MotherEmitter] Emitting internal system event="%s" with %d arg(s)', eventName, safeArgs.length);
+      traceRuntimeEvent('[MotherEmitter] Emitting internal system event="%s" with %d arg(s)', eventName, safeArgs.length);
       return super.emit(eventName, ...args);
     }
 
@@ -301,9 +302,9 @@ class MotherEmitter extends EventEmitter {
 
     // (4) Public event => skip meltdown checks
     if (PUBLIC_EVENTS.includes(eventName)) {
-        console.log('[MotherEmitter] Public event => skipping meltdown => event="%s".', eventName);
+      traceRuntimeEvent('[MotherEmitter] Public event => skipping meltdown => event="%s".', eventName);
       const safeArgs = maskJwtInArgs(args);
-      console.log('[MotherEmitter] Emitting public event="%s" with %d arg(s)', eventName, safeArgs.length);
+      traceRuntimeEvent('[MotherEmitter] Emitting public event="%s" with %d arg(s)', eventName, safeArgs.length);
       return super.emit(eventName, ...args);
     }
 
@@ -314,7 +315,7 @@ class MotherEmitter extends EventEmitter {
           meltdownForModule(`Invalid authModuleSecret for skipJWT event="${eventName}"`, moduleName, this);
           return false;
         }
-          console.log('[MotherEmitter] skipJWT => authorized => event="%s" => normal emit.', eventName);
+        traceRuntimeEvent('[MotherEmitter] skipJWT => authorized => event="%s" => normal emit.', eventName);
         return super.emit(eventName, ...args);
       } else {
         meltdownForModule(`Unauthorized skipJWT usage => event="${eventName}"`, moduleName, this);
@@ -356,7 +357,7 @@ class MotherEmitter extends EventEmitter {
 
     // (9) meltdown checks pass => do normal event
     const safeArgs = maskJwtInArgs(args);
-    console.log('[MotherEmitter] Emitting event="%s" with %d arg(s)', eventName, safeArgs.length);
+    traceRuntimeEvent('[MotherEmitter] Emitting event="%s" with %d arg(s)', eventName, safeArgs.length);
     return super.emit(eventName, ...args);
   }
 }

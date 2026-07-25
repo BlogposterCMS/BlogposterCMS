@@ -44,5 +44,9 @@ before `initialize` and skips the integration when verification fails. A
   Node's core `https` module. Only `https://hooks.slack.com/` URLs are allowed,
   requests time out after five seconds and a channel override works only when
   the webhook permits it.
+- **SMTP** uses the installed Nodemailer runtime transport and creates that
+  transport only when the integration is active. Inactive SMTP configuration
+  performs no network I/O; active notifications without a recipient are
+  skipped.
 
 See the high level [Notification System](../notification_system.md) guide for configuration examples.

@@ -14,6 +14,7 @@
  */
 const bcrypt = require('bcryptjs');
 const { ObjectId } = require('mongodb');
+const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 const TIMEOUT_DURATION = 5000;
 
@@ -42,7 +43,7 @@ function setupUserCrudEvents(motherEmitter) {
     const callback = onceCallback(originalCb);
 
   const sanitized = sanitizePayload(payload, ['password']);
-  console.log('[USER MGMT] "createUser" event triggered. Payload:', sanitized);
+  traceRuntimeEvent('[USER MGMT] "createUser" event triggered. Payload:', sanitized);
 
     const {
       jwt,
@@ -171,7 +172,7 @@ function setupUserCrudEvents(motherEmitter) {
       
         const userLog = { ...newUser };
         if (userLog && userLog.password) userLog.password = '***';
-        console.log('[USER MGMT] createUser => User inserted:', userLog);
+        traceRuntimeEvent('[USER MGMT] createUser => User inserted:', userLog);
 
         if (hasAccessSelection) {
           setUserAccess(motherEmitter, jwt, newUser.id, requestedRoleIds, directPermissions)
@@ -334,7 +335,7 @@ function setupUserCrudEvents(motherEmitter) {
   motherEmitter.on('getAllUsers', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "getAllUsers" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "getAllUsers" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -368,7 +369,7 @@ function setupUserCrudEvents(motherEmitter) {
   motherEmitter.on('deleteUser', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "deleteUser" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "deleteUser" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -418,7 +419,7 @@ function setupUserCrudEvents(motherEmitter) {
   motherEmitter.on('getUserDetailsByUsername', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "getUserDetailsByUsername" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "getUserDetailsByUsername" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, username } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -454,7 +455,12 @@ function setupUserCrudEvents(motherEmitter) {
         console.warn('[USER MGMT] getUserDetailsByUsername => No matching user found => meltdown meltdown.');
         return callback(null, null);
       }
-      console.log('[USER MGMT] getUserDetailsByUsername => Found user record:', rows[0]);
+      // Never print credential fields. The trace only confirms which record was
+      // resolved when detailed event tracing is explicitly enabled.
+      traceRuntimeEvent('[USER MGMT] getUserDetailsByUsername => Found user:', {
+        id: rows[0].id ?? rows[0]._id ?? null,
+        username: rows[0].username || null
+      });
       callback(null, rows[0]);
     });
   });
@@ -464,7 +470,7 @@ function setupUserCrudEvents(motherEmitter) {
     const callback = onceCallback(originalCb);
 
     const sanitizedPayload = sanitizePayload(payload, ['newPassword']);
-    console.log('[USER MGMT] "updateUserProfile" event triggered. Payload:', sanitizedPayload);
+    traceRuntimeEvent('[USER MGMT] "updateUserProfile" event triggered. Payload:', sanitizedPayload);
 
     const {
       jwt,
@@ -537,7 +543,7 @@ function setupUserCrudEvents(motherEmitter) {
           console.error('[USER MGMT] updateUserProfile => meltdown meltdown => Error:', err.message);
           return callback(err);
         }
-        console.log('[USER MGMT] updateUserProfile => Updated user profile for userId:', userId);
+        traceRuntimeEvent('[USER MGMT] updateUserProfile => Updated user profile for userId:', userId);
         callback(null, { success: true });
       });
     } catch (err) {
@@ -551,7 +557,7 @@ function setupUserCrudEvents(motherEmitter) {
   motherEmitter.on('getUserDetailsById', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "getUserDetailsById" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "getUserDetailsById" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType, userId } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -598,7 +604,7 @@ function setupUserCrudEvents(motherEmitter) {
   motherEmitter.on('getUserCount', (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
-    console.log('[USER MGMT] "getUserCount" event triggered. Payload:', sanitizePayload(payload));
+    traceRuntimeEvent('[USER MGMT] "getUserCount" event triggered. Payload:', sanitizePayload(payload));
     const { jwt, moduleName, moduleType } = payload || {};
 
     if (!jwt || moduleName !== 'userManagement' || moduleType !== 'core') {
@@ -630,7 +636,7 @@ function setupUserCrudEvents(motherEmitter) {
         return callback(err);
       }
       const userCount = rows ? rows.length : 0;
-      console.log('[DEBUG] userCount:', userCount);
+      traceRuntimeEvent('[USER MGMT] getUserCount => count:', userCount);
       callback(null, userCount);
     });
   });

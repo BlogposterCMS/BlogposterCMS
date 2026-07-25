@@ -7,6 +7,7 @@ const { hasPermission } = require('../userManagement/permissionUtils');
 const fs = require('fs');
 const path = require('path');
 const notificationEmitter = require('../../emitters/notificationEmitter');
+const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 const notify = (payload) => {
   try {
@@ -264,7 +265,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     const exists = !!pageObj;
 
     if (exists) {
-      console.log(`[plainSpace] Admin page "${finalSlugForCheck}" already exists.`);
+      traceRuntimeEvent(`[plainSpace] Admin page "${finalSlugForCheck}" already exists.`);
 
       const currentMeta = pageObj.meta || {};
       const newMeta = { ...currentMeta };
@@ -480,7 +481,7 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
   });
 
   if (widgetExists) {
-    console.log(`[plainSpace] Widget "${widgetId}" already exists. Skipping creation.`);
+    traceRuntimeEvent(`[plainSpace] Widget "${widgetId}" already exists. Skipping creation.`);
     return;
   }
 

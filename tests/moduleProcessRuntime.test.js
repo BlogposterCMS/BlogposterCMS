@@ -118,6 +118,35 @@ test('process health check initializes a module through IPC without loading it i
   });
 });
 
+test('process runtime acknowledges an unclaimed module ready signal during startup', async () => {
+  await withTempModule('readyModule', {
+    'index.js': `
+      module.exports = {
+        async initialize({ motherEmitter }) {
+          await new Promise((resolve, reject) => {
+            motherEmitter.emit('readyModule.ready', { ok: true }, err => {
+              if (err) return reject(err);
+              resolve();
+            });
+          });
+        }
+      };
+    `
+  }, async context => {
+    const motherEmitter = new EventEmitter();
+    const runtime = await startCommunityModuleProcess(runtimeOptions(context, {
+      motherEmitter
+    }));
+
+    try {
+      assert.strictEqual(motherEmitter.listenerCount('readyModule.ready'), 0);
+      assert.strictEqual(runtime.getRuntimeRecord().capabilities.processIsolated, true);
+    } finally {
+      await runtime.stop('test done');
+    }
+  });
+});
+
 test('process runtime refuses raw Express access during health check', async () => {
   await withTempModule('rawAppModule', {
     'index.js': `

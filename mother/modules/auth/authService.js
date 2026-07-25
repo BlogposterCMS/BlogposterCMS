@@ -15,6 +15,7 @@
 require('dotenv').config();
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 // Destructure the mother emitter and onceCallback from the object
 const { motherEmitter, onceCallback } = require('../../emitters/motherEmitter');
@@ -199,7 +200,9 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
       }
 
       const token = jwt.sign(signPayload, finalSecret, { expiresIn });
-      console.log(`[AUTH MODULE] issueModuleToken => meltdown sees moduleName='${moduleName}', signed as='${actualModuleName}', jti=${jti}`);
+      traceRuntimeEvent(
+        `[AUTH MODULE] issueModuleToken => moduleName='${moduleName}', signed as='${actualModuleName}', jti=${jti}`
+      );
       callback(null, token);
     } catch (err) {
       console.error('[AUTH MODULE] Error issuing module token:', err.message);
@@ -288,7 +291,9 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
               const finalSecret = combineSecretWithSalt(JWT_SECRET, trustLevel);
               const userToken = jwt.sign(signPayload, finalSecret, { expiresIn });
 
-              console.log(`[AUTH MODULE] issueUserToken => userId=${userId}, version=${tokenVersion}, jti=${jti}`);
+              traceRuntimeEvent(
+                `[AUTH MODULE] issueUserToken => userId=${userId}, version=${tokenVersion}, jti=${jti}`
+              );
               if (!userToJtiMapping[userId]) {
                 userToJtiMapping[userId] = [];
               }
@@ -324,7 +329,7 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
         purpose: purpose || 'public'
       };
       const token = jwt.sign(signPayload, finalSecret, { expiresIn });
-      console.log(`[AUTH MODULE] issuePublicToken => purpose=${purpose}, jti=${jti}`);
+      traceRuntimeEvent(`[AUTH MODULE] issuePublicToken => purpose=${purpose}, jti=${jti}`);
       callback(null, token);
     } catch (err) {
       console.error('[AUTH MODULE] issuePublicToken => meltdown meltdown =>', err.message);

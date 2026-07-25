@@ -107,6 +107,9 @@ points are known ahead of time.
   events are rejected. The loader strips app-supplied JWT/module identity,
   injects the parent admin principal server-side, blocks raw database
   placeholders and requires a manifest allowlist entry.
+- The server-rendered Design Studio app shell resolves its frame title and
+  version through this same App Loader and Runtime Manager facade. It does not
+  bypass the app contract by emitting `designer.getDesign` directly.
 - Auth token/session-control events are not valid app bridge contracts. Apps
   cannot allow or dispatch token issuing, token revocation, token lifetime
   changes or `validateToken` through `allowedEvents`; they must use documented

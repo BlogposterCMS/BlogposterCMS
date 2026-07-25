@@ -119,6 +119,11 @@ module.exports = {
 };
 ```
 
+`<moduleName>.ready` is the existing startup lifecycle announcement. Module
+Loader acknowledges it once when no core consumer owns the event; a registered
+core listener takes precedence. Keep the callback so startup failures remain
+observable across the process boundary.
+
 Use `moduleHost.storage` for your own tables. The host maps a logical table
 such as `messages` to an isolated physical table for this module. Do not emit
 raw `dbInsert`, `dbUpdate`, `dbDelete` or raw SQL events.

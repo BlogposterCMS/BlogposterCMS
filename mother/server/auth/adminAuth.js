@@ -5,6 +5,7 @@ const {
   canUseDevAutologin,
   resolveDevAutologinUser
 } = require('../../modules/auth/devAutoLogin');
+const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 function createAdminAuthContext({ motherEmitter, authModuleSecret, isProduction }) {
   async function issueAppLoaderJwt() {
@@ -114,7 +115,9 @@ function createAdminAuthContext({ motherEmitter, authModuleSecret, isProduction 
         maxAge: 2 * 60 * 60 * 1000
       });
 
-      console.log(`[DEV AUTOLOGIN] ${contextLabel} => issued local admin session for "${process.env.DEV_USER || 'admin'}".`);
+      traceRuntimeEvent(
+        `[DEV AUTOLOGIN] ${contextLabel} => issued local admin session for "${process.env.DEV_USER || 'admin'}".`
+      );
       return user.jwt;
     } catch (err) {
       console.warn(`[DEV AUTOLOGIN] ${contextLabel} => ${err.code || 'AUTH_DEV_AUTOLOGIN_FAILED'}: ${err.message}`);

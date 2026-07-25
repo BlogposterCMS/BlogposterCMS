@@ -19,6 +19,7 @@ Key variables to review:
 | `DEV_AUTOLOGIN` | Local development auto-login for loopback dashboard, login and API requests. Defaults on outside production; set to `false` to force the login form and strict first-install credentials. |
 | `DEV_USER` | Username used for development auto-login. Defaults to `admin` when omitted. |
 | `DEV_AGENT_LOGIN` | Localhost-only agent token helper for Codex/automation clients. Defaults on outside production; set to `false` to disable it. |
+| `BLOGPOSTER_EVENT_TRACE` | Opt-in trace for routine MotherEmitter, auth-token and user-detail events. Defaults off so recurring agent polls do not flood the development terminal. Warnings and errors remain visible. |
 | `ALLOW_WEAK_CREDS` | Optional explicit override for the local `admin`/`123` dev bootstrap. Local non-production requests also allow it while `DEV_AUTOLOGIN` is enabled. Never use it in production. |
 
 > **Note:** When `CONTENT_DB_TYPE` is `postgres` the database manager will

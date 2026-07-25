@@ -492,8 +492,54 @@ class CommunityModuleProcess {
 
 async function startCommunityModuleProcess(options) {
   const controller = new CommunityModuleProcess(options);
-  await controller.initialize();
-  return controller;
+  const removeReadyAcknowledger = attachStartupReadyAcknowledger(options);
+
+  try {
+    await controller.initialize();
+    return controller;
+  } finally {
+    removeReadyAcknowledger();
+  }
+}
+
+/**
+ * Community module documentation already treats `<moduleName>.ready` as a
+ * lifecycle announcement. When no core consumer owns that signal, acknowledge
+ * it during startup so the event remains useful and does not become an
+ * unhandled MotherEmitter warning. Existing consumers always take precedence.
+ */
+function attachStartupReadyAcknowledger({ motherEmitter, moduleName } = {}) {
+  const eventName = `${moduleName || ''}.ready`;
+  if (
+    !moduleName ||
+    !motherEmitter ||
+    typeof motherEmitter.once !== 'function' ||
+    typeof motherEmitter.removeListener !== 'function'
+  ) {
+    return () => {};
+  }
+  if (
+    typeof motherEmitter.listenerCount === 'function' &&
+    motherEmitter.listenerCount(eventName) > 0
+  ) {
+    return () => {};
+  }
+
+  const acknowledgeReady = (_payload, callback) => {
+    if (typeof callback === 'function') {
+      callback(null, {
+        moduleName,
+        status: 'ready'
+      });
+    }
+  };
+  // Listener ownership keeps the existing module cleanup contract searchable.
+  acknowledgeReady.moduleName = 'moduleLoader';
+  motherEmitter.once(eventName, acknowledgeReady);
+
+  return () => {
+    motherEmitter.removeListener(eventName, acknowledgeReady);
+  };
 }
 
 async function runCommunityModuleHealthCheck(options) {
@@ -515,6 +561,7 @@ module.exports = {
   runCommunityModuleHealthCheck,
   startCommunityModuleProcess,
   _internals: {
+    attachStartupReadyAcknowledger,
     errorFromWire,
     fromWireValue,
     serializeError,

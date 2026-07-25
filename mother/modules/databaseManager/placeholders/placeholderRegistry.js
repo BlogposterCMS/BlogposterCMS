@@ -60,20 +60,39 @@ function saveCustomPlaceholders() {
 
 function registerCustomPlaceholder(placeholderName, ref) {
   if (!placeholderName || typeof ref !== 'object') {
-    throw new Error('registerCustomPlaceholder => invalid arguments.');
+    throw new Error('[PLACEHOLDER_REGISTRY_INVALID_ARGUMENTS] Placeholder name and reference are required.');
   }
   const { moduleName, functionName } = ref;
   if (!moduleName || !functionName) {
-    throw new Error('Must provide moduleName and functionName.');
+    throw new Error('[PLACEHOLDER_REGISTRY_INVALID_REFERENCE] moduleName and functionName are required.');
   }
-  if (customPlaceholders[placeholderName]) {
+
+  const existing = customPlaceholders[placeholderName];
+  if (
+    existing &&
+    existing.moduleName === moduleName &&
+    existing.functionName === functionName
+  ) {
+    // Core modules register their handlers on every boot. Re-registering the
+    // same owner and function is an idempotent startup operation, not a
+    // replacement that needs another disk write or warning.
+    return {
+      changed: false,
+      placeholderName,
+      moduleName,
+      functionName
+    };
+  }
+
+  if (existing) {
     notificationEmitter.notify({
       moduleName: 'databaseManager',
       notificationType: 'system',
       priority: 'warning',
-      message: `[PLACEHOLDER REGISTRY] Overwriting existing placeholder => ${placeholderName}`
+      message: `[PLACEHOLDER_REGISTRY_REPLACED] Replacing placeholder "${placeholderName}" from module="${existing.moduleName}", fn="${existing.functionName}" with module="${moduleName}", fn="${functionName}".`
     });
   }
+
   customPlaceholders[placeholderName] = { moduleName, functionName };
   notificationEmitter.notify({
     moduleName: 'databaseManager',
@@ -82,6 +101,13 @@ function registerCustomPlaceholder(placeholderName, ref) {
     message: `[PLACEHOLDER REGISTRY] Registered placeholder "${placeholderName}" => module="${moduleName}", fn="${functionName}"`
   });
   saveCustomPlaceholders();
+
+  return {
+    changed: true,
+    placeholderName,
+    moduleName,
+    functionName
+  };
 }
 
 function getCustomPlaceholder(placeholderName) {

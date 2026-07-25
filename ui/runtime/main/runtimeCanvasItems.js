@@ -2,6 +2,7 @@ import { applyItemAppearance, applySceneMetadata, normalizeRuntimeOpacity } from
 import { hasSceneMotion, registerSceneEffects, requestSceneEffectUpdate } from './runtimeSceneEffects.js';
 import { getRuntimeWidgetSizeContract } from './runtimeWidgetTypes.js';
 import { markRuntimeWidgetShell } from './runtimeWidgetHydration.js';
+import { normalizeResponsivePlacementContract, projectResponsiveHorizontalPosition, resolveResponsivePlacementGeometry } from '/ui/shared/layout/responsivePlacement.js';
 const FULL_WIDGET_SIZE_SLOT = 'full';
 function parseFiniteNumber(value) {
     if (value === null || value === undefined || value === '')
@@ -96,7 +97,7 @@ function applyRuntimeWidgetSizeContract(wrapper, def, width, height) {
     }
 }
 export function resolveRuntimeCanvasRect(item, { scaleX, scaleY, percentDivisor = 100, defaultW = 8, defaultH = 4, def, heightProjectionMode = 'percent' }) {
-    const rect = {
+    const legacyRect = {
         x: item.xPercent !== undefined
             ? projectPercent(item.xPercent, scaleX, percentDivisor)
             : item.x ?? 0,
@@ -110,6 +111,31 @@ export function resolveRuntimeCanvasRect(item, { scaleX, scaleY, percentDivisor 
             ? projectRuntimeHeight(item.hPercent, scaleY, percentDivisor, heightProjectionMode)
             : item.h ?? defaultH
     };
+    const canvasWidth = Math.max(1, percentDivisor === 1 ? scaleX * 100 : scaleX);
+    const responsivePlacement = item.responsivePlacement
+        ?? item.responsive_placement
+        ?? item.code?.meta?.responsivePlacement
+        ?? item.code?.meta?.responsive_placement;
+    let rect = legacyRect;
+    if (responsivePlacement && typeof responsivePlacement === 'object') {
+        const legacyX = parseFiniteNumber(legacyRect.x) || 0;
+        const legacyY = parseFiniteNumber(legacyRect.y) || 0;
+        const legacyWidth = Math.max(1, parseFiniteNumber(legacyRect.w) || 1);
+        const legacyHeight = Math.max(1, parseFiniteNumber(legacyRect.h) || 1);
+        const contract = normalizeResponsivePlacementContract(responsivePlacement, {
+            centerXPercent: ((legacyX + (legacyWidth / 2)) / canvasWidth) * 100,
+            yPx: legacyY,
+            widthPx: legacyWidth,
+            heightPx: legacyHeight
+        });
+        const geometry = resolveResponsivePlacementGeometry(contract, canvasWidth);
+        rect = {
+            x: Math.round(projectResponsiveHorizontalPosition(geometry, canvasWidth)),
+            y: Math.round(geometry.yPx),
+            w: Math.max(1, Math.round(geometry.widthPx)),
+            h: Math.max(1, Math.round(geometry.heightPx))
+        };
+    }
     const contract = def ? getRuntimeWidgetSizeContract(def) : null;
     if (!isFullOnlyWidgetContract(contract) || !Number.isFinite(scaleX) || scaleX <= 0) {
         return rect;
@@ -117,7 +143,7 @@ export function resolveRuntimeCanvasRect(item, { scaleX, scaleY, percentDivisor 
     return {
         ...rect,
         x: 0,
-        w: scaleX
+        w: canvasWidth
     };
 }
 export function applyRuntimeLayoutMetadata(wrapper, item) {
@@ -125,6 +151,13 @@ export function applyRuntimeLayoutMetadata(wrapper, item) {
     copyPercentDataset(wrapper, item, 'yPercent');
     copyPercentDataset(wrapper, item, 'wPercent');
     copyPercentDataset(wrapper, item, 'hPercent');
+    const responsivePlacement = item.responsivePlacement
+        ?? item.responsive_placement
+        ?? item.code?.meta?.responsivePlacement
+        ?? item.code?.meta?.responsive_placement;
+    if (responsivePlacement && typeof responsivePlacement === 'object') {
+        wrapper.dataset.responsivePlacement = JSON.stringify(responsivePlacement);
+    }
     const layerRaw = item.layer != null
         ? item.layer
         : item.zIndex ?? item.z_index;

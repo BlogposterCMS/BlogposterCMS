@@ -2,6 +2,39 @@ export const NATIVE_ELEMENT_PREFIX = 'scene-native:';
 export const INSERT_PRESET_PREFIX = 'scene-preset:';
 export const NATIVE_ELEMENT_TYPES = ['text', 'media', 'shape', 'button', 'background'];
 
+// Design Studio uses a 1px canvas grid. Keep initial and minimum dimensions in
+// real pixels here so every insert path shares the same predictable contract.
+const NATIVE_ELEMENT_DIMENSIONS = {
+  text: {
+    heading: { size: { w: 640, h: 128 }, minSize: { w: 240, h: 64 } },
+    subheading: { size: { w: 520, h: 104 }, minSize: { w: 220, h: 64 } },
+    paragraph: { size: { w: 480, h: 180 }, minSize: { w: 240, h: 96 } },
+    quote: { size: { w: 520, h: 180 }, minSize: { w: 260, h: 120 } },
+    list: { size: { w: 420, h: 200 }, minSize: { w: 240, h: 120 } },
+    caption: { size: { w: 320, h: 72 }, minSize: { w: 180, h: 44 } }
+  },
+  media: {
+    image: { size: { w: 480, h: 320 }, minSize: { w: 160, h: 120 } }
+  },
+  shape: {
+    card: { size: { w: 320, h: 220 }, minSize: { w: 120, h: 80 } },
+    divider: { size: { w: 520, h: 32 }, minSize: { w: 160, h: 16 } },
+    spacer: { size: { w: 480, h: 96 }, minSize: { w: 120, h: 32 } }
+  },
+  button: {
+    primary: { size: { w: 180, h: 52 }, minSize: { w: 120, h: 40 } },
+    secondary: { size: { w: 180, h: 52 }, minSize: { w: 120, h: 40 } },
+    plain: { size: { w: 160, h: 44 }, minSize: { w: 100, h: 36 } }
+  }
+};
+
+const NATIVE_DEFAULT_VARIANTS = {
+  text: 'subheading',
+  media: 'image',
+  shape: 'card',
+  button: 'primary'
+};
+
 export const INSERT_TOOL_ITEMS = [
   {
     id: 'text',
@@ -26,9 +59,9 @@ export const INSERT_TOOL_ITEMS = [
     description: 'Images and galleries',
     presets: [
       { id: 'media.image', title: 'Image', icon: 'image', nativeType: 'media', variant: 'image', description: 'Single media block' },
-      { id: 'media.gallery', title: 'Gallery', icon: 'images', widgetId: 'gallery', description: 'Image grid', size: { w: 6, h: 120 }, settings: { mode: 'grid', columns: 3 } },
-      { id: 'media.masonry', title: 'Masonry', icon: 'gallery-thumbnails', widgetId: 'gallery', description: 'Masonry gallery', size: { w: 6, h: 140 }, settings: { mode: 'masonry', columns: 3, heightMode: 'natural' } },
-      { id: 'media.carousel', title: 'Carousel', icon: 'gallery-horizontal', widgetId: 'gallery', description: 'Slider gallery', size: { w: 7, h: 120 }, settings: { mode: 'carousel', showControls: true, showDots: true } },
+      { id: 'media.gallery', title: 'Gallery', icon: 'images', widgetId: 'gallery', description: 'Image grid', size: { w: 720, h: 420 }, minSize: { w: 360, h: 240 }, settings: { mode: 'grid', columns: 3 } },
+      { id: 'media.masonry', title: 'Masonry', icon: 'gallery-thumbnails', widgetId: 'gallery', description: 'Masonry gallery', size: { w: 720, h: 460 }, minSize: { w: 360, h: 260 }, settings: { mode: 'masonry', columns: 3, heightMode: 'natural' } },
+      { id: 'media.carousel', title: 'Carousel', icon: 'gallery-horizontal', widgetId: 'gallery', description: 'Slider gallery', size: { w: 800, h: 420 }, minSize: { w: 400, h: 240 }, settings: { mode: 'carousel', showControls: true, showDots: true } },
       { id: 'media.background', title: 'Background', icon: 'wallpaper', nativeType: 'background', description: 'Section background' }
     ]
   },
@@ -62,8 +95,8 @@ export const INSERT_TOOL_ITEMS = [
     icon: 'menu',
     description: 'Menus and breadcrumbs',
     presets: [
-      { id: 'navigation.menu', title: 'Menu', icon: 'menu', widgetId: 'navigationMenu', description: 'Public menu renderer', size: { w: 8, h: 64 }, settings: { locationKey: 'primary', orientation: 'horizontal', maxDepth: 2 } },
-      { id: 'navigation.breadcrumb', title: 'Breadcrumb', icon: 'chevrons-right', widgetId: 'breadcrumb', description: 'Page path trail', size: { w: 8, h: 48 }, settings: { homeLabel: 'Home', separator: '/' } }
+      { id: 'navigation.menu', title: 'Menu', icon: 'menu', widgetId: 'navigationMenu', description: 'Public menu renderer', size: { w: 760, h: 64 }, minSize: { w: 320, h: 48 }, settings: { locationKey: 'primary', orientation: 'horizontal', maxDepth: 2 } },
+      { id: 'navigation.breadcrumb', title: 'Breadcrumb', icon: 'chevrons-right', widgetId: 'breadcrumb', description: 'Page path trail', size: { w: 640, h: 48 }, minSize: { w: 260, h: 40 }, settings: { homeLabel: 'Home', separator: '/' } }
     ]
   },
   {
@@ -72,7 +105,7 @@ export const INSERT_TOOL_ITEMS = [
     icon: 'archive',
     description: 'Page and collection lists',
     presets: [
-      { id: 'content.collectionArchive', title: 'Collection Archive', icon: 'archive', widgetId: 'collectionArchive', description: 'Cards from a selected collection', size: { w: 12, h: 180 }, settings: { collectionId: '', columns: 3, buttonLabel: 'Read more' } }
+      { id: 'content.collectionArchive', title: 'Collection Archive', icon: 'archive', widgetId: 'collectionArchive', description: 'Cards from a selected collection', size: { w: 960, h: 520 }, minSize: { w: 480, h: 260 }, settings: { collectionId: '', columns: 3, buttonLabel: 'Read more' } }
     ]
   }
 ];
@@ -233,21 +266,26 @@ export function normalizeNativeElementType(value) {
   return NATIVE_ELEMENT_TYPES.includes(type) ? type : '';
 }
 
-export function getNativeElementSize(type, defaultRows = 100) {
-  switch (normalizeNativeElementType(type)) {
-    case 'text':
-      return { w: 5, h: 72 };
-    case 'media':
-      return { w: 5, h: 96 };
-    case 'shape':
-      return { w: 4, h: 80 };
-    case 'button':
-      return { w: 3, h: 54 };
-    case 'background':
-      return { w: 12, h: defaultRows };
-    default:
-      return { w: 4, h: defaultRows };
-  }
+function nativeElementDimensions(type, variant = '') {
+  const nativeType = normalizeNativeElementType(type);
+  const variants = NATIVE_ELEMENT_DIMENSIONS[nativeType];
+  if (!variants) return null;
+  const requestedVariant = String(variant || '').trim().toLowerCase();
+  const fallbackVariant = NATIVE_DEFAULT_VARIANTS[nativeType];
+  return variants[requestedVariant] || variants[fallbackVariant] || null;
+}
+
+export function getNativeElementSize(type, defaultRows = 100, variant = '') {
+  const nativeType = normalizeNativeElementType(type);
+  const dimensions = nativeElementDimensions(nativeType, variant);
+  if (dimensions) return { ...dimensions.size };
+  if (nativeType === 'background') return { w: 960, h: Math.max(1, defaultRows) };
+  return { w: 480, h: Math.max(240, defaultRows) };
+}
+
+export function getNativeElementMinSize(type, variant = '') {
+  const dimensions = nativeElementDimensions(type, variant);
+  return dimensions ? { ...dimensions.minSize } : { w: 240, h: 120 };
 }
 
 function sceneMeta(context = {}, kind, settings = {}) {
@@ -277,6 +315,8 @@ export function createNativeElementPreset(type, context = {}) {
       type: nativeType,
       label: variant.label,
       elementName: variant.elementName,
+      size: getNativeElementSize(nativeType, 100, variantKey),
+      minSize: getNativeElementMinSize(nativeType, variantKey),
       preferredWidgetIds: ['textBox'],
       keywords: ['text', 'type', 'copy'],
       code: {
@@ -294,6 +334,8 @@ export function createNativeElementPreset(type, context = {}) {
       type: nativeType,
       label: variant.label,
       elementName: variant.elementName,
+      size: getNativeElementSize(nativeType, 100, variantKey),
+      minSize: getNativeElementMinSize(nativeType, variantKey),
       preferredWidgetIds: ['htmlBlock'],
       keywords: ['html', 'shape', 'block', 'box'],
       code: {
@@ -312,6 +354,8 @@ export function createNativeElementPreset(type, context = {}) {
       type: nativeType,
       label: 'Media',
       elementName: 'Media',
+      size: getNativeElementSize(nativeType, 100, 'image'),
+      minSize: getNativeElementMinSize(nativeType, 'image'),
       preferredWidgetIds: ['mediaBlock', 'htmlBlock'],
       keywords: ['media', 'image', 'picture'],
       code: {
@@ -333,6 +377,8 @@ export function createNativeElementPreset(type, context = {}) {
       type: nativeType,
       label: variantKey === 'plain' ? 'Text link' : variantKey === 'secondary' ? 'Secondary button' : 'Primary button',
       elementName: variantKey === 'plain' ? 'Text link' : 'Button',
+      size: getNativeElementSize(nativeType, 100, variantKey),
+      minSize: getNativeElementMinSize(nativeType, variantKey),
       behavior: 'scroll',
       preferredWidgetIds: ['buttonLink', 'htmlBlock'],
       keywords: ['button', 'cta', 'action', 'html', 'block'],

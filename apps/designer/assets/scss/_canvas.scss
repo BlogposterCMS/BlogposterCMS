@@ -23,21 +23,21 @@
 
   &:hover {
     border-color: var(--user-color, #007bff);
-    box-shadow: 0 4px 20px rgba(0, 123, 255, 0.15);
-    transform: translateY(-2px);
+    box-shadow: none;
+    transform: none;
 
     &::before {
-      opacity: 0.1;
+      opacity: 0;
     }
   }
 
   &.selected {
     border-color: var(--user-color, #007bff);
-    box-shadow: 0 8px 24px rgba(0, 123, 255, 0.2);
-    transform: translateY(-2px);
+    box-shadow: none;
+    transform: none;
 
     &::before {
-      opacity: 0.15;
+      opacity: 0;
     }
   }
 
@@ -46,10 +46,12 @@
     &:hover,
     &.selected {
       border-color: var(--shared-widget-color, #d4af37);
-      box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
+      box-shadow: none;
+      transform: none;
 
       &::before {
-        background: linear-gradient(45deg, var(--shared-widget-color, #d4af37), transparent, var(--shared-widget-color, #d4af37));
+        opacity: 0;
+        background: none;
       }
     }
   }
@@ -471,79 +473,116 @@ body.builder-mode .canvas-item.inactive-layer {
 
 // Enhanced bounding box
 .bounding-box {
+  --bbox-handle-color: var(--user-color, #007bff);
   position: absolute;
   top: 0;
   left: 0;
-  border: 1px dashed var(--user-color, #007bff);
+  border: 1px solid var(--bbox-handle-color);
   pointer-events: none;
   box-sizing: border-box;
   z-index: 1000;
   will-change: transform, width, height;
   border-radius: 0;
-  background: none;
+  background: transparent;
 
   .bbox-handle {
+    --bbox-handle-x: 0%;
+    --bbox-handle-y: 0%;
     position: absolute;
-    width: 12px;
-    height: 12px;
-    background: var(--user-color, #007bff);
-    border: 2px solid var(--designer-surface);
-    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     pointer-events: all;
-    transform: scale(var(--inv-scale));
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transition: all 0.2s ease;
+    transform: translate(var(--bbox-handle-x), var(--bbox-handle-y)) scale(var(--inv-scale));
+    transform-origin: center;
+    box-shadow: none;
+    transition: transform 0.16s ease;
 
     &:hover {
-      transform: scale(calc(var(--inv-scale) * 1.2));
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      // Keep the axis translation while enlarging the visual feedback.
+      transform: translate(var(--bbox-handle-x), var(--bbox-handle-y)) scale(calc(var(--inv-scale) * 1.08));
     }
-  }
 
-  // Handle positions
-  .nw {
-    top: -6px;
-    left: -6px;
-    cursor: nwse-resize;
-  }
-  .n {
-    top: -6px;
-    left: 50%;
-    transform: translateX(-50%) scale(var(--inv-scale));
-    cursor: ns-resize;
-  }
-  .ne {
-    top: -6px;
-    right: -6px;
-    cursor: nesw-resize;
-  }
-  .e {
-    top: 50%;
-    right: -6px;
-    transform: translateY(-50%) scale(var(--inv-scale));
-    cursor: ew-resize;
-  }
-  .se {
-    bottom: -6px;
-    right: -6px;
-    cursor: nwse-resize;
-  }
-  .s {
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%) scale(var(--inv-scale));
-    cursor: ns-resize;
-  }
-  .sw {
-    bottom: -6px;
-    left: -6px;
-    cursor: nesw-resize;
-  }
-  .w {
-    top: 50%;
-    left: -6px;
-    transform: translateY(-50%) scale(var(--inv-scale));
-    cursor: ew-resize;
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      box-sizing: border-box;
+      transform: translate(-50%, -50%);
+      border: 2px solid var(--bbox-handle-color);
+      border-radius: 50%;
+      background: var(--designer-surface, #fff);
+      box-shadow: 0 1px 4px rgba(18, 21, 34, 0.16);
+      transition: background-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    &:hover::before {
+      background: var(--bbox-handle-color);
+      box-shadow: 0 2px 7px rgba(18, 21, 34, 0.22);
+    }
+
+    // Handle positions use the full hit target while the marker stays compact.
+    &.nw {
+      top: -9px;
+      left: -9px;
+      cursor: nwse-resize;
+    }
+    &.n {
+      --bbox-handle-x: -50%;
+      top: -9px;
+      left: 50%;
+      cursor: ns-resize;
+    }
+    &.ne {
+      top: -9px;
+      right: -9px;
+      cursor: nesw-resize;
+    }
+    &.e {
+      --bbox-handle-y: -50%;
+      top: 50%;
+      right: -9px;
+      cursor: ew-resize;
+    }
+    &.se {
+      right: -9px;
+      bottom: -9px;
+      cursor: nwse-resize;
+    }
+    &.s {
+      --bbox-handle-x: -50%;
+      bottom: -9px;
+      left: 50%;
+      cursor: ns-resize;
+    }
+    &.sw {
+      bottom: -9px;
+      left: -9px;
+      cursor: nesw-resize;
+    }
+    &.w {
+      --bbox-handle-y: -50%;
+      top: 50%;
+      left: -9px;
+      cursor: ew-resize;
+    }
+
+    &.n::before,
+    &.s::before {
+      width: 14px;
+      height: 6px;
+    }
+
+    &.e::before,
+    &.w::before {
+      width: 6px;
+      height: 14px;
+    }
   }
 
   &.disabled {

@@ -27,6 +27,7 @@ jest.mock('../ui/designer/app/widgets/widgetMenu.js', () => ({
 }));
 
 import { applyLayout } from '../ui/designer/app/managers/layoutManager';
+import { resetBuilderViewportStateForTests } from '../ui/designer/app/renderer/viewportState';
 
 describe('designer applyLayout hydration', () => {
   beforeEach(() => {
@@ -34,6 +35,7 @@ describe('designer applyLayout hydration', () => {
     delete (window as { meltdownEmit?: unknown }).meltdownEmit;
     delete (window as { featherIcon?: unknown }).featherIcon;
     jest.clearAllMocks();
+    resetBuilderViewportStateForTests({ width: 1280, zoom: 100 });
   });
 
   it('keeps saved percent bounds before registering loaded widgets with CanvasGrid', () => {
@@ -75,8 +77,14 @@ describe('designer applyLayout hydration', () => {
     expect(makeWidget).toHaveBeenCalledTimes(1);
     expect(widget?.dataset.xPercent).toBe('4');
     expect(widget?.dataset.wPercent).toBe('100');
-    expect(widget?.getAttribute('gs-w')).toBe('12');
+    expect(widget?.getAttribute('gs-w')).toBe('1280');
     expect(widget?.getAttribute('gs-h')).toBe('270');
+    expect(JSON.parse(widget?.dataset.responsivePlacement || '{}')).toMatchObject({
+      version: 1,
+      base: {
+        widthPx: 1280
+      }
+    });
   });
 
   it('accepts snake_case percent bounds from saved design rows', () => {
@@ -113,7 +121,7 @@ describe('designer applyLayout hydration', () => {
     expect(widget?.dataset.yPercent).toBe('20');
     expect(widget?.dataset.wPercent).toBe('50');
     expect(widget?.dataset.hPercent).toBe('10');
-    expect(widget?.dataset.x).toBe('1');
-    expect(widget?.getAttribute('gs-w')).toBe('6');
+    expect(widget?.dataset.x).toBe('128');
+    expect(widget?.getAttribute('gs-w')).toBe('640');
   });
 });

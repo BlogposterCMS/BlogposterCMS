@@ -25,9 +25,11 @@ const { createMeltdownRouter } = require('./http/meltdownRouter');
 const { createPublicPageRoutes } = require('./http/publicPageRoutes');
 const { mountSecurityMiddleware } = require('./http/securityMiddleware');
 const { mountStaticAssetRoutes } = require('./http/staticAssets');
+const { mountDevReloadRoutes } = require('./development/devReload');
 const {
   escapeHtml,
   injectDevBanner,
+  injectDevReload,
   sanitizeSlug
 } = require('./utils/text');
 
@@ -38,13 +40,26 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   const renderMode = features?.renderMode || 'client';
   const plainSpaceVersion = loadPlainSpaceVersion({ rootDir });
   const tokenConfig = createTokenConfig(process.env);
+  const devReloadEnabled = !isProduction &&
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'test' &&
+    process.env.BLOGPOSTER_DEV_RELOAD !== 'false';
 
   app.use(createRequestLogMiddleware(devFileLogger));
   if (devFileLogger.enabled) {
     console.log(`[DEV LOGS] Mirroring development logs to ${devFileLogger.dir}`);
   }
 
-  const staticPaths = mountStaticAssetRoutes(app, { rootDir, securityConfig });
+  const devReload = mountDevReloadRoutes(app, {
+    enabled: devReloadEnabled,
+    rootDir
+  });
+  const staticPaths = mountStaticAssetRoutes(app, {
+    devReloadEnabled,
+    injectDevReload,
+    rootDir,
+    securityConfig
+  });
   mountSecurityMiddleware(app, { isProduction });
 
   const { getCachedCoreToken } = await bootstrapCoreModules({
@@ -134,6 +149,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     motherEmitter
   }));
   app.use(createPublicPageRoutes({
+    injectDevReload,
     motherEmitter,
     plainSpaceVersion,
     renderMode,
@@ -149,6 +165,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
 
   return {
     app,
+    closeDevelopmentServices: devReload.close,
     port
   };
 }

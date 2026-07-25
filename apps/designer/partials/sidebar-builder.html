@@ -4,17 +4,8 @@
       <button type="button" class="scene-rail-button active" data-sidebar-panel-target="insert" aria-controls="scenePanelInsert" aria-selected="true" aria-label="Widgets" title="Widgets" role="tab">
         <img src="/assets/icons/shapes.svg" alt="" class="icon" />
       </button>
-      <button type="button" class="scene-rail-button" data-sidebar-panel-target="layers" aria-controls="scenePanelLayers" aria-selected="false" aria-label="Layers" title="Layers" role="tab">
-        <img src="/assets/icons/list.svg" alt="" class="icon" />
-      </button>
       <button type="button" class="scene-rail-button" data-sidebar-panel-target="layout" aria-controls="scenePanelLayout" aria-selected="false" aria-label="Layout" title="Layout" role="tab">
         <img src="/assets/icons/panels-top-left.svg" alt="" class="icon" />
-      </button>
-      <button type="button" class="scene-rail-button" data-sidebar-panel-target="colors" aria-controls="scenePanelColors" aria-selected="false" aria-label="Color scheme" title="Color scheme" role="tab">
-        <img src="/assets/icons/palette.svg" alt="" class="icon" />
-      </button>
-      <button type="button" class="scene-rail-button" data-sidebar-panel-target="fonts" aria-controls="scenePanelFonts" aria-selected="false" aria-label="Font packages" title="Font packages" role="tab">
-        <img src="/assets/icons/type.svg" alt="" class="icon" />
       </button>
     </div>
     <div class="scene-sidebar-tools" aria-label="Element behavior">
@@ -43,44 +34,24 @@
       </div>
     </section>
 
-    <section id="scenePanelLayers" class="scene-sidebar-section scene-sidebar-panel layer-preview" data-sidebar-panel="layers" aria-label="Layers" role="tabpanel" hidden>
-      <div class="scene-sidebar-heading">
-        <span>Layers</span>
-      </div>
-      <button type="button" class="scene-layer-item scene-layer-item--active">
-        <img src="/assets/icons/type.svg" alt="" class="icon" />
-        <span>Headline</span>
-      </button>
-      <button type="button" class="scene-layer-item">
-        <img src="/assets/icons/text.svg" alt="" class="icon" />
-        <span>Subheadline</span>
-      </button>
-      <button type="button" class="scene-layer-item">
-        <img src="/assets/icons/image.svg" alt="" class="icon" />
-        <span>Image</span>
-      </button>
-      <button type="button" class="scene-layer-item">
-        <img src="/assets/icons/mouse-pointer-click.svg" alt="" class="icon" />
-        <span>Button</span>
-      </button>
-    </section>
-
     <section id="scenePanelLayout" class="scene-sidebar-section scene-sidebar-panel layout-sidebar-panel" data-sidebar-panel="layout" aria-label="Layout" role="tabpanel" hidden>
       <div class="layout-panel-host"></div>
     </section>
 
-    <section id="scenePanelColors" class="scene-sidebar-section scene-sidebar-panel style-library-panel" data-sidebar-panel="colors" aria-label="Color scheme" role="tabpanel" hidden>
+    <section id="scenePanelDesign" class="scene-sidebar-section scene-sidebar-panel style-library-panel" data-sidebar-panel="design" aria-label="Global design" role="tabpanel" hidden>
       <div class="scene-sidebar-heading">
-        <span>Color scheme</span>
+        <span>Global design</span>
       </div>
-      <div class="style-library-panel-host" data-color-scheme-host></div>
-    </section>
-
-    <section id="scenePanelFonts" class="scene-sidebar-section scene-sidebar-panel style-library-panel" data-sidebar-panel="fonts" aria-label="Font packages" role="tabpanel" hidden>
-      <div class="scene-sidebar-heading">
-        <span>Font packages</span>
+      <div class="global-design-settings">
+        <section class="global-design-settings__group" aria-labelledby="globalDesignColorsTitle">
+          <h3 id="globalDesignColorsTitle">Color scheme</h3>
+          <div class="style-library-panel-host" data-color-scheme-host></div>
+        </section>
+        <section class="global-design-settings__group" aria-labelledby="globalDesignFontsTitle">
+          <h3 id="globalDesignFontsTitle">Font packages</h3>
+          <div class="style-library-panel-host" data-font-packages-host></div>
+        </section>
       </div>
-      <div class="style-library-panel-host" data-font-packages-host></div>
     </section>
 
   </div>

@@ -1,6 +1,8 @@
 import {
   getBuilderViewportState,
+  setBuilderFitZoom,
   setBuilderZoom,
+  setBuilderZoomMode,
   subscribeBuilderViewport
 } from '/ui/designer/app/renderer/viewportState.js';
 
@@ -99,9 +101,12 @@ function effectDistance(effect) {
   return Number.isFinite(distance) ? distance : 24;
 }
 
-function syncStagePreviewMarker(progress) {
+function syncStagePreviewMarker(progress, active) {
   const guide = document.querySelector('.scene-viewport-guides');
   if (!guide) return;
+  guide.dataset.motionPathActive = active ? 'true' : 'false';
+  guide.setAttribute('aria-hidden', active ? 'false' : 'true');
+  if (!active) return;
   const pct = Math.round(clampPercent(progress, 0));
   let marker = guide.querySelector('.scene-preview-marker');
   if (!marker) {
@@ -189,10 +194,23 @@ function renderTimelineLanes(gridEl, laneWrap, progress) {
 }
 
 function applyEffectPreview(gridEl, progress) {
-  syncStagePreviewMarker(progress);
   if (!gridEl) return;
   const selected = gridEl.querySelector('.canvas-item.selected');
-  if (!selected) return;
+  const hasMotionPath = Boolean(selected && collectTimelineLanes(gridEl).length);
+  syncStagePreviewMarker(progress, hasMotionPath);
+  gridEl.querySelectorAll('.canvas-item[data-effect-progress]').forEach(item => {
+    if (item === selected && hasMotionPath) return;
+    const content = item.querySelector(':scope > .canvas-item-content');
+    if (content) {
+      content.style.removeProperty('opacity');
+      content.style.removeProperty('transform');
+      content.style.removeProperty('transition');
+      content.style.removeProperty('will-change');
+    }
+    delete item.dataset.effectProgress;
+    delete item.dataset.behaviorState;
+  });
+  if (!selected || !hasMotionPath) return;
   [selected].forEach(item => {
     const effects = parseEffects(item.dataset.effects);
     const behavior = normalizeBehavior(item.dataset.behavior);
@@ -279,53 +297,102 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
   zoomOut.type = 'button';
   zoomOut.title = 'Zoom out';
   zoomOut.setAttribute('aria-label', 'Zoom out');
-  zoomOut.innerHTML = window.featherIcon ? window.featherIcon('minus') : '<img src="/assets/icons/zoom-out.svg" alt="-" />';
-  const zoomLevel = document.createElement('span');
-  zoomLevel.className = 'zoom-level';
+  zoomOut.innerHTML = window.featherIcon
+    ? window.featherIcon('minus')
+    : '<img src="/assets/icons/zoom-out.svg" alt="" />';
   const zoomSlider = document.createElement('input');
   zoomSlider.type = 'range';
   zoomSlider.min = '10';
   zoomSlider.max = '500';
   zoomSlider.step = '1';
-  zoomSlider.value = '100';
-  zoomSlider.style.width = '180px';
   zoomSlider.setAttribute('aria-label', 'Builder zoom');
+  const zoomLevel = document.createElement('span');
+  zoomLevel.className = 'zoom-level';
   const zoomIn = document.createElement('button');
   zoomIn.type = 'button';
   zoomIn.title = 'Zoom in';
   zoomIn.setAttribute('aria-label', 'Zoom in');
-  zoomIn.innerHTML = window.featherIcon ? window.featherIcon('plus') : '<img src="/assets/icons/zoom-in.svg" alt="+" />';
+  zoomIn.innerHTML = window.featherIcon
+    ? window.featherIcon('plus')
+    : '<img src="/assets/icons/zoom-in.svg" alt="" />';
+  const zoomFit = document.createElement('button');
+  zoomFit.type = 'button';
+  zoomFit.className = 'zoom-fit';
+  zoomFit.textContent = 'Fit';
+  zoomFit.setAttribute('aria-label', 'Fit canvas to workspace');
+  zoomFit.setAttribute('aria-pressed', 'false');
 
   let zoomPct = 100;
-  let playRaf = 0;
-  let playStartedAt = 0;
+  let applyingZoom = false;
+  let fitFrame = 0;
+  function computedFitZoom() {
+    const scrollContainer = grid?.scrollContainer || gridEl?.parentElement;
+    const surface = grid?.zoomTarget || gridEl;
+    if (!scrollContainer || !surface) return 100;
+    const availableWidth = Math.max(1, scrollContainer.clientWidth - 96);
+    const availableHeight = Math.max(1, scrollContainer.clientHeight - 112);
+    const surfaceWidth = Math.max(1, surface.offsetWidth || getBuilderViewportState().width);
+    const surfaceHeight = Math.max(1, surface.offsetHeight || gridEl?.offsetHeight || 1);
+    // Fit intentionally keeps a small grey gutter around the authored page so
+    // users can always distinguish the website surface from the editor.
+    const fit = Math.min(1, availableWidth / surfaceWidth, availableHeight / surfaceHeight) * 0.92;
+    return Math.max(10, Math.min(500, Math.floor(fit * 100)));
+  }
   function applyZoom(pct) {
-    zoomPct = Math.max(10, Math.min(500, Math.round(pct)));
+    zoomPct = Math.max(10, Math.min(500, Math.round(Number(pct) || 100)));
     zoomSlider.value = String(zoomPct);
     zoomLevel.textContent = `${zoomPct}%`;
-    const scale = zoomPct / 100;
-    if (grid && typeof grid.setScale === 'function') {
-      grid.setScale(scale);
-    } else if (gridEl) {
-      gridEl.style.transformOrigin = 'center center';
-      gridEl.style.transform = `scale(${scale})`;
-      gridEl.style.setProperty('--canvas-scale', String(scale));
-      gridEl.dispatchEvent(new Event('zoom', { bubbles: true }));
-    }
     document.body.dataset.builderZoom = String(zoomPct);
+    applyingZoom = true;
+    try {
+      grid?.setScale?.(zoomPct / 100);
+    } finally {
+      applyingZoom = false;
+    }
   }
-
+  function scheduleFitZoom() {
+    cancelAnimationFrame(fitFrame);
+    fitFrame = requestAnimationFrame(() => {
+      fitFrame = 0;
+      const current = getBuilderViewportState();
+      if (current.zoomMode !== 'fit') return;
+      const nextZoom = computedFitZoom();
+      if (nextZoom !== current.zoom) setBuilderFitZoom(nextZoom);
+      else applyZoom(nextZoom);
+    });
+  }
   const unsubscribeViewport = subscribeBuilderViewport(next => {
-    if (next.zoom !== zoomPct) applyZoom(next.zoom);
+    zoomFit.classList.toggle('active', next.zoomMode === 'fit');
+    zoomFit.setAttribute('aria-pressed', next.zoomMode === 'fit' ? 'true' : 'false');
+    if (next.zoomMode === 'fit') scheduleFitZoom();
+    else applyZoom(next.zoom);
   });
-  applyZoom(getBuilderViewportState().zoom);
+  zoomOut.addEventListener('click', () => setBuilderZoom(zoomPct - 10));
+  zoomIn.addEventListener('click', () => setBuilderZoom(zoomPct + 10));
+  zoomSlider.addEventListener('input', () => setBuilderZoom(Number.parseInt(zoomSlider.value, 10) || 100));
+  zoomFit.addEventListener('click', () => {
+    setBuilderZoomMode('fit');
+    scheduleFitZoom();
+  });
+  gridEl?.addEventListener('zoom', () => {
+    if (applyingZoom) return;
+    const scale = Number(grid?.scale) || Number.parseFloat(
+      getComputedStyle(gridEl).getPropertyValue('--canvas-scale') || '1'
+    );
+    const nextZoom = Math.round(scale * 100);
+    const current = getBuilderViewportState();
+    if (nextZoom !== current.zoom || current.zoomMode !== 'manual') {
+      setBuilderZoom(nextZoom);
+    }
+  });
+  window.addEventListener('resize', scheduleFitZoom);
+
+  let playRaf = 0;
+  let playStartedAt = 0;
   const initialProgress = Number.parseInt(progress.value, 10) || 50;
   applyEffectPreview(gridEl, initialProgress);
   renderTimelineLanes(gridEl, laneWrap, initialProgress);
 
-  zoomOut.addEventListener('click', () => setBuilderZoom(zoomPct - 10));
-  zoomIn.addEventListener('click', () => setBuilderZoom(zoomPct + 10));
-  zoomSlider.addEventListener('input', () => setBuilderZoom(parseInt(zoomSlider.value, 10) || 100));
   progress.addEventListener('input', () => {
     const pct = Number.parseInt(progress.value, 10) || 0;
     applyEffectPreview(gridEl, pct);
@@ -346,6 +413,7 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
       playRaf = 0;
     }
     renderTimelineLanes(gridEl, laneWrap, Number.parseInt(progress.value, 10) || 0);
+    applyEffectPreview(gridEl, Number.parseInt(progress.value, 10) || 0);
   }
   document.addEventListener('designerSelectionChanged', syncTimelineAvailability);
   syncTimelineAvailability();
@@ -374,24 +442,15 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
     playRaf = requestAnimationFrame(tick);
   });
 
-  gridEl.addEventListener('zoom', () => {
-    const sc = parseFloat(getComputedStyle(gridEl).getPropertyValue('--canvas-scale') || '1');
-    const pct = Math.round(sc * 100);
-    zoomPct = pct;
-    zoomSlider.value = String(pct);
-    zoomLevel.textContent = `${pct}%`;
-  });
-
-  zoomWrap.appendChild(zoomOut);
-  zoomWrap.appendChild(zoomSlider);
-  zoomWrap.appendChild(zoomLevel);
-  zoomWrap.appendChild(zoomIn);
+  zoomWrap.append(zoomOut, zoomSlider, zoomLevel, zoomIn, zoomFit);
   layoutBar.appendChild(timeline);
   layoutBar.appendChild(zoomWrap);
 
   (footer || document.body).appendChild(layoutBar);
   layoutBar.__dispose = () => {
     unsubscribeViewport();
+    cancelAnimationFrame(fitFrame);
+    window.removeEventListener('resize', scheduleFitZoom);
     document.removeEventListener('designerSelectionChanged', syncTimelineAvailability);
   };
   return layoutBar;

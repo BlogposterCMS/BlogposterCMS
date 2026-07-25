@@ -224,6 +224,42 @@ describe('runtimeCanvasItems', () => {
     });
   });
 
+  it('keeps responsive widget pixels stable and reprojects their center at runtime', () => {
+    const item = {
+      responsivePlacement: {
+        version: 1,
+        base: {
+          centerXPercent: 75,
+          yPx: 120,
+          widthPx: 420,
+          heightPx: 300,
+          minWidthPx: 180,
+          minHeightPx: 120
+        },
+        rules: []
+      }
+    };
+
+    expect(resolveRuntimeCanvasRect(item, {
+      scaleX: 1120,
+      scaleY: 900
+    })).toEqual({
+      x: 630,
+      y: 120,
+      w: 420,
+      h: 300
+    });
+    expect(resolveRuntimeCanvasRect(item, {
+      scaleX: 390,
+      scaleY: 900
+    })).toEqual({
+      x: -15,
+      y: 120,
+      w: 420,
+      h: 300
+    });
+  });
+
   it('normalizes full-only widgets to the full grid width before slot validation', () => {
     const def = {
       id: 'full-report',

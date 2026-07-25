@@ -1,3 +1,4 @@
+import { normalizeResponsivePlacementContract, resolveResponsivePlacementGeometry } from '/ui/shared/layout/responsivePlacement.js';
 export const DEFAULT_ADMIN_ROWS = 100;
 function toNumberSafe(value, fallback = 0) {
     if (value === null || value === undefined)
@@ -57,10 +58,42 @@ export function measureGridMetrics(gridEl, grid) {
     return { width, height, paddingLeft, paddingTop, paddingRight, paddingBottom };
 }
 export function computeStaticGridMetrics(gridEl, layout = []) {
-    const width = gridEl?.getBoundingClientRect()?.width || gridEl?.clientWidth || 1;
+    const measuredWidth = gridEl?.getBoundingClientRect()?.width || gridEl?.clientWidth || 1;
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    // Fractional device-pixel ratios can expose a nominal 390px iframe as
+    // 390.666 CSS pixels. When the grid fills that viewport, use the authored
+    // viewport value so Builder and Runtime make the same rounding decision.
+    const width = viewportWidth > 0 && Math.abs(measuredWidth - viewportWidth) < 1
+        ? viewportWidth
+        : measuredWidth;
     const maxPercent = layout.reduce((max, item) => Math.max(max, (Number(item.yPercent) || 0) + (Number(item.hPercent) || 0)), 100);
     const clampedPercent = Math.max(100, Math.min(1000, Math.round(maxPercent)));
-    const height = Math.max(1, (clampedPercent / 100) * width);
+    const legacyHeight = Math.max(1, (clampedPercent / 100) * width);
+    const responsiveBottom = layout.reduce((max, item) => {
+        const persisted = item?.responsivePlacement
+            ?? item?.responsive_placement
+            ?? item?.code?.meta?.responsivePlacement
+            ?? item?.code?.meta?.responsive_placement;
+        if (!persisted || typeof persisted !== 'object')
+            return max;
+        const contract = normalizeResponsivePlacementContract(persisted, {
+            centerXPercent: 50,
+            yPx: 0,
+            widthPx: 1,
+            heightPx: 1
+        });
+        const geometry = resolveResponsivePlacementGeometry(contract, width);
+        return Math.max(max, geometry.yPx + geometry.heightPx);
+    }, 0);
+    const viewportFloor = gridEl?.parentElement?.clientHeight
+        || gridEl?.clientHeight
+        || (typeof window !== 'undefined' ? window.innerHeight : 0)
+        || 1;
+    // Responsive geometry stores vertical coordinates in authored pixels. Do
+    // not derive height from canvas width again or the public page will stretch.
+    const height = responsiveBottom > 0
+        ? Math.max(1, Math.ceil(responsiveBottom), viewportFloor)
+        : legacyHeight;
     const scaleX = width / 100;
     const scaleY = height / 100;
     return {

@@ -1,5 +1,6 @@
 import { attachEditButton, attachLockOnClick, attachOptionsMenu, attachRemoveButton, renderWidget } from './widgetManager.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
+import { getNativeElementMinSize, getNativeElementSize } from '/ui/designer/app/widgets/nativeElementPresets.js';
 const VARIANT_MAP = {
     heading: {
         label: 'Heading',
@@ -107,6 +108,9 @@ const createCanvasItem = (options, widgetDef, config) => {
     const instanceId = genId();
     const activeLayer = getActiveLayer();
     const y = nextAvailableRow(gridEl, activeLayer, defaultRows);
+    const nativeVariant = config.variant === 'body' ? 'paragraph' : (config.variant || 'paragraph');
+    const size = getNativeElementSize('text', defaultRows, nativeVariant);
+    const minSize = getNativeElementMinSize('text', nativeVariant);
     const wrapper = document.createElement('div');
     wrapper.classList.add('canvas-item');
     wrapper.dataset.widgetId = widgetDef.id;
@@ -124,10 +128,10 @@ const createCanvasItem = (options, widgetDef, config) => {
     wrapper.dataset.y = String(y);
     wrapper.id = `widget-${instanceId}`;
     wrapper.style.zIndex = String(activeLayer);
-    wrapper.setAttribute('gs-w', '4');
-    wrapper.setAttribute('gs-h', String(defaultRows));
-    wrapper.setAttribute('gs-min-w', '1');
-    wrapper.setAttribute('gs-min-h', String(defaultRows));
+    wrapper.setAttribute('gs-w', String(size.w));
+    wrapper.setAttribute('gs-h', String(size.h));
+    wrapper.setAttribute('gs-min-w', String(minSize.w));
+    wrapper.setAttribute('gs-min-h', String(minSize.h));
     const content = document.createElement('div');
     content.className = 'canvas-item-content builder-themed';
     const iconHtml = options.getWidgetIcon?.(widgetDef, options.iconMap);
@@ -140,7 +144,13 @@ const createCanvasItem = (options, widgetDef, config) => {
     wrapper.appendChild(content);
     gridEl.appendChild(wrapper);
     grid.makeWidget?.(wrapper);
-    grid.update?.(wrapper, { x: 0, y, w: 4, h: defaultRows, layer: activeLayer });
+    grid.update?.(wrapper, {
+        x: 0,
+        y,
+        w: size.w,
+        h: size.h,
+        layer: activeLayer
+    });
     return wrapper;
 };
 const applyTemplateToWidget = async (options, widgetDef, wrapper, config) => {

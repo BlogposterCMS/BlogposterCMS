@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { init as initCanvasGrid } from '/ui/runtime/main/canvasGrid.js';
+import { getBuilderViewportState } from '/ui/designer/app/renderer/viewportState.js';
 const DEFAULT_PIXEL_CANVAS_WIDTH = 1200;
 function measurableWidth(el) {
     if (!el)
@@ -22,8 +23,10 @@ function measurableWidth(el) {
     })();
     return el.clientWidth || styleWidth || rectWidth || 0;
 }
-function pixelColumnCount(containerEl, gridEl) {
-    const width = measurableWidth(containerEl) || measurableWidth(gridEl) || DEFAULT_PIXEL_CANVAS_WIDTH;
+function pixelColumnCount(gridEl, fallbackEl) {
+    // The authored grid width is the responsive viewport. The surrounding
+    // scroll container is only the editor window and must never resize widgets.
+    const width = measurableWidth(gridEl) || measurableWidth(fallbackEl) || DEFAULT_PIXEL_CANVAS_WIDTH;
     return Math.max(1, Math.round(width));
 }
 export function initGrid(gridEl, state, selectWidget, opts = {}) {
@@ -31,8 +34,13 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
     // use the grid's parent element. This allows zoom to keep scrollbars
     // inside the designer viewport instead of the page.
     const scrollContainer = opts.scrollContainer || gridEl.parentElement || gridEl;
+    const zoomTarget = opts.zoomTarget || gridEl;
     const enableZoom = opts.enableZoom === true;
-    const columnCount = pixelColumnCount(scrollContainer, gridEl);
+    const responsiveViewportWidth = getBuilderViewportState().width;
+    if (zoomTarget !== gridEl) {
+        zoomTarget.style.width = `${responsiveViewportWidth}px`;
+    }
+    const columnCount = pixelColumnCount(gridEl, scrollContainer);
     const grid = initCanvasGrid({
         columns: columnCount,
         columnWidth: 1,
@@ -45,18 +53,25 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
         objectSnapTolerance: 6,
         pixelColumns: true,
         percentageMode: true,
+        renderPercentLayoutAsPixels: true,
+        preservePixelWidgetSize: true,
+        responsivePlacement: true,
+        responsiveViewportWidth,
         bboxHandles: true,
         scrollContainer,
+        zoomTarget,
         enableZoom
     }, gridEl);
     gridEl.__grid = grid;
     function syncPixelColumns() {
-        const nextColumns = pixelColumnCount(scrollContainer, gridEl);
-        grid.options.columns = nextColumns;
-        grid.options.columnWidth = 1;
-        grid._lastColumnWidth = 1;
+        const nextColumns = pixelColumnCount(gridEl, scrollContainer);
+        // CanvasGrid owns the responsive reflow. Updating columns before it sees
+        // the new width would suppress its change detection and leave stale bounds.
+        grid._syncColumnWidthFromWidth?.(nextColumns);
         grid.refreshMetrics?.();
-        grid.widgets?.forEach?.(w => grid.update(w, {}, { silent: true }));
+        grid.widgets?.forEach?.(widget => {
+            grid._applyPosition?.(widget, { x: false, y: false, w: false, h: false });
+        });
     }
     let cwRAF = null;
     function setColumnWidth() {
@@ -74,7 +89,9 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
     window.addEventListener('resize', setColumnWidth);
     // Also observe direct size changes of the grid container (e.g. sidebar toggles).
     const __gridRO = new ResizeObserver(() => setColumnWidth());
-    __gridRO.observe(scrollContainer);
+    __gridRO.observe(gridEl);
+    if (zoomTarget !== gridEl)
+        __gridRO.observe(zoomTarget);
     gridEl.__gridRO = __gridRO;
     grid.on('change', ({ el } = {}) => {
         if (el)
@@ -125,6 +142,14 @@ function serializeCanvasItem(el, codeMap) {
         meta.radius = el.dataset.radius;
     if (workareaId)
         meta.workareaId = workareaId;
+    if (el.dataset.responsivePlacement) {
+        try {
+            meta.responsivePlacement = JSON.parse(el.dataset.responsivePlacement);
+        }
+        catch (error) {
+            console.warn('DESIGNER_RESPONSIVE_PLACEMENT_SERIALIZE_FAILED', error);
+        }
+    }
     const styleSource = readStyleSourceMeta(el);
     if (styleSource)
         meta.styleSource = styleSource;

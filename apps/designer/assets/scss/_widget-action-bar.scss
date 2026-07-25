@@ -6,8 +6,10 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
+  align-items: center;
   gap: 4px;
   padding: 6px;
+  max-width: calc(100vw - 16px);
   z-index: 1000;
   backdrop-filter: blur(10px);
   animation: actionBarSlideIn 0.2s ease;

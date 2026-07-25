@@ -6,9 +6,38 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Unified local development reloads behind `npm run dev`: Sass and Webpack now
+  watch their existing source contracts, Nodemon remains responsible for the
+  server, and a development-only SSE channel refreshes changed CSS in place or
+  reloads dashboard, public and sandboxed app-frame pages after browser-code,
+  HTML or server changes. Production does not expose or inject the reload
+  client.
+- Refined Design Studio selections with larger invisible resize targets,
+  smaller direction-aware handles and stable hover positioning. Selecting an
+  element no longer adds a background, shadow or position shift to its authored
+  content; the bounding box remains the only visual selection layer.
+- Merged the overlapping Design Studio widget and Behavior toolbars into the
+  existing compact widget action bar. Scroll, Sticky and Pin remain directly
+  selectable alongside lock, duplicate, delete and more actions, while the
+  range handles stay on-canvas and agent feedback keeps the toolbar association
+  tied to the selected widget instance. Text selections also keep the separate
+  formatting toolbar clear of the merged selection controls.
+- Removed the Design Studio canvas item's transform easing while dragging.
+  Widgets now track the pointer directly instead of trailing behind it, while
+  border and shadow feedback retain the existing Studio motion.
 - Unified the Design Studio viewport slider, Desktop/Tablet/Mobile controls,
-  footer zoom, Live Preview frame and agent feedback behind one persisted
-  viewport state. The sandboxed app now persists that state through the existing
+  Live Preview frame and agent feedback behind one persisted viewport state,
+  while keeping footer zoom as a separate view-only control. The canvas now
+  grows symmetrically, keeps widget sizes and centre anchors stable, clamps
+  fitting widgets inside the authored page and stores deliberate element
+  geometry overrides in inclusive viewport ranges. Builder, Live Preview and
+  public runtime resolve the same placement metadata. Runtime grids reproject
+  after their actual frame width settles, keep symmetric overflow instead of
+  clamping it to one side and normalize fractional device-pixel widths to the
+  authored viewport. The sandboxed Live Preview also hides its scrollbar
+  gutter without disabling scrolling, so a requested 390px frame remains a
+  390px layout surface. The sandboxed app now
+  persists that state through the existing
   parent AppBridge without adding `allow-same-origin`; header and full page
   reloads no longer reset the canvas width, displayed values match the applied
   width, and the public-runtime iframe receives the same exact width for

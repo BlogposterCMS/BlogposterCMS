@@ -39,6 +39,11 @@ import {
   sitePresetsAgentState
 } from '/ui/shared/presets/sitePresets.js';
 import { getBuilderViewportState } from './renderer/viewportState.js';
+import {
+  normalizeResponsivePlacementContract,
+  resolveResponsivePlacementGeometry,
+  responsiveRuleForWidth
+} from '/ui/shared/layout/responsivePlacement.js';
 
 const SURFACE_ID = 'studio.designer';
 const APP_NAME = 'designer';
@@ -189,6 +194,18 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
       { name: 'y', type: 'number', required: false },
       { name: 'w', type: 'number', required: false },
       { name: 'h', type: 'number', required: false }
+    ]
+  },
+  {
+    action: 'element.responsiveRange.set',
+    label: 'Set responsive range',
+    category: 'element',
+    description: 'Stores the selected element geometry for an exact viewport-width range.',
+    requiresSelection: true,
+    params: [
+      { name: 'id', type: 'string', required: false },
+      { name: 'minWidth', type: 'number', required: true },
+      { name: 'maxWidth', type: 'number', required: true }
     ]
   },
   {
@@ -697,6 +714,49 @@ function layoutNodeFeedback(el: HTMLElement, index: number): Record<string, unkn
   };
 }
 
+function responsivePlacementFeedback(el: HTMLElement): Record<string, unknown> {
+  const viewport = getBuilderViewportState();
+  const x = Number.parseFloat(el.dataset.x || '0') || 0;
+  const y = Number.parseFloat(el.dataset.y || '0') || 0;
+  const width = Number.parseFloat(el.getAttribute('gs-w') || '1') || 1;
+  const height = Number.parseFloat(el.getAttribute('gs-h') || '1') || 1;
+  let raw: unknown = {};
+  try {
+    raw = JSON.parse(el.dataset.responsivePlacement || '{}');
+  } catch {
+    return {
+      available: false,
+      error: 'DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID'
+    };
+  }
+  const contract = normalizeResponsivePlacementContract(raw, {
+    centerXPercent: ((x + (width / 2)) / Math.max(1, viewport.width)) * 100,
+    yPx: y,
+    widthPx: width,
+    heightPx: height
+  });
+  const activeRule = responsiveRuleForWidth(contract, viewport.width);
+  const geometry = resolveResponsivePlacementGeometry(contract, viewport.width);
+  return {
+    available: true,
+    version: contract.version,
+    viewportWidth: viewport.width,
+    activeRuleId: activeRule?.id || null,
+    activeRange: activeRule
+      ? { minWidth: activeRule.minWidth, maxWidth: activeRule.maxWidth }
+      : null,
+    geometry,
+    base: contract.base,
+    rules: contract.rules.map(rule => ({
+      id: rule.id,
+      minWidth: rule.minWidth,
+      maxWidth: rule.maxWidth,
+      geometry: rule.geometry
+    })),
+    fitsViewport: geometry.widthPx <= viewport.width
+  };
+}
+
 function widgetPlacementFeedback(): Record<string, unknown>[] {
   return Array.from(document.querySelectorAll<HTMLElement>('.canvas-item')).map((el, index) => {
     const workarea = el.closest<HTMLElement>('.layout-container, .layout-root');
@@ -721,6 +781,7 @@ function widgetPlacementFeedback(): Record<string, unknown>[] {
       behavior: behaviorOf(el),
       range: rangeOf(el),
       effects: effectsOf(el),
+      responsivePlacement: responsivePlacementFeedback(el),
       styleSource: styleSourceState(el),
       bounds: elementBounds(el)
     };
@@ -838,6 +899,10 @@ function designerFeedbackWarnings(
     const bounds = widget.bounds as Record<string, number> | undefined;
     return bounds && (!bounds.width || !bounds.height);
   });
+  const invalidResponsivePlacements = widgets.filter(widget => {
+    const responsivePlacement = widget.responsivePlacement as Record<string, unknown> | undefined;
+    return responsivePlacement?.error === 'DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID';
+  });
   if (!hasLayoutRoot || layoutNodes.length === 0) {
     warnings.push({
       code: 'DESIGNER_AGENT_FEEDBACK_NO_LAYOUT_ROOT',
@@ -858,6 +923,14 @@ function designerFeedbackWarnings(
       severity: 'warning',
       message: 'One or more widget placements reported zero-size bounds.',
       count: zeroSizeWidgets.length
+    });
+  }
+  if (invalidResponsivePlacements.length > 0) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID',
+      severity: 'warning',
+      message: 'One or more widget responsive-placement contracts could not be parsed.',
+      count: invalidResponsivePlacements.length
     });
   }
   if (!visual.available) {
@@ -902,6 +975,7 @@ function buildDesignerAgentFeedback(
       visualPreview: Boolean(visual.available),
       runtimeLivePreview: true,
       stableBounds: true,
+      responsivePlacementRanges: true,
       objectSnapGuides: true,
       publishingCenter: true
     },
@@ -909,6 +983,7 @@ function buildDesignerAgentFeedback(
       width: builderViewport.width,
       presetId: builderViewport.presetId,
       zoom: builderViewport.zoom,
+      zoomMode: builderViewport.zoomMode,
       browserWidth: window.innerWidth,
       browserHeight: window.innerHeight,
       devicePixelRatio: window.devicePixelRatio || 1
@@ -938,6 +1013,13 @@ function buildDesignerAgentFeedback(
   };
 }
 
+function hasStageHudForElement(el: HTMLElement): boolean {
+  const instanceId = el.dataset.instanceId || el.id || '';
+  if (!instanceId) return false;
+  return Array.from(document.querySelectorAll<HTMLElement>('.widget-action-bar > .scene-stage-hud'))
+    .some(hud => hud.dataset.instanceId === instanceId);
+}
+
 function behaviorElementNode(el: HTMLElement, index: number, activeSceneId = ''): Record<string, unknown> {
   const effects = effectsOf(el);
   const behavior = behaviorOf(el);
@@ -960,7 +1042,7 @@ function behaviorElementNode(el: HTMLElement, index: number, activeSceneId = '')
       badge: Boolean(el.querySelector(':scope > .scene-behavior-badge')),
       range: Boolean(el.querySelector(':scope > .scene-behavior-range-cue')),
       effectGuide: Boolean(el.querySelector(':scope > .scene-stage-effect-guide')),
-      stageHud: Boolean(el.querySelector(':scope > .scene-stage-hud'))
+      stageHud: hasStageHudForElement(el)
     }
   };
 }
@@ -1058,6 +1140,7 @@ function selectionState(): Record<string, unknown> | null {
     range: rangeOf(selected),
     effects,
     effectCount: effects.length,
+    responsivePlacement: responsivePlacementFeedback(selected),
     bounds: elementBounds(selected),
     label: textOf(selected.querySelector('.canvas-item-content'), selected.dataset.widgetId || 'Selected element')
   };
@@ -1295,6 +1378,7 @@ export async function buildDesignerAgentSnapshot(
       viewportWidth: builderViewport.width,
       viewportPreset: builderViewport.presetId,
       viewportZoom: builderViewport.zoom,
+      viewportZoomMode: builderViewport.zoomMode,
       browserViewportWidth: window.innerWidth,
       browserViewportHeight: window.innerHeight,
       visualPreviewAvailable: Boolean(visual.available),

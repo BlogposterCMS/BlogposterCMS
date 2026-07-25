@@ -274,4 +274,28 @@ describe('CanvasGrid object snap guides', () => {
     expect(guide?.dataset.snapGuideSecondarySource).toBe('left');
     expect(guide?.dataset.snapGuideSpacing).toBe('30');
   });
+
+  it('keeps symmetric responsive overflow when a fixed-width widget exceeds the viewport', () => {
+    const canvas = document.createElement('div');
+    Object.defineProperty(canvas, 'clientWidth', { configurable: true, value: 390 });
+    Object.defineProperty(canvas, 'clientHeight', { configurable: true, value: 800 });
+    document.body.appendChild(canvas);
+
+    const grid = new CanvasGrid({
+      cellHeight: 1,
+      columnWidth: 1,
+      columns: Infinity,
+      enableZoom: false,
+      preservePixelWidgetSize: true,
+      useBoundingBox: false
+    }, canvas);
+    const widget = grid.addWidget({ x: 0, y: 0, w: 642, h: 120 });
+
+    widget.dataset.x = '-126';
+    grid._applyPosition(widget, { x: false, y: false, w: false, h: false });
+
+    expect(widget.dataset.x).toBe('-126');
+    expect(widget.getAttribute('gs-w')).toBe('642');
+    expect(widget.style.transform).toBe('translate3d(-126px, 0px, 0)');
+  });
 });

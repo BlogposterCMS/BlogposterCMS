@@ -244,8 +244,15 @@ describe('designer live preview frame', () => {
       path.join(__dirname, '../ui/designer/app/renderer/livePreviewRuntime.ts'),
       'utf8'
     );
+    const runtimeCss = fs.readFileSync(
+      path.join(__dirname, '../public/assets/css/runtime.css'),
+      'utf8'
+    );
 
     expect(publicEntrySource).toContain('await importDesignerLivePreviewRuntime()');
+    expect(publicEntrySource).toContain("document.documentElement.dataset.designerLivePreview = 'true'");
+    expect(runtimeCss).toContain("html[data-designer-live-preview='true']::-webkit-scrollbar");
+    expect(runtimeCss).toContain('scrollbar-width: none');
     expect(publicEntrySource.indexOf('if (livePreview)')).toBeLessThan(
       publicEntrySource.indexOf('await ensureToken()')
     );

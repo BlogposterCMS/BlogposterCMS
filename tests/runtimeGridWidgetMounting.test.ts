@@ -2,7 +2,10 @@
  * @jest-environment jsdom
  */
 
-import { mountRuntimeGridWidgets } from '../ui/runtime/main/runtimeGridWidgetMounting';
+import {
+  mountRuntimeGridWidgets,
+  reflowRuntimeGridWidgets
+} from '../ui/runtime/main/runtimeGridWidgetMounting';
 import { renderRuntimeCanvasWidget } from '../ui/runtime/main/runtimeWidgetMounting';
 
 jest.mock('../ui/runtime/main/runtimeWidgetMounting', () => ({
@@ -123,5 +126,60 @@ describe('runtimeGridWidgetMounting', () => {
       });
       jest.useRealTimers();
     }
+  });
+
+  it('reprojects fixed responsive geometry when the runtime canvas width changes', async () => {
+    const gridEl = document.createElement('section');
+    const grid = {
+      widgets: [] as HTMLElement[],
+      makeWidget: jest.fn((el: HTMLElement) => grid.widgets.push(el)),
+      update: jest.fn(),
+      _applyPosition: jest.fn()
+    };
+    const layout = [{
+      id: 'hero-responsive',
+      widgetId: 'hero',
+      responsivePlacement: {
+        version: 1,
+        base: {
+          centerXPercent: 75,
+          yPx: 120,
+          widthPx: 427,
+          heightPx: 498
+        },
+        rules: []
+      }
+    }];
+
+    await mountRuntimeGridWidgets({
+      gridEl,
+      grid,
+      layout,
+      allWidgets: [{ id: 'hero', metadata: { label: 'Hero' } }],
+      lane: 'public',
+      widgetEmit: jest.fn().mockResolvedValue(undefined),
+      scaleX: 3.9,
+      scaleY: 8,
+      percentDivisor: 1,
+      deferHydration: false
+    });
+
+    const wrapper = gridEl.querySelector<HTMLElement>('.canvas-item')!;
+    expect(wrapper.dataset.x).toBe('-18');
+
+    reflowRuntimeGridWidgets({
+      gridEl,
+      grid,
+      scaleX: 12.8,
+      scaleY: 8,
+      percentDivisor: 1
+    });
+
+    expect(wrapper.dataset.x).toBe('747');
+    expect(grid._applyPosition).toHaveBeenLastCalledWith(
+      wrapper,
+      { x: false, y: false, w: false, h: false }
+    );
+    expect(grid.update).not.toHaveBeenCalled();
   });
 });

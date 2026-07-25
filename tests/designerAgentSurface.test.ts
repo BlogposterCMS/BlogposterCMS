@@ -54,6 +54,8 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain('agentFeedback');
   expect(agentSurfaceSource).toContain('layoutTree');
   expect(agentSurfaceSource).toContain('widgetPlacements');
+  expect(agentSurfaceSource).toContain('responsivePlacementFeedback');
+  expect(agentSurfaceSource).toContain('responsivePlacementRanges');
   expect(agentSurfaceSource).toContain('snapGuides');
   expect(agentSurfaceSource).toContain('function snapGuideFeedback');
   expect(agentSurfaceSource).toContain('.canvas-snap-guide');
@@ -70,6 +72,7 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain('DESIGNER_AGENT_FEEDBACK_NO_COMMAND_PORT');
   expect(agentSurfaceSource).toContain('DESIGNER_AGENT_FEEDBACK_ZERO_WIDGET_BOUNDS');
   expect(agentSurfaceSource).toContain('DESIGNER_AGENT_FEEDBACK_VISUAL_PREVIEW_UNAVAILABLE');
+  expect(agentSurfaceSource).toContain('DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID');
   expect(agentSurfaceSource).toContain('createAgentControlClient');
   expect(agentSurfaceSource).toContain('SURFACE_AGENT_ACTIONS');
   expect(agentSurfaceSource).toContain("import { capturePreview } from './renderer/capturePreview.js'");
@@ -77,6 +80,7 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain("reason === 'refresh'");
   expect(agentSurfaceSource).toContain('DESIGNER_AGENT_ACTIONS');
   expect(agentSurfaceSource).toContain('function stageBehaviorMap');
+  expect(agentSurfaceSource).toContain('function hasStageHudForElement');
   expect(agentSurfaceSource).toContain('function effectsOf');
   expect(agentSurfaceSource).toContain('function elementBounds');
   expect(sharedClientSource).toContain("action: 'surface.refresh'");
@@ -96,6 +100,7 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain("action: 'effect.set'");
   expect(agentSurfaceSource).toContain("action: 'element.update'");
   expect(agentSurfaceSource).toContain("action: 'element.geometry.set'");
+  expect(agentSurfaceSource).toContain("action: 'element.responsiveRange.set'");
   expect(agentSurfaceSource).toContain("action: 'element.duplicate'");
   expect(agentSurfaceSource).toContain("action: 'text.update'");
   expect(agentSurfaceSource).toContain("action: 'viewport.set'");
@@ -136,6 +141,7 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(builderRendererSource).toContain("action === 'range.set'");
   expect(builderRendererSource).toContain("action === 'effect.set'");
   expect(builderRendererSource).toContain("action === 'element.update'");
+  expect(builderRendererSource).toContain("action === 'element.responsiveRange.set'");
   expect(builderRendererSource).toContain("action === 'scene.update'");
   expect(builderRendererSource).toContain("action === 'viewport.set'");
   expect(builderRendererSource).toContain("action === 'design.save'");
@@ -163,4 +169,6 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(feedbackGuideSource).toContain('DESIGNER_AGENT_FEEDBACK_*');
   expect(feedbackGuideSource).toContain('colorLibrary.create');
   expect(feedbackGuideSource).toContain('fontPackages.updateRole');
+  expect(feedbackGuideSource).toContain('element.responsiveRange.set');
+  expect(feedbackGuideSource).toContain('DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID');
 });

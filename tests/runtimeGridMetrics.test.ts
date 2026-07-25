@@ -133,4 +133,36 @@ describe('runtimeGridMetrics', () => {
       scaleY: 30
     });
   });
+
+  it('uses the authored viewport width for full-width grids on fractional DPR displays', () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 390
+    });
+    const gridEl = makeGridEl(391, 0);
+    gridEl.getBoundingClientRect = jest.fn(() => ({
+      width: 390.66668701171875,
+      height: 0,
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 390.66668701171875,
+      bottom: 0,
+      toJSON: () => ({})
+    } as DOMRect));
+
+    try {
+      expect(computeStaticGridMetrics(gridEl)).toMatchObject({
+        width: 390,
+        scaleX: 3.9
+      });
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalInnerWidth
+      });
+    }
+  });
 });

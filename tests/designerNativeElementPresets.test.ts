@@ -63,8 +63,8 @@ describe('designer native element presets', () => {
     }));
   });
 
-  it('keeps layout sizes outside normal widget metadata', () => {
-    expect(getNativeElementSize('background', 120)).toEqual({ w: 12, h: 120 });
-    expect(getNativeElementSize('shape', 120)).toEqual({ w: 4, h: 80 });
+  it('uses sensible pixel insert sizes for the 1px Design Studio grid', () => {
+    expect(getNativeElementSize('background', 120)).toEqual({ w: 960, h: 120 });
+    expect(getNativeElementSize('shape', 120)).toEqual({ w: 320, h: 220 });
   });
 });

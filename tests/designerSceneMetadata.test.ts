@@ -86,10 +86,10 @@ describe('designer scene metadata', () => {
     expect(sidebarHtml).not.toContain('data-sidebar-panel-target="sections"');
     expect(sidebarHtml).not.toContain('id="scenePanelSections"');
     expect(sidebarHtml).not.toContain('data-sidebar-panel="sections"');
-    expect(sidebarHtml).toContain('data-sidebar-panel-target="layers"');
+    expect(sidebarHtml).not.toContain('data-sidebar-panel-target="layers"');
     expect(sidebarHtml).toContain('data-sidebar-panel-target="layout"');
     expect(sidebarHtml).toContain('data-sidebar-panel="insert"');
-    expect(sidebarHtml).toContain('data-sidebar-panel="layers"');
+    expect(sidebarHtml).not.toContain('data-sidebar-panel="layers"');
     expect(sidebarHtml).toContain('class="layout-panel-host"');
     expect(sidebarHtml).toContain('data-designer-tool="scroll"');
     expect(sidebarHtml).toContain('data-designer-tool="action"');
@@ -103,7 +103,8 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain("builder-sidebar--compact");
     expect(rendererSource).toContain('data-sidebar-panel-target');
     expect(rendererSource).toContain('setSidebarPanel(sidebarEl.dataset.activeSidebarPanel || \'insert\')');
-    expect(rendererSource).toContain("const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layers', 'layout', 'colors', 'fonts'])");
+    expect(rendererSource).toContain("const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'design'])");
+    expect(rendererSource).toContain('class="scene-inspector-layer-list"');
     expect(rendererSource).not.toContain("{ selector: 'scene-map', panel: 'sections' }");
     expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('layout')");
     expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('insert')");
@@ -132,6 +133,8 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain("document.addEventListener('click', event => {");
     expect(rendererSource).toContain('!isSidebarFlyoutOpen() || !(target instanceof Node) || sidebarEl.contains(target)');
     expect(rendererSource).toContain("target.closest('.builder-header, .designer-live-preview')");
+    expect(rendererSource).toContain("e.target.closest('.scene-inspector')");
+    expect(rendererSource).toContain('// Layer rows are a selection surface.');
     expect(rendererSource).toContain('}, true);');
     expect(rendererSource).toContain('flyout.hidden = !shouldOpen;');
     expect(rendererSource).toContain("flyout.style.display = shouldOpen ? '' : 'none';");
@@ -166,7 +169,8 @@ describe('designer scene metadata', () => {
 
     expect(rendererSource).toContain("'background'");
     expect(rendererSource).toContain('SCENE_BACKGROUND_PRESETS');
-    expect(rendererSource).toContain('data-scene-bg-preset');
+    expect(rendererSource).toContain('function nextSceneBackground(');
+    expect(rendererSource).not.toContain('data-scene-bg-preset');
     expect(rendererSource).toContain('function insertQuickBackground()');
     expect(rendererSource).toContain("if (nativeType === 'background') return insertQuickBackground();");
   });
@@ -363,7 +367,7 @@ describe('designer scene metadata', () => {
       /body\.builder-mode \.layout-container > \.builder-grid,\s*body\.builder-mode \.layout-container\.builder-grid,\s*body\.builder-mode #layoutRoot > \.builder-grid\s*\{[^}]*\}/
     )?.[0] ?? '';
     const selectedGuideRule = sceneBuilderCss.match(
-      /body\.builder-mode:has\(\.canvas-item\.selected\) \.scene-viewport-guides,\s*body\.builder-mode:has\(\.canvas-item\.editing\) \.scene-viewport-guides\s*\{[^}]*\}/
+      /\.scene-viewport-guides\[data-motion-path-active=true\]\s*\{[^}]*\}/
     )?.[0] ?? '';
 
     expect(layoutRootRule).toContain('z-index: auto;');
@@ -380,15 +384,17 @@ describe('designer scene metadata', () => {
 
     const viewportRule = Array.from(sceneBuilderCss.matchAll(
       /body\.builder-mode #builderViewport\s*\{[^}]*\}/g
-    )).map(match => match[0]).find(rule => rule.includes('var(--scene-surface-soft)')) ?? '';
+    )).map(match => match[0]).find(rule => rule.includes('background: #eceef2;')) ?? '';
     const zoomSizerRule = Array.from(sceneBuilderCss.matchAll(
       /body\.builder-mode #builderViewport \.canvas-zoom-sizer\s*\{[^}]*\}/g
-    )).map(match => match[0]).find(rule => rule.includes('max-width: 1040px;')) ?? '';
+    )).map(match => match[0]).find(rule => rule.includes('max-width: none;')) ?? '';
 
     expect(viewportRule).toContain('display: block;');
+    expect(viewportRule).toContain('background: #eceef2;');
     expect(viewportRule).toContain('overflow: auto;');
     expect(viewportRule).toContain('scrollbar-gutter: stable;');
     expect(zoomSizerRule).toContain('margin: 0 auto;');
+    expect(zoomSizerRule).toContain('max-width: none;');
   });
 
   it('keeps insert groups in the sidebar rail instead of a legacy topbar popover', () => {
@@ -447,12 +453,14 @@ describe('designer scene metadata', () => {
 
     expect(rendererSource).toContain('function renderStageBehaviorHud');
     expect(rendererSource).toContain('className = \'scene-stage-hud\'');
+    expect(rendererSource).toContain('actionBar.prepend(hud)');
+    expect(rendererSource).toContain("actionBar.addEventListener('click', handleStageBehaviorClick)");
     expect(rendererSource).toContain('data-stage-behavior="${escapeAttribute(def.id)}"');
     expect(rendererSource).toContain("event.target.closest?.('[data-stage-behavior]')");
     expect(rendererSource).toContain('removeStageBehaviorHuds');
     expect(sceneBuilderCss).toContain('.scene-stage-hud');
     expect(sceneBuilderCss).toContain('.scene-stage-hud__actions button.active');
-    expect(sceneBuilderCss).toContain('body.builder-mode .canvas-item:not(.selected) > .scene-stage-hud');
+    expect(sceneBuilderCss).not.toContain('body.builder-mode .canvas-item:not(.selected) > .scene-stage-hud');
   });
 
   it('keeps scenes directly navigable from the stage', () => {

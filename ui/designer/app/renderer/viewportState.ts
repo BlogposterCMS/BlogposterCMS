@@ -4,6 +4,7 @@ export interface BuilderViewportState {
   width: number;
   presetId: BuilderViewportPresetId;
   zoom: number;
+  zoomMode: 'fit' | 'manual';
 }
 
 export interface BuilderViewportPreset {
@@ -46,6 +47,13 @@ function presetForWidth(width: number): BuilderViewportPresetId {
   return BUILDER_VIEWPORT_PRESETS.find(preset => preset.width === width)?.id || 'custom';
 }
 
+export function builderBreakpointForWidth(width: unknown): Exclude<BuilderViewportPresetId, 'custom'> {
+  const value = clamp(width, BUILDER_VIEWPORT_MIN, BUILDER_VIEWPORT_MAX, 1280);
+  if (value <= 600) return 'mobile';
+  if (value <= 1024) return 'tablet';
+  return 'desktop';
+}
+
 function normalizeState(value: unknown): BuilderViewportState {
   const source = value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -54,7 +62,8 @@ function normalizeState(value: unknown): BuilderViewportState {
   return {
     width,
     presetId: presetForWidth(width),
-    zoom: clamp(source.zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, 100)
+    zoom: clamp(source.zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, 100),
+    zoomMode: source.zoomMode === 'manual' ? 'manual' : 'fit'
   };
 }
 
@@ -149,7 +158,23 @@ export function setBuilderViewportPreset(id: unknown): BuilderViewportState {
 export function setBuilderZoom(zoom: unknown): BuilderViewportState {
   return publish({
     ...state,
-    zoom: clamp(zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, state.zoom)
+    zoom: clamp(zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, state.zoom),
+    zoomMode: 'manual'
+  });
+}
+
+export function setBuilderFitZoom(zoom: unknown): BuilderViewportState {
+  return publish({
+    ...state,
+    zoom: clamp(zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, state.zoom),
+    zoomMode: 'fit'
+  });
+}
+
+export function setBuilderZoomMode(mode: unknown): BuilderViewportState {
+  return publish({
+    ...state,
+    zoomMode: mode === 'manual' ? 'manual' : 'fit'
   });
 }
 

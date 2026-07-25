@@ -5,6 +5,7 @@ import { activateColorScheme, colorLibraryAgentState, createColorScheme, createL
 import { activateFontPackage, createFontPackage, deleteFontPackage, fontPackagesAgentState, refreshFontPackages, renameFontPackage, resetFontPackageRole, updateFontPackageRole } from '/ui/shared/fonts/fontPackages.js';
 import { applySitePreset, deleteSitePreset, refreshSitePresets, sitePresetsAgentState } from '/ui/shared/presets/sitePresets.js';
 import { getBuilderViewportState } from './renderer/viewportState.js';
+import { normalizeResponsivePlacementContract, resolveResponsivePlacementGeometry, responsiveRuleForWidth } from '/ui/shared/layout/responsivePlacement.js';
 const SURFACE_ID = 'studio.designer';
 const APP_NAME = 'designer';
 const VISUAL_CAPTURE_MIN_INTERVAL_MS = 7000;
@@ -154,6 +155,18 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
             { name: 'y', type: 'number', required: false },
             { name: 'w', type: 'number', required: false },
             { name: 'h', type: 'number', required: false }
+        ]
+    },
+    {
+        action: 'element.responsiveRange.set',
+        label: 'Set responsive range',
+        category: 'element',
+        description: 'Stores the selected element geometry for an exact viewport-width range.',
+        requiresSelection: true,
+        params: [
+            { name: 'id', type: 'string', required: false },
+            { name: 'minWidth', type: 'number', required: true },
+            { name: 'maxWidth', type: 'number', required: true }
         ]
     },
     {
@@ -655,6 +668,49 @@ function layoutNodeFeedback(el, index) {
         bounds: elementBounds(el)
     };
 }
+function responsivePlacementFeedback(el) {
+    const viewport = getBuilderViewportState();
+    const x = Number.parseFloat(el.dataset.x || '0') || 0;
+    const y = Number.parseFloat(el.dataset.y || '0') || 0;
+    const width = Number.parseFloat(el.getAttribute('gs-w') || '1') || 1;
+    const height = Number.parseFloat(el.getAttribute('gs-h') || '1') || 1;
+    let raw = {};
+    try {
+        raw = JSON.parse(el.dataset.responsivePlacement || '{}');
+    }
+    catch {
+        return {
+            available: false,
+            error: 'DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID'
+        };
+    }
+    const contract = normalizeResponsivePlacementContract(raw, {
+        centerXPercent: ((x + (width / 2)) / Math.max(1, viewport.width)) * 100,
+        yPx: y,
+        widthPx: width,
+        heightPx: height
+    });
+    const activeRule = responsiveRuleForWidth(contract, viewport.width);
+    const geometry = resolveResponsivePlacementGeometry(contract, viewport.width);
+    return {
+        available: true,
+        version: contract.version,
+        viewportWidth: viewport.width,
+        activeRuleId: activeRule?.id || null,
+        activeRange: activeRule
+            ? { minWidth: activeRule.minWidth, maxWidth: activeRule.maxWidth }
+            : null,
+        geometry,
+        base: contract.base,
+        rules: contract.rules.map(rule => ({
+            id: rule.id,
+            minWidth: rule.minWidth,
+            maxWidth: rule.maxWidth,
+            geometry: rule.geometry
+        })),
+        fitsViewport: geometry.widthPx <= viewport.width
+    };
+}
 function widgetPlacementFeedback() {
     return Array.from(document.querySelectorAll('.canvas-item')).map((el, index) => {
         const workarea = el.closest('.layout-container, .layout-root');
@@ -679,6 +735,7 @@ function widgetPlacementFeedback() {
             behavior: behaviorOf(el),
             range: rangeOf(el),
             effects: effectsOf(el),
+            responsivePlacement: responsivePlacementFeedback(el),
             styleSource: styleSourceState(el),
             bounds: elementBounds(el)
         };
@@ -784,6 +841,10 @@ function designerFeedbackWarnings(visual, layoutNodes, widgets) {
         const bounds = widget.bounds;
         return bounds && (!bounds.width || !bounds.height);
     });
+    const invalidResponsivePlacements = widgets.filter(widget => {
+        const responsivePlacement = widget.responsivePlacement;
+        return responsivePlacement?.error === 'DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID';
+    });
     if (!hasLayoutRoot || layoutNodes.length === 0) {
         warnings.push({
             code: 'DESIGNER_AGENT_FEEDBACK_NO_LAYOUT_ROOT',
@@ -804,6 +865,14 @@ function designerFeedbackWarnings(visual, layoutNodes, widgets) {
             severity: 'warning',
             message: 'One or more widget placements reported zero-size bounds.',
             count: zeroSizeWidgets.length
+        });
+    }
+    if (invalidResponsivePlacements.length > 0) {
+        warnings.push({
+            code: 'DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID',
+            severity: 'warning',
+            message: 'One or more widget responsive-placement contracts could not be parsed.',
+            count: invalidResponsivePlacements.length
         });
     }
     if (!visual.available) {
@@ -843,6 +912,7 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
             visualPreview: Boolean(visual.available),
             runtimeLivePreview: true,
             stableBounds: true,
+            responsivePlacementRanges: true,
             objectSnapGuides: true,
             publishingCenter: true
         },
@@ -850,6 +920,7 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
             width: builderViewport.width,
             presetId: builderViewport.presetId,
             zoom: builderViewport.zoom,
+            zoomMode: builderViewport.zoomMode,
             browserWidth: window.innerWidth,
             browserHeight: window.innerHeight,
             devicePixelRatio: window.devicePixelRatio || 1
@@ -878,6 +949,13 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
         warnings
     };
 }
+function hasStageHudForElement(el) {
+    const instanceId = el.dataset.instanceId || el.id || '';
+    if (!instanceId)
+        return false;
+    return Array.from(document.querySelectorAll('.widget-action-bar > .scene-stage-hud'))
+        .some(hud => hud.dataset.instanceId === instanceId);
+}
 function behaviorElementNode(el, index, activeSceneId = '') {
     const effects = effectsOf(el);
     const behavior = behaviorOf(el);
@@ -900,7 +978,7 @@ function behaviorElementNode(el, index, activeSceneId = '') {
             badge: Boolean(el.querySelector(':scope > .scene-behavior-badge')),
             range: Boolean(el.querySelector(':scope > .scene-behavior-range-cue')),
             effectGuide: Boolean(el.querySelector(':scope > .scene-stage-effect-guide')),
-            stageHud: Boolean(el.querySelector(':scope > .scene-stage-hud'))
+            stageHud: hasStageHudForElement(el)
         }
     };
 }
@@ -992,6 +1070,7 @@ function selectionState() {
         range: rangeOf(selected),
         effects,
         effectCount: effects.length,
+        responsivePlacement: responsivePlacementFeedback(selected),
         bounds: elementBounds(selected),
         label: textOf(selected.querySelector('.canvas-item-content'), selected.dataset.widgetId || 'Selected element')
     };
@@ -1221,6 +1300,7 @@ export async function buildDesignerAgentSnapshot(context = { reason: 'manual' })
             viewportWidth: builderViewport.width,
             viewportPreset: builderViewport.presetId,
             viewportZoom: builderViewport.zoom,
+            viewportZoomMode: builderViewport.zoomMode,
             browserViewportWidth: window.innerWidth,
             browserViewportHeight: window.innerHeight,
             visualPreviewAvailable: Boolean(visual.available),

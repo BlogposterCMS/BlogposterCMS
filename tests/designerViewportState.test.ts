@@ -6,6 +6,7 @@ import {
   getBuilderViewportState,
   hydrateBuilderViewportState,
   resetBuilderViewportStateForTests,
+  setBuilderFitZoom,
   setBuilderViewportPreset,
   setBuilderViewportWidth,
   setBuilderZoom,
@@ -34,6 +35,8 @@ describe('Designer viewport state', () => {
       presetId: 'custom'
     });
     expect(setBuilderZoom(135)).toMatchObject({ zoom: 135 });
+    expect(getBuilderViewportState().zoomMode).toBe('manual');
+    expect(setBuilderFitZoom(92)).toMatchObject({ zoom: 92, zoomMode: 'fit' });
 
     expect(snapshots.at(-1)).toEqual(getBuilderViewportState());
     expect(JSON.parse(window.localStorage.getItem('blogposter.designer.viewport.v1') || '{}')).toEqual(
@@ -79,7 +82,8 @@ describe('Designer viewport state', () => {
       value: {
         width: 940,
         presetId: 'custom',
-        zoom: 125
+        zoom: 125,
+        zoomMode: 'fit'
       }
     });
     getItem.mockRestore();

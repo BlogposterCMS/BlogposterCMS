@@ -26,6 +26,9 @@
     <button id="previewLayoutBtn" class="button header-icon-btn builder-preview-btn" type="button" aria-label="Preview" title="Preview">
       <img src="/assets/icons/play.svg" class="icon" alt="" />
     </button>
+    <button id="globalDesignSettingsBtn" class="button header-icon-btn builder-design-settings-btn" type="button" aria-label="Global design" title="Global design">
+      <img src="/assets/icons/settings.svg" class="icon" alt="" />
+    </button>
     <button id="viewportControlBtn" class="button header-icon-btn builder-viewport-btn" type="button" aria-label="Viewport" title="Viewport">
       <img src="/assets/icons/monitor.svg" class="icon" alt="" />
     </button>
@@ -40,19 +43,37 @@
     </button>
   </div>
   <div class="viewport-slider">
-    <div class="scene-device-switcher builder-header-viewport-presets" role="group" aria-label="Viewport presets">
-      <button type="button" class="active" data-builder-viewport-preset="desktop" aria-label="Desktop" aria-pressed="true">
-        <img src="/assets/icons/monitor.svg" alt="" class="icon" />
-      </button>
-      <button type="button" data-builder-viewport-preset="tablet" aria-label="Tablet" aria-pressed="false">
-        <img src="/assets/icons/tablet.svg" alt="" class="icon" />
-      </button>
-      <button type="button" data-builder-viewport-preset="mobile" aria-label="Mobile" aria-pressed="false">
-        <img src="/assets/icons/smartphone.svg" alt="" class="icon" />
-      </button>
+    <div class="viewport-control-heading">
+      <span>Viewport</span>
+      <strong class="viewport-value"></strong>
     </div>
-    <input type="range" class="viewport-range" min="320" max="3840" step="10" aria-label="Builder viewport width" />
-    <span class="viewport-value"></span>
+    <div class="scene-device-switcher builder-header-viewport-presets" role="group" aria-label="Viewport presets">
+      <button type="button" class="active" data-builder-viewport-preset="desktop" aria-label="Desktop" aria-pressed="true"><img src="/assets/icons/monitor.svg" alt="" class="icon" /></button>
+      <button type="button" data-builder-viewport-preset="tablet" aria-label="Tablet" aria-pressed="false"><img src="/assets/icons/tablet.svg" alt="" class="icon" /></button>
+      <button type="button" data-builder-viewport-preset="mobile" aria-label="Mobile" aria-pressed="false"><img src="/assets/icons/smartphone.svg" alt="" class="icon" /></button>
+    </div>
+    <div class="viewport-width-band">
+      <input type="range" class="viewport-range" min="320" max="3840" step="10" aria-label="Builder viewport width" />
+      <div class="responsive-rule-markers" aria-hidden="true"></div>
+    </div>
+    <div class="responsive-validity">
+      <div class="responsive-validity-heading">
+        <span>Selected change applies</span>
+        <output class="responsive-validity-value">1025–3840px</output>
+      </div>
+      <div class="responsive-validity-band" style="--responsive-range-start: 20%; --responsive-range-end: 100%;">
+        <span class="responsive-validity-track" aria-hidden="true"></span>
+        <span class="responsive-validity-active" aria-hidden="true"></span>
+        <input type="range" class="responsive-range-min" min="320" max="3840" step="1" value="1025" aria-label="Responsive range start" />
+        <input type="range" class="responsive-range-max" min="320" max="3840" step="1" value="3840" aria-label="Responsive range end" />
+      </div>
+      <div class="responsive-validity-actions" role="group" aria-label="Responsive range shortcuts">
+        <button type="button" data-responsive-scope="lower">Up to here</button>
+        <button type="button" data-responsive-scope="range">Range</button>
+        <button type="button" data-responsive-scope="higher">From here</button>
+        <button type="button" data-responsive-scope="all">All</button>
+      </div>
+    </div>
   </div>
   <div class="builder-options-menu">
     <label class="menu-pro"><input type="checkbox" class="pro-toggle" checked /> Pro Mode</label>

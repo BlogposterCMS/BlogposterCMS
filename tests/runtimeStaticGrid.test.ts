@@ -79,7 +79,8 @@ describe('runtimeStaticGrid', () => {
       columnWidth: 1,
       cellHeight: 1,
       columns: Infinity,
-      rows: Infinity
+      rows: Infinity,
+      preservePixelWidgetSize: true
     });
     expect(result.gridEl?.style.height).toBe('200px');
     const wrapper = target.querySelector<HTMLElement>('.canvas-item');

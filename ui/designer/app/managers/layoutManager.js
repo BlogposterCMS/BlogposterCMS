@@ -2,6 +2,14 @@ import { getWidgetIcon } from '../renderer/renderUtils.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachResizeButton } from '../renderer/widgetActions.js';
 import { attachOptionsMenu } from '../widgets/widgetMenu.js';
 import { renderWidget } from '../widgets/widgetRenderer.js';
+import { getBuilderViewportState } from '/ui/designer/app/renderer/viewportState.js';
+import {
+  normalizeResponsivePlacementContract,
+  projectResponsiveHorizontalPosition,
+  resolveResponsivePlacementGeometry
+} from '/ui/shared/layout/responsivePlacement.js';
+
+const LEGACY_RESPONSIVE_BASE_WIDTH = 1280;
 
 function parseEffects(value) {
   if (!value) return [];
@@ -66,6 +74,29 @@ function writePersistedPercentBounds(el, bounds) {
   if (bounds.yPercent !== null) el.dataset.yPercent = String(bounds.yPercent);
   if (bounds.wPercent !== null) el.dataset.wPercent = String(bounds.wPercent);
   if (bounds.hPercent !== null) el.dataset.hPercent = String(bounds.hPercent);
+}
+
+function geometryFallbackFromLegacyBounds(percentBounds, item, cols, rows, cellH) {
+  const widthPx = percentBounds.wPercent !== null
+    ? Math.max(1, (percentBounds.wPercent / 100) * cols)
+    : Math.max(1, Number(item.w) || 4);
+  const heightPx = percentBounds.hPercent !== null
+    ? Math.max(1, (percentBounds.hPercent / 100) * rows * cellH)
+    : Math.max(1, Number(item.h) || 100);
+  const xPx = percentBounds.xPercent !== null
+    ? (percentBounds.xPercent / 100) * cols
+    : Math.max(0, Number(item.x) || 0);
+  const yPx = percentBounds.yPercent !== null
+    ? (percentBounds.yPercent / 100) * rows * cellH
+    : Math.max(0, Number(item.y) || 0) * cellH;
+  return {
+    centerXPercent: ((xPx + (widthPx / 2)) / Math.max(1, cols)) * 100,
+    yPx,
+    widthPx,
+    heightPx,
+    minWidthPx: Math.max(1, Number(item.minW) || 1),
+    minHeightPx: Math.max(1, Number(item.minH) || 1)
+  };
 }
 
 function readStyleSourceDataset(el) {
@@ -181,20 +212,34 @@ export function applyLayout(layout, {
       wPercent: readPercentValue(item, ['wPercent', 'w_percent']),
       hPercent: readPercentValue(item, ['hPercent', 'h_percent'])
     };
+    const fallbackGeometry = geometryFallbackFromLegacyBounds(
+      percentBounds,
+      item,
+      LEGACY_RESPONSIVE_BASE_WIDTH,
+      rows,
+      cellH
+    );
+    const responsivePlacement = normalizeResponsivePlacementContract(
+      item.responsivePlacement || itemMeta.responsivePlacement,
+      fallbackGeometry
+    );
+    const viewportWidth = getBuilderViewportState().width || cols;
+    const geometry = resolveResponsivePlacementGeometry(responsivePlacement, viewportWidth);
     // CanvasGrid must see persisted percent bounds before makeWidget(), otherwise
     // a not-yet-measured canvas can rewrite saved geometry into tiny values.
     writePersistedPercentBounds(wrapper, percentBounds);
-    const x = percentBounds.xPercent !== null ? Math.round((percentBounds.xPercent / 100) * cols) : (item.x ?? 0);
-    const y = percentBounds.yPercent !== null ? Math.round((percentBounds.yPercent / 100) * rows) : (item.y ?? 0);
-    const w = percentBounds.wPercent !== null ? Math.max(1, Math.round((percentBounds.wPercent / 100) * cols)) : (item.w ?? 4);
-    const h = percentBounds.hPercent !== null ? Math.max(1, Math.round((percentBounds.hPercent / 100) * rows)) : (item.h ?? DEFAULT_ROWS);
+    wrapper.dataset.responsivePlacement = JSON.stringify(responsivePlacement);
+    const w = Math.max(1, Math.round(geometry.widthPx));
+    const h = Math.max(1, Math.round(geometry.heightPx / cellH));
+    const x = Math.round(projectResponsiveHorizontalPosition(geometry, viewportWidth));
+    const y = Math.max(0, Math.round(geometry.yPx / cellH));
     wrapper.dataset.x = x;
     wrapper.dataset.y = y;
     wrapper.style.zIndex = layerIndex.toString();
     wrapper.setAttribute('gs-w', w);
     wrapper.setAttribute('gs-h', h);
-    wrapper.setAttribute('gs-min-w', 1);
-    wrapper.setAttribute('gs-min-h', DEFAULT_ROWS);
+    wrapper.setAttribute('gs-min-w', Math.max(1, Math.round(geometry.minWidthPx || 1)));
+    wrapper.setAttribute('gs-min-h', Math.max(1, Math.round((geometry.minHeightPx || 1) / cellH)));
     const content = document.createElement('div');
     content.className = 'canvas-item-content builder-themed';
     content.innerHTML = `${getWidgetIcon(widgetDef, iconMap)}<span>${widgetDef.metadata?.label || widgetDef.id}</span>`;
@@ -237,6 +282,13 @@ export function getItemData(el, codeMap) {
   if (styleSource) meta.styleSource = styleSource;
   const effects = parseEffects(el.dataset.effects);
   if (effects.length) meta.effects = effects;
+  if (el.dataset.responsivePlacement) {
+    try {
+      meta.responsivePlacement = JSON.parse(el.dataset.responsivePlacement);
+    } catch (error) {
+      console.warn('DESIGNER_RESPONSIVE_PLACEMENT_SERIALIZE_FAILED', error);
+    }
+  }
   if (Object.keys(meta).length) code.meta = meta;
   return {
     widgetId: el.dataset.widgetId,

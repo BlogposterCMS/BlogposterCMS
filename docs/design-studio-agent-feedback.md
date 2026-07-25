@@ -17,7 +17,8 @@ The feedback block is versioned and should expose:
   `designRef`, Style Source metadata and visible bounds.
 - `widgetPlacements`: stable widget instance ids, widget ids, scene/workarea
   ids, selection, behavior, ranges, effects, Style Source metadata and visible
-  bounds plus exact edit-grid coordinates and z-index.
+  bounds plus exact edit-grid coordinates, z-index and responsive placement
+  base/range rules with fixed-pixel geometry.
 - `styleSources`: source, follower and disabled relationships for containers
   and widget placements.
 - `selection`: selected object id, widget id, scene id, behavior/range/effect
@@ -32,12 +33,22 @@ The feedback block is versioned and should expose:
 - `publishing`: whether the Publishing panel is available/open, its active slug,
   usage status, page usage count, published-bundle state and visible usage
   entries.
-- `viewport` and `visual`: shared Builder width, preset and zoom, separate
+- `viewport` and `visual`: shared Builder width, preset, zoom and zoom mode, separate
   browser-frame dimensions, device pixel ratio and optional stage-preview
   metadata.
 - `warnings`: searchable `DESIGNER_AGENT_FEEDBACK_*` entries when a structured
   adapter, command port, layout root, bounds signal or visual preview is
   missing.
+
+Malformed responsive placement metadata produces
+`DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID`; the surface keeps the
+rest of the snapshot readable and never asks an agent to infer the missing
+geometry from DOM scraping.
+
+For a selected element, `behaviorMap.elements[].cues.stageHud` reports the
+Behavior controls embedded in the shared widget action bar. The control is
+associated through the stable widget instance id; agents must not infer the
+selection from toolbar geometry or DOM overlap.
 
 The snapshot tree keeps the stable `sections` id for compatibility, but the
 user-facing label is `Scenes`. These entries represent storyboard-style Design
@@ -90,6 +101,7 @@ behind the existing AgentManager/AppLoader command transport:
 - `scene.add`, `scene.select`, `scene.update`, `scene.move`, `scene.delete`
 - `insert.element`, `element.select`, `element.update`,
   `element.geometry.set`, `element.move`, `element.resize`,
+  `element.responsiveRange.set`,
   `element.zIndex.set`, `element.duplicate`, `element.delete`
 - `text.update`, `behavior.set`, `range.set`, `effect.set`
 - `container.create`, `container.move`, `container.delete`,
@@ -100,9 +112,17 @@ behind the existing AgentManager/AppLoader command transport:
   `sitePresets.delete`
 
 The geometry contract uses the same edit-grid units returned as
-`widgetPlacements[].grid`; persisted/runtime percentage bounds remain visible
-under `bounds`. Empty direct `fontFamily` or `color` values restore the active
-Font Package or Color Scheme default.
+`widgetPlacements[].grid`. `widgetPlacements[].responsivePlacement` identifies
+the fixed-pixel base geometry, the active viewport rule and every named width
+range. `fitsViewport` reports whether the active fixed width fits completely;
+a wider element is expected to overflow symmetrically until an author or agent
+adds a smaller width-range override. Legacy percentage bounds remain available
+for compatibility. Empty direct `fontFamily` or `color` values restore the
+active Font Package or Color Scheme default.
+
+Selection outlines and resize handles are presentation-only. Their hit targets
+may be refined without changing the stable selected-object ids, grid geometry
+or visible `bounds` exposed through the existing feedback contract.
 
 When sandboxed cross-origin stylesheets prevent a pixel capture, the agent
 surface publishes a same-document PNG structure preview drawn from stable

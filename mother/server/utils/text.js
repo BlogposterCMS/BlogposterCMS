@@ -22,18 +22,40 @@ function escapeHtml(str) {
   }[c]));
 }
 
-function injectDevBanner(html) {
-  if (process.env.NODE_ENV !== 'production') {
-    return html.replace(
-      '</body>',
-      '<script type="module" src="/build/devBanner.js"></script></body>'
-    );
+function isDevelopmentHtmlInjectionEnabled() {
+  return process.env.APP_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'test';
+}
+
+function injectScriptBeforeBody(html, scriptTag) {
+  if (html.includes(scriptTag)) return html;
+  if (html.includes('</body>')) {
+    return html.replace('</body>', `${scriptTag}</body>`);
   }
-  return html;
+  return `${html}${scriptTag}`;
+}
+
+function injectDevBanner(html) {
+  if (!isDevelopmentHtmlInjectionEnabled()) return html;
+  return injectScriptBeforeBody(
+    html,
+    '<script type="module" src="/build/devBanner.js"></script>'
+  );
+}
+
+function injectDevReload(html) {
+  if (!isDevelopmentHtmlInjectionEnabled()) return html;
+  return injectScriptBeforeBody(
+    html,
+    '<script type="module" src="/build/devReload.js"></script>'
+  );
 }
 
 module.exports = {
   escapeHtml,
   injectDevBanner,
+  injectDevReload,
+  isDevelopmentHtmlInjectionEnabled,
   sanitizeSlug
 };

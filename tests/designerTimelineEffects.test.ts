@@ -117,7 +117,7 @@ describe('designer timeline effects preview', () => {
     expect(lanes[1].classList.contains('active')).toBe(true);
   });
 
-  it('syncs a stage preview marker with the timeline progress', () => {
+  it('syncs a contextual stage preview marker with motion progress', () => {
     document.body.innerHTML = '';
     const footer = document.createElement('footer');
     const guides = document.createElement('div');
@@ -126,7 +126,10 @@ describe('designer timeline effects preview', () => {
     const content = document.createElement('div');
 
     guides.className = 'scene-viewport-guides';
-    item.className = 'canvas-item';
+    item.className = 'canvas-item selected';
+    item.dataset.effects = JSON.stringify([
+      { id: 'moveY', enabled: true, start: 0, end: 100 }
+    ]);
     content.className = 'canvas-item-content';
     item.appendChild(content);
     gridEl.appendChild(item);
@@ -136,6 +139,8 @@ describe('designer timeline effects preview', () => {
 
     const marker = guides.querySelector<HTMLElement>('.scene-preview-marker')!;
     expect(marker).toBeTruthy();
+    expect(guides.dataset.motionPathActive).toBe('true');
+    expect(guides.getAttribute('aria-hidden')).toBe('false');
     expect(marker.dataset.previewProgress).toBe('50');
     expect(marker.style.getPropertyValue('--scene-preview-progress')).toBe('50%');
 
@@ -146,6 +151,25 @@ describe('designer timeline effects preview', () => {
     expect(marker.dataset.previewProgress).toBe('75');
     expect(marker.style.getPropertyValue('--scene-preview-progress')).toBe('75%');
     expect(marker.textContent).toBe('75%');
+  });
+
+  it('keeps scene motion guides hidden for a static selection', () => {
+    document.body.innerHTML = '';
+    const footer = document.createElement('footer');
+    const guides = document.createElement('div');
+    const gridEl = document.createElement('div');
+    const item = document.createElement('div');
+
+    guides.className = 'scene-viewport-guides';
+    item.className = 'canvas-item selected';
+    gridEl.appendChild(item);
+    document.body.append(guides, gridEl, footer);
+
+    buildLayoutBar({ footer, grid: null, gridEl });
+
+    expect(guides.dataset.motionPathActive).toBe('false');
+    expect(guides.getAttribute('aria-hidden')).toBe('true');
+    expect(guides.querySelector('.scene-preview-marker')).toBeNull();
   });
 
   it('keeps timeline controls inactive until an element is selected', () => {
@@ -160,14 +184,16 @@ describe('designer timeline effects preview', () => {
     buildLayoutBar({ footer, grid: null, gridEl });
     const range = footer.querySelector<HTMLInputElement>('.scene-timeline-range')!;
     const play = footer.querySelector<HTMLButtonElement>('.scene-timeline-play')!;
-    const zoomOut = footer.querySelector<HTMLButtonElement>('.zoom-controls button:first-child')!;
-    const zoomIn = footer.querySelector<HTMLButtonElement>('.zoom-controls button:last-child')!;
+    const zoomOut = footer.querySelector<HTMLButtonElement>('[aria-label="Zoom out"]')!;
+    const zoomIn = footer.querySelector<HTMLButtonElement>('[aria-label="Zoom in"]')!;
+    const zoomFit = footer.querySelector<HTMLButtonElement>('[aria-label="Fit canvas to workspace"]')!;
 
     expect(range.disabled).toBe(true);
     expect(play.disabled).toBe(true);
     expect(play.getAttribute('aria-label')).toBe('Play scroll preview');
     expect(zoomOut.getAttribute('aria-label')).toBe('Zoom out');
     expect(zoomIn.getAttribute('aria-label')).toBe('Zoom in');
+    expect(zoomFit.textContent).toBe('Fit');
     expect(footer.querySelector('.scene-timeline-label')?.textContent).toBe('Select an element');
 
     item.classList.add('selected');

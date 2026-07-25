@@ -1,13 +1,10 @@
 {
   "watch": [
     "app.js",
-    "apps",
     "config",
     "library",
     "modules",
     "mother",
-    "public",
-    "tests",
     "widgets"
   ],
   "ext": "js,json,mjs,cjs,ts",
@@ -16,6 +13,9 @@
     "**/*.sqlite",
     "install.lock",
     "server.log",
+    "public/build/**/*",
+    "public/assets/css/**/*",
+    "apps/**/assets/css/**/*",
     "mother/modules/notificationManager/integrationsRegistry.json",
     "mother/modules/notificationManager/**/*.log",
     "mother/modules/databaseManager/placeholders/placeholderData.json"

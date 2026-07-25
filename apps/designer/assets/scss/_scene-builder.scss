@@ -220,6 +220,177 @@ body.builder-mode .builder-row {
   box-shadow: var(--scene-shadow);
 }
 
+.builder-header .viewport-slider {
+  width: min(430px, calc(100vw - 24px));
+  min-width: 360px;
+  padding: 14px;
+  box-sizing: border-box;
+  background: var(--designer-surface, #fff);
+  color: var(--scene-ink);
+}
+
+.builder-header .viewport-control-heading,
+.builder-header .responsive-validity-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--scene-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.builder-header .viewport-control-heading strong,
+.builder-header .responsive-validity-value {
+  color: var(--scene-ink);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.builder-header .builder-header-viewport-presets {
+  margin-top: 10px;
+}
+
+.viewport-width-band {
+  position: relative;
+  margin-top: 10px;
+  padding-bottom: 7px;
+}
+
+.builder-header .viewport-width-band .viewport-range {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--scene-accent);
+}
+
+.responsive-rule-markers {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 0;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.responsive-rule-markers span {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--scene-accent) 64%, #fff);
+}
+
+.responsive-validity {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--scene-border);
+}
+
+.responsive-validity.is-disabled {
+  opacity: 0.48;
+}
+
+.responsive-validity-band {
+  position: relative;
+  height: 28px;
+  margin-top: 7px;
+}
+
+.responsive-validity-track,
+.responsive-validity-active {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 12px;
+  height: 4px;
+  border-radius: 999px;
+}
+
+.responsive-validity-track {
+  background: #e6e8ee;
+}
+
+.responsive-validity-active {
+  left: var(--responsive-range-start, 0%);
+  right: calc(100% - var(--responsive-range-end, 100%));
+  background: var(--scene-accent);
+}
+
+.responsive-validity-band input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.responsive-validity-band input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+
+.responsive-validity-band input[type="range"]::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  appearance: none;
+  border: 2px solid var(--scene-accent);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(18, 21, 34, 0.13);
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+
+.responsive-validity-band input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: transparent;
+}
+
+.responsive-validity-band input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--scene-accent);
+  border-radius: 50%;
+  background: #fff;
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+
+.responsive-validity-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.responsive-validity-actions button {
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--scene-border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--scene-muted);
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.responsive-validity-actions button:hover,
+.responsive-validity-actions button:focus-visible {
+  border-color: color-mix(in srgb, var(--scene-accent) 34%, var(--scene-border));
+  background: var(--scene-accent-soft);
+  color: var(--scene-accent);
+  outline: none;
+}
+
 /* Left rail */
 .builder-sidebar {
   width: var(--sidebar-width, 58px);
@@ -550,6 +721,24 @@ body.builder-mode .builder-row {
   gap: 8px;
   min-height: 52px;
   padding: 0;
+}
+
+.scene-inspector-layer-list {
+  display: grid;
+  gap: 4px;
+  max-height: 248px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.scene-layer-settings .scene-group-title-row small {
+  max-width: 120px;
+  overflow: hidden;
+  color: var(--scene-muted);
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .scene-layer-select {
@@ -1913,7 +2102,7 @@ body.builder-mode #builderMain {
 body.builder-mode #builderViewport {
   position: relative;
   padding: 54px 52px 118px;
-  background: var(--scene-surface-soft);
+  background: #eceef2;
   // Keep native scrollbars owned by the fixed viewport edge. Centering belongs
   // to the zoom sizer so the vertical bar does not drift with canvas width.
   display: block;
@@ -1926,10 +2115,10 @@ body.builder-mode #builderViewport .canvas-zoom-sizer {
   width: 100%;
   height: 100%;
   margin: 0 auto;
-  max-width: 1040px;
-  max-height: 620px;
-  min-height: 440px;
-  border-radius: 8px;
+  max-width: none;
+  max-height: none;
+  min-height: 1px;
+  border-radius: 10px;
   overflow: visible;
 }
 
@@ -2099,10 +2288,13 @@ body.builder-mode #builderViewport .canvas-zoom-sizer {
 
 body.builder-mode #layoutRoot {
   z-index: auto;
-  border: 1px solid var(--scene-border-strong);
-  border-radius: 8px;
+  border: 0;
+  outline: 1px solid rgba(18, 21, 34, 0.14);
+  border-radius: 10px;
   background: #fff;
-  box-shadow: var(--scene-shadow);
+  box-shadow:
+    0 1px 2px rgba(18, 21, 34, 0.12),
+    0 16px 42px rgba(18, 21, 34, 0.16);
   // Selection chrome and resize handles must be able to render above the
   // scene viewport guide overlay and outside exact canvas edges.
   overflow: visible;
@@ -2211,12 +2403,15 @@ body.builder-mode .layout-container[data-workarea='true']::after {
   pointer-events: none;
   z-index: 4;
   color: var(--scene-faint);
-  transition: opacity 0.14s ease;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease, visibility 0s linear 0.14s;
 }
 
-body.builder-mode:has(.canvas-item.selected) .scene-viewport-guides,
-body.builder-mode:has(.canvas-item.editing) .scene-viewport-guides {
+.scene-viewport-guides[data-motion-path-active="true"] {
   opacity: 0.32;
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .scene-viewport-guides::after {
@@ -2350,17 +2545,35 @@ body.builder-mode:has(.canvas-item.editing) .scene-viewport-guides {
 
 body.builder-mode .canvas-item {
   border-radius: 8px;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  // CanvasGrid owns transform for pointer-accurate positioning. Animating it
+  // here makes each pointer update ease toward the cursor instead of tracking it.
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-body.builder-mode .canvas-item:hover,
-body.builder-mode .canvas-item.selected {
+body.builder-mode .canvas-item.dragging,
+body.builder-mode .canvas-item.is-dragging {
+  transition: none;
+  will-change: transform;
+}
+
+body.builder-mode .canvas-item:hover:not(.selected) {
   border-color: var(--scene-accent);
-  box-shadow: 0 14px 34px rgba(102, 92, 246, 0.12);
+  box-shadow: none;
+  transform: none;
 }
 
 body.builder-mode .canvas-item.selected {
   overflow: visible;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  // Selection must not move or recolor the authored content.
+  transform: none;
+}
+
+body.builder-mode .canvas-item.selected::before {
+  opacity: 0;
+  background: none;
 }
 
 body.builder-mode .canvas-item.inactive-scene {
@@ -2368,82 +2581,24 @@ body.builder-mode .canvas-item.inactive-scene {
 }
 
 .scene-stage-hud {
-  --scene-range-start: 10%;
-  --scene-range-end: 60%;
-  position: absolute;
-  left: 50%;
-  top: -48px;
-  max-width: min(380px, calc(100vw - 32px), calc(100% + 190px));
-  min-height: 34px;
-  padding: 5px;
-  transform: translateX(-50%);
-  border: 1px solid rgba(18, 21, 34, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 42px rgba(18, 21, 34, 0.12);
-  backdrop-filter: blur(18px);
+  min-height: 32px;
+  padding-right: 5px;
+  border-right: 1px solid rgba(18, 21, 34, 0.1);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  flex: 0 0 auto;
   pointer-events: auto;
-  z-index: 8;
-}
-
-body.builder-mode .canvas-item:not(.selected) > .scene-stage-hud {
-  display: none;
 }
 
 .scene-stage-hud__summary {
-  min-width: 0;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 7px;
-  background: #f7f8fb;
-  color: var(--scene-ink);
-  display: inline-grid;
-  grid-template-columns: auto minmax(36px, auto) auto 44px auto;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.scene-stage-hud__summary strong,
-.scene-stage-hud__summary small,
-.scene-stage-hud__summary em {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.scene-stage-hud__summary small,
-.scene-stage-hud__summary em {
-  color: var(--scene-muted);
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-.scene-stage-hud__summary i {
-  position: relative;
-  width: 44px;
-  height: 4px;
-  border-radius: 999px;
-  background: #e4e7f0;
-  overflow: hidden;
-}
-
-.scene-stage-hud__summary i::after {
-  content: "";
   position: absolute;
-  left: var(--scene-range-start);
-  right: calc(100% - var(--scene-range-end));
-  top: 0;
-  bottom: 0;
-  border-radius: inherit;
-  background: var(--scene-accent-line);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .scene-stage-hud .icon {
@@ -2489,7 +2644,6 @@ body.builder-mode .canvas-item:not(.selected) > .scene-stage-hud {
   transform: translateY(1px);
 }
 
-body.builder-mode .canvas-item.selected > .scene-stage-hud + .scene-behavior-badge,
 body.builder-mode .canvas-item.selected > .scene-behavior-badge {
   display: none;
 }
@@ -2637,6 +2791,11 @@ body.builder-mode .canvas-item.scene-behavior--pinned > .canvas-item-content {
   box-shadow: 0 18px 38px rgba(102, 92, 246, 0.1);
 }
 
+body.builder-mode .canvas-item.selected > .canvas-item-content {
+  background: transparent;
+  box-shadow: none;
+}
+
 .scene-effect-cue {
   position: absolute;
   right: 0;
@@ -2777,11 +2936,8 @@ body.builder-mode .canvas-item:not(.selected) > .scene-stage-effect-guide {
 }
 
 .bounding-box {
+  --bbox-handle-color: var(--scene-accent);
   border-color: var(--scene-accent);
-}
-
-.bounding-box .bbox-handle {
-  background: var(--scene-accent);
 }
 
 .builder-version {
@@ -2940,6 +3096,8 @@ body.builder-mode .builder-footer .layout-bar {
 
 .builder-footer .zoom-controls {
   margin-left: 0;
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -2993,6 +3151,23 @@ body.builder-mode .builder-footer .layout-bar {
     --scene-sidebar-flyout-width: 224px;
     --scene-inspector-width: 268px;
   }
+}
+
+.builder-footer .zoom-controls .zoom-fit {
+  width: auto;
+  min-width: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--scene-border);
+  border-radius: 8px;
+}
+
+.builder-footer .zoom-controls .zoom-fit.active,
+.builder-footer .zoom-controls .zoom-fit:hover,
+.builder-footer .zoom-controls .zoom-fit:focus-visible {
+  border-color: color-mix(in srgb, var(--scene-accent) 34%, var(--scene-border));
+  background: var(--scene-accent-soft);
+  color: var(--scene-accent);
+  outline: none;
 }
 
 @media (max-width: 980px) {

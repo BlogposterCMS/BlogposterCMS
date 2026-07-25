@@ -255,7 +255,9 @@ describe('dashboard studio styles', () => {
     expect(siteCss).toContain('clip-path: none');
     expect(siteCss).toContain('clip-path: inset(50%)');
     expect(inlineCreateCss).toContain('gap: var(--studio-inline-create-gap)');
-    expect(inlineCreateOpenCss).toContain('width: min(var(--studio-inline-create-width), calc(100vw - 128px))');
+    // Expanded Sass removes the redundant calc() wrapper while preserving the
+    // same CSS min() expression in the generated stylesheet.
+    expect(inlineCreateOpenCss).toContain('width: min(var(--studio-inline-create-width), 100vw - 128px)');
     expect(inlineCreateInputCss).toContain('height: var(--studio-control-size)');
     expect(inlineCreateInputCss).toContain('background-color: var(--studio-inline-create-input-surface)');
     expect(inlineCreateInputCss).toContain('box-shadow: var(--studio-inline-create-shadow)');
@@ -280,7 +282,7 @@ describe('dashboard studio styles', () => {
     expect(globalScss).toContain('a[data-external-link="true"]');
     expect(globalScss).toContain('content: "\\2197"');
     expect(externalLinkCss).toContain('text-decoration: none');
-    expect(externalLinkIconCss).toContain('content: "\\2197"');
+    expect(externalLinkIconCss).toContain('content: "↗"');
     expect(externalLinkIconCss).toContain('opacity: 0.7');
     expect(externalLinksEntryTs).toContain("import '../controls/externalLinks.js'");
     expect(externalLinksWrapper).toContain("../../../ui/shared/controls/externalLinks.js");
@@ -464,6 +466,17 @@ describe('dashboard studio styles', () => {
     const designerCss = readProjectFile('apps/designer/assets/css/designer.css');
     const designerApp = readProjectFile('ui/designer/app/index.ts');
     const themeModeSource = readProjectFile('ui/shell/theme/userColor.ts');
+    const canvasItemScss = readCssRule(sceneBuilderScss, 'body.builder-mode .canvas-item');
+    const draggingCanvasItemScss = readCssRule(
+      sceneBuilderScss,
+      'body.builder-mode .canvas-item.dragging,\nbody.builder-mode .canvas-item.is-dragging'
+    );
+    const canvasItemCss = designerCss.match(
+      /body\.builder-mode \.canvas-item\s*\{\s*border-radius:\s*8px;[^}]*\}/
+    )?.[0] ?? '';
+    const draggingCanvasItemCss = designerCss.match(
+      /body\.builder-mode \.canvas-item\.dragging,\s*body\.builder-mode \.canvas-item\.is-dragging\s*\{[^}]*transition:\s*none;[^}]*\}/
+    )?.[0] ?? '';
 
     expect(designerScss).toContain("@use '../../../../public/assets/scss/variables' as *");
     expect(designerScss).toContain('background: var(--designer-canvas)');
@@ -480,6 +493,10 @@ describe('dashboard studio styles', () => {
     );
     expect(themeModeSource).toContain('bindThemeModeStorageSync');
     expect(themeModeSource).toContain("event.key !== THEME_MODE_STORAGE_KEY");
+    expect(canvasItemScss).toContain('transition: border-color 0.16s ease, box-shadow 0.16s ease');
+    expect(canvasItemScss).not.toMatch(/transition:[^;]*transform/);
+    expect(draggingCanvasItemScss).toContain('transition: none');
+    expect(draggingCanvasItemScss).toContain('will-change: transform');
 
     expect(designerCss).toContain('--designer-surface: var(--studio-surface-solid)');
     expect(designerCss).toContain(':root:not([data-theme=light])');
@@ -487,5 +504,8 @@ describe('dashboard studio styles', () => {
     expect(designerCss).toContain('background: var(--designer-canvas)');
     expect(designerCss).toContain('background: var(--scene-surface-glass)');
     expect(designerCss).toContain('box-shadow: var(--designer-shadow-lift)');
+    expect(canvasItemCss).not.toMatch(/transition:[^;]*transform/);
+    expect(draggingCanvasItemCss).toContain('transition: none');
+    expect(draggingCanvasItemCss).toContain('will-change: transform');
   });
 });

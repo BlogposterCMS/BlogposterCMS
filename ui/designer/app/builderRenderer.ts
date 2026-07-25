@@ -45,6 +45,7 @@ import {
   createNativeElementPreset,
   getInsertPreset,
   getInsertToolItem,
+  getNativeElementMinSize,
   getNativeElementSize
 } from './widgets/nativeElementPresets.js';
 import { applyWidgetStyleSources } from './widgets/styleSourceSync.js';
@@ -72,6 +73,7 @@ import {
   setBuilderViewportWidth,
   setBuilderZoom
 } from './renderer/viewportState.js';
+import { normalizeResponsiveWidthRange } from '/ui/shared/layout/responsivePlacement.js';
 import {
   createSitePreset
 } from '/ui/shared/presets/sitePresets.js';
@@ -236,11 +238,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     { id: 'instant', title: 'Instant' }
   ];
   const sceneInspector = ensureSceneInspector();
-  const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layers', 'layout', 'colors', 'fonts']);
+  const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'design']);
   const SIDEBAR_TOOL_NAMES = new Set(['scroll', 'action']);
   const SIDEBAR_PANEL_BY_SELECTOR = [
     { selector: 'layout-panel', panel: 'layout' },
-    { selector: 'layer-preview', panel: 'layers' },
+    { selector: 'style-library-panel', panel: 'design' },
+    { selector: 'color-scheme-host', panel: 'design' },
+    { selector: 'font-packages-host', panel: 'design' },
     { selector: 'element-library', panel: 'insert' },
     { selector: 'scene-insert-group', panel: 'insert' },
     { selector: 'scene-insert-preset', panel: 'insert' },
@@ -554,8 +558,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function removeStageBehaviorHuds(exceptEl = null) {
-    gridEl?.querySelectorAll?.('.scene-stage-hud')?.forEach(hud => {
-      if (exceptEl && hud.closest('.canvas-item') === exceptEl) return;
+    const exceptId = exceptEl?.dataset?.instanceId || exceptEl?.id || '';
+    document.querySelectorAll('.scene-stage-hud').forEach(hud => {
+      if (exceptId && hud.dataset.instanceId === exceptId) return;
       hud.remove();
     });
   }
@@ -567,14 +572,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const effectSummary = enabledEffects.length
       ? `${enabledEffects.length} effect${enabledEffects.length === 1 ? '' : 's'}`
       : 'No effects';
-    let hud = el.querySelector(':scope > .scene-stage-hud');
+    let hud = actionBar.querySelector(':scope > .scene-stage-hud');
     if (!hud) {
       hud = document.createElement('div');
       hud.className = 'scene-stage-hud';
-      el.appendChild(hud);
+      // Behavior controls share the established selection toolbar instead of
+      // creating a second floating surface over the same canvas element.
+      actionBar.prepend(hud);
     }
+    hud.dataset.instanceId = el.dataset.instanceId || el.id || '';
     hud.dataset.behavior = behaviorDef.id;
     hud.dataset.effects = String(enabledEffects.length);
+    hud.setAttribute('aria-label', `${behaviorDef.title}, ${range.start}% to ${range.end}%, ${effectSummary}`);
     setRangeVars(hud, range);
     hud.innerHTML = `
       <span class="scene-stage-hud__summary">
@@ -1260,16 +1269,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   function syncInspectorScene(scene = getActiveScene()) {
     if (!sceneInspector || !scene) return;
-    const nameInput = sceneInspector.querySelector('.scene-section-name');
-    const bgInput = sceneInspector.querySelector('.scene-section-bg');
-    const bgSwatch = sceneInspector.querySelector('.scene-section-bg-swatch');
-    const background = getSceneBackground(scene);
-    if (nameInput && nameInput.value !== scene.title) nameInput.value = scene.title;
-    if (bgInput && bgInput.value !== background) bgInput.value = background;
-    if (bgSwatch) bgSwatch.style.backgroundColor = background;
-    sceneInspector.querySelectorAll('[data-scene-bg-preset]').forEach(btn => {
-      btn.classList.toggle('active', normalizeSceneColor(btn.dataset.sceneBgPreset) === background);
-    });
+    const sceneName = sceneInspector.querySelector('.scene-layer-scene-name');
+    if (sceneName) sceneName.textContent = scene.title;
   }
 
   function applySceneBackground(scene, value) {
@@ -1280,23 +1281,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     syncInspectorScene(scene);
     applyActiveSceneStyle();
     return background;
-  }
-
-  function applySceneSettingsFromInspector(persist = true) {
-    const scene = getActiveScene();
-    if (!sceneInspector || !scene) return;
-    const nameInput = sceneInspector.querySelector('.scene-section-name');
-    const bgInput = sceneInspector.querySelector('.scene-section-bg');
-    const nextTitle = String(nameInput?.value || '').trim();
-    if (nextTitle) {
-      scene.title = nextTitle;
-      updateSceneTitleReferences(scene.id, nextTitle);
-      syncSceneTitleDom(scene);
-    }
-    applySceneBackground(scene, bgInput?.value);
-    if (persist) requestSceneChangePersist();
-    if (!state.activeWidgetEl) updateSceneInspector(null);
-    renderSceneLayers();
   }
 
   function compactEffects(effects) {
@@ -1542,19 +1526,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         <button type="button" data-inspector-mode="style" role="tab" aria-selected="false">Style</button>
       </div>
 
-      <section class="scene-inspector-group scene-section-settings" data-inspector-panel="content">
-        <h3>Section</h3>
-        <label class="scene-select-field"><span>Name</span><input class="scene-section-name" value="" /></label>
-        <label class="scene-color-field scene-section-bg-field">
-          <span>Background</span>
-          <i class="scene-section-bg-swatch" aria-hidden="true"></i>
-          <input class="scene-section-bg" type="color" value="${DEFAULT_SCENE_BACKGROUND}" aria-label="Section background" />
-        </label>
-        <div class="scene-background-presets" aria-label="Background presets">
-          ${SCENE_BACKGROUND_PRESETS.map(color => `
-            <button type="button" data-scene-bg-preset="${color}" style="--scene-preset-color:${color}" aria-label="Use ${color} background"></button>
-          `).join('')}
+      <section class="scene-inspector-group scene-layer-settings" data-inspector-panel="content">
+        <div class="scene-group-title-row">
+          <h3>Layers</h3>
+          <small class="scene-layer-scene-name"></small>
         </div>
+        <div class="scene-inspector-layer-list" role="list" aria-label="Layers in active scene"></div>
       </section>
 
       <section class="scene-inspector-group" data-inspector-panel="content">
@@ -1753,13 +1730,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         });
         return;
       }
-      const bgPresetBtn = event.target.closest('[data-scene-bg-preset]');
-      if (bgPresetBtn) {
-        applySceneBackground(getActiveScene(), bgPresetBtn.dataset.sceneBgPreset);
-        requestSceneChangePersist();
-        updateSceneInspector(state.activeWidgetEl);
-        return;
-      }
       const galleryAddBtn = event.target.closest('[data-gallery-add-image]');
       if (galleryAddBtn) {
         addGalleryItem();
@@ -1791,11 +1761,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       }
     });
     inspector.addEventListener('input', event => {
-      const sceneSettingInput = event.target.closest?.('.scene-section-name, .scene-section-bg');
-      if (sceneSettingInput) {
-        applySceneSettingsFromInspector(true);
-        return;
-      }
       const nameInput = event.target.closest?.('.scene-element-name');
       if (nameInput) {
         if (state.activeWidgetEl) {
@@ -1883,12 +1848,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       beginRangeHandleDrag(event, handle, state.activeWidgetEl);
     });
     inspector.addEventListener('change', event => {
-      const sceneSettingInput = event.target.closest?.('.scene-section-name, .scene-section-bg');
-      if (sceneSettingInput) {
-        applySceneSettingsFromInspector(true);
-        renderSceneNavigation();
-        return;
-      }
       const galleryField = event.target.closest?.('[data-gallery-field]');
       if (galleryField) {
         updateGalleryField(galleryField);
@@ -1925,7 +1884,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         control.disabled = !el;
       });
     });
-    sceneInspector.querySelectorAll('[data-inspector-panel="content"]:not(.scene-section-settings)').forEach(panel => {
+    sceneInspector.querySelectorAll('[data-inspector-panel="content"]:not(.scene-layer-settings)').forEach(panel => {
       panel.setAttribute('aria-disabled', el ? 'false' : 'true');
       panel.querySelectorAll('button, input, select, textarea').forEach(control => {
         control.disabled = !el;
@@ -2053,8 +2012,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     return NATIVE_ELEMENT_TYPES.includes(type) ? type : '';
   }
 
-  function nativeElementSize(type) {
-    return getNativeElementSize(normalizeNativeElementType(type), DEFAULT_ROWS);
+  function nativeElementSize(type, variant = '') {
+    const nativeType = normalizeNativeElementType(type);
+    const size = getNativeElementSize(nativeType, DEFAULT_ROWS, variant);
+    const minSize = getNativeElementMinSize(nativeType, variant);
+    return { ...size, minW: minSize.w, minH: minSize.h };
   }
 
   function normalizeInsertPresetId(value) {
@@ -2453,10 +2415,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   function renderSceneLayers() {
-    const layerPanel = sidebarEl.querySelector('.layer-preview');
+    const layerPanel = sceneInspector?.querySelector('.scene-inspector-layer-list');
     if (!layerPanel) return;
-    const heading = layerPanel.querySelector('.scene-sidebar-heading');
-    layerPanel.querySelectorAll('.scene-layer-item').forEach(item => item.remove());
+    layerPanel.replaceChildren();
     const widgets = getSceneLayerStack().slice().reverse();
     renderSceneEmptyState(widgets);
     if (!widgets.length) {
@@ -2508,13 +2469,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           arrangeSceneWidget(widget, actionButton.dataset.layerAction);
           return;
         }
+        // Layer rows are a selection surface. Keep this click out of the
+        // document-level canvas deselection handler so the chosen item remains
+        // active after selecting it from the right inspector.
+        event.preventDefault();
+        event.stopPropagation();
         selectWidgetFromLayer(widget);
       });
       layerPanel.appendChild(item);
     });
-    if (heading && heading.parentElement !== layerPanel) {
-      layerPanel.prepend(heading);
-    }
   }
 
   function handleSceneNavigationClick(event) {
@@ -3101,12 +3064,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   // Allow overlapping widgets for layered layouts
   grid = initGrid(gridEl, state, selectWidget, {
     scrollContainer: gridViewportEl,
+    zoomTarget: layoutRoot,
     enableZoom: true
   });
-  const sizer = grid?.sizer;
-  if (sizer && layoutRoot) {
-    sizer.appendChild(layoutRoot);
-  }
   setDefaultWorkarea(layoutRoot);
   syncWorkspaceToWorkarea();
   layoutCtx.refreshContainerBars();
@@ -3115,7 +3075,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     setDefaultWorkarea(layoutRoot);
     syncWorkspaceToWorkarea();
   });
-  const { actionBar, select: baseSelectWidget } = createActionBar(null, grid, state, () => scheduleAutosave());
+  const {
+    actionBar,
+    select: baseSelectWidget,
+    refreshPosition: refreshActionBarPosition
+  } = createActionBar(null, grid, state, () => scheduleAutosave());
   function selectWidget(el) {
     baseSelectWidget(el);
     if (!el) {
@@ -3136,6 +3100,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     const selectedWidgetDef = allWidgets.find(w => w.id === el.dataset.widgetId);
     updateSceneInspector(el, selectedWidgetDef);
+    refreshActionBarPosition(el);
     renderSceneLayers();
     // Hide background toolbar when selecting a widget
     hideBgToolbar();
@@ -3147,6 +3112,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     setActiveElement(editable);
     if (editable) showToolbar();
     else hideToolbar();
+    // The text formatting toolbar is fixed below the header. Reposition once
+    // it is visible so the merged selection bar never renders on top of it.
+    refreshActionBarPosition(el);
     builderLogger.debug('selectWidget', { widgetId: el?.id, editableId: editable?.id });
   }
   const shouldAutosaveNow = () => Boolean(pageId && state.autosaveEnabled);
@@ -3178,10 +3146,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     beginRangeHandleDrag(event, handle, widget);
   });
 
-  gridEl.addEventListener('click', event => {
+  const handleStageBehaviorClick = event => {
     const behaviorButton = event.target.closest?.('[data-stage-behavior]');
     if (!behaviorButton) return;
-    const widget = behaviorButton.closest('.canvas-item');
+    const hud = behaviorButton.closest('.scene-stage-hud');
+    const activeId = state.activeWidgetEl?.dataset?.instanceId || state.activeWidgetEl?.id || '';
+    const widget = behaviorButton.closest('.canvas-item')
+      || (hud?.dataset?.instanceId === activeId ? state.activeWidgetEl : null);
     if (!widget) return;
     event.preventDefault();
     event.stopPropagation();
@@ -3194,9 +3165,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       state.activeWidgetEl.dataset.scrollEnd
     );
     updateSceneInspector(state.activeWidgetEl, allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId));
+    refreshActionBarPosition(state.activeWidgetEl);
     renderSceneLayers();
     if (pageId && state.autosaveEnabled) scheduleAutosave();
-  });
+  };
+  gridEl.addEventListener('click', handleStageBehaviorClick);
+  actionBar.addEventListener('click', handleStageBehaviorClick);
 
   function pulseElement(el) {
     if (!el?.classList) return;
@@ -3310,17 +3284,43 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     return { x, y };
   }
 
+  function normalizeSceneWidgetDimensions({ w, h, minW, minH }) {
+    const canvasWidth = Math.max(
+      1,
+      Number(grid?.options?.columns) || Number(gridEl?.clientWidth) || 1040
+    );
+    const width = Math.min(canvasWidth, Math.max(1, Math.round(Number(w) || 480)));
+    const height = Math.max(1, Math.round(Number(h) || 240));
+    return {
+      w: width,
+      h: height,
+      minW: Math.min(width, Math.max(1, Math.round(Number(minW) || 240))),
+      minH: Math.min(height, Math.max(1, Math.round(Number(minH) || 120)))
+    };
+  }
+
+  function defaultWidgetDimensions() {
+    return { w: 480, h: 240, minW: 240, minH: 120 };
+  }
+
   async function createSceneWidget(widgetDef, {
     x = 0,
     y = 0,
-    w = 4,
-    h = DEFAULT_ROWS,
+    w = 480,
+    h = 240,
+    minW = 240,
+    minH = 120,
     code = null,
     behavior = 'scroll',
     label = '',
     elementName = ''
   } = {}) {
     if (!widgetDef || !gridEl || !grid) return null;
+    const dimensions = normalizeSceneWidgetDimensions({ w, h, minW, minH });
+    w = dimensions.w;
+    h = dimensions.h;
+    minW = dimensions.minW;
+    minH = dimensions.minH;
     const instId = genId();
     const activeScene = getActiveScene();
     const wrapper = document.createElement('div');
@@ -3341,8 +3341,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     wrapper.style.zIndex = String(activeLayer);
     wrapper.setAttribute('gs-w', String(w));
     wrapper.setAttribute('gs-h', String(h));
-    wrapper.setAttribute('gs-min-w', '1');
-    wrapper.setAttribute('gs-min-h', String(DEFAULT_ROWS));
+    wrapper.setAttribute('gs-min-w', String(minW));
+    wrapper.setAttribute('gs-min-h', String(minH));
 
     const content = document.createElement('div');
     content.className = 'canvas-item-content builder-themed';
@@ -3414,13 +3414,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       return null;
     }
     await ensureDesignLayerForTool();
-    const size = preset.size || { w: 4, h: DEFAULT_ROWS };
+    const size = preset.size || defaultWidgetDimensions();
+    const minSize = preset.minSize || { w: size.minW || 240, h: size.minH || 120 };
     const pos = position || nextSceneInsertPosition(size.w, size.h);
     return createSceneWidget(widgetDef, {
       x: pos.x,
       y: pos.y,
       w: size.w,
       h: size.h,
+      minW: minSize.w,
+      minH: minSize.h,
       code: createPublicWidgetPresetCode(preset),
       label: preset.title,
       elementName: preset.title
@@ -3438,13 +3441,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       focusWidgetIcon(preset.keywords);
       return null;
     }
-    const size = nativeElementSize('text');
+    const size = {
+      ...preset.size,
+      minW: preset.minSize.w,
+      minH: preset.minSize.h
+    };
     const pos = position || nextSceneInsertPosition(size.w, size.h);
     return createSceneWidget(widgetDef, {
       x: pos.x,
       y: pos.y,
       w: size.w,
       h: size.h,
+      minW: size.minW,
+      minH: size.minH,
       code: preset.code,
       label: preset.label,
       elementName: preset.elementName
@@ -3462,13 +3471,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       focusWidgetIcon(preset.keywords);
       return null;
     }
-    const size = nativeElementSize('shape');
+    const size = {
+      ...preset.size,
+      minW: preset.minSize.w,
+      minH: preset.minSize.h
+    };
     const pos = position || nextSceneInsertPosition(size.w, size.h);
     return createSceneWidget(widgetDef, {
       x: pos.x,
       y: pos.y,
       w: size.w,
       h: size.h,
+      minW: size.minW,
+      minH: size.minH,
       code: preset.code,
       label: preset.label,
       elementName: preset.elementName
@@ -3494,13 +3509,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       focusWidgetIcon(preset.keywords);
       return null;
     }
-    const size = nativeElementSize('media');
+    const size = {
+      ...preset.size,
+      minW: preset.minSize.w,
+      minH: preset.minSize.h
+    };
     const pos = position || nextSceneInsertPosition(size.w, size.h);
     return createSceneWidget(widgetDef, {
       x: pos.x,
       y: pos.y,
       w: size.w,
       h: size.h,
+      minW: size.minW,
+      minH: size.minH,
       code: preset.code,
       label: preset.label,
       elementName: preset.elementName
@@ -3518,13 +3539,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       focusWidgetIcon(preset.keywords);
       return null;
     }
-    const size = nativeElementSize('button');
+    const size = {
+      ...preset.size,
+      minW: preset.minSize.w,
+      minH: preset.minSize.h
+    };
     const pos = position || nextSceneInsertPosition(size.w, size.h);
     return createSceneWidget(widgetDef, {
       x: pos.x,
       y: pos.y,
       w: size.w,
       h: size.h,
+      minW: size.minW,
+      minH: size.minH,
       code: preset.code,
       label: preset.label,
       elementName: preset.elementName,
@@ -3586,7 +3613,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     setInspectorMode('behavior');
     const nextBehavior = normalizeBehavior(behavior);
     if (!state.activeWidgetEl) {
-      focusSidebarSection('.layer-preview');
+      sceneInspector?.querySelector('.scene-layer-settings')?.scrollIntoView?.({
+        block: 'nearest',
+        behavior: 'smooth'
+      });
       updateSceneInspector(null);
       setSidebarToolActive(nextBehavior === 'scroll' ? 'scroll' : 'action');
       return;
@@ -3804,6 +3834,26 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     return { handled: true, geometry, selection: selectedElementSummary(el) };
   }
 
+  function updateElementResponsiveRange(command = {}) {
+    const selectResult = command.target || commandValue(command, 'id') ? selectElementByCommand(command) : null;
+    if (selectResult && !selectResult.handled) return selectResult;
+    const el = state.activeWidgetEl;
+    if (!el) return { handled: false, reason: 'no-active-element' };
+    const viewport = getBuilderViewportState();
+    const range = normalizeResponsiveWidthRange({
+      minWidth: commandValue(command, 'minWidth', viewport.width),
+      maxWidth: commandValue(command, 'maxWidth', viewport.width)
+    }, viewport.width);
+    grid.setResponsiveRange?.(range, { element: el, rewriteActive: true });
+    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    return {
+      handled: true,
+      range,
+      responsivePlacement: grid.getResponsivePlacementState?.(el) || null,
+      selection: selectedElementSummary(el)
+    };
+  }
+
   function setElementStack(command = {}) {
     const selectResult = command.target || commandValue(command, 'id') ? selectElementByCommand(command) : null;
     if (selectResult && !selectResult.handled) return selectResult;
@@ -3852,6 +3902,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       y: Number(source.dataset.y || 0) + 1,
       w: Number(source.getAttribute('gs-w') || 1),
       h: Number(source.getAttribute('gs-h') || DEFAULT_ROWS),
+      minW: Number(source.getAttribute('gs-min-w') || 1),
+      minH: Number(source.getAttribute('gs-min-h') || 1),
       code,
       behavior: source.dataset.behavior,
       elementName: source.dataset.elementName
@@ -4079,6 +4131,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     if (action === 'element.select') return selectElementByCommand(command);
     if (action === 'element.move' || action === 'element.resize' || action === 'element.geometry.set') return updateElementGeometry(command);
+    if (action === 'element.responsiveRange.set') return updateElementResponsiveRange(command);
     if (action === 'element.zIndex.set' || action === 'element.arrange') return setElementStack(command);
     if (action === 'element.delete') return deleteElementFromCommand(command);
     if (action === 'element.duplicate') return duplicateElementFromCommand(command);
@@ -4215,7 +4268,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       e.target.closest('.widget-action-bar') ||
       e.target.closest('.text-block-editor-toolbar') ||
       e.target.closest('.bg-editor-toolbar') ||
-      e.target.closest('.color-picker')
+      e.target.closest('.color-picker') ||
+      e.target.closest('.scene-inspector')
     ) {
       return;
     }
@@ -4240,6 +4294,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                  e.target.closest('.bg-editor-toolbar') ||
                  e.target.closest('.color-picker') ||
                  e.target.closest('.scene-empty-state') ||
+                 e.target.closest('.scene-inspector') ||
                  e.target.closest('.builder-header') ||
                  e.target.closest('.layout-bar') ||
                  e.target.closest('.builder-sidebar');
@@ -4423,7 +4478,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       : '';
     if (presetId) {
       const preset = getInsertPreset(presetId);
-      const baseSize = preset?.size || (preset?.nativeType ? nativeElementSize(preset.nativeType) : { w: 4, h: DEFAULT_ROWS });
+      const baseSize = preset?.size
+        || (preset?.nativeType ? nativeElementSize(preset.nativeType, preset.variant) : defaultWidgetDimensions());
       await insertPresetElement(presetId, dropSceneInsertPosition(e, baseSize.w, baseSize.h));
       return;
     }
@@ -4438,8 +4494,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     const widgetDef = allWidgets.find(w => w.id === dragData);
     if (!widgetDef) return;
     await ensureDesignLayerForTool();
-    const { x, y } = dropSceneInsertPosition(e, 4, DEFAULT_ROWS);
-    await createSceneWidget(widgetDef, { x, y, w: 4, h: DEFAULT_ROWS });
+    const size = defaultWidgetDimensions();
+    const { x, y } = dropSceneInsertPosition(e, size.w, size.h);
+    await createSceneWidget(widgetDef, { x, y, ...size });
   });
 
   if (!layoutName) {
@@ -4668,6 +4725,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         getSceneSections: getSceneSectionsSnapshot
       })
     }),
+    openDesignSettings: () => setSidebarPanel('design'),
     undo: undoCurrentDesign,
     redo: redoCurrentDesign
   });

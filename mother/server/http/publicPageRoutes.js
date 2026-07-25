@@ -7,6 +7,7 @@ const path = require('path');
 const { verifyOriginToken } = require('../security/originToken');
 
 function createPublicPageRoutes({
+  injectDevReload = html => html,
   motherEmitter,
   plainSpaceVersion,
   renderMode,
@@ -59,7 +60,9 @@ function createPublicPageRoutes({
       if (!filePath.startsWith(builderPublicRoot) || !fs.existsSync(filePath)) {
         return next();
       }
-      res.sendFile(filePath);
+      const html = await fs.promises.readFile(filePath, 'utf8');
+      res.type('html');
+      res.send(injectDevReload(html));
     } catch (err) {
       next(err);
     }
@@ -140,6 +143,7 @@ function createPublicPageRoutes({
       window.NONCE  = ${JSON.stringify(nonce)};
     </script>`;
       html = html.replace('</head>', inject + '</head>');
+      html = injectDevReload(html);
 
       res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
       res.send(html);

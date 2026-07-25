@@ -113,6 +113,27 @@ left-side builder-header action.
 Switching back to design mode restores the widget sidebar and re‑enables normal editing.
 Both editors share a footer with zoom controls, and the design sidebar now features a leading layout switch bubble for jumping to the layout editor.
 Layouts without an explicit title initialise the header input to "Layout name" instead of a generic "default" tag.
+
+Viewport authoring and canvas zoom deliberately remain separate controls. The
+header viewport band selects the responsive width and the width range in which
+a selected element override applies. The footer zoom changes only the visual
+magnification of the workspace and offers a Fit mode; it never changes saved
+element geometry or the authored responsive width.
+
+Responsive element placement extends the existing CanvasGrid placement metadata
+instead of introducing another layout owner. A base pixel rectangle keeps its
+width and height while the viewport changes, with its horizontal centre as the
+stable anchor. Elements that fit are clamped fully inside the page. When an
+element is wider than the selected viewport, its unavoidable overflow is
+centred instead of being pushed to one side. Width-specific overrides use the
+same placement record with explicit inclusive `minWidth`/`maxWidth` ranges and
+are resolved identically by the Builder, Live Preview and public runtime.
+Runtime grids reproject that record after their container width settles. A
+full-width grid uses the nominal browser viewport when fractional device-pixel
+rounding differs by less than one pixel, and the sandboxed Live Preview removes
+only the visual scrollbar gutter. This keeps a requested 390px surface at
+390px while retaining normal wheel and keyboard scrolling.
+
 Layout mode now exposes a floating container toolbar above the active page or
 container surface. It can add a container using the parent rule, open the manual
 placement picker, switch stack/row/free mode, adjust gap, padding and

@@ -50,6 +50,23 @@ First follow the [Installation](installation.md) guide if you have not yet set u
    warnings/errors, and `requests.log` for HTTP method, path, status and
    duration. Set `DEV_FILE_LOGS=false` in `.env` to disable this mirror.
 
+   For active UI development, use the coordinated development command instead:
+
+   ```bash
+   npm run dev
+   ```
+
+   It runs Nodemon, Sass watch and the production-compatible browser-bundle
+   watcher together, so generated build files keep the same names and format as
+   `npm run build`. The
+   existing development banner also connects the dashboard and sandboxed app
+   frames to the local reload stream. Compiled CSS is cache-busted in place;
+   JavaScript, HTML and server restarts reload the page. Source-only SCSS and
+   TypeScript events are intentionally ignored until Sass or Webpack has
+   produced the browser-served output, preventing reloads against stale files.
+   Set `BLOGPOSTER_DEV_RELOAD=false` to disable the reload stream, or use
+   `npm run dev:server` to run Nodemon alone.
+
 4. **Run tests**
    ```bash
    npm test

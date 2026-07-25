@@ -145,7 +145,12 @@ function mountModulePublicLoaderRoutes(app, { rootDir, modulePublicLoaderRoot })
   });
 }
 
-function mountStaticAssetRoutes(app, { rootDir, securityConfig }) {
+function mountStaticAssetRoutes(app, {
+  devReloadEnabled = false,
+  injectDevReload = html => html,
+  rootDir,
+  securityConfig
+}) {
   const publicPath = path.join(rootDir, 'public');
   const assetsPath = path.join(publicPath, 'assets');
   const buildPath = path.join(publicPath, 'build');
@@ -177,6 +182,40 @@ function mountStaticAssetRoutes(app, { rootDir, securityConfig }) {
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     res.json({ publicKey: publicKeyPem });
   });
+  if (devReloadEnabled) {
+    const devAppIndexRouter = express.Router();
+    devAppIndexRouter.get('/:appName/index.html', async (req, res, next) => {
+      const appName = String(req.params.appName || '');
+      if (!/^[a-z0-9][a-z0-9_-]{0,63}$/i.test(appName)) {
+        res.status(400).send('Bad request');
+        return;
+      }
+
+      try {
+        const appIndexPath = path.join(appStaticPath, appName, 'index.html');
+        const html = await fs.promises.readFile(appIndexPath, 'utf8');
+        res.type('html');
+        res.setHeader('Cache-Control', 'no-store');
+        res.send(injectDevReload(html));
+      } catch (error) {
+        if (error?.code === 'ENOENT') {
+          next();
+          return;
+        }
+        console.error('[DEV_RELOAD_APP_HTML_ERROR]', error);
+        res.status(500).send('Development app shell unavailable');
+      }
+    });
+    // Reuse the guarded app-static boundary; this route only transforms HTML
+    // in development and falls through to the normal static server otherwise.
+    app.use(
+      '/apps',
+      setStaticCorsHeaders,
+      guardAppStaticRoot,
+      blockBrowserSourceFiles,
+      devAppIndexRouter
+    );
+  }
   app.use('/apps', setStaticCorsHeaders, guardAppStaticRoot, blockBrowserSourceFiles, express.static(appStaticPath));
   app.use('/widgets', setStaticCorsHeaders, guardWidgetStaticRoot, blockBrowserSourceFiles, express.static(widgetsPath));
   app.use('/plainspace', blockBrowserSourceFiles, express.static(path.join(publicPath, 'plainspace')));

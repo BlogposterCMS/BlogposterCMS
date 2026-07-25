@@ -25,6 +25,14 @@ function clamp(value, min, max, fallback) {
 function presetForWidth(width) {
     return BUILDER_VIEWPORT_PRESETS.find(preset => preset.width === width)?.id || 'custom';
 }
+export function builderBreakpointForWidth(width) {
+    const value = clamp(width, BUILDER_VIEWPORT_MIN, BUILDER_VIEWPORT_MAX, 1280);
+    if (value <= 600)
+        return 'mobile';
+    if (value <= 1024)
+        return 'tablet';
+    return 'desktop';
+}
 function normalizeState(value) {
     const source = value && typeof value === 'object' && !Array.isArray(value)
         ? value
@@ -33,7 +41,8 @@ function normalizeState(value) {
     return {
         width,
         presetId: presetForWidth(width),
-        zoom: clamp(source.zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, 100)
+        zoom: clamp(source.zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, 100),
+        zoomMode: source.zoomMode === 'manual' ? 'manual' : 'fit'
     };
 }
 function readStoredState() {
@@ -120,7 +129,21 @@ export function setBuilderViewportPreset(id) {
 export function setBuilderZoom(zoom) {
     return publish({
         ...state,
-        zoom: clamp(zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, state.zoom)
+        zoom: clamp(zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, state.zoom),
+        zoomMode: 'manual'
+    });
+}
+export function setBuilderFitZoom(zoom) {
+    return publish({
+        ...state,
+        zoom: clamp(zoom, BUILDER_ZOOM_MIN, BUILDER_ZOOM_MAX, state.zoom),
+        zoomMode: 'fit'
+    });
+}
+export function setBuilderZoomMode(mode) {
+    return publish({
+        ...state,
+        zoomMode: mode === 'manual' ? 'manual' : 'fit'
     });
 }
 export async function hydrateBuilderViewportState() {

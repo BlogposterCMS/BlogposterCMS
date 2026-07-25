@@ -50,7 +50,11 @@ describe('designer grid manager workarea serialization', () => {
         canvasSnapGuides: true,
         objectSnapTolerance: 6,
         pixelColumns: true,
-        percentageMode: true
+        percentageMode: true,
+        renderPercentLayoutAsPixels: true,
+        preservePixelWidgetSize: true,
+        responsivePlacement: true,
+        responsiveViewportWidth: 1280
       }),
       gridEl
     );
@@ -70,6 +74,11 @@ describe('designer grid manager workarea serialization', () => {
     widget.dataset.yPercent = '20';
     widget.dataset.wPercent = '30';
     widget.dataset.hPercent = '40';
+    widget.dataset.responsivePlacement = JSON.stringify({
+      version: 1,
+      base: { centerXPercent: 25, yPx: 20, widthPx: 300, heightPx: 120 },
+      rules: []
+    });
     grid.appendChild(widget);
     workarea.appendChild(grid);
     document.body.appendChild(workarea);
@@ -80,7 +89,11 @@ describe('designer grid manager workarea serialization', () => {
       workareaId: 'hero-workarea',
       code: {
         meta: {
-          workareaId: 'hero-workarea'
+          workareaId: 'hero-workarea',
+          responsivePlacement: expect.objectContaining({
+            version: 1,
+            base: expect.objectContaining({ widthPx: 300 })
+          })
         }
       }
     });

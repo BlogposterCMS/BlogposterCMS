@@ -105,6 +105,12 @@ function buildFallbackHeader() {
         alt: 'Preview'
     }));
     headerActions.appendChild(createActionButton({
+        id: 'globalDesignSettingsBtn',
+        className: 'header-icon-btn builder-design-settings-btn',
+        icon: '/assets/icons/settings.svg',
+        alt: 'Global design'
+    }));
+    headerActions.appendChild(createActionButton({
         id: 'viewportControlBtn',
         className: 'header-icon-btn builder-viewport-btn',
         icon: '/assets/icons/monitor.svg',
@@ -130,16 +136,29 @@ function buildFallbackHeader() {
     }));
     const viewportSlider = document.createElement('div');
     viewportSlider.className = 'viewport-slider';
-    const range = document.createElement('input');
-    range.type = 'range';
-    range.className = 'viewport-range';
-    range.min = '320';
-    range.max = '3840';
-    range.step = '10';
-    range.setAttribute('aria-label', 'Viewport width');
-    const valueDisplay = document.createElement('span');
-    valueDisplay.className = 'viewport-value';
-    viewportSlider.append(buildViewportPresetSwitcher(), range, valueDisplay);
+    viewportSlider.innerHTML = `
+    <div class="viewport-control-heading"><span>Viewport</span><strong class="viewport-value"></strong></div>
+    <div class="viewport-width-band">
+      <input type="range" class="viewport-range" min="320" max="3840" step="10" aria-label="Builder viewport width" />
+      <div class="responsive-rule-markers" aria-hidden="true"></div>
+    </div>
+    <div class="responsive-validity">
+      <div class="responsive-validity-heading"><span>Selected change applies</span><output class="responsive-validity-value"></output></div>
+      <div class="responsive-validity-band">
+        <span class="responsive-validity-track" aria-hidden="true"></span>
+        <span class="responsive-validity-active" aria-hidden="true"></span>
+        <input type="range" class="responsive-range-min" min="320" max="3840" step="1" aria-label="Responsive range start" />
+        <input type="range" class="responsive-range-max" min="320" max="3840" step="1" aria-label="Responsive range end" />
+      </div>
+      <div class="responsive-validity-actions" role="group" aria-label="Responsive range shortcuts">
+        <button type="button" data-responsive-scope="lower">Up to here</button>
+        <button type="button" data-responsive-scope="range">Range</button>
+        <button type="button" data-responsive-scope="higher">From here</button>
+        <button type="button" data-responsive-scope="all">All</button>
+      </div>
+    </div>
+  `;
+    viewportSlider.prepend(buildViewportPresetSwitcher());
     header.appendChild(viewportSlider);
     const optionsMenu = document.createElement('div');
     optionsMenu.className = 'builder-options-menu';
@@ -201,7 +220,7 @@ async function loadHeaderPartial(existing) {
         return existing ?? ensureHeaderMount();
     }
 }
-export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, livePreviewController, undo, redo }) {
+export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, livePreviewController, openDesignSettings, undo, redo }) {
     let topBar = null;
     let layoutName = initialLayoutName;
     let headerResizeObserver = null;
@@ -279,6 +298,10 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
             const saveBtn = topBar.querySelector('#saveLayoutBtn');
             const previewBtn = topBar.querySelector('#previewLayoutBtn');
             const publishBtn = topBar.querySelector('#publishLayoutBtn');
+            const designSettingsBtn = topBar.querySelector('#globalDesignSettingsBtn');
+            designSettingsBtn?.addEventListener('click', () => {
+                openDesignSettings?.();
+            });
             const saveWrapper = document.createElement('div');
             saveWrapper.className = 'builder-save-wrapper';
             if (saveBtn) {

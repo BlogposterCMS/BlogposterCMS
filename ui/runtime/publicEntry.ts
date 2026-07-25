@@ -28,6 +28,13 @@ function hasDesignerLivePreviewQuery(): boolean {
   }
 }
 
+function markDesignerLivePreviewDocument(): void {
+  document.documentElement.dataset.designerLivePreview = 'true';
+  if (document.body) {
+    document.body.dataset.designerLivePreview = 'true';
+  }
+}
+
 function getMeltdownEmit(): NonNullable<Window['meltdownEmit']> {
   const emit = window.meltdownEmit;
   if (typeof emit !== 'function') {
@@ -49,6 +56,10 @@ async function ensureToken(): Promise<void> {
 export async function bootPublicRuntime(): Promise<void> {
   const livePreview = hasDesignerLivePreviewQuery();
   if (livePreview) {
+    // Keep the requested preview width equal to the authored viewport width.
+    // A hidden scrollbar still allows scrolling but no longer steals pixels
+    // from responsive layout calculations inside the sandboxed iframe.
+    markDesignerLivePreviewDocument();
     // The sandboxed preview has an opaque origin, so its data channel is the
     // parent Designer bridge. Boot that adapter before any direct public API
     // request; the current Color Scheme and Font Package arrive in the render

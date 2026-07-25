@@ -4,6 +4,7 @@ import { bindGlobalListeners } from '/ui/shared/grid/globalEvents.js';
 import { BoundingBoxManager } from '/ui/shared/grid/BoundingBoxManager.js';
 import { snapToGrid, elementRect, rectsCollide } from '/ui/shared/grid/grid-utils.js';
 import { resolveObjectSnap } from '/ui/shared/grid/snapGuides.js';
+import { defaultResponsiveWidthRange, normalizeResponsivePlacementContract, normalizeResponsiveWidthRange, projectResponsiveHorizontalPosition, resolveResponsivePlacementGeometry, responsiveRuleForWidth, upsertResponsivePlacementRule } from '/ui/shared/layout/responsivePlacement.js';
 const COLUMN_WIDTH_EPSILON = 0.01;
 function normalizePercentRecalc(recalc) {
     if (typeof recalc === 'object' && recalc !== null) {
@@ -40,7 +41,9 @@ export class CanvasGrid {
             objectSnapLiveMagnet: false,
             objectSnapTolerance: 6,
             bboxHandles: true,
-            enableZoom: true
+            enableZoom: true,
+            preservePixelWidgetSize: false,
+            responsivePlacement: false
         }, options);
         this.staticGrid = Boolean(this.options.staticGrid);
         this.pushOnOverlap = Boolean(this.options.pushOnOverlap);
@@ -62,25 +65,42 @@ export class CanvasGrid {
         // The scroll container hosts the scrollbars. Default to the grid's
         // parent element, but allow an explicit element via options.
         this.scrollContainer = options.scrollContainer || this.el.parentElement || this.el;
+        // Some editors wrap the grid in an authored page surface. Scaling that
+        // existing surface keeps its background and bounds aligned with widgets.
+        this.zoomTarget = options.zoomTarget || this.el;
+        this.responsiveViewportWidth = safePositiveMetric(options.responsiveViewportWidth || this.zoomTarget?.offsetWidth || this.el?.offsetWidth);
+        this.responsiveRange = normalizeResponsiveWidthRange(options.responsiveRange || defaultResponsiveWidthRange(this.responsiveViewportWidth), this.responsiveViewportWidth);
         // Create a sizing wrapper to expand with zoom so the scrollbars show
         // inside the designer rather than on the page.
         try {
             if (this.enableZoom &&
                 this.scrollContainer &&
-                this.el.parentElement === this.scrollContainer) {
+                this.zoomTarget?.parentElement === this.scrollContainer) {
+                const targetWidth = this.zoomTarget.offsetWidth || 0;
+                const targetHeight = this.zoomTarget.offsetHeight || 0;
                 const sizer = document.createElement('div');
                 sizer.className = 'canvas-zoom-sizer';
                 sizer.style.position = 'relative';
                 sizer.style.width = '100%';
                 sizer.style.height = '100%';
-                this.scrollContainer.insertBefore(sizer, this.el);
-                sizer.appendChild(this.el);
+                this.scrollContainer.insertBefore(sizer, this.zoomTarget);
+                sizer.appendChild(this.zoomTarget);
                 this.sizer = sizer;
-                // Position the actual grid absolutely inside the sizer so we can
-                // scale it visually while the sizer controls the scroll area.
-                this.el.style.position = 'absolute';
-                this.el.style.left = '0';
-                this.el.style.top = '0';
+                // Position the complete zoom target inside the sizer so the authored
+                // surface and its grid scale as one visual unit.
+                this.zoomTarget.style.position = 'absolute';
+                this.zoomTarget.style.left = '0';
+                this.zoomTarget.style.top = '0';
+                if (this.zoomTarget !== this.el) {
+                    // Detaching an inset-positioned page surface from the viewport would
+                    // otherwise make it follow the sizer dimensions recursively.
+                    if (targetWidth > 0)
+                        this.zoomTarget.style.width = `${targetWidth}px`;
+                    if (targetHeight > 0)
+                        this.zoomTarget.style.height = `${targetHeight}px`;
+                    this.zoomTarget.style.right = 'auto';
+                    this.zoomTarget.style.bottom = 'auto';
+                }
             }
         }
         catch { /* non-fatal if DOM structure unexpected */ }
@@ -161,7 +181,7 @@ export class CanvasGrid {
         if (this.enableZoom) {
             this.el.style.setProperty('--canvas-scale', '1');
             // Top-left transform origin keeps the canvas from drifting when zoomed out
-            this.el.style.transformOrigin = '0 0';
+            this.zoomTarget.style.transformOrigin = '0 0';
             const wheelZoom = (e) => {
                 if (!e.ctrlKey)
                     return;
@@ -194,15 +214,12 @@ export class CanvasGrid {
         if (!this.sizer)
             return;
         const scale = this.scale || this._currentScale();
-        // Base the width on the larger of the unscaled scroll container and the
-        // grid itself so manual width changes don't clip the canvas when it
-        // exceeds the viewport while still avoiding runaway scaling during zoom.
-        const scW = (this.scrollContainer && this.scrollContainer.clientWidth) || 0;
-        const gridW = this.el.offsetWidth || 0;
-        const baseW = Math.max(scW, gridW);
-        const scH = (this.scrollContainer && this.scrollContainer.clientHeight) || 0;
-        const gridH = this.el.offsetHeight || 0;
-        const baseH = Math.max(scH, gridH);
+        // The zoom target owns the unscaled page size. The scroll container stays
+        // fixed while the sizer grows or shrinks around that complete surface.
+        const gridW = this.zoomTarget?.offsetWidth || this.el.offsetWidth || 0;
+        const gridH = this.zoomTarget?.offsetHeight || this.el.offsetHeight || 0;
+        const baseW = Math.max(1, gridW);
+        const baseH = Math.max(1, gridH);
         const targetW = baseW * scale;
         const targetH = baseH * scale;
         if (Math.round(this.sizer.offsetWidth) === Math.round(targetW) &&
@@ -216,8 +233,8 @@ export class CanvasGrid {
         if (!this.scrollContainer)
             return;
         const sc = this.scrollContainer;
-        const sw = this.sizer?.clientWidth || this.el.offsetWidth || 0;
-        const sh = this.sizer?.clientHeight || this.el.offsetHeight || 0;
+        const sw = this.sizer?.clientWidth || this.zoomTarget?.offsetWidth || this.el.offsetWidth || 0;
+        const sh = this.sizer?.clientHeight || this.zoomTarget?.offsetHeight || this.el.offsetHeight || 0;
         sc.scrollLeft = sw > sc.clientWidth ? (sw - sc.clientWidth) / 2 : 0;
         sc.scrollTop = sh > sc.clientHeight ? (sh - sc.clientHeight) / 2 : 0;
     }
@@ -242,9 +259,158 @@ export class CanvasGrid {
         else {
             this._centerViewport();
         }
-        this.el.style.transform = `scale(${clamped})`;
+        this.zoomTarget.style.transform = `scale(${clamped})`;
         this.el.style.setProperty('--canvas-scale', String(clamped));
         this.el.dispatchEvent(new Event('zoom', { bubbles: true }));
+    }
+    _responsiveGeometryFromElement(el, canvasWidth = this.responsiveViewportWidth || this._getCanvasMetrics().width) {
+        const columnWidth = safePositiveMetric(this.options.columnWidth);
+        const cellHeight = safePositiveMetric(this.options.cellHeight);
+        const widthPx = Math.max(1, (Number(el.getAttribute('gs-w')) || 1) * columnWidth);
+        const heightPx = Math.max(1, (Number(el.getAttribute('gs-h')) || 1) * cellHeight);
+        const xPx = (Number(el.dataset.x) || 0) * columnWidth;
+        const yPx = (Number(el.dataset.y) || 0) * cellHeight;
+        const safeCanvasWidth = safePositiveMetric(canvasWidth);
+        return {
+            // Center anchoring keeps an object visually in place while both sides of
+            // the authored viewport grow or shrink around it.
+            centerXPercent: ((xPx + (widthPx / 2)) / safeCanvasWidth) * 100,
+            yPx,
+            widthPx,
+            heightPx,
+            minWidthPx: Math.max(1, (Number(el.getAttribute('gs-min-w')) || 1) * columnWidth),
+            minHeightPx: Math.max(1, (Number(el.getAttribute('gs-min-h')) || 1) * cellHeight)
+        };
+    }
+    _readResponsivePlacement(el, canvasWidth = this.responsiveViewportWidth || this._getCanvasMetrics().width) {
+        let persisted = {};
+        try {
+            persisted = JSON.parse(el.dataset.responsivePlacement || '{}');
+        }
+        catch (error) {
+            console.warn('DESIGNER_RESPONSIVE_PLACEMENT_PARSE_FAILED', error);
+        }
+        return normalizeResponsivePlacementContract(persisted, this._responsiveGeometryFromElement(el, canvasWidth));
+    }
+    _writeResponsivePlacement(el, contract) {
+        el.dataset.responsivePlacement = JSON.stringify(contract);
+        const activeRule = responsiveRuleForWidth(contract, this.responsiveViewportWidth);
+        if (activeRule)
+            el.dataset.responsiveRuleId = activeRule.id;
+        else
+            delete el.dataset.responsiveRuleId;
+    }
+    _applyResponsiveGeometry(el, geometry, canvasWidth) {
+        const columnWidth = safePositiveMetric(this.options.columnWidth);
+        const cellHeight = safePositiveMetric(this.options.cellHeight);
+        const widthPx = Math.max(1, geometry.widthPx);
+        const heightPx = Math.max(1, geometry.heightPx);
+        const xPx = projectResponsiveHorizontalPosition(geometry, canvasWidth);
+        const yPx = Math.max(0, geometry.yPx);
+        const x = Math.round(xPx / columnWidth);
+        const y = Math.round(yPx / cellHeight);
+        const w = Math.max(1, Math.round(widthPx / columnWidth));
+        const h = Math.max(1, Math.round(heightPx / cellHeight));
+        el.dataset.x = String(x);
+        el.dataset.y = String(y);
+        el.setAttribute('gs-w', String(w));
+        el.setAttribute('gs-h', String(h));
+        el.setAttribute('gs-min-w', String(Math.max(1, Math.round((geometry.minWidthPx || 1) / columnWidth))));
+        el.setAttribute('gs-min-h', String(Math.max(1, Math.round((geometry.minHeightPx || 1) / cellHeight))));
+        // Retain the old percentage fields as a compatibility projection. New
+        // runtimes use responsivePlacement, while old readers still receive sane
+        // bounds instead of stale values from the previous viewport.
+        const metrics = this._getCanvasMetrics();
+        const safeHeight = safePositiveMetric(metrics.height);
+        el.dataset.xPercent = String((xPx / safePositiveMetric(canvasWidth)) * 100);
+        el.dataset.yPercent = String((yPx / safeHeight) * 100);
+        el.dataset.wPercent = String((widthPx / safePositiveMetric(canvasWidth)) * 100);
+        el.dataset.hPercent = String((heightPx / safeHeight) * 100);
+        this._applyPosition(el, { x: false, y: false, w: false, h: false });
+    }
+    _ensureResponsivePlacement(el) {
+        const contract = this._readResponsivePlacement(el);
+        this._writeResponsivePlacement(el, contract);
+        return contract;
+    }
+    _recordResponsivePlacement(el) {
+        if (!this.options.responsivePlacement)
+            return;
+        const contract = this._readResponsivePlacement(el);
+        const next = upsertResponsivePlacementRule(contract, this.responsiveViewportWidth, this.responsiveRange, this._responsiveGeometryFromElement(el));
+        this._writeResponsivePlacement(el, next.contract);
+        document.dispatchEvent(new CustomEvent('designerResponsivePlacementChanged', {
+            detail: {
+                instanceId: el.dataset.instanceId || el.id || null,
+                viewportWidth: this.responsiveViewportWidth,
+                range: { ...this.responsiveRange },
+                ruleId: next.rule.id
+            }
+        }));
+    }
+    _reflowResponsiveWidgets(width) {
+        if (!this.options.responsivePlacement)
+            return;
+        const nextWidth = safePositiveMetric(width);
+        this.responsiveViewportWidth = nextWidth;
+        this.widgets.forEach((widget) => {
+            const contract = this._ensureResponsivePlacement(widget);
+            this._applyResponsiveGeometry(widget, resolveResponsivePlacementGeometry(contract, nextWidth), nextWidth);
+        });
+        if (this.activeEl)
+            this._updateBBox();
+    }
+    setResponsiveViewport(width, options = {}) {
+        if (!this.options.responsivePlacement)
+            return;
+        const nextWidth = safePositiveMetric(width);
+        this.responsiveRange = normalizeResponsiveWidthRange(options.range || this.responsiveRange || defaultResponsiveWidthRange(nextWidth), nextWidth);
+        if (this.zoomTarget && this.zoomTarget !== this.el) {
+            this.zoomTarget.style.width = `${Math.round(nextWidth)}px`;
+            this.zoomTarget.style.marginLeft = 'auto';
+            this.zoomTarget.style.marginRight = 'auto';
+        }
+        // Inline width changes participate in layout synchronously in browsers,
+        // but the follow-up frame also covers nested layout containers.
+        const sync = () => {
+            this._refreshCanvasMetrics();
+            this._syncColumnWidthFromWidth(nextWidth);
+            this._reflowResponsiveWidgets(nextWidth);
+            this._syncSizer();
+            this._centerViewport();
+        };
+        sync();
+        requestAnimationFrame(sync);
+    }
+    setResponsiveRange(range, options = {}) {
+        this.responsiveRange = normalizeResponsiveWidthRange(range, this.responsiveViewportWidth);
+        const element = options.element || this.activeEl;
+        if (element && options.rewriteActive !== false) {
+            this._recordResponsivePlacement(element);
+        }
+        return { ...this.responsiveRange };
+    }
+    getResponsivePlacementState(element = this.activeEl) {
+        const range = { ...this.responsiveRange };
+        if (!element) {
+            return {
+                viewportWidth: this.responsiveViewportWidth,
+                range,
+                activeRule: null,
+                rules: []
+            };
+        }
+        const contract = this._readResponsivePlacement(element);
+        return {
+            viewportWidth: this.responsiveViewportWidth,
+            range,
+            activeRule: responsiveRuleForWidth(contract, this.responsiveViewportWidth),
+            rules: contract.rules.map(rule => ({
+                id: rule.id,
+                minWidth: rule.minWidth,
+                maxWidth: rule.maxWidth
+            }))
+        };
     }
     _updateGridHeight() {
         const { cellHeight } = this.options;
@@ -273,15 +439,20 @@ export class CanvasGrid {
         let h = +el.getAttribute('gs-h') || 1;
         w = Math.max(1, w);
         h = Math.max(1, h);
+        const preserveProjectedBounds = Boolean(this.options.preservePixelWidgetSize &&
+            !percentRecalc.x &&
+            !percentRecalc.w);
         if (Number.isFinite(columns)) {
-            if (w > columns)
-                w = columns;
-            if (x < 0)
-                x = 0;
-            if (x + w > columns)
-                x = columns - w;
+            if (!preserveProjectedBounds) {
+                if (w > columns)
+                    w = columns;
+                if (x < 0)
+                    x = 0;
+                if (x + w > columns)
+                    x = columns - w;
+            }
         }
-        else if (x < 0) {
+        else if (x < 0 && !preserveProjectedBounds) {
             x = 0;
         }
         if (Number.isFinite(rows)) {
@@ -355,6 +526,10 @@ export class CanvasGrid {
     }
     makeWidget(el) {
         this._applyPosition(el, { x: false, y: false, w: false, h: false });
+        if (this.options.responsivePlacement) {
+            const contract = this._ensureResponsivePlacement(el);
+            this._applyResponsiveGeometry(el, resolveResponsivePlacementGeometry(contract, this.responsiveViewportWidth), this.responsiveViewportWidth);
+        }
         if (this.pushOnOverlap && this.widgets.length) {
             const rect = this._collisionRect(el);
             const hasCollision = this._countCollisionsForRect(rect) > 0;
@@ -427,6 +602,8 @@ export class CanvasGrid {
             h: opts.h != null
         };
         this._applyPosition(el, recalc);
+        if (!meta.silent)
+            this._recordResponsivePlacement(el);
         if (this.pushOnOverlap)
             this._resolveCollisions(el);
         if (el === this.activeEl)
@@ -796,6 +973,10 @@ export class CanvasGrid {
             this.options.columnWidth = 1;
             this._lastColumnWidth = 1;
             if (changed) {
+                if (this.options.responsivePlacement) {
+                    this._reflowResponsiveWidgets(nextColumns);
+                    return true;
+                }
                 this.widgets.forEach((wi) => this._applyPosition(wi, {
                     x: false,
                     y: false,

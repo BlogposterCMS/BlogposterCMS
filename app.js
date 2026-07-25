@@ -41,7 +41,7 @@ loadSecretsOverrides({ rootDir: __dirname });
 
 (async () => {
   const devFileLogger = installDevFileLogger({ rootDir: path.resolve(__dirname, '..') });
-  const { app, port } = await createBlogposterApp({
+  const { app, closeDevelopmentServices, port } = await createBlogposterApp({
     rootDir: __dirname,
     motherEmitter,
     devFileLogger
@@ -50,6 +50,7 @@ loadSecretsOverrides({ rootDir: __dirname });
   const server = app.listen(port, () => {
     console.log(`[SERVER] BlogPosterCMS is listening on http://localhost:${port}/`);
   });
+  server.once('close', closeDevelopmentServices);
   attachShutdownHandlers(server);
 })().catch(err => {
   console.error('[SERVER INIT] Startup failed:', err);

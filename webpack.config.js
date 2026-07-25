@@ -44,6 +44,7 @@ const entry = {
   customSelect: resolveSource(__dirname, './ui/shared/entries/customSelect'),
   externalLinks: resolveSource(__dirname, './ui/shared/entries/externalLinks'),
   devBanner: resolveSource(__dirname, './ui/shared/entries/devBanner'),
+  devReload: resolveSource(__dirname, './ui/shared/entries/devReload'),
   faviconLoader: resolveSource(__dirname, './ui/shared/entries/faviconLoader'),
   fontsLoader: resolveSource(__dirname, './ui/shared/entries/fontsLoader'),
   icons: resolveSource(__dirname, './ui/shared/entries/icons'),

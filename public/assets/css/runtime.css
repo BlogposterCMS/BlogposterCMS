@@ -11,6 +11,18 @@ body {
   margin: 0;
 }
 
+/* Live preview keeps scrolling available without reducing the authored width. */
+html[data-designer-live-preview='true'],
+html[data-designer-live-preview='true'] body {
+  scrollbar-width: none;
+}
+
+html[data-designer-live-preview='true']::-webkit-scrollbar,
+html[data-designer-live-preview='true'] body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 #content {
   min-width: 0;
 }

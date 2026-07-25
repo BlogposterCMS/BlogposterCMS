@@ -37,6 +37,19 @@ type RuntimeGridPendingItem = {
   placeholder: HTMLElement;
 };
 
+type RuntimeReflowCanvasItem = HTMLElement & {
+  __runtimeLayoutItem?: RuntimeGridLayoutItem;
+  __runtimeWidgetDefinition?: RuntimeWidgetDefinition;
+};
+
+export type RuntimeGridReflowOptions = {
+  gridEl: HTMLElement;
+  grid: RendererGrid | null | undefined;
+  scaleX: number;
+  scaleY: number;
+  percentDivisor?: number;
+};
+
 function findWidgetDefinition(
   allWidgets: RuntimeWidgetDefinition[],
   widgetId: unknown
@@ -94,6 +107,11 @@ export async function mountRuntimeGridWidgets({
       instanceId: item.id,
       includeLayoutMetadata
     });
+    // These references are a render cache, not another layout owner. They let
+    // the existing projection be reapplied when the canvas width settles.
+    const reflowItem = wrapper as RuntimeReflowCanvasItem;
+    reflowItem.__runtimeLayoutItem = item;
+    reflowItem.__runtimeWidgetDefinition = def;
 
     gridEl.appendChild(wrapper);
     grid?.makeWidget?.(wrapper);
@@ -105,4 +123,36 @@ export async function mountRuntimeGridWidgets({
   }
 
   await renderPendingGridWidgets(pending, grid, lane, widgetEmit, afterRender);
+}
+
+export function reflowRuntimeGridWidgets({
+  gridEl,
+  grid,
+  scaleX,
+  scaleY,
+  percentDivisor
+}: RuntimeGridReflowOptions): void {
+  gridEl.querySelectorAll<RuntimeReflowCanvasItem>(':scope > .canvas-item').forEach(wrapper => {
+    const item = wrapper.__runtimeLayoutItem;
+    const def = wrapper.__runtimeWidgetDefinition;
+    if (!item || !def) return;
+    const rect = resolveRuntimeCanvasRect(item, {
+      scaleX,
+      scaleY,
+      percentDivisor,
+      def
+    });
+    wrapper.dataset.x = String(rect.x);
+    wrapper.dataset.y = String(rect.y);
+    wrapper.setAttribute('gs-w', String(rect.w));
+    wrapper.setAttribute('gs-h', String(rect.h));
+    if (typeof grid?._applyPosition === 'function') {
+      // The responsive contract already produced the final pixel rectangle.
+      // Reapplying it without percentage recalculation preserves a deliberate,
+      // symmetric overflow when an authored element is wider than the viewport.
+      grid._applyPosition(wrapper, { x: false, y: false, w: false, h: false });
+    } else {
+      grid?.update?.(wrapper, rect, { silent: true });
+    }
+  });
 }

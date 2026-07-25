@@ -153,8 +153,11 @@ npm run build
 npm run dev
 ```
 
-The default runtime entrypoint is `node app.js`. The development command uses
-`nodemon app.js`.
+The default runtime entrypoint is `node app.js`. The development command starts
+the existing Node server together with Sass and browser-bundle watchers. Open
+development pages receive a local reload signal: changed stylesheets are
+replaced in place, while JavaScript, HTML and server restarts trigger a full
+reload. Use `npm run dev:server` when only the raw Nodemon server is wanted.
 
 ## Documentation
 

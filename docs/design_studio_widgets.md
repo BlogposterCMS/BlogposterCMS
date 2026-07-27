@@ -15,20 +15,30 @@ Widgets are content or behavior units that mount into a layout leaf. They must
 use versioned metadata, follow the Design Contract, and keep data access behind
 the existing AppLoader/runtime contracts.
 
-The page surface itself is the default free-placement workarea. Authors can add
-layout containers from the floating container toolbar; the parent container's
-mode decides how automatic inserts behave: `stack` appends vertically, `row`
-appends horizontally, and `free` keeps absolute CanvasGrid placement inside the
-active workarea. Container settings such as gap, padding and background are
-stored on the `LayoutTree`; widget placements store `workareaId` so runtime
-mounting can target the correct container without turning containers into
-widgets. Container authoring failures are isolated at the toolbar and shared
-layout adapter boundaries, with searchable `DESIGNER_CONTAINER_*` diagnostics
-instead of allowing a single bad action to break the Studio UI.
+The page root is always a vertical stack of canonical Sections. Each Section is
+a stable workarea and can use `free`, `stack`, `row` or `grid` placement;
+nested Containers use the same mode contract. A Container is a structural
+layout item in its parent grid and, at the same time, a grid surface for its
+direct children. Containers may therefore nest recursively without becoming
+public widget modules or creating a second placement system. Section and
+Container settings such as gap, padding, columns, alignment, minimum height and
+background are stored on the `LayoutTree`; widget and Container placements
+store the immediate surface `nodeId` as `workareaId` so Runtime can rebuild the
+same hierarchy. Container authoring failures are isolated at the toolbar and
+shared layout adapter boundaries, with searchable `DESIGNER_CONTAINER_*`
+diagnostics instead of allowing a single bad action to break the Studio UI.
 Containers and widget placements may also carry optional `styleSource`
-metadata. The first source object owns reusable layout/design properties, while
-followers copy those properties without copying content. Authors can unlink a
-follower per object when a container or widget needs to diverge.
+metadata, but the relationship is never inferred from sibling order, creation
+or movement. `Duplicate` clears relationship metadata and creates an
+independent copy. `Linked copy` copies the current recursive structure and
+independent content once, then links only corresponding layout/design
+properties. Later widget-structure changes do not synchronize. Authors can
+unlink a follower per object when a Container or widget needs to diverge.
+
+Background inheritance is explicit: transparent Section -> page background ->
+global website Body background. The global color is stored by SettingsManager
+under `DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND`; the page and Section values stay
+inside the saved LayoutTree.
 
 ## Foundation Set
 
@@ -58,6 +68,16 @@ is marked as advanced and hidden from normal catalogs.
 
 - `textBox`: Rich Text baseline for headings, paragraphs and sanitized saved
   HTML while keeping the saved-design widget id stable.
+  Heading, Subheading, Paragraph, Quote and Caption are insert presets for this
+  same widget, not separate widget types. After insertion, the text toolbar can
+  switch the active block between H1-H6, Paragraph, Text block, Inline text,
+  Quote and Code block while preserving its content, non-typographic
+  attributes and widget instance id. A role switch resets block-level font
+  overrides so the newly selected typography preset becomes visible
+  immediately; formatting inside nested spans and links remains intact.
+  Double-clicking a selected text widget activates this registered Rich Text
+  root, so typing and toolbar changes cannot target the surrounding canvas
+  item.
 - `mediaBlock`: image/media presentation with alt text, captions, aspect ratio
   handling, safe links and clear empty states.
 - `buttonLink`: primary, secondary and plain link actions with safe URL

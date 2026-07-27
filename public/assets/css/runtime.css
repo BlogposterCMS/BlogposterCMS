@@ -26,3 +26,53 @@ html[data-designer-live-preview='true'] body::-webkit-scrollbar {
 #content {
   min-width: 0;
 }
+
+.runtime-design-document,
+.runtime-design-document > .runtime-layout-container {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.runtime-layout-container.layout-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.runtime-layout-container.canvas-grid {
+  position: relative;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.runtime-layout-container.canvas-grid[data-layout-mode='stack'],
+.runtime-layout-container.canvas-grid[data-layout-mode='row'],
+.runtime-layout-container.canvas-grid[data-layout-mode='grid'] {
+  display: flex;
+  gap: inherit;
+  min-height: 0;
+}
+
+.runtime-layout-container.canvas-grid[data-layout-mode='stack'] {
+  flex-direction: column;
+  align-items: var(--layout-align, stretch);
+}
+
+.runtime-layout-container.canvas-grid[data-layout-mode='row'] {
+  flex-flow: row wrap;
+  align-items: var(--layout-align, stretch);
+}
+
+.runtime-layout-container.canvas-grid[data-layout-mode='grid'] {
+  display: grid;
+  grid-template-columns: repeat(var(--layout-columns, 3), minmax(0, 1fr));
+  align-items: var(--layout-align, stretch);
+}
+
+.runtime-layout-container.canvas-grid:not([data-layout-mode='free']) > .canvas-item {
+  position: relative !important;
+  inset: auto !important;
+  width: auto !important;
+  max-width: 100%;
+  transform: none !important;
+}

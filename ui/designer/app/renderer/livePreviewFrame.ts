@@ -59,9 +59,22 @@ type LivePreviewControllerOptions = {
   loadTimeoutMs?: number;
 };
 
+export type LivePreviewFrameGeometry = {
+  layoutWidth: number;
+  layoutHeight: number;
+  displayScale: number;
+  displayWidth: number;
+  displayHeight: number;
+  fitMode: 'actual' | 'fit';
+};
+
 const DESIGNER_LIVE_PREVIEW_QUERY = 'designer-live-preview';
 const DEFAULT_RENDER_DEBOUNCE_MS = 180;
 const DEFAULT_LOAD_TIMEOUT_MS = 8000;
+const PREVIEW_STAGE_GUTTER = 48;
+const MIN_PREVIEW_WIDTH = 320;
+const MAX_PREVIEW_WIDTH = 3840;
+const MIN_PREVIEW_HEIGHT = 320;
 const FALLBACK_VIEWPORT: DesignerLivePreviewViewport = { id: 'desktop', label: 'Desktop', width: '100%' };
 const DEFAULT_VIEWPORTS: DesignerLivePreviewViewport[] = [
   FALLBACK_VIEWPORT,
@@ -198,6 +211,41 @@ function normalizeViewportWidth(id: string, value: unknown): string {
   if (id === 'mobile') return '390px';
   if (id === 'tablet') return '820px';
   return '100%';
+}
+
+/**
+ * Keeps the iframe's CSS viewport at the authored width and only scales its
+ * visual output. This preserves media-query and viewport-unit behavior while
+ * still fitting wide pages on a smaller editor screen.
+ */
+export function calculateLivePreviewFrameGeometry(
+  viewportWidth: unknown,
+  shellWidth: unknown,
+  shellHeight: unknown
+): LivePreviewFrameGeometry {
+  const parsedViewportWidth = Number.parseFloat(String(viewportWidth || ''));
+  const parsedShellWidth = Number(shellWidth);
+  const parsedShellHeight = Number(shellHeight);
+  const layoutWidth = Math.max(
+    MIN_PREVIEW_WIDTH,
+    Math.min(MAX_PREVIEW_WIDTH, Number.isFinite(parsedViewportWidth) ? parsedViewportWidth : 1280)
+  );
+  const availableWidth = Math.max(1, (Number.isFinite(parsedShellWidth) ? parsedShellWidth : layoutWidth) - PREVIEW_STAGE_GUTTER);
+  const availableHeight = Math.max(1, (Number.isFinite(parsedShellHeight) ? parsedShellHeight : 720) - PREVIEW_STAGE_GUTTER);
+  const layoutHeight = Math.max(MIN_PREVIEW_HEIGHT, Math.round(availableHeight));
+  const displayScale = Math.max(
+    0.1,
+    Math.min(1, availableWidth / layoutWidth, availableHeight / layoutHeight)
+  );
+
+  return {
+    layoutWidth: Math.round(layoutWidth),
+    layoutHeight,
+    displayScale,
+    displayWidth: Math.round(layoutWidth * displayScale),
+    displayHeight: Math.round(layoutHeight * displayScale),
+    fitMode: displayScale < 0.999 ? 'fit' : 'actual'
+  };
 }
 
 export function normalizeLivePreviewViewports(
@@ -388,6 +436,10 @@ export function livePreviewFeedbackState(): Record<string, unknown> {
     open,
     status: panel?.dataset.status || document.body.dataset.livePreviewStatus || (open ? 'unknown' : 'closed'),
     viewport: panel?.dataset.viewport || document.body.dataset.livePreviewViewport || null,
+    layoutWidth: Number(panel?.dataset.layoutWidth) || null,
+    layoutHeight: Number(panel?.dataset.layoutHeight) || null,
+    displayScale: Number(panel?.dataset.displayScale) || null,
+    fitMode: panel?.dataset.fitMode || null,
     source: open ? 'designer-live-preview-frame' : null,
     frameUrl: frame?.getAttribute('src') || null,
     errorCode: panel?.dataset.errorCode || null,
@@ -413,6 +465,9 @@ export function createLivePreviewController({
   };
   let panel: HTMLElement | null = null;
   let frame: HTMLIFrameElement | null = null;
+  let frameShell: HTMLElement | null = null;
+  let frameStage: HTMLElement | null = null;
+  let frameResizeObserver: ResizeObserver | null = null;
   let trigger: HTMLElement | null = null;
   let open = false;
   let renderTimer = 0;
@@ -465,10 +520,49 @@ export function createLivePreviewController({
     trigger.classList.toggle('is-live-preview-open', open);
   }
 
-  function setFrameWidth(): void {
-    if (!frame) return;
-    frame.style.width = activeViewport.width;
+  function activeViewportWidth(): number {
+    const width = Number.parseFloat(activeViewport.width);
+    return Number.isFinite(width) ? width : getBuilderViewportState().width;
+  }
+
+  function updateFrameGeometry(): void {
+    if (!frame || !frameShell || !frameStage) return;
+    const bounds = frameShell.getBoundingClientRect();
+    const geometry = calculateLivePreviewFrameGeometry(
+      activeViewportWidth(),
+      frameShell.clientWidth || bounds.width || window.innerWidth,
+      frameShell.clientHeight || bounds.height || Math.max(MIN_PREVIEW_HEIGHT, window.innerHeight - 56)
+    );
+
+    frame.style.width = `${geometry.layoutWidth}px`;
+    frame.style.height = `${geometry.layoutHeight}px`;
+    frame.style.transform = `scale(${geometry.displayScale})`;
+    frameStage.style.width = `${geometry.displayWidth}px`;
+    frameStage.style.height = `${geometry.displayHeight}px`;
     frame.title = `Live preview - ${activeViewport.label}`;
+
+    if (panel) {
+      panel.dataset.layoutWidth = String(geometry.layoutWidth);
+      panel.dataset.layoutHeight = String(geometry.layoutHeight);
+      panel.dataset.displayScale = geometry.displayScale.toFixed(4);
+      panel.dataset.fitMode = geometry.fitMode;
+      const meta = panel.querySelector<HTMLElement>('[data-live-preview-geometry]');
+      if (meta) {
+        meta.textContent = `${geometry.layoutWidth} px · ${Math.round(geometry.displayScale * 100)}% view`;
+      }
+    }
+  }
+
+  function disconnectFrameResizeObserver(): void {
+    frameResizeObserver?.disconnect();
+    frameResizeObserver = null;
+  }
+
+  function observeFrameShell(): void {
+    disconnectFrameResizeObserver();
+    if (!frameShell || typeof ResizeObserver !== 'function') return;
+    frameResizeObserver = new ResizeObserver(() => updateFrameGeometry());
+    frameResizeObserver.observe(frameShell);
   }
 
   function markViewportButtons(): void {
@@ -493,7 +587,7 @@ export function createLivePreviewController({
       setStatus('error');
       return;
     }
-    setFrameWidth();
+    updateFrameGeometry();
     setStatus('loading');
     frame.contentWindow.postMessage({
       type: DESIGNER_LIVE_PREVIEW_RENDER,
@@ -527,6 +621,11 @@ export function createLivePreviewController({
     title.className = 'designer-live-preview__title';
     title.textContent = 'Live Preview';
     bar.appendChild(title);
+    const geometry = document.createElement('div');
+    geometry.className = 'designer-live-preview__geometry';
+    geometry.dataset.livePreviewGeometry = 'true';
+    geometry.setAttribute('aria-label', 'Preview viewport and visual scale');
+    bar.appendChild(geometry);
     const status = document.createElement('div');
     status.className = 'designer-live-preview__status';
     status.dataset.livePreviewStatus = 'true';
@@ -556,8 +655,10 @@ export function createLivePreviewController({
     actions.append(refresh, close);
     bar.appendChild(actions);
 
-    const shell = document.createElement('div');
-    shell.className = 'designer-live-preview__frame-shell';
+    frameShell = document.createElement('div');
+    frameShell.className = 'designer-live-preview__frame-shell';
+    frameStage = document.createElement('div');
+    frameStage.className = 'designer-live-preview__frame-stage';
     frame = document.createElement('iframe');
     frame.id = 'designerLivePreviewFrame';
     frame.className = 'designer-live-preview__frame';
@@ -565,12 +666,14 @@ export function createLivePreviewController({
     frame.setAttribute('title', 'Live public preview');
     frame.setAttribute('loading', 'eager');
     frame.addEventListener('load', () => scheduleRender(0));
-    shell.appendChild(frame);
+    frameStage.appendChild(frame);
+    frameShell.appendChild(frameStage);
 
-    root.append(bar, shell);
+    root.append(bar, frameShell);
     document.body.appendChild(root);
     markViewportButtons();
-    setFrameWidth();
+    observeFrameShell();
+    updateFrameGeometry();
     return root;
   }
 
@@ -646,8 +749,11 @@ export function createLivePreviewController({
     // Remove the iframe instead of only hiding it so stale public-runtime
     // messages cannot keep the overlay in a confusing half-open state.
     panel?.remove();
+    disconnectFrameResizeObserver();
     panel = null;
     frame = null;
+    frameShell = null;
+    frameStage = null;
     setBodyPreviewDataset(false);
     updateTrigger();
   }
@@ -662,9 +768,11 @@ export function createLivePreviewController({
     };
     if (panel) panel.dataset.viewport = activeViewport.id;
     markViewportButtons();
-    setFrameWidth();
+    updateFrameGeometry();
     scheduleRender(0);
   });
+  const handleWindowResize = () => updateFrameGeometry();
+  window.addEventListener('resize', handleWindowResize);
 
   return {
     open: openPreview,
@@ -681,9 +789,12 @@ export function createLivePreviewController({
       closePreview();
       unsubscribeViewport();
       window.removeEventListener('message', handlePreviewMessage);
+      window.removeEventListener('resize', handleWindowResize);
       panel?.remove();
       panel = null;
       frame = null;
+      frameShell = null;
+      frameStage = null;
     }
   };
 }

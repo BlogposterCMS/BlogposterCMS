@@ -134,20 +134,60 @@ rounding differs by less than one pixel, and the sandboxed Live Preview removes
 only the visual scrollbar gutter. This keeps a requested 390px surface at
 390px while retaining normal wheel and keyboard scrolling.
 
-Layout mode now exposes a floating container toolbar above the active page or
-container surface. It can add a container using the parent rule, open the manual
-placement picker, switch stack/row/free mode, adjust gap, padding and
-background, follow or unlink a Style Source, toggle the design surface, assign
-static designs and remove containers. Automatic container inserts follow the
-selected parent mode:
+Every Section owns a compact floating toolbar, and a selected nested Container
+uses the same local interaction language. The single mode icon cycles Free,
+Auto and Grid; Auto retains its last vertical or horizontal direction.
+Placement mode only controls layout gestures: active-layer widgets remain
+selectable and open the same inspector and floating action bar in every mode.
+The Section toolbar is inset at the top right of its own authored surface so it
+does not overlap the centered Add Section control on the shared lower edge. The
+toolbar can add or duplicate a nested Container, create an explicit linked
+copy, adjust gap, padding, minimum height and background, unlink an existing
+style relationship, toggle the design surface, assign static designs and
+remove Containers. The active Section shows an editor-only boundary on all four
+authored edges. Its two-pixel, Studio-token-based line fades and settles into
+place briefly, follows the real Section size, remains legible at Fit zoom and
+is never persisted into the public page. Reduced-motion preferences remove the
+transition. A Section's bottom edge is also its resize handle, so authored
+height does not require a parallel sidebar control. Its hit target and thumb
+stay screen-sized at every Builder zoom, while pointer movement is converted
+back into authored pixels before the Section minimum height is persisted. The
+active Section keeps the filigree thumb visible near the lower-right edge,
+separate from the centered Add Section action.
+The same lower edge exposes the existing Add Section action. It inserts the
+canonical Section immediately below that edge, scrolls the new surface into
+view and briefly highlights it; reduced-motion preferences keep the
+confirmation visible without movement.
+The Section toolbar and storyboard share one delete path. Deleting removes the
+Section together with its nested Containers and widgets, then activates a
+remaining fallback Section; the final remaining Section is protected so the page
+always keeps one valid authored surface.
+The authored page root uses content-driven height, so every inserted Section
+extends the same white canvas. Its CanvasGrid and widgets move with that
+Section instead of remaining positioned against the original first-screen
+height; the grey area stays editor surround only.
+Clicking an empty part of a Section clears the current widget selection and its
+floating action bar before opening the Section toolbar. This uses the
+background pointer path because CanvasGrid may consume the later click event.
+Scrolling the canvas hides the floating action bar without discarding the
+selected widget or its inspector state; selecting the widget again restores
+the local controls at its current position.
+Automatic Container inserts follow the selected parent mode:
 `stack` creates vertical flow, `row` creates horizontal flow and `free` keeps
 CanvasGrid-style absolute placement inside the active workarea. The star button
 designates the sole dynamic host, moving the free-placement canvas into that
 workarea, and the design button stores a `designRef` so static content can
 mount inside the container at runtime.
-When a new sibling container is created, the first sibling becomes the Style
-Source and later siblings can follow its layout/design properties without
-copying its content. Each follower can be unlinked from the toolbar.
+Creating or moving a Container never assigns a Style Source. `Duplicate`
+creates a fully independent recursive copy. `Linked copy` clones the current
+Container tree and widget contents once, gives every copied node and widget a
+new stable id, and links only corresponding layout/design properties. Content
+remains independent, and later structural additions or removals are not
+mirrored. A follower shows only its linked state and an unlink action; unlinking
+removes the relationship metadata completely.
+Free Placement is the default authoring mode. Auto and Grid temporarily lock
+direct child gestures; returning to Free clears only those temporary locks in
+the same mutation turn, preserving explicit widget locks and inactive layers.
 Toolbar actions, container refreshes and shared layout callbacks are guarded:
 unexpected failures are logged with `DESIGNER_CONTAINER_*` or
 `LAYOUT_CONTAINER_AFTER_CHANGE_FAILED` codes and must not break the surrounding
@@ -160,10 +200,12 @@ Layout terminology is explicit:
 - `WidgetPlacement` means canvas/grid widget coordinates and widget metadata.
   Placements include the nearest `workareaId` when a layout container owns the
   active design surface.
-- `StyleSource` means reusable style/layout metadata shared by containers or
-  widget placements. Followers copy source properties, not content.
-- `DesignDocument` means the saved runtime contract: `LayoutTree` plus
-  placements, scenes, styles and metadata.
+- `StyleSource` means an explicit reusable style/layout relationship created by
+  `Linked copy` or an explicit command. Followers copy source properties, not
+  content or later structure.
+- `DesignDocument` means the saved runtime contract: canonical Section nodes in
+  `LayoutTree` plus placements, styles and metadata. The extracted `scenes`
+  view is compatibility-only and is derived from those nodes.
 
 The shared source of truth for this contract lives under `ui/shared/layout/`.
 Designer adapter modules such as
@@ -220,18 +262,33 @@ The renderer entry point delegates specific responsibilities to focused helpers:
 Designer implementation work belongs under `ui/designer/app/`, with bundle
 entries in `ui/designer/entries/`.
 
-`#layoutRoot` now always acts as the root layout container. When no saved
-layout tree exists the builder seeds a leaf node, assigns it a deterministic
-`nodeId`, treats it as the default free-placement workarea and persists that
-node instead of the wrapper element. Subsequent splits or container moves reuse
-these stable identifiers so workarea flags, container settings and `designRef`
-assignments survive reloads and publishing.
+`#layoutRoot` now always acts as the page container and a fixed vertical stack.
+Its direct children are canonical Sections with stable `nodeId` values. The
+storyboard uses those same ids. Each Section owns one persistent CanvasGrid.
+A nested Container is registered as one item in its parent CanvasGrid while its
+same DOM node owns another CanvasGrid for direct children. Widget and Container
+serialization therefore retain their immediate surface id as `workareaId`.
+A legacy single workarea is migrated into the first Section without replacing
+the root shell or losing its content.
 
- The sidebar layout panel now lists the current container tree. Selecting an entry
- scrolls the canvas to the corresponding container and keeps its action bar in view.
- An arrange toggle enables drag-and-drop container reordering with undo/redo and autosave.
+The left Layout panel renders this recursive Section/Container hierarchy.
+Selecting a row scrolls the canvas to that node. Dragging a Container row into a
+Section or another Container explicitly changes its parent; cycle drops are
+rejected. Normal canvas dragging remains local placement and never silently
+reparents an item.
 
-A runtime page loader now renders the resolved layout, mounts any static design references, locates the dynamic host (falling back to the largest leaf), and injects the page design when auto-mount is enabled. The public runtime path also reads a saved Design Studio `DesignDocument`; when a design includes a `LayoutTree`, it renders the tree first and mounts widget placements into the primary workarea instead of immediately flattening the design into a single grid. All backend requests include the correct JWT and module identifiers to satisfy auth checks.
+Section deletion filters placements by both canonical Section id and every
+recursive grid-surface id before rebuilding the remaining composite layout.
+This prevents content from a deleted Container grid from being reassigned to a
+neighbouring Section.
+
+A runtime page loader now renders the resolved layout, mounts any static design
+references and injects each placement into its matching recursive grid
+`workareaId`.
+Placements without an id retain the primary-workarea fallback for legacy
+documents. Website Body background is read from the public SettingsManager
+allowlist; page and Section backgrounds then apply the same inheritance used
+in the Studio.
 
 Each layout node carries a stable `nodeId` so runtime mapping between the JSON tree and DOM elements remains deterministic.
 
@@ -299,10 +356,20 @@ The app loader verifies these events before launching the designer. If any requi
   then the preview adapter renders the current unsaved design through
   `renderPublicRuntimePageContent` so the preview and saved page share the same
   Runtime content contract.
+- The preview iframe keeps the exact selected Builder width as its CSS layout
+  viewport. When that viewport is wider than the editor, a separate visual
+  fit scale shrinks the rendered frame without changing media-query or viewport
+  unit evaluation. The Preview bar reports both the authored pixel width and
+  the visual scale so these two concerns cannot be mistaken for each other.
 - The Live Preview payload normalizes stored `snake_case` design rows and the
   global layout layer to the public Runtime placement contract before rendering,
   so unsaved previews and saved public pages use the same widget identity and
   percent-bound fields.
+- Public widget-instance defaults use Runtime Manager's existing
+  `cmsPublicRuntimeRequest` facade. Inside Live Preview, the adapter translates
+  only validated `default.*` widget-instance reads to the Designer's existing
+  authenticated `cmsAdminApiRequest` AppLoader bridge. The manifest does not
+  expose direct PlainSpace events or add a public-token bridge exception.
 - Closing the Live Preview removes the isolated frame from the editor DOM so
   stale public-runtime messages cannot keep the preview surface half-open.
 - Live Preview forwards only the existing signed `originToken` to the public
@@ -317,6 +384,10 @@ The app loader verifies these events before launching the designer. If any requi
 - The frame reports `loading`, `ready` or `error` to agent feedback. A runtime
   that does not answer before the load deadline reports
   `DESIGNER_LIVE_PREVIEW_TIMEOUT`.
+- Footer zoom remains an always-available editor view control. The Scroll
+  timeline is a contextual motion-preview tool and appears only when the
+  selected element has Sticky/Pinned behavior or an enabled effect; static
+  selections do not reserve permanent footer space for it.
 - Design saves capture the visible viewport region for thumbnails and cap the
   generated image dimensions, so small cards stay recognizable instead of
   shrinking a full-height 1:1 page capture.
@@ -375,23 +446,33 @@ The app loader verifies these events before launching the designer. If any requi
   canvas content.
 
 ## Sidebar panels
-- The Design Studio sidebar uses one stable rail shell with circular panel
-  buttons for Widgets, Layers and Layout. Widgets are the compact default state
-  and render as icon circles; the layer list and layout tree expand into their
-  own panels instead of replacing the whole sidebar. Scenes are
-  storyboard-style viewport states, not vertical document scroll sections or a
-  primary sidebar chapter, and are edited from the canvas storyboard rail.
-  Layers are the editable elements inside the active Scene.
-  Selecting a row in Layers selects the matching canvas widget and scrolls the
-  stage to it when it is outside the visible viewport. Layer rows also expose
-  forward/backward order controls that update the saved widget `zIndex`.
-  Clicking the currently open rail button closes the flyout, and clicking
-  outside the sidebar closes it through the same state helper so the canvas is
-  not covered by a stale panel.
-- The Widgets panel now renders grouped insert circles for Text, Media, Shape,
-  Button, Navigation and Content. Clicking a circle expands only that group into a
-  preset panel. The raw public widget registry is no longer dumped into the
-  default sidebar, so `textBox`, `mediaBlock`, `buttonLink`, `gallery`,
+- The Design Studio sidebar uses one stable rail shell. Widget types own its
+  full remaining height and render as one vertical icon list; only this list
+  receives vertical overflow when space is tight. Layout and Scene behavior
+  controls stay fixed below it in visually separate groups.
+- Scroll and Action in the fixed behavior group are one-shot shortcuts. A
+  second click clears the pressed rail state without rewriting the selected
+  widget's saved behavior. They do not lock the Studio into a persistent tool
+  mode.
+- Clicking Text, Media, Shape, Button, Navigation or Content opens an anchored
+  preset popover to the right of that widget type. Choosing a preset performs
+  the existing insert action. Clicking the same widget type again, pressing
+  Escape or clicking outside closes the popover without changing the canvas.
+- Scenes are storyboard-style viewport states, not vertical document scroll
+  sections or a primary sidebar chapter, and are edited from the canvas
+  storyboard rail. Layers are the editable elements inside the active Scene.
+  Empty Scenes keep their Scene name and quick-insert controls directly in the
+  viewport; that empty-state surface lives outside the normalized LayoutTree
+  so container hydration cannot remove it.
+  Layers is a separate top-level tool in the fixed left rail beside Layout; it
+  is not part of the selected widget's Content options. The right sidebar is
+  reserved for the selected widget's Content, Behavior and Style properties.
+  Selecting a row in the left Layers panel keeps that panel open, selects the
+  matching canvas widget and scrolls the stage to it when it is outside the
+  visible viewport. Layer rows also expose forward/backward order controls that
+  update the saved widget `zIndex`.
+- The raw public widget registry is not dumped into the default sidebar, so
+  `textBox`, `mediaBlock`, `buttonLink`, `gallery`,
   `navigationMenu`, `breadcrumb` and `collectionArchive` stay technical
   renderers while authors pick task-focused presets.
 - `ui/designer/app/renderer/layoutMode.js` may load the Layout partial into

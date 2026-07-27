@@ -40,6 +40,14 @@ export async function fetchRuntimePageBySlug(emit, slug, lane) {
         : cmsPublicRuntimePayload('pages', 'getBySlug', { slug, lane });
     return unwrapData(await emit(eventName, payload));
 }
+export async function fetchRuntimePublicSettings(emit, lane, keys) {
+    const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+    const payload = lane === 'admin'
+        ? cmsAdminPayload('settings', 'public', { keys })
+        : cmsPublicRuntimePayload('settings', 'public', { keys });
+    const value = unwrapData(await emit(eventName, payload));
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
 export async function fetchRuntimePageById(emit, pageId, lane) {
     const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
     const payload = lane === 'admin'

@@ -1,15 +1,21 @@
 <nav class="sidebar-nav builder-sidebar-nav scene-panel-shell" data-active-sidebar-panel="insert" aria-label="Scene builder sidebar">
   <div class="scene-sidebar-rail" aria-label="Builder sidebar">
-    <div class="scene-sidebar-tablist" role="tablist" aria-label="Builder panels">
-      <button type="button" class="scene-rail-button active" data-sidebar-panel-target="insert" aria-controls="scenePanelInsert" aria-selected="true" aria-label="Widgets" title="Widgets" role="tab">
-        <img src="/assets/icons/shapes.svg" alt="" class="icon" />
-      </button>
+    <div class="scene-widget-scroll" aria-label="Widgets">
+      <div class="scene-native-elements" aria-label="Widget types">
+        <!-- Widget types are rendered from nativeElementPresets.js. -->
+      </div>
+    </div>
+
+    <div class="scene-sidebar-tablist" role="tablist" aria-label="Layout and layers">
       <button type="button" class="scene-rail-button" data-sidebar-panel-target="layout" aria-controls="scenePanelLayout" aria-selected="false" aria-label="Layout" title="Layout" role="tab">
         <img src="/assets/icons/panels-top-left.svg" alt="" class="icon" />
       </button>
+      <button type="button" class="scene-rail-button" data-sidebar-panel-target="layers" aria-controls="scenePanelLayers" aria-selected="false" aria-label="Layers" title="Layers" role="tab">
+        <img src="/assets/icons/layers.svg" alt="" class="icon" />
+      </button>
     </div>
     <div class="scene-sidebar-tools" aria-label="Element behavior">
-      <button type="button" class="scene-rail-button scene-rail-button--tool active" data-designer-tool="scroll" aria-pressed="true" aria-label="Scroll" title="Scroll">
+      <button type="button" class="scene-rail-button scene-rail-button--tool" data-designer-tool="scroll" aria-pressed="false" aria-label="Scroll" title="Scroll">
         <img src="/assets/icons/scroll.svg" alt="" class="icon" />
       </button>
       <button type="button" class="scene-rail-button scene-rail-button--tool" data-designer-tool="action" aria-pressed="false" aria-label="Action" title="Action">
@@ -18,15 +24,9 @@
     </div>
   </div>
 
-  <div class="scene-sidebar-panels scene-sidebar-flyout" data-sidebar-flyout>
-    <section id="scenePanelInsert" class="scene-sidebar-section scene-sidebar-panel element-library is-active" data-sidebar-panel="insert" aria-label="Elements" role="tabpanel">
-      <div class="scene-sidebar-heading">
-        <span>Widgets</span>
-      </div>
-      <div class="scene-native-elements" aria-label="Insert groups">
-        <!-- Insert groups are rendered from nativeElementPresets.js. -->
-      </div>
-      <div class="scene-insert-panels" aria-label="Insert presets">
+  <div class="scene-sidebar-panels scene-sidebar-flyout" data-sidebar-flyout aria-hidden="true" hidden>
+    <section id="scenePanelInsert" class="scene-sidebar-section scene-sidebar-panel element-library" data-sidebar-panel="insert" aria-label="Widget presets" role="dialog" aria-modal="false" hidden>
+      <div class="scene-insert-panels" aria-label="Widget presets">
         <!-- Preset panels are rendered from nativeElementPresets.js. -->
       </div>
       <div class="drag-icons" aria-label="Public widgets">
@@ -38,11 +38,39 @@
       <div class="layout-panel-host"></div>
     </section>
 
-    <section id="scenePanelDesign" class="scene-sidebar-section scene-sidebar-panel style-library-panel" data-sidebar-panel="design" aria-label="Global design" role="tabpanel" hidden>
+    <section id="scenePanelLayers" class="scene-sidebar-section scene-sidebar-panel layer-sidebar-panel" data-sidebar-panel="layers" aria-label="Layers" role="tabpanel" hidden>
+      <div class="scene-sidebar-heading scene-group-title-row">
+        <span>Layers</span>
+        <small class="scene-layer-scene-name"></small>
+      </div>
+      <!-- Layer rows are rendered by builderRenderer so selection and ordering
+           continue to use the same canvas state and agent feedback contract. -->
+      <div class="scene-inspector-layer-list" role="list" aria-label="Layers in active scene"></div>
+    </section>
+
+    <section id="scenePanelDesign" class="scene-sidebar-section scene-sidebar-panel style-library-panel" data-sidebar-panel="design" aria-label="Design settings" role="tabpanel" hidden>
       <div class="scene-sidebar-heading">
-        <span>Global design</span>
+        <span>Design settings</span>
       </div>
       <div class="global-design-settings">
+        <section class="global-design-settings__group" aria-labelledby="globalDesignBackgroundTitle">
+          <h3 id="globalDesignBackgroundTitle">Website settings</h3>
+          <label class="global-design-background-field">
+            <span>Body</span>
+            <input type="color" value="#f2f3f7" data-global-body-background />
+          </label>
+        </section>
+        <section class="global-design-settings__group" aria-labelledby="pageDesignBackgroundTitle">
+          <h3 id="pageDesignBackgroundTitle">Page settings</h3>
+          <label class="global-design-background-field">
+            <span>Page</span>
+            <input type="color" value="#ffffff" data-page-background />
+          </label>
+          <label class="global-design-background-inherit">
+            <input type="checkbox" data-page-background-inherit />
+            <span>Inherit website background</span>
+          </label>
+        </section>
         <section class="global-design-settings__group" aria-labelledby="globalDesignColorsTitle">
           <h3 id="globalDesignColorsTitle">Color scheme</h3>
           <div class="style-library-panel-host" data-color-scheme-host></div>

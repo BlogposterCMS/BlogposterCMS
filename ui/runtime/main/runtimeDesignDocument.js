@@ -12,9 +12,49 @@ function collectLeaves(node, leaves = []) {
     leaves.push(node);
     return leaves;
 }
+function collectPlacementHosts(node, hosts = [], isRoot = true) {
+    if (!node)
+        return hosts;
+    // The page root only orders Sections. Every Section and nested Container is
+    // a real placement host, including Containers that own further Containers.
+    if (node.section || node.type === 'leaf' || !isRoot)
+        hosts.push(node);
+    if (node.type === 'split') {
+        node.children.forEach(child => collectPlacementHosts(child, hosts, false));
+    }
+    return hosts;
+}
+function structuralItemsForHost(host, idMap) {
+    if (host.type !== 'split')
+        return [];
+    return host.children.flatMap(child => {
+        const childId = String(child.nodeId || '').trim();
+        const element = childId ? idMap.get(childId) : null;
+        if (!element)
+            return [];
+        const placement = child.placement || {};
+        return [{
+                element,
+                item: {
+                    id: `layout-container:${childId}`,
+                    x: placement.x ?? 0,
+                    y: placement.y ?? 0,
+                    w: placement.w ?? 480,
+                    h: placement.h ?? 240,
+                    ...(placement.xPercent !== undefined ? { xPercent: placement.xPercent } : {}),
+                    ...(placement.yPercent !== undefined ? { yPercent: placement.yPercent } : {}),
+                    ...(placement.wPercent !== undefined ? { wPercent: placement.wPercent } : {}),
+                    ...(placement.hPercent !== undefined ? { hPercent: placement.hPercent } : {}),
+                    ...(placement.responsivePlacement
+                        ? { responsivePlacement: placement.responsivePlacement }
+                        : {})
+                }
+            }];
+    });
+}
 function primaryWorkareaId(tree) {
-    const leaves = collectLeaves(tree);
-    const workarea = leaves.find(leaf => leaf.workarea) || leaves[0] || null;
+    const hosts = collectPlacementHosts(tree);
+    const workarea = hosts.find(host => host.workarea) || hosts.find(host => host.section) || hosts[0] || null;
     return workarea?.nodeId || null;
 }
 function placementWorkareaId(item) {
@@ -64,6 +104,7 @@ export async function renderRuntimeDesignDocument(target, document, allWidgets, 
     target.appendChild(shell);
     const fallbackWorkareaId = primaryWorkareaId(tree);
     const leaves = collectLeaves(tree);
+    const placementHosts = collectPlacementHosts(tree);
     const placements = document.placements;
     for (const leaf of leaves) {
         const leafId = leaf.nodeId || '';
@@ -71,15 +112,22 @@ export async function renderRuntimeDesignDocument(target, document, allWidgets, 
         if (!container)
             continue;
         await renderDesignRefLeaf({ leaf, container, allWidgets, lane, options });
-        const localPlacements = placementsForWorkarea(placements, leafId, fallbackWorkareaId);
-        const combined = leafId === fallbackWorkareaId
+    }
+    for (const host of placementHosts) {
+        const hostId = host.nodeId || '';
+        const container = hostId ? idMap.get(String(hostId)) : null;
+        if (!container)
+            continue;
+        const localPlacements = placementsForWorkarea(placements, hostId, fallbackWorkareaId);
+        const structuralItems = structuralItemsForHost(host, idMap);
+        const combined = hostId === fallbackWorkareaId
             ? [...(options.globalLayout || []), ...localPlacements]
             : localPlacements;
-        if (combined.length) {
-            await renderStaticRuntimeGrid(container, combined, allWidgets, lane, {
-                widgetEmit: options.widgetEmit
-            });
-        }
+        await renderStaticRuntimeGrid(container, combined, allWidgets, lane, {
+            widgetEmit: options.widgetEmit,
+            useTargetAsGrid: true,
+            structuralItems
+        });
     }
     return true;
 }

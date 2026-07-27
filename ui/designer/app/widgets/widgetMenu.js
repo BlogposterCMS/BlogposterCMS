@@ -4,8 +4,7 @@ import {
   applyWidgetStyleSources,
   followWidgetStyleSource,
   markWidgetStyleSource,
-  unlinkWidgetStyleSource,
-  widgetStyleSourceId
+  unlinkWidgetStyleSource
 } from './styleSourceSync.js';
 
 export function attachOptionsMenu(el, widgetDef, editBtn, {
@@ -14,7 +13,8 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   scheduleAutosave,
   activeLayer,
   codeMap,
-  genId
+  genId,
+  duplicateWidget
 }) {
   const menuBtn = document.createElement('button');
   menuBtn.className = 'widget-menu';
@@ -25,10 +25,11 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   const menu = document.createElement('div');
   menu.className = 'widget-options-menu';
   menu.innerHTML = `
-        <button class="menu-edit"><img src="/assets/icons/pencil-line.svg" class="icon" alt="edit" /> Edit Code</button>
+      <button class="menu-edit"><img src="/assets/icons/pencil-line.svg" class="icon" alt="edit" /> Edit Code</button>
       <button class="menu-copy"><img src="/assets/icons/copy.svg" class="icon" alt="duplicate" /> Duplicate</button>
-      <button class="menu-style-source"><img src="/assets/icons/link.svg" class="icon" alt="style source" /> Set as Style Source</button>
-      <button class="menu-style-follow"><img src="/assets/icons/link-2.svg" class="icon" alt="follow style source" /> Follow Style Source</button>
+      <button class="menu-copy-linked"><img src="/assets/icons/link-2.svg" class="icon" alt="linked duplicate" /> Linked copy</button>
+      <button class="menu-style-status" disabled><img src="/assets/icons/link.svg" class="icon" alt="" /> Style linked</button>
+      <button class="menu-style-unlink"><img src="/assets/icons/unlink.svg" class="icon" alt="unlink style" /> Unlink style</button>
       <button class="menu-template"><img src="/assets/icons/package.svg" class="icon" alt="template" /> Save as Template</button>
       <button class="menu-lock"><img src="/assets/icons/lock.svg" class="icon" alt="lock" /> Lock Position</button>
       <button class="menu-snap"><img src="/assets/icons/layout-grid.svg" class="icon" alt="snap" /> Snap to Grid</button>
@@ -70,18 +71,6 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   menu.show = showMenu;
   menu.hide = hideMenu;
 
-  function firstStyleSourceCandidate() {
-    const parent = el.parentElement;
-    if (!parent) return null;
-    const widgets = Array.from(parent.querySelectorAll('.canvas-item'));
-    const explicit = widgets.find(item => (
-      item !== el &&
-      item.dataset.styleSourceRole === 'source' &&
-      item.dataset.styleSourceEnabled !== 'false'
-    ));
-    return explicit || widgets.find(item => item !== el && item.dataset.styleSourceEnabled !== 'false') || null;
-  }
-
   function emitStyleSourceChange(target = el) {
     grid?.__grid?.emitChange?.(target, { contentOnly: true });
     if (target.dataset.styleSourceRole === 'source') {
@@ -96,17 +85,11 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   }
 
   function updateStyleSourceButtons() {
-    const setBtn = menu.querySelector('.menu-style-source');
-    const followBtn = menu.querySelector('.menu-style-follow');
-    const isSource = el.dataset.styleSourceRole === 'source' && el.dataset.styleSourceEnabled !== 'false';
+    const statusBtn = menu.querySelector('.menu-style-status');
+    const unlinkBtn = menu.querySelector('.menu-style-unlink');
     const isFollower = Boolean(el.dataset.styleSourceId) && el.dataset.styleSourceEnabled !== 'false';
-    if (setBtn) {
-      setBtn.innerHTML = `<img src="/assets/icons/link.svg" class="icon" alt="style source" /> ${isSource ? 'Style Source' : 'Set as Style Source'}`;
-      setBtn.disabled = isSource;
-    }
-    if (followBtn) {
-      followBtn.innerHTML = `<img src="/assets/icons/${isFollower ? 'unlink' : 'link-2'}.svg" class="icon" alt="follow style source" /> ${isFollower ? 'Unlink Style Source' : 'Follow Style Source'}`;
-    }
+    if (statusBtn) statusBtn.hidden = !isFollower;
+    if (unlinkBtn) unlinkBtn.hidden = !isFollower;
   }
 
   menuBtn.addEventListener('click', e => {
@@ -119,50 +102,98 @@ export function attachOptionsMenu(el, widgetDef, editBtn, {
   });
 
   menu.querySelector('.menu-edit').onclick = () => { editBtn.click(); menu.style.display = 'none'; };
-  menu.querySelector('.menu-style-source').onclick = () => {
-    markWidgetStyleSource(el);
+  menu.querySelector('.menu-style-unlink').onclick = () => {
+    unlinkWidgetStyleSource(el, codeMap);
     updateStyleSourceButtons();
     emitStyleSourceChange();
     menu.style.display = 'none';
   };
-  menu.querySelector('.menu-style-follow').onclick = () => {
-    const isFollower = Boolean(el.dataset.styleSourceId) && el.dataset.styleSourceEnabled !== 'false';
-    if (isFollower) {
-      unlinkWidgetStyleSource(el);
-      updateStyleSourceButtons();
-      emitStyleSourceChange();
-      menu.style.display = 'none';
-      return;
+
+  function cloneValue(value) {
+    if (value == null) return value;
+    if (typeof structuredClone === 'function') {
+      try { return structuredClone(value); } catch {}
     }
-    const source = firstStyleSourceCandidate();
-    const sourceId = widgetStyleSourceId(source);
-    if (!source || !sourceId) {
-      menu.style.display = 'none';
-      return;
+    try { return JSON.parse(JSON.stringify(value)); } catch { return value; }
+  }
+
+  function clearStyleSource(target) {
+    delete target.dataset.styleSourceEnabled;
+    delete target.dataset.styleSourceRole;
+    delete target.dataset.styleSourceId;
+    delete target.dataset.styleSyncLayout;
+    delete target.dataset.styleSyncDesign;
+  }
+
+  function independentCode(value) {
+    const code = cloneValue(value);
+    if (!code || typeof code !== 'object') return code;
+    ['styleSource', 'style_source', 'styleLink', 'style_link'].forEach(key => {
+      delete code[key];
+    });
+    if (code.meta && typeof code.meta === 'object') {
+      ['styleSource', 'style_source', 'styleLink', 'style_link'].forEach(key => {
+        delete code.meta[key];
+      });
     }
-    followWidgetStyleSource(el, source);
-    grid?.__grid?.update?.(el, {}, { silent: true });
-    grid?.__grid?.emitChange?.(source, { contentOnly: true });
-    updateStyleSourceButtons();
-    emitStyleSourceChange();
-    menu.style.display = 'none';
-  };
-  menu.querySelector('.menu-copy').onclick = () => {
-    const clone = el.cloneNode(true);
+    return code;
+  }
+
+  async function fallbackDuplicate(linked) {
+    const clone = el.cloneNode(false);
+    clone.classList.remove('selected');
+    const sourceContent = el.querySelector(':scope > .canvas-item-content');
+    if (sourceContent) clone.appendChild(sourceContent.cloneNode(true));
     const cloneId = genId();
     clone.id = `widget-${cloneId}`;
     clone.dataset.instanceId = cloneId;
     clone.dataset.global = el.dataset.global || 'false';
     clone.dataset.layer = el.dataset.layer || String(activeLayer);
+    clearStyleSource(clone);
+    const sourceCode = codeMap?.[el.dataset.instanceId];
+    if (sourceCode && codeMap) codeMap[cloneId] = independentCode(sourceCode);
     grid.appendChild(clone);
     grid.__grid.makeWidget(clone);
     const cEditBtn = editBtn.cloneNode(true);
     clone.appendChild(cEditBtn);
-    attachOptionsMenu(clone, widgetDef, cEditBtn, { grid, pageId, scheduleAutosave, activeLayer, codeMap, genId });
+    attachOptionsMenu(clone, widgetDef, cEditBtn, {
+      grid,
+      pageId,
+      scheduleAutosave,
+      activeLayer,
+      codeMap,
+      genId,
+      duplicateWidget
+    });
+    if (linked) {
+      markWidgetStyleSource(el);
+      followWidgetStyleSource(clone, el);
+    }
     renderWidget(clone, widgetDef, codeMap);
+    grid.__grid.emitChange?.(clone, { contentOnly: true });
+    if (linked) emitStyleSourceChange(el);
     if (pageId) scheduleAutosave();
+    return clone;
+  }
+
+  async function runDuplicate(linked) {
     menu.style.display = 'none';
-  };
+    try {
+      if (typeof duplicateWidget === 'function') {
+        await duplicateWidget(el, { linked });
+      } else {
+        await fallbackDuplicate(linked);
+      }
+    } catch (err) {
+      console.warn('[Designer] DESIGNER_WIDGET_DUPLICATE_FAILED', {
+        instanceId: el.dataset.instanceId || null,
+        linked
+      }, err);
+    }
+  }
+
+  menu.querySelector('.menu-copy').onclick = () => runDuplicate(false);
+  menu.querySelector('.menu-copy-linked').onclick = () => runDuplicate(true);
   menu.querySelector('.menu-template').onclick = () => {
     const defaultName = widgetDef.metadata?.label || widgetDef.id;
     const name = prompt('Template name:', defaultName);

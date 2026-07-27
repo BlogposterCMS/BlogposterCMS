@@ -108,6 +108,32 @@ describe('Plainspace canvas hydration', () => {
     }
   });
 
+  it('unregisters a reparented item without removing its DOM node', () => {
+    document.body.innerHTML = '';
+    const sourceGridEl = document.createElement('div');
+    const targetGridEl = document.createElement('div');
+    document.body.append(sourceGridEl, targetGridEl);
+
+    const sourceGrid = initCanvasGrid({}, sourceGridEl);
+    const targetGrid = initCanvasGrid({}, targetGridEl);
+    const item = document.createElement('div');
+    item.className = 'canvas-item';
+    item.dataset.x = '0';
+    item.dataset.y = '0';
+    item.setAttribute('gs-w', '100');
+    item.setAttribute('gs-h', '80');
+    sourceGridEl.appendChild(item);
+    sourceGrid.makeWidget(item, { silent: true });
+
+    sourceGrid.unregisterWidget(item, { silent: true });
+    targetGridEl.appendChild(item);
+    targetGrid.makeWidget(item, { silent: true });
+
+    expect(sourceGrid.widgets).not.toContain(item);
+    expect(targetGrid.widgets).toContain(item);
+    expect(item.parentElement).toBe(targetGridEl);
+  });
+
   it('keeps pushed widgets near the collision origin even when earlier gaps exist', () => {
     document.body.innerHTML = '';
     const gridEl = document.createElement('div');

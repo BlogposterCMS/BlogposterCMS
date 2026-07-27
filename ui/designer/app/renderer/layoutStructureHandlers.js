@@ -65,6 +65,15 @@ export function createLayoutStructureHandlers({
         } catch (err) {
           warnLayoutStructure('DESIGNER_LAYOUT_TREE_FOCUS_FAILED', err);
         }
+      }, (source, target, position) => {
+        try {
+          layoutCtxProvider()?.moveContainer?.(source, target, position);
+        } catch (err) {
+          warnLayoutStructure('DESIGNER_LAYOUT_TREE_MOVE_FAILED', err, {
+            sourceId: source?.dataset?.nodeId || null,
+            targetId: target?.dataset?.nodeId || target?.dataset?.sectionId || null
+          });
+        }
       });
     } catch (err) {
       warnLayoutStructure('DESIGNER_LAYOUT_TREE_RENDER_FAILED', err);

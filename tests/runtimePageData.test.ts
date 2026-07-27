@@ -7,6 +7,7 @@ import {
   fetchRuntimeDesign,
   fetchRuntimePageById,
   fetchRuntimePageBySlug,
+  fetchRuntimePublicSettings,
   fetchRuntimeWidgetRegistry,
   laneAuthPayload,
   loadRuntimeGlobalLayout,
@@ -72,6 +73,27 @@ describe('runtimePageData', () => {
       resource: 'pages',
       action: 'get',
       params: { pageId: 'child-1', lane: 'public' }
+    });
+  });
+
+  it('loads the public website background through the settings facade', async () => {
+    const emit = jest.fn().mockResolvedValue({
+      data: { DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND: '#eef2f7' }
+    });
+
+    await expect(fetchRuntimePublicSettings(
+      emit,
+      'public',
+      ['DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND']
+    )).resolves.toEqual({
+      DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND: '#eef2f7'
+    });
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
+      moduleName: 'runtimeManager',
+      moduleType: 'core',
+      resource: 'settings',
+      action: 'public',
+      params: { keys: ['DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND'] }
     });
   });
 

@@ -13,8 +13,22 @@ import {
   applyFont,
   toggleStyle,
   getRegisteredEditable,
-  applyToolbarChange
+  applyToolbarChange,
+  applySemanticTextTag
 } from '../core/editor.js';
+import {
+  SEMANTIC_TEXT_TAG_OPTIONS,
+  captureSemanticTextSelection,
+  resolveSemanticTextElement,
+  resolveTextStyleElement,
+  restoreSemanticTextSelection
+} from '../core/semanticTextTag.js';
+import {
+  clearToolbarPopoverPosition,
+  mountToolbarPopover,
+  positionToolbarPopover,
+  restoreToolbarPopover
+} from './toolbarPopover.js';
 import { designerState, setDefaultOpacity } from '../../managers/designerState.js';
 import { saveSelection, restoreSelection, isSelectionStyled, initSelectionTracking } from '../core/selection.js';
 import { fetchPartial } from '../../fetchPartial.js';
@@ -156,6 +170,7 @@ function applyStyleInternal(prop, value) {
     if (innerEditable) state.activeEl = innerEditable;
   }
   const targetEl = state.activeEl;
+  const styleTarget = resolveTextStyleElement(targetEl, window.getSelection?.()) || targetEl;
   DBG('applyStyleInternal', { prop, value, targetId: targetEl?.id, targetCls: targetEl?.className });
   // Detect mode early and clear any stale ranges when not editing
   const widgetEl = targetEl?.closest?.('.canvas-item');
@@ -262,16 +277,16 @@ function applyStyleInternal(prop, value) {
       touch(carrier);
     });
   } else {
-    // Edit mode but no active selection: do not style whole element
-    // Selection mode (not contenteditable): style whole element
-    if (!isEditMode) {
-      DBG('whole-element-apply', { targetId: targetEl?.id });
-      touch(targetEl);
+    // With a caret or a single-block Rich Text widget, toolbar changes belong
+    // to that block. Multi-block editables still require an explicit range.
+    if (!isEditMode || styleTarget !== targetEl) {
+      DBG('whole-element-apply', { targetId: styleTarget?.id, targetTag: styleTarget?.tagName });
+      touch(styleTarget);
       try {
         if (window.DEBUG_TEXT_EDITOR) {
-          const prevOutline = targetEl.style.outline;
-          targetEl.style.outline = '1px dashed magenta';
-          setTimeout(() => { try { targetEl.style.outline = prevOutline; } catch {} }, 600);
+          const prevOutline = styleTarget.style.outline;
+          styleTarget.style.outline = '1px dashed magenta';
+          setTimeout(() => { try { styleTarget.style.outline = prevOutline; } catch {} }, 600);
         }
       } catch (e) {}
     } else {
@@ -306,8 +321,11 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       '<button type="button" class="tb-btn" data-cmd="italic">' + window.featherIcon('italic') + '</button>',
       '<button type="button" class="tb-btn" data-cmd="underline">' + window.featherIcon('underline') + '</button>',
       '<button type="button" class="tb-btn" data-cmd="align" data-align="left">' + window.featherIcon('align-left') + '</button>',
-      '<select class="heading-select" style="display:none">' +
-        ['h1','h2','h3','h4','h5','h6'].map(h => `<option value="${h}">${h.toUpperCase()}</option>`).join('') +
+      '<select class="heading-select" aria-label="Text type" title="Change the text role and its typography preset without replacing the widget">' +
+        '<option value="" disabled>Mixed text</option>' +
+        SEMANTIC_TEXT_TAG_OPTIONS
+          .map(option => `<option value="${option.value}">${option.label}</option>`)
+          .join('') +
       '</select>',
       '<div class="font-size-control">' +
         '<button type="button" class="tb-btn fs-dec">-</button>' +
@@ -323,7 +341,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
       '</div>' +
       '<div class="opacity-control">' +
         '<button type="button" class="tb-btn opacity-btn">' + window.featherIcon('droplet') + '</button>' +
-        '<div class="opacity-slider">' +
+        '<div class="opacity-slider text-toolbar-opacity-popover">' +
           '<input type="range" class="opacity-range" min="0" max="100" value="100" />' +
           '<span class="opacity-value">100%</span>' +
         '</div>' +
@@ -359,7 +377,6 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   const opacitySlider = state.toolbar.querySelector('.opacity-slider');
   const opacityRange = state.toolbar.querySelector('.opacity-range');
   const opacityValue = state.toolbar.querySelector('.opacity-value');
-
   if (opacityRange) {
     const init = Math.round(designerState.defaultOpacity * 100);
     opacityRange.value = String(init);
@@ -380,7 +397,16 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
   function hideOpacitySlider() {
     if (!opacitySlider) return;
     opacitySlider.classList.remove('open');
+    restoreToolbarPopover(opacitySlider);
+    clearToolbarPopoverPosition(opacitySlider);
     document.removeEventListener('click', outsideOpacityHandler);
+    window.removeEventListener('resize', positionOpacitySlider);
+    window.removeEventListener('scroll', positionOpacitySlider);
+  }
+
+  function positionOpacitySlider() {
+    if (!opacitySlider?.classList.contains('open') || !opacityBtn) return;
+    positionToolbarPopover(opacitySlider, opacityBtn);
   }
 
   function outsideOpacityHandler(e) {
@@ -394,36 +420,83 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     if (opacitySlider.classList.contains('open')) {
       hideOpacitySlider();
     } else {
+      // Portalling the slider avoids the toolbar's horizontal overflow region,
+      // which otherwise clips the popover even when overflow-y is visible.
+      mountToolbarPopover(opacitySlider);
       opacitySlider.classList.add('open');
+      positionOpacitySlider();
       document.addEventListener('click', outsideOpacityHandler);
+      window.addEventListener('resize', positionOpacitySlider);
+      window.addEventListener('scroll', positionOpacitySlider);
     }
   });
 
   const fsInput = state.toolbar.querySelector('.fs-input');
+  const semanticTagSelect = state.toolbar.querySelector('.heading-select');
+  let pendingSemanticTarget = null;
+  let pendingSemanticSelection = null;
+
+  function currentSemanticTarget() {
+    const editable = ensureActiveEditable();
+    return editable
+      ? resolveSemanticTextElement(editable, window.getSelection?.())
+      : null;
+  }
+
+  function syncSemanticTagSelect() {
+    if (!semanticTagSelect) return;
+    const editable = ensureActiveEditable();
+    const target = editable
+      ? resolveSemanticTextElement(editable, window.getSelection?.())
+      : null;
+    semanticTagSelect.disabled = !editable;
+    semanticTagSelect.value = target?.tagName?.toLowerCase() || '';
+    semanticTagSelect.title = target
+      ? 'Change the text role and its typography preset without replacing the Rich Text widget'
+      : 'Place the cursor inside one text block to change its HTML tag';
+  }
+
+  semanticTagSelect?.addEventListener('pointerdown', () => {
+    pendingSemanticTarget = currentSemanticTarget();
+    pendingSemanticSelection = captureSemanticTextSelection(
+      pendingSemanticTarget,
+      window.getSelection?.()
+    );
+  });
+
+  semanticTagSelect?.addEventListener('change', () => {
+    const nextTagName = semanticTagSelect.value;
+    const target = pendingSemanticTarget || currentSemanticTarget();
+    const selectionSnapshot = pendingSemanticSelection || captureSemanticTextSelection(
+      target,
+      window.getSelection?.()
+    );
+    pendingSemanticTarget = null;
+    pendingSemanticSelection = null;
+    if (!target || !nextTagName) {
+      syncSemanticTagSelect();
+      return;
+    }
+    try {
+      const replacement = applySemanticTextTag(target, nextTagName);
+      restoreSemanticTextSelection(
+        replacement,
+        selectionSnapshot,
+        window.getSelection?.()
+      );
+      semanticTagSelect.value = replacement.tagName.toLowerCase();
+      updateButtonStates();
+    } catch (error) {
+      console.error('[DESIGNER_TEXT_TAG_UPDATE_FAILED]', error);
+      syncSemanticTagSelect();
+    }
+  });
 
   function updateFontSizeInput() {
     if (!state.activeEl || !fsInput) return;
     const el = state.activeEl;
     const sel = window.getSelection();
-    let useEl = el;
-    if (
-      sel && sel.rangeCount && !sel.isCollapsed &&
-      el.contains(sel.anchorNode) && el.contains(sel.focusNode)
-    ) {
-      // Find first text node in range and use its parent for size
-      const range = sel.getRangeAt(0);
-      let walkerRoot = range.commonAncestorContainer;
-      if (walkerRoot.nodeType === 3) walkerRoot = walkerRoot.parentNode;
-      const walker = document.createTreeWalker(
-        walkerRoot,
-        NodeFilter.SHOW_TEXT,
-        { acceptNode: n => range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }
-      );
-      while (walker.nextNode()) {
-        const parent = walker.currentNode?.parentElement;
-        if (parent) { useEl = parent; break; }
-      }
-    }
+    const useEl = resolveTextStyleElement(el, sel) || el;
     const computedSize = window.getComputedStyle(useEl).fontSize;
     const numeric = parseFloat(computedSize);
     if (!Number.isNaN(numeric)) fsInput.value = numeric;
@@ -455,6 +528,7 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
     }
     updateFontSizeInput();
     updateFontLabelFromSelection();
+    syncSemanticTagSelect();
   };
 
   document.addEventListener('selectionchange', () => {
@@ -483,9 +557,9 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
   function collectDocumentColors() {
     const colors = new Set();
-    const grid = document.getElementById('workspaceMain');
-    if (!grid) return [];
-    grid.querySelectorAll('*').forEach(el => {
+    const layoutRoot = document.getElementById('layoutRoot');
+    if (!layoutRoot) return [];
+    layoutRoot.querySelectorAll('*').forEach(el => {
       const style = getComputedStyle(el);
       ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
         const val = style[prop];
@@ -1022,11 +1096,6 @@ export function showToolbar() {
 export function hideToolbar() {
   if (!state.toolbar) return;
   state.toolbar.style.display = 'none';
-  const headingSelect = state.toolbar.querySelector('.heading-select');
-  if (headingSelect) {
-    headingSelect.style.display = 'none';
-    headingSelect.onchange = null;
-  }
   if (toolbarPositionListenersAttached) {
     window.removeEventListener('scroll', updateToolbarPosition);
     window.removeEventListener('resize', updateToolbarPosition);

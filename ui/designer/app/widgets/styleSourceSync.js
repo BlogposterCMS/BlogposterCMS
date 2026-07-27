@@ -11,9 +11,27 @@ export function markWidgetStyleSource(source) {
   delete source.dataset.styleSourceId;
 }
 
-export function unlinkWidgetStyleSource(target) {
+export function unlinkWidgetStyleSource(target, codeMap = null) {
   if (!target) return;
-  target.dataset.styleSourceEnabled = 'false';
+  // An unlinked widget is fully independent. Remove the complete relationship
+  // instead of persisting a disabled source id that can surprise users later.
+  delete target.dataset.styleSourceEnabled;
+  delete target.dataset.styleSourceRole;
+  delete target.dataset.styleSourceId;
+  delete target.dataset.styleSyncLayout;
+  delete target.dataset.styleSyncDesign;
+  const instanceId = target.dataset.instanceId;
+  const code = instanceId && codeMap?.[instanceId];
+  if (code && typeof code === 'object') {
+    ['styleSource', 'style_source', 'styleLink', 'style_link'].forEach(key => {
+      delete code[key];
+    });
+    if (code.meta && typeof code.meta === 'object') {
+      ['styleSource', 'style_source', 'styleLink', 'style_link'].forEach(key => {
+        delete code.meta[key];
+      });
+    }
+  }
 }
 
 export function copyWidgetStyleProperties(source, target) {

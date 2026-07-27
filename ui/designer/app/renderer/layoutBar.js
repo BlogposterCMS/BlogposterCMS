@@ -242,6 +242,7 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
 
   const timeline = document.createElement('div');
   timeline.className = 'scene-timeline';
+  timeline.hidden = true;
 
   const timelineLabel = document.createElement('span');
   timelineLabel.className = 'scene-timeline-label';
@@ -398,23 +399,28 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
     applyEffectPreview(gridEl, pct);
     syncTimelineLanes(laneWrap, pct);
   });
-  grid?.on?.('change', () => renderTimelineLanes(gridEl, laneWrap, Number.parseInt(progress.value, 10) || 0));
-  document.addEventListener('designerContentChanged', () => {
-    renderTimelineLanes(gridEl, laneWrap, Number.parseInt(progress.value, 10) || 0);
-  });
   function syncTimelineAvailability() {
-    const selected = Boolean(gridEl?.querySelector('.canvas-item.selected'));
-    timeline.classList.toggle('is-disabled', !selected);
-    playBtn.disabled = !selected;
-    progress.disabled = !selected;
-    timelineLabel.textContent = selected ? 'Scroll timeline' : 'Select an element';
-    if (!selected && playRaf) {
+    const selected = gridEl?.querySelector('.canvas-item.selected');
+    const hasMotionTimeline = Boolean(selected && collectTimelineLanes(gridEl).length);
+    timeline.hidden = !hasMotionTimeline;
+    timeline.setAttribute('aria-hidden', hasMotionTimeline ? 'false' : 'true');
+    timeline.classList.toggle('is-disabled', !hasMotionTimeline);
+    layoutBar.classList.toggle('has-motion-timeline', hasMotionTimeline);
+    playBtn.disabled = !hasMotionTimeline;
+    progress.disabled = !hasMotionTimeline;
+    timelineLabel.textContent = 'Scroll timeline';
+    if (selected?.dataset.instanceId) timeline.dataset.contextInstanceId = selected.dataset.instanceId;
+    else delete timeline.dataset.contextInstanceId;
+    if (!hasMotionTimeline && playRaf) {
       cancelAnimationFrame(playRaf);
       playRaf = 0;
     }
     renderTimelineLanes(gridEl, laneWrap, Number.parseInt(progress.value, 10) || 0);
     applyEffectPreview(gridEl, Number.parseInt(progress.value, 10) || 0);
   }
+  const syncTimelineFromContent = () => syncTimelineAvailability();
+  grid?.on?.('change', syncTimelineFromContent);
+  document.addEventListener('designerContentChanged', syncTimelineFromContent);
   document.addEventListener('designerSelectionChanged', syncTimelineAvailability);
   syncTimelineAvailability();
   playBtn.addEventListener('click', () => {
@@ -451,6 +457,7 @@ export function buildLayoutBar({ footer, grid, gridEl }) {
     unsubscribeViewport();
     cancelAnimationFrame(fitFrame);
     window.removeEventListener('resize', scheduleFitZoom);
+    document.removeEventListener('designerContentChanged', syncTimelineFromContent);
     document.removeEventListener('designerSelectionChanged', syncTimelineAvailability);
   };
   return layoutBar;

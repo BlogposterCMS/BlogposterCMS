@@ -13,6 +13,202 @@
   box-sizing: border-box;
 }
 
+#layoutRoot.layout-page-root {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  height: auto;
+}
+
+.layout-page-root > .layout-section {
+  --designer-section-boundary-size: 2px;
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 320px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.layout-page-root > .layout-section.layout-section--active {
+  z-index: 1;
+  outline: 0;
+}
+
+.layout-page-root > .layout-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 32;
+  // Keep the editor boundary aligned with the restrained Studio chrome while
+  // painting above Section content so widgets cannot hide it.
+  border: var(--designer-section-boundary-size) solid
+    color-mix(in srgb, var(--designer-accent, #22c7cc) 78%, var(--studio-border-strong));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--designer-accent, #22c7cc) 10%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.998);
+  transform-origin: center;
+  transition:
+    opacity 160ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.layout-page-root > .layout-section.layout-section--active::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.layout-page-root > .layout-section.layout-section--inserting {
+  animation: designer-section-insert-reveal 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.layout-page-root > .layout-section.layout-section--inserting::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 33;
+  border: 2px solid var(--designer-accent, #22c7cc);
+  box-shadow: inset 0 0 0 1px rgba(34, 199, 204, 0.18);
+  pointer-events: none;
+  transform-origin: top center;
+  animation: designer-section-insert-highlight 900ms ease-out both;
+}
+
+@keyframes designer-section-insert-reveal {
+  from {
+    opacity: 0.28;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes designer-section-insert-highlight {
+  0% {
+    opacity: 1;
+    transform: scaleY(0.96);
+  }
+
+  55% {
+    opacity: 0.72;
+    transform: scaleY(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+
+.layout-section > .layout-section-add {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 35;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid rgba(18, 21, 34, 0.16);
+  border-radius: 999px;
+  background: #fff;
+  color: #202936;
+  box-shadow: 0 7px 18px rgba(18, 21, 34, 0.14);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  transform: translate(-50%, 50%);
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+
+.layout-section:hover > .layout-section-add,
+.layout-section:focus-within > .layout-section-add,
+.layout-page-root > .layout-section:last-of-type > .layout-section-add {
+  opacity: 1;
+}
+
+.layout-section > .layout-section-add:hover {
+  border-color: var(--designer-accent, #22c7cc);
+}
+
+.layout-section > .layout-section-add .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.layout-section > .layout-section-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: -10px;
+  left: 0;
+  z-index: 34;
+  width: 100%;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  opacity: 0;
+  touch-action: none;
+  // CanvasGrid publishes the inverse zoom on the scaled page root. Keeping
+  // only the hit area's Y axis screen-sized avoids blocking Section content
+  // while making the boundary reliably draggable in Fit mode.
+  transform: scaleY(var(--canvas-inverse-scale, 1));
+  transform-origin: center;
+  transition: opacity 120ms ease;
+}
+
+.layout-section > .layout-section-resize-handle > span {
+  position: absolute;
+  right: 20px;
+  width: 44px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--designer-accent, #22c7cc);
+  box-shadow: 0 1px 4px rgba(18, 21, 34, 0.22);
+  // The parent already corrects the Y axis; only compensate the thumb width.
+  transform: scaleX(var(--canvas-inverse-scale, 1));
+  transform-origin: right center;
+}
+
+.layout-section:hover > .layout-section-resize-handle,
+.layout-section:focus-within > .layout-section-resize-handle,
+.layout-section.layout-section--active > .layout-section-resize-handle,
+.layout-section.layout-section--resizing > .layout-section-resize-handle {
+  opacity: 1;
+}
+
+.layout-section.layout-section--resizing {
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout-page-root > .layout-section::before {
+    transition: none;
+    transform: none;
+  }
+
+  .layout-page-root > .layout-section.layout-section--inserting {
+    animation: none;
+  }
+
+  .layout-page-root > .layout-section.layout-section--inserting::after {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .layout-container[data-layout-mode='stack'] {
   align-items: stretch;
 }
@@ -53,6 +249,56 @@ body.builder-mode .layout-container.builder-grid {
   overflow: visible;
   box-sizing: border-box;
   min-height: 120px;
+}
+
+body.builder-mode .layout-page-root > .layout-section {
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+body.builder-mode .layout-grid-surface {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+}
+
+body.builder-mode .layout-grid-surface[data-layout-mode='free'] {
+  // `.layout-container` is flex by default for legacy structural nodes. A
+  // free-placement surface must instead be a plain positioning context.
+  display: block;
+}
+
+body.builder-mode .layout-grid-surface[data-layout-mode='stack'],
+body.builder-mode .layout-grid-surface[data-layout-mode='row'],
+body.builder-mode .layout-grid-surface[data-layout-mode='grid'] {
+  display: flex;
+  gap: inherit;
+  min-height: 0;
+}
+
+body.builder-mode .layout-grid-surface[data-layout-mode='stack'] {
+  flex-direction: column;
+  align-items: var(--layout-align, stretch);
+}
+
+body.builder-mode .layout-grid-surface[data-layout-mode='row'] {
+  flex-flow: row wrap;
+  align-items: var(--layout-align, stretch);
+}
+
+body.builder-mode .layout-grid-surface[data-layout-mode='grid'] {
+  display: grid;
+  grid-template-columns: repeat(var(--layout-columns, 3), minmax(0, 1fr));
+  align-items: var(--layout-align, stretch);
+}
+
+body.builder-mode .layout-grid-surface:not([data-layout-mode='free']) > .canvas-item {
+  position: relative !important;
+  inset: auto !important;
+  width: auto !important;
+  max-width: 100%;
+  transform: none !important;
 }
 
 body.builder-mode #builderViewport > .builder-grid {

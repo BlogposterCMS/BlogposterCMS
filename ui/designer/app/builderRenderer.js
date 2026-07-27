@@ -1,16 +1,20 @@
 // @ts-nocheck
 import { initTextEditor, showToolbar, hideToolbar, setActiveElement, getRegisteredEditable, undoTextCommand, redoTextCommand } from './editor/editor.js';
-import { initBackgroundToolbar, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar } from './editor/toolbar/backgroundToolbar.js';
-import { initGrid, getCurrentLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
+import { initBackgroundToolbar, refreshBackgroundToolbars, showBackgroundToolbar as showBgToolbar, hideBackgroundToolbar as hideBgToolbar } from './editor/toolbar/backgroundToolbar.js';
+import { initGrid, getCurrentLayoutForLayer as getWorkspaceLayoutForLayer, pushState as pushHistoryState } from './managers/gridManager.js';
 import { applyLayout } from './managers/layoutManager.js';
+import { createLayoutGridRegistry } from './managers/layoutGridRegistry.js';
+import { planSectionDeletion } from './managers/sectionDeletion.js';
+import { bindLayoutWidgetSelection, syncLayoutSurfaceInteractions } from './managers/layoutInteractionMode.js';
 import { hideBuilderPanel } from './managers/panelManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 import { designerState } from './managers/designerState.js';
 import { deserializeLayout, serializeLayout } from './renderer/layoutSerialize.js';
 import { initLayoutMode, populateWidgetsPanel, startLayoutMode, stopLayoutMode } from './renderer/layoutMode.js';
 import { attachContainerBar } from './ux/containerActionBar.js';
+import { refreshSectionResizeHandles } from './ux/sectionResizeHandle.js';
+import { revealInsertedSection } from './ux/sectionInsertFeedback.js';
 import { renderLayoutTreeSidebar } from './renderer/layoutTreeView.js';
-import { activateArrange as enableArrange, deactivateArrange as disableArrange } from './managers/layoutArrange.js';
 import { createLogger } from './utils/logger';
 import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
@@ -26,8 +30,8 @@ import { buildLayoutBar } from './renderer/layoutBar.js';
 import { normalizeSceneRange, rangeFromPointer } from './renderer/sceneRangeControls';
 import { createLayoutStructureHandlers } from './renderer/layoutStructureHandlers.js';
 import { INSERT_TOOL_ITEMS, INSERT_PRESET_PREFIX, NATIVE_ELEMENT_PREFIX, NATIVE_ELEMENT_TYPES, createNativeElementPreset, getInsertPreset, getInsertToolItem, getNativeElementMinSize, getNativeElementSize } from './widgets/nativeElementPresets.js';
-import { applyWidgetStyleSources } from './widgets/styleSourceSync.js';
-import { setDefaultWorkarea, ensureLayoutRootContainer, setDynamicHost as setDynamicHostContainer, setDesignRef as setContainerDesignRef, setContainerLayoutMode as setContainerLayoutModeNode, setContainerSettings as setContainerSettingsNode, toggleContainerStyleSource as toggleContainerStyleSourceNode, placeContainer as placeContainerNode, deleteContainer as deleteContainerNode, moveContainer as moveContainerNode } from './managers/layoutContainerManager.js';
+import { applyWidgetStyleSources, followWidgetStyleSource, unlinkWidgetStyleSource } from './widgets/styleSourceSync.js';
+import { setDefaultWorkarea, ensureLayoutRootContainer, ensurePageSectionRoot, syncPageSection, getPageSectionElement, activatePageSection, movePageSection, removePageSection, setDynamicHost as setDynamicHostContainer, setDesignRef as setContainerDesignRef, setContainerLayoutMode as setContainerLayoutModeNode, setContainerSettings as setContainerSettingsNode, linkContainerStyleSource as linkContainerStyleSourceNode, unlinkContainerStyleSource as unlinkContainerStyleSourceNode, duplicateContainer as duplicateContainerNode, placeContainer as placeContainerNode, deleteContainer as deleteContainerNode, moveContainer as moveContainerNode } from './managers/layoutContainerManager.js';
 import { pushLayoutSnapshot, undoDesign, redoDesign, resetDesignHistory } from './managers/historyManager.js';
 import { getBuilderViewportState, setBuilderViewportPreset, setBuilderViewportWidth, setBuilderZoom } from './renderer/viewportState.js';
 import { normalizeResponsiveWidthRange } from '/ui/shared/layout/responsivePlacement.js';
@@ -119,6 +123,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     let layoutRoot;
     let gridEl;
     let grid = null;
+    let layoutGridRegistry = null;
+    let sectionGridInteractionsReady = false;
+    let applyingCompositeLayout = false;
     let codeMap = {};
     let globalLayoutName = null;
     // Track when the BG toolbar was just opened to avoid immediate hide by global click
@@ -128,6 +135,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (!codeMap || typeof codeMap !== 'object')
             codeMap = {};
         return codeMap;
+    }
+    /**
+     * Keeps the established serializer contract for save, preview and publish
+     * consumers while aggregating every real Section workspace in page order.
+     */
+    function getCurrentLayoutForLayer(targetGridEl, layer, currentCodeMap) {
+        if (layoutGridRegistry) {
+            return layoutGridRegistry.serializeLayer(getWorkspaceLayoutForLayer, layer, currentCodeMap);
+        }
+        return getWorkspaceLayoutForLayer(targetGridEl, layer, currentCodeMap);
     }
     const INSPECTOR_MODES = ['content', 'behavior', 'style'];
     let activeInspectorMode = 'content';
@@ -152,7 +169,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     let activeSceneId = sceneSections[0].id;
     let editingSceneId = null;
     const DEFAULT_SCROLL_RANGE = { start: 10, end: 60 };
-    const DEFAULT_SCENE_BACKGROUND = '#ffffff';
+    const DEFAULT_SCENE_BACKGROUND = 'transparent';
+    const GLOBAL_BODY_BACKGROUND_KEY = 'DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND';
+    const DEFAULT_GLOBAL_BODY_BACKGROUND = '#f2f3f7';
     const SCENE_BACKGROUND_PRESETS = ['#ffffff', '#f7f8fb', '#f4f1ff', '#eef8f7', '#fbf7ef'];
     const BEHAVIOR_DEFS = [
         { id: 'scroll', title: 'Scroll', icon: 'scroll' },
@@ -182,10 +201,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         { id: 'instant', title: 'Instant' }
     ];
     const sceneInspector = ensureSceneInspector();
-    const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'design']);
+    const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'layers', 'design']);
     const SIDEBAR_TOOL_NAMES = new Set(['scroll', 'action']);
     const SIDEBAR_PANEL_BY_SELECTOR = [
         { selector: 'layout-panel', panel: 'layout' },
+        { selector: 'layer-sidebar-panel', panel: 'layers' },
+        { selector: 'scene-inspector-layer-list', panel: 'layers' },
         { selector: 'style-library-panel', panel: 'design' },
         { selector: 'color-scheme-host', panel: 'design' },
         { selector: 'font-packages-host', panel: 'design' },
@@ -209,6 +230,30 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             panel.hidden = true;
         });
     }
+    function resetSidebarFlyoutPosition() {
+        const flyout = sidebarEl.querySelector('[data-sidebar-flyout]');
+        if (!flyout)
+            return;
+        flyout.style.removeProperty('--scene-sidebar-flyout-top');
+        delete flyout.dataset.anchorInsertGroup;
+    }
+    function positionWidgetPresetPopover(anchorButton = null) {
+        const flyout = sidebarEl.querySelector('[data-sidebar-flyout]');
+        const anchor = anchorButton
+            || sidebarEl.querySelector('[data-insert-group].active');
+        if (!flyout || !anchor || !isSidebarFlyoutOpen())
+            return;
+        // Keep the preset popover visually attached to its widget type while
+        // clamping it inside the available Designer sidebar height.
+        const sidebarBounds = sidebarEl.getBoundingClientRect();
+        const anchorBounds = anchor.getBoundingClientRect();
+        const flyoutBounds = flyout.getBoundingClientRect();
+        const desiredTop = anchorBounds.top - sidebarBounds.top;
+        const maxTop = Math.max(8, sidebarBounds.height - flyoutBounds.height - 12);
+        const top = Math.max(8, Math.min(desiredTop, maxTop));
+        flyout.style.setProperty('--scene-sidebar-flyout-top', `${Math.round(top)}px`);
+        flyout.dataset.anchorInsertGroup = anchor.dataset.insertGroup || '';
+    }
     function isSidebarFlyoutOpen() {
         return sidebarEl.dataset.sidebarFlyoutOpen === 'true';
     }
@@ -221,6 +266,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             flyout.hidden = !shouldOpen;
             flyout.style.display = shouldOpen ? '' : 'none';
             flyout.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+            if (!shouldOpen) {
+                flyout.classList.remove('scene-sidebar-flyout--widget-popover');
+                resetSidebarFlyoutPosition();
+            }
         }
     }
     function closeSidebarPanel(options = {}) {
@@ -236,7 +285,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             button.setAttribute('aria-selected', 'false');
         });
     }
-    function setInsertGroup(groupId) {
+    function setInsertGroup(groupId, anchorButton = null) {
         const item = getInsertToolItem(groupId);
         if (!item) {
             collapseInsertGroup();
@@ -254,16 +303,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             panel.classList.toggle('is-active', active);
             panel.hidden = !active;
         });
+        positionWidgetPresetPopover(anchorButton || sidebarEl.querySelector(`[data-insert-group="${cssEscape(item.id)}"]`));
         return item;
     }
     function setSidebarPanel(panelName = 'insert', options = {}) {
         const activePanel = normalizeSidebarPanel(panelName);
         const shell = sidebarEl.querySelector('.scene-panel-shell');
+        const flyout = sidebarEl.querySelector('[data-sidebar-flyout]');
         sidebarEl.dataset.activeSidebarPanel = activePanel;
         setSidebarFlyoutOpen(true);
         sidebarEl.classList.toggle('builder-sidebar--compact', activePanel === 'insert');
         if (activePanel !== 'insert' || !options.preserveInsertGroup)
             collapseInsertGroup();
+        flyout?.classList.toggle('scene-sidebar-flyout--widget-popover', activePanel === 'insert');
+        if (activePanel !== 'insert')
+            resetSidebarFlyoutPosition();
         if (shell)
             shell.dataset.activeSidebarPanel = activePanel;
         sidebarEl.querySelectorAll('[data-sidebar-panel]').forEach(panel => {
@@ -286,6 +340,78 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             button.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
     }
+    function settingResultValue(result, fallback = '') {
+        const value = result && typeof result === 'object' && 'value' in result
+            ? result.value
+            : result;
+        return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+    }
+    function studioBackgroundColor(value, fallback) {
+        const normalized = normalizeSceneColor(value, fallback);
+        return normalized === 'transparent' || /^#[0-9a-f]{6}$/i.test(normalized)
+            ? normalized
+            : fallback;
+    }
+    async function initDesignBackgroundSettings() {
+        const globalInput = sidebarEl.querySelector('[data-global-body-background]');
+        const pageInput = sidebarEl.querySelector('[data-page-background]');
+        const inheritInput = sidebarEl.querySelector('[data-page-background-inherit]');
+        if (!globalInput || !pageInput || !inheritInput || !layoutRoot)
+            return;
+        let globalBackground = DEFAULT_GLOBAL_BODY_BACKGROUND;
+        try {
+            const result = await emitAdminFacade(meltdownEmit, 'settings', 'get', {
+                key: GLOBAL_BODY_BACKGROUND_KEY
+            });
+            globalBackground = studioBackgroundColor(settingResultValue(result, globalBackground), globalBackground);
+        }
+        catch (err) {
+            console.warn('[Designer] DESIGNER_GLOBAL_BACKGROUND_LOAD_FAILED', err);
+        }
+        const initialDesign = window.DESIGN_DATA || window.INITIAL_DESIGN || {};
+        const persistedPageBackground = studioBackgroundColor(layoutRoot.dataset.layoutBackground || initialDesign.bg_color || '#ffffff', '#ffffff');
+        if (!layoutRoot.dataset.layoutBackground) {
+            setContainerSettingsNode(layoutRoot, { background: persistedPageBackground });
+        }
+        const applyPreview = () => {
+            const pageBackground = studioBackgroundColor(layoutRoot.dataset.layoutBackground, 'transparent');
+            const effectiveBackground = pageBackground === 'transparent'
+                ? globalBackground
+                : pageBackground;
+            layoutRoot.dataset.globalBackground = globalBackground;
+            layoutRoot.style.backgroundColor = effectiveBackground;
+            globalInput.value = globalBackground;
+            inheritInput.checked = pageBackground === 'transparent';
+            pageInput.disabled = pageBackground === 'transparent';
+            pageInput.value = pageBackground === 'transparent' ? '#ffffff' : pageBackground;
+        };
+        globalInput.addEventListener('change', async () => {
+            globalBackground = studioBackgroundColor(globalInput.value, DEFAULT_GLOBAL_BODY_BACKGROUND);
+            applyPreview();
+            try {
+                await emitAdminFacade(meltdownEmit, 'settings', 'set', {
+                    key: GLOBAL_BODY_BACKGROUND_KEY,
+                    value: globalBackground
+                });
+            }
+            catch (err) {
+                console.warn('[Designer] DESIGNER_GLOBAL_BACKGROUND_SAVE_FAILED', err);
+            }
+        });
+        pageInput.addEventListener('change', () => {
+            setContainerSettingsNode(layoutRoot, { background: pageInput.value });
+            applyPreview();
+            handleContainerMutation();
+        });
+        inheritInput.addEventListener('change', () => {
+            setContainerSettingsNode(layoutRoot, {
+                background: inheritInput.checked ? 'transparent' : pageInput.value
+            });
+            applyPreview();
+            handleContainerMutation();
+        });
+        applyPreview();
+    }
     async function activateSidebarPanel(panelName = 'insert') {
         const activePanel = normalizeSidebarPanel(panelName);
         if (!layoutCtx) {
@@ -295,7 +421,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (activePanel === 'layout' && HAS_LAYOUT_STRUCTURE) {
             if (activeLayer === 0) {
                 await startLayoutMode(layoutCtx);
-                wireArrangeToggle();
             }
             else {
                 await switchLayer(0);
@@ -339,12 +464,20 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     function normalizeSceneColor(value, fallback = DEFAULT_SCENE_BACKGROUND) {
         const raw = String(value || '').trim();
+        if (raw.toLowerCase() === 'transparent')
+            return 'transparent';
         if (/^#[0-9a-f]{6}$/i.test(raw))
             return raw.toLowerCase();
         if (/^#[0-9a-f]{3}$/i.test(raw)) {
             return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`.toLowerCase();
         }
         return fallback;
+    }
+    function normalizeSceneBackgroundImageUrl(value) {
+        const url = String(value || '').trim();
+        if (!url || url.length > 2048)
+            return '';
+        return /^(?:https?:\/\/|\/)/i.test(url) ? url : '';
     }
     function getSceneBackground(scene = getActiveScene()) {
         return normalizeSceneColor(scene?.background, DEFAULT_SCENE_BACKGROUND);
@@ -357,18 +490,36 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     function applyActiveSceneStyle() {
         const scene = getActiveScene();
         const background = getSceneBackground(scene);
+        const sectionEl = activatePageSection(layoutRoot, scene?.id);
         if (gridEl) {
             gridEl.dataset.sceneBackground = background;
-            gridEl.style.backgroundColor = background;
+            gridEl.style.backgroundColor = 'transparent';
             if (scene?.id) {
                 gridEl.querySelectorAll(`.canvas-item[data-scene-id="${cssEscape(scene.id)}"]`).forEach(el => {
                     el.dataset.sceneBackground = background;
                 });
             }
         }
-        if (layoutRoot) {
-            layoutRoot.dataset.sceneBackground = background;
-            layoutRoot.style.backgroundColor = background;
+        if (sectionEl) {
+            sectionEl.dataset.sectionBackground = background;
+            sectionEl.style.backgroundColor = background;
+            const backgroundImageUrl = normalizeSceneBackgroundImageUrl(scene?.backgroundImageUrl);
+            if (backgroundImageUrl) {
+                const safeUrl = backgroundImageUrl.replace(/["\\]/g, '\\$&');
+                sectionEl.dataset.bgImageUrl = backgroundImageUrl;
+                sectionEl.style.backgroundImage = `url("${safeUrl}")`;
+                sectionEl.style.backgroundSize = 'cover';
+                sectionEl.style.backgroundRepeat = 'no-repeat';
+                sectionEl.style.backgroundPosition = 'center';
+                if (scene?.backgroundImageId) {
+                    sectionEl.dataset.bgImageId = String(scene.backgroundImageId);
+                }
+            }
+            else {
+                delete sectionEl.dataset.bgImageUrl;
+                delete sectionEl.dataset.bgImageId;
+                sectionEl.style.backgroundImage = '';
+            }
         }
     }
     function syncSceneTitleDom(scene) {
@@ -692,13 +843,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         };
     }
     function syncWidgetStyleFollowers(sourceEl) {
-        return applyWidgetStyleSources(gridEl, sourceEl, {
+        const sectionScope = sourceEl?.closest?.('.layout-section') || gridEl;
+        return applyWidgetStyleSources(sectionScope, sourceEl, {
             onFollower: follower => {
-                gridEl?.__grid?.update?.(follower, {}, { silent: true });
+                const followerRecord = layoutGridRegistry?.forWorkspace(follower.parentElement);
+                const followerGrid = followerRecord?.grid || gridEl?.__grid;
+                followerGrid?.update?.(follower, {}, { silent: true });
                 renderEffectCue(follower, getElementEffects(follower));
                 renderStageEffectGuides(follower, getElementEffects(follower));
                 updateBehaviorPresentation(follower, getElementEffects(follower));
-                gridEl?.__grid?.emitChange?.(follower, { contentOnly: true });
+                followerGrid?.emitChange?.(follower, { contentOnly: true });
             }
         });
     }
@@ -1222,17 +1376,101 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             hrefInput.value = data.href;
     }
     function syncInspectorScene(scene = getActiveScene()) {
-        if (!sceneInspector || !scene)
+        if (!scene)
             return;
-        const sceneName = sceneInspector.querySelector('.scene-layer-scene-name');
+        const sceneName = sidebarEl.querySelector('.scene-layer-scene-name');
         if (sceneName)
             sceneName.textContent = scene.title;
+    }
+    function syncInspectorSection(scene = getActiveScene()) {
+        if (!sceneInspector || !scene)
+            return;
+        const sectionEl = getPageSectionElement(layoutRoot, scene.id);
+        const background = getSceneBackground(scene);
+        const numberValue = (value, fallback) => {
+            const parsed = Number.parseFloat(String(value || ''));
+            return Number.isFinite(parsed) ? Math.round(parsed) : fallback;
+        };
+        const name = sceneInspector.querySelector('.scene-section-name');
+        const direction = sceneInspector.querySelector('.scene-section-direction');
+        const gap = sceneInspector.querySelector('.scene-section-gap');
+        const padding = sceneInspector.querySelector('.scene-section-padding');
+        const minHeight = sceneInspector.querySelector('.scene-section-height');
+        const columns = sceneInspector.querySelector('.scene-section-columns');
+        const align = sceneInspector.querySelector('.scene-section-align');
+        const color = sceneInspector.querySelector('.scene-section-background');
+        const transparent = sceneInspector.querySelector('.scene-section-transparent');
+        if (name)
+            name.value = scene.title;
+        const currentLayoutMode = sectionEl?.dataset?.layoutMode || 'free';
+        const visibleMode = currentLayoutMode === 'stack' || currentLayoutMode === 'row'
+            ? 'auto'
+            : currentLayoutMode;
+        if (direction) {
+            direction.value = currentLayoutMode === 'row' ? 'horizontal' : 'vertical';
+            direction.closest('label').hidden = visibleMode !== 'auto';
+        }
+        if (gap)
+            gap.value = String(numberValue(sectionEl?.dataset?.layoutGap, 0));
+        if (padding)
+            padding.value = String(numberValue(sectionEl?.dataset?.layoutPadding, 0));
+        if (minHeight)
+            minHeight.value = String(numberValue(sectionEl?.dataset?.layoutMinHeight, 320));
+        if (columns)
+            columns.value = String(numberValue(sectionEl?.dataset?.layoutColumns, 3));
+        if (align)
+            align.value = sectionEl?.dataset?.layoutAlign || 'stretch';
+        if (transparent)
+            transparent.checked = background === 'transparent';
+        if (color) {
+            color.disabled = background === 'transparent';
+            color.value = background === 'transparent' ? '#ffffff' : background;
+        }
+    }
+    function updateSectionFromInspector(target, persist = true) {
+        const scene = getActiveScene();
+        const sectionEl = getPageSectionElement(layoutRoot, scene?.id);
+        if (!scene || !sectionEl || !target)
+            return;
+        if (target.matches('.scene-section-direction')) {
+            sectionEl.dataset.layoutAutoDirection = target.value;
+            setContainerLayoutMode(sectionEl, target.value === 'horizontal' ? 'row' : 'stack');
+        }
+        else if (target.matches('.scene-section-gap')) {
+            setContainerSettings(sectionEl, { gap: `${Math.max(0, Number(target.value) || 0)}px` });
+        }
+        else if (target.matches('.scene-section-padding')) {
+            setContainerSettings(sectionEl, { padding: `${Math.max(0, Number(target.value) || 0)}px` });
+        }
+        else if (target.matches('.scene-section-height')) {
+            setContainerSettings(sectionEl, { minHeight: `${Math.max(80, Number(target.value) || 320)}px` });
+        }
+        else if (target.matches('.scene-section-columns')) {
+            setContainerSettings(sectionEl, { columns: Math.max(1, Math.min(12, Number(target.value) || 3)) });
+        }
+        else if (target.matches('.scene-section-align')) {
+            setContainerSettings(sectionEl, { align: target.value });
+        }
+        else if (target.matches('.scene-section-background')) {
+            applySceneBackground(scene, target.value);
+        }
+        else if (target.matches('.scene-section-transparent')) {
+            applySceneBackground(scene, target.checked ? 'transparent' : (sceneInspector.querySelector('.scene-section-background')?.value || '#ffffff'));
+        }
+        syncInspectorSection(scene);
+        if (persist)
+            requestSceneChangePersist();
     }
     function applySceneBackground(scene, value) {
         if (!scene)
             return DEFAULT_SCENE_BACKGROUND;
         const background = normalizeSceneColor(value, getSceneBackground(scene));
         scene.background = background;
+        const sectionEl = getPageSectionElement(layoutRoot, scene.id);
+        if (sectionEl) {
+            sectionEl.dataset.sectionBackground = background;
+            setContainerSettingsNode(sectionEl, { background });
+        }
         updateSceneBackgroundReferences(scene.id, background);
         syncInspectorScene(scene);
         applyActiveSceneStyle();
@@ -1472,18 +1710,40 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         <button type="button" data-inspector-mode="style" role="tab" aria-selected="false">Style</button>
       </div>
 
-      <section class="scene-inspector-group scene-layer-settings" data-inspector-panel="content">
-        <div class="scene-group-title-row">
-          <h3>Layers</h3>
-          <small class="scene-layer-scene-name"></small>
-        </div>
-        <div class="scene-inspector-layer-list" role="list" aria-label="Layers in active scene"></div>
-      </section>
-
-      <section class="scene-inspector-group" data-inspector-panel="content">
+      <section class="scene-inspector-group scene-element-settings" data-inspector-panel="content">
         <h3>Element</h3>
         <label class="scene-select-field"><span>Name</span><input class="scene-element-name" value="" /></label>
         <label class="scene-select-field"><span>Type</span><input class="scene-element-type" value="Section" readonly /></label>
+      </section>
+
+      <section class="scene-inspector-group scene-section-settings" data-inspector-panel="content">
+        <h3>Section</h3>
+        <label class="scene-select-field"><span>Name</span><input class="scene-section-name" value="" /></label>
+        <label class="scene-select-field">
+          <span>Direction</span>
+          <select class="scene-section-direction">
+            <option value="vertical">Vertical</option>
+            <option value="horizontal">Horizontal</option>
+          </select>
+        </label>
+        <div class="scene-field-grid">
+          <label><span>Gap</span><input class="scene-section-gap" type="number" min="0" max="96" step="1" value="0" /></label>
+          <label><span>Padding</span><input class="scene-section-padding" type="number" min="0" max="192" step="1" value="0" /></label>
+        </div>
+        <div class="scene-field-grid">
+          <label><span>Columns</span><input class="scene-section-columns" type="number" min="1" max="12" step="1" value="3" /></label>
+          <label><span>Alignment</span>
+            <select class="scene-section-align">
+              <option value="stretch">Stretch</option>
+              <option value="start">Start</option>
+              <option value="center">Center</option>
+              <option value="end">End</option>
+            </select>
+          </label>
+        </div>
+        <label class="scene-select-field"><span>Minimum height</span><input class="scene-section-height" type="number" min="80" max="2400" step="10" value="320" /></label>
+        <label class="scene-select-field"><span>Background</span><input class="scene-section-background" type="color" value="#ffffff" /></label>
+        <label class="scene-toggle-field"><input class="scene-section-transparent" type="checkbox" checked /><span>Transparent (inherit page background)</span></label>
       </section>
 
       <section class="scene-inspector-group scene-button-settings" data-inspector-panel="content" hidden>
@@ -1701,6 +1961,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             }
         });
         inspector.addEventListener('input', event => {
+            const sectionField = event.target.closest?.('.scene-section-gap, .scene-section-padding, .scene-section-height, .scene-section-columns, .scene-section-background');
+            if (sectionField) {
+                updateSectionFromInspector(sectionField, false);
+                return;
+            }
             const nameInput = event.target.closest?.('.scene-element-name');
             if (nameInput) {
                 if (state.activeWidgetEl) {
@@ -1794,6 +2059,26 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             beginRangeHandleDrag(event, handle, state.activeWidgetEl);
         });
         inspector.addEventListener('change', event => {
+            const sectionName = event.target.closest?.('.scene-section-name');
+            if (sectionName) {
+                const scene = getActiveScene();
+                const nextTitle = String(sectionName.value || '').trim();
+                if (scene && nextTitle) {
+                    scene.title = nextTitle;
+                    updateSceneTitleReferences(scene.id, nextTitle);
+                    renderSceneNavigation();
+                    requestSceneChangePersist();
+                }
+                else {
+                    syncInspectorSection(scene);
+                }
+                return;
+            }
+            const sectionField = event.target.closest?.('.scene-section-direction, .scene-section-gap, .scene-section-padding, .scene-section-height, .scene-section-columns, .scene-section-align, .scene-section-background, .scene-section-transparent');
+            if (sectionField) {
+                updateSectionFromInspector(sectionField, true);
+                return;
+            }
             const galleryField = event.target.closest?.('[data-gallery-field]');
             if (galleryField) {
                 updateGalleryField(galleryField);
@@ -1832,10 +2117,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 control.disabled = !el;
             });
         });
-        sceneInspector.querySelectorAll('[data-inspector-panel="content"]:not(.scene-layer-settings)').forEach(panel => {
-            panel.setAttribute('aria-disabled', el ? 'false' : 'true');
+        sceneInspector.querySelectorAll('[data-inspector-panel="content"]').forEach(panel => {
+            const sectionPanel = panel.classList.contains('scene-section-settings');
+            const available = sectionPanel ? !el : Boolean(el);
+            if (sectionPanel || panel.classList.contains('scene-element-settings')) {
+                panel.hidden = !available;
+            }
+            panel.setAttribute('aria-disabled', available ? 'false' : 'true');
             panel.querySelectorAll('button, input, select, textarea').forEach(control => {
-                control.disabled = !el;
+                control.disabled = !available;
             });
         });
         const activeScene = sceneSections.find(section => section.id === activeSceneId) || sceneSections[0];
@@ -1847,6 +2137,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const range = el ? getElementRange(el) : { ...DEFAULT_SCROLL_RANGE };
         const effects = el ? getElementEffects(el) : normalizeEffects([]);
         syncInspectorScene(activeScene);
+        syncInspectorSection(activeScene);
         applyActiveSceneStyle();
         sceneInspector.querySelectorAll('[data-behavior-value]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.behaviorValue === behavior);
@@ -1905,11 +2196,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 existing.title = normalizedTitle;
             if (meta.background)
                 existing.background = normalizeSceneColor(meta.background);
+            if (meta.backgroundImageUrl) {
+                existing.backgroundImageUrl = normalizeSceneBackgroundImageUrl(meta.backgroundImageUrl);
+            }
+            if (meta.backgroundImageId)
+                existing.backgroundImageId = String(meta.backgroundImageId);
             return;
         }
         const next = { id, title: normalizedTitle };
         if (meta.background)
             next.background = normalizeSceneColor(meta.background);
+        if (meta.backgroundImageUrl) {
+            next.backgroundImageUrl = normalizeSceneBackgroundImageUrl(meta.backgroundImageUrl);
+        }
+        if (meta.backgroundImageId)
+            next.backgroundImageId = String(meta.backgroundImageId);
         sceneSections.push(next);
     }
     function escapeHtml(value) {
@@ -1949,14 +2250,23 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (pageId && state.autosaveEnabled)
             scheduleAutosave();
     }
-    function createSceneFromUi({ edit = true } = {}) {
+    function createSceneFromUi({ edit = true, insertionSource = 'storyboard' } = {}) {
         const next = sceneSections.length + 1;
         const title = `Scene ${next}`;
         const section = { id: uniqueSceneId(title), title };
-        sceneSections.push(section);
+        const currentIndex = sceneSections.findIndex(item => item.id === activeSceneId);
+        const insertIndex = currentIndex >= 0 ? currentIndex + 1 : sceneSections.length;
+        sceneSections.splice(insertIndex, 0, section);
+        syncPageSection(layoutRoot, section);
+        movePageSection(layoutRoot, section.id, insertIndex);
         activeSceneId = section.id;
         editingSceneId = edit ? section.id : null;
         renderSceneNavigation();
+        syncSectionWorkspaces({ scroll: false });
+        const insertedSection = getPageSectionElement(layoutRoot, section.id);
+        if (!revealInsertedSection(insertedSection, { source: insertionSource })) {
+            warnDesignerContainerError('DESIGNER_SECTION_INSERT_FEEDBACK_TARGET_MISSING', new Error('The inserted Section is missing from the canonical layout root.'), { sectionId: section.id, insertionSource });
+        }
         requestSceneChangePersist();
         return section;
     }
@@ -1989,34 +2299,38 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         event.dataTransfer.effectAllowed = 'copy';
     }
     function updateSceneTitleReferences(sceneId, title) {
-        if (!gridEl)
-            return;
-        gridEl.querySelectorAll(`.canvas-item[data-scene-id="${cssEscape(sceneId)}"]`).forEach(el => {
+        const scene = sceneSections.find(section => section.id === sceneId);
+        if (scene)
+            syncPageSection(layoutRoot, scene);
+        const workspace = layoutGridRegistry?.forSection(sceneId)?.surface || gridEl;
+        workspace?.querySelectorAll('.canvas-item').forEach(el => {
             el.dataset.sceneTitle = title;
         });
     }
     function updateSceneBackgroundReferences(sceneId, background) {
-        if (!gridEl)
-            return;
-        gridEl.querySelectorAll(`.canvas-item[data-scene-id="${cssEscape(sceneId)}"]`).forEach(el => {
+        const workspace = layoutGridRegistry?.forSection(sceneId)?.surface || gridEl;
+        workspace?.querySelectorAll('.canvas-item').forEach(el => {
             el.dataset.sceneBackground = background;
         });
     }
     function getActiveSceneWidgets(sceneId = activeSceneId) {
-        return gridEl
-            ? Array.from(gridEl.querySelectorAll('.canvas-item')).filter(widget => {
-                return !widget.dataset.sceneId || widget.dataset.sceneId === sceneId;
-            })
+        const workspace = layoutGridRegistry?.forSection(sceneId)?.surface || gridEl;
+        return workspace
+            ? Array.from(workspace.querySelectorAll('.canvas-item'))
             : [];
     }
     function layerStackIndex(widget) {
         return Number.parseInt(widget?.style?.zIndex || widget?.dataset?.layerOrder || widget?.dataset?.layer || '0', 10) || 0;
     }
     function domStackIndex(widget) {
-        return gridEl ? Array.from(gridEl.children).indexOf(widget) : -1;
+        return widget?.parentElement ? Array.from(widget.parentElement.children).indexOf(widget) : -1;
     }
-    function getSceneLayerStack(sceneId = activeSceneId) {
-        return getActiveSceneWidgets(sceneId).sort((left, right) => {
+    function getSiblingLayerStack(widget) {
+        if (!widget?.parentElement)
+            return [];
+        return Array.from(widget.parentElement.children)
+            .filter(child => child instanceof HTMLElement && child.classList.contains('canvas-item'))
+            .sort((left, right) => {
             const zIndexDiff = layerStackIndex(left) - layerStackIndex(right);
             if (zIndexDiff !== 0)
                 return zIndexDiff;
@@ -2024,19 +2338,19 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         });
     }
     function writeSceneLayerStack(stack) {
-        if (!gridEl || !Array.isArray(stack))
+        if (!Array.isArray(stack))
             return;
         stack.forEach((widget, index) => {
             const order = String(index + 1);
             widget.dataset.layerOrder = order;
             widget.style.zIndex = order;
-            gridEl.appendChild(widget);
+            widget.parentElement?.appendChild(widget);
         });
     }
     function arrangeSceneWidget(widget, direction = 'forward') {
         if (!widget || !gridEl)
             return false;
-        const stack = getSceneLayerStack(widget.dataset.sceneId || activeSceneId);
+        const stack = getSiblingLayerStack(widget);
         const currentIndex = stack.indexOf(widget);
         const offset = direction === 'backward' ? -1 : 1;
         const nextIndex = currentIndex + offset;
@@ -2173,6 +2487,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             const nextTitle = String(input.value || '').trim();
             if (nextTitle) {
                 scene.title = nextTitle;
+                syncPageSection(layoutRoot, scene);
                 updateSceneTitleReferences(scene.id, nextTitle);
                 requestSceneChangePersist();
             }
@@ -2187,33 +2502,48 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return;
         const [section] = sceneSections.splice(current, 1);
         sceneSections.splice(next, 0, section);
+        movePageSection(layoutRoot, sceneId, next);
         activeSceneId = sceneId;
         renderSceneNavigation();
         requestSceneChangePersist();
     }
     function removeScene(sceneId) {
-        if (sceneSections.length <= 1)
-            return;
-        const index = sceneSections.findIndex(section => section.id === sceneId);
-        if (index < 0)
-            return;
-        const fallback = sceneSections[index + 1] || sceneSections[index - 1];
-        if (!fallback)
-            return;
-        const removed = sceneSections.splice(index, 1)[0];
-        if (gridEl) {
-            gridEl.querySelectorAll(`.canvas-item[data-scene-id="${cssEscape(removed.id)}"]`).forEach(el => {
-                el.dataset.sceneId = fallback.id;
-                el.dataset.sceneTitle = fallback.title;
-                el.dataset.sceneBackground = getSceneBackground(fallback);
-            });
-        }
-        if (activeSceneId === removed.id)
-            activeSceneId = fallback.id;
-        if (editingSceneId === removed.id)
+        // Capture the current DOM-backed placements first. The deletion planner
+        // then removes every placement owned by this Section or one of its nested
+        // Container grids instead of silently moving content into another Section.
+        saveActiveLayer();
+        const deletion = planSectionDeletion({
+            sections: sceneSections,
+            sceneId,
+            surfaceRecords: layoutGridRegistry?.orderedRecords() || [],
+            layoutLayers
+        });
+        if (!deletion.handled)
+            return deletion;
+        sceneSections.splice(0, sceneSections.length, ...deletion.remainingSections);
+        layoutLayers.forEach((layer, index) => {
+            layer.layout = deletion.filteredLayerLayouts[index] || [];
+        });
+        // Applying the remaining composite layout recreates widget DOM nodes, so
+        // stale selections and their floating controls must be cleared first.
+        state.activeWidgetEl?.classList?.remove('selected');
+        state.activeWidgetEl = null;
+        hideToolbar();
+        hideBgToolbar();
+        activeSceneId = deletion.fallbackSection.id;
+        if (editingSceneId === deletion.removedSection.id)
             editingSceneId = null;
+        removePageSection(layoutRoot, deletion.removedSection.id);
+        activatePageSection(layoutRoot, deletion.fallbackSection.id);
+        applyCompositeLayout(activeLayer);
         renderSceneNavigation();
         requestSceneChangePersist();
+        return {
+            handled: true,
+            deletedSceneId: deletion.removedSection.id,
+            activeSceneId: deletion.fallbackSection.id,
+            removedSurfaceIds: deletion.removedSurfaceIds
+        };
     }
     function getSceneSectionsSnapshot() {
         return sceneSections
@@ -2223,9 +2553,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 id: String(section.id),
                 title: String(section.title || section.id)
             };
-            const background = getSceneBackground(section);
-            if (background !== DEFAULT_SCENE_BACKGROUND) {
+            const background = normalizeSceneColor(section.background, DEFAULT_SCENE_BACKGROUND);
+            if (section.background && background !== DEFAULT_SCENE_BACKGROUND) {
                 snapshot.background = background;
+            }
+            const backgroundImageUrl = normalizeSceneBackgroundImageUrl(section.backgroundImageUrl);
+            if (backgroundImageUrl)
+                snapshot.backgroundImageUrl = backgroundImageUrl;
+            if (backgroundImageUrl && section.backgroundImageId) {
+                snapshot.backgroundImageId = String(section.backgroundImageId);
             }
             return snapshot;
         });
@@ -2237,7 +2573,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             if (!section || typeof section !== 'object')
                 return;
             ensureSceneSection(section.id || section.sceneId, section.title || section.sceneTitle, {
-                background: section.background || section.bgColor || section.bg_color
+                background: section.background || section.bgColor || section.bg_color,
+                backgroundImageUrl: section.backgroundImageUrl ||
+                    section.background_image_url ||
+                    section.bgImageUrl ||
+                    section.bg_image_url,
+                backgroundImageId: section.backgroundImageId ||
+                    section.background_image_id ||
+                    section.bgImageId ||
+                    section.bg_image_id
             });
         });
     }
@@ -2246,7 +2590,28 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return;
         try {
             const layoutObj = typeof layoutData === 'string' ? JSON.parse(layoutData) : layoutData;
-            hydrateSceneSectionsFromSceneList(layoutObj?.scenes);
+            const canonical = [];
+            const visit = node => {
+                if (!node || typeof node !== 'object')
+                    return;
+                if (node.section?.id) {
+                    canonical.push({
+                        ...node.section,
+                        background: node.section.background || node.settings?.background
+                    });
+                }
+                if (Array.isArray(node.children))
+                    node.children.forEach(visit);
+            };
+            visit(layoutObj);
+            if (canonical.length) {
+                sceneSections.splice(0, sceneSections.length);
+                hydrateSceneSectionsFromSceneList(canonical);
+                activeSceneId = sceneSections[0]?.id || activeSceneId;
+            }
+            else {
+                hydrateSceneSectionsFromSceneList(layoutObj?.scenes);
+            }
         }
         catch (err) {
             console.warn('[Designer] failed to hydrate scene sections from layout metadata', err);
@@ -2323,6 +2688,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     function renderSceneNavigation() {
         const activeScene = sceneSections.find(section => section.id === activeSceneId) || sceneSections[0];
+        syncSceneSectionsToLayout();
         const itemsMarkup = renderSceneNavigationItems();
         sidebarEl.querySelectorAll('.scene-section-list').forEach(list => {
             list.innerHTML = itemsMarkup;
@@ -2349,28 +2715,30 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             title.textContent = scene?.title || 'Scene';
     }
     function updateSceneVisibility() {
-        if (!gridEl)
+        syncSectionWorkspaces();
+        const activeWidget = state.activeWidgetEl;
+        if (!activeWidget)
             return;
-        gridEl.querySelectorAll('.canvas-item').forEach(el => {
-            const inactiveScene = Boolean(el.dataset.sceneId && el.dataset.sceneId !== activeSceneId);
-            el.classList.toggle('inactive-scene', inactiveScene);
-            if (inactiveScene && el === state.activeWidgetEl) {
-                el.classList.remove('selected');
-                state.activeWidgetEl = null;
-                gridEl.__grid?.clearSelection?.();
-                hideToolbar();
-                updateSceneInspector(null);
-            }
-        });
+        const selectedSectionId = activeWidget
+            .closest('.layout-section[data-section-id]')
+            ?.dataset?.sectionId;
+        if (selectedSectionId && selectedSectionId !== activeSceneId) {
+            activeWidget.classList.remove('selected');
+            activeWidget.closest('.layout-grid-surface')?.__grid?.clearSelection?.();
+            state.activeWidgetEl = null;
+            hideToolbar();
+            updateSceneInspector(null);
+        }
     }
     function renderSceneLayers() {
-        const layerPanel = sceneInspector?.querySelector('.scene-inspector-layer-list');
+        const layerPanel = sidebarEl.querySelector('.scene-inspector-layer-list');
         if (!layerPanel)
             return;
         layerPanel.replaceChildren();
-        const widgets = getSceneLayerStack().slice().reverse();
-        renderSceneEmptyState(widgets);
-        if (!widgets.length) {
+        const sectionSurface = layoutGridRegistry?.forSection(activeSceneId)?.surface || gridEl;
+        const allItems = getActiveSceneWidgets();
+        renderSceneEmptyState(allItems);
+        if (!allItems.length) {
             const empty = document.createElement('button');
             empty.type = 'button';
             empty.className = 'scene-layer-item scene-layer-item--empty';
@@ -2379,55 +2747,87 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             layerPanel.appendChild(empty);
             return;
         }
-        widgets.forEach(widget => {
-            const stack = getSceneLayerStack(widget.dataset.sceneId || activeSceneId);
-            const stackIndex = stack.indexOf(widget);
-            const canSendBackward = stackIndex > 0;
-            const canBringForward = stackIndex >= 0 && stackIndex < stack.length - 1;
-            const widgetDef = allWidgets.find(w => w.id === widget.dataset.widgetId);
-            const label = widget.dataset.elementName || widgetDef?.metadata?.label || widget.dataset.widgetId || 'Element';
-            const item = document.createElement('div');
-            item.className = `scene-layer-item${widget === state.activeWidgetEl ? ' scene-layer-item--active' : ''}`;
-            item.dataset.widgetInstanceId = widget.dataset.instanceId || '';
-            item.dataset.widgetId = widget.dataset.widgetId || '';
-            item.dataset.sceneId = widget.dataset.sceneId || activeSceneId;
-            item.dataset.layer = widget.dataset.layer || String(activeLayer);
-            item.dataset.zIndex = widget.style.zIndex || '';
-            item.setAttribute('role', 'listitem');
-            item.innerHTML = `
-        <button type="button" class="scene-layer-select" data-layer-select aria-label="Select ${escapeAttribute(label)}">
-          ${getWidgetIcon(widgetDef || { id: widget.dataset.widgetId || 'box', metadata: { icon: 'box' } }, ICON_MAP)}
-          <span class="scene-layer-copy">
-            <span class="scene-layer-title">${escapeHtml(label)}</span>
-            ${renderLayerBehaviorMeta(widget)}
+        const orderedChildren = surface => Array.from(surface?.children || [])
+            .filter(child => child instanceof HTMLElement && child.classList.contains('canvas-item'))
+            .sort((left, right) => {
+            const zIndexDiff = layerStackIndex(left) - layerStackIndex(right);
+            if (zIndexDiff !== 0)
+                return zIndexDiff;
+            return domStackIndex(left) - domStackIndex(right);
+        })
+            .reverse();
+        const renderSurface = (surface, depth = 0) => {
+            orderedChildren(surface).forEach(widget => {
+                const stack = getSiblingLayerStack(widget);
+                const stackIndex = stack.indexOf(widget);
+                const canSendBackward = stackIndex > 0;
+                const canBringForward = stackIndex >= 0 && stackIndex < stack.length - 1;
+                const isContainer = widget.classList.contains('layout-grid-container');
+                const widgetDef = isContainer
+                    ? null
+                    : allWidgets.find(candidate => candidate.id === widget.dataset.widgetId);
+                const label = isContainer
+                    ? (widget.dataset.elementName || 'Container')
+                    : (widget.dataset.elementName || widgetDef?.metadata?.label || widget.dataset.widgetId || 'Element');
+                const item = document.createElement('div');
+                const selected = isContainer
+                    ? widget.classList.contains('layout-container--active')
+                    : widget === state.activeWidgetEl;
+                item.className = `scene-layer-item${selected ? ' scene-layer-item--active' : ''}${isContainer ? ' scene-layer-item--container' : ''}`;
+                item.style.setProperty('--scene-layer-depth', String(depth));
+                item.dataset.widgetInstanceId = widget.dataset.instanceId || '';
+                item.dataset.widgetId = widget.dataset.widgetId || '';
+                item.dataset.layoutNodeId = widget.dataset.nodeId || '';
+                item.dataset.sceneId = widget.dataset.sceneId || activeSceneId;
+                item.dataset.layer = widget.dataset.layer || String(activeLayer);
+                item.dataset.zIndex = widget.style.zIndex || '';
+                item.setAttribute('role', 'listitem');
+                const iconMarkup = isContainer
+                    ? '<img src="/assets/icons/box.svg" alt="" class="icon" />'
+                    : getWidgetIcon(widgetDef || { id: widget.dataset.widgetId || 'box', metadata: { icon: 'box' } }, ICON_MAP);
+                const metaMarkup = isContainer
+                    ? `<span class="scene-layer-behavior">${escapeHtml(widget.dataset.layoutMode === 'stack' || widget.dataset.layoutMode === 'row'
+                        ? 'Auto'
+                        : (widget.dataset.layoutMode || 'Free'))}</span>`
+                    : renderLayerBehaviorMeta(widget);
+                item.innerHTML = `
+          <button type="button" class="scene-layer-select" data-layer-select aria-label="Select ${escapeAttribute(label)}">
+            ${iconMarkup}
+            <span class="scene-layer-copy">
+              <span class="scene-layer-title">${escapeHtml(label)}</span>
+              ${metaMarkup}
+            </span>
+          </button>
+          <span class="scene-layer-actions" aria-label="Layer order">
+            <button type="button" class="scene-layer-action" data-layer-action="forward" aria-label="Bring layer forward" ${canBringForward ? '' : 'disabled'}>
+              <img src="/assets/icons/arrow-up.svg" alt="" class="icon" />
+            </button>
+            <button type="button" class="scene-layer-action" data-layer-action="backward" aria-label="Send layer backward" ${canSendBackward ? '' : 'disabled'}>
+              <img src="/assets/icons/arrow-down.svg" alt="" class="icon" />
+            </button>
           </span>
-        </button>
-        <span class="scene-layer-actions" aria-label="Layer order">
-          <button type="button" class="scene-layer-action" data-layer-action="forward" aria-label="Bring layer forward" ${canBringForward ? '' : 'disabled'}>
-            <img src="/assets/icons/arrow-up.svg" alt="" class="icon" />
-          </button>
-          <button type="button" class="scene-layer-action" data-layer-action="backward" aria-label="Send layer backward" ${canSendBackward ? '' : 'disabled'}>
-            <img src="/assets/icons/arrow-down.svg" alt="" class="icon" />
-          </button>
-        </span>
-      `;
-            item.addEventListener('click', event => {
-                const actionButton = event.target.closest?.('[data-layer-action]');
-                if (actionButton) {
+        `;
+                item.addEventListener('click', event => {
+                    const actionButton = event.target.closest?.('[data-layer-action]');
+                    if (actionButton) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        arrangeSceneWidget(widget, actionButton.dataset.layerAction);
+                        return;
+                    }
+                    // Layer rows are a selection surface. Keep this click out of the
+                    // document-level canvas deselection handler so the chosen item remains
+                    // active after selecting it from the left Layers sidebar.
                     event.preventDefault();
                     event.stopPropagation();
-                    arrangeSceneWidget(widget, actionButton.dataset.layerAction);
-                    return;
-                }
-                // Layer rows are a selection surface. Keep this click out of the
-                // document-level canvas deselection handler so the chosen item remains
-                // active after selecting it from the right inspector.
-                event.preventDefault();
-                event.stopPropagation();
-                selectWidgetFromLayer(widget);
+                    selectWidgetFromLayer(widget);
+                });
+                layerPanel.appendChild(item);
+                if (isContainer)
+                    renderSurface(widget, depth + 1);
             });
-            layerPanel.appendChild(item);
-        });
+        };
+        renderSurface(sectionSurface);
     }
     function handleSceneNavigationClick(event) {
         if (event.target.closest?.('.scene-section-title-input'))
@@ -2436,7 +2836,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (addButton) {
             event.preventDefault();
             event.stopPropagation();
-            createSceneFromUi({ edit: true });
+            createSceneFromUi({ edit: true, insertionSource: 'storyboard' });
             return true;
         }
         const actionButton = event.target.closest?.('[data-section-action]');
@@ -2465,6 +2865,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             activeSceneId = item.dataset.sceneId;
             editingSceneId = null;
             renderSceneNavigation();
+            syncSectionWorkspaces({ scroll: true });
             return true;
         }
         return false;
@@ -2490,6 +2891,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 activeSceneId = sceneId;
                 editingSceneId = null;
                 renderSceneNavigation();
+                syncSectionWorkspaces({ scroll: true });
             }
             return true;
         }
@@ -2525,6 +2927,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             const tool = designerToolButton.dataset.designerTool;
             if (!SIDEBAR_TOOL_NAMES.has(tool))
                 return;
+            const wasActive = designerToolButton.getAttribute('aria-pressed') === 'true';
+            if (wasActive) {
+                // Behavior tools are one-shot shortcuts, not permanent editor modes.
+                // A second click only clears the rail state and keeps saved widget data.
+                setSidebarToolActive('');
+                return;
+            }
             setSidebarToolActive(tool);
             document.dispatchEvent(new CustomEvent('designerToolSelected', {
                 detail: { tool, source: 'sidebar' }
@@ -2534,7 +2943,15 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const insertGroupButton = event.target.closest?.('[data-insert-group]');
         if (insertGroupButton) {
             event.preventDefault();
-            setInsertGroup(insertGroupButton.dataset.insertGroup);
+            event.stopPropagation();
+            const alreadyOpen = isSidebarFlyoutOpen()
+                && sidebarEl.dataset.activeSidebarPanel === 'insert'
+                && insertGroupButton.getAttribute('aria-expanded') === 'true';
+            if (alreadyOpen) {
+                closeSidebarPanel();
+                return;
+            }
+            setInsertGroup(insertGroupButton.dataset.insertGroup, insertGroupButton);
             return;
         }
         const insertPresetButton = event.target.closest?.('[data-insert-preset]');
@@ -2562,6 +2979,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         closeSidebarPanel();
     }, true);
     sidebarEl.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && isSidebarFlyoutOpen()) {
+            const flyout = sidebarEl.querySelector('[data-sidebar-flyout]');
+            const anchorId = flyout?.dataset.anchorInsertGroup || '';
+            event.preventDefault();
+            closeSidebarPanel();
+            if (anchorId) {
+                sidebarEl.querySelector(`[data-insert-group="${cssEscape(anchorId)}"]`)?.focus();
+            }
+            return;
+        }
         handleSceneNavigationKeydown(event);
     });
     sidebarEl.addEventListener('dragstart', event => {
@@ -2688,31 +3115,31 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       </div>
       <div id="layoutRoot" class="layout-root">
         <div id="workspaceMain" class="builder-grid"></div>
-        <div class="scene-empty-state" hidden>
-          <span class="scene-empty-title">Hero Scene</span>
-          <span class="scene-empty-actions" role="group" aria-label="Quick add to empty scene">
-            <button type="button" data-empty-insert="text" aria-label="Add text">
-              <img src="/assets/icons/type.svg" alt="" class="icon" />
-              <span>Text</span>
-            </button>
-            <button type="button" data-empty-insert="media" aria-label="Add media">
-              <img src="/assets/icons/image.svg" alt="" class="icon" />
-              <span>Media</span>
-            </button>
-            <button type="button" data-empty-insert="shape" aria-label="Add shape">
-              <img src="/assets/icons/shapes.svg" alt="" class="icon" />
-              <span>Shape</span>
-            </button>
-            <button type="button" data-empty-insert="button" aria-label="Add button">
-              <img src="/assets/icons/mouse-pointer-click.svg" alt="" class="icon" />
-              <span>Button</span>
-            </button>
-            <button type="button" data-empty-insert="background" aria-label="Change background">
-              <img src="/assets/icons/wallpaper.svg" alt="" class="icon" />
-              <span>Background</span>
-            </button>
-          </span>
-        </div>
+      </div>
+      <div class="scene-empty-state" hidden>
+        <span class="scene-empty-title">Hero Scene</span>
+        <span class="scene-empty-actions" role="group" aria-label="Quick add to empty scene">
+          <button type="button" data-empty-insert="text" aria-label="Add text">
+            <img src="/assets/icons/type.svg" alt="" class="icon" />
+            <span>Text</span>
+          </button>
+          <button type="button" data-empty-insert="media" aria-label="Add media">
+            <img src="/assets/icons/image.svg" alt="" class="icon" />
+            <span>Media</span>
+          </button>
+          <button type="button" data-empty-insert="shape" aria-label="Add shape">
+            <img src="/assets/icons/shapes.svg" alt="" class="icon" />
+            <span>Shape</span>
+          </button>
+          <button type="button" data-empty-insert="button" aria-label="Add button">
+            <img src="/assets/icons/mouse-pointer-click.svg" alt="" class="icon" />
+            <span>Button</span>
+          </button>
+          <button type="button" data-empty-insert="background" aria-label="Change background">
+            <img src="/assets/icons/wallpaper.svg" alt="" class="icon" />
+            <span>Background</span>
+          </button>
+        </span>
       </div>
     </div>
   `;
@@ -2726,6 +3153,35 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         gridViewportEl.appendChild(layoutRoot);
     }
     gridViewportEl?.addEventListener('click', event => {
+        const deleteSectionButton = event.target.closest?.('.section-delete');
+        if (deleteSectionButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            const owningSection = deleteSectionButton.closest?.('.layout-section[data-section-id]');
+            if (owningSection?.dataset.sectionId)
+                removeScene(owningSection.dataset.sectionId);
+            return;
+        }
+        const addSectionButton = event.target.closest?.('[data-add-section-after]');
+        if (addSectionButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            const afterId = addSectionButton.dataset.addSectionAfter;
+            if (afterId && afterId !== activeSceneId)
+                activeSceneId = afterId;
+            createSceneFromUi({ edit: true, insertionSource: 'section-edge' });
+            return;
+        }
+        const sectionTarget = event.target.closest?.('.layout-section[data-section-id]');
+        if (sectionTarget && !event.target.closest?.('.canvas-item, .container-actionbar')) {
+            const nextSceneId = sectionTarget.dataset.sectionId;
+            if (nextSceneId && nextSceneId !== activeSceneId) {
+                activeSceneId = nextSceneId;
+                editingSceneId = null;
+                renderSceneNavigation();
+                syncSectionWorkspaces({ scroll: false });
+            }
+        }
         const sceneActionButton = event.target.closest?.('[data-stage-scene-action]');
         if (sceneActionButton) {
             event.preventDefault();
@@ -2733,19 +3189,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             const action = sceneActionButton.dataset.stageSceneAction;
             const activeIndex = sceneSections.findIndex(section => section.id === activeSceneId);
             if (action === 'add') {
-                createSceneFromUi({ edit: true });
+                createSceneFromUi({ edit: true, insertionSource: 'stage-storyboard' });
                 return;
             }
             if (action === 'prev' && activeIndex > 0) {
                 activeSceneId = sceneSections[activeIndex - 1].id;
                 editingSceneId = null;
                 renderSceneNavigation();
+                syncSectionWorkspaces({ scroll: true });
                 return;
             }
             if (action === 'next' && activeIndex >= 0 && activeIndex < sceneSections.length - 1) {
                 activeSceneId = sceneSections[activeIndex + 1].id;
                 editingSceneId = null;
                 renderSceneNavigation();
+                syncSectionWorkspaces({ scroll: true });
                 return;
             }
         }
@@ -2764,36 +3222,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     gridViewportEl?.addEventListener('focusout', event => {
         handleSceneNavigationFocusout(event);
     });
-    // Apply persisted background settings from the initial design payload so
-    // backgrounds survive reloads and future saves reuse the same media object.
-    try {
-        const initialDesign = window.DESIGN_DATA || window.INITIAL_DESIGN;
-        if (initialDesign && typeof initialDesign === 'object') {
-            if (initialDesign.bg_color) {
-                gridEl.style.backgroundColor = String(initialDesign.bg_color);
-            }
-            if (initialDesign.bg_media_url) {
-                const safeUrl = String(initialDesign.bg_media_url).replace(/"/g, '&quot;');
-                gridEl.style.backgroundImage = `url("${safeUrl}")`;
-                gridEl.style.backgroundSize = 'cover';
-                gridEl.style.backgroundRepeat = 'no-repeat';
-                gridEl.style.backgroundPosition = 'center';
-                gridEl.dataset.bgImageUrl = initialDesign.bg_media_url;
-                if (initialDesign.bg_media_id) {
-                    gridEl.dataset.bgImageId = initialDesign.bg_media_id;
-                }
-            }
-        }
-    }
-    catch (err) {
-        console.warn('[Designer] failed to apply initial background', err);
-    }
-    designerState.bgMediaId = gridEl.dataset.bgImageId || '';
-    designerState.bgMediaUrl = gridEl.dataset.bgImageUrl || '';
+    const initialDesign = window.DESIGN_DATA || window.INITIAL_DESIGN;
     let persistedLayoutData = null;
     try {
-        const designData = window.DESIGN_DATA || window.INITIAL_DESIGN;
-        const layoutData = designData?.layout || designData?.layout_json;
+        const layoutData = initialDesign?.layout || initialDesign?.layout_json;
         if (layoutData) {
             const obj = typeof layoutData === 'string' ? JSON.parse(layoutData) : layoutData;
             persistedLayoutData = obj;
@@ -2804,6 +3236,33 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     catch (e) {
         console.warn('[Designer] failed to deserialize layout', e);
     }
+    // Hydrate legacy page background fields only after the LayoutTree so an
+    // explicitly authored page background remains authoritative.
+    try {
+        if (initialDesign && typeof initialDesign === 'object') {
+            if (initialDesign.bg_color && !layoutRoot.dataset.layoutBackground) {
+                setContainerSettingsNode(layoutRoot, {
+                    background: String(initialDesign.bg_color)
+                });
+            }
+            if (initialDesign.bg_media_url && !layoutRoot.dataset.bgImageUrl) {
+                const safeUrl = String(initialDesign.bg_media_url).replace(/"/g, '&quot;');
+                layoutRoot.style.backgroundImage = `url("${safeUrl}")`;
+                layoutRoot.style.backgroundSize = 'cover';
+                layoutRoot.style.backgroundRepeat = 'no-repeat';
+                layoutRoot.style.backgroundPosition = 'center';
+                layoutRoot.dataset.bgImageUrl = initialDesign.bg_media_url;
+                if (initialDesign.bg_media_id) {
+                    layoutRoot.dataset.bgImageId = initialDesign.bg_media_id;
+                }
+            }
+        }
+    }
+    catch (err) {
+        console.warn('[Designer] DESIGNER_PAGE_BACKGROUND_HYDRATE_FAILED', err);
+    }
+    designerState.bgMediaId = layoutRoot.dataset.bgImageId || '';
+    designerState.bgMediaUrl = layoutRoot.dataset.bgImageUrl || '';
     const viewportSizeEl = document.createElement('div');
     viewportSizeEl.className = 'viewport-size-display';
     gridViewportEl.appendChild(viewportSizeEl);
@@ -2813,7 +3272,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return;
         pushLayoutSnapshot(currentDesignId, layout, pushHistoryState);
     }
-    const { updateAllWidgetContents } = registerBuilderEvents(gridEl, ensureCodeMap(), { getRegisteredEditable });
+    const { updateAllWidgetContents } = registerBuilderEvents(layoutRoot, ensureCodeMap(), { getRegisteredEditable });
     const saveLayoutCtx = {
         updateAllWidgetContents,
         getCurrentLayout: () => getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap()),
@@ -2835,21 +3294,34 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             scheduleAutosave();
     }
     function getActiveWorkareaContainer() {
-        const rootContainer = ensureLayoutRootContainer(layoutRoot);
+        const rootContainer = ensurePageSectionRoot(layoutRoot, getSceneSectionsSnapshot());
         if (!rootContainer)
             return null;
-        return layoutRoot.querySelector('.layout-container[data-workarea="true"]')
-            || (rootContainer.dataset.workarea === 'true' ? rootContainer : null)
+        return activatePageSection(layoutRoot, activeSceneId)
+            || getPageSectionElement(layoutRoot, activeSceneId)
+            || layoutRoot.querySelector('.layout-section')
             || rootContainer;
     }
-    function syncWorkspaceToWorkarea() {
+    function syncSectionWorkspaces({ scroll = false } = {}) {
         try {
             const workarea = getActiveWorkareaContainer();
             if (!workarea || !gridEl)
                 return;
-            if (gridEl.parentElement !== workarea) {
-                workarea.appendChild(gridEl);
+            if (!layoutGridRegistry) {
+                if (gridEl.parentElement !== workarea)
+                    workarea.appendChild(gridEl);
+                return;
             }
+            const records = layoutGridRegistry.sync();
+            if (sectionGridInteractionsReady) {
+                records.forEach(bindSectionGridEvents);
+            }
+            const activeRecord = layoutGridRegistry.activate(activeSceneId);
+            if (!activeRecord) {
+                throw new Error(`DESIGNER_SECTION_GRID_ACTIVE_MISSING: no grid exists for Section "${activeSceneId}".`);
+            }
+            gridEl = activeRecord.workspace;
+            grid = activeRecord.grid;
             grid?.refreshMetrics?.();
             grid?.widgets?.forEach?.(widget => {
                 try {
@@ -2861,10 +3333,59 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                     });
                 }
             });
+            if (scroll) {
+                activeRecord.section.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+            }
         }
         catch (err) {
-            warnDesignerContainerError('DESIGNER_WORKAREA_SYNC_FAILED', err);
+            warnDesignerContainerError('DESIGNER_SECTION_GRID_SYNC_FAILED', err);
         }
+    }
+    function refreshSectionAddButtons() {
+        if (!layoutRoot)
+            return;
+        layoutRoot.querySelectorAll(':scope > .layout-section').forEach(sectionEl => {
+            sectionEl.querySelector(':scope > .layout-section-add')?.remove();
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'layout-section-add';
+            button.dataset.addSectionAfter = sectionEl.dataset.sectionId || '';
+            button.setAttribute('aria-label', 'Add section below');
+            button.innerHTML = '<img src="/assets/icons/plus.svg" alt="" class="icon" /><span>Add section</span>';
+            sectionEl.appendChild(button);
+        });
+        refreshSectionResizeHandles({
+            layoutRoot,
+            onResize: (sectionEl, height) => {
+                setContainerSettingsNode(sectionEl, { minHeight: `${height}px` });
+                layoutGridRegistry?.forSection(sectionEl.dataset.sectionId)?.grid?.refreshMetrics?.();
+                if (sectionEl.dataset.sectionId === activeSceneId) {
+                    syncInspectorSection();
+                }
+            },
+            onCommit: () => handleContainerMutation()
+        });
+        refreshBackgroundToolbars(layoutRoot);
+    }
+    function syncSceneSectionsToLayout() {
+        if (!layoutRoot)
+            return;
+        ensurePageSectionRoot(layoutRoot, getSceneSectionsSnapshot());
+        sceneSections.forEach((section, index) => {
+            syncPageSection(layoutRoot, {
+                ...section,
+                background: getSceneBackground(section)
+            });
+            movePageSection(layoutRoot, section.id, index);
+        });
+        activatePageSection(layoutRoot, activeSceneId);
+        syncSectionWorkspaces();
+        const validIds = new Set(sceneSections.map(section => section.id));
+        layoutRoot.querySelectorAll(':scope > .layout-section[data-section-id]').forEach(sectionEl => {
+            if (!validIds.has(sectionEl.dataset.sectionId))
+                sectionEl.remove();
+        });
+        refreshSectionAddButtons();
     }
     const { refreshContainerBars, refreshLayoutTree, handleContainerChange } = createLayoutStructureHandlers({
         layoutRootRef: () => layoutRoot,
@@ -2882,7 +3403,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         catch (err) {
             warnDesignerContainerError('DESIGNER_CONTAINER_MUTATION_FAILED', err);
         }
-        syncWorkspaceToWorkarea();
+        syncSectionWorkspaces();
+        // A mode change must update CanvasGrid gesture locks in the same turn.
+        // Without this, switching Auto/Grid back to Free only changes the icon and
+        // CSS while stale gs-no-move/gs-no-resize attributes block interaction.
+        markInactiveWidgets();
     }
     function placeContainer(targetEl, pos) {
         try {
@@ -2933,13 +3458,77 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             }));
         }
     }
-    function toggleContainerStyleSource(el) {
+    function linkContainerStyleSource(source, target) {
         try {
-            toggleContainerStyleSourceNode(layoutRoot, el);
+            const linked = linkContainerStyleSourceNode(layoutRoot, source, target);
+            if (!linked) {
+                throw new Error('DESIGNER_CONTAINER_STYLE_SOURCE_LINK_INVALID: source and target need distinct stable container ids.');
+            }
             handleContainerMutation();
         }
         catch (err) {
-            warnDesignerContainerError('DESIGNER_CONTAINER_STYLE_SOURCE_FAILED', err, containerDebugInfo(el));
+            warnDesignerContainerError('DESIGNER_CONTAINER_STYLE_SOURCE_LINK_FAILED', err, {
+                source: containerDebugInfo(source),
+                target: containerDebugInfo(target)
+            });
+        }
+    }
+    function unlinkContainerStyleSource(el) {
+        try {
+            containerSubtreeSurfaces(el).forEach(surface => {
+                unlinkContainerStyleSourceNode(surface);
+                directWidgetElements(surface).forEach(widget => {
+                    unlinkWidgetStyleSource(widget, ensureCodeMap());
+                });
+            });
+            handleContainerMutation();
+        }
+        catch (err) {
+            warnDesignerContainerError('DESIGNER_CONTAINER_STYLE_SOURCE_UNLINK_FAILED', err, containerDebugInfo(el));
+        }
+    }
+    function containerSubtreeSurfaces(container) {
+        return container
+            ? [container, ...Array.from(container.querySelectorAll('.layout-container'))]
+            : [];
+    }
+    async function duplicateContainer(el, { linked = false } = {}) {
+        try {
+            updateAllWidgetContents();
+            const sourceSurfaces = containerSubtreeSurfaces(el);
+            const widgetGroups = sourceSurfaces.map(surface => (directWidgetElements(surface).map(widgetDuplicateSnapshot)));
+            const clone = duplicateContainerNode(el, { linked, layoutRoot });
+            if (!clone) {
+                throw new Error(`DESIGNER_CONTAINER_DUPLICATE_FAILED: container "${el?.dataset?.nodeId || ''}" could not be copied.`);
+            }
+            // Register the copied recursive surfaces before their independent widget
+            // instances are mounted into the corresponding child grids.
+            handleContainerMutation();
+            const cloneSurfaces = containerSubtreeSurfaces(clone);
+            for (let surfaceIndex = 0; surfaceIndex < widgetGroups.length; surfaceIndex += 1) {
+                const targetSurface = cloneSurfaces[surfaceIndex];
+                const targetRecord = layoutGridRegistry?.forWorkspace(targetSurface);
+                if (!targetRecord) {
+                    throw new Error(`DESIGNER_CONTAINER_DUPLICATE_GRID_MISSING: copied surface "${targetSurface?.dataset?.nodeId || ''}" has no grid record.`);
+                }
+                for (const snapshot of widgetGroups[surfaceIndex]) {
+                    await duplicateSceneWidget(snapshot.source, {
+                        linked,
+                        targetRecord,
+                        offset: 0,
+                        select: false,
+                        persist: false
+                    });
+                }
+            }
+            handleContainerMutation();
+            if (pageId && state.autosaveEnabled)
+                scheduleAutosave();
+            return clone;
+        }
+        catch (err) {
+            warnDesignerContainerError('DESIGNER_CONTAINER_DUPLICATE_FAILED', err, containerDebugInfo(el, { linked }));
+            throw err;
         }
     }
     function deleteContainer(el) {
@@ -2961,23 +3550,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 position: pos
             });
         }
-    }
-    function activateArrange() {
-        enableArrange(layoutRoot, { moveContainer });
-    }
-    function deactivateArrange() {
-        disableArrange(layoutRoot);
-    }
-    function wireArrangeToggle() {
-        const toggle = sidebarEl.querySelector('.layout-arrange-toggle');
-        if (!toggle)
-            return;
-        toggle.addEventListener('change', () => {
-            if (toggle.checked)
-                activateArrange();
-            else
-                deactivateArrange();
-        });
     }
     layoutCtx = {
         sidebarEl,
@@ -3010,35 +3582,130 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         setDesignRef,
         setContainerLayoutMode,
         setContainerSettings,
-        toggleContainerStyleSource,
+        duplicateContainer,
+        linkContainerStyleSource,
+        unlinkContainerStyleSource,
         deleteContainer,
+        moveContainer,
         refreshContainerBars,
         refreshLayoutTree,
-        activateArrange,
-        deactivateArrange,
         setSidebarPanel,
+        closeSidebarPanel,
         INSERT_TOOL_ITEMS
     };
     populateWidgetsPanel(sidebarEl, allWidgets, ICON_MAP, HAS_LAYOUT_STRUCTURE ? () => switchLayer(0) : null, INSERT_TOOL_ITEMS);
-    setSidebarPanel(sidebarEl.dataset.activeSidebarPanel || 'insert');
+    const initialSidebarPanel = normalizeSidebarPanel(sidebarEl.dataset.activeSidebarPanel || 'insert');
+    if (initialSidebarPanel === 'insert') {
+        // Widget presets are intentionally closed until a widget type is chosen.
+        closeSidebarPanel({ preserveInsertGroup: true });
+    }
+    else {
+        setSidebarPanel(initialSidebarPanel);
+    }
+    sidebarEl.querySelector('.scene-widget-scroll')?.addEventListener('scroll', () => {
+        positionWidgetPresetPopover();
+    }, { passive: true });
     renderSceneNavigation();
-    // Allow overlapping widgets for layered layouts
-    grid = initGrid(gridEl, state, selectWidget, {
-        scrollContainer: gridViewportEl,
-        zoomTarget: layoutRoot,
-        enableZoom: true
+    // Every canonical Section owns a persistent CanvasGrid. Only the first grid
+    // controls the shared page zoom; all grids still keep independent placement,
+    // selection and responsive metrics.
+    let sectionGridCount = 0;
+    layoutGridRegistry = createLayoutGridRegistry({
+        layoutRoot,
+        legacyWorkspace: gridEl,
+        createGrid: (workspace, _surfaceId, surfaceMeta) => {
+            const isSectionGrid = surfaceMeta?.isSection === true;
+            const ownsPageZoom = isSectionGrid && sectionGridCount++ === 0;
+            return initGrid(workspace, state, selectWidget, {
+                scrollContainer: gridViewportEl,
+                zoomTarget: isSectionGrid ? layoutRoot : workspace,
+                enableZoom: ownsPageZoom,
+                // The page root grows with its Section children; only its width is a
+                // fixed authored viewport dimension.
+                dynamicZoomTargetHeight: isSectionGrid
+            });
+        }
     });
+    const initialSectionGrid = layoutGridRegistry.activate(activeSceneId);
+    if (!initialSectionGrid) {
+        throw new Error('DESIGNER_SECTION_GRID_INITIALIZE_FAILED: the page has no canonical Section grid.');
+    }
+    gridEl = initialSectionGrid.workspace;
+    grid = initialSectionGrid.grid;
     setDefaultWorkarea(layoutRoot);
-    syncWorkspaceToWorkarea();
+    activatePageSection(layoutRoot, activeSceneId);
+    syncSectionWorkspaces();
     layoutCtx.refreshContainerBars();
     layoutCtx.refreshLayoutTree();
     window.addEventListener('resize', () => {
         setDefaultWorkarea(layoutRoot);
-        syncWorkspaceToWorkarea();
+        syncSectionWorkspaces();
+        positionWidgetPresetPopover();
     });
-    const { actionBar, select: baseSelectWidget, refreshPosition: refreshActionBarPosition } = createActionBar(null, grid, state, () => scheduleAutosave());
+    const { actionBar, select: baseSelectWidget, refreshPosition: refreshActionBarPosition, hide: hideActionBar, clearSelection: clearActionBarSelection } = createActionBar(null, grid, state, () => scheduleAutosave());
+    let actionBarSelectedAt = Number.NEGATIVE_INFINITY;
+    const hideActionBarForCanvasMovement = () => {
+        hideActionBar();
+        removeStageBehaviorHuds();
+    };
+    gridViewportEl?.addEventListener('wheel', hideActionBarForCanvasMovement, { passive: true });
+    gridViewportEl?.addEventListener('touchmove', hideActionBarForCanvasMovement, { passive: true });
+    gridViewportEl?.addEventListener('scroll', () => {
+        // The toolbar is positioned outside the scroll surface. Hide it as soon
+        // as user navigation moves the canvas. A short guard ignores the browser's
+        // own reveal scroll immediately around widget selection.
+        const now = window.performance?.now?.() || Date.now();
+        if (now - actionBarSelectedAt < 350)
+            return;
+        hideActionBarForCanvasMovement();
+    }, { passive: true });
+    sectionGridInteractionsReady = true;
+    syncSectionWorkspaces();
     function selectWidget(el) {
+        if (el?.classList?.contains('layout-grid-container')) {
+            const sectionId = el.closest?.('.layout-section[data-section-id]')?.dataset?.sectionId;
+            if (sectionId) {
+                activeSceneId = sectionId;
+                activatePageSection(layoutRoot, sectionId);
+            }
+            if (state.activeWidgetEl && state.activeWidgetEl !== el) {
+                state.activeWidgetEl.classList.remove('selected');
+                state.activeWidgetEl.dispatchEvent(new Event('deselected'));
+            }
+            state.activeWidgetEl = null;
+            layoutRoot.querySelectorAll('.layout-container--active').forEach(container => {
+                container.classList.remove('layout-container--active');
+            });
+            el.classList.add('layout-container--active');
+            actionBar.style.display = 'none';
+            hideToolbar();
+            updateSceneInspector(null);
+            renderSceneLayers();
+            return;
+        }
+        const owningSurface = el?.parentElement?.closest?.('.layout-grid-surface');
+        const owningRecord = layoutGridRegistry?.forWorkspace(owningSurface);
+        const sectionId = owningRecord?.sectionId || el
+            ?.closest?.('.layout-section[data-section-id]')
+            ?.dataset?.sectionId;
+        if (sectionId) {
+            activeSceneId = sectionId;
+            editingSceneId = null;
+            activatePageSection(layoutRoot, activeSceneId);
+            if (owningRecord) {
+                gridEl = owningRecord.surface;
+                grid = owningRecord.grid;
+            }
+            else {
+                const activeRecord = layoutGridRegistry?.activate(activeSceneId);
+                if (activeRecord) {
+                    gridEl = activeRecord.workspace;
+                    grid = activeRecord.grid;
+                }
+            }
+        }
         baseSelectWidget(el);
+        actionBarSelectedAt = window.performance?.now?.() || Date.now();
         if (!el) {
             removeStageBehaviorHuds();
             updateSceneInspector(null);
@@ -3048,8 +3715,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
         if (!el.dataset.behavior)
             el.dataset.behavior = 'scroll';
-        if (!el.dataset.sceneId)
-            el.dataset.sceneId = activeSceneId;
+        el.dataset.sceneId = activeSceneId;
+        el.dataset.workareaId = owningRecord?.surfaceId || activeSceneId;
         if (!el.dataset.sceneTitle) {
             const activeScene = getActiveScene();
             if (activeScene?.title)
@@ -3062,6 +3729,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         updateSceneInspector(el, selectedWidgetDef);
         refreshActionBarPosition(el);
         renderSceneLayers();
+        renderStageSceneControls(getActiveScene(), renderSceneNavigationItems());
         // Hide background toolbar when selecting a widget
         hideBgToolbar();
         let editable = getRegisteredEditable(el);
@@ -3079,10 +3747,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         refreshActionBarPosition(el);
         builderLogger.debug('selectWidget', { widgetId: el?.id, editableId: editable?.id });
     }
+    bindLayoutWidgetSelection({
+        layoutRoot,
+        getActiveLayer: () => activeLayer,
+        isDisabled: () => document.body.classList.contains('preview-mode'),
+        // Selection is independent from placement gestures. Auto and Grid keep
+        // their move/resize locks while exposing the same inspector and action bar
+        // as Free placement.
+        onSelect: widget => selectWidget(widget)
+    });
     const shouldAutosaveNow = () => Boolean(pageId && state.autosaveEnabled);
     initTextPanel({
         grid,
         gridEl,
+        getGrid: () => grid,
+        getGridEl: () => gridEl,
         allWidgets,
         genId,
         ensureCodeMap,
@@ -3097,7 +3776,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         iconMap: ICON_MAP,
         getWidgetIcon
     });
-    gridEl.addEventListener('pointerdown', event => {
+    layoutRoot.addEventListener('pointerdown', event => {
         const handle = event.target.closest?.('.scene-behavior-range-cue [data-range-handle]');
         if (!handle)
             return;
@@ -3132,7 +3811,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (pageId && state.autosaveEnabled)
             scheduleAutosave();
     };
-    gridEl.addEventListener('click', handleStageBehaviorClick);
+    layoutRoot.addEventListener('click', handleStageBehaviorClick);
     actionBar.addEventListener('click', handleStageBehaviorClick);
     function pulseElement(el) {
         if (!el?.classList)
@@ -3245,8 +3924,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const y = Math.max(0, Math.floor(relY / cellHeight) || 0);
         return { x, y };
     }
-    function normalizeSceneWidgetDimensions({ w, h, minW, minH }) {
-        const canvasWidth = Math.max(1, Number(grid?.options?.columns) || Number(gridEl?.clientWidth) || 1040);
+    function normalizeSceneWidgetDimensions({ w, h, minW, minH }, targetGrid = grid, targetSurface = gridEl) {
+        const canvasWidth = Math.max(1, Number(targetGrid?.options?.columns) || Number(targetSurface?.clientWidth) || 1040);
         const width = Math.min(canvasWidth, Math.max(1, Math.round(Number(w) || 480)));
         const height = Math.max(1, Math.round(Number(h) || 240));
         return {
@@ -3259,34 +3938,155 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     function defaultWidgetDimensions() {
         return { w: 480, h: 240, minW: 240, minH: 120 };
     }
-    async function createSceneWidget(widgetDef, { x = 0, y = 0, w = 480, h = 240, minW = 240, minH = 120, code = null, behavior = 'scroll', label = '', elementName = '' } = {}) {
-        if (!widgetDef || !gridEl || !grid)
+    function cloneDesignerValue(value) {
+        if (value == null)
+            return value;
+        if (typeof structuredClone === 'function') {
+            try {
+                return structuredClone(value);
+            }
+            catch {
+                // JSON below is the compatibility path for browser values that cannot
+                // be structured-cloned (for example function-bearing metadata).
+            }
+        }
+        try {
+            return JSON.parse(JSON.stringify(value));
+        }
+        catch {
+            return value;
+        }
+    }
+    function directWidgetElements(surface) {
+        return Array.from(surface?.children || []).filter(child => (child instanceof HTMLElement &&
+            child.classList.contains('canvas-item') &&
+            Boolean(child.dataset.widgetId)));
+    }
+    function independentWidgetCode(value) {
+        const code = cloneDesignerValue(value);
+        if (!code || typeof code !== 'object')
+            return code;
+        ['styleSource', 'style_source', 'styleLink', 'style_link'].forEach(key => {
+            delete code[key];
+        });
+        if (code.meta && typeof code.meta === 'object') {
+            ['styleSource', 'style_source', 'styleLink', 'style_link'].forEach(key => {
+                delete code.meta[key];
+            });
+        }
+        return code;
+    }
+    function widgetDuplicateSnapshot(source) {
+        const instanceId = source?.dataset?.instanceId || '';
+        return {
+            source,
+            widgetDef: allWidgets.find(widget => widget.id === source?.dataset?.widgetId) || null,
+            code: independentWidgetCode(ensureCodeMap()[instanceId] || null),
+            x: Number(source?.dataset?.x || 0),
+            y: Number(source?.dataset?.y || 0),
+            w: Number(source?.getAttribute?.('gs-w') || 1),
+            h: Number(source?.getAttribute?.('gs-h') || DEFAULT_ROWS),
+            minW: Number(source?.getAttribute?.('gs-min-w') || 1),
+            minH: Number(source?.getAttribute?.('gs-min-h') || 1),
+            layer: Number(source?.dataset?.layer || activeLayer),
+            behavior: source?.dataset?.behavior || 'scroll',
+            sceneId: source?.dataset?.sceneId || activeSceneId,
+            sceneTitle: source?.dataset?.sceneTitle || '',
+            sceneBackground: source?.dataset?.sceneBackground || '',
+            elementName: source?.dataset?.elementName || '',
+            datasets: Object.fromEntries(['scrollStart', 'scrollEnd', 'effects', 'opacity', 'radius', 'responsivePlacement']
+                .filter(key => source?.dataset?.[key] !== undefined)
+                .map(key => [key, source.dataset[key]]))
+        };
+    }
+    async function duplicateSceneWidget(source, { linked = false, targetRecord = null, offset = 16, select = true, persist = true } = {}) {
+        if (!source)
             return null;
-        const dimensions = normalizeSceneWidgetDimensions({ w, h, minW, minH });
+        updateAllWidgetContents();
+        const snapshot = widgetDuplicateSnapshot(source);
+        if (!snapshot.widgetDef) {
+            throw new Error(`DESIGNER_WIDGET_DUPLICATE_DEFINITION_MISSING: no widget definition exists for "${source.dataset.widgetId || ''}".`);
+        }
+        const sourceRecord = layoutGridRegistry?.forWorkspace(source.parentElement);
+        const destination = targetRecord || sourceRecord;
+        const duplicate = await createSceneWidget(snapshot.widgetDef, {
+            x: snapshot.x + offset,
+            y: snapshot.y + offset,
+            w: snapshot.w,
+            h: snapshot.h,
+            minW: snapshot.minW,
+            minH: snapshot.minH,
+            code: snapshot.code,
+            behavior: snapshot.behavior,
+            elementName: snapshot.elementName,
+            targetRecord: destination,
+            layer: snapshot.layer,
+            sceneId: snapshot.sceneId,
+            sceneTitle: snapshot.sceneTitle,
+            sceneBackground: snapshot.sceneBackground,
+            global: false,
+            select: false,
+            persist: false
+        });
+        if (!duplicate)
+            return null;
+        Object.entries(snapshot.datasets).forEach(([key, value]) => {
+            duplicate.dataset[key] = value;
+        });
+        if (snapshot.datasets.opacity !== undefined) {
+            duplicate.style.opacity = String(normalizeOpacity(snapshot.datasets.opacity) / 100);
+        }
+        if (snapshot.datasets.radius !== undefined) {
+            const content = duplicate.querySelector(':scope > .canvas-item-content');
+            if (content)
+                content.style.borderRadius = `${snapshot.datasets.radius}px`;
+        }
+        if (linked) {
+            followWidgetStyleSource(duplicate, source);
+            destination?.grid?.update?.(duplicate, {}, { silent: true });
+            destination?.grid?.emitChange?.(source, { contentOnly: true });
+        }
+        destination?.grid?.emitChange?.(duplicate, { contentOnly: true });
+        if (select) {
+            setInspectorMode('content');
+            selectWidget(duplicate);
+        }
+        renderSceneLayers();
+        if (persist && pageId && state.autosaveEnabled)
+            scheduleAutosave();
+        return duplicate;
+    }
+    async function createSceneWidget(widgetDef, { x = 0, y = 0, w = 480, h = 240, minW = 240, minH = 120, code = null, behavior = 'scroll', label = '', elementName = '', targetRecord = null, layer = activeLayer, sceneId = activeSceneId, sceneTitle = '', sceneBackground = '', global = false, select = true, persist = true } = {}) {
+        const targetSurface = targetRecord?.surface || targetRecord?.workspace || gridEl;
+        const targetGrid = targetRecord?.grid || grid;
+        if (!widgetDef || !targetSurface || !targetGrid)
+            return null;
+        const dimensions = normalizeSceneWidgetDimensions({ w, h, minW, minH }, targetGrid, targetSurface);
         w = dimensions.w;
         h = dimensions.h;
         minW = dimensions.minW;
         minH = dimensions.minH;
         const instId = genId();
-        const activeScene = getActiveScene();
+        const activeScene = sceneSections.find(scene => scene.id === sceneId) || getActiveScene();
         const wrapper = document.createElement('div');
         wrapper.classList.add('canvas-item');
         wrapper.id = `widget-${instId}`;
         wrapper.dataset.widgetId = widgetDef.id;
         wrapper.dataset.instanceId = instId;
-        wrapper.dataset.layer = String(activeLayer);
+        wrapper.dataset.global = global ? 'true' : 'false';
+        wrapper.dataset.layer = String(layer);
         wrapper.dataset.behavior = normalizeBehavior(behavior);
         wrapper.dataset.scrollStart = String(DEFAULT_SCROLL_RANGE.start);
         wrapper.dataset.scrollEnd = String(DEFAULT_SCROLL_RANGE.end);
-        wrapper.dataset.sceneId = activeSceneId;
-        if (activeScene?.title)
-            wrapper.dataset.sceneTitle = activeScene.title;
-        wrapper.dataset.sceneBackground = getSceneBackground(activeScene);
+        wrapper.dataset.sceneId = sceneId;
+        wrapper.dataset.workareaId = targetRecord?.surfaceId || sceneId;
+        wrapper.dataset.sceneTitle = sceneTitle || activeScene?.title || '';
+        wrapper.dataset.sceneBackground = sceneBackground || getSceneBackground(activeScene);
         if (elementName)
             wrapper.dataset.elementName = String(elementName).trim();
         wrapper.dataset.x = String(x);
         wrapper.dataset.y = String(y);
-        wrapper.style.zIndex = String(activeLayer);
+        wrapper.style.zIndex = String(layer);
         wrapper.setAttribute('gs-w', String(w));
         wrapper.setAttribute('gs-h', String(h));
         wrapper.setAttribute('gs-min-w', String(minW));
@@ -3299,27 +4099,30 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (code && typeof code === 'object') {
             localCodeMap[instId] = code;
         }
-        attachRemoveButton(wrapper, grid, pageId, scheduleAutosave);
+        attachRemoveButton(wrapper, targetGrid, pageId, scheduleAutosave);
         const editBtn = attachEditButton(wrapper, widgetDef, localCodeMap, pageId, scheduleAutosave);
         attachOptionsMenu(wrapper, widgetDef, editBtn, {
-            grid: gridEl,
+            grid: targetSurface,
             pageId,
             scheduleAutosave,
-            activeLayer,
+            activeLayer: layer,
             codeMap: localCodeMap,
-            genId
+            genId,
+            duplicateWidget: (source, options = {}) => duplicateSceneWidget(source, options)
         });
         attachLockOnClick(wrapper, selectWidget);
-        gridEl.appendChild(wrapper);
-        grid.makeWidget(wrapper);
-        grid.update?.(wrapper, { x, y, w, h, layer: activeLayer });
+        targetSurface.appendChild(wrapper);
+        targetGrid.makeWidget(wrapper);
+        targetGrid.update?.(wrapper, { x, y, w, h, layer });
         await renderWidget(wrapper, widgetDef, localCodeMap, code);
-        setInspectorMode('content');
-        selectWidget(wrapper);
+        if (select) {
+            setInspectorMode('content');
+            selectWidget(wrapper);
+        }
         markInactiveWidgets();
         renderSceneLayers();
-        grid.emitChange?.(wrapper);
-        if (pageId && state.autosaveEnabled)
+        targetGrid.emitChange?.(wrapper);
+        if (persist && pageId && state.autosaveEnabled)
             scheduleAutosave();
         return wrapper;
     }
@@ -3559,10 +4362,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         setInspectorMode('behavior');
         const nextBehavior = normalizeBehavior(behavior);
         if (!state.activeWidgetEl) {
-            sceneInspector?.querySelector('.scene-layer-settings')?.scrollIntoView?.({
-                block: 'nearest',
-                behavior: 'smooth'
-            });
             updateSceneInspector(null);
             setSidebarToolActive(nextBehavior === 'scroll' ? 'scroll' : 'action');
             return;
@@ -3842,30 +4641,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const source = findCanvasItemByCommand(command);
         if (!source)
             return { handled: false, reason: 'element-not-found' };
-        updateAllWidgetContents();
-        const widgetDef = allWidgets.find(widget => widget.id === source.dataset.widgetId);
-        if (!widgetDef)
-            return { handled: false, reason: 'widget-definition-not-found' };
-        const sourceCode = ensureCodeMap()[source.dataset.instanceId];
-        const code = sourceCode ? JSON.parse(JSON.stringify(sourceCode)) : null;
-        const duplicate = await createSceneWidget(widgetDef, {
-            x: Number(source.dataset.x || 0) + 1,
-            y: Number(source.dataset.y || 0) + 1,
-            w: Number(source.getAttribute('gs-w') || 1),
-            h: Number(source.getAttribute('gs-h') || DEFAULT_ROWS),
-            minW: Number(source.getAttribute('gs-min-w') || 1),
-            minH: Number(source.getAttribute('gs-min-h') || 1),
-            code,
-            behavior: source.dataset.behavior,
-            elementName: source.dataset.elementName
+        const duplicate = await duplicateSceneWidget(source, {
+            linked: commandValue(command, 'linked', false) === true,
+            offset: 16,
+            select: true,
+            persist: true
         });
         if (!duplicate)
             return { handled: false, reason: 'duplicate-create-failed' };
-        ['scrollStart', 'scrollEnd', 'effects', 'opacity', 'radius'].forEach(key => {
-            if (source.dataset[key] !== undefined)
-                duplicate.dataset[key] = source.dataset[key];
-        });
-        renderSceneLayers();
         return { handled: true, selection: selectedElementSummary(duplicate) };
     }
     function updateTextFromCommand(command = {}) {
@@ -3907,12 +4690,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             selection: selectedElementSummary(widget)
         };
     }
-    function updateContainerFromCommand(action, command = {}) {
+    async function updateContainerFromCommand(action, command = {}) {
         const target = findLayoutContainerByCommand(command, 'id');
         if (!target)
             return { handled: false, reason: 'container-not-found' };
+        let resultContainer = target;
         if (action === 'container.create') {
             placeContainer(target, commandValue(command, 'position', 'inside'));
+        }
+        else if (action === 'container.duplicate') {
+            const duplicate = await duplicateContainer(target, {
+                linked: commandValue(command, 'linked', false) === true
+            });
+            if (!duplicate)
+                return { handled: false, reason: 'container-duplicate-failed' };
+            resultContainer = duplicate;
         }
         else if (action === 'container.delete') {
             deleteContainer(target);
@@ -3933,36 +4725,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
         else if (action === 'container.styleSource.link') {
             const source = findLayoutContainerByCommand(command, 'sourceId');
-            if (source && source !== target) {
-                source.dataset.styleSourceEnabled = 'true';
-                source.dataset.styleSourceRole = 'source';
-                source.dataset.styleSyncLayout = 'true';
-                source.dataset.styleSyncDesign = 'true';
-                if (target.dataset.styleSourceEnabled !== 'true'
-                    || target.dataset.styleSourceId !== source.dataset.nodeId) {
-                    target.dataset.styleSourceEnabled = 'false';
-                    delete target.dataset.styleSourceId;
-                    toggleContainerStyleSource(target);
-                }
+            if (!source || source === target) {
+                return { handled: false, reason: 'container-style-source-required' };
             }
-            else if (target.dataset.styleSourceEnabled !== 'true' || !target.dataset.styleSourceId) {
-                toggleContainerStyleSource(target);
-            }
+            linkContainerStyleSource(source, target);
         }
         else if (action === 'container.styleSource.unlink') {
-            if (target.dataset.styleSourceEnabled !== 'false') {
-                if (target.dataset.styleSourceId)
-                    toggleContainerStyleSource(target);
-                else {
-                    target.dataset.styleSourceEnabled = 'false';
-                    handleContainerMutation();
-                }
-            }
+            unlinkContainerStyleSource(target);
         }
         else {
             return { handled: false, reason: 'unsupported-container-command', action };
         }
-        return { handled: true, action, container: containerDebugInfo(target) };
+        return { handled: true, action, container: containerDebugInfo(resultContainer) };
     }
     async function createCurrentSitePreset(command = {}) {
         const name = String(commandValue(command, 'name', '') || '').trim();
@@ -4069,8 +4843,12 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return stepSceneBy(1);
         if (action === 'scene.prev' || action === 'scene.previous')
             return stepSceneBy(-1);
-        if (action === 'scene.add')
-            return { handled: true, scene: sceneSummary(createSceneFromUi({ edit: false })) };
+        if (action === 'scene.add') {
+            return {
+                handled: true,
+                scene: sceneSummary(createSceneFromUi({ edit: false, insertionSource: 'agent-command' }))
+            };
+        }
         if (action === 'scene.select')
             return activateSceneById(commandValue(command, 'sceneId', command.target), false);
         if (action === 'scene.rename' || action === 'scene.update' || action === 'scene.background')
@@ -4091,9 +4869,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
         if (action === 'scene.delete') {
             const sceneId = String(commandValue(command, 'sceneId', activeSceneId));
-            const before = sceneSections.length;
-            removeScene(sceneId);
-            return { handled: sceneSections.length < before, deletedSceneId: sceneId };
+            return removeScene(sceneId);
         }
         if (action === 'insert' || action === 'insert.element') {
             const type = commandValue(command, 'type', command.value || command.target);
@@ -4211,47 +4987,120 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             }
         }
     });
-    // When the grid selection changes, either select a widget or show the
-    // background toolbar. Previously we only handled the widget case, so
-    // clicking on empty space would not reveal the background toolbar. This
-    // mirrors the behaviour of the text editor: when nothing is selected we
-    // hide the text toolbar and show the background toolbar. Record the
-    // opening timestamp so the global click handler does not immediately hide
-    // it again.
-    grid.on('change', ({ el, contentOnly } = {}) => {
-        if (el) {
-            // Selecting a widget hides the background toolbar and shows the text toolbar
-            selectWidget(el);
+    /**
+     * Binds editor behavior once per Section grid. The closure uses the record's
+     * own grid so inactive Sections never mutate through the active alias.
+     */
+    function bindSectionGridEvents(record) {
+        const workspace = record?.workspace;
+        const sectionGrid = record?.grid;
+        if (!workspace || !sectionGrid || workspace.dataset.editorEventsBound === 'true')
+            return;
+        workspace.dataset.editorEventsBound = 'true';
+        sectionGrid.on('change', ({ el, contentOnly } = {}) => {
+            if (applyingCompositeLayout)
+                return;
+            if (el) {
+                selectWidget(el);
+            }
+            else if (record.sectionId === activeSceneId) {
+                hideToolbar();
+                showBgToolbar(record.section);
+                bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
+            }
+            if (contentOnly)
+                return;
+            const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
+            pushLayoutState(layout);
+            if (pageId && state.autosaveEnabled)
+                scheduleAutosave();
+        });
+        sectionGrid.on('dragstart', () => {
+            sectionGrid.bboxManager?.hide?.();
+            actionBar.style.display = 'none';
+        });
+        sectionGrid.on('resizestart', () => {
+            actionBar.style.display = 'none';
+        });
+        sectionGrid.on('dragstop', () => {
+            sectionGrid.bboxManager?.show?.();
+            if (state.activeWidgetEl)
+                selectWidget(state.activeWidgetEl);
+        });
+        sectionGrid.on('resizestop', () => {
+            if (state.activeWidgetEl)
+                selectWidget(state.activeWidgetEl);
+        });
+    }
+    syncSectionWorkspaces();
+    layoutRoot.addEventListener('designerSectionModeRequested', event => {
+        const section = event.target?.closest?.('.layout-section[data-section-id]');
+        const mode = event.detail?.mode;
+        if (!section || !mode)
+            return;
+        activateSceneById(section.dataset.sectionId, false);
+        activatePageSection(layoutRoot, section.dataset.sectionId);
+        setContainerLayoutMode(section, mode);
+        syncInspectorSection();
+        showBgToolbar(section);
+    });
+    layoutRoot.addEventListener('designerSectionBackgroundChanged', event => {
+        const section = event.target?.closest?.('.layout-section[data-section-id]');
+        const scene = sceneSections.find(item => item.id === section?.dataset.sectionId);
+        if (!section || !scene)
+            return;
+        scene.background = normalizeSceneColor(event.detail?.background, DEFAULT_SCENE_BACKGROUND);
+        const backgroundImageUrl = normalizeSceneBackgroundImageUrl(event.detail?.backgroundImageUrl);
+        if (backgroundImageUrl) {
+            scene.backgroundImageUrl = backgroundImageUrl;
+            scene.backgroundImageId = String(event.detail?.backgroundImageId || '');
         }
         else {
-            // Deselecting: hide text toolbar and show background toolbar
-            hideToolbar();
-            showBgToolbar();
-            bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
+            delete scene.backgroundImageUrl;
+            delete scene.backgroundImageId;
         }
-        if (contentOnly)
+        syncInspectorSection(scene);
+        requestSceneChangePersist();
+    });
+    function clearActiveWidgetSelection() {
+        if (!clearActionBarSelection())
+            return false;
+        removeStageBehaviorHuds();
+        updateSceneInspector(null);
+        renderSceneLayers();
+        hideToolbar();
+        return true;
+    }
+    const clearActiveWidgetFromExternalPointer = event => {
+        const activeWidget = state.activeWidgetEl;
+        if (!activeWidget)
             return;
-        const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
-        pushLayoutState(layout);
-        if (pageId && state.autosaveEnabled)
-            scheduleAutosave();
-    });
-    grid.on("dragstart", () => {
-        grid.bboxManager?.hide?.();
-        actionBar.style.display = "none";
-    });
-    grid.on("resizestart", () => {
-        actionBar.style.display = "none";
-    });
-    grid.on("dragstop", () => {
-        grid.bboxManager?.show?.();
-        if (state.activeWidgetEl)
-            selectWidget(state.activeWidgetEl);
-    });
-    grid.on("resizestop", () => {
-        if (state.activeWidgetEl)
-            selectWidget(state.activeWidgetEl);
-    });
+        if (
+        // Let CanvasGrid own widget-to-widget transitions. Clearing its active
+        // item during capture would interfere with the new selection gesture.
+        event.target.closest('.canvas-item') ||
+            event.target.closest('.widget-action-bar') ||
+            event.target.closest('.text-block-editor-toolbar') ||
+            event.target.closest('.bg-editor-toolbar') ||
+            event.target.closest('.color-picker') ||
+            event.target.closest('.scene-inspector')) {
+            return;
+        }
+        if (!clearActiveWidgetSelection())
+            return;
+        window.requestAnimationFrame(() => {
+            // Some CanvasGrid pointer paths restore their visual active class later
+            // in the same gesture. Keep the cleared structured selection canonical.
+            if (state.activeWidgetEl)
+                return;
+            activeWidget.classList.remove('selected');
+            activeWidget.closest('.layout-grid-surface')?.__grid?.clearSelection?.();
+        });
+    };
+    // Capture before CanvasGrid so both pointer-capable and click-only input
+    // paths close stale chrome even when the grid stops bubbling afterwards.
+    document.addEventListener('pointerdown', clearActiveWidgetFromExternalPointer, true);
+    document.addEventListener('click', clearActiveWidgetFromExternalPointer, true);
     document.addEventListener('click', e => {
         if (!state.activeWidgetEl)
             return;
@@ -4263,17 +5112,31 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             e.target.closest('.scene-inspector')) {
             return;
         }
-        actionBar.style.display = 'none';
-        state.activeWidgetEl.classList.remove('selected');
-        state.activeWidgetEl.dispatchEvent(new Event('deselected'));
-        removeStageBehaviorHuds();
-        state.activeWidgetEl = null;
-        updateSceneInspector(null);
-        renderSceneLayers();
-        hideToolbar();
-        grid.clearSelection();
+        clearActiveWidgetSelection();
     });
-    // Show background toolbar when clicking on background (content/grid), not on a widget/UI
+    function showSectionToolbarForEvent(event) {
+        const directSection = event.target?.closest?.('.layout-section[data-section-id]');
+        const hitRecord = directSection ? null : layoutGridRegistry?.orderedRecords().find(record => {
+            const bounds = record.surface.getBoundingClientRect?.();
+            const clientX = event.clientX ?? -1;
+            const clientY = event.clientY ?? -1;
+            return bounds &&
+                clientX >= bounds.left &&
+                clientX <= bounds.right &&
+                clientY >= bounds.top &&
+                clientY <= bounds.bottom;
+        });
+        const section = directSection || hitRecord?.section || null;
+        if (section?.dataset.sectionId) {
+            // CanvasGrid may stop the later click event. Clear the widget selection
+            // on this background pointer path so its floating actions cannot linger.
+            clearActiveWidgetSelection();
+            activateSceneById(section.dataset.sectionId, false);
+            activatePageSection(layoutRoot, section.dataset.sectionId);
+        }
+        showBgToolbar(section);
+    }
+    // Show the owning Section toolbar when clicking its background, not a widget/UI.
     const contentClickHandler = e => {
         const inPreview = document.body.classList.contains('preview-mode');
         if (inPreview) {
@@ -4294,16 +5157,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (isUi)
             return;
         hideToolbar();
-        showBgToolbar();
+        showSectionToolbarForEvent(e);
         bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
         backgroundLogger.debug('bgToolbar show via contentDown', { timestamp: bgToolbarOpenedTs });
     };
     // Prefer pointerdown for consistency and to avoid race with global click hide
-    gridEl.addEventListener('pointerdown', contentClickHandler);
+    layoutRoot.addEventListener('pointerdown', contentClickHandler);
     const contentRoot = document.getElementById('content');
-    if (contentRoot && contentRoot !== gridEl)
+    if (contentRoot && contentRoot !== layoutRoot)
         contentRoot.addEventListener('pointerdown', contentClickHandler);
-    backgroundLogger.debug('listeners attached: pointerdown on #workspaceMain and #content');
+    backgroundLogger.debug('listeners attached: pointerdown on Section grids and #content');
     // Capture-phase handler to catch clicks swallowed by other listeners
     const captureBackgroundIntent = e => {
         if (document.body.classList.contains('preview-mode')) {
@@ -4311,15 +5174,23 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return;
         }
         let inContent = e.target.closest('#content');
-        // If an overlay outside #content captures the event, fall back to hit-testing #workspaceMain bounds
+        // If an overlay outside #content captures the event, fall back to hit-testing
+        // any canonical Section workspace.
         if (!inContent) {
-            const gridRect = gridEl?.getBoundingClientRect?.();
             const cx = (e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? -1);
             const cy = (e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? -1);
-            if (gridRect && cx >= gridRect.left && cx <= gridRect.right && cy >= gridRect.top && cy <= gridRect.bottom) {
+            const hitWorkspace = layoutGridRegistry?.orderedRecords().find(record => {
+                const bounds = record.surface.getBoundingClientRect?.();
+                return bounds && cx >= bounds.left && cx <= bounds.right && cy >= bounds.top && cy <= bounds.bottom;
+            });
+            if (hitWorkspace)
                 inContent = true;
-            }
-            backgroundLogger.debug('capture hit-test', { cx, cy, gridRect, inContent: !!inContent });
+            backgroundLogger.debug('capture hit-test', {
+                cx,
+                cy,
+                sectionId: hitWorkspace?.sectionId || null,
+                inContent: !!inContent
+            });
         }
         if (!inContent)
             return;
@@ -4336,17 +5207,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (isUi)
             return;
         hideToolbar();
-        showBgToolbar();
+        showSectionToolbarForEvent(e);
         bgToolbarOpenedTs = (window.performance?.now?.() || Date.now());
         backgroundLogger.debug('bgToolbar show via capture', { timestamp: bgToolbarOpenedTs });
     };
     document.addEventListener('pointerdown', captureBackgroundIntent, true);
     // Hide background toolbar when clicking outside of canvas/toolbar
     document.addEventListener('click', e => {
-        if (!document.getElementById('workspaceMain'))
+        if (!layoutRoot?.querySelector('.layout-grid-surface'))
             return;
         const insideBgToolbar = e.target.closest('.bg-editor-toolbar');
-        const insideGrid = e.target.closest('#workspaceMain');
+        const insideGrid = e.target.closest('.layout-grid-surface');
         const insidePicker = e.target.closest('.color-picker');
         const insideTextTb = e.target.closest('.text-block-editor-toolbar');
         if (insideBgToolbar || insidePicker || insideTextTb) {
@@ -4413,6 +5284,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                     hPercent: w.h_percent ?? w.hPercent,
                     behavior: meta.behavior || w.behavior,
                     sceneId: meta.sceneId || w.sceneId,
+                    workareaId: meta.workareaId || w.workareaId || w.workarea_id || meta.sceneId || w.sceneId,
                     sceneTitle: meta.sceneTitle || w.sceneTitle,
                     sceneBackground: meta.sceneBackground || w.sceneBackground || w.scene_background,
                     scrollStart: meta.scrollStart || w.scrollStart || w.scroll_start,
@@ -4464,6 +5336,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     }
     hydrateSceneSectionsFromLayoutTree(persistedLayoutData);
     hydrateSceneSectionsFromLayouts(layoutLayers.map(layer => layer.layout));
+    syncSceneSectionsToLayout();
     if (HAS_LAYOUT_STRUCTURE) {
         if (globalLayoutName) {
             document.body.dataset.globalLayoutName = globalLayoutName;
@@ -4475,11 +5348,34 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     applyCompositeLayout(activeLayer);
     markInactiveWidgets();
     renderSceneNavigation();
-    gridEl.addEventListener('dragover', e => { e.preventDefault(); gridEl.classList.add('drag-over'); });
-    gridEl.addEventListener('dragleave', () => gridEl.classList.remove('drag-over'));
-    gridEl.addEventListener('drop', async (e) => {
+    void initDesignBackgroundSettings();
+    const sectionWorkspaceForEvent = event => (event.target?.closest?.('.layout-grid-surface') || gridEl);
+    const activateEventSectionWorkspace = event => {
+        const workspace = sectionWorkspaceForEvent(event);
+        const record = layoutGridRegistry?.forWorkspace(workspace);
+        if (!record)
+            return workspace;
+        activeSceneId = record.sectionId;
+        activatePageSection(layoutRoot, activeSceneId);
+        gridEl = record.workspace;
+        grid = record.grid;
+        renderStageSceneControls(getActiveScene(), renderSceneNavigationItems());
+        return workspace;
+    };
+    layoutRoot.addEventListener('dragover', e => {
+        const workspace = sectionWorkspaceForEvent(e);
+        if (!workspace)
+            return;
         e.preventDefault();
-        gridEl.classList.remove('drag-over');
+        workspace.classList.add('drag-over');
+    });
+    layoutRoot.addEventListener('dragleave', e => {
+        sectionWorkspaceForEvent(e)?.classList.remove('drag-over');
+    });
+    layoutRoot.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const workspace = activateEventSectionWorkspace(e);
+        workspace?.classList.remove('drag-over');
         const dragData = e.dataTransfer?.getData('text/plain') || '';
         const presetId = dragData.startsWith(INSERT_PRESET_PREFIX)
             ? normalizeInsertPresetId(dragData)
@@ -4521,7 +5417,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (HAS_LAYOUT_STRUCTURE) {
         if (activeLayer === 0) {
             await startLayoutMode(layoutCtx);
-            wireArrangeToggle();
         }
         else {
             stopLayoutMode(layoutCtx);
@@ -4550,51 +5445,18 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         // No layer tabs to update; footer only hosts zoom controls now.
     }
     function markInactiveWidgets() {
-        gridEl.querySelectorAll('.canvas-item').forEach(el => {
-            const inactive = String(el.dataset.layer) !== String(activeLayer);
-            if (inactive) {
-                el.classList.add('inactive-layer');
-                el.title = 'Change layer to edit this widget';
-            }
-            else {
-                el.classList.remove('inactive-layer');
-                el.removeAttribute('title');
-            }
-            if (inactive) {
-                el.setAttribute('gs-no-move', 'true');
-                el.setAttribute('gs-no-resize', 'true');
-                if (el.getAttribute('contenteditable') === 'true') {
-                    el.dataset.prevContentEditable = 'true';
-                }
-                el.setAttribute('contenteditable', 'false');
-            }
-            else {
-                el.removeAttribute('gs-no-move');
-                el.removeAttribute('gs-no-resize');
-                if (el.dataset.prevContentEditable === 'true') {
-                    el.setAttribute('contenteditable', 'true');
-                    delete el.dataset.prevContentEditable;
-                }
-                else {
-                    el.removeAttribute('contenteditable');
-                }
-            }
-        });
+        const workspaces = layoutGridRegistry?.orderedRecords() || [
+            { section: gridEl?.closest?.('.layout-section'), workspace: gridEl }
+        ];
+        syncLayoutSurfaceInteractions(workspaces, activeLayer);
     }
     const applySnapshot = layout => {
-        applyLayout(layout, {
-            gridEl,
-            grid,
-            codeMap: ensureCodeMap(),
-            allWidgets,
-            layerIndex: activeLayer,
-            iconMap: ICON_MAP
-        });
-        markInactiveWidgets();
+        layoutLayers[activeLayer].layout = Array.isArray(layout) ? layout : [];
+        applyCompositeLayout(activeLayer);
     };
     Object.assign(layoutCtx, {
         getSitePresetSettings: () => {
-            const container = layoutRoot?.querySelector('.layout-container') || layoutRoot;
+            const container = getActiveWorkareaContainer();
             const numberFromCss = (value, fallback = 0) => {
                 const numeric = Number.parseFloat(String(value || ''));
                 return Number.isFinite(numeric) ? Math.round(numeric) : fallback;
@@ -4608,7 +5470,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         },
         applySitePresetSettings: settings => {
             const source = settings && typeof settings === 'object' ? settings : {};
-            const container = layoutRoot?.querySelector('.layout-container') || layoutRoot;
+            const container = getActiveWorkareaContainer();
             setContainerLayoutMode(container, source.layoutMode || 'free');
             setContainerSettings(container, {
                 gap: `${Math.max(0, Number(source.gap) || 0)}px`,
@@ -4733,24 +5595,41 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
     await headerController.renderHeader();
     function applyCompositeLayout(idx) {
-        if (grid && typeof grid.removeAll === 'function') {
-            grid.removeAll();
+        syncSectionWorkspaces();
+        applyingCompositeLayout = true;
+        try {
+            layoutGridRegistry?.clearAll();
+            Object.keys(ensureCodeMap()).forEach(k => delete codeMap[k]);
+            for (let i = 0; i <= idx; i++) {
+                const { groups, unassigned } = layoutGridRegistry.partition(layoutLayers[i].layout, activeSceneId);
+                if (unassigned.length) {
+                    console.warn('[Designer] DESIGNER_SECTION_GRID_LAYOUT_UNASSIGNED', {
+                        layer: i,
+                        count: unassigned.length
+                    });
+                }
+                layoutGridRegistry.orderedRecords().forEach(record => {
+                    const sectionLayout = groups.get(record.surfaceId) || [];
+                    if (!sectionLayout.length)
+                        return;
+                    applyLayout(sectionLayout, {
+                        gridEl: record.surface,
+                        grid: record.grid,
+                        codeMap: ensureCodeMap(),
+                        allWidgets,
+                        append: true,
+                        preserveCodeMap: true,
+                        layerIndex: i,
+                        iconMap: ICON_MAP,
+                        duplicateWidget: (source, options = {}) => duplicateSceneWidget(source, options)
+                    });
+                });
+            }
         }
-        else {
-            gridEl.innerHTML = '';
+        finally {
+            applyingCompositeLayout = false;
         }
-        Object.keys(ensureCodeMap()).forEach(k => delete codeMap[k]);
-        for (let i = 0; i <= idx; i++) {
-            applyLayout(layoutLayers[i].layout, {
-                gridEl,
-                grid,
-                codeMap: ensureCodeMap(),
-                allWidgets,
-                append: i !== 0,
-                layerIndex: i,
-                iconMap: ICON_MAP
-            });
-        }
+        syncSectionWorkspaces();
         markInactiveWidgets();
     }
     async function switchLayer(idx) {
@@ -4765,10 +5644,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             if (activeLayer === 0) {
                 await headerController.renderHeader({ reload: true });
                 await startLayoutMode(layoutCtx);
-                wireArrangeToggle();
             }
             else {
-                deactivateArrange();
                 stopLayoutMode(layoutCtx);
                 renderSceneNavigation();
             }

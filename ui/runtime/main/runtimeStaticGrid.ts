@@ -6,6 +6,7 @@ import {
 } from './runtimeGridMetrics.js';
 import type { RuntimeWidgetDefinition } from './runtimeWidgetRenderer.js';
 import {
+  mountRuntimeGridStructuralItems,
   mountRuntimeGridWidgets,
   reflowRuntimeGridWidgets,
   type RuntimeGridLayoutItem
@@ -41,7 +42,8 @@ function mergeResponsiveLayout(
 function installStaticGridResponsiveReflow(
   gridEl: ResponsiveRuntimeGridElement,
   grid: RendererGrid,
-  fallbackLayout: LayoutItem[]
+  fallbackLayout: LayoutItem[],
+  manageGridHeight = true
 ): void {
   const requestFrame = typeof window.requestAnimationFrame === 'function'
     ? window.requestAnimationFrame.bind(window)
@@ -59,7 +61,7 @@ function installStaticGridResponsiveReflow(
     try {
       const layout = gridEl.__runtimeResponsiveLayout || fallbackLayout;
       const metrics = computeStaticGridMetrics(gridEl, layout);
-      gridEl.style.height = `${metrics.height}px`;
+      if (manageGridHeight) gridEl.style.height = `${metrics.height}px`;
       reflowRuntimeGridWidgets({
         gridEl,
         grid,
@@ -92,6 +94,11 @@ export type RuntimeStaticGridOptions = {
   gridEl?: HTMLElement | null;
   grid?: RendererGrid | null;
   append?: boolean;
+  useTargetAsGrid?: boolean;
+  structuralItems?: Array<{
+    element: HTMLElement;
+    item: RuntimeGridLayoutItem;
+  }>;
   widgetEmit?: RuntimeWidgetEmitter;
 };
 
@@ -105,11 +112,12 @@ export async function renderStaticRuntimeGrid(
   if (!target) return { gridEl: null, grid: null };
 
   let { gridEl, grid, append = false } = opts;
+  const structuralItems = Array.isArray(opts.structuralItems) ? opts.structuralItems : [];
   const widgetEmit = opts.widgetEmit || noopWidgetEmit;
   if (!append || !gridEl || !grid) {
-    gridEl = document.createElement('div');
-    gridEl.className = 'canvas-grid';
-    target.appendChild(gridEl);
+    gridEl = opts.useTargetAsGrid ? target : document.createElement('div');
+    gridEl.classList.add('canvas-grid');
+    if (!opts.useTargetAsGrid) target.appendChild(gridEl);
     grid = initCanvasGrid(
       {
         staticGrid: true,
@@ -124,15 +132,27 @@ export async function renderStaticRuntimeGrid(
     ) as RendererGrid;
   }
 
-  mergeResponsiveLayout(gridEl as ResponsiveRuntimeGridElement, layout, append);
-  const metrics = computeStaticGridMetrics(gridEl, layout);
+  const projectionLayout = [
+    ...structuralItems.map(entry => entry.item),
+    ...layout
+  ];
+  mergeResponsiveLayout(gridEl as ResponsiveRuntimeGridElement, projectionLayout, append);
+  const metrics = computeStaticGridMetrics(gridEl, projectionLayout);
   grid.options = grid.options || {};
   grid.options.columnWidth = 1;
   grid.options.cellHeight = 1;
   grid.options.columns = Infinity;
   grid.options.rows = Infinity;
   grid.options.preservePixelWidgetSize = true;
-  gridEl.style.height = `${metrics.height}px`;
+  if (!opts.useTargetAsGrid) gridEl.style.height = `${metrics.height}px`;
+
+  mountRuntimeGridStructuralItems({
+    grid,
+    items: structuralItems,
+    scaleX: metrics.scaleX,
+    scaleY: metrics.scaleY,
+    percentDivisor: 1
+  });
 
   await mountRuntimeGridWidgets({
     gridEl,
@@ -149,7 +169,8 @@ export async function renderStaticRuntimeGrid(
   installStaticGridResponsiveReflow(
     gridEl as ResponsiveRuntimeGridElement,
     grid as RendererGrid,
-    layout
+    projectionLayout,
+    !opts.useTargetAsGrid
   );
   return { gridEl, grid };
 }

@@ -5,6 +5,7 @@
 import {
   buildLivePreviewFrameUrl,
   buildLivePreviewPayload,
+  calculateLivePreviewFrameGeometry,
   createLivePreviewController,
   livePreviewFeedbackState,
   normalizeLivePreviewViewports
@@ -199,6 +200,10 @@ describe('designer live preview frame', () => {
     panel.id = 'designerLivePreviewPanel';
     panel.dataset.status = 'ready';
     panel.dataset.viewport = 'mobile';
+    panel.dataset.layoutWidth = '390';
+    panel.dataset.layoutHeight = '720';
+    panel.dataset.displayScale = '0.8';
+    panel.dataset.fitMode = 'fit';
     const frame = document.createElement('iframe');
     frame.id = 'designerLivePreviewFrame';
     frame.src = '/coming-soon?designer-live-preview=1';
@@ -211,8 +216,32 @@ describe('designer live preview frame', () => {
       open: true,
       status: 'ready',
       viewport: 'mobile',
+      layoutWidth: 390,
+      layoutHeight: 720,
+      displayScale: 0.8,
+      fitMode: 'fit',
       frameUrl: '/coming-soon?designer-live-preview=1',
       runtime: 'public'
+    });
+  });
+
+  it('keeps the authored viewport width and computes a visual fit scale separately', () => {
+    expect(calculateLivePreviewFrameGeometry(1440, 1000, 800)).toEqual({
+      layoutWidth: 1440,
+      layoutHeight: 752,
+      displayScale: expect.closeTo(0.6611, 4),
+      displayWidth: 952,
+      displayHeight: 497,
+      fitMode: 'fit'
+    });
+
+    expect(calculateLivePreviewFrameGeometry(1440, 1600, 900)).toEqual({
+      layoutWidth: 1440,
+      layoutHeight: 852,
+      displayScale: 1,
+      displayWidth: 1440,
+      displayHeight: 852,
+      fitMode: 'actual'
     });
   });
 
@@ -261,6 +290,9 @@ describe('designer live preview frame', () => {
     expect(importerSource).toContain('import(/* webpackIgnore: true */ DESIGNER_LIVE_PREVIEW_RUNTIME_PATH)');
     expect(runtimeSource).toContain('renderPublicRuntimePageContent');
     expect(runtimeSource).toContain('previewRuntimeDataEmit');
+    expect(runtimeSource).toContain("previewRuntimeEmit('cmsAdminApiRequest'");
+    expect(runtimeSource).toContain('DESIGNER_LIVE_PREVIEW_WIDGET_INSTANCE_ID_INVALID');
+    expect(runtimeSource).toContain('widgetEmit: previewEmit');
     expect(runtimeSource).toContain('applyColorLibraryVariables');
     expect(runtimeSource).toContain('applyActiveFontPackage');
     expect(runtimeSource).not.toContain('designerLivePreview ===');

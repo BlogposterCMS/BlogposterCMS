@@ -37,6 +37,8 @@ export function normalizeRuntimeDesignWidget(widget = {}) {
         elementName,
         behavior: widget.behavior ?? widget.behaviour ?? meta.behavior,
         sceneId: widget.sceneId ?? widget.scene_id ?? meta.sceneId ?? meta.scene_id,
+        workareaId: widget.workareaId ?? widget.workarea_id ?? meta.workareaId ?? meta.workarea_id
+            ?? widget.sceneId ?? widget.scene_id ?? meta.sceneId ?? meta.scene_id,
         sceneTitle: widget.sceneTitle ?? widget.scene_title ?? meta.sceneTitle ?? meta.scene_title,
         sceneBackground: widget.sceneBackground ?? widget.scene_background
             ?? meta.sceneBackground ?? meta.scene_background,

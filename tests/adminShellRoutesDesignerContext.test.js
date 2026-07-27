@@ -1,6 +1,8 @@
 const {
   fetchDesignerAppFrameDesign
 } = require('../mother/server/http/adminShellRoutes');
+const fs = require('fs');
+const path = require('path');
 
 test('Designer app-frame metadata uses the existing AppLoader runtime facade', async () => {
   const decodedAdmin = {
@@ -77,4 +79,15 @@ test('Designer app-frame metadata keeps the manifest title when no design is ret
   });
 
   expect(design).toBeNull();
+});
+
+test('Designer browser chrome keeps the app title instead of exposing the selected design name', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '../mother/server/http/adminShellRoutes.js'),
+    'utf8'
+  );
+
+  expect(source).not.toContain('pageTitle = design.design.title');
+  expect(source).toContain("let pageTitle = manifest.title || manifest.name || 'App';");
+  expect(source).toContain("const dv = parseInt(design?.design?.version, 10);");
 });

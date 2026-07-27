@@ -2246,8 +2246,10 @@ describe('UI architecture boundaries', () => {
     expect(staticGridSource).not.toContain('createRuntimeCanvasItem({');
     expect(staticGridSource).not.toContain('resolveRuntimeCanvasRect(');
     expect(staticGridSource).toContain("from './runtimeGridWidgetMounting.js'");
+    expect(staticGridSource).toContain('mountRuntimeGridStructuralItems({');
     expect(staticGridSource).toContain('mountRuntimeGridWidgets({');
     expect(gridWidgetMountingSource).toContain("from './runtimeCanvasItems.js'");
+    expect(gridWidgetMountingSource).toContain('export function mountRuntimeGridStructuralItems');
     expect(gridWidgetMountingSource).toContain('createRuntimeCanvasItem({');
     expect(gridWidgetMountingSource).toContain('resolveRuntimeCanvasRect(');
     expect(canvasItemSource).toContain('export function createRuntimeCanvasItem');
@@ -2618,7 +2620,8 @@ describe('UI architecture boundaries', () => {
     expect(mountSource).toContain("from './runtimeWidgetInstances.js'");
     expect(mountSource).toContain('await applyDefaultWidgetInstanceOptions');
     expect(instanceSource).toContain('export async function applyDefaultWidgetInstanceOptions');
-    expect(instanceSource).toContain("emit('getWidgetInstance'");
+    expect(instanceSource).toContain("'cmsPublicRuntimeRequest'");
+    expect(instanceSource).toContain("runtimePublicPayload(window.PUBLIC_TOKEN, 'plainSpace', 'widgetInstance'");
     expect(instanceSource).toContain("lane === 'admin'");
     expect(instanceSource).toContain("from './widgetRuntimeGateway.js'");
     expect(instanceSource).not.toContain('DASHBOARD_LAYOUT_OPTION_KEYS');

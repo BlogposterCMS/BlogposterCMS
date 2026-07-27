@@ -37,6 +37,7 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
   const scrollContainer = opts.scrollContainer || gridEl.parentElement || gridEl;
   const zoomTarget = opts.zoomTarget || gridEl;
   const enableZoom = opts.enableZoom === true;
+  const dynamicZoomTargetHeight = opts.dynamicZoomTargetHeight === true && zoomTarget !== gridEl;
   const responsiveViewportWidth = getBuilderViewportState().width;
   if (zoomTarget !== gridEl) {
     zoomTarget.style.width = `${responsiveViewportWidth}px`;
@@ -67,6 +68,15 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
     gridEl
   );
   gridEl.__grid = grid;
+  if (dynamicZoomTargetHeight) {
+    // CanvasGrid temporarily freezes an external zoom target to its measured
+    // height while creating the scroll sizer. Design Studio's page root is a
+    // vertical Section stack, so it must resume content-driven height after
+    // that wrapper exists or later Sections overflow into the grey editor.
+    zoomTarget.dataset.dynamicCanvasHeight = 'true';
+    zoomTarget.style.height = 'auto';
+    grid._syncSizer?.();
+  }
 
   function syncPixelColumns() {
     const nextColumns = pixelColumnCount(gridEl, scrollContainer);
@@ -74,6 +84,7 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
     // the new width would suppress its change detection and leave stale bounds.
     grid._syncColumnWidthFromWidth?.(nextColumns);
     grid.refreshMetrics?.();
+    if (dynamicZoomTargetHeight) grid._syncSizer?.();
     grid.widgets?.forEach?.(widget => {
       grid._applyPosition?.(widget, { x: false, y: false, w: false, h: false });
     });
@@ -106,20 +117,22 @@ export function initGrid(gridEl, state, selectWidget, opts = {}) {
 
 export function getCurrentLayout(gridEl, codeMap) {
   if (!gridEl) return [];
-  const items = Array.from(gridEl.querySelectorAll('.canvas-item'));
+  const items = Array.from(gridEl.querySelectorAll(':scope > .canvas-item[data-widget-id]'));
   return items.map(el => serializeCanvasItem(el, codeMap));
 }
 
 export function getCurrentLayoutForLayer(gridEl, idx, codeMap) {
   if (!gridEl) return [];
-  const items = Array.from(gridEl.querySelectorAll(`.canvas-item[data-layer="${idx}"]`));
+  const items = Array.from(gridEl.querySelectorAll(
+    `:scope > .canvas-item[data-widget-id][data-layer="${idx}"]`
+  ));
   return items.map(el => serializeCanvasItem(el, codeMap));
 }
 
 function serializeCanvasItem(el, codeMap) {
   const instanceId = el.dataset.instanceId;
   const workareaEl = el.closest('.layout-container');
-  const workareaId = workareaEl?.dataset?.nodeId || '';
+  const workareaId = el.dataset.workareaId || workareaEl?.dataset?.nodeId || '';
   const existingCode = instanceId ? codeMap[instanceId] : null;
   const code = existingCode && typeof existingCode === 'object'
     ? { ...existingCode }

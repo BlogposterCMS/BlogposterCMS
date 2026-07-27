@@ -7,11 +7,27 @@ jest.mock('../ui/designer/app/renderer/capturePreview.js', () => ({
 }));
 
 describe('designer save manager sections', () => {
-  it('includes empty scene sections in the saved layout payload', async () => {
+  it('saves empty Sections on canonical LayoutTree nodes without a duplicate scene list', async () => {
     const layoutRoot = document.createElement('div');
-    layoutRoot.className = 'layout-container';
-    layoutRoot.dataset.workarea = 'true';
-    layoutRoot.dataset.nodeId = 'root-node';
+    layoutRoot.className = 'layout-root layout-container layout-page-root';
+    layoutRoot.dataset.split = 'true';
+    layoutRoot.dataset.orientation = 'horizontal';
+    layoutRoot.dataset.layoutMode = 'stack';
+    layoutRoot.dataset.nodeId = 'page-root';
+    const hero = document.createElement('section');
+    hero.className = 'layout-container layout-section';
+    hero.dataset.nodeId = 'hero-scene';
+    hero.dataset.sectionId = 'hero-scene';
+    hero.dataset.sectionTitle = 'Hero Scene';
+    hero.dataset.workarea = 'true';
+    const showcase = document.createElement('section');
+    showcase.className = 'layout-container layout-section';
+    showcase.dataset.nodeId = 'empty-showcase';
+    showcase.dataset.sectionId = 'empty-showcase';
+    showcase.dataset.sectionTitle = 'Empty Showcase';
+    showcase.dataset.sectionBackground = '#f7f8fb';
+    showcase.dataset.layoutBackground = '#f7f8fb';
+    layoutRoot.append(hero, showcase);
     const gridEl = document.createElement('div');
     const emitted: any[] = [];
 
@@ -60,16 +76,29 @@ describe('designer save manager sections', () => {
       entry.payload?.resource === 'designer' &&
       entry.payload?.action === 'save'
     ));
-    expect(saveEvent?.payload.params.layout).toEqual(
-      expect.objectContaining({
-        type: 'leaf',
-        workarea: true,
-        scenes: [
-          { id: 'hero-scene', title: 'Hero Scene' },
-          { id: 'empty-showcase', title: 'Empty Showcase', background: '#f7f8fb' }
-        ]
-      })
-    );
+    expect(saveEvent?.payload.params.layout).toMatchObject({
+      type: 'split',
+      orientation: 'horizontal',
+      nodeId: 'page-root',
+      children: [
+        {
+          type: 'leaf',
+          nodeId: 'hero-scene',
+          workarea: true,
+          section: { id: 'hero-scene', title: 'Hero Scene' }
+        },
+        {
+          type: 'leaf',
+          nodeId: 'empty-showcase',
+          section: {
+            id: 'empty-showcase',
+            title: 'Empty Showcase',
+            background: '#f7f8fb'
+          }
+        }
+      ]
+    });
+    expect(saveEvent?.payload.params.layout).not.toHaveProperty('scenes');
   });
 
   it('returns the uploaded viewport thumbnail URL from design saves', async () => {

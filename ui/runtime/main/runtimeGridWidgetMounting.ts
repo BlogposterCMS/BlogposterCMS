@@ -1,4 +1,5 @@
 import {
+  applyRuntimeLayoutMetadata,
   createRuntimeCanvasItem,
   resolveRuntimeCanvasRect,
   type RuntimeCanvasItemMeta
@@ -45,6 +46,19 @@ type RuntimeReflowCanvasItem = HTMLElement & {
 export type RuntimeGridReflowOptions = {
   gridEl: HTMLElement;
   grid: RendererGrid | null | undefined;
+  scaleX: number;
+  scaleY: number;
+  percentDivisor?: number;
+};
+
+export type RuntimeGridStructuralItem = {
+  element: HTMLElement;
+  item: RuntimeGridLayoutItem;
+};
+
+export type RuntimeGridStructuralMountOptions = {
+  grid: RendererGrid | null | undefined;
+  items: RuntimeGridStructuralItem[];
   scaleX: number;
   scaleY: number;
   percentDivisor?: number;
@@ -125,6 +139,35 @@ export async function mountRuntimeGridWidgets({
   await renderPendingGridWidgets(pending, grid, lane, widgetEmit, afterRender);
 }
 
+export function mountRuntimeGridStructuralItems({
+  grid,
+  items,
+  scaleX,
+  scaleY,
+  percentDivisor
+}: RuntimeGridStructuralMountOptions): void {
+  items.forEach(({ element, item }) => {
+    const rect = resolveRuntimeCanvasRect(item, {
+      scaleX,
+      scaleY,
+      percentDivisor
+    });
+    const structuralElement = element as RuntimeReflowCanvasItem;
+    structuralElement.classList.add('canvas-item', 'runtime-layout-grid-item');
+    structuralElement.dataset.x = String(rect.x);
+    structuralElement.dataset.y = String(rect.y);
+    structuralElement.setAttribute('gs-w', String(rect.w));
+    structuralElement.setAttribute('gs-h', String(rect.h));
+    structuralElement.setAttribute('gs-min-w', structuralElement.getAttribute('gs-min-w') || '120');
+    structuralElement.setAttribute('gs-min-h', structuralElement.getAttribute('gs-min-h') || '80');
+    // Keep the structural node on the same responsive projection path as
+    // regular widgets without pretending it has a widget definition.
+    structuralElement.__runtimeLayoutItem = item;
+    applyRuntimeLayoutMetadata(structuralElement, item);
+    grid?.makeWidget?.(structuralElement, { silent: true });
+  });
+}
+
 export function reflowRuntimeGridWidgets({
   gridEl,
   grid,
@@ -135,7 +178,10 @@ export function reflowRuntimeGridWidgets({
   gridEl.querySelectorAll<RuntimeReflowCanvasItem>(':scope > .canvas-item').forEach(wrapper => {
     const item = wrapper.__runtimeLayoutItem;
     const def = wrapper.__runtimeWidgetDefinition;
-    if (!item || !def) return;
+    // Structural Container items share the same grid projection but do not
+    // have a widget definition. Their LayoutTree placement is still enough to
+    // reflow them through the canonical responsive geometry contract.
+    if (!item) return;
     const rect = resolveRuntimeCanvasRect(item, {
       scaleX,
       scaleY,

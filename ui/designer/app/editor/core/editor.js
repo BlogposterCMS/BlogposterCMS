@@ -8,6 +8,7 @@ function DBG(...args) {
 import { recordChange } from './history.js';
 import { initToolbar, showToolbar, hideToolbar } from '../toolbar/toolbar.js';
 import { isValidTag } from './allowedTags.js';
+import { replaceSemanticTextElement } from './semanticTextTag.js';
 import { initGlobalEvents, onGlobalEvent } from '/ui/runtime/grid-core/globalEvents.js';
 
 export const state = {
@@ -92,10 +93,33 @@ export function applyColor(color) {
   recordChange(state.activeEl, prev, updateAndDispatch);
 }
 
+export function applySemanticTextTag(target, nextTagName) {
+  const editable = state.activeEl;
+  if (!editable || !target || target === editable || !editable.contains(target)) {
+    throw new Error(
+      'DESIGNER_TEXT_TAG_TARGET_INVALID: Select one text block inside the active Rich Text widget.'
+    );
+  }
+  const prev = editable.outerHTML;
+  const replacement = replaceSemanticTextElement(target, nextTagName);
+  if (replacement === target) return replacement;
+  updateAndDispatch(editable);
+  recordChange(editable, prev, updateAndDispatch);
+  return replacement;
+}
+
 function isEditableElement(el) {
   if (!el || el.nodeType !== 1) return false;
   const ignore = ['A', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT', 'IMG', 'SVG', 'VIDEO', 'AUDIO', 'CANVAS'];
   if (ignore.includes(el.tagName)) return false;
+  if (
+    el.classList.contains('canvas-item') ||
+    el.classList.contains('canvas-item-content') ||
+    el.classList.contains('hit-layer') ||
+    el.classList.contains('bp-public-widget')
+  ) {
+    return false;
+  }
   if (!el.textContent.trim()) return false;
   const tag = el.tagName.toLowerCase();
   if (isValidTag(tag)) return true;
@@ -247,6 +271,7 @@ export function editElement(el, onSave, clickEvent = null) {
 }
 
 const editableMap = new WeakMap();
+let editableRegistrationBridgeAttached = false;
 
 export function registerElement(editable, onSave) {
   if (!editable) return;
@@ -263,13 +288,37 @@ export function registerElement(editable, onSave) {
   }
 }
 
+export function enableEditableRegistrationBridge() {
+  if (editableRegistrationBridgeAttached) return;
+  editableRegistrationBridgeAttached = true;
+  document.addEventListener('ui:widget-editable-mounted', event => {
+    const detail = event.detail;
+    const editable = detail?.element;
+    if (!(editable instanceof HTMLElement)) return;
+    registerElement(editable);
+    detail.handled = true;
+  });
+}
+
 export function getRegisteredEditable(widget) {
   const el = editableMap.get(widget) || null;
   DBG('getRegisteredEditable', { widgetId: widget?.id, editableId: el?.id });
   return el;
 }
 
+export function resolveEditableTarget(widget, ev) {
+  const registered = getRegisteredEditable(widget);
+  // Public widgets explicitly register their content root. It must win over
+  // generic event-path detection because the hit layer is a sibling of that
+  // root and would otherwise make the whole canvas item contenteditable.
+  if (registered && widget?.contains(registered)) return registered;
+  const mountedEditable = widget?.querySelector?.('[data-text-editable], .editable');
+  if (mountedEditable) return mountedEditable;
+  return findEditableFromEvent(ev);
+}
+
 export function enableAutoEdit() {
+  enableEditableRegistrationBridge();
   if (state.autoHandler) return;
   initGlobalEvents(document);
   state.autoHandler = ev => {
@@ -277,8 +326,7 @@ export function enableAutoEdit() {
     if (state.toolbar && state.toolbar.contains(ev.target)) return;
     const widget = findWidget(ev.target);
     if (!widget || !widget.classList.contains('selected')) return;
-    let el = findEditableFromEvent(ev);
-    if (!el) el = getRegisteredEditable(widget);
+    const el = resolveEditableTarget(widget, ev);
     if (!el) {
       setTimeout(() => widget.dispatchEvent(new Event('dblclick')), 30);
       return;

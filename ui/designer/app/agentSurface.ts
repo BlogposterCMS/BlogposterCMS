@@ -64,34 +64,34 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
   },
   {
     action: 'scene.next',
-    label: 'Next scene',
+    label: 'Next section',
     category: 'scene',
-    description: 'Selects the next scene on the stage.'
+    description: 'Selects the next canonical LayoutTree Section on the stage.'
   },
   {
     action: 'scene.prev',
-    label: 'Previous scene',
+    label: 'Previous section',
     category: 'scene',
-    description: 'Selects the previous scene on the stage.'
+    description: 'Selects the previous canonical LayoutTree Section on the stage.'
   },
   {
     action: 'scene.add',
-    label: 'Add scene',
+    label: 'Add section',
     category: 'scene',
-    description: 'Creates a new scene and makes it active.'
+    description: 'Creates a new LayoutTree Section below the active Section and makes it active.'
   },
   {
     action: 'scene.select',
-    label: 'Select scene',
+    label: 'Select section',
     category: 'scene',
-    description: 'Selects a scene by id.',
+    description: 'Selects a Section by its stable node id.',
     params: [{ name: 'sceneId', type: 'string', required: true }]
   },
   {
     action: 'scene.update',
-    label: 'Update scene',
+    label: 'Update section',
     category: 'scene',
-    description: 'Renames a scene or changes its background.',
+    description: 'Renames a Section or changes its inherited background.',
     params: [
       { name: 'sceneId', type: 'string', required: false },
       { name: 'title', type: 'string', required: false },
@@ -100,9 +100,9 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
   },
   {
     action: 'scene.move',
-    label: 'Move scene',
+    label: 'Move section',
     category: 'scene',
-    description: 'Moves a scene by delta or to an exact zero-based index.',
+    description: 'Moves the same Section node used by the page LayoutTree and storyboard.',
     params: [
       { name: 'sceneId', type: 'string', required: true },
       { name: 'delta', type: 'number', required: false },
@@ -111,9 +111,9 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
   },
   {
     action: 'scene.delete',
-    label: 'Delete scene',
+    label: 'Delete section',
     category: 'scene',
-    description: 'Deletes a scene while preserving the required final scene.',
+    description: 'Deletes a Section while preserving the required final Section.',
     params: [{ name: 'sceneId', type: 'string', required: true }]
   },
   {
@@ -248,8 +248,9 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     action: 'element.duplicate',
     label: 'Duplicate element',
     category: 'element',
-    description: 'Duplicates an element through the existing widget creation path.',
-    requiresSelection: true
+    description: 'Creates either a fully independent duplicate or an explicit linked-style copy.',
+    requiresSelection: true,
+    params: [{ name: 'linked', type: 'boolean', required: false }]
   },
   {
     action: 'element.delete',
@@ -306,6 +307,16 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     ]
   },
   {
+    action: 'container.duplicate',
+    label: 'Duplicate layout container',
+    category: 'layout',
+    description: 'Copies a recursive Container tree with independent content and optionally linked layout styling.',
+    params: [
+      { name: 'id', type: 'string', required: true },
+      { name: 'linked', type: 'boolean', required: false }
+    ]
+  },
+  {
     action: 'container.move',
     label: 'Move layout container',
     category: 'layout',
@@ -347,10 +358,10 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     action: 'container.styleSource.link',
     label: 'Link Style Source',
     category: 'layout',
-    description: 'Links a layout container to an existing sibling Style Source.',
+    description: 'Explicitly links a layout container to the requested Style Source.',
     params: [
       { name: 'id', type: 'string', required: true },
-      { name: 'sourceId', type: 'string', required: false }
+      { name: 'sourceId', type: 'string', required: true }
     ]
   },
   {
@@ -686,6 +697,7 @@ function layoutParentId(el: HTMLElement): string | null {
 
 function layoutNodeRole(el: HTMLElement): string {
   if (el.id === 'layoutRoot' || el.classList.contains('layout-root')) return 'layout-root';
+  if (el.classList.contains('layout-section')) return 'section';
   if (el.dataset.workarea === 'true') return 'workarea';
   return 'layout-container';
 }
@@ -693,6 +705,15 @@ function layoutNodeRole(el: HTMLElement): string {
 function layoutNodeFeedback(el: HTMLElement, index: number): Record<string, unknown> {
   const id = feedbackNodeId(el, `layout-node-${index + 1}`);
   const directChildren = Array.from(el.children).filter(child => child.matches?.('.layout-container, .layout-root')).length;
+  const parentGridSurface = el.parentElement?.closest<HTMLElement>('.layout-grid-surface') || null;
+  const unexpectedInteractionLocks = Array.from(el.children).filter(child => (
+    child instanceof HTMLElement &&
+    child.classList.contains('canvas-item') &&
+    child.getAttribute('gs-no-move') === 'true' &&
+    child.getAttribute('gs-locked') !== 'true' &&
+    !child.classList.contains('inactive-layer')
+  )).length;
+  const mode = el.dataset.layoutMode || 'free';
   return {
     id,
     role: layoutNodeRole(el),
@@ -700,15 +721,44 @@ function layoutNodeFeedback(el: HTMLElement, index: number): Record<string, unkn
     label: el.dataset.label || el.dataset.nodeId || el.dataset.designRef || id,
     selected: el.classList.contains('layout-container--active') || el.classList.contains('tree-selected'),
     workarea: el.dataset.workarea === 'true',
-    containsWorkspace: Boolean(el.querySelector(':scope > #workspaceMain, :scope > .builder-grid')),
+    containsWorkspace: el.classList.contains('layout-grid-surface'),
+    gridSurfaceId: el.dataset.gridSurfaceId || null,
+    parentGridSurfaceId: parentGridSurface?.dataset.gridSurfaceId || null,
+    parentGridItem: el.classList.contains('layout-grid-container'),
     childContainerCount: directChildren,
-    mode: el.dataset.layoutMode || 'free',
+    mode,
+    interaction: {
+      freePlacementInteractive: mode !== 'free' || unexpectedInteractionLocks === 0,
+      unexpectedTemporaryLockCount: unexpectedInteractionLocks
+    },
     settings: {
       gap: el.dataset.layoutGap || null,
       padding: el.dataset.layoutPadding || null,
+      columns: Number.parseInt(el.dataset.layoutColumns || '0', 10) || null,
+      align: el.dataset.layoutAlign || null,
+      minHeight: el.dataset.layoutMinHeight || null,
       background: el.dataset.layoutBackground || el.dataset.sceneBackground || null,
       designRef: el.dataset.designRef || null
     },
+    section: el.dataset.sectionId ? {
+      id: el.dataset.sectionId,
+      title: el.dataset.sectionTitle || el.dataset.sectionId,
+      background: el.dataset.sectionBackground || 'transparent',
+      backgroundImageUrl: el.dataset.bgImageUrl || null,
+      backgroundImageId: el.dataset.bgImageId || null,
+      boundaryVisibility: el.classList.contains('layout-section--active')
+        ? 'all-sides'
+        : 'hidden',
+      boundaryPresentation: 'filigree-fade',
+      toolbarPlacement: 'top-right-inset',
+      resizeHandle: 'bottom-edge',
+      resizeInteraction: 'zoom-invariant-authored-pixels',
+      insertionFeedback: {
+        state: el.dataset.sectionInsertState || 'idle',
+        source: el.dataset.sectionInsertSource || null,
+        visible: el.classList.contains('layout-section--inserting')
+      }
+    } : null,
     styleSource: styleSourceState(el),
     bounds: elementBounds(el)
   };
@@ -837,8 +887,9 @@ function visualFeedbackState(visual: Record<string, unknown>): Record<string, un
 }
 
 function snapGuideFeedback(): Record<string, unknown> {
-  const grid = document.getElementById('workspaceMain') ||
-    document.querySelector<HTMLElement>('.builder-grid, .canvas-grid');
+  const grid = document.querySelector<HTMLElement>(
+    '.layout-section.layout-section--active.layout-grid-surface'
+  ) || document.querySelector<HTMLElement>('.layout-grid-surface');
   const guideElements = Array.from(document.querySelectorAll<HTMLElement>('.canvas-snap-guide'));
   return {
     enabled: grid instanceof HTMLElement ? grid.dataset.objectSnapGuides === 'true' : false,
@@ -903,11 +954,58 @@ function designerFeedbackWarnings(
     const responsivePlacement = widget.responsivePlacement as Record<string, unknown> | undefined;
     return responsivePlacement?.error === 'DESIGNER_AGENT_FEEDBACK_RESPONSIVE_PLACEMENT_INVALID';
   });
+  const blockedFreePlacement = layoutNodes.filter(node => {
+    const interaction = node.interaction as Record<string, unknown> | undefined;
+    return node.mode === 'free' && interaction?.freePlacementInteractive === false;
+  });
   if (!hasLayoutRoot || layoutNodes.length === 0) {
     warnings.push({
       code: 'DESIGNER_AGENT_FEEDBACK_NO_LAYOUT_ROOT',
       severity: 'warning',
       message: 'Design Studio feedback could not find #layoutRoot or layout containers.'
+    });
+  }
+  const sections = sectionNodes();
+  const sectionGridCount = document.querySelectorAll(
+    '#layoutRoot > .layout-section[data-section-id].layout-grid-surface'
+  ).length;
+  const expectedGridNodes = Array.from(document.querySelectorAll<HTMLElement>(
+    '#layoutRoot > .layout-section[data-section-id], #layoutRoot > .layout-section[data-section-id] .layout-container'
+  ));
+  const gridSurfaces = Array.from(document.querySelectorAll<HTMLElement>(
+    '#layoutRoot .layout-grid-surface[data-grid-surface-id]'
+  ));
+  const gridSurfaceIds = new Set(gridSurfaces.map(surface => (
+    surface.dataset.gridSurfaceId || surface.dataset.sectionId || surface.dataset.nodeId || ''
+  )));
+  const misplacedWidgets = widgets.filter(widget => {
+    const workareaId = String(widget.workareaId || '');
+    return workareaId && !gridSurfaceIds.has(workareaId);
+  });
+  if (
+    sections.length === 0 ||
+    sectionGridCount !== sections.length
+  ) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_SECTION_STRUCTURE_MISMATCH',
+      severity: 'warning',
+      message: 'Canonical Sections, their CanvasGrid workspaces and widget workarea ids are not aligned.',
+      sectionCount: sections.length,
+      sectionGridCount,
+      misplacedWidgetCount: misplacedWidgets.length
+    });
+  }
+  if (
+    misplacedWidgets.length > 0 ||
+    gridSurfaces.length !== expectedGridNodes.length
+  ) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_LAYOUT_GRID_TREE_MISMATCH',
+      severity: 'warning',
+      message: 'A Section or nested Container is missing its recursive CanvasGrid surface, or a widget points to an unknown surface.',
+      expectedGridSurfaceCount: expectedGridNodes.length,
+      gridSurfaceCount: gridSurfaces.length,
+      misplacedWidgetCount: misplacedWidgets.length
     });
   }
   if (!hasCommandPort) {
@@ -933,6 +1031,14 @@ function designerFeedbackWarnings(
       count: invalidResponsivePlacements.length
     });
   }
+  if (blockedFreePlacement.length > 0) {
+    warnings.push({
+      code: 'DESIGNER_AGENT_FEEDBACK_FREE_PLACEMENT_LOCKED',
+      severity: 'warning',
+      message: 'A Free Placement surface still has temporary Auto/Grid interaction locks.',
+      containerIds: blockedFreePlacement.map(node => node.id)
+    });
+  }
   if (!visual.available) {
     warnings.push({
       code: 'DESIGNER_AGENT_FEEDBACK_VISUAL_PREVIEW_UNAVAILABLE',
@@ -947,6 +1053,41 @@ function feedbackStatus(warnings: Record<string, unknown>[]): string {
   if (warnings.some(warning => warning.severity === 'error')) return 'blocked';
   if (warnings.some(warning => warning.severity === 'warning')) return 'degraded';
   return 'ready';
+}
+
+function motionTimelineFeedbackState(): Record<string, unknown> {
+  const timeline = document.querySelector<HTMLElement>('.scene-timeline');
+  const progress = timeline?.querySelector<HTMLInputElement>('.scene-timeline-range');
+  return {
+    available: Boolean(timeline),
+    visible: Boolean(timeline && !timeline.hidden),
+    contextInstanceId: timeline?.dataset.contextInstanceId || null,
+    progress: progress ? Number(progress.value) || 0 : null,
+    laneCount: timeline?.querySelectorAll('.scene-timeline-lane').length || 0
+  };
+}
+
+function widgetLibraryFeedbackState(): Record<string, unknown> {
+  const rail = document.querySelector<HTMLElement>('.scene-widget-scroll');
+  const popover = document.querySelector<HTMLElement>('[data-sidebar-panel="insert"]');
+  const categories = Array.from(document.querySelectorAll<HTMLElement>('[data-insert-group]'));
+  const openCategory = categories.find(button => button.getAttribute('aria-expanded') === 'true') || null;
+  const visiblePresets = popover && !popover.hidden
+    ? Array.from(popover.querySelectorAll<HTMLElement>('[data-insert-preset]'))
+      .filter(button => !button.closest<HTMLElement>('[data-insert-group-panel]')?.hidden)
+      .map(button => button.dataset.insertPreset || '')
+      .filter(Boolean)
+    : [];
+  return {
+    available: Boolean(rail),
+    presentation: 'scrollable-widget-rail-with-preset-popover',
+    scrollable: Boolean(rail && rail.scrollHeight > rail.clientHeight),
+    categoryCount: categories.length,
+    categoryIds: categories.map(button => button.dataset.insertGroup || '').filter(Boolean),
+    openCategoryId: openCategory?.dataset.insertGroup || null,
+    popoverOpen: Boolean(popover && !popover.hidden && openCategory),
+    visiblePresetIds: visiblePresets
+  };
 }
 
 function buildDesignerAgentFeedback(
@@ -977,6 +1118,18 @@ function buildDesignerAgentFeedback(
       stableBounds: true,
       responsivePlacementRanges: true,
       objectSnapGuides: true,
+      contextualMotionTimeline: true,
+      widgetPresetPopovers: true,
+      sectionInsertFeedback: true,
+      sectionDeletion: true,
+      activeSectionBoundaries: true,
+      activeSectionBoundaryTransition: true,
+      sectionToolbarInsetPlacement: true,
+      sectionResizeZoomInvariant: true,
+      placementModeIndependentWidgetSelection: true,
+      sectionBackgroundDeselectsWidget: true,
+      widgetActionBarHidesOnCanvasScroll: true,
+      flowingSectionCanvas: true,
       publishingCenter: true
     },
     viewport: {
@@ -1000,12 +1153,19 @@ function buildDesignerAgentFeedback(
       rootId: layoutNodes[0]?.id || null,
       nodeCount: layoutNodes.length,
       workareaCount: layoutNodes.filter(node => node.workarea === true).length,
+      pageFlow: {
+        axis: 'vertical',
+        dynamicHeight: document.getElementById('layoutRoot')?.dataset.dynamicCanvasHeight === 'true',
+        sectionCount: document.querySelectorAll('#layoutRoot > .layout-section[data-section-id]').length
+      },
       nodes: layoutNodes
     },
     widgetPlacements,
     styleSources: styleSourceRelationships(layoutNodes, widgetPlacements),
     selection: selectionState(),
     snapGuides: snapGuideFeedback(),
+    motionTimeline: motionTimelineFeedbackState(),
+    widgetLibrary: widgetLibraryFeedbackState(),
     livePreview: livePreviewFeedbackState(),
     publishing: publishingFeedbackState(),
     visual: visualFeedbackState(visual),
@@ -1080,21 +1240,44 @@ function clickFirst(selector: string): boolean {
 }
 
 function sectionNodes(): Record<string, unknown>[] {
-  return Array.from(document.querySelectorAll<HTMLElement>('.scene-section-item')).map((section, index) => {
-    const sceneId = section.dataset.sceneId || `section-${index + 1}`;
-    const sceneElements = Array.from(document.querySelectorAll<HTMLElement>(`.canvas-item[data-scene-id="${cssEscape(sceneId)}"]`));
+  const sections = Array.from(
+    document.querySelectorAll<HTMLElement>('#layoutRoot > .layout-section[data-section-id]')
+  );
+  const canDelete = sections.length > 1;
+  return sections.map((section, index) => {
+    const sceneId = section.dataset.sectionId || `section-${index + 1}`;
+    const workspace = section.classList.contains('layout-grid-surface') ? section : null;
+    const sceneElements = Array.from(workspace?.querySelectorAll<HTMLElement>(':scope > .canvas-item') || []);
     const behaviorCount = sceneElements.filter(el => behaviorOf(el) !== 'scroll' || effectsOf(el).length > 0).length;
     return {
       id: sceneId,
       role: 'section',
-      label: textOf(section.querySelector('.scene-section-title'), `Scene ${index + 1}`),
-      active: section.classList.contains('active'),
+      nodeId: section.dataset.nodeId || sceneId,
+      label: section.dataset.sectionTitle || `Section ${index + 1}`,
+      active: section.classList.contains('layout-section--active'),
       meta: {
-        number: textOf(section.querySelector('.scene-section-number'), String(index + 1)),
-        detail: textOf(section.querySelector('.scene-section-meta')),
+        number: String(index + 1),
+        placementMode: section.dataset.layoutMode || 'free',
+        minHeight: section.dataset.layoutMinHeight || null,
+        background: section.dataset.sectionBackground || 'transparent',
+        backgroundImageUrl: section.dataset.bgImageUrl || null,
+        backgroundImageId: section.dataset.bgImageId || null,
+        ownsCanvasGrid: Boolean(
+          (workspace as (HTMLElement & { __grid?: unknown }) | null)?.__grid
+        ),
+        workspaceId: workspace?.id || null,
         elementCount: sceneElements.length,
         behaviorCount,
-        ...datasetOf(section, ['sceneId'])
+        deletable: canDelete,
+        deleteBehavior: 'remove-section-and-recursive-content',
+        boundaryVisibility: section.classList.contains('layout-section--active')
+          ? 'all-sides'
+          : 'hidden',
+        boundaryPresentation: 'filigree-fade',
+        toolbarPlacement: 'top-right-inset',
+        resizeHandle: 'bottom-edge',
+        resizeInteraction: 'zoom-invariant-authored-pixels',
+        ...datasetOf(section, ['sectionId', 'sectionTitle', 'nodeId', 'workarea'])
       }
     };
   });
@@ -1191,11 +1374,26 @@ function availableControls(): Record<string, unknown>[] {
     });
   });
   document.querySelectorAll<HTMLElement>('[data-insert-group]').forEach(button => {
+    const expanded = button.getAttribute('aria-expanded') === 'true';
     controls.push({
       id: `insert.${button.dataset.insertGroup}`,
       role: 'insert-group',
       label: button.getAttribute('aria-label') || textOf(button, button.dataset.insertGroup || ''),
-      active: button.classList.contains('active') || button.getAttribute('aria-expanded') === 'true'
+      active: button.classList.contains('active') || expanded,
+      meta: {
+        presentation: 'widget-rail-popover',
+        expanded
+      }
+    });
+  });
+  document.querySelectorAll<HTMLElement>('[data-insert-preset]').forEach(button => {
+    const group = button.closest<HTMLElement>('[data-insert-group-panel]');
+    controls.push({
+      id: `insert.preset.${button.dataset.insertPreset}`,
+      role: 'insert-preset-command',
+      label: button.getAttribute('aria-label') || textOf(button, button.dataset.insertPreset || ''),
+      hidden: Boolean(group?.hidden),
+      meta: datasetOf(button, ['insertPreset', 'nativeElement', 'widgetId'])
     });
   });
   document.querySelectorAll<HTMLElement>('[data-designer-tool]').forEach(button => {
@@ -1240,8 +1438,8 @@ function availableControls(): Record<string, unknown>[] {
 }
 
 async function captureStageVisual(reason: string): Promise<Record<string, unknown>> {
-  const gridEl = document.getElementById('workspaceMain') as HTMLElement | null;
-  if (!gridEl) {
+  const stageEl = document.getElementById('layoutRoot') as HTMLElement | null;
+  if (!stageEl) {
     return { available: false, reason: 'missing-stage' };
   }
 
@@ -1254,7 +1452,7 @@ async function captureStageVisual(reason: string): Promise<Record<string, unknow
     return { ...lastVisualSnapshot, reused: true, reuseReason: 'rate-limit' };
   }
 
-  const previewDataUrl = await capturePreview(gridEl, { structuralFallback: true });
+  const previewDataUrl = await capturePreview(stageEl, { structuralFallback: true });
   if (!previewDataUrl) {
     return {
       available: false,
@@ -1271,8 +1469,8 @@ async function captureStageVisual(reason: string): Promise<Record<string, unknow
       : 'designer.capturePreview',
     capturedAt: new Date().toISOString(),
     previewDataUrl,
-    width: Math.round(gridEl.getBoundingClientRect().width || gridEl.clientWidth || 0),
-    height: Math.round(gridEl.getBoundingClientRect().height || gridEl.clientHeight || 0),
+    width: Math.round(stageEl.getBoundingClientRect().width || stageEl.clientWidth || 0),
+    height: Math.round(stageEl.getBoundingClientRect().height || stageEl.clientHeight || 0),
     activeSceneId: document.body.dataset.activeScene || '',
     activeSceneTitle: document.body.dataset.activeSceneTitle || ''
   };

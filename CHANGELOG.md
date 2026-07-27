@@ -6,6 +6,112 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Fixed widget selection in Auto and Grid Section/Container modes. Placement
+  locks still prevent free dragging and resizing, but clicking an active-layer
+  widget now opens the same inspector and floating action bar as Free mode.
+  Agent feedback declares placement-mode-independent selection.
+- Fixed Section resizing at Builder zoom levels other than 100%. The bottom-edge
+  handle now remains screen-sized in Fit mode, and pointer movement is converted
+  from screen pixels into authored canvas pixels before the Section height is
+  persisted. The active Section keeps its resize thumb visible near the
+  lower-right edge instead of hiding it behind the centered Add Section action.
+  Agent feedback exposes the zoom-invariant resize contract.
+- Moved each active Section toolbar away from the shared Section boundary into
+  the owning Section's top-right inset. The lower-edge Add Section control now
+  remains visually independent instead of merging with the next Section's mode
+  and delete actions. Agent feedback exposes the inset placement.
+- Fixed the selected-widget action bar remaining visible after clicking an
+  empty part of a Section. Section background pointer handling now clears the
+  widget, owning grid, contextual behavior controls and inspector selection
+  together, including when CanvasGrid consumes the later click event. Scrolling
+  the canvas hides the floating bar immediately so it cannot remain detached
+  from the selected widget.
+- Made the active Design Studio Section's full authored boundary visible with
+  filigree editor-only lines on every side. A short opacity-and-scale transition
+  now matches the restrained Studio chrome, remains legible at Fit zoom,
+  respects reduced-motion preferences and does not alter saved or public page
+  styling. Agent feedback reports visibility and presentation.
+- Added canonical Section deletion to the Section-owned canvas toolbar while
+  retaining the existing storyboard and `scene.delete` command paths. Deleting
+  a Section now removes its recursive Container tree and every widget placement
+  owned by those grids, selects a remaining fallback Section, and persists the
+  reduced page once. The last remaining Section cannot be deleted. Designer
+  agent feedback exposes both deletion support and per-Section availability.
+- Made the bottom-edge Add Section action visibly insert the canonical Section
+  directly below the clicked Section. The new surface now scrolls into view,
+  fades in and receives a short accent outline so the insertion is obvious;
+  reduced-motion users get a non-moving confirmation. The transient state and
+  command source are also available through the existing Designer agent
+  feedback contract. The shared page zoom surface now returns to
+  content-driven height after CanvasGrid initialization, so added Sections
+  extend the white work area and carry their own widgets instead of overflowing
+  into the grey editor surround while element chrome remains at the top.
+- Fixed Free Placement after switching a Section or Container through Auto or
+  Grid: the mode transition now clears temporary CanvasGrid move/resize locks
+  immediately, while explicit locks and inactive layers remain protected.
+  Replaced automatic Style Source assignment with explicit copy semantics for
+  widgets and recursive Containers. `Duplicate` now produces a fully
+  independent copy; `Linked copy` clones the current structure and independent
+  content once, then links only the corresponding layout/design properties.
+  Creating or moving a Container never links it implicitly, and linked
+  followers expose a simple `Style linked` / `Unlink style` state. Agent
+  feedback reports stale Free Placement locks and the command catalog supports
+  independent or linked duplicates through the existing Designer command port.
+- Made Design Studio pages Section-first. `#layoutRoot` is now a fixed vertical
+  page stack, every storyboard entry addresses the same stable LayoutTree
+  Section node, and widget placements persist their immediate grid surface id
+  as `workareaId`.
+  Authors can add a Section from the lower edge of any existing Section,
+  reorder/rename/delete it from the storyboard, resize its bottom edge, and
+  cycle Free, Auto or Grid from the compact toolbar owned by that Section.
+  Containers are now recursive
+  layout items: each Container is positioned by its parent Section or Container
+  grid and simultaneously owns a grid surface for its direct children. The
+  Layout tree is the sole explicit reparenting surface; the retired Arrange
+  mode is no longer wired into the active Designer, and ordinary canvas
+  dragging never changes hierarchy by accident. Gap, padding, columns, alignment,
+  minimum height and local backgrounds remain LayoutTree settings. Website Body
+  background now lives in Global design, page background can inherit it, and
+  transparent Sections inherit through page to website. Public Runtime renders
+  the same recursive grid tree and agent feedback warns when Section,
+  Container and placement surface ids drift. The browser tab keeps the stable
+  `Design Studio` app title instead of exposing internal seeded design names
+  such as `System / Coming Soon`.
+- Unified Design Studio text presets around the existing `textBox` widget.
+  Heading and paragraph choices remain fast insert presets, while the text
+  toolbar now changes an existing block between H1-H6, Paragraph, Text block,
+  Inline text, Quote and Code block without replacing its widget instance or
+  content. Changing the role now also clears stale block typography overrides
+  so an H1 changed to Paragraph immediately follows the paragraph preset. The
+  font-size control now reads and edits the active text block rather than the
+  outer Rich Text wrapper, and double-click editing now focuses the registered
+  text content instead of accidentally making the complete canvas item
+  editable. The text-opacity slider now opens in a viewport-level popover so it
+  is no longer clipped behind the horizontally scrollable toolbar.
+- Fixed Design Studio behavior and Scene controls: Scroll and Action are now
+  deselectable one-shot sidebar shortcuts instead of permanently pressed
+  modes, and empty Scenes retain their visible Scene name and quick-insert
+  actions after the layout tree is normalized.
+- Moved the Design Studio Layers tree into its own fixed left-rail tool beside
+  Layout. The right sidebar is now reserved for the selected widget's Content,
+  Behavior and Style properties, while the left Layers panel preserves canvas
+  selection and forward/backward ordering controls.
+- Reworked the Design Studio's left rail so widget types own the full remaining
+  sidebar height and only that list scrolls when vertical space is tight.
+  Layout and Scene behavior controls remain fixed in separate groups. Selecting
+  Text, Media, Shape, Button, Navigation or Content now opens the existing
+  preset choices in an anchored popover instead of nesting all widget controls
+  inside one scrolling flyout.
+- Refactored Design Studio Live Preview geometry so the public Runtime iframe
+  always evaluates the exact selected viewport width while a separate visual
+  fit scale makes wide pages inspectable on smaller editor screens. The
+  Preview bar and agent feedback expose both values. Footer zoom remains
+  permanently available, while the Scroll timeline now appears only for a
+  selected element with Sticky/Pinned behavior or enabled motion effects.
+  Public widget-instance defaults now use the same audited Runtime Manager
+  contract in the normal public page and Live Preview; the Preview adapter
+  narrowly maps validated `default.*` reads through its existing authenticated
+  admin facade instead of failing on or granting a direct PlainSpace bridge.
 - Fixed noisy and incomplete development startup paths: the existing SMTP
   integration now ships with its Nodemailer runtime transport, identical
   custom-placeholder registrations are idempotent instead of warning and

@@ -1,5 +1,6 @@
 import {
   createDesignDocument,
+  collectLayoutSections,
   extractDesignDocument,
   normalizeLayoutContainerSettings,
   normalizeLayoutTree
@@ -10,7 +11,13 @@ describe('shared layout document contract', () => {
     expect(normalizeLayoutTree({
       orientation: 'horizontal',
       node_id: 10,
-      scenes: [{ id: 'hero', title: 'Hero', bg_color: '#ffffff' }],
+      scenes: [{
+        id: 'hero',
+        title: 'Hero',
+        bg_color: '#ffffff',
+        bg_image_url: '/media/hero.jpg',
+        bg_image_id: 'media-hero'
+      }],
       children: [
         { nodeId: 'left', design_ref: 'static-design' },
         { nodeId: 'right', isDynamicHost: true }
@@ -19,11 +26,31 @@ describe('shared layout document contract', () => {
       type: 'split',
       orientation: 'horizontal',
       nodeId: '10',
-      scenes: [{ id: 'hero', title: 'Hero', background: '#ffffff' }],
+      scenes: [{
+        id: 'hero',
+        title: 'Hero',
+        background: '#ffffff',
+        backgroundImageUrl: '/media/hero.jpg',
+        backgroundImageId: 'media-hero'
+      }],
       children: [
         { type: 'leaf', nodeId: 'left', designRef: 'static-design' },
         { type: 'leaf', workarea: true, nodeId: 'right' }
       ]
+    });
+  });
+
+  it('drops unsafe Section background image URLs from imported documents', () => {
+    expect(normalizeLayoutTree({
+      type: 'leaf',
+      nodeId: 'hero',
+      section: {
+        id: 'hero',
+        title: 'Hero',
+        backgroundImageUrl: 'javascript:alert(1)'
+      }
+    })).toMatchObject({
+      section: { id: 'hero', title: 'Hero' }
     });
   });
 
@@ -32,6 +59,8 @@ describe('shared layout document contract', () => {
       layoutMode: 'row',
       gap: 12,
       padding: '24px',
+      columns: 4,
+      align: 'center',
       background: '#f8fafc',
       maxWidth: '1200px',
       minHeight: '50vh',
@@ -42,11 +71,55 @@ describe('shared layout document contract', () => {
       mode: 'row',
       gap: '12px',
       padding: '24px',
+      columns: 4,
+      align: 'center',
       background: '#f8fafc',
       maxWidth: '1200px',
       minHeight: '50vh',
       overflow: 'hidden'
     });
+  });
+
+  it('uses LayoutTree Section nodes as the canonical scene order', () => {
+    const layoutTree = normalizeLayoutTree({
+      type: 'split',
+      orientation: 'horizontal',
+      nodeId: 'page-root',
+      settings: { mode: 'stack' },
+      scenes: [{ id: 'legacy', title: 'Legacy duplicate' }],
+      children: [
+        {
+          type: 'leaf',
+          nodeId: 'hero',
+          section: { id: 'hero', title: 'Hero', background: 'transparent' }
+        },
+        {
+          type: 'leaf',
+          nodeId: 'features',
+          section: {
+            id: 'features',
+            title: 'Features',
+            background: '#f8fafc',
+            backgroundImageUrl: '/media/features.jpg',
+            backgroundImageId: 'features-image'
+          }
+        }
+      ]
+    });
+
+    expect(collectLayoutSections(layoutTree)).toEqual([
+      { id: 'hero', title: 'Hero', background: 'transparent' },
+      {
+        id: 'features',
+        title: 'Features',
+        background: '#f8fafc',
+        backgroundImageUrl: '/media/features.jpg',
+        backgroundImageId: 'features-image'
+      }
+    ]);
+    expect(extractDesignDocument({ layout: layoutTree }).scenes).toEqual(
+      collectLayoutSections(layoutTree)
+    );
   });
 
   it('normalizes reusable style source metadata on containers', () => {

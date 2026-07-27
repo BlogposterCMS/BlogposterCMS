@@ -230,6 +230,10 @@ export class CanvasGrid {
     this.scale = 1;
     if (this.enableZoom) {
       this.el.style.setProperty('--canvas-scale', '1');
+      // Descendant editor controls can counter-scale their hit targets while
+      // the authored page itself remains zoomed.
+      this.zoomTarget.style.setProperty('--canvas-scale', '1');
+      this.zoomTarget.style.setProperty('--canvas-inverse-scale', '1');
       // Top-left transform origin keeps the canvas from drifting when zoomed out
       this.zoomTarget.style.transformOrigin = '0 0';
       const wheelZoom = (e: any) => {
@@ -315,6 +319,8 @@ export class CanvasGrid {
     }
     this.zoomTarget.style.transform = `scale(${clamped})`;
     this.el.style.setProperty('--canvas-scale', String(clamped));
+    this.zoomTarget.style.setProperty('--canvas-scale', String(clamped));
+    this.zoomTarget.style.setProperty('--canvas-inverse-scale', String(1 / clamped));
     this.el.dispatchEvent(new Event('zoom', { bubbles: true }));
   }
 
@@ -615,7 +621,7 @@ export class CanvasGrid {
     }
   }
 
-  makeWidget(el: any) {
+  makeWidget(el: any, { silent = false } = {}) {
     this._applyPosition(el, { x: false, y: false, w: false, h: false });
     if (this.options.responsivePlacement) {
       const contract = this._ensureResponsivePlacement(el);
@@ -648,7 +654,7 @@ export class CanvasGrid {
     this.widgets.push(el);
     if (this.pushOnOverlap) this._resolveCollisions(el);
     this._updateGridHeight();
-    this.emitChange(el);
+    if (!silent) this.emitChange(el);
   }
 
   addWidget(opts: any = {}) {
@@ -663,12 +669,20 @@ export class CanvasGrid {
     return el;
   }
 
-  removeWidget(el: any) {
+  unregisterWidget(el: any, { silent = true } = {}) {
+    if (this.activeEl === el) this.clearSelection();
+    this.widgets = this.widgets.filter((widget: any) => widget !== el);
+    this._resizeObserver?.unobserve?.(el);
+    this._updateGridHeight();
+    if (!silent) this.emitChange(el);
+  }
+
+  removeWidget(el: any, { silent = false } = {}) {
     if (el.parentNode === this.el) {
-      if (this.activeEl === el) this.clearSelection();
+      this.unregisterWidget(el, { silent: true });
       el.remove();
       this._updateGridHeight();
-      this.emitChange(el);
+      if (!silent) this.emitChange(el);
     }
   }
 
@@ -1453,8 +1467,8 @@ export class CanvasGrid {
     this._emit('staticchange', this.staticGrid);
   }
 
-  removeAll() {
-    this.widgets.slice().forEach((w: any) => this.removeWidget(w));
+  removeAll({ silent = false } = {}) {
+    this.widgets.slice().forEach((w: any) => this.removeWidget(w, { silent }));
   }
 }
 

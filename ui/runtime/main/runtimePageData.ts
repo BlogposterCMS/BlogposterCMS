@@ -86,6 +86,19 @@ export async function fetchRuntimePageBySlug(
   return unwrapData(await emit(eventName, payload));
 }
 
+export async function fetchRuntimePublicSettings(
+  emit: RuntimeEmitter,
+  lane: string,
+  keys: string[]
+): Promise<LooseRecord> {
+  const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
+  const payload = lane === 'admin'
+    ? cmsAdminPayload('settings', 'public', { keys })
+    : cmsPublicRuntimePayload('settings', 'public', { keys });
+  const value = unwrapData(await emit(eventName, payload));
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
 export async function fetchRuntimePageById(
   emit: RuntimeEmitter,
   pageId: unknown,

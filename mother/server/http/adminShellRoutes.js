@@ -318,11 +318,13 @@ function createAdminShellRoutes({
           designId,
           dispatchAppLoaderEvent
         });
-        if (design?.design?.title) pageTitle = design.design.title;
+        // Keep browser chrome tied to the application. The authored document
+        // name belongs inside Studio; showing seeded names such as
+        // "System / Coming Soon" in the tab leaks an implementation detail.
         const dv = parseInt(design?.design?.version, 10);
         if (!Number.isNaN(dv)) designVersion = String(dv);
       } catch (err) {
-        console.warn('[GET /admin/app] failed to fetch design title =>', err.message);
+        console.warn('[GET /admin/app] failed to fetch design metadata =>', err.message);
       }
     } else if (idParam) {
       pageId = idParam;

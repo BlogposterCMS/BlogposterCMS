@@ -38,6 +38,23 @@ describe('Design Studio public widgets', () => {
     expect(host.querySelector('.hit-layer')).toBeNull();
   });
 
+  it('keeps every toolbar text role inside the same textBox renderer', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    await renderTextBox(host, {
+      id: 'semantic-copy',
+      instanceMetadata: {
+        html: '<h6>Small heading</h6><span>Inline copy</span><blockquote>Quote</blockquote><pre>const ready = true;</pre>'
+      }
+    });
+
+    expect(host.querySelector('.widget-rich-text h6')?.textContent).toBe('Small heading');
+    expect(host.querySelector('.widget-rich-text span')?.textContent).toBe('Inline copy');
+    expect(host.querySelector('.widget-rich-text blockquote')?.textContent).toBe('Quote');
+    expect(host.querySelector('.widget-rich-text pre')?.textContent).toBe('const ready = true;');
+  });
+
   it('renders media and blocks unsafe media URLs', () => {
     const host = document.createElement('div');
     renderMedia(host, {

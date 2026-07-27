@@ -5,6 +5,10 @@
 import {
   deleteContainer,
   deserializeLayout,
+  duplicateContainer,
+  activatePageSection,
+  ensurePageSectionRoot,
+  getPageSectionElement,
   ensureLayoutRootContainer,
   moveContainer,
   placeContainer,
@@ -12,7 +16,7 @@ import {
   setContainerLayoutMode,
   setContainerSettings,
   setDefaultWorkarea,
-  toggleContainerStyleSource
+  unlinkContainerStyleSource
 } from '../ui/shared/layout/layoutDom';
 
 describe('shared layout DOM adapter', () => {
@@ -137,7 +141,7 @@ describe('shared layout DOM adapter', () => {
     });
   });
 
-  it('links new containers to the first style source while keeping content independent', () => {
+  it('keeps newly created and moved containers independent by default', () => {
     const root = document.createElement('div');
     root.className = 'layout-root layout-container';
     root.dataset.nodeId = 'root';
@@ -146,26 +150,56 @@ describe('shared layout DOM adapter', () => {
 
     const first = root.children[0] as HTMLElement;
     const second = root.children[1] as HTMLElement;
-    first.appendChild(document.createElement('strong')).textContent = 'Leader content';
-    second.appendChild(document.createElement('em')).textContent = 'Follower content';
+    expect(first.dataset.styleSourceRole).toBeUndefined();
+    expect(second.dataset.styleSourceRole).toBeUndefined();
 
-    expect(first.dataset.styleSourceRole).toBe('source');
-    expect(second.dataset.styleSourceRole).toBe('follower');
-    expect(second.dataset.styleSourceId).toBe(first.dataset.nodeId);
+    moveContainer(second, first, 'inside', options());
 
-    setContainerSettings(first, { gap: '22px', padding: '14px', background: '#ffffff' });
+    expect(second.dataset.styleSourceRole).toBeUndefined();
+    expect(second.dataset.styleSourceId).toBeUndefined();
+  });
 
-    expect(second.style.gap).toBe('22px');
-    expect(second.style.padding).toBe('14px');
-    expect(second.dataset.layoutBackground).toBe('#ffffff');
-    expect(first.textContent).toBe('Leader content');
-    expect(second.textContent).toBe('Follower content');
-    expect(serializeLayout(root)).toMatchObject({
-      children: [
-        { styleSource: { enabled: true, role: 'source' } },
-        { styleSource: { enabled: true, role: 'follower', sourceId: first.dataset.nodeId } }
-      ]
-    });
+  it('creates independent and linked recursive container copies explicitly', () => {
+    const root = document.createElement('div');
+    root.className = 'layout-root layout-container';
+    root.dataset.nodeId = 'root';
+    document.body.appendChild(root);
+    const layoutOptions = options();
+    placeContainer(root, 'auto', layoutOptions);
+
+    const source = root.children[0] as HTMLElement;
+    placeContainer(source, 'inside', layoutOptions);
+    const sourceChild = source.querySelector('.layout-container') as HTMLElement;
+    setContainerSettings(sourceChild, { padding: '6px' });
+    source.dataset.layoutGap = '22px';
+    source.setAttribute('gs-w', '420');
+    const independent = duplicateContainer(source, {
+      ...layoutOptions,
+      layoutRoot: root,
+      linked: false
+    }) as HTMLElement;
+    const linked = duplicateContainer(source, {
+      ...layoutOptions,
+      layoutRoot: root,
+      linked: true
+    }) as HTMLElement;
+
+    expect(independent.dataset.nodeId).not.toBe(source.dataset.nodeId);
+    expect(independent.dataset.styleSourceId).toBeUndefined();
+    expect(linked.dataset.styleSourceRole).toBe('follower');
+    expect(linked.dataset.styleSourceId).toBe(source.dataset.nodeId);
+    expect(linked.getAttribute('gs-w')).toBe('420');
+    const linkedChild = linked.querySelector('.layout-container') as HTMLElement;
+    expect(linkedChild.dataset.styleSourceRole).toBe('follower');
+    expect(linkedChild.dataset.styleSourceId).toBe(sourceChild.dataset.nodeId);
+
+    setContainerSettings(source, { gap: '30px', padding: '14px' });
+    setContainerSettings(sourceChild, { padding: '18px' });
+
+    expect(linked.style.gap).toBe('30px');
+    expect(linked.style.padding).toBe('14px');
+    expect(linkedChild.style.padding).toBe('18px');
+    expect(independent.style.gap).not.toBe('30px');
   });
 
   it('can unlink a follower container from its style source', () => {
@@ -193,10 +227,11 @@ describe('shared layout DOM adapter', () => {
     const follower = root.children[1] as HTMLElement;
     expect(follower.style.padding).toBe('8px');
 
-    toggleContainerStyleSource(root, follower);
+    unlinkContainerStyleSource(follower);
     setContainerSettings(leader, { padding: '24px' });
 
-    expect(follower.dataset.styleSourceEnabled).toBe('false');
+    expect(follower.dataset.styleSourceEnabled).toBeUndefined();
+    expect(follower.dataset.styleSourceId).toBeUndefined();
     expect(follower.style.padding).toBe('8px');
   });
 
@@ -235,6 +270,77 @@ describe('shared layout DOM adapter', () => {
     expect(shell.firstElementChild).toBe(root);
     expect(root.dataset.split).toBe('true');
     expect(root.children).toHaveLength(1);
+  });
+
+  it('migrates the legacy workarea into ordered canonical page Sections', () => {
+    const root = document.createElement('div');
+    root.className = 'layout-root layout-container builder-grid canvas-grid';
+    root.dataset.nodeId = 'legacy-root';
+    root.dataset.workarea = 'true';
+    const workspace = document.createElement('div');
+    workspace.id = 'workspaceMain';
+    root.appendChild(workspace);
+
+    ensurePageSectionRoot(root, [
+      { id: 'hero', title: 'Hero' },
+      {
+        id: 'features',
+        title: 'Features',
+        background: '#f8fafc',
+        backgroundImageUrl: '/media/features.jpg',
+        backgroundImageId: 'features-image'
+      }
+    ], options());
+    const active = activatePageSection(root, 'features');
+
+    expect(root.classList.contains('layout-page-root')).toBe(true);
+    expect(root.dataset.layoutMode).toBe('stack');
+    expect(root.style.flexDirection).toBe('column');
+    expect(getPageSectionElement(root, 'hero')?.querySelector('#workspaceMain')).toBe(workspace);
+    expect(active?.dataset.nodeId).toBe('features');
+    expect(active?.dataset.bgImageUrl).toBe('/media/features.jpg');
+    expect(active?.style.backgroundImage).toContain('/media/features.jpg');
+    expect(serializeLayout(root)).toMatchObject({
+      type: 'split',
+      orientation: 'horizontal',
+      settings: { mode: 'stack' },
+      children: [
+        { nodeId: 'hero', section: { id: 'hero', title: 'Hero' } },
+        {
+          nodeId: 'features',
+          workarea: true,
+          section: {
+            id: 'features',
+            title: 'Features',
+            background: '#f8fafc',
+            backgroundImageUrl: '/media/features.jpg',
+            backgroundImageId: 'features-image'
+          }
+        }
+      ]
+    });
+  });
+
+  it('adds a nested Container without wrapping or replacing its canonical Section workarea', () => {
+    const root = document.createElement('div');
+    root.className = 'layout-root layout-container builder-grid canvas-grid';
+    const workspace = document.createElement('div');
+    workspace.id = 'workspaceMain';
+    root.appendChild(workspace);
+
+    ensurePageSectionRoot(root, [{ id: 'hero', title: 'Hero' }], options());
+    const section = getPageSectionElement(root, 'hero') as HTMLElement;
+    activatePageSection(root, 'hero');
+
+    placeContainer(section, 'auto', { ...options(), layoutRoot: root });
+
+    expect(section.dataset.split).toBe('true');
+    expect(section.querySelector(':scope > #workspaceMain')).toBe(workspace);
+    expect(section.querySelectorAll(':scope > .layout-container')).toHaveLength(1);
+    expect(section.dataset.workarea).toBe('true');
+
+    setContainerLayoutMode(section, 'free');
+    expect(section.dataset.layoutMode).toBe('free');
   });
 
   it('keeps DOM mutations when the after-change callback fails', () => {

@@ -419,7 +419,8 @@ body.builder-mode .builder-row {
 
 .builder-sidebar .builder-sidebar-nav {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   position: relative;
   display: grid;
   grid-template-columns: var(--scene-sidebar-rail-width, 58px);
@@ -431,28 +432,47 @@ body.builder-mode .builder-row {
 .scene-sidebar-rail {
   min-width: 0;
   width: var(--scene-sidebar-rail-width, 58px);
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   box-sizing: border-box;
   padding: 14px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  overflow: hidden;
   background: var(--scene-surface-soft);
   border-right: 1px solid var(--scene-border);
+}
+
+.scene-widget-scroll {
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 0 0 8px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .scene-sidebar-tablist,
 .scene-sidebar-tools {
   width: 100%;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
+.scene-sidebar-tablist {
+  padding-top: 8px;
+  border-top: 1px solid var(--scene-border);
+}
+
 .scene-sidebar-tools {
-  margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--scene-border);
 }
@@ -491,10 +511,10 @@ body.builder-mode .builder-row {
   position: absolute;
   z-index: 132;
   left: calc(var(--scene-sidebar-rail-width, 58px) + 10px);
-  top: 12px;
+  top: var(--scene-sidebar-flyout-top, 12px);
   width: var(--scene-sidebar-flyout-width, 256px);
   max-width: calc(100vw - var(--scene-sidebar-rail-width, 58px) - 28px);
-  max-height: calc(100vh - var(--builder-header-height, 76px) - 24px);
+  max-height: calc(100% - var(--scene-sidebar-flyout-top, 12px) - 12px);
   box-sizing: border-box;
   min-width: 0;
   min-height: 0;
@@ -516,6 +536,12 @@ body.builder-mode .builder-row {
     opacity 150ms ease,
     transform 180ms ease,
     box-shadow 180ms ease;
+}
+
+.scene-sidebar-flyout.scene-sidebar-flyout--widget-popover {
+  width: min(232px, calc(100vw - var(--scene-sidebar-rail-width, 58px) - 28px));
+  padding: 12px;
+  gap: 10px;
 }
 
 .scene-sidebar-panels.scene-sidebar-flyout[hidden] {
@@ -731,7 +757,17 @@ body.builder-mode .builder-row {
   scrollbar-gutter: stable;
 }
 
-.scene-layer-settings .scene-group-title-row small {
+.layer-sidebar-panel {
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 12px;
+}
+
+.layer-sidebar-panel .scene-sidebar-heading {
+  flex: 0 0 auto;
+}
+
+.layer-sidebar-panel .scene-group-title-row small {
   max-width: 120px;
   overflow: hidden;
   color: var(--scene-muted);
@@ -741,11 +777,24 @@ body.builder-mode .builder-row {
   white-space: nowrap;
 }
 
+.layer-sidebar-panel .scene-inspector-layer-list {
+  min-height: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.scene-panel-shell[data-active-sidebar-panel='layers'] .scene-sidebar-flyout {
+  height: calc(100% - 24px);
+  overflow: hidden;
+}
+
 .scene-layer-select {
   min-width: 0;
   width: 100%;
   min-height: 50px;
-  padding: 7px 0 7px 8px;
+  padding: 7px 0 7px calc(8px + (var(--scene-layer-depth, 0) * 14px));
   border: 0;
   background: transparent;
   color: inherit;
@@ -755,6 +804,10 @@ body.builder-mode .builder-row {
   gap: 8px;
   text-align: left;
   cursor: pointer;
+}
+
+.scene-layer-item--container .scene-layer-title {
+  font-weight: 700;
 }
 
 .scene-layer-copy {
@@ -1027,18 +1080,19 @@ body.builder-mode .builder-row {
 }
 
 .scene-native-elements {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-  gap: 10px;
-  justify-items: center;
-  margin-bottom: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .scene-native-element {
   position: relative;
-  width: 42px;
-  min-width: 42px;
-  height: 42px;
+  flex: 0 0 40px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -1087,7 +1141,6 @@ body.builder-mode .builder-row {
   opacity: 0.82;
 }
 
-.scene-native-element span,
 .builder-sidebar .builder-sidebar-nav .element-library .drag-widget-icon .label {
   position: absolute;
   z-index: 4;
@@ -1111,12 +1164,22 @@ body.builder-mode .builder-row {
   white-space: nowrap;
 }
 
-.scene-native-element:hover span,
-.scene-native-element:focus-visible span,
 .builder-sidebar .builder-sidebar-nav .element-library .drag-widget-icon:hover .label,
 .builder-sidebar .builder-sidebar-nav .element-library .drag-widget-icon:focus-visible .label {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.scene-widget-rail-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .scene-insert-panels {
@@ -1293,6 +1356,10 @@ body.builder-mode .builder-row {
 
 .builder-sidebar--compact .scene-sidebar-panels {
   padding: 18px 16px;
+}
+
+.builder-sidebar--compact .scene-sidebar-flyout--widget-popover {
+  padding: 12px;
 }
 
 .builder-sidebar--compact .element-library .scene-sidebar-heading,
@@ -2576,10 +2643,6 @@ body.builder-mode .canvas-item.selected::before {
   background: none;
 }
 
-body.builder-mode .canvas-item.inactive-scene {
-  display: none;
-}
-
 .scene-stage-hud {
   min-height: 32px;
   padding-right: 5px;
@@ -2946,7 +3009,7 @@ body.builder-mode .canvas-item:not(.selected) > .scene-stage-effect-guide {
 
 /* Bottom timeline */
 body.builder-mode .builder-footer .layout-bar {
-  height: 112px;
+  height: 64px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -2958,12 +3021,20 @@ body.builder-mode .builder-footer .layout-bar {
   backdrop-filter: blur(18px);
 }
 
+body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
+  height: 112px;
+}
+
 .scene-timeline {
   min-width: 0;
   display: grid;
   grid-template-columns: auto 48px 38px minmax(160px, 1fr) 60px;
   align-items: end;
   gap: 18px;
+}
+
+.scene-timeline[hidden] {
+  display: none;
 }
 
 .scene-timeline-label {
@@ -3203,11 +3274,13 @@ body.builder-mode .builder-footer .layout-bar {
 
   .builder-sidebar .builder-sidebar-nav {
     grid-template-columns: 56px minmax(0, 1fr);
+    height: 42vh;
     min-height: auto;
     overflow: hidden;
   }
 
   .scene-sidebar-rail {
+    height: 42vh;
     padding: 10px 8px;
   }
 
@@ -3264,8 +3337,12 @@ body.builder-mode .builder-footer .layout-bar {
 
   .builder-footer .layout-bar {
     grid-template-columns: 1fr;
-    height: 118px;
+    height: 64px;
     padding: 12px 16px;
+  }
+
+  .builder-footer .layout-bar.has-motion-timeline {
+    height: 118px;
   }
 
   .scene-timeline {

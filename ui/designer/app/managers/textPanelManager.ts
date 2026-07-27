@@ -38,6 +38,8 @@ type TextPanelInitOptions = {
     removeWidget?: (el: HTMLElement) => void;
   } | null;
   gridEl: HTMLElement | null;
+  getGrid?: () => TextPanelInitOptions['grid'];
+  getGridEl?: () => HTMLElement | null;
   allWidgets: WidgetDefinition[];
   genId: () => string;
   ensureCodeMap: () => Record<string, TemplateData>;
@@ -164,7 +166,9 @@ const createCanvasItem = (
     label: string;
   }
 ): HTMLElement | null => {
-  const { grid, gridEl, genId, getActiveLayer, defaultRows } = options;
+  const grid = options.getGrid?.() || options.grid;
+  const gridEl = options.getGridEl?.() || options.gridEl;
+  const { genId, getActiveLayer, defaultRows } = options;
   if (!gridEl || !grid || typeof grid.makeWidget !== 'function') return null;
   const instanceId = genId();
   const activeLayer = getActiveLayer();
@@ -266,7 +270,8 @@ const wireTemplateButton = (
     }
     try {
       const codeMap = options.ensureCodeMap();
-      const grid = options.grid;
+      const grid = options.getGrid?.() || options.grid;
+      const gridEl = options.getGridEl?.() || options.gridEl;
       if (!grid) {
         wrapper.remove();
         return;
@@ -276,7 +281,7 @@ const wireTemplateButton = (
       });
       const editBtn = attachEditButton(wrapper, widgetDef);
       attachOptionsMenu(wrapper, widgetDef, editBtn, {
-        grid: options.gridEl,
+        grid: gridEl,
         pageId: options.pageId,
         scheduleAutosave: () => {
           if (options.shouldAutosave()) options.scheduleAutosave();
@@ -288,8 +293,8 @@ const wireTemplateButton = (
       attachLockOnClick(wrapper);
 
       await applyTemplateToWidget(options, widgetDef, wrapper, config);
-      options.grid?.emitChange?.(wrapper);
-      options.grid?.emitChange?.(wrapper, { contentOnly: true });
+      grid.emitChange?.(wrapper);
+      grid.emitChange?.(wrapper, { contentOnly: true });
       options.selectWidget(wrapper);
       options.markInactiveWidgets();
       if (options.shouldAutosave()) options.scheduleAutosave();
@@ -349,7 +354,7 @@ const registerVariantButtons = (
 };
 
 export function initTextPanel(options: TextPanelInitOptions): void {
-  if (!options?.gridEl || !options.grid) return;
+  if (!options || (!(options.getGridEl?.() || options.gridEl)) || (!(options.getGrid?.() || options.grid))) return;
   const panel = document.getElementById('builderPanel');
   if (!panel) return;
   const textPanel = panel.querySelector('.text-panel');

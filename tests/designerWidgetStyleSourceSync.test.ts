@@ -68,13 +68,24 @@ describe('designer widget style source sync', () => {
     const root = document.createElement('section');
     const source = canvasItem('leader');
     const follower = canvasItem('follower');
+    const codeMap = {
+      follower: {
+        meta: {
+          styleSource: { enabled: true, role: 'follower', sourceId: 'leader' }
+        }
+      }
+    };
     root.append(source, follower);
     followWidgetStyleSource(follower, source);
-    unlinkWidgetStyleSource(follower);
+    unlinkWidgetStyleSource(follower, codeMap);
     source.dataset.radius = '24';
 
     expect(applyWidgetStyleSources(root, source)).toBe(0);
     expect(follower.dataset.radius).not.toBe('24');
+    expect(follower.dataset.styleSourceId).toBeUndefined();
+    expect(follower.dataset.styleSourceRole).toBeUndefined();
+    expect(follower.dataset.styleSourceEnabled).toBeUndefined();
+    expect(codeMap.follower.meta.styleSource).toBeUndefined();
   });
 
   it('can explicitly mark a source without creating a follower', () => {

@@ -1,4 +1,8 @@
 import { applyWidgetOptions } from './widgetRuntimeGateway.js';
+import {
+  runtimePublicPayload,
+  unwrapRuntimeFacadeData
+} from '../../shared/api-client/runtimeFacade.js';
 import type { RendererGrid } from './runtimeGridMetrics.js';
 import type { RuntimeWidgetDefinition } from './runtimeWidgetRenderer.js';
 
@@ -28,11 +32,16 @@ export async function applyDefaultWidgetInstanceOptions(
   }
 
   try {
-    const res = await emit('getWidgetInstance', {
-      moduleName: 'plainspace',
-      moduleType: 'core',
-      instanceId: `default.${def.id}`
-    });
+    // Public pages and the sandboxed Live Preview share the audited Runtime
+    // Manager facade. Direct PlainSpace events cannot cross the AppLoader
+    // bridge and would make widget defaults disappear only in the preview.
+    const response = await emit(
+      'cmsPublicRuntimeRequest',
+      runtimePublicPayload(window.PUBLIC_TOKEN, 'plainSpace', 'widgetInstance', {
+        instanceId: `default.${def.id}`
+      })
+    );
+    const res = unwrapRuntimeFacadeData<LooseRecord>(response);
     const parsedOptions = parseWidgetOptions(res?.content);
     applyWidgetOptions(wrapper, parsedOptions ?? undefined, grid as any);
   } catch {}

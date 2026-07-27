@@ -17,6 +17,12 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
   const menuBtn = actionBar.querySelector('.action-menu');
   const delBtn = actionBar.querySelector('.action-delete');
 
+  const gridFor = el => (
+    el?.parentElement?.closest?.('.layout-grid-surface')?.__grid ||
+    el?.parentElement?.__grid ||
+    grid
+  );
+
   const setLockIcon = locked => {
     const icon = locked ? 'unlock' : 'lock';
     const label = locked ? 'Unlock element' : 'Lock element';
@@ -87,7 +93,7 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     if (editable) window.setActiveElement(editable);
     el.dispatchEvent(new Event('selected'));
     state.activeWidgetEl.classList.add('selected');
-    grid.select(el);
+    gridFor(el)?.select?.(el);
     const locked = el.getAttribute('gs-locked') === 'true';
     setLockIcon(locked);
     actionBar.style.display = 'flex';
@@ -97,12 +103,32 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     refreshPosition(el);
   }
 
+  function hide() {
+    actionBar.style.display = 'none';
+    actionBar.style.visibility = 'hidden';
+  }
+
+  function clearSelection() {
+    const activeWidget = state.activeWidgetEl;
+    hide();
+    if (!activeWidget) return false;
+
+    activeWidget.classList.remove('selected');
+    activeWidget.dispatchEvent(new Event('deselected'));
+    gridFor(activeWidget)?.clearSelection?.();
+    state.activeWidgetEl = null;
+    return true;
+  }
+
   lockBtn.addEventListener('click', e => {
     e.stopPropagation();
     if (!state.activeWidgetEl) return;
     const locked = state.activeWidgetEl.getAttribute('gs-locked') === 'true';
     state.activeWidgetEl.setAttribute('gs-locked', (!locked).toString());
-    grid.update(state.activeWidgetEl, { locked: !locked, noMove: !locked, noResize: !locked });
+    gridFor(state.activeWidgetEl)?.update?.(
+      state.activeWidgetEl,
+      { locked: !locked, noMove: !locked, noResize: !locked }
+    );
     setLockIcon(!locked);
     if (state.pageId) scheduleAutosave();
   });
@@ -124,11 +150,11 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     const target = state.activeWidgetEl;
     target.classList.remove('selected');
     target.dispatchEvent(new Event('deselected'));
-    grid.removeWidget(target);
+    gridFor(target)?.removeWidget?.(target);
     actionBar.style.display = 'none';
     state.activeWidgetEl = null;
     if (state.pageId) scheduleAutosave();
   });
 
-  return { actionBar, select, refreshPosition };
+  return { actionBar, select, refreshPosition, hide, clearSelection };
 }

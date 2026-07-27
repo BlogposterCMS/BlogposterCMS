@@ -108,7 +108,7 @@ function buildFallbackHeader() {
         id: 'globalDesignSettingsBtn',
         className: 'header-icon-btn builder-design-settings-btn',
         icon: '/assets/icons/settings.svg',
-        alt: 'Global design'
+        alt: 'Design settings'
     }));
     headerActions.appendChild(createActionButton({
         id: 'viewportControlBtn',

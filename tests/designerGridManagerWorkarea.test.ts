@@ -11,6 +11,12 @@ import { getCurrentLayout, initGrid } from '../ui/designer/app/managers/gridMana
 const { init: initCanvasGrid } = jest.requireMock('/ui/runtime/main/canvasGrid.js');
 
 class ResizeObserverMock {
+  static callbacks: ResizeObserverCallback[] = [];
+
+  constructor(callback: ResizeObserverCallback) {
+    ResizeObserverMock.callbacks.push(callback);
+  }
+
   observe(): void {}
   unobserve(): void {}
   disconnect(): void {}
@@ -19,6 +25,7 @@ class ResizeObserverMock {
 describe('designer grid manager workarea serialization', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    ResizeObserverMock.callbacks = [];
     (globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverMock;
     (globalThis as { requestAnimationFrame?: unknown }).requestAnimationFrame = (callback: FrameRequestCallback) => {
       callback(0);
@@ -97,5 +104,36 @@ describe('designer grid manager workarea serialization', () => {
         }
       }
     });
+  });
+
+  it('keeps the shared page zoom target content-height driven as Sections are appended', () => {
+    const viewport = document.createElement('main');
+    const pageRoot = document.createElement('div');
+    const section = document.createElement('section');
+    pageRoot.appendChild(section);
+    viewport.appendChild(pageRoot);
+    document.body.appendChild(viewport);
+    const syncSizer = jest.fn();
+    (initCanvasGrid as jest.Mock).mockReturnValue({
+      options: { columns: 1280 },
+      widgets: [],
+      on: jest.fn(),
+      update: jest.fn(),
+      _syncSizer: syncSizer
+    });
+
+    initGrid(section, {}, jest.fn(), {
+      scrollContainer: viewport,
+      zoomTarget: pageRoot,
+      enableZoom: true,
+      dynamicZoomTargetHeight: true
+    });
+
+    expect(pageRoot.style.height).toBe('auto');
+    expect(pageRoot.dataset.dynamicCanvasHeight).toBe('true');
+    expect(syncSizer).toHaveBeenCalled();
+
+    ResizeObserverMock.callbacks.forEach(callback => callback([], {} as ResizeObserver));
+    expect(syncSizer.mock.calls.length).toBeGreaterThan(1);
   });
 });

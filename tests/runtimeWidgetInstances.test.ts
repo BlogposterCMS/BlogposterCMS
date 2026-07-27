@@ -34,10 +34,15 @@ describe('runtimeWidgetInstances', () => {
       'public'
     );
 
-    expect(emit).toHaveBeenCalledWith('getWidgetInstance', {
-      moduleName: 'plainspace',
+    expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
+      jwt: undefined,
+      moduleName: 'runtimeManager',
       moduleType: 'core',
-      instanceId: 'default.stats'
+      resource: 'plainSpace',
+      action: 'widgetInstance',
+      params: {
+        instanceId: 'default.stats'
+      }
     });
     expect(applyWidgetOptions).toHaveBeenCalledWith(
       wrapper,
@@ -64,6 +69,32 @@ describe('runtimeWidgetInstances', () => {
 
     expect(emit).not.toHaveBeenCalled();
     expect(applyWidgetOptions).not.toHaveBeenCalled();
+  });
+
+  it('unwraps Runtime Manager facade data before applying public widget options', async () => {
+    const wrapper = document.createElement('div');
+    const grid = { options: {} };
+    const emit = jest.fn().mockResolvedValue({
+      resource: 'plainSpace',
+      action: 'widgetInstance',
+      data: {
+        content: '{"width":72}'
+      }
+    });
+
+    await applyDefaultWidgetInstanceOptions(
+      wrapper,
+      { id: 'hero' },
+      grid,
+      emit,
+      'public'
+    );
+
+    expect(applyWidgetOptions).toHaveBeenCalledWith(
+      wrapper,
+      { width: 72 },
+      grid
+    );
   });
 
   it('swallows missing or malformed default options like the renderer path', async () => {

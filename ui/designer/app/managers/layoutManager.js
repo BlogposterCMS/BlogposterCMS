@@ -116,7 +116,9 @@ export function applyLayout(layout, {
   allWidgets,
   layerIndex = 0,
   append = false,
-  iconMap = {}
+  preserveCodeMap = false,
+  iconMap = {},
+  duplicateWidget = null
 } = {}) {
   const DEFAULT_ROWS = 100;
   if (!append) {
@@ -125,7 +127,9 @@ export function applyLayout(layout, {
     } else {
       gridEl.innerHTML = '';
     }
-    Object.keys(codeMap).forEach(k => delete codeMap[k]);
+    if (!preserveCodeMap) {
+      Object.keys(codeMap).forEach(k => delete codeMap[k]);
+    }
   }
   layout.forEach(item => {
     const widgetDef = allWidgets.find(w => w.id === item.widgetId);
@@ -249,7 +253,15 @@ export function applyLayout(layout, {
     attachRemoveButton(wrapper, grid, null, () => {});
     attachResizeButton(wrapper, grid);
     const editBtn = attachEditButton(wrapper, widgetDef, codeMap, null, () => {});
-    attachOptionsMenu(wrapper, widgetDef, editBtn, { grid, pageId: null, scheduleAutosave: () => {}, activeLayer: layerIndex, codeMap, genId: () => instId });
+    attachOptionsMenu(wrapper, widgetDef, editBtn, {
+      grid: gridEl,
+      pageId: null,
+      scheduleAutosave: () => {},
+      activeLayer: layerIndex,
+      codeMap,
+      genId: () => instId,
+      duplicateWidget
+    });
     attachLockOnClick(wrapper);
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
@@ -260,7 +272,7 @@ export function applyLayout(layout, {
 export function getItemData(el, codeMap) {
   const instanceId = el.dataset.instanceId;
   const workareaEl = el.closest('.layout-container');
-  const workareaId = workareaEl?.dataset?.nodeId || el.dataset.workareaId || '';
+  const workareaId = el.dataset.workareaId || workareaEl?.dataset?.nodeId || '';
   const existingCode = instanceId ? codeMap[instanceId] : null;
   const code = existingCode && typeof existingCode === 'object'
     ? { ...existingCode }

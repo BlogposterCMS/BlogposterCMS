@@ -1,9 +1,18 @@
 import {
   createLeaf as createSharedLeaf,
   deleteContainer as deleteSharedContainer,
+  activatePageSection as activateSharedPageSection,
   ensureLayoutRootContainer as ensureSharedLayoutRootContainer,
+  ensurePageSectionRoot as ensureSharedPageSectionRoot,
+  getPageSectionElement as getSharedPageSectionElement,
+  movePageSection as moveSharedPageSection,
   moveContainer as moveSharedContainer,
   placeContainer as placeSharedContainer,
+  duplicateContainer as duplicateSharedContainer,
+  removePageSection as removeSharedPageSection,
+  syncPageSection as syncSharedPageSection,
+  linkContainerStyleSource as linkSharedContainerStyleSource,
+  unlinkContainerStyleSource as unlinkSharedContainerStyleSource,
   toggleContainerStyleSource as toggleSharedContainerStyleSource,
   setContainerLayoutMode as setSharedContainerLayoutMode,
   setContainerSettings as setSharedContainerSettings,
@@ -25,6 +34,30 @@ export function setDefaultWorkarea(root) {
 
 export function ensureLayoutRootContainer(layoutRoot) {
   return ensureSharedLayoutRootContainer(layoutRoot, designerLayoutDomOptions);
+}
+
+export function ensurePageSectionRoot(layoutRoot, sections = []) {
+  return ensureSharedPageSectionRoot(layoutRoot, sections, designerLayoutDomOptions);
+}
+
+export function syncPageSection(layoutRoot, section) {
+  return syncSharedPageSection(layoutRoot, section, designerLayoutDomOptions);
+}
+
+export function getPageSectionElement(layoutRoot, sectionId) {
+  return getSharedPageSectionElement(layoutRoot, sectionId);
+}
+
+export function activatePageSection(layoutRoot, sectionId) {
+  return activateSharedPageSection(layoutRoot, sectionId);
+}
+
+export function movePageSection(layoutRoot, sectionId, targetIndex) {
+  return moveSharedPageSection(layoutRoot, sectionId, targetIndex);
+}
+
+export function removePageSection(layoutRoot, sectionId) {
+  return removeSharedPageSection(layoutRoot, sectionId);
 }
 
 export function createLeaf() {
@@ -49,6 +82,21 @@ export function setContainerSettings(el, settings) {
 
 export function toggleContainerStyleSource(layoutRoot, el) {
   return toggleSharedContainerStyleSource(layoutRoot, el);
+}
+
+export function linkContainerStyleSource(layoutRoot, source, target) {
+  return linkSharedContainerStyleSource(layoutRoot, source, target);
+}
+
+export function unlinkContainerStyleSource(el) {
+  return unlinkSharedContainerStyleSource(el);
+}
+
+export function duplicateContainer(targetEl, options = {}) {
+  return duplicateSharedContainer(targetEl, {
+    ...designerLayoutDomOptions,
+    ...options
+  });
 }
 
 export function placeContainer(targetEl, position, options = {}) {

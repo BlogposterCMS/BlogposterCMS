@@ -1,4 +1,4 @@
-import { createRuntimeCanvasItem, resolveRuntimeCanvasRect } from './runtimeCanvasItems.js';
+import { applyRuntimeLayoutMetadata, createRuntimeCanvasItem, resolveRuntimeCanvasRect } from './runtimeCanvasItems.js';
 import { renderRuntimeCanvasWidget } from './runtimeWidgetMounting.js';
 import { waitForRuntimeWidgetShellPaint } from './runtimeWidgetHydration.js';
 function findWidgetDefinition(allWidgets, widgetId) {
@@ -48,11 +48,36 @@ export async function mountRuntimeGridWidgets({ gridEl, grid, layout, allWidgets
     }
     await renderPendingGridWidgets(pending, grid, lane, widgetEmit, afterRender);
 }
+export function mountRuntimeGridStructuralItems({ grid, items, scaleX, scaleY, percentDivisor }) {
+    items.forEach(({ element, item }) => {
+        const rect = resolveRuntimeCanvasRect(item, {
+            scaleX,
+            scaleY,
+            percentDivisor
+        });
+        const structuralElement = element;
+        structuralElement.classList.add('canvas-item', 'runtime-layout-grid-item');
+        structuralElement.dataset.x = String(rect.x);
+        structuralElement.dataset.y = String(rect.y);
+        structuralElement.setAttribute('gs-w', String(rect.w));
+        structuralElement.setAttribute('gs-h', String(rect.h));
+        structuralElement.setAttribute('gs-min-w', structuralElement.getAttribute('gs-min-w') || '120');
+        structuralElement.setAttribute('gs-min-h', structuralElement.getAttribute('gs-min-h') || '80');
+        // Keep the structural node on the same responsive projection path as
+        // regular widgets without pretending it has a widget definition.
+        structuralElement.__runtimeLayoutItem = item;
+        applyRuntimeLayoutMetadata(structuralElement, item);
+        grid?.makeWidget?.(structuralElement, { silent: true });
+    });
+}
 export function reflowRuntimeGridWidgets({ gridEl, grid, scaleX, scaleY, percentDivisor }) {
     gridEl.querySelectorAll(':scope > .canvas-item').forEach(wrapper => {
         const item = wrapper.__runtimeLayoutItem;
         const def = wrapper.__runtimeWidgetDefinition;
-        if (!item || !def)
+        // Structural Container items share the same grid projection but do not
+        // have a widget definition. Their LayoutTree placement is still enough to
+        // reflow them through the canonical responsive geometry contract.
+        if (!item)
             return;
         const rect = resolveRuntimeCanvasRect(item, {
             scaleX,

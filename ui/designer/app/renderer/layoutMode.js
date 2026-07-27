@@ -69,17 +69,26 @@ function renderInsertGroups(sidebarEl, insertToolItems, allWidgets = []) {
       type="button"
       class="scene-native-element scene-insert-group"
       data-insert-group="${escapeHtml(item.id)}"
-      ${item.nativeType ? `data-native-element="${escapeHtml(item.nativeType)}" draggable="true"` : 'draggable="false"'}
+      aria-label="${escapeHtml(item.title)}"
+      aria-haspopup="dialog"
+      aria-controls="sceneInsertPanel-${escapeHtml(item.id)}"
       aria-expanded="false"
       title="${escapeHtml(item.title)}"
     >
       ${iconMarkup(item.icon)}
-      <span>${escapeHtml(item.title)}</span>
+      <span class="scene-widget-rail-label">${escapeHtml(item.title)}</span>
     </button>
   `).join('');
 
   panelWrap.innerHTML = groups.map(item => `
-    <section class="scene-insert-panel" data-insert-group-panel="${escapeHtml(item.id)}" hidden>
+    <section
+      id="sceneInsertPanel-${escapeHtml(item.id)}"
+      class="scene-insert-panel"
+      data-insert-group-panel="${escapeHtml(item.id)}"
+      role="group"
+      aria-label="${escapeHtml(item.title)} presets"
+      hidden
+    >
       <div class="scene-insert-panel-head">
         ${iconMarkup(item.icon)}
         <strong>${escapeHtml(item.title)}</strong>
@@ -359,7 +368,11 @@ export function stopLayoutMode(ctx) {
   if (!ctx.sidebarEl.querySelector('.scene-panel-shell')) {
     populateWidgetsPanel(ctx.sidebarEl, ctx.allWidgets, ctx.ICON_MAP, () => ctx.switchLayer(0), ctx.INSERT_TOOL_ITEMS);
   }
-  ctx.setSidebarPanel?.('insert');
+  if (typeof ctx.closeSidebarPanel === 'function') {
+    ctx.closeSidebarPanel();
+  } else {
+    ctx.setSidebarPanel?.('insert');
+  }
   if (ctx.gridEl) ctx.gridEl.style.pointerEvents = '';
   // Returning to the design layer must respect the current selection; a
   // toolbar without a selected editable element creates phantom local styles.

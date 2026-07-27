@@ -14,7 +14,7 @@ test('Builder reuses the existing Layout panel for Site Presets and keeps color 
   const layoutMode = source('ui/designer/app/renderer/layoutMode.js');
 
   expect(header).toContain('id="globalDesignSettingsBtn"');
-  expect(header).toContain('aria-label="Global design"');
+  expect(header).toContain('aria-label="Design settings"');
   expect(sidebar).toContain('data-sidebar-panel="design"');
   expect(sidebar).toContain('data-color-scheme-host');
   expect(sidebar).toContain('data-font-packages-host');

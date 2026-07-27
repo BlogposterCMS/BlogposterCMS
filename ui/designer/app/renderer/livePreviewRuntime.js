@@ -114,6 +114,23 @@ function previewRuntimeDataEmit(payload) {
         if (resource === 'pages' && action === 'children') {
             return [];
         }
+        if (resource === 'plainSpace' && action === 'widgetInstance') {
+            const instanceId = String(requestPayload.params?.instanceId || '');
+            if (!/^default\.[A-Za-z0-9_.:-]{1,160}$/.test(instanceId)) {
+                throw new Error('DESIGNER_LIVE_PREVIEW_WIDGET_INSTANCE_ID_INVALID: only default widget instances are readable');
+            }
+            // The sandbox asks through the public Runtime contract, while its trusted
+            // Designer parent already owns an authenticated AppLoader admin bridge.
+            // Translate only this public-safe default read instead of granting the
+            // app a direct PlainSpace or public-token bridge exception.
+            return previewRuntimeEmit('cmsAdminApiRequest', {
+                moduleName: 'runtimeManager',
+                moduleType: 'core',
+                resource: 'plainSpace',
+                action: 'widgetInstance',
+                params: { instanceId }
+            });
+        }
         return previewRuntimeEmit(eventName, requestPayload);
     };
 }
@@ -151,7 +168,7 @@ export async function renderLivePreviewPayload(payload) {
         allWidgets: widgets,
         lane: 'public',
         emit: previewEmit,
-        widgetEmit: previewRuntimeEmit
+        widgetEmit: previewEmit
     });
     if (!contentEl.childElementCount) {
         renderEmptyPreview(contentEl);

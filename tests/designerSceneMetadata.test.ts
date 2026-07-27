@@ -41,6 +41,82 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('setInspectorMode(activeInspectorMode, inspector);');
   });
 
+  it('keeps layers in a standalone left sidebar view instead of widget properties', () => {
+    const rendererSource = fs.readFileSync(
+      path.join(__dirname, '../ui/designer/app/builderRenderer.ts'),
+      'utf8'
+    );
+    const sidebarHtml = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/partials/sidebar-builder.html'),
+      'utf8'
+    );
+    const sceneBuilderCss = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/assets/css/designer.css'),
+      'utf8'
+    );
+
+    expect(sidebarHtml).toContain('data-sidebar-panel-target="layers"');
+    expect(sidebarHtml).toContain('data-sidebar-panel="layers"');
+    expect(sidebarHtml).toContain('class="scene-inspector-layer-list"');
+    expect(rendererSource).not.toContain('class="scene-inspector-viewbar"');
+    expect(rendererSource).not.toContain('data-inspector-view="layers"');
+    expect(rendererSource).toContain("const layerPanel = sidebarEl.querySelector('.scene-inspector-layer-list');");
+    expect(rendererSource).toContain('selectWidget(widget);');
+    expect(rendererSource).toContain('const stack = getSiblingLayerStack(widget);');
+    expect(rendererSource).toContain('if (isContainer) renderSurface(widget, depth + 1);');
+    expect(sceneBuilderCss).toContain(".scene-panel-shell[data-active-sidebar-panel=layers] .scene-sidebar-flyout");
+    expect(sceneBuilderCss).toContain('.layer-sidebar-panel .scene-inspector-layer-list');
+  });
+
+  it('keeps Section creation on the authored bottom edge', () => {
+    const rendererSource = fs.readFileSync(
+      path.join(__dirname, '../ui/designer/app/builderRenderer.ts'),
+      'utf8'
+    );
+    const layoutCss = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/assets/scss/_layout-root.scss'),
+      'utf8'
+    );
+
+    expect(rendererSource).toContain('function refreshSectionAddButtons()');
+    expect(rendererSource).toContain("button.className = 'layout-section-add';");
+    expect(rendererSource).toContain("button.dataset.addSectionAfter = sectionEl.dataset.sectionId || '';");
+    expect(rendererSource).toContain("insertionSource: 'section-edge'");
+    expect(rendererSource).toContain('revealInsertedSection(insertedSection');
+    expect(rendererSource).toContain('dynamicZoomTargetHeight: isSectionGrid');
+    expect(rendererSource).toContain("event.target.closest?.('.section-delete')");
+    expect(rendererSource).toContain('removeScene(owningSection.dataset.sectionId)');
+    expect(rendererSource).toContain('planSectionDeletion({');
+    expect(rendererSource).toContain('clearSelection: clearActionBarSelection');
+    expect(rendererSource).toContain("gridViewportEl?.addEventListener('scroll'");
+    expect(rendererSource).toContain("gridViewportEl?.addEventListener('wheel'");
+    expect(rendererSource).toContain('now - actionBarSelectedAt < 350');
+    expect(rendererSource).toContain('hideActionBar();');
+    expect(rendererSource).toContain('function clearActiveWidgetSelection()');
+    expect(rendererSource).toContain('const clearActiveWidgetFromExternalPointer = event =>');
+    expect(rendererSource).toContain("event.target.closest('.canvas-item') ||");
+    expect(rendererSource).toContain(
+      "document.addEventListener('pointerdown', clearActiveWidgetFromExternalPointer, true)"
+    );
+    expect(rendererSource).toContain(
+      "document.addEventListener('click', clearActiveWidgetFromExternalPointer, true)"
+    );
+    expect(rendererSource).toContain('window.requestAnimationFrame(() =>');
+    expect(rendererSource).toContain("activeWidget.closest('.layout-grid-surface')?.__grid?.clearSelection?.()");
+    expect(rendererSource).toContain('// CanvasGrid may stop the later click event.');
+    expect(rendererSource).toContain('clearActiveWidgetSelection();');
+    expect(layoutCss).toContain('.layout-section > .layout-section-add');
+    expect(layoutCss).toContain('.layout-page-root > .layout-section:last-of-type > .layout-section-add');
+    expect(layoutCss).toContain('@keyframes designer-section-insert-highlight');
+    expect(layoutCss).toContain('--designer-section-boundary-size: 2px');
+    expect(layoutCss).toContain('.layout-page-root > .layout-section::before');
+    expect(layoutCss).toContain('border: var(--designer-section-boundary-size) solid');
+    expect(layoutCss).toContain('opacity 160ms ease');
+    expect(layoutCss).toContain('transform 180ms cubic-bezier(0.22, 1, 0.36, 1)');
+    expect(layoutCss).toContain('.layout-section.layout-section--active::before');
+    expect(layoutCss).toContain('pointer-events: none');
+  });
+
   it('renders grouped insert placeholders in the builder sidebar', () => {
     const sidebarHtml = fs.readFileSync(
       path.join(__dirname, '../apps/designer/partials/sidebar-builder.html'),
@@ -79,17 +155,19 @@ describe('designer scene metadata', () => {
 
     expect(sidebarHtml).toContain('class="sidebar-nav builder-sidebar-nav scene-panel-shell"');
     expect(sidebarHtml).toContain('class="scene-sidebar-rail"');
+    expect(sidebarHtml).toContain('class="scene-widget-scroll"');
     expect(sidebarHtml).toContain('class="scene-sidebar-tablist"');
     expect(sidebarHtml).toContain('class="scene-sidebar-tools"');
     expect(sidebarHtml).toContain('class="scene-sidebar-panels scene-sidebar-flyout"');
-    expect(sidebarHtml).toContain('data-sidebar-panel-target="insert"');
+    expect(sidebarHtml).not.toContain('data-sidebar-panel-target="insert"');
     expect(sidebarHtml).not.toContain('data-sidebar-panel-target="sections"');
+    expect(sidebarHtml).not.toContain('layout-arrange-toggle');
     expect(sidebarHtml).not.toContain('id="scenePanelSections"');
     expect(sidebarHtml).not.toContain('data-sidebar-panel="sections"');
-    expect(sidebarHtml).not.toContain('data-sidebar-panel-target="layers"');
+    expect(sidebarHtml).toContain('data-sidebar-panel-target="layers"');
     expect(sidebarHtml).toContain('data-sidebar-panel-target="layout"');
     expect(sidebarHtml).toContain('data-sidebar-panel="insert"');
-    expect(sidebarHtml).not.toContain('data-sidebar-panel="layers"');
+    expect(sidebarHtml).toContain('data-sidebar-panel="layers"');
     expect(sidebarHtml).toContain('class="layout-panel-host"');
     expect(sidebarHtml).toContain('data-designer-tool="scroll"');
     expect(sidebarHtml).toContain('data-designer-tool="action"');
@@ -102,12 +180,15 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('builder-sidebar--flyout-open');
     expect(rendererSource).toContain("builder-sidebar--compact");
     expect(rendererSource).toContain('data-sidebar-panel-target');
-    expect(rendererSource).toContain('setSidebarPanel(sidebarEl.dataset.activeSidebarPanel || \'insert\')');
-    expect(rendererSource).toContain("const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'design'])");
-    expect(rendererSource).toContain('class="scene-inspector-layer-list"');
+    expect(rendererSource).toContain('const initialSidebarPanel = normalizeSidebarPanel');
+    expect(rendererSource).toContain('closeSidebarPanel({ preserveInsertGroup: true });');
+    expect(rendererSource).toContain("const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'layers', 'design'])");
+    expect(sidebarHtml).toContain('class="scene-inspector-layer-list"');
     expect(rendererSource).not.toContain("{ selector: 'scene-map', panel: 'sections' }");
+    expect(rendererSource).not.toContain("from './managers/layoutArrange.js'");
+    expect(rendererSource).not.toContain('wireArrangeToggle');
     expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('layout')");
-    expect(layoutModeSource).toContain("ctx.setSidebarPanel?.('insert')");
+    expect(layoutModeSource).toContain("ctx.closeSidebarPanel()");
     expect(sceneBuilderCss).toContain('.scene-sidebar-rail');
     expect(sceneBuilderCss).toContain('--scene-sidebar-flyout-width');
     expect(sceneBuilderCss).toContain('.scene-sidebar-flyout');
@@ -258,6 +339,9 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('data-empty-insert="button"');
     expect(rendererSource).toContain('data-empty-insert="background"');
     expect(rendererSource).toContain('void insertNativeElement(insertButton.dataset.emptyInsert)');
+    expect(rendererSource).toMatch(
+      /<div id="layoutRoot" class="layout-root">\s*<div id="workspaceMain" class="builder-grid"><\/div>\s*<\/div>\s*<div class="scene-empty-state"/
+    );
     expect(sceneBuilderCss).toContain('.scene-empty-state');
     expect(sceneBuilderCss).toContain('.scene-empty-actions button');
   });
@@ -282,7 +366,11 @@ describe('designer scene metadata', () => {
     expect(headerHtml).toContain('aria-label="Open publishing"');
     expect(sidebarHtml).toContain('data-designer-tool="scroll"');
     expect(sidebarHtml).toContain('data-designer-tool="action"');
+    expect(sidebarHtml).toContain('data-designer-tool="scroll" aria-pressed="false"');
+    expect(sidebarHtml).not.toContain('scene-rail-button--tool active" data-designer-tool="scroll"');
     expect(rendererSource).toContain("detail: { tool, source: 'sidebar' }");
+    expect(rendererSource).toContain("const wasActive = designerToolButton.getAttribute('aria-pressed') === 'true';");
+    expect(rendererSource).toContain("setSidebarToolActive('');");
     expect(rendererSource).toContain("if (tool === 'text')");
     expect(rendererSource).toContain('await insertQuickText();');
     expect(rendererSource).toContain('await insertQuickMedia();');
@@ -397,9 +485,17 @@ describe('designer scene metadata', () => {
     expect(zoomSizerRule).toContain('max-width: none;');
   });
 
-  it('keeps insert groups in the sidebar rail instead of a legacy topbar popover', () => {
+  it('keeps widget types in the scrollable rail and opens their presets in a popover', () => {
+    const sidebarHtml = fs.readFileSync(
+      path.join(__dirname, '../apps/designer/partials/sidebar-builder.html'),
+      'utf8'
+    );
     const rendererSource = fs.readFileSync(
       path.join(__dirname, '../ui/designer/app/builderRenderer.ts'),
+      'utf8'
+    );
+    const layoutModeSource = fs.readFileSync(
+      path.join(__dirname, '../ui/designer/app/renderer/layoutMode.js'),
       'utf8'
     );
     const sceneBuilderCss = fs.readFileSync(
@@ -413,12 +509,22 @@ describe('designer scene metadata', () => {
 
     expect(nativePresetSource).toContain('export const INSERT_TOOL_ITEMS');
     expect(rendererSource).toContain('INSERT_TOOL_ITEMS,');
-    expect(rendererSource).not.toContain('function openInsertPopover');
-    expect(rendererSource).not.toContain('className = \'scene-tool-popover\'');
+    expect(sidebarHtml).toContain('class="scene-widget-scroll"');
+    expect(sidebarHtml.indexOf('class="scene-widget-scroll"'))
+      .toBeLessThan(sidebarHtml.indexOf('class="scene-sidebar-tablist"'));
+    expect(sidebarHtml).toContain('aria-label="Widget presets" role="dialog"');
+    expect(layoutModeSource).toContain('aria-haspopup="dialog"');
+    expect(layoutModeSource).toContain('class="scene-native-element scene-insert-group"');
+    expect(rendererSource).toContain('function positionWidgetPresetPopover');
+    expect(rendererSource).toContain("flyout?.classList.toggle('scene-sidebar-flyout--widget-popover'");
     expect(rendererSource).not.toContain('data-tool-insert-group');
-    expect(rendererSource).toContain('setInsertGroup(insertGroupButton.dataset.insertGroup);');
+    expect(rendererSource).toContain('setInsertGroup(insertGroupButton.dataset.insertGroup, insertGroupButton);');
     expect(sceneBuilderCss).not.toContain('.scene-tool-popover');
     expect(sceneBuilderCss).toContain('.scene-sidebar-tools');
+    expect(sceneBuilderCss).toContain('.scene-widget-scroll');
+    expect(sceneBuilderCss).toContain('scrollbar-gutter: stable;');
+    expect(sceneBuilderCss).toContain('flex: 0 0 40px;');
+    expect(sceneBuilderCss).toContain('.scene-sidebar-flyout.scene-sidebar-flyout--widget-popover');
   });
 
   it('keeps behavior settings visually summarized in the inspector', () => {

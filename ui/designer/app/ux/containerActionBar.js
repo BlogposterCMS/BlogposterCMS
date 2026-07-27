@@ -1,11 +1,19 @@
 import { STRINGS } from '../i18n.js';
-import { showPlacementPicker } from './placementPicker.js';
 
 let activeContainer = null;
 
 function safeContainerAction(action, el, handler) {
   try {
-    handler?.();
+    const result = handler?.();
+    if (result && typeof result.catch === 'function') {
+      result.catch(err => {
+        console.warn('[Designer] DESIGNER_CONTAINER_ACTION_FAILED', {
+          action,
+          nodeId: el?.dataset?.nodeId || null,
+          mode: el?.dataset?.layoutMode || null
+        }, err);
+      });
+    }
   } catch (err) {
     // A broken container action should never take down the Designer shell.
     console.warn('[Designer] DESIGNER_CONTAINER_ACTION_FAILED', {
@@ -31,6 +39,27 @@ function currentMode(el) {
   return 'free';
 }
 
+function visibleMode(el) {
+  const mode = currentMode(el);
+  return mode === 'stack' || mode === 'row' ? 'auto' : mode;
+}
+
+function nextMode(el) {
+  const mode = visibleMode(el);
+  if (mode === 'free') {
+    return el.dataset.layoutAutoDirection === 'horizontal' ? 'row' : 'stack';
+  }
+  if (mode === 'auto') return 'grid';
+  return 'free';
+}
+
+function modePresentation(el) {
+  const mode = visibleMode(el);
+  if (mode === 'auto') return { icon: 'rows-3', title: 'Auto layout' };
+  if (mode === 'grid') return { icon: 'grid-3x3', title: STRINGS.containerModeGrid };
+  return { icon: 'mouse-pointer-2', title: STRINGS.containerModeFree };
+}
+
 function pxNumber(value, fallback = 0) {
   const raw = String(value || '').trim();
   const parsed = Number.parseFloat(raw);
@@ -42,15 +71,17 @@ function colorValue(value) {
   return /^#[0-9a-f]{6}$/i.test(raw) ? raw : '#ffffff';
 }
 
-function styleSourceTitle(el) {
-  if (el.dataset.styleSourceEnabled === 'false') return STRINGS.containerStyleSourceEnable;
-  if (el.dataset.styleSourceId) return STRINGS.containerStyleSourceDisable;
-  if (el.dataset.styleSourceRole === 'source') return STRINGS.containerStyleSourceActive;
-  return STRINGS.containerStyleSourceEnable;
-}
-
 export function attachContainerBar(el, ctx) {
   if (!el) return;
+  if (
+    el.classList.contains('layout-page-root') ||
+    el.classList.contains('layout-section')
+  ) {
+    // Sections use their compact, section-owned toolbar. Reusing the nested
+    // Container bar here would expose two competing mode/background controls.
+    el.querySelector(':scope > .container-actionbar')?.remove();
+    return;
+  }
   const actions = ctx && typeof ctx === 'object' ? ctx : {};
   if (!el.__layoutContainerSelectBound) {
     el.__layoutContainerSelectBound = true;
@@ -88,17 +119,6 @@ export function attachContainerBar(el, ctx) {
     return btn;
   };
 
-  const makeModeBtn = (mode, icon, title) => {
-    const btn = makeBtn(`bar-mode bar-mode-${mode}`, icon, title, () => {
-      actions.setContainerLayoutMode?.(el, mode);
-    });
-    btn.dataset.containerMode = mode;
-    const disabled = mode === 'free' && el.dataset.split === 'true';
-    btn.disabled = disabled;
-    if (currentMode(el) === mode) btn.classList.add('active');
-    return btn;
-  };
-
   const makeNumberInput = (key, icon, title, value) => {
     const wrap = document.createElement('label');
     wrap.className = `bar-field bar-field-${key}`;
@@ -110,7 +130,7 @@ export function attachContainerBar(el, ctx) {
     const input = document.createElement('input');
     input.type = 'number';
     input.min = '0';
-    input.max = '96';
+    input.max = key === 'minHeight' ? '2400' : '96';
     input.step = '1';
     input.value = String(pxNumber(value));
     input.setAttribute('aria-label', title);
@@ -126,16 +146,27 @@ export function attachContainerBar(el, ctx) {
   const addBtn = makeBtn('bar-add', 'plus', STRINGS.containerAdd, () => {
     actions.placeContainer?.(el, 'auto');
   });
-  const placeBtn = makeBtn('bar-place', 'move', STRINGS.containerPlace, () => {
-    showPlacementPicker(el, pos => {
-      safeContainerAction(`place:${pos}`, el, () => actions.placeContainer?.(el, pos));
-    });
+  const duplicateBtn = makeBtn('bar-duplicate', 'copy', 'Duplicate', () => {
+    return actions.duplicateContainer?.(el, { linked: false });
   });
-  const stackBtn = makeModeBtn('stack', 'rows-3', STRINGS.containerModeStack);
-  const rowBtn = makeModeBtn('row', 'columns-3', STRINGS.containerModeRow);
-  const freeBtn = makeModeBtn('free', 'mouse-pointer-2', STRINGS.containerModeFree);
+  const linkedDuplicateBtn = makeBtn('bar-duplicate-linked', 'link-2', 'Linked copy', () => {
+    return actions.duplicateContainer?.(el, { linked: true });
+  });
+  const modeState = modePresentation(el);
+  const modeBtn = makeBtn('bar-mode bar-mode-cycle', modeState.icon, `${modeState.title} · click to change`, () => {
+    actions.setContainerLayoutMode?.(el, nextMode(el));
+  });
+  modeBtn.dataset.containerMode = visibleMode(el);
+  modeBtn.classList.add('active');
+  const directionBtn = makeBtn('bar-auto-direction', 'arrow-right', 'Auto layout direction', () => {
+    const horizontal = currentMode(el) !== 'row';
+    el.dataset.layoutAutoDirection = horizontal ? 'horizontal' : 'vertical';
+    actions.setContainerLayoutMode?.(el, horizontal ? 'row' : 'stack');
+  });
+  directionBtn.hidden = currentMode(el) !== 'stack' && currentMode(el) !== 'row';
   const gapInput = makeNumberInput('gap', 'space', STRINGS.containerGap, el.dataset.layoutGap);
   const paddingInput = makeNumberInput('padding', 'panel-top', STRINGS.containerPadding, el.dataset.layoutPadding);
+  const minHeightInput = makeNumberInput('minHeight', 'ruler', STRINGS.containerMinHeight, el.dataset.layoutMinHeight);
   const bgInput = document.createElement('input');
   bgInput.type = 'color';
   bgInput.className = 'bar-color';
@@ -147,7 +178,10 @@ export function attachContainerBar(el, ctx) {
       actions.setContainerSettings?.(el, { background: bgInput.value });
     });
   });
-  const styleSourceBtn = makeBtn('bar-style-source', el.dataset.styleSourceId ? 'unlink' : 'link', styleSourceTitle(el), () => actions.toggleContainerStyleSource?.(el));
+  const isStyleFollower = Boolean(el.dataset.styleSourceId) && el.dataset.styleSourceEnabled !== 'false';
+  const styleSourceBtn = isStyleFollower
+    ? makeBtn('bar-style-source', 'unlink', 'Style linked · unlink', () => actions.unlinkContainerStyleSource?.(el))
+    : null;
   const hostBtn = makeBtn('bar-host', 'star', STRINGS.containerHost, () => actions.setDynamicHost?.(el));
   const designBtn = makeBtn('bar-design', 'file', STRINGS.containerDesign, () => {
     const id = typeof window !== 'undefined' && typeof window.prompt === 'function'
@@ -159,9 +193,25 @@ export function attachContainerBar(el, ctx) {
 
   if (el.dataset.workarea === 'true') hostBtn.classList.add('active');
   if (el.dataset.designRef) designBtn.classList.add('active');
-  if (el.dataset.styleSourceId || el.dataset.styleSourceRole === 'source') styleSourceBtn.classList.add('active');
-  if (el.classList.contains('layout-root')) delBtn.disabled = true;
+  if (styleSourceBtn) styleSourceBtn.classList.add('active');
+  if (el.classList.contains('layout-root') || el.classList.contains('layout-section')) {
+    delBtn.disabled = true;
+  }
 
-  bar.append(addBtn, placeBtn, stackBtn, rowBtn, freeBtn, gapInput, paddingInput, bgInput, styleSourceBtn, hostBtn, designBtn, delBtn);
+  bar.append(
+    addBtn,
+    duplicateBtn,
+    linkedDuplicateBtn,
+    modeBtn,
+    directionBtn,
+    gapInput,
+    paddingInput,
+    minHeightInput,
+    bgInput,
+    ...(styleSourceBtn ? [styleSourceBtn] : []),
+    hostBtn,
+    designBtn,
+    delBtn
+  );
   el.prepend(bar);
 }

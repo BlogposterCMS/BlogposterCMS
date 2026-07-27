@@ -73,9 +73,8 @@ export function createSaveManager(state, ctx) {
       ? ctx.getSceneSections()
       : [];
     const layoutPayload = layoutTree || (sceneSections.length ? { type: 'leaf', workarea: true } : null);
-    if (layoutPayload && sceneSections.length) {
-      layoutPayload.scenes = sceneSections;
-    }
+    // Canonical Section metadata is serialized on the LayoutTree nodes. Do not
+    // write a second mutable scene list that could drift from the page order.
     // Page cards need an at-a-glance thumbnail, so save the visible viewport
     // instead of shrinking a full-height canvas into an unreadable image.
     const thumbnailCaptureOptions = { viewport: true };
@@ -103,9 +102,9 @@ export function createSaveManager(state, ctx) {
       }
     }
     try {
-      const bgStyle = gridEl ? getComputedStyle(gridEl) : null;
-      let mediaId = gridEl?.dataset.bgImageId || designerState.bgMediaId || '';
-      let mediaUrl = gridEl?.dataset.bgImageUrl || designerState.bgMediaUrl || '';
+      const bgStyle = layoutRoot ? getComputedStyle(layoutRoot) : (gridEl ? getComputedStyle(gridEl) : null);
+      let mediaId = layoutRoot?.dataset.bgImageId || gridEl?.dataset.bgImageId || designerState.bgMediaId || '';
+      let mediaUrl = layoutRoot?.dataset.bgImageUrl || gridEl?.dataset.bgImageUrl || designerState.bgMediaUrl || '';
       if (!mediaUrl && bgStyle?.backgroundImage && bgStyle.backgroundImage !== 'none') {
         const m = bgStyle.backgroundImage.match(/url\((['"]?)(.*?)\1\)/i);
         mediaUrl = m ? m[2] : '';

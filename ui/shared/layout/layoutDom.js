@@ -1,4 +1,4 @@
-import { normalizeLayoutContainerSettings, normalizeLayoutTree } from './layoutDocument.js';
+import { normalizeLayoutContainerSettings, normalizeLayoutNodePlacement, normalizeLayoutTree } from './layoutDocument.js';
 import { hasStyleSourceSettings, normalizeStyleSourceSettings } from './styleSource.js';
 const DEFAULT_LABELS = {
     splitHint: 'Click to add container',
@@ -56,6 +56,8 @@ function readContainerSettings(el) {
             : 'free'),
         gap: el.dataset.layoutGap,
         padding: el.dataset.layoutPadding,
+        columns: el.dataset.layoutColumns,
+        align: el.dataset.layoutAlign,
         background: el.dataset.layoutBackground,
         maxWidth: el.dataset.layoutMaxWidth,
         minHeight: el.dataset.layoutMinHeight,
@@ -76,6 +78,14 @@ function writeContainerSettings(el, settings) {
         el.dataset.layoutPadding = normalized.padding;
     else
         delete el.dataset.layoutPadding;
+    if (normalized.columns)
+        el.dataset.layoutColumns = String(normalized.columns);
+    else
+        delete el.dataset.layoutColumns;
+    if (normalized.align)
+        el.dataset.layoutAlign = normalized.align;
+    else
+        delete el.dataset.layoutAlign;
     if (normalized.background)
         el.dataset.layoutBackground = normalized.background;
     else
@@ -136,6 +146,23 @@ function applyContainerSettingsToElement(el) {
     const settings = readContainerSettings(el);
     if (settings.mode)
         el.dataset.layoutMode = settings.mode;
+    if (el.dataset.split === 'true') {
+        // A split node is the persisted recursive Container shape. Its authored
+        // placement mode, rather than the legacy split orientation, owns how its
+        // direct Container and widget children flow.
+        if (settings.mode === 'grid') {
+            el.style.display = 'grid';
+            el.style.removeProperty('flex-direction');
+        }
+        else if (settings.mode === 'free') {
+            el.style.display = 'block';
+            el.style.removeProperty('flex-direction');
+        }
+        else {
+            el.style.display = 'flex';
+            el.style.flexDirection = settings.mode === 'row' ? 'row' : 'column';
+        }
+    }
     if (settings.gap)
         el.style.gap = settings.gap;
     else
@@ -144,6 +171,14 @@ function applyContainerSettingsToElement(el) {
         el.style.padding = settings.padding;
     else
         el.style.removeProperty('padding');
+    if (settings.columns)
+        el.style.setProperty('--layout-columns', String(settings.columns));
+    else
+        el.style.removeProperty('--layout-columns');
+    if (settings.align)
+        el.style.setProperty('--layout-align', settings.align);
+    else
+        el.style.removeProperty('--layout-align');
     if (settings.background)
         el.style.background = settings.background;
     else
@@ -171,6 +206,127 @@ function serializableSettings(el) {
     }
     return Object.keys(settings).length ? settings : {};
 }
+function readSection(el) {
+    const id = String(el?.dataset?.sectionId || '').trim();
+    if (!id)
+        return undefined;
+    const title = String(el?.dataset?.sectionTitle || id).trim() || id;
+    const background = String(el?.dataset?.sectionBackground || '').trim();
+    const backgroundImageUrl = String(el?.dataset?.bgImageUrl || '').trim();
+    const backgroundImageId = String(el?.dataset?.bgImageId || '').trim();
+    return {
+        id,
+        title,
+        ...(background ? { background } : {}),
+        ...(backgroundImageUrl ? { backgroundImageUrl } : {}),
+        ...(backgroundImageId ? { backgroundImageId } : {})
+    };
+}
+function readNodePlacement(el) {
+    let responsivePlacement;
+    try {
+        const parsed = JSON.parse(el.dataset.responsivePlacement || 'null');
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            responsivePlacement = parsed;
+        }
+    }
+    catch {
+        responsivePlacement = undefined;
+    }
+    return normalizeLayoutNodePlacement({
+        x: el.dataset.x,
+        y: el.dataset.y,
+        w: el.getAttribute('gs-w'),
+        h: el.getAttribute('gs-h'),
+        xPercent: el.dataset.xPercent,
+        yPercent: el.dataset.yPercent,
+        wPercent: el.dataset.wPercent,
+        hPercent: el.dataset.hPercent,
+        responsivePlacement
+    });
+}
+function writeNodePlacement(el, placement) {
+    if (!placement)
+        return;
+    if (placement.x !== undefined)
+        el.dataset.x = String(placement.x);
+    if (placement.y !== undefined)
+        el.dataset.y = String(placement.y);
+    if (placement.w !== undefined)
+        el.setAttribute('gs-w', String(placement.w));
+    if (placement.h !== undefined)
+        el.setAttribute('gs-h', String(placement.h));
+    if (placement.xPercent !== undefined)
+        el.dataset.xPercent = String(placement.xPercent);
+    if (placement.yPercent !== undefined)
+        el.dataset.yPercent = String(placement.yPercent);
+    if (placement.wPercent !== undefined)
+        el.dataset.wPercent = String(placement.wPercent);
+    if (placement.hPercent !== undefined)
+        el.dataset.hPercent = String(placement.hPercent);
+    if (placement.responsivePlacement) {
+        el.dataset.responsivePlacement = JSON.stringify(placement.responsivePlacement);
+    }
+}
+function resetPlacementForNewParent(el) {
+    // A tree drop has no canvas pointer coordinate. Start the Container at its
+    // new parent's origin and let that parent's CanvasGrid author a fresh
+    // responsive contract instead of reusing percentages from the old surface.
+    el.dataset.x = '0';
+    el.dataset.y = '0';
+    delete el.dataset.xPercent;
+    delete el.dataset.yPercent;
+    delete el.dataset.wPercent;
+    delete el.dataset.hPercent;
+    delete el.dataset.responsivePlacement;
+}
+function writeSection(el, section) {
+    if (!section?.id) {
+        el.classList.remove('layout-section');
+        delete el.dataset.sectionId;
+        delete el.dataset.sectionTitle;
+        delete el.dataset.sectionBackground;
+        delete el.dataset.bgImageUrl;
+        delete el.dataset.bgImageId;
+        el.style.removeProperty('background-image');
+        return;
+    }
+    el.classList.add('layout-section');
+    el.dataset.sectionId = section.id;
+    el.dataset.sectionTitle = section.title || section.id;
+    el.dataset.nodeId = section.id;
+    if (section.background)
+        el.dataset.sectionBackground = section.background;
+    else
+        delete el.dataset.sectionBackground;
+    if (section.backgroundImageUrl) {
+        const safeUrl = section.backgroundImageUrl.replace(/["\\]/g, '\\$&');
+        el.dataset.bgImageUrl = section.backgroundImageUrl;
+        el.style.backgroundImage = `url("${safeUrl}")`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundRepeat = 'no-repeat';
+        el.style.backgroundPosition = 'center';
+    }
+    else {
+        delete el.dataset.bgImageUrl;
+        delete el.dataset.bgImageId;
+        el.style.removeProperty('background-image');
+    }
+    if (section.backgroundImageId)
+        el.dataset.bgImageId = section.backgroundImageId;
+    else
+        delete el.dataset.bgImageId;
+}
+function createSectionLeaf(section, options = {}) {
+    const leaf = createLeaf(options);
+    writeSection(leaf, section);
+    setContainerSettings(leaf, {
+        mode: 'free',
+        minHeight: '320px',
+        background: section.background || 'transparent'
+    });
+    return leaf;
+}
 function assignLeafState(targetEl, existing) {
     if (targetEl.dataset.workarea === 'true') {
         existing.dataset.workarea = 'true';
@@ -194,45 +350,17 @@ function moveContentIntoLeaf(targetEl, existing) {
 function containerIdentity(el) {
     return String(el?.dataset?.nodeId || '').trim();
 }
-function styleSourceEnabled(el) {
-    return readStyleSourceSettings(el).enabled !== false;
-}
 function copyContainerStyle(source, target) {
     writeContainerSettings(target, readContainerSettings(source));
-}
-function siblingStyleSourceFor(targetEl) {
-    const parent = targetEl.parentElement;
-    if (!parent)
-        return null;
-    const siblings = childLayoutContainers(parent);
-    const explicit = siblings.find(child => (child !== targetEl &&
-        child.dataset.styleSourceRole === 'source' &&
-        styleSourceEnabled(child)));
-    if (explicit)
-        return explicit;
-    return siblings.find(child => child !== targetEl && styleSourceEnabled(child)) || null;
-}
-function linkNewContainerToSiblingStyleSource(targetEl) {
-    const source = siblingStyleSourceFor(targetEl);
-    const sourceId = containerIdentity(source);
-    if (!source || !sourceId)
-        return;
-    const sourceSettings = readStyleSourceSettings(source);
-    writeStyleSourceSettings(source, {
-        ...sourceSettings,
-        enabled: sourceSettings.enabled ?? true,
-        role: 'source',
-        syncLayout: sourceSettings.syncLayout ?? true,
-        syncDesign: sourceSettings.syncDesign ?? true
+    // A linked copy shares its size contract but keeps its position in the
+    // parent grid independent, so repeated designs can live in different slots.
+    ['gs-w', 'gs-h', 'gs-min-w', 'gs-min-h'].forEach(attribute => {
+        const value = source.getAttribute(attribute);
+        if (value)
+            target.setAttribute(attribute, value);
+        else
+            target.removeAttribute(attribute);
     });
-    writeStyleSourceSettings(targetEl, {
-        enabled: true,
-        role: 'follower',
-        sourceId,
-        syncLayout: true,
-        syncDesign: true
-    });
-    copyContainerStyle(source, targetEl);
 }
 function findContainerById(root, sourceId) {
     const containers = [
@@ -261,25 +389,10 @@ export function applyContainerStyleSources(root) {
         }
     });
 }
-export function toggleContainerStyleSource(layoutRoot, targetEl) {
-    if (!targetEl)
-        return;
-    const current = readStyleSourceSettings(targetEl);
-    if (current.enabled !== false && current.sourceId) {
-        writeStyleSourceSettings(targetEl, { ...current, enabled: false });
-        return;
-    }
-    const source = siblingStyleSourceFor(targetEl);
+export function linkContainerStyleSource(layoutRoot, source, targetEl) {
     const sourceId = containerIdentity(source);
-    if (!source || !sourceId) {
-        writeStyleSourceSettings(targetEl, {
-            enabled: true,
-            role: 'source',
-            syncLayout: true,
-            syncDesign: true
-        });
-        return;
-    }
+    if (!source || !targetEl || source === targetEl || !sourceId)
+        return false;
     writeStyleSourceSettings(source, {
         ...readStyleSourceSettings(source),
         enabled: true,
@@ -296,6 +409,35 @@ export function toggleContainerStyleSource(layoutRoot, targetEl) {
     });
     copyContainerStyle(source, targetEl);
     applyContainerStyleSources(layoutRoot || targetEl);
+    return true;
+}
+export function unlinkContainerStyleSource(targetEl) {
+    if (!targetEl)
+        return;
+    // Unlink means fully independent. Keeping a disabled source id made the old
+    // UI look detached while retaining a hidden relationship in saved data.
+    writeStyleSourceSettings(targetEl, {});
+}
+/**
+ * Legacy compatibility for callers that only know the old toggle action.
+ * It can now only unlink an existing follower or mark an explicit source; it
+ * never guesses a sibling and therefore cannot create a surprise relation.
+ */
+export function toggleContainerStyleSource(layoutRoot, targetEl) {
+    if (!targetEl)
+        return;
+    const current = readStyleSourceSettings(targetEl);
+    if (current.sourceId) {
+        unlinkContainerStyleSource(targetEl);
+        return;
+    }
+    writeStyleSourceSettings(targetEl, {
+        enabled: true,
+        role: 'source',
+        syncLayout: true,
+        syncDesign: true
+    });
+    applyContainerStyleSources(layoutRoot || targetEl);
 }
 export function serializeLayout(container) {
     if (!container)
@@ -303,6 +445,10 @@ export function serializeLayout(container) {
     const isSplit = container.dataset.split === 'true';
     const workarea = container.dataset.workarea === 'true';
     const nodeId = container.dataset.nodeId;
+    const section = readSection(container);
+    const placement = container.classList.contains('layout-grid-container')
+        ? readNodePlacement(container)
+        : undefined;
     if (isSplit) {
         const orientation = container.dataset.orientation === 'horizontal' ? 'horizontal' : 'vertical';
         const children = childLayoutContainers(container)
@@ -319,6 +465,8 @@ export function serializeLayout(container) {
             children,
             ...(workarea ? { workarea: true } : {}),
             ...(nodeId ? { nodeId } : {}),
+            ...(section ? { section } : {}),
+            ...(placement ? { placement } : {}),
             ...(Object.keys(serializableSettings(container)).length ? { settings: serializableSettings(container) } : {}),
             ...(hasStyleSourceSettings(serializableStyleSource(container)) ? { styleSource: serializableStyleSource(container) } : {})
         };
@@ -331,6 +479,8 @@ export function serializeLayout(container) {
         type: 'leaf',
         ...(workarea ? { workarea: true } : {}),
         ...(nodeId ? { nodeId } : {}),
+        ...(section ? { section } : {}),
+        ...(placement ? { placement } : {}),
         ...(Object.keys(serializableSettings(container)).length ? { settings: serializableSettings(container) } : {}),
         ...(hasStyleSourceSettings(serializableStyleSource(container)) ? { styleSource: serializableStyleSource(container) } : {})
     };
@@ -389,6 +539,8 @@ export function deserializeLayout(obj, container, options = {}) {
         delete container.dataset.workareaLabel;
     }
     container.dataset.nodeId = node.nodeId || nextNodeId(options);
+    writeNodePlacement(container, node.placement);
+    writeSection(container, node.section);
     if (node.type === 'leaf' && node.designRef) {
         container.dataset.designRef = node.designRef;
     }
@@ -396,6 +548,70 @@ export function deserializeLayout(obj, container, options = {}) {
         delete container.dataset.designRef;
     }
     applyContainerStyleSources(container.closest('.layout-root') || container);
+}
+function cloneLayoutNodeWithFreshIds(node, options, isRoot = false) {
+    const placement = node.placement
+        ? { ...node.placement }
+        : undefined;
+    if (isRoot && placement) {
+        // Keep a duplicate visible when its parent uses Free Placement without
+        // coupling its eventual position to the source.
+        if (placement.x !== undefined)
+            placement.x += 16;
+        if (placement.y !== undefined)
+            placement.y += 16;
+        if (placement.xPercent !== undefined)
+            placement.xPercent = Math.min(100, placement.xPercent + 1.5);
+        if (placement.yPercent !== undefined)
+            placement.yPercent = Math.min(100, placement.yPercent + 1.5);
+    }
+    const common = {
+        nodeId: nextNodeId(options),
+        ...(node.settings ? { settings: { ...node.settings } } : {}),
+        ...(placement ? { placement } : {})
+    };
+    if (node.type === 'split') {
+        return {
+            type: 'split',
+            orientation: node.orientation,
+            children: node.children.map(child => cloneLayoutNodeWithFreshIds(child, options)),
+            ...common,
+            ...(node.sizes ? { sizes: [...node.sizes] } : {})
+        };
+    }
+    return {
+        type: 'leaf',
+        ...common,
+        ...(node.designRef ? { designRef: node.designRef } : {})
+    };
+}
+function containerSubtree(root) {
+    return [
+        root,
+        ...Array.from(root.querySelectorAll('.layout-container'))
+    ];
+}
+export function duplicateContainer(source, { linked = false, layoutRoot = null, onAfterChange, ...options } = {}) {
+    if (!source?.parentElement)
+        return null;
+    const sourceTree = serializeLayout(source);
+    if (!sourceTree)
+        return null;
+    const cloneTree = cloneLayoutNodeWithFreshIds(sourceTree, options, true);
+    const clone = document.createElement('div');
+    deserializeLayout(cloneTree, clone, options);
+    source.parentElement.insertBefore(clone, source.nextSibling);
+    if (linked) {
+        const sources = containerSubtree(source);
+        const targets = containerSubtree(clone);
+        sources.forEach((sourceNode, index) => {
+            linkContainerStyleSource(layoutRoot, sourceNode, targets[index] || null);
+        });
+    }
+    const root = layoutRoot || source.closest('.layout-root') || source.parentElement;
+    applyContainerStyleSources(root);
+    notifyAfterChange(onAfterChange, { layoutRoot: root });
+    return clone;
 }
 export function renderLayoutTree(tree, mountEl) {
     const node = normalizeLayoutTree(tree);
@@ -447,6 +663,8 @@ export function renderLayoutTree(tree, mountEl) {
                 ...current.settings
             });
         }
+        writeSection(el, current.section);
+        writeNodePlacement(el, current.placement);
         writeStyleSourceSettings(el, current.styleSource || {});
         parent.appendChild(el);
         return el;
@@ -488,6 +706,124 @@ export function ensureLayoutRootContainer(layoutRoot, options = {}) {
     }
     return rootContainer;
 }
+/**
+ * Migrates the legacy single workarea into a page root whose direct children
+ * are canonical Sections. The page root remains a fixed vertical stack; only
+ * its Section children may change placement mode.
+ */
+export function ensurePageSectionRoot(layoutRoot, sections = [], options = {}) {
+    const root = ensureLayoutRootContainer(layoutRoot, options);
+    if (!root)
+        return null;
+    const normalizedSections = sections.filter(section => section?.id);
+    const existingSections = childLayoutContainers(root).filter(child => Boolean(readSection(child)));
+    const alreadyCanonical = root.classList.contains('layout-page-root') || existingSections.length > 0;
+    if (!alreadyCanonical) {
+        const firstSection = normalizedSections[0] || { id: 'section-1', title: 'Section 1' };
+        const leaf = createSectionLeaf(firstSection, options);
+        assignLeafState(root, leaf);
+        moveContentIntoLeaf(root, leaf);
+        copyContainerStyle(root, leaf);
+        setContainerSettings(leaf, {
+            ...readContainerSettings(leaf),
+            minHeight: readContainerSettings(leaf).minHeight || '320px',
+            background: firstSection.background || readContainerSettings(leaf).background || 'transparent'
+        });
+        root.replaceChildren(leaf);
+    }
+    root.classList.add('layout-page-root', 'layout-root', 'layout-container');
+    root.classList.remove('builder-grid', 'canvas-grid', 'layout-section');
+    root.dataset.nodeId = root.dataset.nodeId === normalizedSections[0]?.id
+        ? 'page-root'
+        : (root.dataset.nodeId || 'page-root');
+    root.dataset.split = 'true';
+    root.dataset.orientation = 'horizontal';
+    root.style.display = 'flex';
+    root.style.flexDirection = 'column';
+    delete root.dataset.workarea;
+    delete root.dataset.workareaLabel;
+    delete root.dataset.sectionId;
+    delete root.dataset.sectionTitle;
+    delete root.dataset.sectionBackground;
+    writeContainerSettings(root, {
+        ...readContainerSettings(root),
+        mode: 'stack',
+        gap: '0px',
+        padding: '0px',
+        overflow: 'visible'
+    });
+    const byId = new Map(childLayoutContainers(root)
+        .map(child => [readSection(child)?.id, child])
+        .filter((entry) => Boolean(entry[0])));
+    normalizedSections.forEach(section => {
+        const sectionEl = byId.get(section.id) || createSectionLeaf(section, options);
+        writeSection(sectionEl, section);
+        root.appendChild(sectionEl);
+    });
+    return root;
+}
+export function getPageSectionElement(layoutRoot, sectionId) {
+    if (!layoutRoot || !sectionId)
+        return null;
+    return childLayoutContainers(layoutRoot)
+        .find(child => child.dataset.sectionId === sectionId) || null;
+}
+export function syncPageSection(layoutRoot, section, options = {}) {
+    const currentRoot = ensureLayoutRootContainer(layoutRoot, options);
+    const root = currentRoot?.classList.contains('layout-page-root')
+        ? currentRoot
+        : ensurePageSectionRoot(layoutRoot, [section], options);
+    if (!root)
+        return null;
+    const existing = getPageSectionElement(root, section.id);
+    if (existing) {
+        writeSection(existing, section);
+        return existing;
+    }
+    const sectionEl = createSectionLeaf(section, options);
+    root.appendChild(sectionEl);
+    return sectionEl;
+}
+export function movePageSection(layoutRoot, sectionId, targetIndex) {
+    const section = getPageSectionElement(layoutRoot, sectionId);
+    if (!layoutRoot || !section)
+        return false;
+    const sections = childLayoutContainers(layoutRoot).filter(child => Boolean(readSection(child)));
+    const boundedIndex = Math.max(0, Math.min(sections.length - 1, targetIndex));
+    const reference = sections.filter(child => child !== section)[boundedIndex] || null;
+    if (reference)
+        layoutRoot.insertBefore(section, reference);
+    else
+        layoutRoot.appendChild(section);
+    return true;
+}
+export function removePageSection(layoutRoot, sectionId) {
+    const section = getPageSectionElement(layoutRoot, sectionId);
+    if (!section)
+        return false;
+    section.remove();
+    return true;
+}
+export function activatePageSection(layoutRoot, sectionId) {
+    if (!layoutRoot)
+        return null;
+    const sections = childLayoutContainers(layoutRoot).filter(child => Boolean(readSection(child)));
+    let active = null;
+    sections.forEach(section => {
+        const selected = section.dataset.sectionId === sectionId;
+        section.classList.toggle('layout-section--active', selected);
+        if (selected) {
+            section.dataset.workarea = 'true';
+            section.dataset.workareaLabel = section.dataset.sectionTitle || sectionId;
+            active = section;
+        }
+        else {
+            delete section.dataset.workarea;
+            delete section.dataset.workareaLabel;
+        }
+    });
+    return active;
+}
 export function setDefaultWorkarea(root, options = {}) {
     if (!root)
         return;
@@ -524,7 +860,12 @@ export function setContainerLayoutMode(el, mode) {
     const nextMode = normalizeLayoutContainerSettings({ mode }).mode;
     if (!nextMode)
         return;
-    if (nextMode === 'free' && el.dataset.split === 'true')
+    // A canonical Section may host nested containers and still remain the
+    // widget placement surface. Ordinary split containers cannot use free mode.
+    if (nextMode === 'free' &&
+        el.dataset.split === 'true' &&
+        !el.dataset.sectionId &&
+        !el.classList.contains('layout-grid-surface'))
         return;
     if (el.dataset.split === 'true') {
         const orientation = orientationForMode(nextMode);
@@ -574,7 +915,16 @@ export function placeContainer(targetEl, position, { layoutRoot, onAfterChange, 
     const orientation = splitOrientationForPosition(position, targetEl);
     const newLeaf = createLeaf(options);
     if (normalizedPosition === 'inside') {
-        if (targetEl.dataset.split === 'true') {
+        if (targetEl.dataset.sectionId || targetEl.classList.contains('layout-grid-surface')) {
+            // Grid surfaces are stable structural and placement nodes. A nested
+            // Container is both a child item and another grid surface, so no
+            // wrapper leaf is necessary.
+            targetEl.dataset.split = 'true';
+            targetEl.dataset.orientation = orientation;
+            writeContainerSettings(targetEl, readContainerSettings(targetEl));
+            targetEl.appendChild(newLeaf);
+        }
+        else if (targetEl.dataset.split === 'true') {
             targetEl.appendChild(newLeaf);
         }
         else {
@@ -595,7 +945,6 @@ export function placeContainer(targetEl, position, { layoutRoot, onAfterChange, 
     else {
         insertAdjacentContainer(targetEl, newLeaf, normalizedPosition, orientation, options);
     }
-    linkNewContainerToSiblingStyleSource(newLeaf);
     applyContainerStyleSources(layoutRoot || targetEl.closest('.layout-root') || targetEl);
     notifyAfterChange(onAfterChange, { layoutRoot: layoutRoot || targetEl.closest('.layout-root') });
 }
@@ -634,6 +983,8 @@ function collapseSingleChildSplit(parent) {
     // editor with a stale root reference after deleting a nested container.
     if (parent.classList.contains('layout-root'))
         return;
+    if (parent.classList.contains('layout-grid-surface'))
+        return;
     const children = Array.from(parent.children).filter((child) => child instanceof HTMLElement);
     if (children.length !== 1)
         return;
@@ -656,14 +1007,21 @@ export function deleteContainer(targetEl, { onAfterChange } = {}) {
     notifyAfterChange(onAfterChange, { layoutRoot: parent?.closest?.('.layout-root') || parent });
 }
 export function moveContainer(srcEl, targetEl, position, { onAfterChange, ...options } = {}) {
-    if (!srcEl || !targetEl || srcEl === targetEl)
+    if (!srcEl || !targetEl || srcEl === targetEl || srcEl.contains(targetEl))
         return;
     const orientation = position === 'inside'
         ? (targetEl.dataset.orientation === 'vertical' ? 'vertical' : 'horizontal')
         : splitOrientationForPosition(position);
     const srcParent = srcEl.parentElement;
     if (position === 'inside') {
-        if (targetEl.dataset.split === 'true') {
+        if (targetEl.classList.contains('layout-grid-surface') || targetEl.dataset.sectionId) {
+            targetEl.dataset.split = 'true';
+            targetEl.dataset.orientation = orientation;
+            writeContainerSettings(targetEl, readContainerSettings(targetEl));
+            resetPlacementForNewParent(srcEl);
+            targetEl.appendChild(srcEl);
+        }
+        else if (targetEl.dataset.split === 'true') {
             targetEl.appendChild(srcEl);
         }
         else {
@@ -683,7 +1041,6 @@ export function moveContainer(srcEl, targetEl, position, { onAfterChange, ...opt
         insertAdjacentContainer(targetEl, srcEl, position, orientation, options);
     }
     collapseSingleChildSplit(srcParent);
-    linkNewContainerToSiblingStyleSource(srcEl);
     applyContainerStyleSources(targetEl.closest('.layout-root') || targetEl);
     notifyAfterChange(onAfterChange, { layoutRoot: targetEl.closest('.layout-root') });
 }

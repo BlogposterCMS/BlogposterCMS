@@ -1,1 +1,1 @@
-import '../app/editor/editor.js';
+export { registerElement } from '../app/editor/editor.js';

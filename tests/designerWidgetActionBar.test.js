@@ -116,6 +116,56 @@ describe('designer widget action bar', () => {
     expect(scheduleAutosave).toHaveBeenCalledTimes(2);
   });
 
+  it('clears the toolbar and owning grid selection together', () => {
+    const widget = document.createElement('div');
+    widget.className = 'canvas-item';
+    document.body.appendChild(widget);
+
+    const deselected = jest.fn();
+    widget.addEventListener('deselected', deselected);
+    const grid = {
+      select: jest.fn(),
+      clearSelection: jest.fn()
+    };
+    const state = { activeWidgetEl: null, pageId: null };
+    const { actionBar, select, clearSelection } = createActionBar(
+      null,
+      grid,
+      state,
+      jest.fn()
+    );
+
+    select(widget);
+    expect(clearSelection()).toBe(true);
+    expect(actionBar.style.display).toBe('none');
+    expect(actionBar.style.visibility).toBe('hidden');
+    expect(widget.classList.contains('selected')).toBe(false);
+    expect(deselected).toHaveBeenCalledTimes(1);
+    expect(grid.clearSelection).toHaveBeenCalledTimes(1);
+    expect(state.activeWidgetEl).toBeNull();
+  });
+
+  it('can hide during canvas scrolling without discarding selection', () => {
+    const widget = document.createElement('div');
+    widget.className = 'canvas-item';
+    document.body.appendChild(widget);
+    const state = { activeWidgetEl: null, pageId: null };
+    const { actionBar, select, hide } = createActionBar(
+      null,
+      { select: jest.fn() },
+      state,
+      jest.fn()
+    );
+
+    select(widget);
+    hide();
+
+    expect(actionBar.style.display).toBe('none');
+    expect(actionBar.style.visibility).toBe('hidden');
+    expect(state.activeWidgetEl).toBe(widget);
+    expect(widget.classList.contains('selected')).toBe(true);
+  });
+
   it('moves below the selected element when the text toolbar occupies the same space', () => {
     const textToolbar = document.createElement('div');
     textToolbar.className = 'text-block-editor-toolbar show';

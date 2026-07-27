@@ -41,6 +41,7 @@ describe('runtimeDesignLayouts', () => {
       elementName: undefined,
       behavior: undefined,
       sceneId: 'scene-hero',
+      workareaId: 'scene-hero',
       sceneTitle: undefined,
       sceneBackground: undefined,
       scrollStart: undefined,

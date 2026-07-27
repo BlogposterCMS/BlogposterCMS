@@ -271,7 +271,13 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `?designer-live-preview=1`. `ui/runtime/publicEntry.ts` detects that query,
   imports `ui/designer/app/renderer/livePreviewRuntime`, and receives the
   current unsaved `DesignDocument` via `postMessage`; Runtime data requests go
-  back through the existing Designer AppLoader bridge.
+  back through the existing Designer AppLoader bridge. The iframe retains the
+  selected Builder width as its real CSS viewport; the surrounding preview
+  stage may visually fit that frame without changing Runtime layout geometry
+  or responsive breakpoints. Public widget-instance defaults also remain on
+  Runtime Manager's facade. The Preview adapter narrowly translates validated
+  `default.*` reads onto the existing authenticated admin facade, so it never
+  requires a direct PlainSpace or public-token bridge exception.
 - `ui/designer/app/*`: active Designer implementation. The `apps/designer/`
   tree keeps assets, partials and app metadata only. Sandboxed Designer frames
   verify parent origins through the
@@ -284,8 +290,12 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `LayoutTree`, `WidgetPlacement` and `DesignDocument` normalization plus DOM
   serialization, rendering and container operations used by Designer adapters
   and the public runtime. Container mode and surface settings live on
-  `LayoutTree` nodes, while free-positioned widgets keep percent geometry and
-  point back to their owning container through `workareaId`. Shared
+  `LayoutTree` nodes. Every Section is a persistent grid surface; every nested
+  Container is both one placement item in its parent grid and the owner of a
+  child grid. Free-positioned widgets and Containers keep percent geometry and
+  point back to their immediate surface through `workareaId`. Hierarchy changes
+  are explicit Layout-tree operations, while canvas dragging stays within the
+  current surface. Shared
   `styleSource` metadata lives here as well so containers and widget
   placements can reuse layout/design properties without copying content.
 - `ui/widgets/entries/*`: widget-panel and future widget runtime bundles.

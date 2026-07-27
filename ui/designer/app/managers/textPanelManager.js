@@ -102,7 +102,9 @@ const nextAvailableRow = (gridEl, activeLayer, defaultRows) => {
     return maxY;
 };
 const createCanvasItem = (options, widgetDef, config) => {
-    const { grid, gridEl, genId, getActiveLayer, defaultRows } = options;
+    const grid = options.getGrid?.() || options.grid;
+    const gridEl = options.getGridEl?.() || options.gridEl;
+    const { genId, getActiveLayer, defaultRows } = options;
     if (!gridEl || !grid || typeof grid.makeWidget !== 'function')
         return null;
     const instanceId = genId();
@@ -200,7 +202,8 @@ const wireTemplateButton = (button, options, widgetDef, config) => {
         }
         try {
             const codeMap = options.ensureCodeMap();
-            const grid = options.grid;
+            const grid = options.getGrid?.() || options.grid;
+            const gridEl = options.getGridEl?.() || options.gridEl;
             if (!grid) {
                 wrapper.remove();
                 return;
@@ -211,7 +214,7 @@ const wireTemplateButton = (button, options, widgetDef, config) => {
             });
             const editBtn = attachEditButton(wrapper, widgetDef);
             attachOptionsMenu(wrapper, widgetDef, editBtn, {
-                grid: options.gridEl,
+                grid: gridEl,
                 pageId: options.pageId,
                 scheduleAutosave: () => {
                     if (options.shouldAutosave())
@@ -223,8 +226,8 @@ const wireTemplateButton = (button, options, widgetDef, config) => {
             });
             attachLockOnClick(wrapper);
             await applyTemplateToWidget(options, widgetDef, wrapper, config);
-            options.grid?.emitChange?.(wrapper);
-            options.grid?.emitChange?.(wrapper, { contentOnly: true });
+            grid.emitChange?.(wrapper);
+            grid.emitChange?.(wrapper, { contentOnly: true });
             options.selectWidget(wrapper);
             options.markInactiveWidgets();
             if (options.shouldAutosave())
@@ -276,7 +279,7 @@ const registerVariantButtons = (panel, options, widgetDef) => {
     }
 };
 export function initTextPanel(options) {
-    if (!options?.gridEl || !options.grid)
+    if (!options || (!(options.getGridEl?.() || options.gridEl)) || (!(options.getGrid?.() || options.grid)))
         return;
     const panel = document.getElementById('builderPanel');
     if (!panel)

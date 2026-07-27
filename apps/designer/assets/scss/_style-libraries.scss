@@ -34,6 +34,31 @@
   font-weight: 750;
 }
 
+.global-design-background-field,
+.global-design-background-inherit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--scene-ink);
+  font-size: 12px;
+}
+
+.global-design-background-field input[type='color'] {
+  width: 42px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--scene-border);
+  border-radius: 8px;
+  background: var(--scene-surface);
+}
+
+.global-design-background-inherit {
+  justify-content: flex-start;
+  margin-top: 9px;
+  color: var(--scene-muted);
+}
+
 .style-library-intro {
   margin: 0;
   color: var(--scene-muted);

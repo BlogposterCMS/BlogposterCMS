@@ -172,7 +172,7 @@ describe('designer timeline effects preview', () => {
     expect(guides.querySelector('.scene-preview-marker')).toBeNull();
   });
 
-  it('keeps timeline controls inactive until an element is selected', () => {
+  it('keeps zoom visible and reveals the timeline only for a selected motion element', () => {
     document.body.innerHTML = '';
     const footer = document.createElement('footer');
     const gridEl = document.createElement('div');
@@ -187,22 +187,35 @@ describe('designer timeline effects preview', () => {
     const zoomOut = footer.querySelector<HTMLButtonElement>('[aria-label="Zoom out"]')!;
     const zoomIn = footer.querySelector<HTMLButtonElement>('[aria-label="Zoom in"]')!;
     const zoomFit = footer.querySelector<HTMLButtonElement>('[aria-label="Fit canvas to workspace"]')!;
+    const timeline = footer.querySelector<HTMLElement>('.scene-timeline')!;
 
     expect(range.disabled).toBe(true);
     expect(play.disabled).toBe(true);
+    expect(timeline.hidden).toBe(true);
+    expect(footer.querySelector('.layout-bar')?.classList.contains('has-motion-timeline')).toBe(false);
     expect(play.getAttribute('aria-label')).toBe('Play scroll preview');
     expect(zoomOut.getAttribute('aria-label')).toBe('Zoom out');
     expect(zoomIn.getAttribute('aria-label')).toBe('Zoom in');
     expect(zoomFit.textContent).toBe('Fit');
-    expect(footer.querySelector('.scene-timeline-label')?.textContent).toBe('Select an element');
 
     item.classList.add('selected');
     document.dispatchEvent(new CustomEvent('designerSelectionChanged', {
       detail: { selected: true, id: 'selected-1' }
     }));
 
+    expect(range.disabled).toBe(true);
+    expect(play.disabled).toBe(true);
+    expect(timeline.hidden).toBe(true);
+
+    item.dataset.effects = JSON.stringify([
+      { id: 'moveY', enabled: true, start: 10, end: 80 }
+    ]);
+    document.dispatchEvent(new CustomEvent('designerContentChanged'));
+
     expect(range.disabled).toBe(false);
     expect(play.disabled).toBe(false);
+    expect(timeline.hidden).toBe(false);
+    expect(footer.querySelector('.layout-bar')?.classList.contains('has-motion-timeline')).toBe(true);
     expect(footer.querySelector('.scene-timeline-label')?.textContent).toBe('Scroll timeline');
   });
 });

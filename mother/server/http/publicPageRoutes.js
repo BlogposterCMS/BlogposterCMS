@@ -20,9 +20,12 @@ function createPublicPageRoutes({
   const libraryRoot = path.join(process.cwd(), 'library');
   const builderPublicRoot = path.join(libraryRoot, 'public', 'builder');
 
-  router.get('/p/:slug', async (req, res, next) => {
+  router.get('/p/*', async (req, res, next) => {
     try {
-      const slug = sanitizeSlug(req.params.slug || '');
+      // Express exposes the remainder of a wildcard route as parameter 0. Keep
+      // every path segment so nested page slugs resolve through the same
+      // sanitized page and builder boundaries as single-segment slugs.
+      const slug = sanitizeSlug(req.params[0] || '');
 
       try {
         global.pagesPublicToken = await new Promise((resolve, reject) => {
@@ -53,7 +56,7 @@ function createPublicPageRoutes({
 
         if (page?.id) return next();
       } catch (lookupErr) {
-        console.warn('[SERVER] /p/:slug lookup failed ->', lookupErr.message);
+        console.warn('[SERVER] /p/* lookup failed ->', lookupErr.message);
       }
 
       const filePath = path.join(builderPublicRoot, slug, 'index.html');
@@ -68,7 +71,7 @@ function createPublicPageRoutes({
     }
   });
 
-  router.get('/:slug?', async (req, res, next) => {
+  router.get('*', async (req, res, next) => {
     try {
       const livePreviewRequested = String(req.query?.['designer-live-preview'] || '') === '1';
       if (livePreviewRequested) {
@@ -86,7 +89,10 @@ function createPublicPageRoutes({
         res.setHeader('Cache-Control', 'no-store');
         res.setHeader('Referrer-Policy', 'no-referrer');
       }
-      const requestedSlug = req.params.slug;
+      // The wildcard contains the pathname without the query string. Strip
+      // only leading separators here; sanitizeSlug remains the authoritative
+      // normalizer and length boundary before the database lookup.
+      const requestedSlug = String(req.params[0] || '').replace(/^\/+/, '');
       const slug = sanitizeSlug(typeof requestedSlug === 'string' ? requestedSlug : '');
 
       try {
@@ -148,7 +154,7 @@ function createPublicPageRoutes({
       res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
       res.send(html);
     } catch (err) {
-      console.error('[SERVER] /:slug render error ->', err);
+      console.error('[SERVER] /* render error ->', err);
       next(err);
     }
   });

@@ -6,6 +6,11 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Fixed public routing for nested page slugs so paths such as
+  `/guides/getting-started/install` resolve through the existing sanitized
+  page lookup while unknown nested paths still fall through to not found.
+- Fixed public HTML-only pages receiving an additional empty viewport-height
+  widget canvas when no Designer widget placements exist.
 - Fixed the canonical `/media/...` runtime path so public page HTML can load
   published Media Manager styles, fonts and images, including while maintenance
   mode is active. Static delivery remains contained to `library/public` and

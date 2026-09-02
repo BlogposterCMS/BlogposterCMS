@@ -19,6 +19,10 @@ or later filter hints instead of creating a separate taxonomy system.
 Runtime presentation can then cascade through that parent/child hierarchy: a
 child page without its own design can reuse the nearest parent page design or
 layout template while keeping its own content.
+Public URLs preserve every sanitized slug segment, so a page slug such as
+`guides/getting-started/install` is served at
+`/guides/getting-started/install`. Unknown nested paths still fall through
+to the normal not-found boundary.
 WordPress language and translation-group hints stay metadata-first as well:
 valid language codes are copied onto the imported entry/page, while translation
 extension grouping remains traceable under the WordPress metadata.

@@ -245,6 +245,14 @@ function createInstanceId(item) {
 async function loadWidgets(descriptor = {}, ctx = {}) {
     const layout = resolveWidgetLayout(descriptor, ctx);
     const root = document.getElementById('app') || document.body;
+    // Raw HTML is the complete fallback presentation when no widget placements
+    // exist. Appending the default 100vh canvas here would add a blank page after
+    // otherwise complete imported or hand-authored content.
+    const hasHtmlPage = ctx.hasPageHtmlContent === true || Boolean(root.querySelector('.bp-page-html'));
+    if ((layout.items || []).length === 0 && hasHtmlPage) {
+        markPublicWidgetsReady(layout, 0);
+        return;
+    }
     const registry = typeof ctx.meltdownEmit === 'function'
         ? await emitPublicRuntime(ctx, 'widgets', 'list').catch(() => [])
         : [];

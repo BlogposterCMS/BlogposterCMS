@@ -75,10 +75,32 @@ describe('pagesManager public html loader security', () => {
     expect(executeJs).toHaveBeenCalledWith('window.__ran = true;', expect.any(HTMLElement), expect.any(HTMLElement), 'HTML Loader');
   });
 
+  test('shares HTML fallback presence with later public loaders', async () => {
+    __setLoaderTestDeps({
+      sanitizeHtml: (value: string) => value,
+    });
+    const ctx: Record<string, unknown> = {};
+
+    await loadHtml(
+      {
+        inline: { html: '<main>Imported page</main>' },
+      },
+      ctx
+    );
+
+    expect(ctx.hasPageHtmlContent).toBe(true);
+  });
+
   test('skips fallback html when a linked design layout rendered widgets', async () => {
     __setLoaderTestDeps({
       sanitizeHtml: (value: string) => value,
     });
+
+    const ctx: Record<string, unknown> = {
+      activeLayout: {
+        items: [{ widgetId: 'hero', instanceId: 'hero-1' }],
+      },
+    };
 
     await loadHtml(
       {
@@ -87,13 +109,10 @@ describe('pagesManager public html loader security', () => {
           html: '<section>Fallback page</section>',
         },
       },
-      {
-        activeLayout: {
-          items: [{ widgetId: 'hero', instanceId: 'hero-1' }],
-        },
-      }
+      ctx
     );
 
     expect(document.getElementById('app')?.innerHTML).toBe('');
+    expect(ctx.hasPageHtmlContent).toBe(false);
   });
 });

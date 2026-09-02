@@ -20,6 +20,7 @@ type HtmlDescriptor = {
 
 type RuntimeLayoutContext = {
   activeLayout?: unknown;
+  hasPageHtmlContent?: boolean;
 };
 
 type LoaderTestDeps = {
@@ -97,13 +98,26 @@ export async function loadHtml(
   descriptor: HtmlDescriptor = {},
   ctx?: unknown
 ): Promise<void> {
+  const inline = descriptor.inline || {};
+  const html = inline.html || '';
+  const runtimeContext = ctx && typeof ctx === 'object'
+    ? ctx as RuntimeLayoutContext
+    : undefined;
+
+  // Later public loaders share this context. Publish the HTML fallback state
+  // before awaiting the sanitizer so the widget loader cannot race ahead and
+  // append an empty canvas while complete page HTML is still being prepared.
+  if (runtimeContext) {
+    runtimeContext.hasPageHtmlContent = Boolean(html);
+  }
   if (descriptor.fallbackOnly && hasActiveDesignLayout(ctx)) {
+    if (runtimeContext) {
+      runtimeContext.hasPageHtmlContent = false;
+    }
     return;
   }
   await ensureSanitizer();
 
-  const inline = descriptor.inline || {};
-  const html = inline.html || '';
   const css = inline.css || '';
   const js = inline.js || '';
 

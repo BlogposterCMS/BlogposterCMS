@@ -17,6 +17,11 @@ Stores widgets used by both the public site and the admin dashboard.
 - The public `widgets` loader renders from the current page envelope/context
   layout. Loader-to-loader layout sharing happens through explicit context, so
   one page's loaded widget layout cannot bleed into another page.
+- Complete HTML-only pages do not receive an empty fallback widget canvas when
+  their resolved layout has no widget placements. This keeps imported and
+  hand-authored HTML at its authored document height. The HTML loader publishes
+  this state through the existing page-scoped loader context before sanitizer
+  loading, so asynchronous attachment loading cannot reintroduce the canvas.
 - Community widget folders can only register `widgetType: "public"`; admin
   widgets belong to trusted UI modules.
 - Community widget metadata cannot declare `moduleType`; widgets are not core

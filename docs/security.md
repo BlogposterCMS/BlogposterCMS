@@ -25,6 +25,10 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
   below Media Manager's `library/public` directory. Requests pass through a
   realpath containment guard and reject TypeScript sources, secret-shaped
   filenames and package manifests before static delivery.
+- **Public nested-page boundary** – Catch-all public page routes retain all
+  pathname segments only after the existing slug sanitizer has normalized and
+  length-limited them. The server renders only a matching published page;
+  unknown nested paths continue to the normal not-found handler.
 - **Custom design scripts** – Runtime rendering only executes design-supplied JavaScript when the payload carries an explicit trust flag (such as `allowCustomJs`). Only literal boolean `true`, `1` or the string equivalents `'true'`, `'1'`, `'yes'`, `'y'` or `'on'` are treated as trusted so stringified falsy values remain blocked. Restrict that capability to trusted authors via permissions or workflow reviews and audit designs regularly.
 
 Always review your access logs and keep dependencies up to date. Security patches will continue to harden the platform over time.

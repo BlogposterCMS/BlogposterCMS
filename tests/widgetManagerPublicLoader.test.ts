@@ -34,6 +34,7 @@ const { loadWidgets, registerLoaders } = require('../mother/modules/widgetManage
 describe('widgetManager public loader', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div>';
+    delete document.documentElement.dataset.bpPublicWidgetsReady;
     jest.clearAllMocks();
     mockRenderTextWidget.mockImplementation((el: HTMLElement, ctx: Record<string, any> = {}) => {
       el.textContent = ctx.instanceMetadata?.settings?.html || '';
@@ -44,6 +45,29 @@ describe('widgetManager public loader', () => {
     const register = jest.fn();
     registerLoaders(register);
     expect(register).toHaveBeenCalledWith('widgets', loadWidgets);
+  });
+
+  test('does not append an empty canvas after complete HTML-only page content', async () => {
+    const meltdownEmit = jest.fn();
+
+    await loadWidgets(
+      {},
+      {
+        meltdownEmit,
+        publicToken: 'public-token',
+        activeLayout: {
+          grid: { columns: 12, cellHeight: 8 },
+          items: [],
+          layoutRef: 'layout:missing@v1',
+        },
+        hasPageHtmlContent: true,
+      }
+    );
+
+    expect(document.getElementById('bp-grid')).toBeNull();
+    expect(initCanvasGrid).not.toHaveBeenCalled();
+    expect(meltdownEmit).not.toHaveBeenCalled();
+    expect(document.documentElement.dataset.bpPublicWidgetsReady).toBe('true');
   });
 
   test('renders public widgets into the active layout grid', async () => {

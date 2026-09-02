@@ -6,6 +6,8 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Aligned both container stages with Debian Trixie after the final-image smoke
+  check exposed SQLite 6's glibc requirement on older Debian images.
 - Remediated dependency-audit findings across runtime and build dependencies,
   including forged ZIP-size allocation and vulnerable native-install TAR chains.
   Retained Express 4 and the existing authentication/database authorities;

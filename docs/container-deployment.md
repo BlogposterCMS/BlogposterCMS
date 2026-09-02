@@ -15,6 +15,9 @@ loading as a non-root user. It does **not** publish a registry tag or deploy it.
   the final image contains production dependencies, not the build toolchain.
 - SQLite and bcrypt are installed for the Linux image, never copied from the
   host's `node_modules`. Node.js 24 is required by the supported image.
+  Both stages use Debian Trixie: the SQLite 6 Linux prebuild needs glibc 2.38
+  or newer and does not load on Bookworm's older libc. CI's final-image native
+  load check is mandatory; a successful Docker build alone misses that mismatch.
 - No build arguments accept secrets. Inject production configuration at runtime
   through the deployment system, outside Git and the build context.
 

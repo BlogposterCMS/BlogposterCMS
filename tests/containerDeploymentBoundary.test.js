@@ -6,7 +6,8 @@ const read = name => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
 
 test('container keeps runtime, native modules and non-root persistent state together', () => {
   const dockerfile = read('Dockerfile');
-  expect(dockerfile.match(/FROM node:24-bookworm-slim/g)).toHaveLength(2);
+  expect(dockerfile.match(/FROM node:24-trixie-slim/g)).toHaveLength(2);
+  expect(dockerfile).not.toContain('FROM node:24-bookworm');
   expect(dockerfile).toContain('npm ci && npm audit --audit-level=high');
   expect(dockerfile).toContain('npm run build && npm prune --omit=dev');
   expect(dockerfile).toContain('USER node');

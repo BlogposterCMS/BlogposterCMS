@@ -1,12 +1,13 @@
 # Build only in CI or on an approved builder; production pulls a reviewed image.
-FROM node:24-bookworm-slim AS build
+# SQLite 6 Linux prebuilds require glibc >= 2.38; Debian Trixie supplies 2.41.
+FROM node:24-trixie-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci && npm audit --audit-level=high
 COPY . .
 RUN npm run build && npm prune --omit=dev
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:24-trixie-slim AS runtime
 ENV NODE_ENV=production APP_ENV=production PORT=3000 \
     CONTENT_DB_TYPE=sqlite SQLITE_STORAGE=/app/data \
     DEV_AUTOLOGIN=false DEV_AGENT_LOGIN=false BLOGPOSTER_DEV_RELOAD=false \

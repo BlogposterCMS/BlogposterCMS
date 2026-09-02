@@ -21,6 +21,10 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
 - **Monitoring and logs** – Record login attempts and important actions. Reviewing logs helps detect suspicious behavior early.
 
 - **Content sanitization** – Design content is sanitised both when it is saved server-side and again when it is rendered in the browser. Public pages retain `<style>` tags while stripping scripts and unsafe CSS patterns (like `expression` or URLs using `javascript:` or `data:`) so designs render without enabling script injection.
+- **Public media boundary** – `/media/...` serves only files already stored
+  below Media Manager's `library/public` directory. Requests pass through a
+  realpath containment guard and reject TypeScript sources, secret-shaped
+  filenames and package manifests before static delivery.
 - **Custom design scripts** – Runtime rendering only executes design-supplied JavaScript when the payload carries an explicit trust flag (such as `allowCustomJs`). Only literal boolean `true`, `1` or the string equivalents `'true'`, `'1'`, `'yes'`, `'y'` or `'on'` are treated as trusted so stringified falsy values remain blocked. Restrict that capability to trusted authors via permissions or workflow reviews and audit designs regularly.
 
 Always review your access logs and keep dependencies up to date. Security patches will continue to harden the platform over time.

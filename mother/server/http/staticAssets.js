@@ -154,12 +154,14 @@ function mountStaticAssetRoutes(app, {
   const publicPath = path.join(rootDir, 'public');
   const assetsPath = path.join(publicPath, 'assets');
   const buildPath = path.join(publicPath, 'build');
+  const mediaPublicPath = path.join(rootDir, 'library', 'public');
   const widgetsPath = path.join(rootDir, 'widgets');
   const designerMainTs = path.join(rootDir, 'ui', 'designer', 'app', 'main');
   const designerManagersTs = path.join(rootDir, 'ui', 'designer', 'app', 'managers');
   const modulePublicLoaderRoot = path.join(rootDir, 'modules');
   const appStaticPath = path.join(rootDir, 'apps');
   const guardAppStaticRoot = makeStaticRealpathGuard(appStaticPath, 'apps');
+  const guardMediaStaticRoot = makeStaticRealpathGuard(mediaPublicPath, 'media');
   const guardWidgetStaticRoot = makeStaticRealpathGuard(widgetsPath, 'widgets');
 
   app.get('/apps/designer/main/:moduleName.js', makeParamTsHandler(designerMainTs, 'moduleName'));
@@ -232,12 +234,17 @@ function mountStaticAssetRoutes(app, {
   });
 
   app.use('/assets', setStaticCorsHeaders, blockBrowserSourceFiles, express.static(assetsPath));
+  // Only files already placed below the Media Manager's public boundary are
+  // addressable here. The realpath and filename guards keep traversal,
+  // symlink escapes, source files and secret-shaped files fail-closed.
+  app.use('/media', setStaticCorsHeaders, guardMediaStaticRoot, blockBrowserSourceFiles, express.static(mediaPublicPath));
   app.use('/favicon.ico', express.static(path.join(publicPath, 'favicon.ico')));
   app.use('/fonts', setStaticCorsHeaders, express.static(path.join(publicPath, 'fonts')));
 
   return {
     assetsPath,
     buildPath,
+    mediaPublicPath,
     publicPath,
     widgetsPath
   };

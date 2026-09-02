@@ -10,6 +10,9 @@ Handles file and folder operations under the media library. It verifies permissi
 - List and create folders.
 - Upload files through stream-based middleware.
 - Move files or entire folders into the public directory via `makeFilePublic` (requires `builder.publish` permission). The event accepts an explicit `userId` and falls back to the JWT payload's `user.id`, `userId`, `id`, or `sub` fields.
+- Serve files already below `library/public` from the canonical `/media/...`
+  path. The HTTP boundary applies the same source/secret filename filter and a
+  realpath guard before Express serves a file.
 - For security, published builder assets must live under a `builder/` path; other locations are rejected. Paths are normalized to use forward slashes so this check works across operating systems.
 - Local file events require a `mediaManager`/`core` payload and an authenticated
   principal with an explicit media, content editing or builder publishing
@@ -95,3 +98,6 @@ Public URLs reject executable or ambiguous schemes such as `javascript:`,
 `data:`, `vbscript:` and protocol-relative URLs. Non-manager list calls are
 forced to public active assets, regardless of caller-supplied status or
 visibility filters.
+
+Maintenance mode leaves `/media/...` available so the selected maintenance
+page can continue to load its published styles, fonts and images.

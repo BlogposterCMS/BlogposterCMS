@@ -1999,6 +1999,7 @@ describe('UI architecture boundaries', () => {
       '/assets',
       '/api',
       '/build',
+      '/media',
       '/ui',
       '/plainspace',
       '/apps',

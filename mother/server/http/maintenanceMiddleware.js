@@ -5,6 +5,7 @@ const MAINTENANCE_ALLOWED_PREFIXES = [
   '/assets',
   '/api',
   '/build',
+  '/media',
   '/ui',
   '/login',
   '/favicon.ico',

@@ -6,6 +6,10 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Fixed the canonical `/media/...` runtime path so public page HTML can load
+  published Media Manager styles, fonts and images, including while maintenance
+  mode is active. Static delivery remains contained to `library/public` and
+  keeps the existing source/secret filename guard.
 - Fixed widget selection in Auto and Grid Section/Container modes. Placement
   locks still prevent free dragging and resizing, but clicking an active-layer
   widget now opens the same inspector and floating action bar as Free mode.

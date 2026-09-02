@@ -8,8 +8,11 @@ This guide describes how to set up BlogposterCMS for local development. Producti
    cd BlogposterCMS
    ```
 2. **Install dependencies**
+   Use Node.js 24 LTS (the same major used by CI and the container) and install
+   the reviewed lockfile. Native SQLite and bcrypt must load successfully on
+   the target architecture; do not bypass failed install scripts.
    ```bash
-   npm install
+   npm ci
    ```
 3. **Bundle front-end assets**
    ```bash
@@ -32,3 +35,6 @@ This guide describes how to set up BlogposterCMS for local development. Producti
    Navigate to `http://localhost:3000/` in your browser. The admin area lives under `/admin`.
 
 The project ships with several core modules enabled by default. Optional modules can be added under `modules/` and will be loaded by the Module Loader when present.
+
+For the independent server image and its persistence/reverse-proxy requirements,
+see [Container deployment](container-deployment.md).

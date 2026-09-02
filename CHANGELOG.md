@@ -6,6 +6,16 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Remediated dependency-audit findings across runtime and build dependencies,
+  including forged ZIP-size allocation and vulnerable native-install TAR chains.
+  Retained Express 4 and the existing authentication/database authorities;
+  added ZIP, password-hash and HTTP parser compatibility regressions. CI and
+  release validation now use Node.js 24 with the unchanged full-tree audit gate.
+- Added an independent non-root server Dockerfile and CI image-build/native
+  loading check, with a closed build context and persistent data/media volumes.
+  Site content and secrets stay outside images; registry publication, restore
+  proof, public routing and production deployment remain explicit operator gates.
+
 - Fixed public routing for nested page slugs so paths such as
   `/guides/getting-started/install` resolve through the existing sanitized
   page lookup while unknown nested paths still fall through to not found.

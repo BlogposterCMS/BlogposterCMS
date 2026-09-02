@@ -346,7 +346,7 @@ second product or bypassing the event-driven architecture.
   contracts before carrier, payment, product or order modules.
 - Tests: To be defined with the first job manager or domain module.
 - Docs: Workboard and future module references.
-- Risks: Business modules built too early may duplicate YiTaiCOS behavior
+- Risks: Business modules built too early may duplicate downstream application behavior
   without the safety boundaries that make ERP flows maintainable.
 
 #### Public capability map

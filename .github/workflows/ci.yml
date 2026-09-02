@@ -16,9 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: 'npm'
           cache-dependency-path: package-lock.json
       - name: Install dependencies
@@ -38,9 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: 'npm'
           cache-dependency-path: package-lock.json
       - name: Install dependencies
@@ -53,3 +53,17 @@ jobs:
           languages: javascript
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
+
+  container:
+    needs: lint_and_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build independent server image
+        run: docker build --pull --tag blogposter-cms:ci .
+      - name: Verify non-root native runtime
+        run: >-
+          docker run --rm --entrypoint node blogposter-cms:ci -e
+          "if(process.getuid()===0)throw new Error('CONTAINER_ROOT_USER');
+          require('sqlite3').verbose();require('bcrypt');require('express');
+          console.log('CONTAINER_NATIVE_RUNTIME_OK')"

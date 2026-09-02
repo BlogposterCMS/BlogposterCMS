@@ -1,5 +1,23 @@
 # Security Notes
 
+## Dependency security baseline
+
+The supported CI/container runtime is Node.js 24. Keep the full-tree
+`npm audit --audit-level=high` gate; development/build dependencies are not
+excluded. The September 2026 remediation refreshes the lockfile and upgrades
+ZIP/native installer dependencies without replacing Express 4 routes, SQLite
+authority, or the existing bcryptjs login implementation. Scoped `qs` 6.16.0
+overrides for Express/body-parser bridge their older minor-range constraints;
+remove them only when the upstream ranges admit a fixed parser and tests pass.
+Regression coverage includes forged ZIP size allocation, ordinary ZIP reads,
+native hash interoperability, HTTP query/form parsing and SQLite content saves.
+
+The upstream `sqlite3` repository is archived. Its patched 6.0.1 dependency is
+a bounded remediation, not a long-term support guarantee. Track maintenance
+separately; replacing the database adapter requires its own compatibility,
+backup/restore and cutover decision. Container isolation and deployment gates
+are documented in [Container deployment](container-deployment.md).
+
 Agent access codes are one-time, short-lived and exchanged for least-privilege
 `agent` tokens. The localhost dev-session helper is disabled in production and
 can be disabled locally with `DEV_AGENT_LOGIN=false`.

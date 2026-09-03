@@ -21,6 +21,24 @@ loading as a non-root user. It does **not** publish a registry tag or deploy it.
 - No build arguments accept secrets. Inject production configuration at runtime
   through the deployment system, outside Git and the build context.
 
+### Reviewed base-image mirrors
+
+Both stages use the single global `NODE_IMAGE` build argument. Its default is
+the official Node 24 Trixie Slim image pinned by OCI index digest. An approved
+builder may set `NODE_IMAGE` to an accessible mirror of that exact image when
+Docker Hub is unreachable. Verify the official and mirror index digests and
+the target platform manifest before using the override; retain the digest in
+the supplied reference. Never substitute Bookworm, Alpine, an unverified image,
+or an unpinned tag to work around a network failure. Keep site-specific registry
+settings in the deployment system, not this generic source repository.
+
+The reviewed index on 2026-09-03 is
+`sha256:50c3b2f6988dfc307b86e5301d69611af31f4789bdf232863b07d3b02fe55ae0`;
+its Linux AMD64 manifest is
+`sha256:a747ad80c8a161b650d79a6da9c422005b91148b18b8d2c669eb5a0b7c07e600`.
+Refreshing this pin is a separate reviewed update. A manifest check proves
+image identity, not build-network reachability or the final CMS runtime.
+
 ## Required deployment configuration
 
 1. Set `PUBLIC_URL` and `APP_BASE_URL` to the approved HTTPS origin, plus all

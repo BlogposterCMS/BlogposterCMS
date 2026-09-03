@@ -6,6 +6,15 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-09-03
+
+- Made the shared Node 24 Trixie container base configurable through one
+  `NODE_IMAGE` build argument and pinned its official digest. Approved builders
+  can use an identity-verified mirror when Docker Hub is unreachable, without
+  changing native runtime compatibility, CMS behavior, or persistence.
+
+## [0.7.0] - 2026-09-03
+
 - Aligned both container stages with Debian Trixie after the final-image smoke
   check exposed SQLite 6's glibc requirement on older Debian images.
 - Remediated dependency-audit findings across runtime and build dependencies,

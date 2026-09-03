@@ -1,13 +1,16 @@
 # Build only in CI or on an approved builder; production pulls a reviewed image.
 # SQLite 6 Linux prebuilds require glibc >= 2.38; Debian Trixie supplies 2.41.
-FROM node:24-trixie-slim AS build
+# A reviewed mirror may override the registry, while retaining this official digest.
+# Keep one base for both stages so native modules see the same Node/libc runtime.
+ARG NODE_IMAGE=docker.io/library/node:24-trixie-slim@sha256:50c3b2f6988dfc307b86e5301d69611af31f4789bdf232863b07d3b02fe55ae0
+FROM ${NODE_IMAGE} AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci && npm audit --audit-level=high
 COPY . .
 RUN npm run build && npm prune --omit=dev
 
-FROM node:24-trixie-slim AS runtime
+FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production APP_ENV=production PORT=3000 \
     CONTENT_DB_TYPE=sqlite SQLITE_STORAGE=/app/data \
     DEV_AUTOLOGIN=false DEV_AGENT_LOGIN=false BLOGPOSTER_DEV_RELOAD=false \

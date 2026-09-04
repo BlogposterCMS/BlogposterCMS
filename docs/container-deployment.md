@@ -11,8 +11,13 @@ loading as a non-root user. It does **not** publish a registry tag or deploy it.
   registry and record its immutable digest. Production only pulls that digest.
 - The closed `.dockerignore` excludes databases, uploads, environment files,
   key material, local overrides, and mutable installation/registry state.
-- A multi-stage build audits the full dependency tree and bundles browser assets;
-  the final image contains production dependencies, not the build toolchain.
+- GitHub CI runs the authoritative full-tree dependency audit before an image is
+  eligible for deployment. The registry builder installs the reviewed lockfile
+  with `npm ci --no-audit`, so an unavailable npm advisory endpoint cannot make
+  an otherwise reproducible regional image build fail. Operators must verify the
+  matching CI result before deploying the tag. The multi-stage build bundles
+  browser assets; the final image contains production dependencies, not the
+  build toolchain.
 - SQLite and bcrypt are installed for the Linux image, never copied from the
   host's `node_modules`. Node.js 24 is required by the supported image.
   Both stages use Debian Trixie: the SQLite 6 Linux prebuild needs glibc 2.38

@@ -6,7 +6,10 @@ ARG NODE_IMAGE=docker.io/library/node:24-trixie-slim@sha256:50c3b2f6988dfc307b86
 FROM ${NODE_IMAGE} AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci && npm audit --audit-level=high
+# GitHub CI is the authoritative full-tree audit gate. Keep the registry build
+# deterministic and independent of npm's advisory endpoint, which is not needed
+# to install the reviewed lockfile and can be unreachable from regional builders.
+RUN npm ci --no-audit
 COPY . .
 RUN npm run build && npm prune --omit=dev
 

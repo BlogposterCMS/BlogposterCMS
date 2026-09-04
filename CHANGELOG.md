@@ -6,6 +6,13 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-09-04
+
+- Made regional container builds reproducible when npm's advisory endpoint is
+  unavailable. GitHub CI remains the authoritative full-tree vulnerability
+  gate; the registry build installs the exact reviewed lockfile without a
+  duplicate network audit, and deployment still requires the matching CI result.
+
 ## [0.7.2] - 2026-09-04
 
 - Added the provider-neutral `staticSiteAssets` importer for idempotently

@@ -8,7 +8,8 @@ test('container keeps runtime, native modules and non-root persistent state toge
   const dockerfile = read('Dockerfile');
   expect(dockerfile.match(/^FROM \$\{NODE_IMAGE\} AS (build|runtime)$/gm)).toHaveLength(2);
   expect(dockerfile).not.toContain('FROM node:24-bookworm');
-  expect(dockerfile).toContain('npm ci && npm audit --audit-level=high');
+  expect(dockerfile).toContain('npm ci --no-audit');
+  expect(dockerfile).not.toContain('RUN npm audit');
   expect(dockerfile).toContain('npm run build && npm prune --omit=dev');
   expect(dockerfile).toContain('USER node');
   expect(dockerfile).toContain('VOLUME ["/app/data", "/app/library"]');
@@ -18,6 +19,12 @@ test('container keeps runtime, native modules and non-root persistent state toge
   }
   expect(dockerfile).toContain('DEV_AUTOLOGIN=false DEV_AGENT_LOGIN=false');
   expect(dockerfile).toContain('CMD ["node", "app.js"]');
+});
+
+test('GitHub workflows retain the authoritative full-tree vulnerability gate', () => {
+  for (const workflow of ['.github/workflows/ci.yml', '.github/workflows/release.yml']) {
+    expect(read(workflow)).toContain('npm audit --audit-level=high');
+  }
 });
 
 test('one digest-pinned Trixie base supports a reviewed build-time registry override', () => {

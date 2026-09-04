@@ -3,9 +3,12 @@
 ## Dependency security baseline
 
 The supported CI/container runtime is Node.js 24. Keep the full-tree
-`npm audit --audit-level=high` gate; development/build dependencies are not
-excluded. The September 2026 remediation refreshes the lockfile and upgrades
-ZIP/native installer dependencies without replacing Express 4 routes, SQLite
+`npm audit --audit-level=high` gate in GitHub CI; development/build dependencies
+are not excluded. Registry image builds install the same reviewed lockfile with
+`npm ci --no-audit` and are deployable only after that CI gate passes. This avoids
+making a regional builder depend on npm's advisory endpoint without weakening
+the release decision. The September 2026 remediation refreshes the lockfile and
+upgrades ZIP/native installer dependencies without replacing Express 4 routes, SQLite
 authority, or the existing bcryptjs login implementation. Scoped `qs` 6.16.0
 overrides for Express/body-parser bridge their older minor-range constraints;
 remove them only when the upstream ranges admit a fixed parser and tests pass.

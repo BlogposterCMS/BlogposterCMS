@@ -6,6 +6,16 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-04
+
+- Fixed production startup on isolated networks: release images now package
+  TUF-verified public GitHub/Sigstore trust roots and use the verifier's offline
+  mode without weakening repository, workflow, tag or source-commit checks.
+  Missing packaged roots fail closed with `RUNTIME_INTEGRITY_TRUST_ROOT_MISSING`.
+- Added a credential-free, network-disabled final-image integrity/native check
+  to release CI. Branch CI checks the non-deployable build stage; only signed
+  release inputs can produce the final production image.
+
 ## [0.9.0] - 2026-09-04
 
 ### Update safety

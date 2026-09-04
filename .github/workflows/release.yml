@@ -58,6 +58,8 @@ jobs:
           subject-path: runtime-integrity-manifest.json
       - name: Stage runtime integrity attestation bundle
         run: cp "${{ steps.runtime_integrity_attestation.outputs.bundle-path }}" runtime-integrity-manifest.bundle.json
+      - name: Export TUF-verified public trust roots for offline startup
+        run: gh attestation trusted-root > runtime-integrity-trusted-root.jsonl
       - name: Zip Build Artifacts
         run: zip -r blogposter_cms_build.zip public/build/
 
@@ -69,6 +71,7 @@ jobs:
             blogposter_cms_build.zip
             runtime-integrity-manifest.json
             runtime-integrity-manifest.bundle.json
+            runtime-integrity-trusted-root.jsonl
 
   publish_image:
     needs: validate
@@ -115,6 +118,17 @@ jobs:
           subject-name: ${{ steps.image.outputs.repository }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+      - name: Verify signed final runtime with no network or credentials
+        env:
+          RELEASE_IMAGE: ${{ steps.image.outputs.repository }}@${{ steps.build.outputs.digest }}
+        run: |
+          docker pull "$RELEASE_IMAGE"
+          docker run --rm --network none --entrypoint node "$RELEASE_IMAGE" -e \
+            "if(process.getuid()===0)throw new Error('CONTAINER_ROOT_USER');
+            require('./mother/security/runtimeIntegrity').verifyRuntimeIntegrity({rootDir:'/app'})
+            .then(()=>{require('sqlite3').verbose();require('bcrypt');require('express');
+            console.log('CONTAINER_OFFLINE_INTEGRITY_OK')})
+            .catch(e=>{console.error(e.code||'CONTAINER_INTEGRITY_FAILED');process.exit(1)})"
       - name: Create updater release manifest
         env:
           BLOGPOSTER_IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}

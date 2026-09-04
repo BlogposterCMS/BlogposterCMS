@@ -279,7 +279,7 @@ function auditIntegrity(consoleLike, level, code, message, details = {}) {
   })}`);
 }
 
-function verifyAttestation({ manifestPath, bundlePath, expectedVersion, expectedSourceCommit, ghPath = 'gh', runner = spawnSync }) {
+function verifyAttestation({ manifestPath, bundlePath, trustedRootPath, expectedVersion, expectedSourceCommit, ghPath = 'gh', runner = spawnSync }) {
   if (!/^[a-f0-9]{40}$/.test(expectedSourceCommit || '')) {
     throw createIntegrityError('RUNTIME_INTEGRITY_COMMIT_INVALID', 'Attestation verification requires the full expected source commit.');
   }
@@ -292,10 +292,15 @@ function verifyAttestation({ manifestPath, bundlePath, expectedVersion, expected
     '--source-digest', expectedSourceCommit,
     '--deny-self-hosted-runners'
   ];
+  // A detached bundle alone still makes gh refresh its TUF trust roots online.
+  // Release images ship CI-verified public roots in their read-only image tree.
+  // Source installations without packaged roots retain gh's normal TUF policy.
+  if (trustedRootPath) args.push('--custom-trusted-root', trustedRootPath);
   const result = runner(ghPath, args, {
     encoding: 'utf8',
     env: { ...process.env, GH_PROMPT_DISABLED: '1' },
-    windowsHide: true
+    windowsHide: true,
+    timeout: 30000
   });
   if (result?.status !== 0) {
     throw createIntegrityError(
@@ -403,6 +408,7 @@ async function verifyRuntimeIntegrity(options = {}) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blogposter-integrity-'));
   const packagedManifestPath = path.join(rootDir, '.integrity', 'runtime-integrity-manifest.json');
   const packagedBundlePath = path.join(rootDir, '.integrity', 'runtime-integrity-manifest.bundle.json');
+  const packagedTrustedRootPath = path.join(rootDir, '.integrity', 'runtime-integrity-trusted-root.jsonl');
   const localManifestPath = options.manifestPath || env.BLOGPOSTER_RUNTIME_INTEGRITY_MANIFEST_PATH ||
     (fs.existsSync(packagedManifestPath) ? packagedManifestPath : null);
   const localBundlePath = options.bundlePath || env.BLOGPOSTER_RUNTIME_INTEGRITY_BUNDLE_PATH ||
@@ -413,6 +419,12 @@ async function verifyRuntimeIntegrity(options = {}) {
   const attestationVerifier = options.attestationVerifier || verifyAttestation;
 
   try {
+    // Do not fetch replacement trust anchors or accept a runtime environment
+    // override. Trust material belongs to the externally verified image digest.
+    const usesPackagedManifest = manifestPath === packagedManifestPath;
+    if (usesPackagedManifest && !fs.existsSync(packagedTrustedRootPath)) {
+      throw createIntegrityError('RUNTIME_INTEGRITY_TRUST_ROOT_MISSING', 'The release image is missing its offline verification trust roots.');
+    }
     if (!localManifestPath) {
       await fetchFile(env.BLOGPOSTER_RUNTIME_INTEGRITY_MANIFEST_URL || urls.manifestUrl, manifestPath);
     }
@@ -432,6 +444,7 @@ async function verifyRuntimeIntegrity(options = {}) {
     attestationVerifier({
       manifestPath,
       bundlePath,
+      trustedRootPath: usesPackagedManifest ? packagedTrustedRootPath : undefined,
       expectedVersion: version,
       expectedSourceCommit: identityCandidate?.source?.commit
     });

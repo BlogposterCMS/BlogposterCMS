@@ -12,8 +12,12 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit
 COPY . .
 RUN npm run build \
-    && npm prune --omit=dev \
-    && node tools/verify-runtime-integrity-baseline.js .release-integrity/runtime-integrity-manifest.json \
+    && npm prune --omit=dev
+
+# Branch CI exercises the non-deployable build stage without release signing.
+# Only a tag release with externally signed inputs can produce the final image.
+FROM build AS verified-build
+RUN node tools/verify-runtime-integrity-baseline.js .release-integrity/runtime-integrity-manifest.json \
     && rm -rf /app/.release-integrity /app/tools
 
 # The runtime and host updater deliberately use the same GitHub/Sigstore
@@ -46,10 +50,11 @@ ENV NODE_ENV=production APP_ENV=production PORT=3000 \
 WORKDIR /app
 # Core code and the verifier stay root-owned and read-only to the unprivileged
 # application user. Only explicit data directories become writable below.
-COPY --from=build /app /app
+COPY --from=verified-build /app /app
 COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh
 COPY .release-integrity/runtime-integrity-manifest.json /app/.integrity/runtime-integrity-manifest.json
 COPY .release-integrity/runtime-integrity-manifest.bundle.json /app/.integrity/runtime-integrity-manifest.bundle.json
+COPY .release-integrity/runtime-integrity-trusted-root.jsonl /app/.integrity/runtime-integrity-trusted-root.jsonl
 # Existing file-backed state follows the same persisted data volume as SQLite.
 # No customer database, secrets, media or install state enters the build context.
 RUN mkdir -p /app/data /app/library /app/logs /app/temp_uploads \

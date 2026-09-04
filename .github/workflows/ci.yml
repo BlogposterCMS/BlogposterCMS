@@ -59,11 +59,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build independent server image
-        run: docker build --pull --tag blogposter-cms:ci .
+      # Unsigned branch builds are diagnostic only; release CI verifies the
+      # signed final image, including its configured non-root user, offline.
+      - name: Build non-deployable native dependency stage
+        run: docker build --pull --target build --tag blogposter-cms:ci .
       - name: Verify non-root native runtime
         run: >-
-          docker run --rm --entrypoint node blogposter-cms:ci -e
+          docker run --rm --network none --user node --entrypoint node blogposter-cms:ci -e
           "if(process.getuid()===0)throw new Error('CONTAINER_ROOT_USER');
           require('sqlite3').verbose();require('bcrypt');require('express');
           console.log('CONTAINER_NATIVE_RUNTIME_OK')"

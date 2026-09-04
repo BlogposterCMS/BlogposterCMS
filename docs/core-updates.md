@@ -20,6 +20,8 @@ a GitHub build-provenance attestation and attaches these assets to the release:
   signed SHA-256 baseline for application code, modules and production
   dependencies;
 - `blogposter-update`: pull-only host updater;
+- `runtime-integrity-trusted-root.jsonl`: public trust roots exported by the
+  release runner after GitHub CLI's normal TUF verification;
 - `blogposter-updater.conf.example`: non-secret updater configuration;
 - `SHA256SUMS`: release-asset transport checksums;
 - `blogposter_cms_build.zip`: browser-build artifact retained for development
@@ -120,7 +122,11 @@ attestation applies to a separately rebuilt image.
 
 Every production image contains the integrity manifest and detached bundle
 created externally for its exact packaged version. The bundled `gh` verifier
-checks the GitHub/Sigstore signature offline against the same fixed repository,
+uses the image-owned `runtime-integrity-trusted-root.jsonl` with
+`--custom-trusted-root`. A detached bundle alone is insufficient: GitHub CLI
+otherwise refreshes its TUF roots over the network. Release CI exercises the
+final non-root image with `--network none` before publishing release assets.
+The verifier checks the GitHub/Sigstore signature offline against the same fixed repository,
 release workflow and source commit used by the host updater before Blogposter
 loads its event bus or any
 module. It then hashes the application code, community modules and production
@@ -138,3 +144,8 @@ There is intentionally no local resign command. A new trusted baseline can be
 created only by the tag-triggered GitHub release workflow. Production also
 rejects `BLOGPOSTER_RUNTIME_INTEGRITY=off`; unavailable or invalid integrity
 artifacts therefore stop startup instead of silently weakening verification.
+Packaged manifests without their trust roots fail with
+`RUNTIME_INTEGRITY_TRUST_ROOT_MISSING`; no runtime configuration can replace
+those image-owned anchors. Source installations without packaged artifacts
+retain GitHub CLI's normal online TUF verification. Refresh anchors through a
+new externally verified release image, not writable runtime state.

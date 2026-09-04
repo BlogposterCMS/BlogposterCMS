@@ -133,6 +133,15 @@ GitHub/Sigstore trust chain as the updater, and cannot be bypassed in
 production. No private signing key or automatic local re-signing path is
 shipped.
 
+Release images also package the public GitHub/Sigstore trust roots exported by
+GitHub CLI after TUF verification on the release runner. Offline verification
+uses these root-owned image files, not a writable cache, runtime URL or secret.
+Their trust is bound to the externally verified image digest; repository,
+workflow, exact tag/commit and hosted-runner constraints still apply. Missing
+packaged anchors stop startup. Release CI verifies the final image without
+network access, so a detached attestation bundle cannot mask an online trust
+bootstrap dependency.
+
 Module overlays are restricted to declared static directories. Backend entry
 files, module manifests, package-manager files, host folders and symlinks cannot
 participate. Deploy Git-managed overlays as a read-only mount at

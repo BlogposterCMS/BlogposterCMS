@@ -157,6 +157,7 @@ test('production startup verifies packaged attestation assets without a network 
     fs.mkdirSync(integrityDir);
     fs.renameSync(signed.manifestPath, path.join(integrityDir, 'runtime-integrity-manifest.json'));
     fs.renameSync(signed.bundlePath, path.join(integrityDir, 'runtime-integrity-manifest.bundle.json'));
+    fs.writeFileSync(path.join(integrityDir, 'runtime-integrity-trusted-root.jsonl'), '{}\n');
     const fetchFile = jest.fn(() => Promise.reject(new Error('network must not be used')));
     const attestationVerifier = jest.fn(() => true);
 
@@ -170,8 +171,30 @@ test('production startup verifies packaged attestation assets without a network 
     expect(fetchFile).not.toHaveBeenCalled();
     expect(attestationVerifier).toHaveBeenCalledWith(expect.objectContaining({
       expectedSourceCommit: 'a'.repeat(40),
-      expectedVersion: '1.2.3'
+      expectedVersion: '1.2.3',
+      trustedRootPath: path.join(integrityDir, 'runtime-integrity-trusted-root.jsonl')
     }));
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test('packaged releases fail closed when their offline trust roots are absent', async () => {
+  const rootDir = createRuntimeFixture();
+  try {
+    const signed = writeSignedFixture(rootDir);
+    const integrityDir = path.join(rootDir, '.integrity');
+    fs.mkdirSync(integrityDir);
+    fs.renameSync(signed.manifestPath, path.join(integrityDir, 'runtime-integrity-manifest.json'));
+    fs.renameSync(signed.bundlePath, path.join(integrityDir, 'runtime-integrity-manifest.bundle.json'));
+    const fetchFile = jest.fn();
+    const attestationVerifier = jest.fn();
+    await expect(verifyRuntimeIntegrity({
+      rootDir, env: { NODE_ENV: 'production' }, fetchFile, attestationVerifier,
+      consoleLike: { info: jest.fn(), error: jest.fn() }
+    })).rejects.toMatchObject({ code: 'RUNTIME_INTEGRITY_TRUST_ROOT_MISSING' });
+    expect(fetchFile).not.toHaveBeenCalled();
+    expect(attestationVerifier).not.toHaveBeenCalled();
   } finally {
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
@@ -278,4 +301,18 @@ test('application startup imports integrity gate before event infrastructure', (
   expect(source.indexOf('await verifyRuntimeIntegrity')).toBeLessThan(
     source.indexOf("require('./mother/emitters/motherEmitter')")
   );
+});
+
+test('offline verifier supplies packaged roots without relaxing signer constraints', () => {
+  const runner = jest.fn(() => ({ status: 0 }));
+  verifyAttestation({
+    manifestPath: '/app/.integrity/manifest.json', bundlePath: '/app/.integrity/bundle.json',
+    trustedRootPath: '/app/.integrity/runtime-integrity-trusted-root.jsonl',
+    expectedVersion: '1.2.3', expectedSourceCommit: 'a'.repeat(40), runner
+  });
+  expect(runner.mock.calls[0][1]).toEqual(expect.arrayContaining([
+    '--custom-trusted-root', '/app/.integrity/runtime-integrity-trusted-root.jsonl',
+    '--repo', 'BlogposterCMS/BlogposterCMS', '--source-ref', 'refs/tags/v1.2.3',
+    '--source-digest', 'a'.repeat(40), '--deny-self-hosted-runners'
+  ]));
 });

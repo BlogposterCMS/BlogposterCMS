@@ -53,3 +53,16 @@ test('build context excludes local secrets and site state by default', () => {
     expect(rules).toContain(rule);
   }
 });
+
+test('release images require packaged trust roots and pass offline verification', () => {
+  const rootAsset = 'runtime-integrity-trusted-root.jsonl';
+  expect(read('Dockerfile')).toContain('FROM build AS verified-build');
+  expect(read('Dockerfile')).toContain('COPY --from=verified-build /app /app');
+  expect(read('Dockerfile')).toContain(`COPY .release-integrity/${rootAsset} /app/.integrity/${rootAsset}`);
+  expect(read('.dockerignore')).toContain(`!.release-integrity/${rootAsset}`);
+  const release = read('.github/workflows/release.yml');
+  expect(release).toContain(`gh attestation trusted-root > ${rootAsset}`);
+  expect(release).toContain('docker run --rm --network none --entrypoint node');
+  expect(release).toContain('CONTAINER_OFFLINE_INTEGRITY_OK');
+  expect(read('.github/workflows/ci.yml')).toContain('--target build');
+});

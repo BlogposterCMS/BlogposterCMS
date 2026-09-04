@@ -26,6 +26,7 @@
 !.release-integrity/
 !.release-integrity/runtime-integrity-manifest.json
 !.release-integrity/runtime-integrity-manifest.bundle.json
+!.release-integrity/runtime-integrity-trusted-root.jsonl
 !tools/
 !tools/verify-runtime-integrity-baseline.js
 

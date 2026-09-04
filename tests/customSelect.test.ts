@@ -105,4 +105,25 @@ describe('global custom select control', () => {
     expect(document.querySelector<HTMLSelectElement>('select[name="dynamic"]')?.dataset.customSelectEnhanced).toBe('true');
     expect(host.querySelector('.custom-select')).not.toBeNull();
   });
+
+  it('enhances dynamic selects and resolves labels inside a ShadowRoot', async () => {
+    const enhanceSelects = await loadEnhancer();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = host.attachShadow({ mode: 'open' });
+
+    enhanceSelects(root);
+    root.innerHTML = `
+      <label for="parent-page">Parent page</label>
+      <select id="parent-page">
+        <option value="none">No parent</option>
+      </select>
+    `;
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const select = root.querySelector<HTMLSelectElement>('select')!;
+    const display = root.querySelector<HTMLButtonElement>('.custom-select .display')!;
+    expect(select.dataset.customSelectEnhanced).toBe('true');
+    expect(display.getAttribute('aria-label')).toBe('Parent page');
+  });
 });

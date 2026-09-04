@@ -1,0 +1,86 @@
+.bp-alert {
+  --bp-alert-tone: var(--studio-text-muted);
+
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--bp-alert-tone) 30%, var(--studio-border));
+  border-radius: var(--studio-field-radius);
+  background: color-mix(in srgb, var(--bp-alert-tone) 7%, var(--studio-surface-solid));
+  color: var(--studio-text);
+}
+
+.bp-alert--info { --bp-alert-tone: var(--color-info); }
+.bp-alert--success { --bp-alert-tone: var(--color-success); }
+.bp-alert--warning { --bp-alert-tone: var(--color-warning); }
+.bp-alert--error { --bp-alert-tone: var(--color-error); }
+
+.bp-alert img {
+  width: 18px;
+  height: 18px;
+}
+
+.bp-alert__content {
+  display: grid;
+  gap: 3px;
+}
+
+.bp-alert__content strong {
+  font-size: 0.9rem;
+}
+
+.bp-alert__content p {
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.bp-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--studio-surface-muted);
+  color: var(--studio-text-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.bp-badge--info { color: var(--color-info); background: color-mix(in srgb, var(--color-info) 10%, transparent); }
+.bp-badge--success { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 10%, transparent); }
+.bp-badge--warning { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 11%, transparent); }
+.bp-badge--error { color: var(--color-error); background: color-mix(in srgb, var(--color-error) 10%, transparent); }
+
+.bp-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 20px;
+  border: 1px dashed var(--studio-border-strong);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-muted);
+  text-align: center;
+}
+
+.bp-empty-state img {
+  width: 28px;
+  height: 28px;
+  opacity: 0.68;
+}
+
+.bp-empty-state strong {
+  color: var(--studio-text);
+}
+
+.bp-empty-state p {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}

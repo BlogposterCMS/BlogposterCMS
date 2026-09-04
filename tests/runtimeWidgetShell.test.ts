@@ -39,7 +39,7 @@ describe('runtimeWidgetShell', () => {
 
     expect(wrapper.shadowRoot).toBe(root);
     expect(styles[0]).toContain("@import url('/assets/css/site.css')");
-    expect(container.className).toBe('widget-container admin-widget');
+    expect(container.className).toBe('widget-container admin-widget app-scope');
     expect(container.style.width).toBe('100%');
     expect(container.style.height).toBe('100%');
     expect(root.querySelector('slot[name="resize-handle"]')).not.toBeNull();
@@ -86,5 +86,19 @@ describe('runtimeWidgetShell', () => {
 
     expect(stopPropagation).not.toHaveBeenCalled();
     expect(stopImmediatePropagation).not.toHaveBeenCalled();
+  });
+
+  it('enhances selects inserted into an admin widget ShadowRoot', async () => {
+    const wrapper = document.createElement('div');
+    document.body.appendChild(wrapper);
+    const { root, container } = createRuntimeWidgetShell(wrapper, 'admin');
+    const select = document.createElement('select');
+    select.innerHTML = '<option value="draft">Draft</option>';
+
+    container.appendChild(select);
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(select.dataset.customSelectEnhanced).toBe('true');
+    expect(root.querySelector('.custom-select')).not.toBeNull();
   });
 });

@@ -23,6 +23,9 @@
   --color-card: #ffffff;
   --color-dark: #111827;
   --color-error: #d93025;
+  --color-success: #16835a;
+  --color-warning: #a15c08;
+  --color-info: #2563eb;
   --gradient-primary: linear-gradient(
     180deg,
     hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12) 0%,
@@ -45,6 +48,10 @@
   --studio-radius-control: 999px;
   --studio-radius-panel: 18px;
   --studio-control-size: 40px;
+  --studio-field-radius: 12px;
+  --studio-field-min-height: 44px;
+  --studio-field-padding-x: 14px;
+  --studio-field-gap: 7px;
   --studio-header-search-open-width: 240px;
   --studio-inline-create-width: 452px;
   --studio-inline-create-gap: 8px;
@@ -84,6 +91,9 @@
     --color-card: #2a2a2a;
     --color-dark: #f0f0f0;
     --color-error: #f28b82;
+    --color-success: #52d6a0;
+    --color-warning: #f5b94c;
+    --color-info: #8bbcff;
     --gradient-primary: linear-gradient(
       180deg,
       hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,
@@ -121,6 +131,9 @@
   --color-card: #2a2a2a;
   --color-dark: #f0f0f0;
   --color-error: #f28b82;
+  --color-success: #52d6a0;
+  --color-warning: #f5b94c;
+  --color-info: #8bbcff;
   --gradient-primary: linear-gradient(
     180deg,
     hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8), 0.20) 0%,

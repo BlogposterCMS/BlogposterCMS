@@ -74,4 +74,18 @@ describe('bpDialog', () => {
 
     await expect(promise).resolves.toBe('Home');
   });
+
+  it('uses consumer-provided confirmation labels', async () => {
+    const promise = bpDialog.confirm('Publish page?', {
+      confirmLabel: 'Publish',
+      cancelLabel: 'Keep draft'
+    });
+    await waitForDialog();
+
+    expect(document.querySelector('[data-action="confirm"]')?.textContent).toBe('Publish');
+    expect(document.querySelector('[data-action="cancel"]')?.textContent).toBe('Keep draft');
+    clickAction('confirm');
+
+    await expect(promise).resolves.toBe(true);
+  });
 });

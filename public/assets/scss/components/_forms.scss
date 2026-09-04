@@ -1,8 +1,144 @@
 .app-scope form:not(.step) {
   display: flex;
   flex-direction: column;
-  gap: 8px; /* optimaler Abstand zwischen Feldern */
+  gap: 16px;
   position: relative;
+}
+
+// Shared admin fields also cover module-owned markup that does not use the
+// floating-label .field wrapper. Pickers and choice controls have dedicated
+// components below and are deliberately excluded from this base rule.
+.app-scope :where(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  textarea
+) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--studio-field-min-height);
+  padding: 10px var(--studio-field-padding-x);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-surface-muted);
+  color: var(--studio-text);
+  box-shadow: none;
+  font: inherit;
+  line-height: 1.4;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-ease-standard),
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.app-scope textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.app-scope :where(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  textarea
+):hover:not(:disabled):not([readonly]) {
+  border-color: var(--studio-border-strong);
+}
+
+.app-scope :where(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  textarea
+):focus {
+  outline: none;
+  border-color: transparent;
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-focus-ring);
+}
+
+.app-scope :where(input, textarea)::placeholder {
+  color: var(--studio-text-muted);
+  opacity: 0.8;
+}
+
+.app-scope :where(input, textarea):disabled,
+.app-scope :where(input, textarea)[readonly] {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.app-scope :where(input, textarea)[aria-invalid="true"] {
+  border-color: color-mix(in srgb, var(--color-error) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 14%, transparent);
+}
+
+.app-scope .form-field {
+  display: grid;
+  gap: var(--studio-field-gap);
+  min-width: 0;
+}
+
+.app-scope .form-field > label,
+.app-scope .form-field__label {
+  color: var(--studio-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.app-scope .form-field__hint,
+.app-scope .form-field__error,
+.app-scope .form-status {
+  min-height: 18px;
+  color: var(--studio-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.app-scope .form-field__error,
+.app-scope .form-status.is-error {
+  color: var(--color-error);
+}
+
+.app-scope .form-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  color: var(--studio-text);
+  font-size: 0.94rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.app-scope .form-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.app-scope .form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .app-scope .field {
@@ -14,7 +150,7 @@
 .app-scope .field textarea {
   width: 100%;
   padding: 14px 18px;
-  border-radius: var(--studio-radius-panel);
+  border-radius: var(--studio-field-radius);
   border: 1px solid var(--studio-border);
   background-color: var(--studio-surface-muted);
   font-size: 15px;
@@ -61,7 +197,11 @@
 }
 
 .app-scope form .button {
-  margin-top: 14px;
+  margin-top: 4px;
+}
+
+.app-scope .form-actions .button {
+  margin-top: 0;
 }
 
 // Dashboard checkbox styling
@@ -75,6 +215,7 @@
   transition: all 0.2s ease;
   appearance: none;
   position: relative;
+  flex: 0 0 16px;
 
   &:checked {
     background: var(--user-color, #007bff);
@@ -94,5 +235,97 @@
 
   &:hover {
     border-color: var(--user-color, #007bff);
+  }
+}
+
+.app-scope input[type="radio"] {
+  appearance: none;
+  position: relative;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 50%;
+  background: var(--studio-surface-solid);
+  cursor: pointer;
+
+  &:checked {
+    border-color: var(--user-color);
+    box-shadow: inset 0 0 0 4px var(--user-color);
+  }
+
+  &:focus-visible {
+    box-shadow: var(--studio-focus-ring);
+  }
+}
+
+.app-scope .form-switch {
+  display: inline-grid;
+  grid-template-columns: 38px minmax(0, auto);
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  color: var(--studio-text);
+  font-size: 0.94rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.app-scope .form-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.app-scope .form-switch__track {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 999px;
+  background: var(--studio-surface-muted);
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.app-scope .form-switch__track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-shadow-control);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.app-scope .form-switch input:checked + .form-switch__track {
+  border-color: var(--user-color);
+  background: var(--user-color);
+}
+
+.app-scope .form-switch input:checked + .form-switch__track::after {
+  transform: translateX(16px);
+}
+
+.app-scope .form-switch input:focus-visible + .form-switch__track {
+  box-shadow: var(--studio-focus-ring);
+}
+
+.app-scope .form-switch input:disabled ~ * {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+@media (max-width: 680px) {
+  .app-scope .form-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

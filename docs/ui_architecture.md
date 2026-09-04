@@ -128,6 +128,20 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   Dashboard alerts, confirmations, prompts, and custom modal content must use
   `ui/shared/dialogs/bpDialog.ts`; feature code should not call native browser
   dialogs directly when it is running inside the dashboard shell.
+  Admin widget ShadowRoots carry the same `app-scope` as the dashboard shell
+  and register `ui/shared/controls/customSelect.ts` against their root. This is
+  the binding layer for the shared Studio UI kit: `.form-field`, `.form-choice`,
+  `.form-actions`, `.form-status`, `.button`, `.icon-button`, and the custom
+  select/color-picker components. Admin widgets must not introduce native
+  single-select pickers or widget-local control styling.
+  The authenticated `/admin/settings/ui-kit` surface is the executable catalog
+  for this contract. It renders the actual shared field, tab, dialog, popover,
+  toast and loading modules rather than look-alike examples. Its page definition
+  stays in the core admin seed configuration, while the gallery renderer lives
+  beside the other Settings surfaces and carries no separate persistence or
+  backend authority. Developers should add new reusable control states to the
+  shared module and gallery together, then cover both behavior and the compiled
+  Studio CSS with focused tests.
 - `ui/runtime/entries/*`: public and admin page rendering entrypoints.
 - `ui/runtime/publicEntry.ts`, `ui/runtime/entries/publicEntry.ts`, and
   `ui/runtime/envelope/*`: TypeScript-authored public runtime boot, page

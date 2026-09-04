@@ -194,4 +194,14 @@ describe('PlainSpace admin page seeding', () => {
     expect(updateCenterPage.config.layout.sidebar).toBe('settings-sidebar');
     expect(updateCenterPage.config.icon).toBe('/assets/icons/refresh-cw.svg');
   });
+
+  it('seeds the developer UI Kit inside the Settings workspace', () => {
+    const uiKitPage = ADMIN_PAGES.find(page => page.slug === 'ui-kit' && page.parentSlug === 'settings');
+
+    expect(uiKitPage).toBeTruthy();
+    expect(uiKitPage.title).toBe('UI Kit');
+    expect(uiKitPage.config.layout.sidebar).toBe('settings-sidebar');
+    expect(uiKitPage.config.icon).toBe('/assets/icons/component.svg');
+    expect(uiKitPage.config.widgets).toEqual([]);
+  });
 });

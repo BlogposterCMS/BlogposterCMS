@@ -6,6 +6,18 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Unified admin widget controls with the existing Studio UI kit: ShadowRoot
+  widgets now receive the scoped form/button rules, dynamic single-selects use
+  the shared non-native dropdown, Settings uses structured fields and action
+  groups, and Page Management uses responsive table rows plus accessible
+  floating icon actions. The bundled Lucide SVG assets remain the single icon
+  source.
+- Added the authenticated Settings > UI Kit component gallery and completed
+  the shared admin primitives for labelled fields, switches, accessible tabs,
+  popovers, transient toasts, loaders and progress. The live gallery exercises
+  dialogs, prompts, custom dropdowns, the color picker, feedback states, data
+  display and bundled Lucide icons as executable developer documentation.
+
 ## [0.8.0] - 2026-09-04
 
 - Added a pull-only CMS core updater and release contract that publishes the

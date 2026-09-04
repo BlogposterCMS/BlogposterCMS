@@ -258,6 +258,22 @@ module.exports.ADMIN_PAGES = [
     }
   },
   {
+    title: 'UI Kit',
+    slug: 'ui-kit',
+    parentSlug: 'settings',
+    lane: 'admin',
+    weight: 25,
+    config: {
+      layout: {
+        header: 'top-header',
+        sidebar: 'settings-sidebar',
+        inheritsLayout: true
+      },
+      icon: '/assets/icons/component.svg',
+      widgets: []
+    }
+  },
+  {
     title: 'SEO',
     slug: 'seo',
     parentSlug: 'settings',

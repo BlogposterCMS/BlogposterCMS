@@ -2,7 +2,7 @@ const enhancedSelects = new WeakMap();
 const activeSelects = new Set();
 let instanceId = 0;
 let documentBindingsReady = false;
-let documentObserver = null;
+const rootObservers = new WeakMap();
 function nextId(prefix) {
     instanceId += 1;
     return `${prefix}-${instanceId}`;
@@ -43,7 +43,12 @@ function getButtonLabel(select) {
         const escapedId = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
             ? CSS.escape(select.id)
             : select.id.replace(/["\\]/g, '\\$&');
-        const label = document.querySelector(`label[for="${escapedId}"]`);
+        // Widget controls can live in a ShadowRoot. Resolve the label inside the
+        // select's own tree so the shared control keeps its accessible name there.
+        const root = select.getRootNode();
+        const label = root instanceof Document || root instanceof ShadowRoot
+            ? root.querySelector(`label[for="${escapedId}"]`)
+            : document.querySelector(`label[for="${escapedId}"]`);
         if (label?.textContent)
             return label.textContent.trim();
     }
@@ -105,8 +110,10 @@ function focusOption(state, direction) {
     const options = getFocusableOptions(state);
     if (!options.length)
         return;
-    const current = document.activeElement instanceof HTMLButtonElement
-        ? options.indexOf(document.activeElement)
+    const root = state.wrapper.getRootNode();
+    const activeElement = root instanceof ShadowRoot ? root.activeElement : document.activeElement;
+    const current = activeElement instanceof HTMLButtonElement
+        ? options.indexOf(activeElement)
         : -1;
     const next = current < 0
         ? (direction > 0 ? 0 : options.length - 1)
@@ -282,14 +289,26 @@ function bindDocumentBehavior() {
         return;
     documentBindingsReady = true;
     document.addEventListener('click', event => {
-        const target = event.target;
-        if (target instanceof Element && target.closest('.custom-select'))
+        // Clicks crossing a ShadowRoot are retargeted to the host. The composed
+        // path is the reliable way to detect interaction inside a custom select.
+        const clickedInsideSelect = event.composedPath().some(node => (node instanceof Element && node.closest('.custom-select') !== null));
+        if (clickedInsideSelect)
             return;
         closeAll();
     });
-    if (typeof MutationObserver === 'undefined' || !document.body)
+}
+function bindRootObserver(root) {
+    if (typeof MutationObserver === 'undefined')
         return;
-    documentObserver = new MutationObserver(records => {
+    const observationRoot = root instanceof HTMLSelectElement
+        ? root.getRootNode()
+        : root;
+    const target = observationRoot instanceof Document
+        ? observationRoot.body
+        : observationRoot;
+    if (!(target instanceof Node) || rootObservers.has(target))
+        return;
+    const observer = new MutationObserver(records => {
         records.forEach(record => {
             record.removedNodes.forEach(cleanupRemovedSelects);
             record.addedNodes.forEach(node => {
@@ -303,12 +322,14 @@ function bindDocumentBehavior() {
             });
         });
     });
-    documentObserver.observe(document.body, { childList: true, subtree: true });
+    observer.observe(target, { childList: true, subtree: true });
+    rootObservers.set(target, observer);
 }
 export default function enhanceSelects(root = document) {
     const scope = root instanceof HTMLSelectElement ? [root] : Array.from(root.querySelectorAll('select'));
     scope.forEach(enhanceSelect);
     bindDocumentBehavior();
+    bindRootObserver(root);
 }
 function startCustomSelects() {
     enhanceSelects(document);

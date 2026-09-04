@@ -1,0 +1,118 @@
+.bp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.bp-loader {
+  color: var(--studio-text-muted);
+  font-size: 0.88rem;
+}
+
+.bp-loader--inline,
+.bp-loader--spinner,
+.bp-loader--overlay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.bp-loader--overlay {
+  width: 100%;
+  min-height: 132px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-muted);
+}
+
+.bp-loader__spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 2px solid color-mix(in srgb, var(--user-color) 22%, var(--studio-border));
+  border-top-color: var(--user-color);
+  border-radius: 50%;
+  animation: bp-loader-spin 700ms linear infinite;
+}
+
+.bp-loader--skeleton {
+  position: relative;
+  display: grid;
+  gap: 11px;
+  width: 100%;
+  min-height: 132px;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-muted);
+}
+
+.bp-loader__skeleton-line {
+  display: block;
+  width: var(--bp-skeleton-width, 100%);
+  height: 13px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--studio-border) 20%,
+    color-mix(in srgb, var(--studio-border-strong) 72%, transparent) 45%,
+    var(--studio-border) 70%
+  );
+  background-size: 220% 100%;
+  animation: bp-loader-shimmer 1.35s ease-in-out infinite;
+  animation-delay: var(--bp-skeleton-delay, 0ms);
+}
+
+.bp-progress {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.bp-progress__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--studio-text-muted);
+  font-size: 0.84rem;
+}
+
+.bp-progress__track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--studio-border);
+}
+
+.bp-progress__bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--user-color);
+  transition: width var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+@keyframes bp-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bp-loader-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -20% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-loader__spinner,
+  .bp-loader__skeleton-line {
+    animation: none;
+  }
+}

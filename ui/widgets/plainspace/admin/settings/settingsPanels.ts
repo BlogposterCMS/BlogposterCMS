@@ -26,10 +26,18 @@ import type {
   ModuleAccessRequest,
   ModuleUpdateInspection
 } from '../modulesListData.js';
+import { renderUiKitGallery } from './uiKitGallery.js';
+import {
+  createFormActions,
+  createFormChoice as createChoice,
+  createFormField
+} from '/ui/shared/forms/formField.js';
+import { createTabSystem } from '/ui/shared/navigation/tabs.js';
 
 type SurfaceKey =
   | 'general'
   | 'design'
+  | 'ui-kit'
   | 'seo'
   | 'security'
   | 'modules'
@@ -98,7 +106,9 @@ function createShell(title: string, subtitle: string) {
   content.className = 'settings-tab-panels';
 
   const status = document.createElement('div');
-  status.className = 'access-settings-status';
+  status.className = 'access-settings-status form-status';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
 
   root.appendChild(header);
   root.appendChild(tabs);
@@ -106,44 +116,6 @@ function createShell(title: string, subtitle: string) {
   root.appendChild(status);
 
   return { root, tabs, content, status };
-}
-
-function createTabSystem(container: HTMLElement, tabsHost: HTMLElement) {
-  const tabs: Array<{ button: HTMLButtonElement; panel: HTMLElement }> = [];
-
-  const select = (index: number) => {
-    tabs.forEach((tab, i) => {
-      const active = i === index;
-      tab.button.classList.toggle('active', active);
-      tab.button.setAttribute('aria-selected', String(active));
-      tab.panel.hidden = !active;
-    });
-  };
-
-  const addTab = (label: string): HTMLElement => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'button ghost sm';
-    button.textContent = label;
-
-    const panel = document.createElement('section');
-    panel.className = 'settings-section';
-    panel.hidden = true;
-
-    button.addEventListener('click', () => {
-      const idx = tabs.findIndex(tab => tab.button === button);
-      if (idx >= 0) select(idx);
-    });
-
-    tabs.push({ button, panel });
-    tabsHost.appendChild(button);
-    container.appendChild(panel);
-
-    if (tabs.length === 1) select(0);
-    return panel;
-  };
-
-  return { addTab };
 }
 
 function dialogApi(): DialogApi | null {
@@ -283,12 +255,11 @@ async function renderGeneral(ctx: RenderCtx) {
     }
   });
 
-  const titleLabel = document.createElement('label');
-  titleLabel.textContent = 'Site Title';
-  const descLabel = document.createElement('label');
-  descLabel.textContent = 'Site Description';
-
-  identity.append(titleLabel, titleInput, descLabel, descInput, save);
+  identity.append(
+    createFormField('Site Title', titleInput),
+    createFormField('Site Description', descInput),
+    createFormActions(save)
+  );
   ctx.el.replaceChildren(shell.root);
 }
 
@@ -300,8 +271,6 @@ async function renderDesign(ctx: RenderCtx) {
 
   const designSettings = await fetchDesignSettings(ctx.meltdownEmit, ctx.jwt);
 
-  const favLabel = document.createElement('label');
-  favLabel.textContent = 'Favicon URL';
   const favInput = document.createElement('input');
   favInput.type = 'text';
   favInput.value = designSettings.faviconUrl;
@@ -332,8 +301,6 @@ async function renderDesign(ctx: RenderCtx) {
     }
   });
 
-  const fontLabel = document.createElement('label');
-  fontLabel.textContent = 'Google Fonts API Key';
   const fontInput = document.createElement('input');
   fontInput.type = 'text';
   fontInput.value = designSettings.googleFontsApiKey;
@@ -350,8 +317,14 @@ async function renderDesign(ctx: RenderCtx) {
     }
   });
 
-  branding.append(favLabel, favInput, pickBtn, favSave);
-  typography.append(fontLabel, fontInput, fontSave);
+  branding.append(
+    createFormField('Favicon URL', favInput),
+    createFormActions(pickBtn, favSave)
+  );
+  typography.append(
+    createFormField('Google Fonts API Key', fontInput),
+    createFormActions(fontSave)
+  );
   ctx.el.replaceChildren(shell.root);
 }
 
@@ -362,19 +335,13 @@ async function renderSeo(ctx: RenderCtx) {
 
   const seoSettings = await fetchSeoSettings(ctx.meltdownEmit, ctx.jwt);
 
-  const titleLabel = document.createElement('label');
-  titleLabel.textContent = 'SEO Title Template';
   const titleInput = document.createElement('input');
   titleInput.type = 'text';
   titleInput.value = seoSettings.titleTemplate;
 
-  const descLabel = document.createElement('label');
-  descLabel.textContent = 'Default Meta Description';
   const descInput = document.createElement('textarea');
   descInput.value = seoSettings.metaDescription;
 
-  const indexLabel = document.createElement('label');
-  indexLabel.textContent = 'Allow Search Engine Indexing';
   const indexInput = document.createElement('input');
   indexInput.type = 'checkbox';
   indexInput.checked = seoSettings.indexingEnabled;
@@ -396,7 +363,12 @@ async function renderSeo(ctx: RenderCtx) {
     }
   });
 
-  defaults.append(titleLabel, titleInput, descLabel, descInput, indexLabel, indexInput, save);
+  defaults.append(
+    createFormField('SEO Title Template', titleInput),
+    createFormField('Default Meta Description', descInput),
+    createChoice('Allow Search Engine Indexing', indexInput),
+    createFormActions(save)
+  );
   ctx.el.replaceChildren(shell.root);
 }
 
@@ -418,8 +390,6 @@ async function renderSecurity(ctx: RenderCtx) {
     ? 'Initial setup is complete.'
     : 'Initial setup is still pending.';
 
-  const allowLabel = document.createElement('label');
-  allowLabel.textContent = 'Allow public registration';
   const accessSave = document.createElement('button');
   accessSave.type = 'button';
   accessSave.className = 'button primary';
@@ -436,9 +406,6 @@ async function renderSecurity(ctx: RenderCtx) {
   const maintenanceToggle = document.createElement('input');
   maintenanceToggle.type = 'checkbox';
   maintenanceToggle.checked = securitySettings.maintenanceMode;
-  const maintenanceLabel = document.createElement('label');
-  maintenanceLabel.textContent = 'Enable maintenance mode';
-
   const pageSelect = document.createElement('select');
   const none = document.createElement('option');
   none.value = '';
@@ -451,9 +418,6 @@ async function renderSecurity(ctx: RenderCtx) {
     if (String(page.id) === String(securitySettings.maintenancePageId)) option.selected = true;
     pageSelect.appendChild(option);
   });
-  const pageLabel = document.createElement('label');
-  pageLabel.textContent = 'Maintenance page';
-
   const maintenanceSave = document.createElement('button');
   maintenanceSave.type = 'button';
   maintenanceSave.className = 'button primary';
@@ -467,8 +431,16 @@ async function renderSecurity(ctx: RenderCtx) {
     }
   });
 
-  accessTab.append(allowLabel, allowRegistration, installState, accessSave);
-  maintenanceTab.append(maintenanceLabel, maintenanceToggle, pageLabel, pageSelect, maintenanceSave);
+  accessTab.append(
+    createChoice('Allow public registration', allowRegistration),
+    installState,
+    createFormActions(accessSave)
+  );
+  maintenanceTab.append(
+    createChoice('Enable maintenance mode', maintenanceToggle),
+    createFormField('Maintenance page', pageSelect),
+    createFormActions(maintenanceSave)
+  );
   ctx.el.replaceChildren(shell.root);
 }
 
@@ -500,6 +472,10 @@ async function renderModules(ctx: RenderCtx) {
   await renderEmbeddedWidgetPanel(providersPanel, 'providers');
 
   ctx.el.replaceChildren(shell.root);
+}
+
+async function renderUiKit(ctx: RenderCtx) {
+  renderUiKitGallery(ctx.el);
 }
 
 async function renderUpdateRows(
@@ -680,6 +656,7 @@ async function renderImportExport(ctx: RenderCtx) {
 const SURFACE_RENDERERS: Record<SurfaceKey, (ctx: RenderCtx) => Promise<void>> = {
   general: renderGeneral,
   design: renderDesign,
+  'ui-kit': renderUiKit,
   seo: renderSeo,
   security: renderSecurity,
   modules: renderModules,

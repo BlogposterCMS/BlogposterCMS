@@ -1,0 +1,254 @@
+.ui-kit {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  padding-bottom: 24px;
+}
+
+.ui-kit__header {
+  align-items: flex-start;
+}
+
+.ui-kit__header-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.ui-kit__header-copy .page-title,
+.ui-kit__header-copy p {
+  margin: 0;
+}
+
+.ui-kit__jump-nav {
+  position: sticky;
+  z-index: 8;
+  top: calc(66px + var(--maintenance-banner-height, 0px));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-control);
+  background: color-mix(in srgb, var(--studio-surface-solid) 90%, transparent);
+  box-shadow: var(--studio-shadow-soft);
+  backdrop-filter: blur(16px);
+}
+
+.ui-kit__jump-nav .button {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+/* Structural accessibility labels describe regions; they are not tooltips.
+   Suppressing the legacy floating-label pseudo element prevents hidden
+   content from introducing horizontal overflow in the reference page. */
+.ui-kit :where(nav, [role='tablist'], [role='tabpanel'], [role='progressbar'])[aria-label]::after {
+  content: none;
+  display: none;
+}
+
+.ui-kit__sections {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+  min-width: 0;
+}
+
+.ui-kit__section {
+  grid-column: span 6;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  scroll-margin-top: 126px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-shadow-soft);
+}
+
+.ui-kit__section--wide {
+  grid-column: 1 / -1;
+}
+
+.ui-kit__section-header {
+  display: grid;
+  gap: 4px;
+}
+
+.ui-kit__section-header h2,
+.ui-kit__section-header p {
+  margin: 0;
+}
+
+.ui-kit__section-header h2 {
+  color: var(--studio-text);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.ui-kit__section-header p,
+.ui-kit__caption {
+  color: var(--studio-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.ui-kit__caption {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.ui-kit__specimen,
+.ui-kit__stack,
+.ui-kit__form,
+.ui-kit__choices,
+.ui-kit__alerts {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ui-kit__specimen {
+  padding: 16px;
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-canvas-subtle);
+}
+
+.ui-kit__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ui-kit__row .button {
+  min-width: 0;
+  margin: 0;
+}
+
+.ui-kit__field-grid,
+.ui-kit__feedback-grid,
+.ui-kit__loading-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ui-kit__field-grid {
+  align-items: start;
+}
+
+.ui-kit__field-grid .form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.ui-kit__choice-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.ui-kit__color-picker {
+  min-height: 390px;
+  max-height: 520px;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-surface-muted);
+}
+
+.ui-kit__popover-anchor {
+  position: relative;
+}
+
+.ui-kit__loading-grid > * {
+  min-width: 0;
+}
+
+.ui-kit__icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(72px, 1fr));
+  gap: 10px;
+}
+
+.ui-kit__icon-tile {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-surface-muted);
+  color: var(--studio-text-muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.ui-kit__icon-tile img {
+  width: 22px;
+  height: 22px;
+}
+
+.ui-kit__token-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ui-kit__token {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: var(--studio-text-muted);
+  font-size: 0.74rem;
+}
+
+.ui-kit__token-swatch {
+  display: block;
+  min-height: 54px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  background: var(--ui-kit-token-color);
+}
+
+.ui-kit__data-tabs .bp-tab-panel {
+  max-width: none;
+  margin-top: 12px;
+  padding: 14px;
+  box-shadow: none;
+}
+
+@media (max-width: 1080px) {
+  .ui-kit__section {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .ui-kit__jump-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .ui-kit__field-grid,
+  .ui-kit__feedback-grid,
+  .ui-kit__loading-grid,
+  .ui-kit__token-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ui-kit__icon-grid {
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
+  }
+
+  .ui-kit__section {
+    padding: 16px;
+  }
+}

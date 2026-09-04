@@ -48,9 +48,34 @@ The shared external-link enhancer marks cross-origin `http` and `https` anchors 
 
 ## Dropdown System
 
-Use normal single-select `<select>` elements for forms and admin widgets. The shared `customSelect` entry enhances them globally into Studio dropdowns, preserving the native select for form submission while rendering the tokenized control, popover, keyboard handling and dark-mode styling. The enhancer also watches dashboard content that is inserted after page changes, so widget-level selects do not need bespoke setup code.
+Use normal single-select `<select>` elements as the semantic data control in forms and admin widgets. The shared `customSelect` entry enhances them into Studio dropdowns, preserving the hidden select for form submission while rendering the tokenized control, popover, keyboard handling and dark-mode styling. Admin widget ShadowRoots register their own observer, so controls inserted after async widget rendering are enhanced as well and never fall back to the browser-native picker.
 
-Use `data-native-select="true"` or `data-enhance="native"` only when the browser-native control is required. Multi-selects and selects with `size` greater than one stay native automatically.
+Admin surfaces must not use `data-native-select="true"` or `data-enhance="native"`. Multi-selects and listboxes remain a separate control type and require an explicit shared component before they are introduced in the admin lane.
+
+## Admin Form System
+
+Admin fields use the shared `.form-field`, `.form-choice`, `.form-actions` and `.form-status` structures. Text inputs and textareas use `--studio-field-*` tokens; action buttons use the global `.button` variants; compact icon actions use `.icon-button`; color choices use the shared color picker. Module-owned widgets inherit the same rules through the `app-scope` placed inside their ShadowRoot. Do not add widget-local browser-default inputs, selects, pickers or square icon buttons.
+
+## Admin UI Kit Gallery
+
+Open **Settings → UI Kit** at `/admin/settings/ui-kit` to inspect the canonical
+admin controls in their real interactive states. The page covers Studio tokens
+and Lucide assets, button variants, labelled inputs and textareas, validation,
+checkboxes, radios, switches, the custom single-select and color picker,
+dialogs and prompts, popovers, toasts, loaders, progress, alerts, tabs, badges,
+cards, tables and empty states. It is an authenticated admin seed page, so the
+route is created or reconciled at startup without checking the local database
+into Git.
+
+New admin code should reuse the shared modules rather than copying gallery
+markup: `ui/shared/forms/formField.ts` for labelled controls,
+`ui/shared/navigation/tabs.ts` for keyboard-accessible tabs,
+`ui/shared/dialogs/bpDialog.ts` for modals and prompts,
+`ui/shared/overlays/popover.ts` for anchored overlays,
+`ui/shared/feedback/toast.ts` for transient notifications and
+`ui/shared/feedback/loading.ts` for loading and progress states. The gallery is
+the visual regression reference; a component is not part of the admin kit
+until its default, focus, disabled and relevant error/loading states work there.
 
 ## Creating Workspaces and Subpages
 

@@ -10,6 +10,11 @@
 @use 'components/dashboard-dialog';
 @use 'components/custom-select';
 @use 'components/color-picker';
+@use 'components/popover';
+@use 'components/toast';
+@use 'components/loading';
+@use 'components/feedback';
+@use 'components/data-display';
 @use 'cards';
 @use 'responsive';
 @use 'components/sidebar-bubble';
@@ -24,6 +29,7 @@
 @use 'pages/pages';
 @use 'pages/media';
 @use 'pages/settings';
+@use 'pages/ui-kit';
 @use 'pages/access-settings';
 @use 'pages/system-settings';
 @use 'pages/login-strategies';

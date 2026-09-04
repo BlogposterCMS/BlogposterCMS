@@ -18,6 +18,7 @@
 }
 
 .app-scope .field .custom-select,
+.app-scope .form-field .custom-select,
 .app-scope .custom-select[data-full-width="true"] {
   width: 100%;
 }
@@ -31,10 +32,10 @@
   min-height: var(--custom-select-control-h);
   padding: 0 14px 0 18px;
   border: 1px solid var(--studio-border);
-  border-radius: var(--custom-select-radius);
+  border-radius: var(--studio-field-radius, var(--custom-select-radius));
   background: var(--studio-surface-solid);
   color: inherit;
-  box-shadow: var(--studio-shadow-control);
+  box-shadow: none;
   cursor: pointer;
   font: inherit;
   text-align: left;
@@ -49,13 +50,20 @@
 .custom-select.open .display {
   background: var(--studio-surface-solid);
   border-color: var(--studio-border-strong);
-  transform: scale(1.012);
+}
+
+/* The field already has a visible label. The global floating-label helper is
+   intended for icon actions and would otherwise widen every select by the
+   generated aria-label tooltip. */
+.custom-select .display[aria-label]::after {
+  content: none;
+  display: none;
 }
 
 .custom-select .display:focus-visible {
   outline: none;
   border-color: transparent;
-  box-shadow: var(--studio-focus-ring), var(--studio-shadow-control);
+  box-shadow: var(--studio-focus-ring);
 }
 
 .custom-select.is-disabled {
@@ -104,13 +112,13 @@
   max-height: min(280px, 48vh);
   padding: 6px;
   border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-panel);
+  border-radius: var(--studio-field-radius, var(--studio-radius-panel));
   background: var(--studio-surface-solid);
   box-shadow: var(--studio-shadow-lift);
   opacity: 0;
   pointer-events: none;
   overflow: auto;
-  transform: translateY(-4px) scale(0.985);
+  transform: translateY(-4px);
   transform-origin: top center;
   transition:
     opacity var(--motion-duration-fast) var(--motion-ease-standard),
@@ -120,7 +128,7 @@
 .custom-select.open .options {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
 }
 
 .custom-select .option {

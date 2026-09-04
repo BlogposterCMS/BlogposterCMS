@@ -46,6 +46,8 @@ describe('page parent reassignment helpers', () => {
 
     expect(host.querySelector('ul.page-list')).toBeNull();
     expect(host.querySelector('table.page-list-table')).not.toBeNull();
+    expect(host.querySelector('button.add-page-btn')?.getAttribute('aria-label')).toBe('Add page');
+    expect(host.querySelector('button.filter')?.getAttribute('aria-pressed')).toBe('true');
 
     const pageRows = Array.from(host.querySelectorAll<HTMLTableRowElement>('tr.page-list-row'));
     const byTitle = (title: string) => pageRows.find(row => (
@@ -60,6 +62,7 @@ describe('page parent reassignment helpers', () => {
     expect(teamRow.hidden).toBe(true);
 
     const homeToggle = homeRow.querySelector<HTMLButtonElement>('.page-list-toggle');
+    expect(homeToggle?.getAttribute('aria-label')).toBe('Show child pages for Home');
     expect(homeToggle?.getAttribute('aria-expanded')).toBe('false');
     homeToggle?.click();
     expect(homeToggle?.getAttribute('aria-expanded')).toBe('true');

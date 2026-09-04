@@ -44,6 +44,8 @@ describe('dashboard studio styles', () => {
     expect(variables).toContain("--font-body: 'HarmonyOS Sans', 'Noto Sans Variable', system-ui, sans-serif");
     expect(variables).toContain('--studio-canvas');
     expect(variables).toContain('--studio-shadow-control');
+    expect(variables).toContain('--studio-field-radius: 12px');
+    expect(variables).toContain('--studio-field-min-height: 44px');
     expect(variables).toContain('--studio-shadow-control: 0 1px 2px rgba(15, 23, 42, 0.12)');
     expect(variables).toContain('0 4px 12px rgba(15, 23, 42, 0.10)');
     expect(variables).toContain('--studio-inline-create-width: 452px');
@@ -53,6 +55,7 @@ describe('dashboard studio styles', () => {
     expect(variables).toContain(':root[data-theme="dark"]');
     expect(variables).toContain('@media (prefers-reduced-motion: reduce)');
     expect(uiTokens).toContain('shadowControl');
+    expect(uiTokens).toContain("fieldMinHeight: '44px'");
     expect(uiTokens).toContain('0 4px 12px rgba(15, 23, 42, 0.10)');
 
     expect(css).toContain('color-scheme: light dark');
@@ -68,11 +71,12 @@ describe('dashboard studio styles', () => {
     expect(css).toContain('@media (prefers-color-scheme: dark)');
     expect(css).toContain(':root[data-theme=dark]');
     expect(customSelectScss).toContain('.custom-select__native');
-    expect(customSelectScss).toContain('box-shadow: var(--studio-shadow-control)');
+    expect(customSelectScss).toContain('border-radius: var(--studio-field-radius');
+    expect(customSelectScss).toContain('box-shadow: none');
     expect(customSelectScss).toContain("mask: url('/assets/icons/chevron-down.svg')");
     expect(customSelectScss).toContain('@media (prefers-reduced-motion: reduce)');
     expect(css).toContain('.custom-select__native');
-    expect(css).toContain('box-shadow: var(--studio-shadow-control)');
+    expect(css).toContain('border-radius: var(--studio-field-radius');
     expect(css).toContain('mask: url("/assets/icons/chevron-down.svg")');
   });
 
@@ -445,6 +449,26 @@ describe('dashboard studio styles', () => {
     expect(siteCss).toContain('var(--studio-shadow-lift)');
   });
 
+  it('applies the shared admin field and icon-action kit to widget surfaces', () => {
+    const formsScss = readProjectFile('public/assets/scss/components/_forms.scss');
+    const buttonsScss = readProjectFile('public/assets/scss/components/_buttons.scss');
+    const pagesScss = readProjectFile('public/assets/scss/pages/_pages.scss');
+    const settingsScss = readProjectFile('public/assets/scss/pages/_settings.scss');
+    const siteCss = readProjectFile('public/assets/css/site.css');
+
+    expect(formsScss).toContain('.app-scope .form-field');
+    expect(formsScss).toContain('input[type="text"]');
+    expect(formsScss).toContain('var(--studio-field-radius)');
+    expect(buttonsScss).toContain('.page-action-button');
+    expect(buttonsScss).toContain('var(--studio-shadow-control)');
+    expect(pagesScss).toContain('.page-list-table-wrap');
+    expect(pagesScss).toContain('.page-actions.page-list-actions');
+    expect(settingsScss).toContain('.settings-section .form-actions .button');
+    expect(siteCss).toContain('.app-scope .form-field');
+    expect(siteCss).toContain('.page-list-table-wrap');
+    expect(siteCss).toContain('.page-action-button,');
+  });
+
   it('keeps Collections admin styling aligned with Page Management', () => {
     const pagesScss = readProjectFile('public/assets/scss/pages/_pages.scss');
     const siteCss = readProjectFile('public/assets/css/site.css');
@@ -457,6 +481,30 @@ describe('dashboard studio styles', () => {
     expect(siteCss).toContain('background: #fafbfc');
     expect(siteCss).toContain('border-color: var(--user-color)');
     expect(siteCss).toContain('.collections-list-empty-row .empty-state');
+  });
+
+  it('publishes the complete shared UI Kit styles through the admin stylesheet', () => {
+    const siteScss = readProjectFile('public/assets/scss/site.scss');
+    const siteCss = readProjectFile('public/assets/css/site.css');
+    const uiKitScss = readProjectFile('public/assets/scss/pages/_ui-kit.scss');
+    const customSelectScss = readProjectFile('public/assets/scss/components/_custom-select.scss');
+
+    expect(siteScss).toContain("@use 'components/popover'");
+    expect(siteScss).toContain("@use 'components/toast'");
+    expect(siteScss).toContain("@use 'components/loading'");
+    expect(siteScss).toContain("@use 'components/feedback'");
+    expect(siteScss).toContain("@use 'components/data-display'");
+    expect(siteScss).toContain("@use 'pages/ui-kit'");
+    expect(uiKitScss).toContain('.ui-kit__sections');
+    expect(siteCss).toContain('.bp-popover-layer');
+    expect(siteCss).toContain('.bp-toast-region');
+    expect(siteCss).toContain('.bp-loader--skeleton');
+    expect(siteCss).toContain('.bp-alert--success');
+    expect(siteCss).toContain('.bp-table-wrap');
+    expect(siteCss).toContain('.ui-kit__sections');
+    expect(customSelectScss).toContain('.custom-select .display[aria-label]::after');
+    expect(siteCss).toContain('.bp-popover[aria-label]::after');
+    expect(siteCss).toContain('.bp-toast-region[aria-label]::after');
   });
 
   it('keeps the Designer app on the dashboard Studio theme contract', () => {

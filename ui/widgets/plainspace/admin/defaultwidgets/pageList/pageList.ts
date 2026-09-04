@@ -332,11 +332,12 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[]): void {
   title.className = 'page-title';
   title.textContent = 'Pages';
 
-  const addBtn = document.createElement('img');
-  addBtn.src = '/assets/icons/plus.svg';
-  addBtn.alt = 'Add page';
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.innerHTML = icon('plus');
+  addBtn.setAttribute('aria-label', 'Add page');
   addBtn.title = 'Add new page';
-  addBtn.className = 'icon add-page-btn';
+  addBtn.className = 'icon-button lg add-page-btn';
   addBtn.addEventListener('click', async () => {
     clearInlineError();
     const pageTitle = await bpDialog.prompt('New page title:');
@@ -387,16 +388,22 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[]): void {
   tableWrap.appendChild(table);
 
   filters.forEach((filterName, idx) => {
-    const filterEl = document.createElement('span');
+    const filterEl = document.createElement('button');
+    filterEl.type = 'button';
     filterEl.className = 'filter';
     filterEl.textContent = filterName;
     if (idx === 0) filterEl.classList.add('active');
     filterEl.onclick = () => {
-      filterNav.querySelectorAll('.filter').forEach(f => f.classList.remove('active'));
+      filterNav.querySelectorAll('.filter').forEach(f => {
+        f.classList.remove('active');
+        f.setAttribute('aria-pressed', 'false');
+      });
       filterEl.classList.add('active');
+      filterEl.setAttribute('aria-pressed', 'true');
       currentFilter = filterName;
       renderFilteredPages();
     };
+    filterEl.setAttribute('aria-pressed', String(idx === 0));
     filterNav.appendChild(filterEl);
   });
 
@@ -457,6 +464,7 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[]): void {
 
     const parentSelect = document.createElement('select');
     parentSelect.className = 'page-parent-select';
+    parentSelect.setAttribute('aria-label', `Parent page for ${page.title}`);
 
     const emptyOption = document.createElement('option');
     emptyOption.value = '';
@@ -532,7 +540,7 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[]): void {
       <td class="page-list-title-cell">
         <span class="page-list-title-inner" style="padding-left: ${hierarchy.depth * 18}px">
           ${hasChildren
-            ? `<button class="page-list-toggle" type="button" aria-expanded="false" title="Show child pages">${icon('chevron-right', 'expand-page')}</button>`
+            ? `<button class="page-list-toggle" type="button" aria-label="Show child pages for ${escapeHtml(page.title)}" aria-expanded="false" title="Show child pages">${icon('chevron-right', 'expand-page')}</button>`
             : '<span class="page-list-toggle-placeholder"></span>'}
           <span class="page-name" contenteditable="true">${escapeHtml(page.title)}</span>
         </span>
@@ -541,18 +549,18 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[]): void {
         <span class="page-slug-row">
           ${page.is_start
             ? `<span class="page-list-home-indicator home-indicator" title="Current home page">${icon('house')}</span>`
-            : `<button class="page-list-home-button set-home" type="button" title="Set as home page">${icon('house-plus')}</button>`}
+            : `<button class="page-list-home-button set-home" type="button" aria-label="Set ${escapeHtml(page.title)} as home page" title="Set as home page">${icon('house-plus')}</button>`}
           <span class="page-slug" contenteditable="true">/${escapeHtml(page.slug)}</span>
         </span>
       </td>
       <td class="page-list-status-cell">${escapeHtml(page.status || 'draft')}</td>
       <td class="page-list-parent-cell"></td>
       <td class="page-actions page-list-actions">
-        <button class="page-action-button edit-page" type="button" title="Edit page">${icon('pencil')}</button>
-        <button class="page-action-button toggle-draft" type="button" title="${page.status === 'draft' ? 'Mark as published' : 'Mark as draft'}">${icon('drafting-compass')}</button>
-        <button class="page-action-button view-page" type="button" title="Open page">${icon('external-link')}</button>
-        <button class="page-action-button share-page" type="button" title="Share page link">${icon('share-2')}</button>
-        <button class="page-action-button delete-page" type="button" title="Delete page">${icon('trash-2')}</button>
+        <button class="page-action-button edit-page" type="button" aria-label="Edit ${escapeHtml(page.title)}" title="Edit page">${icon('pencil')}</button>
+        <button class="page-action-button toggle-draft" type="button" aria-label="${page.status === 'draft' ? 'Publish' : 'Unpublish'} ${escapeHtml(page.title)}" title="${page.status === 'draft' ? 'Mark as published' : 'Mark as draft'}">${icon('drafting-compass')}</button>
+        <button class="page-action-button view-page" type="button" aria-label="Open ${escapeHtml(page.title)}" title="Open page">${icon('external-link')}</button>
+        <button class="page-action-button share-page" type="button" aria-label="Share ${escapeHtml(page.title)}" title="Share page link">${icon('share-2')}</button>
+        <button class="page-action-button delete-page" type="button" aria-label="Delete ${escapeHtml(page.title)}" title="Delete page">${icon('trash-2')}</button>
       </td>`;
 
     if (hasChildren) {

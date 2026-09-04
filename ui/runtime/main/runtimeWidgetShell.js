@@ -1,9 +1,13 @@
 import { getGlobalCssUrl } from './runtimePageShell.js';
+import enhanceSelects from '../../shared/controls/customSelect.js';
 function createWidgetContainer(root, lane) {
     const container = document.createElement('div');
     container.className = 'widget-container';
     if (lane === 'admin') {
-        container.classList.add('admin-widget');
+        // Admin component rules are intentionally scoped to app-scope. Keeping
+        // that scope inside every widget ShadowRoot makes the same UI kit apply to
+        // dashboard chrome and widget-owned forms without leaking into public pages.
+        container.classList.add('admin-widget', 'app-scope');
     }
     container.style.width = '100%';
     container.style.height = '100%';
@@ -41,6 +45,12 @@ export function createRuntimeWidgetShell(wrapper, lane = 'public') {
     style.textContent = `@import url('${globalCss}');`;
     root.appendChild(style);
     const container = createWidgetContainer(root, lane);
+    if (lane === 'admin') {
+        // The document observer cannot see into ShadowRoots. Register the shared
+        // dropdown enhancer at the root so controls added by async widgets are
+        // upgraded instead of falling back to the browser-native picker.
+        enhanceSelects(root);
+    }
     stopFormControlDrag(wrapper, container);
     attachResizeHandleSlot(root);
     return { root, container };

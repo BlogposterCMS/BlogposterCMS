@@ -8,8 +8,15 @@ export const spacing = {
 export const radius = {
     sm: '4px',
     md: '8px',
+    field: '12px',
     panel: '18px',
     control: '999px'
+};
+export const control = {
+    height: '40px',
+    fieldMinHeight: '44px',
+    fieldPaddingX: '14px',
+    fieldGap: '7px'
 };
 export const studio = {
     canvas: '#ffffff',
@@ -31,6 +38,9 @@ export const motion = {
 export const intent = {
     default: 'default',
     primary: 'primary',
+    info: 'info',
+    success: 'success',
+    warning: 'warning',
     danger: 'danger',
     muted: 'muted'
 };

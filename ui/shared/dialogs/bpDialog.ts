@@ -1,4 +1,4 @@
-export type BpDialogKind = 'alert' | 'confirm' | 'prompt' | 'modal';
+export type BpDialogKind = 'alert' | 'confirm' | 'prompt' | 'modal' | 'warning' | 'danger';
 export type BpDialogActionVariant = 'primary' | 'ghost' | 'danger';
 
 export interface BpDialogAction {
@@ -24,6 +24,9 @@ export interface BpDialogOpenOptions {
   actions?: BpDialogAction[];
   prompt?: BpDialogPromptOptions;
   dismissable?: boolean;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  submitLabel?: string;
 }
 
 export interface BpDialogResult {
@@ -86,20 +89,22 @@ function dialogTitle(kind: BpDialogKind, title?: string): string {
   if (kind === 'confirm') return 'Please confirm';
   if (kind === 'prompt') return 'Input required';
   if (kind === 'alert') return 'Notice';
+  if (kind === 'warning') return 'Warning';
+  if (kind === 'danger') return 'Attention required';
   return 'Dialog';
 }
 
-function defaultActions(kind: BpDialogKind): BpDialogAction[] {
+function defaultActions(kind: BpDialogKind, options: BpDialogOpenOptions): BpDialogAction[] {
   if (kind === 'confirm') {
     return [
-      { id: 'cancel', label: 'Cancel', variant: 'ghost' },
-      { id: 'confirm', label: 'OK', variant: 'primary', autofocus: true }
+      { id: 'cancel', label: options.cancelLabel ?? 'Cancel', variant: 'ghost' },
+      { id: 'confirm', label: options.confirmLabel ?? 'OK', variant: 'primary', autofocus: true }
     ];
   }
   if (kind === 'prompt') {
     return [
-      { id: 'cancel', label: 'Cancel', variant: 'ghost' },
-      { id: 'submit', label: 'OK', variant: 'primary', autofocus: true }
+      { id: 'cancel', label: options.cancelLabel ?? 'Cancel', variant: 'ghost' },
+      { id: 'submit', label: options.submitLabel ?? options.confirmLabel ?? 'OK', variant: 'primary', autofocus: true }
     ];
   }
   return [{ id: 'ok', label: 'OK', variant: 'primary', autofocus: true }];
@@ -159,7 +164,7 @@ function runDomDialog(options: BpDialogOpenOptions): Promise<BpDialogResult> {
     const messageId = nextId('bp-dialog-message');
     const errorId = nextId('bp-dialog-error');
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const actions = options.actions?.length ? options.actions : defaultActions(kind);
+    const actions = options.actions?.length ? options.actions : defaultActions(kind, options);
 
     const root = document.createElement('div');
     root.className = 'bp-dialog-root';

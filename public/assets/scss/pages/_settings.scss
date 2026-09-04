@@ -8,18 +8,81 @@
 
 .settings-content {
   flex: 1;
-  background: #fff;
+  background: var(--studio-surface-solid);
   padding: 24px;
-  border-radius: 14px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.07);
+  border-radius: var(--studio-radius-panel);
+  box-shadow: var(--studio-shadow-soft);
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.settings-surface {
+  min-width: 0;
+  color: var(--studio-text);
 }
 
+.settings-surface-header {
+  gap: 20px;
+}
+
+.settings-surface-header .page-title {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.settings-hint {
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.settings-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+}
+
+.settings-tabs .button {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.settings-tabs .button.active {
+  background: var(--studio-surface-muted);
+  box-shadow: var(--studio-shadow-control);
+}
+
+.settings-tab-panels {
+  min-width: 0;
+}
+
+.settings-section {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  max-width: 760px;
+  padding: 20px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-shadow-soft);
+}
+
+.settings-section[hidden] {
+  display: none;
+}
+
+.settings-section .form-actions .button {
+  min-width: 0;
+}
+
+.settings-surface > .form-status:not(:empty) {
+  padding: 10px 12px;
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-surface-muted);
+}

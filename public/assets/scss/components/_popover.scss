@@ -1,0 +1,93 @@
+.bp-popover-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5300;
+  pointer-events: none;
+}
+
+.bp-popover {
+  position: fixed;
+  display: grid;
+  gap: 10px;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 24px));
+  max-height: min(420px, calc(100vh - 24px));
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-lift);
+  opacity: 0;
+  pointer-events: auto;
+  transform: translateY(-5px) scale(0.98);
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-enter);
+}
+
+/* A popover's accessible name labels the region; it must not become a second
+   visual tooltip through the legacy global aria-label helper. */
+.bp-popover[aria-label]::after {
+  content: none;
+  display: none;
+}
+
+.bp-popover.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.bp-popover.is-leaving {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+
+.bp-popover__message {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--studio-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.bp-popover__menu {
+  display: grid;
+  gap: 4px;
+}
+
+.bp-popover__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--studio-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.bp-popover__item:hover,
+.bp-popover__item:focus-visible {
+  background: var(--studio-surface-muted);
+  box-shadow: var(--studio-focus-ring);
+}
+
+.bp-popover__item img {
+  width: 17px;
+  height: 17px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-popover {
+    transition: none;
+    transform: none;
+  }
+}

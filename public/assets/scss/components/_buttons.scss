@@ -59,8 +59,14 @@
   --fg: var(--studio-text);
   box-shadow: var(--studio-shadow-soft);
 }
+.app-scope .button.secondary{
+  --bg: var(--studio-surface-muted);
+  --fg: var(--studio-text);
+  box-shadow: inset 0 0 0 1px var(--studio-border);
+}
 .app-scope .button.outline{
   --bg: transparent; --fg: var(--brand);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 45%, var(--studio-border));
 }
 .app-scope .button.text{
   --bg: transparent; --fg: var(--brand);
@@ -91,6 +97,83 @@
 .app-scope .button .icon{ display:inline-flex; width:1.1em; height:1.1em; line-height:0; }
 .app-scope .button .icon+span,
 .app-scope .button span+.icon{ margin-left:6px; }
+
+/* Compact icon actions reuse the floating language of the dashboard chrome. */
+.app-scope :where(
+  .icon-button,
+  .page-action-button,
+  .page-list-home-button,
+  .page-list-toggle
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--studio-radius-control);
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-control);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.app-scope :where(
+  .icon-button,
+  .page-action-button,
+  .page-list-home-button,
+  .page-list-toggle
+):hover:not(:disabled) {
+  background: var(--studio-surface-muted);
+  box-shadow: var(--studio-shadow-lift);
+}
+
+.app-scope :where(
+  .icon-button,
+  .page-action-button,
+  .page-list-home-button,
+  .page-list-toggle
+):focus-visible {
+  outline: none;
+  box-shadow: var(--studio-focus-ring), var(--studio-shadow-control);
+}
+
+.app-scope :where(
+  .icon-button,
+  .page-action-button,
+  .page-list-home-button,
+  .page-list-toggle
+):disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.app-scope :where(
+  .icon-button,
+  .page-action-button,
+  .page-list-home-button,
+  .page-list-toggle
+) img {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+.app-scope .icon-button.lg {
+  flex-basis: var(--studio-control-size);
+  width: var(--studio-control-size);
+  height: var(--studio-control-size);
+}
+
+.app-scope .page-action-button.delete-page:hover:not(:disabled) {
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 8%, var(--studio-surface-solid));
+}
 
 /* Loading state */
 .app-scope .button.is-loading{

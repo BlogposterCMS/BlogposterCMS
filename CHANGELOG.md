@@ -6,6 +6,19 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-04
+
+- Added a pull-only CMS core updater and release contract that publishes the
+  complete digest-pinned server image with GitHub provenance, backs up named
+  data/media volumes, verifies readiness and packaged version, and restores the
+  previous image plus data automatically when cutover fails.
+- Activated the existing per-module `data/module-overrides/<moduleName>` tree
+  for declared static frontend paths. Overrides are resolved before managed
+  module files, survive module/core updates, remain read-only in the supplied
+  deployment layout, and cannot replace backend entries or manifests.
+- Added bounded `/health/live` and `/health/ready` responses so deployment tools
+  can distinguish listener availability from a version-verified ready runtime.
+
 ## [0.7.3] - 2026-09-04
 
 - Made regional container builds reproducible when npm's advisory endpoint is

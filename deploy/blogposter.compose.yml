@@ -1,0 +1,47 @@
+# Official pull-only deployment contract. The updater changes only the
+# digest-pinned BLOGPOSTER_IMAGE value in its dedicated release environment.
+name: blogposter
+services:
+  blogposter:
+    image: ${BLOGPOSTER_IMAGE:?Set the reviewed Blogposter image including its sha256 digest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    env_file:
+      - ${BLOGPOSTER_ENV_FILE:?Set the absolute protected CMS runtime environment file}
+    environment:
+      NODE_ENV: production
+      APP_ENV: production
+      PORT: "3000"
+      CONTENT_DB_TYPE: sqlite
+      SQLITE_STORAGE: /app/data
+      DEV_AUTOLOGIN: "false"
+      DEV_AGENT_LOGIN: "false"
+      ALLOW_WEAK_CREDS: "false"
+      BLOGPOSTER_DEV_RELOAD: "false"
+      DEV_FILE_LOGS: "false"
+      BLOGPOSTER_EVENT_TRACE: "false"
+    expose:
+      - "3000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    volumes:
+      - blogposter_data:/app/data
+      - blogposter_library:/app/library
+      # The Git-managed customization repository is mounted read-only into the
+      # one canonical runtime overlay path; the rest of /app/data stays private.
+      - ${BLOGPOSTER_OVERRIDES_DIR:?Set the absolute module-overrides repository path}:/app/data/module-overrides:ro
+    networks:
+      - blogposter_proxy
+
+volumes:
+  blogposter_data:
+  blogposter_library:
+
+networks:
+  blogposter_proxy:
+    external: true
+    name: ${BLOGPOSTER_PROXY_NETWORK:?Set the existing approved proxy network}

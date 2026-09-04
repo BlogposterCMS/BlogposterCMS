@@ -11,12 +11,20 @@ permissions:
   security-events: write
   packages: write
   actions: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify release tag matches package version
+        run: |
+          test "${GITHUB_REF_TYPE}" = "tag" || { echo "CORE_UPDATE_RELEASE_TAG_REQUIRED"; exit 1; }
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          test "${GITHUB_REF_NAME}" = "v${PACKAGE_VERSION}" || { echo "CORE_UPDATE_RELEASE_TAG_MISMATCH"; exit 1; }
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -48,8 +56,67 @@ jobs:
           name: blogposter_cms_build
           path: blogposter_cms_build.zip
 
-  release:
+  publish_image:
     needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      image: ${{ steps.image.outputs.repository }}
+      version: ${{ steps.image.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve immutable release identity
+        id: image
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "repository=ghcr.io/blogpostercms/blogpostercms" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish reviewed server image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.image.outputs.repository }}:${{ steps.image.outputs.version }}
+            ${{ steps.image.outputs.repository }}:${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.image.outputs.version }}
+      - name: Attest server image build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.image.outputs.repository }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: Create updater release manifest
+        env:
+          BLOGPOSTER_IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}
+          BLOGPOSTER_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p release-assets
+          node tools/create-core-update-manifest.js release-assets/blogposter-update.json
+          cp deploy/blogposter-update release-assets/blogposter-update
+          cp deploy/blogposter-updater.conf.example release-assets/blogposter-updater.conf.example
+          cp deploy/blogposter.compose.yml release-assets/blogposter.compose.yml
+          cp deploy/deployment.env.example release-assets/deployment.env.example
+          chmod 0755 release-assets/blogposter-update
+          (cd release-assets && sha256sum blogposter-update.json blogposter-update blogposter-updater.conf.example blogposter.compose.yml deployment.env.example > SHA256SUMS)
+      - name: Upload core updater assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: blogposter_core_release
+          path: release-assets/
+
+  release:
+    needs: [validate, publish_image]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,11 +125,17 @@ jobs:
         with:
           name: blogposter_cms_build
           path: ./release-assets
+      - name: Download core updater assets
+        uses: actions/download-artifact@v4
+        with:
+          name: blogposter_core_release
+          path: ./release-assets
 
       - name: Read CHANGELOG.md
         id: changelog
         run: |
-          RELEASE_NOTES=$(awk '/^## /{flag=1;next}/^$/{if(flag) exit}flag' CHANGELOG.md)
+          RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+          RELEASE_NOTES=$(awk -v heading="## [${RELEASE_VERSION}]" '$0 == heading || index($0, heading " - ") == 1 {flag=1; next} /^## / {if(flag) exit} flag' CHANGELOG.md)
           echo "notes<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -71,4 +144,4 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           body: ${{ env.notes }}
-          artifacts: "./release-assets/blogposter_cms_build.zip"
+          artifacts: "./release-assets/*"

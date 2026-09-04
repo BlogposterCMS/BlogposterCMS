@@ -113,6 +113,21 @@ The updater validates the package with the installer policy, blocks downgrades
 and module-name mismatches, requires admin review for new core access, runs the
 health check before swapping folders and keeps a backup for rollback.
 
+## Core Update Supply Chain
+
+Core releases are complete OCI images, not file patches. The release workflow
+binds the package version, source commit and immutable image digest in
+`blogposter-update.json` and publishes GitHub build provenance. The external
+host updater verifies that identity, backs up named persistent volumes, checks
+the packaged version and automatically restores the previous digest and data
+when readiness fails. It never receives CMS runtime secrets and never writes
+inside the running application image. See [Safe core updates](core-updates.md).
+
+Module overlays are restricted to declared static directories. Backend entry
+files, module manifests, package-manager files, host folders and symlinks cannot
+participate. Deploy Git-managed overlays as a read-only mount at
+`/app/data/module-overrides`; never commit or expose the rest of `/app/data`.
+
 ## Developing Secure Modules
 
 When writing your own modules keep these best practices in mind:

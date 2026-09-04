@@ -1,0 +1,21 @@
+# Non-secret host paths and update trust policy. The CMS runtime secrets remain
+# in BLOGPOSTER_ENV_FILE, referenced by the Compose file, and are never read by
+# this updater.
+BLOGPOSTER_UPDATE_MANIFEST_URL=https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json
+BLOGPOSTER_UPDATE_REPOSITORY=BlogposterCMS/BlogposterCMS
+BLOGPOSTER_COMPOSE_FILE=/opt/blogposter/blogposter.compose.yml
+BLOGPOSTER_COMPOSE_PROJECT_DIR=/opt/blogposter
+BLOGPOSTER_COMPOSE_ENV_FILE=/opt/blogposter/deployment.env
+BLOGPOSTER_RELEASE_ENV_FILE=/opt/blogposter/release.env
+BLOGPOSTER_SERVICE=blogposter
+BLOGPOSTER_BACKUP_DIR=/opt/blogposter/backups
+BLOGPOSTER_STATE_DIR=/opt/blogposter/updater-state
+BLOGPOSTER_DATA_DESTINATIONS=/app/data,/app/library
+BLOGPOSTER_UPDATE_TIMEOUT_SECONDS=180
+BLOGPOSTER_ATTESTATION_MODE=github
+
+# A separately verified registry mirror may be used by setting all three values.
+# The image must include an immutable digest and the trusted prefix must match.
+# BLOGPOSTER_MIRROR_IMAGE=registry.example.com/blogposter/blogpostercms@sha256:...
+# BLOGPOSTER_ATTESTATION_MODE=registry-digest
+# BLOGPOSTER_TRUSTED_REGISTRY_PREFIX=registry.example.com/blogposter/

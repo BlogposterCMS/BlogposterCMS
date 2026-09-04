@@ -17,6 +17,7 @@ const {
   normalizeCommunityStorageTable,
   normalizeMountPath,
   resolveStaticAssetDir,
+  resolveStaticAssetLayers,
   createCommunityStaticAssetOptions,
   stripCommunityListenerPrivatePayload
 } = require('../mother/modules/moduleLoader/moduleHost');
@@ -689,6 +690,56 @@ test('module host capabilities expose read-only system boundaries', () => {
   expect(moduleHost.capabilities.rawSql).toBe(false);
   expect(moduleHost.capabilities.systemWrites).toBe(false);
   expect(moduleHost.capabilities.moduleStorage).toBe(true);
+});
+
+test('static assets prefer a declared user overlay and fall back to managed module files', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-static-overlay-'));
+  const moduleDir = path.join(tempRoot, 'modules', 'demoModule');
+  const frontendDir = path.join(moduleDir, 'frontend');
+  const modificationRoot = path.join(tempRoot, 'data', 'module-overrides');
+  const overrideDir = path.join(modificationRoot, 'demoModule', 'frontend');
+  fs.mkdirSync(frontendDir, { recursive: true });
+  fs.mkdirSync(overrideDir, { recursive: true });
+  fs.writeFileSync(path.join(frontendDir, 'theme.css'), 'managed');
+  fs.writeFileSync(path.join(frontendDir, 'fallback.js'), 'fallback');
+  fs.writeFileSync(path.join(overrideDir, 'theme.css'), 'override');
+
+  const app = express();
+  const moduleHost = createCommunityModuleHost({
+    app,
+    motherEmitter: new EventEmitter(),
+    moduleName: 'demoModule',
+    moduleInfo: { staticFrontend: true },
+    moduleDir,
+    jwt: 'token',
+    nonce: 'nonce-1',
+    modificationRoot
+  });
+  const mount = moduleHost.registerStaticAssets({ dir: 'frontend' });
+  const server = await new Promise(resolve => {
+    const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
+  });
+
+  try {
+    const address = server.address();
+    const origin = `http://127.0.0.1:${address.port}`;
+    const overridden = await fetch(`${origin}/modules/demoModule/theme.css`);
+    const fallback = await fetch(`${origin}/modules/demoModule/fallback.js`);
+
+    expect(mount.overrideActive).toBe(true);
+    expect(await overridden.text()).toBe('override');
+    expect(await fallback.text()).toBe('fallback');
+    expect(resolveStaticAssetLayers({
+      moduleName: 'demoModule',
+      moduleInfo: { overridablePaths: [] },
+      moduleDir,
+      requestedDir: 'frontend',
+      modificationRoot
+    })).toEqual([fs.realpathSync(frontendDir)]);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test('normalizes community static mount paths', () => {

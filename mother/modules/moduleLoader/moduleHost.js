@@ -19,6 +19,7 @@ const {
   describeCoreAccessEvent,
   isCommunityAccessGranted
 } = require('./moduleAccessPolicy');
+const { resolveModuleOverrideDir } = require('./moduleModificationPolicy');
 const {
   _internals: {
     adminApiDefinition
@@ -180,6 +181,29 @@ function resolveStaticAssetDir(moduleDir, requestedDir = 'frontend') {
   const realModuleDir = fs.realpathSync(moduleDir);
   const realCandidate = fs.realpathSync(candidate);
   return assertInside(realModuleDir, realCandidate, 'Static asset directory');
+}
+
+function resolveStaticAssetLayers({ moduleName, moduleInfo = {}, moduleDir, requestedDir = 'frontend', modificationRoot }) {
+  const baseDir = resolveStaticAssetDir(moduleDir, requestedDir);
+  const overrideDir = resolveModuleOverrideDir(
+    moduleName,
+    requestedDir,
+    moduleInfo,
+    modificationRoot ? { modificationRoot } : {}
+  );
+  return overrideDir ? [overrideDir, baseDir] : [baseDir];
+}
+
+function mountStaticAssetLayers(app, mountPath, layers, staticOptions) {
+  const middleware = layers.map((root, index) => {
+    // An overlay miss must reach the reviewed module file. The last layer keeps
+    // the module's requested fallthrough behavior.
+    const options = index < layers.length - 1
+      ? { ...staticOptions, fallthrough: true }
+      : staticOptions;
+    return express.static(root, options);
+  });
+  app.use(mountPath, blockCommunityStaticAssetFiles, ...middleware);
 }
 
 function isBlockedCommunityStaticAssetPath(requestPath = '') {
@@ -871,7 +895,8 @@ function createCommunityModuleHost({
   jwt,
   nonce,
   accessGrants = [],
-  accessConsentManager = null
+  accessConsentManager = null,
+  modificationRoot
 }) {
   assertValidModuleName(moduleName);
   const normalizedModuleDir = path.resolve(moduleDir);
@@ -901,12 +926,20 @@ function createCommunityModuleHost({
         throw new Error('[MODULE HOST] Static assets can only be registered during runtime initialization.');
       }
 
-      const root = resolveStaticAssetDir(normalizedModuleDir, dir);
+      const layers = resolveStaticAssetLayers({
+        moduleName,
+        moduleInfo,
+        moduleDir: normalizedModuleDir,
+        requestedDir: dir,
+        modificationRoot
+      });
+      const root = layers[layers.length - 1];
       const normalizedMountPath = normalizeMountPath(moduleName, mountPath);
       const staticOptions = createCommunityStaticAssetOptions(options);
-      app.use(normalizedMountPath, blockCommunityStaticAssetFiles, express.static(root, staticOptions));
-      staticMounts.push({ mountPath: normalizedMountPath, dir: root });
-      return cloneRuntimeData({ mountPath: normalizedMountPath, dir: root });
+      mountStaticAssetLayers(app, normalizedMountPath, layers, staticOptions);
+      const overrideActive = layers.length > 1;
+      staticMounts.push({ mountPath: normalizedMountPath, dir: root, overrideActive });
+      return cloneRuntimeData({ mountPath: normalizedMountPath, dir: root, overrideActive });
     }),
 
     getStaticMounts: createBoundaryFunction(function getStaticMounts() {
@@ -917,7 +950,16 @@ function createCommunityModuleHost({
   return host;
 }
 
-function createCommunityHealthCheckHost({ moduleName, moduleInfo = {}, moduleDir, jwt, nonce, markEvent, accessGrants = [] }) {
+function createCommunityHealthCheckHost({
+  moduleName,
+  moduleInfo = {},
+  moduleDir,
+  jwt,
+  nonce,
+  markEvent,
+  accessGrants = [],
+  modificationRoot
+}) {
   assertValidModuleName(moduleName);
   const normalizedModuleDir = path.resolve(moduleDir);
   const events = createHealthCheckEventBus({ moduleName, jwt, nonce, markEvent, accessGrants });
@@ -948,10 +990,18 @@ function createCommunityHealthCheckHost({ moduleName, moduleInfo = {}, moduleDir
     storage,
     registerStaticAssets: createBoundaryFunction(function registerStaticAssets({ dir = 'frontend', mountPath = '/' } = {}) {
       markEvent('registerStaticAssets');
-      const root = resolveStaticAssetDir(normalizedModuleDir, dir);
+      const layers = resolveStaticAssetLayers({
+        moduleName,
+        moduleInfo,
+        moduleDir: normalizedModuleDir,
+        requestedDir: dir,
+        modificationRoot
+      });
+      const root = layers[layers.length - 1];
       return cloneRuntimeData({
         mountPath: normalizeMountPath(moduleName, mountPath),
-        dir: root
+        dir: root,
+        overrideActive: layers.length > 1
       });
     }),
     getStaticMounts: createBoundaryFunction(function getStaticMounts() {
@@ -974,6 +1024,8 @@ module.exports = {
   normalizeCommunityStorageTable,
   normalizeMountPath,
   resolveStaticAssetDir,
+  resolveStaticAssetLayers,
+  mountStaticAssetLayers,
   isBlockedCommunityStaticAssetPath,
   blockCommunityStaticAssetFiles,
   createCommunityStaticAssetOptions,

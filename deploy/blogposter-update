@@ -1,0 +1,411 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly UPDATER_VERSION='1.0.0'
+readonly DEFAULT_MANIFEST_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json'
+readonly ALLOWED_CONFIG_KEYS=' BLOGPOSTER_UPDATE_MANIFEST_URL BLOGPOSTER_UPDATE_REPOSITORY BLOGPOSTER_COMPOSE_FILE BLOGPOSTER_COMPOSE_PROJECT_DIR BLOGPOSTER_COMPOSE_ENV_FILE BLOGPOSTER_RELEASE_ENV_FILE BLOGPOSTER_SERVICE BLOGPOSTER_BACKUP_DIR BLOGPOSTER_STATE_DIR BLOGPOSTER_DATA_DESTINATIONS BLOGPOSTER_UPDATE_TIMEOUT_SECONDS BLOGPOSTER_ATTESTATION_MODE BLOGPOSTER_MIRROR_IMAGE BLOGPOSTER_TRUSTED_REGISTRY_PREFIX '
+
+log() {
+  printf '[%s] %s\n' "$1" "$2"
+}
+
+fail() {
+  printf '[%s] %s\n' "$1" "$2" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || fail 'CORE_UPDATE_PREREQUISITE_MISSING' "Required command is unavailable: $1"
+}
+
+trim_value() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+  printf '%s' "$value"
+}
+
+load_config() {
+  local file="$1" line key value
+  [[ -f "$file" ]] || fail 'CORE_UPDATE_CONFIG_MISSING' "Updater config does not exist: $file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="$(trim_value "$line")"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    [[ "$line" == *=* ]] || fail 'CORE_UPDATE_CONFIG_INVALID' 'Updater config accepts only KEY=VALUE lines.'
+    key="${line%%=*}"
+    value="$(trim_value "${line#*=}")"
+    [[ "$key" =~ ^[A-Z0-9_]+$ ]] || fail 'CORE_UPDATE_CONFIG_INVALID' "Invalid config key: $key"
+    [[ "$ALLOWED_CONFIG_KEYS" == *" $key "* ]] || fail 'CORE_UPDATE_CONFIG_KEY_DENIED' "Unsupported config key: $key"
+    printf -v "$key" '%s' "$value"
+    export "$key"
+  done < "$file"
+}
+
+semver_parts() {
+  local version="${1%%-*}"
+  [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+  printf '%s\n' "${version//./ }"
+}
+
+semver_greater() {
+  local left_major left_minor left_patch right_major right_minor right_patch
+  read -r left_major left_minor left_patch <<< "$(semver_parts "$1")" || return 1
+  read -r right_major right_minor right_patch <<< "$(semver_parts "$2")" || return 1
+  (( 10#$left_major > 10#$right_major )) && return 0
+  (( 10#$left_major < 10#$right_major )) && return 1
+  (( 10#$left_minor > 10#$right_minor )) && return 0
+  (( 10#$left_minor < 10#$right_minor )) && return 1
+  (( 10#$left_patch > 10#$right_patch ))
+}
+
+compose_args() {
+  COMPOSE_ARGS=(compose --project-directory "$BLOGPOSTER_COMPOSE_PROJECT_DIR")
+  [[ -n "${BLOGPOSTER_COMPOSE_ENV_FILE:-}" ]] && COMPOSE_ARGS+=(--env-file "$BLOGPOSTER_COMPOSE_ENV_FILE")
+  COMPOSE_ARGS+=(--env-file "$BLOGPOSTER_RELEASE_ENV_FILE" -f "$BLOGPOSTER_COMPOSE_FILE")
+}
+
+compose_run() {
+  docker "${COMPOSE_ARGS[@]}" "$@"
+}
+
+write_release_image() {
+  local image_ref="$1" target="$BLOGPOSTER_RELEASE_ENV_FILE" temp
+  [[ "$image_ref" =~ ^[a-z0-9.-]+/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]] || \
+    fail 'CORE_UPDATE_IMAGE_REFERENCE_INVALID' 'Release image must use a lowercase registry path and immutable sha256 digest.'
+  mkdir -p "$(dirname "$target")"
+  temp="${target}.tmp.$$"
+  umask 077
+  printf 'BLOGPOSTER_IMAGE=%s\n' "$image_ref" > "$temp"
+  mv -f "$temp" "$target"
+}
+
+fetch_manifest() {
+  local output="$1"
+  curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+    --output "$output" "${BLOGPOSTER_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}" || \
+    fail 'CORE_UPDATE_MANIFEST_DOWNLOAD_FAILED' 'Could not download the update manifest over HTTPS.'
+  jq -e '
+    .schemaVersion == 1 and
+    .product == "blogpostercms" and
+    (.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$")) and
+    (.minimumUpdaterVersion | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+    (.source.repository | test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")) and
+    (.source.commit | test("^[a-f0-9]{40}$")) and
+    (.image.reference | test("^[a-z0-9.-]+/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$")) and
+    .database.rollbackCompatible == true
+  ' "$output" >/dev/null || fail 'CORE_UPDATE_MANIFEST_INVALID' 'Update manifest is malformed or not rollback-compatible.'
+}
+
+manifest_value() {
+  jq -er "$1" "$MANIFEST_FILE" || fail 'CORE_UPDATE_MANIFEST_FIELD_MISSING' "Manifest field is missing: $1"
+}
+
+select_image_reference() {
+  local manifest_image
+  manifest_image="$(manifest_value '.image.reference')"
+  if [[ -n "${BLOGPOSTER_MIRROR_IMAGE:-}" ]]; then
+    [[ "${BLOGPOSTER_ATTESTATION_MODE:-}" == 'registry-digest' ]] || \
+      fail 'CORE_UPDATE_MIRROR_TRUST_INVALID' 'A mirror image requires BLOGPOSTER_ATTESTATION_MODE=registry-digest.'
+    [[ -n "${BLOGPOSTER_TRUSTED_REGISTRY_PREFIX:-}" ]] || \
+      fail 'CORE_UPDATE_MIRROR_TRUST_INVALID' 'A mirror image requires BLOGPOSTER_TRUSTED_REGISTRY_PREFIX.'
+    [[ "$BLOGPOSTER_MIRROR_IMAGE" == "$BLOGPOSTER_TRUSTED_REGISTRY_PREFIX"* ]] || \
+      fail 'CORE_UPDATE_MIRROR_REGISTRY_DENIED' 'Mirror image is outside the configured trusted registry prefix.'
+    [[ "$BLOGPOSTER_MIRROR_IMAGE" =~ ^[a-z0-9.-]+/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]] || \
+      fail 'CORE_UPDATE_IMAGE_REFERENCE_INVALID' 'Mirror image must use an immutable sha256 digest.'
+    printf '%s' "$BLOGPOSTER_MIRROR_IMAGE"
+    return
+  fi
+  printf '%s' "$manifest_image"
+}
+
+verify_image_trust() {
+  local image_ref="$1" expected_repo="$2" mode="${BLOGPOSTER_ATTESTATION_MODE:-github}"
+  case "$mode" in
+    github)
+      require_command gh
+      gh attestation verify "oci://$image_ref" --repo "$expected_repo" >/dev/null || \
+        fail 'CORE_UPDATE_ATTESTATION_INVALID' 'GitHub build provenance verification failed.'
+      ;;
+    registry-digest)
+      [[ -n "${BLOGPOSTER_TRUSTED_REGISTRY_PREFIX:-}" && "$image_ref" == "$BLOGPOSTER_TRUSTED_REGISTRY_PREFIX"* ]] || \
+        fail 'CORE_UPDATE_REGISTRY_TRUST_INVALID' 'Digest-only mode requires a matching trusted registry prefix.'
+      ;;
+    *)
+      fail 'CORE_UPDATE_ATTESTATION_MODE_INVALID' "Unsupported attestation mode: $mode"
+      ;;
+  esac
+}
+
+container_id() {
+  compose_run ps -q "$BLOGPOSTER_SERVICE" | head -n 1
+}
+
+wait_healthy() {
+  local id deadline status
+  deadline=$((SECONDS + BLOGPOSTER_UPDATE_TIMEOUT_SECONDS))
+  while (( SECONDS < deadline )); do
+    id="$(container_id)"
+    if [[ -n "$id" ]]; then
+      status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "$id" 2>/dev/null || true)"
+      [[ "$status" == 'healthy' ]] && return 0
+      [[ "$status" == 'unhealthy' ]] && return 1
+      [[ "$status" == 'missing' ]] && fail 'CORE_UPDATE_HEALTHCHECK_MISSING' 'Container image has no healthcheck.'
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+verify_running_version() {
+  local id expected actual
+  expected="$1"
+  id="$(container_id)"
+  [[ -n "$id" ]] || return 1
+  actual="$(docker exec "$id" node -p "require('/app/package.json').version" 2>/dev/null || true)"
+  [[ "$actual" == "$expected" ]]
+}
+
+archive_name_for_destination() {
+  printf '%s' "${1#/}" | tr '/:' '__'
+}
+
+create_volume_backups() {
+  local id old_image backup_dir mounts_json destinations destination mount_type volume_name archive checksum state_json
+  id="$1"
+  old_image="$2"
+  backup_dir="$3"
+  mkdir -p "$backup_dir"
+  mounts_json="$(docker inspect "$id" | jq -ce '.[0].Mounts')"
+  IFS=',' read -r -a destinations <<< "$BLOGPOSTER_DATA_DESTINATIONS"
+  state_json='[]'
+
+  for destination in "${destinations[@]}"; do
+    destination="$(trim_value "$destination")"
+    mount_type="$(jq -er --arg destination "$destination" '.[] | select(.Destination == $destination) | .Type' <<< "$mounts_json")" || \
+      fail 'CORE_UPDATE_VOLUME_MISSING' "Required persistent mount is missing: $destination"
+    [[ "$mount_type" == 'volume' ]] || \
+      fail 'CORE_UPDATE_VOLUME_TYPE_UNSUPPORTED' "Automatic backup supports named volumes only: $destination"
+    volume_name="$(jq -er --arg destination "$destination" '.[] | select(.Destination == $destination) | .Name' <<< "$mounts_json")"
+    [[ "$volume_name" =~ ^[A-Za-z0-9_.-]+$ ]] || fail 'CORE_UPDATE_VOLUME_NAME_INVALID' "Unsafe volume name for $destination"
+    archive="$(archive_name_for_destination "$destination").tar.gz"
+    # The normal CMS stays non-root. This short-lived helper needs root only to
+    # preserve ownership and permissions for the complete named volume archive.
+    docker run --rm --user 0:0 --entrypoint tar \
+      -v "$volume_name:/source:ro" -v "$backup_dir:/backup" "$old_image" \
+      -C /source -czf "/backup/$archive" . >/dev/null || \
+      fail 'CORE_UPDATE_BACKUP_FAILED' "Failed to back up $destination"
+    checksum="$(sha256sum "$backup_dir/$archive" | awk '{print $1}')"
+    state_json="$(jq -c \
+      --arg destination "$destination" --arg volume "$volume_name" \
+      --arg archive "$archive" --arg checksum "$checksum" \
+      '. + [{destination:$destination,volume:$volume,archive:$archive,sha256:$checksum}]' <<< "$state_json")"
+  done
+  jq -n --arg image "$old_image" --argjson volumes "$state_json" \
+    '{schemaVersion:1,previousImage:$image,volumes:$volumes}' > "$backup_dir/backup-state.json"
+  BACKUP_STATE_FILE="$backup_dir/backup-state.json"
+}
+
+restore_volume_backups() {
+  local state_file backup_dir old_image row volume archive checksum actual
+  state_file="$1"
+  backup_dir="$(dirname "$state_file")"
+  old_image="$(jq -er '.previousImage' "$state_file")"
+  while IFS= read -r row; do
+    volume="$(jq -er '.volume' <<< "$row")"
+    archive="$(jq -er '.archive' <<< "$row")"
+    checksum="$(jq -er '.sha256' <<< "$row")"
+    [[ "$volume" =~ ^[A-Za-z0-9_.-]+$ && "$archive" =~ ^[A-Za-z0-9_.-]+\.tar\.gz$ ]] || \
+      fail 'CORE_UPDATE_BACKUP_STATE_INVALID' 'Backup state contains an unsafe path or volume.'
+    actual="$(sha256sum "$backup_dir/$archive" | awk '{print $1}')"
+    [[ "$actual" == "$checksum" ]] || fail 'CORE_UPDATE_BACKUP_CHECKSUM_INVALID' "Backup checksum mismatch: $archive"
+    docker run --rm --user 0:0 --entrypoint sh \
+      -v "$volume:/target" -v "$backup_dir:/backup:ro" "$old_image" \
+      -c 'find /target -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -xzf "/backup/$1" -C /target' \
+      sh "$archive" >/dev/null || fail 'CORE_UPDATE_RESTORE_FAILED' "Failed to restore volume $volume"
+  done < <(jq -c '.volumes[]' "$state_file")
+}
+
+recover_failed_apply() {
+  local original_status="$1"
+  trap - EXIT
+  log 'CORE_UPDATE_ROLLBACK_STARTED' 'Update failed; restoring the previous image and persistent volumes.'
+  compose_run stop "$BLOGPOSTER_SERVICE" >/dev/null 2>&1 || true
+  if [[ "${DATA_MAY_HAVE_CHANGED:-0}" == '1' && -f "${BACKUP_STATE_FILE:-}" ]]; then
+    restore_volume_backups "$BACKUP_STATE_FILE" || \
+      fail 'CORE_UPDATE_ROLLBACK_FAILED' 'Persistent volume restore failed; keep the service stopped and use the recorded backup.'
+  fi
+  write_release_image "$PREVIOUS_IMAGE"
+  compose_args
+  compose_run up -d --no-deps --force-recreate "$BLOGPOSTER_SERVICE" >/dev/null || \
+    fail 'CORE_UPDATE_ROLLBACK_FAILED' 'Previous image could not be restarted.'
+  wait_healthy || fail 'CORE_UPDATE_ROLLBACK_FAILED' 'Previous image did not become healthy after rollback.'
+  rm -f "${MANIFEST_FILE:-}"
+  log 'CORE_UPDATE_ROLLED_BACK' 'Previous image and data were restored successfully.'
+  exit "$original_status"
+}
+
+prepare_environment() {
+  BLOGPOSTER_UPDATE_MANIFEST_URL="${BLOGPOSTER_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}"
+  BLOGPOSTER_UPDATE_REPOSITORY="${BLOGPOSTER_UPDATE_REPOSITORY:-BlogposterCMS/BlogposterCMS}"
+  BLOGPOSTER_SERVICE="${BLOGPOSTER_SERVICE:-blogposter}"
+  BLOGPOSTER_DATA_DESTINATIONS="${BLOGPOSTER_DATA_DESTINATIONS:-/app/data,/app/library}"
+  BLOGPOSTER_UPDATE_TIMEOUT_SECONDS="${BLOGPOSTER_UPDATE_TIMEOUT_SECONDS:-180}"
+  [[ "$BLOGPOSTER_UPDATE_TIMEOUT_SECONDS" =~ ^[0-9]+$ && "$BLOGPOSTER_UPDATE_TIMEOUT_SECONDS" -ge 30 ]] || \
+    fail 'CORE_UPDATE_TIMEOUT_INVALID' 'Update timeout must be an integer of at least 30 seconds.'
+  for required in BLOGPOSTER_COMPOSE_FILE BLOGPOSTER_COMPOSE_PROJECT_DIR BLOGPOSTER_RELEASE_ENV_FILE BLOGPOSTER_BACKUP_DIR BLOGPOSTER_STATE_DIR; do
+    [[ -n "${!required:-}" ]] || fail 'CORE_UPDATE_CONFIG_MISSING' "Required config value is missing: $required"
+  done
+  [[ -f "$BLOGPOSTER_COMPOSE_FILE" ]] || fail 'CORE_UPDATE_COMPOSE_MISSING' 'Compose file does not exist.'
+  [[ -z "${BLOGPOSTER_COMPOSE_ENV_FILE:-}" || -f "$BLOGPOSTER_COMPOSE_ENV_FILE" ]] || \
+    fail 'CORE_UPDATE_COMPOSE_ENV_MISSING' 'Compose interpolation environment file does not exist.'
+  mkdir -p "$BLOGPOSTER_STATE_DIR" "$BLOGPOSTER_BACKUP_DIR"
+  compose_args
+}
+
+run_check() {
+  local id current_version target_version image_ref
+  fetch_manifest "$MANIFEST_FILE"
+  target_version="$(manifest_value '.version')"
+  image_ref="$(select_image_reference)"
+  id="$(container_id)"
+  [[ -n "$id" ]] || fail 'CORE_UPDATE_CONTAINER_MISSING' 'The configured Blogposter service is not running.'
+  current_version="$(docker exec "$id" node -p "require('/app/package.json').version" 2>/dev/null || true)"
+  [[ -n "$current_version" ]] || fail 'CORE_UPDATE_CURRENT_VERSION_UNKNOWN' 'Cannot read the running Blogposter version.'
+  if semver_greater "$target_version" "$current_version"; then
+    log 'CORE_UPDATE_AVAILABLE' "$current_version -> $target_version ($image_ref)"
+  else
+    log 'CORE_UPDATE_NOT_REQUIRED' "Running version $current_version is current or newer."
+  fi
+}
+
+run_apply() {
+  local id current_version target_version minimum_version target_image expected_repo timestamp backup_dir
+  fetch_manifest "$MANIFEST_FILE"
+  target_version="$(manifest_value '.version')"
+  minimum_version="$(manifest_value '.minimumUpdaterVersion')"
+  expected_repo="$(manifest_value '.source.repository')"
+  [[ "$expected_repo" == "$BLOGPOSTER_UPDATE_REPOSITORY" ]] || \
+    fail 'CORE_UPDATE_REPOSITORY_MISMATCH' 'Manifest repository does not match updater policy.'
+  semver_greater "$minimum_version" "$UPDATER_VERSION" && \
+    fail 'CORE_UPDATE_UPDATER_TOO_OLD' "Updater $UPDATER_VERSION cannot install a release requiring $minimum_version."
+  target_image="$(select_image_reference)"
+
+  id="$(container_id)"
+  [[ -n "$id" ]] || fail 'CORE_UPDATE_CONTAINER_MISSING' 'The configured Blogposter service is not running.'
+  current_version="$(docker exec "$id" node -p "require('/app/package.json').version" 2>/dev/null || true)"
+  semver_greater "$target_version" "$current_version" || \
+    fail 'CORE_UPDATE_DOWNGRADE_DENIED' "Target $target_version is not newer than running version $current_version."
+  PREVIOUS_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$id")"
+  [[ "$PREVIOUS_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || \
+    fail 'CORE_UPDATE_CURRENT_IMAGE_MUTABLE' 'Running image is not pinned by digest; safe rollback cannot be guaranteed.'
+
+  verify_image_trust "$target_image" "$expected_repo"
+  docker pull "$target_image" >/dev/null || fail 'CORE_UPDATE_IMAGE_PULL_FAILED' 'Target image could not be pulled.'
+  docker run --rm --entrypoint node "$target_image" -e \
+    "require('sqlite3').verbose();require('bcrypt');require('express')" >/dev/null || \
+    fail 'CORE_UPDATE_IMAGE_SMOKE_FAILED' 'Target image failed the native runtime smoke check.'
+
+  timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  backup_dir="$BLOGPOSTER_BACKUP_DIR/${current_version}-to-${target_version}-$timestamp"
+  mkdir -p "$backup_dir"
+  cp "$MANIFEST_FILE" "$backup_dir/blogposter-update.json"
+
+  DATA_MAY_HAVE_CHANGED=0
+  trap 'recover_failed_apply $?' EXIT
+  compose_run stop "$BLOGPOSTER_SERVICE" >/dev/null
+  create_volume_backups "$id" "$PREVIOUS_IMAGE" "$backup_dir"
+  write_release_image "$target_image"
+  compose_args
+  compose_run config --quiet
+  DATA_MAY_HAVE_CHANGED=1
+  compose_run up -d --no-deps --force-recreate "$BLOGPOSTER_SERVICE" >/dev/null
+  wait_healthy || fail 'CORE_UPDATE_READINESS_FAILED' 'Updated service did not become healthy before the timeout.'
+  verify_running_version "$target_version" || fail 'CORE_UPDATE_VERSION_MISMATCH' 'Running container version does not match the release manifest.'
+
+  jq -n --arg previousImage "$PREVIOUS_IMAGE" --arg currentImage "$target_image" \
+    --arg previousVersion "$current_version" --arg currentVersion "$target_version" \
+    --arg backupState "$BACKUP_STATE_FILE" --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{schemaVersion:1,previousImage:$previousImage,currentImage:$currentImage,previousVersion:$previousVersion,currentVersion:$currentVersion,backupState:$backupState,updatedAt:$updatedAt}' \
+    > "$BLOGPOSTER_STATE_DIR/last-success.json"
+  DATA_MAY_HAVE_CHANGED=0
+  trap - EXIT
+  log 'CORE_UPDATE_APPLIED' "BlogposterCMS $target_version is healthy; rollback state is recorded in $BLOGPOSTER_STATE_DIR."
+}
+
+run_rollback() {
+  local state_file previous_image previous_version
+  [[ "${CONFIRM_DATA_LOSS:-0}" == '1' ]] || \
+    fail 'CORE_UPDATE_ROLLBACK_CONFIRMATION_REQUIRED' 'Manual rollback can discard post-update writes; pass --confirm-data-loss.'
+  state_file="$BLOGPOSTER_STATE_DIR/last-success.json"
+  [[ -f "$state_file" ]] || fail 'CORE_UPDATE_ROLLBACK_STATE_MISSING' 'No successful update rollback state exists.'
+  previous_image="$(jq -er '.previousImage' "$state_file")"
+  previous_version="$(jq -er '.previousVersion' "$state_file")"
+  BACKUP_STATE_FILE="$(jq -er '.backupState' "$state_file")"
+  [[ -f "$BACKUP_STATE_FILE" ]] || fail 'CORE_UPDATE_BACKUP_STATE_MISSING' 'Recorded rollback backup is missing.'
+  compose_run stop "$BLOGPOSTER_SERVICE" >/dev/null
+  restore_volume_backups "$BACKUP_STATE_FILE"
+  write_release_image "$previous_image"
+  compose_args
+  compose_run up -d --no-deps --force-recreate "$BLOGPOSTER_SERVICE" >/dev/null
+  wait_healthy || fail 'CORE_UPDATE_ROLLBACK_FAILED' 'Rolled-back service did not become healthy.'
+  verify_running_version "$previous_version" || fail 'CORE_UPDATE_ROLLBACK_VERSION_MISMATCH' 'Rolled-back version does not match recorded state.'
+  log 'CORE_UPDATE_ROLLBACK_APPLIED' "BlogposterCMS $previous_version was restored."
+}
+
+usage() {
+  printf 'Usage: blogposter-update <check|apply|rollback> --config PATH [--confirm-data-loss]\n'
+}
+
+main() {
+  local command="${1:-}" config_file='' arg
+  shift || true
+  while (($#)); do
+    arg="$1"
+    case "$arg" in
+      --config)
+        shift
+        config_file="${1:-}"
+        ;;
+      --confirm-data-loss)
+        CONFIRM_DATA_LOSS=1
+        ;;
+      --version)
+        printf '%s\n' "$UPDATER_VERSION"
+        return
+        ;;
+      *)
+        usage
+        fail 'CORE_UPDATE_ARGUMENT_INVALID' "Unknown argument: $arg"
+        ;;
+    esac
+    shift
+  done
+  [[ -n "$config_file" ]] || { usage; fail 'CORE_UPDATE_CONFIG_MISSING' '--config is required.'; }
+
+  require_command curl
+  require_command docker
+  require_command flock
+  require_command jq
+  require_command sha256sum
+  load_config "$config_file"
+  prepare_environment
+  exec 9>"$BLOGPOSTER_STATE_DIR/update.lock"
+  flock -n 9 || fail 'CORE_UPDATE_LOCKED' 'Another Blogposter update is already running.'
+  MANIFEST_FILE="$(mktemp "$BLOGPOSTER_STATE_DIR/manifest.XXXXXX.json")"
+  trap 'rm -f "${MANIFEST_FILE:-}"' EXIT
+
+  case "$command" in
+    check) run_check ;;
+    apply) run_apply ;;
+    rollback) run_rollback ;;
+    *) usage; fail 'CORE_UPDATE_COMMAND_INVALID' 'Expected check, apply or rollback.' ;;
+  esac
+  rm -f "$MANIFEST_FILE"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

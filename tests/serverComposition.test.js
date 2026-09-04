@@ -23,6 +23,7 @@ test('app.js stays a thin startup composition root', () => {
 test('server composition keeps static, security, bootstrap and route order explicit', () => {
   const composition = source('mother/server/createBlogposterApp.js');
   const orderedMarkers = [
+    'createHealthRoutes({',
     'mountStaticAssetRoutes(app',
     'mountSecurityMiddleware(app',
     'bootstrapCoreModules({',
@@ -50,6 +51,7 @@ test('server ownership is split into focused host modules', () => {
   [
     'mother/server/http/staticAssets.js',
     'mother/server/http/securityMiddleware.js',
+    'mother/server/http/healthRoutes.js',
     'mother/server/http/meltdownRouter.js',
     'mother/server/http/authRoutes.js',
     'mother/server/http/installRoutes.js',

@@ -273,6 +273,12 @@ If an installation contains files under `data/module-overrides/<moduleName>`,
 the Modules admin page marks that module with a red `Modification` badge. This
 folder is user-owned and is never overwritten by the module ZIP installer.
 
+Static frontend overrides are active when the module uses
+`staticFrontend: true`. Additional static roots must be listed in
+`moduleInfo.overridablePaths`. The directory hierarchy mirrors the managed
+module, and an override miss falls back to the original file. Store only the
+override tree in Git; mount it read-only into the canonical runtime path.
+
 Treat the badge as an explicit local-change warning, not as permission to patch
 backend module code in place. Backend entry files such as `index.js`, manifests
 such as `moduleInfo.json`, package manager files, host folders and symlinks are

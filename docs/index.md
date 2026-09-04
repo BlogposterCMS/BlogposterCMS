@@ -4,6 +4,8 @@ BlogposterCMS is an **open-source Node.js content management system** built with
 This folder provides additional information on installing, configuring and extending the system. The files are grouped by topic for easier navigation.
 
 - [Installation](installation.md)
+- [Safe Core Updates](core-updates.md)
+- [Container Deployment](container-deployment.md)
 - [Module Architecture](modules.md)
 - [Community Module Guide](community_module_guide.md)
 - [Permission System](permission_system.md)

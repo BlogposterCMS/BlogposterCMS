@@ -20,6 +20,7 @@ const { mountAgentApiRoutes } = require('./http/agentApiRoutes');
 const { createAppManagementRoutes } = require('./http/appManagementRoutes');
 const { createAuthRoutes } = require('./http/authRoutes');
 const { createInstallRoutes } = require('./http/installRoutes');
+const { createHealthRoutes } = require('./http/healthRoutes');
 const { createMaintenanceMiddleware } = require('./http/maintenanceMiddleware');
 const { createMeltdownRouter } = require('./http/meltdownRouter');
 const { createPublicPageRoutes } = require('./http/publicPageRoutes');
@@ -36,6 +37,7 @@ const {
 async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   const app = express();
   const port = process.env.PORT || 3000;
+  const productVersion = require(path.join(rootDir, 'package.json')).version;
   const installLockPath = path.join(rootDir, 'install.lock');
   const renderMode = features?.renderMode || 'client';
   const plainSpaceVersion = loadPlainSpaceVersion({ rootDir });
@@ -54,6 +56,9 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     enabled: devReloadEnabled,
     rootDir
   });
+  // Local container probes must remain reachable before HTTPS enforcement. The
+  // route exposes only bounded product/version readiness metadata.
+  app.use(createHealthRoutes({ version: productVersion }));
   const staticPaths = mountStaticAssetRoutes(app, {
     devReloadEnabled,
     injectDevReload,

@@ -67,6 +67,10 @@ image identity, not build-network reachability or the final CMS runtime.
 This image treats extension code as part of the reviewed image. Install/update
 modules, apps and widgets in the source/build workflow, not the disposable
 container filesystem. Content and media editing remain normal CMS operations.
+Git-managed frontend customizations may be mounted read-only at the canonical
+`/app/data/module-overrides` path; do not mount over managed application or
+module code. The supplied `deploy/blogposter.compose.yml` keeps that overlay,
+the private database volume and media volume separate.
 
 ## Verification and rollback gates
 
@@ -77,3 +81,7 @@ content save/read/reload, nested public pages, and public media. Back up both
 volumes and secrets, restore to an isolated instance, and verify the same paths.
 Record the image digest and keep the prior image, matching data backup and proxy
 configuration. Image creation alone is not a production-ready/live claim.
+
+The supported core update and automatic rollback procedure is documented in
+[Safe core updates](core-updates.md). It replaces the full image by immutable
+digest, never individual application files.

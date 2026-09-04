@@ -26,6 +26,7 @@ const FORBIDDEN_MODIFICATION_ROOT_DIRNAMES = new Set([
   'ui',
   'widgets'
 ]);
+const DEFAULT_OVERRIDABLE_PATHS = Object.freeze(['frontend']);
 
 function createModificationError(code, message) {
   const err = new Error(`[${code}] ${message}`);
@@ -45,6 +46,78 @@ function resolveModuleModificationDir(moduleName, options = {}) {
   const safeModuleName = assertCommunityModuleName(moduleName);
   const root = modificationRoot(options);
   return assertInside(root, path.join(root, safeModuleName), 'module modification folder');
+}
+
+function normalizeOverrideRelativePath(value, label = 'module override path') {
+  const raw = String(value || '');
+  const normalized = raw.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  const segments = normalized.split('/').filter(Boolean);
+  if (
+    !segments.length ||
+    normalized.includes('\0') ||
+    path.isAbsolute(raw) ||
+    segments.some(segment => segment === '.' || segment === '..')
+  ) {
+    throw createModificationError(
+      'E_MODULE_OVERRIDE_PATH_INVALID',
+      `${label} must be a non-empty relative path without traversal.`
+    );
+  }
+  return segments.join('/');
+}
+
+function normalizeOverridablePaths(moduleInfo = {}) {
+  const declared = moduleInfo?.overridablePaths;
+  const values = declared === undefined
+    ? (moduleInfo?.staticFrontend === true ? DEFAULT_OVERRIDABLE_PATHS : [])
+    : declared;
+  if (!Array.isArray(values)) {
+    throw createModificationError(
+      'E_MODULE_OVERRIDE_DECLARATION_INVALID',
+      'moduleInfo.overridablePaths must be an array of relative directory paths.'
+    );
+  }
+  return [...new Set(values.map(value => normalizeOverrideRelativePath(value, 'overridable path')))];
+}
+
+function overridePathIsDeclared(requestedPath, declaredPaths) {
+  return declaredPaths.some(allowed => (
+    requestedPath === allowed || requestedPath.startsWith(`${allowed}/`)
+  ));
+}
+
+/**
+ * Resolve a user-owned overlay directory without copying it into managed code.
+ * Only module-declared static roots participate, keeping backend entrypoints and
+ * manifests on the reviewed module update path.
+ */
+function resolveModuleOverrideDir(moduleName, requestedDir, moduleInfo = {}, options = {}) {
+  const safeModuleName = assertCommunityModuleName(moduleName);
+  const relativeDir = normalizeOverrideRelativePath(requestedDir, 'requested override directory');
+  const declaredPaths = normalizeOverridablePaths(moduleInfo);
+  if (!overridePathIsDeclared(relativeDir, declaredPaths)) return null;
+
+  const summary = readModuleModificationSummary(safeModuleName, options);
+  if (!summary.hasModification) return null;
+
+  const moduleOverrideRoot = resolveModuleModificationDir(safeModuleName, options);
+  const candidate = assertInside(
+    moduleOverrideRoot,
+    path.resolve(moduleOverrideRoot, relativeDir),
+    'module override directory'
+  );
+  if (!fs.existsSync(candidate)) return null;
+
+  const stats = fs.lstatSync(candidate);
+  if (!stats.isDirectory() || stats.isSymbolicLink()) {
+    throw createModificationError(
+      'E_MODULE_OVERRIDE_NOT_DIRECTORY',
+      `Module "${safeModuleName}" override "${relativeDir}" must be a real directory.`
+    );
+  }
+  const realRoot = fs.realpathSync(moduleOverrideRoot);
+  const realCandidate = fs.realpathSync(candidate);
+  return assertInside(realRoot, realCandidate, 'module override directory');
 }
 
 function assertModificationEntryAllowed(entry, currentDir, moduleRoot, safeModuleName) {
@@ -181,9 +254,11 @@ function applyModificationSummary(target, moduleName, options = {}) {
 
 module.exports = {
   DEFAULT_MODIFICATION_ROOT,
+  DEFAULT_OVERRIDABLE_PATHS,
   MODIFICATION_SOURCE,
   applyModificationSummary,
   readModuleModificationSummary,
+  resolveModuleOverrideDir,
   resolveModuleModificationDir,
   safeModuleModificationSummary,
   _internals: {
@@ -191,6 +266,9 @@ module.exports = {
     createModificationError,
     inspectModificationFiles,
     modificationDisplayPath,
-    modificationRoot
+    modificationRoot,
+    normalizeOverridablePaths,
+    normalizeOverrideRelativePath,
+    overridePathIsDeclared
   }
 };

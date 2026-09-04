@@ -5,8 +5,10 @@ const path = require('path');
 
 const {
   readModuleModificationSummary,
+  resolveModuleOverrideDir,
   safeModuleModificationSummary,
-  resolveModuleModificationDir
+  resolveModuleModificationDir,
+  _internals: { normalizeOverridablePaths }
 } = require('../mother/modules/moduleLoader/moduleModificationPolicy');
 
 test('module modification policy detects user override files without exposing absolute paths', () => {
@@ -70,4 +72,48 @@ test('module modification policy reports forbidden backend override files with a
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test('module override resolver mirrors only declared static directories', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-overlay-'));
+  const modificationRoot = path.join(tempRoot, 'module-overrides');
+  const frontendDir = path.join(modificationRoot, 'shopSync', 'frontend');
+  const templateDir = path.join(modificationRoot, 'shopSync', 'templates');
+
+  try {
+    fs.mkdirSync(frontendDir, { recursive: true });
+    fs.mkdirSync(templateDir, { recursive: true });
+    fs.writeFileSync(path.join(frontendDir, 'theme.css'), '.override {}');
+    fs.writeFileSync(path.join(templateDir, 'card.html'), '<p>override</p>');
+
+    assert.strictEqual(
+      resolveModuleOverrideDir('shopSync', 'frontend', { staticFrontend: true }, { modificationRoot }),
+      fs.realpathSync(frontendDir)
+    );
+    assert.strictEqual(
+      resolveModuleOverrideDir('shopSync', 'templates', { staticFrontend: true }, { modificationRoot }),
+      null
+    );
+    assert.strictEqual(
+      resolveModuleOverrideDir('shopSync', 'templates', { overridablePaths: ['templates'] }, { modificationRoot }),
+      fs.realpathSync(templateDir)
+    );
+    assert.deepStrictEqual(
+      normalizeOverridablePaths({ overridablePaths: ['frontend', 'frontend', 'locales'] }),
+      ['frontend', 'locales']
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('module override declarations reject traversal and absolute paths', () => {
+  assert.throws(
+    () => normalizeOverridablePaths({ overridablePaths: ['../mother'] }),
+    /E_MODULE_OVERRIDE_PATH_INVALID/
+  );
+  assert.throws(
+    () => normalizeOverridablePaths({ overridablePaths: 'frontend' }),
+    /E_MODULE_OVERRIDE_DECLARATION_INVALID/
+  );
 });

@@ -18,6 +18,8 @@ test('container keeps runtime, native modules and non-root persistent state toge
     expect(read('.dockerignore')).not.toContain(`!${name}`);
   }
   expect(dockerfile).toContain('DEV_AUTOLOGIN=false DEV_AGENT_LOGIN=false');
+  expect(dockerfile).toContain("http://127.0.0.1:3000/health/ready");
+  expect(dockerfile).toContain("j.code==='BLOGPOSTER_READY'");
   expect(dockerfile).toContain('CMD ["node", "app.js"]');
 });
 

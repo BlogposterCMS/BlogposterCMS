@@ -90,12 +90,12 @@ and `TMP` may also be passed so the child process can start.
   belong under `apps/`, widgets belong under `widgets/`, and each module folder
   owns exactly one module manifest even if somebody copies files directly into
   `modules/`.
-- Marks non-empty `data/module-overrides/<moduleName>` folders as local module
-  modifications in registry and system-module responses. These user-owned
-  folders are only an explicit modification signal for the admin UI until a
-  dedicated overlay resolver consumes them; backend entry files, manifests,
-  package manager files, host folders and symlinks are reported with
-  `E_MODULE_MODIFICATION_*` errors instead of being silently treated as safe.
+- Resolves declared static files from `data/module-overrides/<moduleName>`
+  before falling back to the reviewed module folder. `staticFrontend: true`
+  implicitly permits `frontend/`; other static roots must be declared through
+  `moduleInfo.overridablePaths`. Backend entry files, manifests, package manager
+  files, host folders and symlinks remain blocked with searchable
+  `E_MODULE_MODIFICATION_*` or `E_MODULE_OVERRIDE_*` errors.
 - Updates installed community modules from an explicit `trustedUpdateSource`
   in the registry metadata. The updater fetches GitHub release assets through
   the Module Loader, requires a matching ZIP plus SHA-256 sidecar, optionally
@@ -250,6 +250,30 @@ isolation before treating Marketplace code as fully untrusted production input.
 Managed module code is updated through the same validation path as ZIP
 installation. Local user-owned overrides live separately under
 `data/module-overrides/<moduleName>` and are not touched by the updater.
+
+The override directory mirrors the module-relative path without changing the
+managed module. For example, this file:
+
+```text
+data/module-overrides/shopSync/frontend/theme.css
+```
+
+is served before `modules/shopSync/frontend/theme.css`, while any missing file
+falls back to the managed module. Static frontends opt into `frontend/`
+automatically. A module that registers another static directory must declare it:
+
+```json
+{
+  "moduleName": "shopSync",
+  "overridablePaths": ["frontend", "locales"]
+}
+```
+
+Declarations are relative directories only. Absolute paths, traversal,
+backend entry files, manifests, package-manager files, host folders and
+symlinks fail closed. Keep the override tree in a separate Git repository and
+mount only that directory at `/app/data/module-overrides`; never version the
+complete runtime `data/` directory.
 
 An installed module may declare or receive a registry-owned update source:
 

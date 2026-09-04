@@ -30,8 +30,8 @@ RUN mkdir -p /app/data /app/library /app/logs /app/temp_uploads \
 USER node
 EXPOSE 3000
 VOLUME ["/app/data", "/app/library"]
-# The listener starts after module bootstrap. HTTPS redirect is expected here;
-# this is liveness, not a substitute for an authenticated database/readiness test.
+# The listener starts only after module bootstrap; the bounded readiness route
+# also exposes the packaged version so the external updater can verify cutover.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD node -e "const r=require('http').get('http://127.0.0.1:3000/login',s=>{s.resume();process.exit(s.statusCode>=200&&s.statusCode<400?0:1)});r.on('error',()=>process.exit(1));r.setTimeout(4000,()=>{r.destroy();process.exit(1)})"
+    CMD node -e "const r=require('http').get('http://127.0.0.1:3000/health/ready',s=>{let b='';s.on('data',c=>b+=c);s.on('end',()=>{try{const j=JSON.parse(b);process.exit(s.statusCode===200&&j.code==='BLOGPOSTER_READY'&&j.status==='ready'?0:1)}catch{process.exit(1)}})});r.on('error',()=>process.exit(1));r.setTimeout(4000,()=>{r.destroy();process.exit(1)})"
 CMD ["node", "app.js"]

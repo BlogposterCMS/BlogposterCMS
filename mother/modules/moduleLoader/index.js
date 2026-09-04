@@ -45,9 +45,9 @@ const {
 const { initModuleRegistryAdminEvents } = require('./moduleRegistryEvents');
 const {
   normalizeMountPath,
-  resolveStaticAssetDir,
-  blockCommunityStaticAssetFiles,
-  createCommunityStaticAssetOptions
+  createCommunityStaticAssetOptions,
+  mountStaticAssetLayers,
+  resolveStaticAssetLayers
 } = require('./moduleHost');
 const {
   assertCommunityModuleFolderShape,
@@ -266,7 +266,7 @@ async function loadAllModules({ emitter, app, jwt }) {
   console.log('[MODULE LOADER] All optional modules loaded / retried successfully. The meltdown continues.');
 }
 
-function serveStaticFrontend({ row, folderNames = [], modulesPath, app }) {
+function serveStaticFrontend({ row, folderNames = [], modulesPath, app, modificationRoot }) {
   if (!row || !row.is_active || !app || typeof app.use !== 'function') return false;
 
   const moduleName = sanitizeModuleName(row.module_name);
@@ -281,12 +281,18 @@ function serveStaticFrontend({ row, folderNames = [], modulesPath, app }) {
   if (!fs.existsSync(frontendPath)) return false;
 
   const checkedModulePath = assertCommunityModuleFolderShape(modulePath, moduleName, { modulesRoot: modulesPath });
-  const root = resolveStaticAssetDir(checkedModulePath, 'frontend');
+  const layers = resolveStaticAssetLayers({
+    moduleName,
+    moduleInfo: rowModuleInfo,
+    moduleDir: checkedModulePath,
+    requestedDir: 'frontend',
+    modificationRoot
+  });
+  const root = layers[layers.length - 1];
   const mountPath = normalizeMountPath(moduleName, '/');
-  const express = require('express');
-  app.use(mountPath, blockCommunityStaticAssetFiles, express.static(root, createCommunityStaticAssetOptions()));
+  mountStaticAssetLayers(app, mountPath, layers, createCommunityStaticAssetOptions());
   console.log(`[MODULE LOADER] Serving static frontend for module: ${moduleName}`);
-  return { moduleName, mountPath, dir: root };
+  return { moduleName, mountPath, dir: root, overrideActive: layers.length > 1 };
 }
 
 /**

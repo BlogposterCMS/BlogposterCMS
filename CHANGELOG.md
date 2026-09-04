@@ -8,6 +8,8 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [0.9.0] - 2026-09-04
 
+### Update safety
+
 - Extended the updater trust chain to the initial installation and every
   production process start. Release automation now externally attests both the
   update manifest and a complete runtime SHA-256 baseline; startup fails closed
@@ -19,6 +21,9 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
   `data/notificationManager`. First start initializes from signed read-only
   defaults, updates preserve existing user configuration, and the host updater
   performs a non-overwriting one-time migration from older containers.
+
+### Backend architecture
+
 - Replaced the legacy backend-event caller layer with generated `BACKEND_EVENTS`
   constants, event-specific executable payload schemas and matching TypeScript
   payload/result declarations. Promise callers now use the shared request
@@ -30,6 +35,12 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
   payloads are also inferred through listener destructuring and `typeof`
   guards, preventing provider and strategy functions from being rejected as
   JSON during registration.
+- Split Runtime Manager facade maps and domain-specific dispatch rules into
+  content, presentation, access and platform modules without changing facade
+  events, permissions, resource/action names or response envelopes.
+
+### Admin interface
+
 - Unified admin widget controls with the existing Studio UI kit: ShadowRoot
   widgets now receive the scoped form/button rules, dynamic single-selects use
   the shared non-native dropdown, Settings uses structured fields and action
@@ -41,9 +52,6 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
   popovers, transient toasts, loaders and progress. The live gallery exercises
   dialogs, prompts, custom dropdowns, the color picker, feedback states, data
   display and bundled Lucide icons as executable developer documentation.
-- Split Runtime Manager facade maps and domain-specific dispatch rules into
-  content, presentation, access and platform modules without changing facade
-  events, permissions, resource/action names or response envelopes.
 
 ## [0.8.0] - 2026-09-04
 

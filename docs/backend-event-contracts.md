@@ -19,6 +19,14 @@ facade definitions, checked for drift and never edited by hand. Backend code
 must not add raw event-name literals, private callback-to-Promise adapters or
 temporary callback-forwarding wrappers.
 
+Unbundled `publicLoader.ts` browser entrypoints are not backend callers, even
+when stored beneath `mother/modules`. They reuse the existing
+`/ui/shared/api-client/runtimeFacade.js` ESM facade. Never import the CommonJS
+backend catalog into that browser graph or expose server contracts as static
+assets. Public resource/action authorization and wire event names stay owned by
+the existing runtime facade. Native-browser verification is required because
+Jest's module resolver can hide extensionless/CommonJS import failures.
+
 ## Enforced contracts
 
 The HTTP adapter exposes five strict executable contracts:

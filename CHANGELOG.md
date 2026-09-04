@@ -6,6 +6,14 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-09-05
+
+- Restored native-browser loading of the public Designer and Widget loaders.
+  Both reuse the existing browser ESM runtime facade instead of importing the
+  server-only CommonJS backend event catalog. Transport, authorization, payloads
+  and rendering remain unchanged; deployed-JavaScript boundary tests protect
+  against module-resolver false positives.
+
 ## [0.9.1] - 2026-09-04
 
 - Fixed production startup on isolated networks: release images now package

@@ -1,6 +1,7 @@
 
 
-import { BACKEND_EVENTS } from '../../contracts/generatedBackendEventCatalog';
+// Unbundled browser loaders use the public ESM facade, not server CommonJS.
+import { emitRuntimePublic } from '/ui/shared/api-client/runtimeFacade.js';
 
 type DesignerLoaderContext = {
   meltdownEmit?: <T = unknown>(eventName: string, payload?: Record<string, unknown>) => Promise<T>;
@@ -12,12 +13,6 @@ type DesignerLoaderContext = {
 type DesignDescriptor = {
   css?: string[];
   layoutRef?: string;
-};
-
-type RuntimeFacadeResponse<T> = {
-  resource?: string;
-  action?: string;
-  data?: T;
 };
 
 type PublicLayout = {
@@ -44,19 +39,6 @@ function fallbackLayout(layoutRef?: string): PublicLayout {
   };
 }
 
-function unwrapRuntimeFacadeData<T>(value: RuntimeFacadeResponse<T> | T): T {
-  if (
-    value &&
-    typeof value === 'object' &&
-    'resource' in value &&
-    'action' in value &&
-    'data' in value
-  ) {
-    return (value as RuntimeFacadeResponse<T>).data as T;
-  }
-  return value as T;
-}
-
 async function emitPublicRuntime<T>(
   ctx: DesignerLoaderContext | undefined,
   resource: string,
@@ -66,15 +48,7 @@ async function emitPublicRuntime<T>(
   if (!ctx || typeof ctx.meltdownEmit !== 'function') {
     throw new Error('[DesignerPublicLoader:PUBLIC_RUNTIME_EMIT_MISSING] meltdownEmit is required.');
   }
-  const result = await ctx.meltdownEmit<RuntimeFacadeResponse<T>>(BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST, {
-    jwt: ctx.publicToken,
-    moduleName: 'runtimeManager',
-    moduleType: 'core',
-    resource,
-    action,
-    params
-  });
-  return unwrapRuntimeFacadeData<T>(result);
+  return emitRuntimePublic<T>(ctx.meltdownEmit, ctx.publicToken, resource, action, params);
 }
 
 async function loadDesign(

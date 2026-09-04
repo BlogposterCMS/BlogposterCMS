@@ -1,4 +1,5 @@
-import { BACKEND_EVENTS } from '../../contracts/generatedBackendEventCatalog';
+// The loader is fetched as browser ESM rather than bundled server code.
+import { emitRuntimePublic } from '/ui/shared/api-client/runtimeFacade.js';
 import { init as initCanvasGrid } from '/ui/runtime/main/canvasGrid.js';
 import { applyWidgetOptions } from '/ui/runtime/main/widgetOptions.js';
 import { executeJs } from '/ui/runtime/main/script-utils.js';
@@ -165,28 +166,11 @@ function fallbackLayout(layoutRef) {
         layoutRef: typeof layoutRef === 'string' ? layoutRef : undefined
     };
 }
-function unwrapRuntimeFacadeData(value) {
-    if (isRecord(value) &&
-        'resource' in value &&
-        'action' in value &&
-        'data' in value) {
-        return value.data;
-    }
-    return value;
-}
 async function emitPublicRuntime(ctx, resource, action, params = {}) {
     if (typeof ctx.meltdownEmit !== 'function') {
         throw new Error('[WidgetPublicLoader:PUBLIC_RUNTIME_EMIT_MISSING] meltdownEmit is required.');
     }
-    const result = await ctx.meltdownEmit(BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST, {
-        jwt: ctx.publicToken,
-        moduleName: 'runtimeManager',
-        moduleType: 'core',
-        resource,
-        action,
-        params
-    });
-    return unwrapRuntimeFacadeData(result);
+    return emitRuntimePublic(ctx.meltdownEmit, ctx.publicToken, resource, action, params);
 }
 function resolveWidgetLayout(descriptor, ctx) {
     const descriptorLayout = normalizePublicWidgetLayout(descriptor.layout);

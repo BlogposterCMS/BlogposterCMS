@@ -13,6 +13,10 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
   registration. The baseline includes unusual executable extensions instead of
   trusting filename suffixes, with stable audit codes and no local re-signing
   path.
+- Moved mutable Notification Manager registry state and FileLog output into
+  data/notificationManager. First start initializes from signed read-only
+  defaults, updates preserve existing user configuration, and the host updater
+  performs a non-overwriting one-time migration from older containers.
 - Unified admin widget controls with the existing Studio UI kit: ShadowRoot
   widgets now receive the scoped form/button rules, dynamic single-selects use
   the shared non-native dropdown, Settings uses structured fields and action

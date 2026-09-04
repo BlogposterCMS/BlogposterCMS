@@ -52,6 +52,9 @@ image identity, not build-network reachability or the final CMS runtime.
 2. Keep both `APP_ENV=production` and `NODE_ENV=production`. Keep auto-login,
    agent development login, weak credentials, file debug logs and reload disabled.
 3. Persist `/app/data` and `/app/library` with permissions for UID/GID 1000.
+   Notification integration configuration and the default FileLog output live
+   below `/app/data/notificationManager`; do not mount a writable path over the
+   signed `/app/mother` release tree.
    The data volume owns SQLite files plus `install.lock`, `modulePasswords.json`
    and `placeholderData.json` through container-only symlinks. When importing an
    existing installation, copy those three files into the data volume along with

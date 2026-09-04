@@ -79,6 +79,8 @@ test('host updater is valid Bash and keeps update safety gates explicit', () => 
   expect(source).toContain("gh attestation verify \"oci://$image_ref\"");
   expect(source).toContain('CORE_UPDATE_CURRENT_IMAGE_MUTABLE');
   expect(source).toContain('create_volume_backups');
+  expect(source).toContain('migrate_notification_state');
+  expect(source).toContain('CORE_UPDATE_NOTIFICATION_STATE_MIGRATION_FAILED');
   expect(source).toContain('restore_volume_backups');
   expect(source).toContain('CORE_UPDATE_ROLLBACK_CONFIRMATION_REQUIRED');
   expect(source).toContain('verify_running_version');
@@ -95,6 +97,14 @@ test('host updater semantic version comparison blocks equal and older releases',
   const result = spawnSync('bash', ['-lc', command], { cwd: rootDir, encoding: 'utf8' });
   expect(result.status).toBe(0);
   expect(result.stderr).toBe('');
+});
+
+test('host updater seeds legacy notification state only inside the canonical data volume', () => {
+  const source = fs.readFileSync(updaterPath, 'utf8');
+  expect(source).toContain('migrate_notification_state "$id"');
+  expect(source).toContain('/app/data/notificationManager/integrationsRegistry.json');
+  expect(source).toContain('[ -e "$target" ] && exit 0');
+  expect(source).toContain('CORE_UPDATE_NOTIFICATION_STATE_MIGRATION_FAILED');
 });
 
 test('release workflow publishes and attests the full server image and updater assets', () => {

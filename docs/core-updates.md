@@ -81,6 +81,12 @@ the new image and waits for `/health/ready`. It then verifies that the packaged
 version matches the release manifest. Any failure after shutdown automatically
 restores the recorded volumes and previous image.
 
+Before replacing an older container, the updater seeds its notification
+integration registry into `/app/data/notificationManager` only when no
+persistent registry exists yet. This one-time compatibility step preserves
+existing settings; it never overwrites the data-volume copy. Subsequent release
+defaults remain read-only inside the signed application tree.
+
 The updater intentionally supports named volumes only. A bind-mounted database
 could resolve to an unexpectedly broad host path and is therefore rejected with
 `CORE_UPDATE_VOLUME_TYPE_UNSUPPORTED` instead of being modified.

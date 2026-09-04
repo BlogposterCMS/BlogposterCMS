@@ -14,7 +14,9 @@ custom web hooks.
 
 ## Startup
 - Core module loaded during boot.
-- Loads integrations defined in its configuration.
+- Initializes its persistent registry once from the signed release defaults,
+  then loads integrations from `data/notificationManager` without overwriting
+  existing user configuration.
 
 ## Purpose
 - Listens to the internal `notificationEmitter` and forwards messages to active integrations.
@@ -38,8 +40,9 @@ before `initialize` and skips the integration when verification fails. A
 
 ### Built-in integrations
 
-- **FileLog** – appends notifications to a local log file and ensures the
-  directory exists before writing.
+- **FileLog** – appends notifications to
+  `data/notificationManager/blogposter.log` by default and ensures the
+  persistent directory exists before writing.
 - **Slack** – posts messages to a Slack channel via incoming webhook using only
   Node's core `https` module. Only `https://hooks.slack.com/` URLs are allowed,
   requests time out after five seconds and a channel override works only when

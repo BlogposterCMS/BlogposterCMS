@@ -231,6 +231,26 @@ create_volume_backups() {
   BACKUP_STATE_FILE="$backup_dir/backup-state.json"
 }
 
+migrate_notification_state() {
+  local id="$1"
+  # Older images kept mutable notification config in their writable container
+  # layer. Seed the canonical data volume exactly once before that container is
+  # replaced; an existing persistent registry always wins.
+  docker exec "$id" sh -c '
+    set -eu
+    source=/app/mother/modules/notificationManager/integrationsRegistry.json
+    target=/app/data/notificationManager/integrationsRegistry.json
+    [ -e "$target" ] && exit 0
+    [ -f "$source" ] || exit 0
+    mkdir -p "$(dirname "$target")"
+    temp="${target}.tmp.$$"
+    cp "$source" "$temp"
+    chmod 600 "$temp"
+    mv "$temp" "$target"
+  ' >/dev/null || \
+    fail 'CORE_UPDATE_NOTIFICATION_STATE_MIGRATION_FAILED' 'Could not preserve the existing notification integration registry.'
+}
+
 restore_volume_backups() {
   local state_file backup_dir old_image row volume archive checksum actual
   state_file="$1"
@@ -340,6 +360,7 @@ run_apply() {
   mkdir -p "$backup_dir"
   cp "$MANIFEST_FILE" "$backup_dir/blogposter-update.json"
 
+  migrate_notification_state "$id"
   DATA_MAY_HAVE_CHANGED=0
   trap 'recover_failed_apply $?' EXIT
   compose_run stop "$BLOGPOSTER_SERVICE" >/dev/null

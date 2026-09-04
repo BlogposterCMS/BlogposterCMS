@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
+const os = require('os');
 const EventEmitter = require('events');
 const https = require('https');
 const { PassThrough } = require('stream');
@@ -35,18 +36,28 @@ function emitAsync(emitter, eventName, payload) {
 }
 
 async function testFileLogIntegration() {
-  const logPath = path.resolve(__dirname, '../mother/modules/notificationManager/blogposter.log');
-  const beforeSize = fs.existsSync(logPath) ? fs.statSync(logPath).size : 0;
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'notification-manager-'));
+  const logPath = path.join(stateDir, 'blogposter.log');
 
-  const nm = loadNotificationManager();
-  const stubEmitter = { on() {}, emit() {} };
-  await nm.initialize({ motherEmitter: stubEmitter, app: {}, isCore: true, jwt: 't' });
-  nm._emitter.notify({ moduleName: 'test', notificationType: 'system', priority: 'info', message: 'Hello Test', timestamp: new Date().toISOString() });
+  try {
+    const nm = loadNotificationManager();
+    const stubEmitter = { on() {}, emit() {} };
+    await nm.initialize({
+      motherEmitter: stubEmitter,
+      app: {},
+      isCore: true,
+      jwt: 't',
+      notificationStateDir: stateDir
+    });
+    nm._emitter.notify({ moduleName: 'test', notificationType: 'system', priority: 'info', message: 'Hello Test', timestamp: new Date().toISOString() });
 
-  await new Promise(r => setTimeout(r, 100));
-  const afterSize = fs.existsSync(logPath) ? fs.statSync(logPath).size : 0;
+    await new Promise(r => setTimeout(r, 100));
+    const afterSize = fs.existsSync(logPath) ? fs.statSync(logPath).size : 0;
 
-  assert(afterSize > beforeSize, 'server.log should grow after notification');
+    assert(afterSize > 0, 'persistent notification log should grow after notification');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 }
 
 test('notification manager writes to log file', async () => {
@@ -54,18 +65,24 @@ test('notification manager writes to log file', async () => {
 });
 
 test('getRecentNotifications returns array', async () => {
-  const nm = loadNotificationManager();
-  const stubEmitter = { on() {}, emit() {} };
-  await nm.initialize({ motherEmitter: stubEmitter, app: {}, isCore: true, jwt: 't' });
-  const { getRecentNotifications } = require('../mother/modules/notificationManager/notificationManagerService');
-  const list = getRecentNotifications(1);
-  assert(Array.isArray(list), 'should return array');
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'notification-manager-'));
+  try {
+    const nm = loadNotificationManager();
+    const stubEmitter = { on() {}, emit() {} };
+    await nm.initialize({ motherEmitter: stubEmitter, app: {}, isCore: true, jwt: 't', notificationStateDir: stateDir });
+    const { getRecentNotifications } = require('../mother/modules/notificationManager/notificationManagerService');
+    const list = getRecentNotifications(1, { stateDir });
+    assert(Array.isArray(list), 'should return array');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 });
 
 test('getRecentNotifications requires notificationManager core scope and permission', async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'notification-manager-'));
   const nm = loadNotificationManager();
   const emitter = new EventEmitter();
-  await nm.initialize({ motherEmitter: emitter, app: {}, isCore: true, jwt: 't' });
+  await nm.initialize({ motherEmitter: emitter, app: {}, isCore: true, jwt: 't', notificationStateDir: stateDir });
 
   const wrongScope = await emitAsync(emitter, 'getRecentNotifications', {
     jwt: 'other-core-token',
@@ -94,6 +111,7 @@ test('getRecentNotifications requires notificationManager core scope and permiss
   });
   assert.ifError(allowed.err);
   assert(Array.isArray(allowed.result));
+  fs.rmSync(stateDir, { recursive: true, force: true });
 });
 
 test('slack webhook sends message', async () => {

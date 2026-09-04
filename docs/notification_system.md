@@ -8,9 +8,12 @@ to chat services such as Slack.
 
 Integrations live in `mother/modules/notificationManager/integrations`. Each
 integration exports an object with an `integrationName` and an `initialize`
-method. When the CMS starts, the manager loads the `integrationsRegistry.json`
-file to determine which integrations are active and passes their stored config to
-`initialize`.
+method. The signed `mother/modules/notificationManager/integrationsRegistry.json`
+is a read-only release default. On first start the manager copies it to
+`data/notificationManager/integrationsRegistry.json`, then loads and updates only
+that persistent registry. Existing activation and integration configuration is
+preserved across core updates; new release integrations are added without
+replacing existing entries.
 
 Integrations can also expose a `fields` array describing their configuration
 requirements. The registry mirrors this metadata so the admin UI can present
@@ -35,8 +38,9 @@ Example registry entry:
   }
 }
 ```
-Replace these placeholder credentials with real values in a deployment-specific
-registry file that is **not** committed to version control.
+Replace these placeholder credentials in the persistent registry through the
+administration workflow. Never commit `data/notificationManager`; it can contain
+integration credentials.
 
 ## Usage
 

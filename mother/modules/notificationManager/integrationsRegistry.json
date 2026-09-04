@@ -67,7 +67,7 @@
   "FileLog": {
     "active": true,
     "config": {
-      "logPath": "./mother/modules/notificationManager/blogposter.log"
+      "logPath": "./data/notificationManager/blogposter.log"
     },
     "fields": [
       {

@@ -22,7 +22,7 @@ module.exports = {
       // Attempt a dummy append to ensure the path is writable
       fs.appendFileSync(logPath, '', 'utf8');
     } catch (err) {
-      throw new Error(`Cannot write to logPath: ${err.message}`);
+      throw new Error(`[NOTIFICATION_FILE_LOG_UNWRITABLE] Cannot write to logPath: ${err.message}`);
     }
   },
 
@@ -35,7 +35,7 @@ module.exports = {
         try {
           fs.appendFileSync(logPath, line, 'utf8');
         } catch (err) {
-          console.error('[FileLog Integration] Failed to write to log =>', err.message);
+          console.error('[NOTIFICATION_FILE_LOG_WRITE_FAILED] Failed to write notification log =>', err.message);
         }
       }
     };

@@ -95,7 +95,8 @@ test('container build gate rejects drift from the externally signed baseline', (
 });
 
 test('only explicitly known runtime data paths are excluded', () => {
-  expect(_internals.pathIsMutableRuntimeData('mother/modules/notificationManager/blogposter.log')).toBe(true);
+  expect(_internals.pathIsMutableRuntimeData('mother/modules/databaseManager/modulePasswords.json')).toBe(true);
+  expect(_internals.pathIsMutableRuntimeData('mother/modules/notificationManager/blogposter.log')).toBe(false);
   expect(_internals.pathIsMutableRuntimeData('mother/modules/example/runtime.log')).toBe(false);
   expect(_internals.pathIsMutableRuntimeData('modules/example/handler.db')).toBe(false);
   expect(_internals.pathIsMutableRuntimeData('modules/example/handler.sqlite.js')).toBe(false);

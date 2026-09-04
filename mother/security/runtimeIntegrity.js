@@ -31,8 +31,7 @@ const MUTABLE_RUNTIME_PATHS = Object.freeze([
   // data, not release code. Their exact names are excluded; their parent code
   // directories remain fully covered by the signed baseline.
   'mother/modules/databaseManager/modulePasswords.json',
-  'mother/modules/databaseManager/placeholders/placeholderData.json',
-  'mother/modules/notificationManager/blogposter.log'
+  'mother/modules/databaseManager/placeholders/placeholderData.json'
 ]);
 
 let runtimeState = {

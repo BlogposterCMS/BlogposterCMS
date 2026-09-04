@@ -138,6 +138,11 @@ files, module manifests, package-manager files, host folders and symlinks cannot
 participate. Deploy Git-managed overlays as a read-only mount at
 `/app/data/module-overrides`; never commit or expose the rest of `/app/data`.
 
+Notification integration configuration and FileLog output are mutable private
+state under `/app/data/notificationManager`. The signed registry inside
+`/app/mother` is a read-only initialization default and must never be edited or
+made writable in production.
+
 ## Developing Secure Modules
 
 When writing your own modules keep these best practices in mind:

@@ -17,7 +17,7 @@ function assertNotificationPayload(payload, eventName) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, app, isCore, jwt }) {
+  async initialize({ motherEmitter, app, isCore, jwt, notificationStateDir }) {
     if (!isCore) {
       throw new Error('[NOTIFICATION MANAGER] Must be loaded as a core module.');
     }
@@ -31,7 +31,10 @@ module.exports = {
     console.log('[NOTIFICATION MANAGER] Initializing...');
 
     // Lade alle Integrationen
-    const integrations = await loadIntegrations();
+    // Production uses /app/data/notificationManager. Tests may inject an
+    // isolated state directory without changing the runtime authority.
+    const stateOptions = notificationStateDir ? { stateDir: notificationStateDir } : {};
+    const integrations = await loadIntegrations(stateOptions);
 
     // Initialisiere aktive Integrationen einmalig
     const activeInstances = {};
@@ -70,7 +73,7 @@ module.exports = {
         if (payload?.decodedJWT && !hasPermission(payload.decodedJWT, 'notifications.read')) {
           return callback(new Error('Forbidden - missing permission: notifications.read'));
         }
-        const list = getRecentNotifications(limit);
+        const list = getRecentNotifications(limit, stateOptions);
         callback(null, list);
       } catch (err) {
         callback(err);

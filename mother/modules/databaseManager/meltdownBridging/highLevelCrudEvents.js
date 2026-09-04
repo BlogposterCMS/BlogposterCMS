@@ -362,12 +362,13 @@ function localDbInsert(motherEmitter, payload, callback) {
   const values = Object.values(data);
 
   const tableName = resolveSqlTableName(payload);
-  const sql = `
-    INSERT INTO ${tableName}
-    (${columns.join(', ')})
-    VALUES (${placeholders.join(', ')})
-    RETURNING *;
-  `;
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(tableName)) {
+    return callback(new Error('[localDbInsert] Invalid table name.'));
+  }
+  const sql = 'INSERT INTO ' + tableName +
+    ' (' + columns.join(', ') + ')' +
+    ' VALUES (' + placeholders.join(', ') + ')' +
+    ' RETURNING *;';
   motherEmitter.emit(
     'performDbOperation',
     markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: values }, 'insert'),
@@ -439,9 +440,12 @@ function localDbSelect(motherEmitter, payload, callback) {
   }
 
   const tableName = resolveSqlTableName(payload);
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(tableName)) {
+    return callback(new Error('[localDbSelect] Invalid table name.'));
+  }
   const sql = `
     SELECT *
-    FROM ${tableName}
+    FROM ` + tableName + `
     ${whereClause}
     ORDER BY id DESC
   `;
@@ -559,8 +563,11 @@ function localDbUpdate(motherEmitter, payload, callback) {
   const allValues = [...setValues, ...whereValues];
 
   const tableName = resolveSqlTableName(payload);
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(tableName)) {
+    return callback(new Error('[localDbUpdate] Invalid table name.'));
+  }
   const sql = `
-    UPDATE ${tableName}
+    UPDATE ` + tableName + `
     SET ${setClauses.join(', ')}
     WHERE ${whereClauses.join(' AND ')}
     RETURNING *;
@@ -621,8 +628,11 @@ function localDbDelete(motherEmitter, payload, callback) {
   const whereValues = Object.values(where);
 
   const tableName = resolveSqlTableName(payload);
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(tableName)) {
+    return callback(new Error('[localDbDelete] Invalid table name.'));
+  }
   const sql = `
-    DELETE FROM ${tableName}
+    DELETE FROM ` + tableName + `
     WHERE ${whereClauses.join(' AND ')}
     RETURNING *;
   `;

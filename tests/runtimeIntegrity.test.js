@@ -4,6 +4,8 @@ const path = require('path');
 const {
   MANAGED_PATHS,
   buildRuntimeIntegrityManifest,
+  collectManagedFiles,
+  compareRecords,
   parseRuntimeIntegrityManifest,
   verifyAttestation,
   verifyRuntimeIntegrity,
@@ -37,6 +39,8 @@ function createRuntimeFixture() {
     fs.mkdirSync(moduleDir, { recursive: true });
     fs.writeFileSync(path.join(moduleDir, 'index.js'), `module.exports = '${moduleName}';\n`);
   }
+  fs.writeFileSync(path.join(rootDir, 'modules', 'alpha', 'handler.db'), "module.exports = 'db-handler';\n");
+  fs.writeFileSync(path.join(rootDir, 'modules', 'alpha', 'handler.sqlite.js'), "module.exports = 'sqlite-handler';\n");
   return rootDir;
 }
 
@@ -90,11 +94,37 @@ test('container build gate rejects drift from the externally signed baseline', (
   }
 });
 
-test('runtime-generated data files are excluded without weakening executable coverage', () => {
-  expect(_internals.pathIsMutableRuntimeData('mother/modules/example/runtime.log')).toBe(true);
-  expect(_internals.pathIsMutableRuntimeData('mother/modules/example/cache.sqlite-wal')).toBe(true);
-  expect(_internals.pathIsMutableRuntimeData('mother/modules/example/index.js')).toBe(false);
-  expect(_internals.pathIsMutableRuntimeData('modules/example/index.js')).toBe(false);
+test('only explicitly known runtime data paths are excluded', () => {
+  expect(_internals.pathIsMutableRuntimeData('mother/modules/notificationManager/blogposter.log')).toBe(true);
+  expect(_internals.pathIsMutableRuntimeData('mother/modules/example/runtime.log')).toBe(false);
+  expect(_internals.pathIsMutableRuntimeData('modules/example/handler.db')).toBe(false);
+  expect(_internals.pathIsMutableRuntimeData('modules/example/handler.sqlite.js')).toBe(false);
+});
+
+test('unusual executable module extensions are hashed and tampering is detected', () => {
+  const rootDir = createRuntimeFixture();
+  try {
+    const manifest = buildRuntimeIntegrityManifest({ rootDir, ...RELEASE_IDENTITY });
+    const dbHandler = path.join(rootDir, 'modules', 'alpha', 'handler.db');
+    expect(require(dbHandler)).toBe('db-handler');
+    expect(manifest.files.map(record => record.path)).toEqual(expect.arrayContaining([
+      'modules/alpha/handler.db',
+      'modules/alpha/handler.sqlite.js'
+    ]));
+
+    fs.writeFileSync(dbHandler, "module.exports = 'tampered';\n");
+    fs.writeFileSync(
+      path.join(rootDir, 'modules', 'alpha', 'handler.sqlite.js'),
+      "module.exports = 'tampered';\n"
+    );
+    const issues = compareRecords(manifest.files, collectManagedFiles(rootDir));
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'modules/alpha/handler.db' }),
+      expect.objectContaining({ path: 'modules/alpha/handler.sqlite.js' })
+    ]));
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
 });
 
 test('production startup fails closed on changed core files after signature verification', async () => {

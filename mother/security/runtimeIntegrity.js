@@ -31,7 +31,8 @@ const MUTABLE_RUNTIME_PATHS = Object.freeze([
   // data, not release code. Their exact names are excluded; their parent code
   // directories remain fully covered by the signed baseline.
   'mother/modules/databaseManager/modulePasswords.json',
-  'mother/modules/databaseManager/placeholders/placeholderData.json'
+  'mother/modules/databaseManager/placeholders/placeholderData.json',
+  'mother/modules/notificationManager/blogposter.log'
 ]);
 
 let runtimeState = {
@@ -70,9 +71,9 @@ function pathIsManaged(relativePath, managedPaths = MANAGED_PATHS) {
 }
 
 function pathIsMutableRuntimeData(relativePath) {
-  if (MUTABLE_RUNTIME_PATHS.includes(relativePath)) return true;
-  const baseName = path.posix.basename(relativePath);
-  return baseName.endsWith('.log') || baseName.endsWith('.db') || baseName.includes('.sqlite');
+  // Node treats unknown extensions as CommonJS in require(), so suffix-based
+  // exclusions would let executable module code escape the signed baseline.
+  return MUTABLE_RUNTIME_PATHS.includes(relativePath);
 }
 
 function sha256File(filePath) {

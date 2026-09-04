@@ -26,6 +26,10 @@ Handles file and folder operations under the media library. It verifies permissi
   renditions.
 - Link attachments to content entries or source-owned records with a role and
   stable ordering.
+- Represent local and externally delivered assets through the same attachment
+  contract. `storagePath` is the local path or provider object key, `url` is the
+  public delivery URL, and provider/CDN details remain bounded attachment
+  metadata. Media Manager does not store object-storage credentials.
 
 Uploads performed through meltdown events accept empty payloads. Supplying `fileData` as an empty string or zero-length `Buffer` writes the decoded content to disk while preserving the strict MIME/type whitelist enforced by the module.
 The whitelist includes common web presentation assets used by imported themes
@@ -101,3 +105,11 @@ visibility filters.
 
 Maintenance mode leaves `/media/...` available so the selected maintenance
 page can continue to load its published styles, fonts and images.
+
+Static-site migrations should use the existing `staticSiteAssets` importer.
+It registers already published local files or OSS/CDN objects here and creates
+canonical page relations without bypassing Media Manager. Downloadable
+application packages are attachments with category `download` and artifact
+metadata; immutable versions remain separate attachment records. A provider
+uploader may be added behind this boundary later, but it must not introduce a
+second media catalog or expose provider credentials to Pages or public HTML.

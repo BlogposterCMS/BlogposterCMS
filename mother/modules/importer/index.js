@@ -94,7 +94,7 @@ function sanitizeRunImportOptions(importerName, options = {}) {
       sanitized.path = assertInsideImportRoots(sanitized.path, 'options.path');
     }
   }
-  if (importerName === 'wordpressSitePackage') {
+  if (importerName === 'wordpressSitePackage' || importerName === 'staticSiteAssets') {
     if (sanitized.packageDir) {
       sanitized.packageDir = assertInsideImportRoots(sanitized.packageDir, 'options.packageDir');
     }

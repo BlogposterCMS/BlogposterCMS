@@ -6,6 +6,14 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-09-04
+
+- Added the provider-neutral `staticSiteAssets` importer for idempotently
+  registering an existing site's local or OSS/CDN-delivered files in Media
+  Manager and linking direct references to existing Pages. Downloadable
+  application packages keep immutable version/build/checksum identity and
+  artifact metadata instead of becoming CMS product records.
+
 ## [0.7.1] - 2026-09-03
 
 - Made the shared Node 24 Trixie container base configurable through one

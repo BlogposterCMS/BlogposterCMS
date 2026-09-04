@@ -23,6 +23,11 @@
 !public/**
 !widgets/
 !widgets/**
+!.release-integrity/
+!.release-integrity/runtime-integrity-manifest.json
+!.release-integrity/runtime-integrity-manifest.bundle.json
+!tools/
+!tools/verify-runtime-integrity-baseline.js
 
 # Re-exclude mutable and secret-bearing files even inside an allowed directory.
 **/.env

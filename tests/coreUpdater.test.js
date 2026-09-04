@@ -72,6 +72,10 @@ test('host updater is valid Bash and keeps update safety gates explicit', () => 
   expect(syntax.stderr).toBe('');
 
   const source = fs.readFileSync(updaterPath, 'utf8');
+  expect(source).toContain('CORE_UPDATE_MANIFEST_ATTESTATION_INVALID');
+  expect(source).toContain('--signer-workflow "$TRUSTED_SIGNER_WORKFLOW"');
+  expect(source).toContain('--source-ref "refs/tags/v${candidate_version}"');
+  expect(source).toContain('--source-digest "$candidate_commit"');
   expect(source).toContain("gh attestation verify \"oci://$image_ref\"");
   expect(source).toContain('CORE_UPDATE_CURRENT_IMAGE_MUTABLE');
   expect(source).toContain('create_volume_backups');
@@ -99,8 +103,24 @@ test('release workflow publishes and attests the full server image and updater a
   expect(workflow).toContain('actions/attest@v4');
   expect(workflow).toContain('artifact-metadata: write');
   expect(workflow).toContain('blogposter-update.json');
+  expect(workflow).toContain('blogposter-update.bundle.json');
+  expect(workflow).toContain('runtime-integrity-manifest.json');
+  expect(workflow).toContain('runtime-integrity-manifest.bundle.json');
+  expect(workflow).toContain('Download signed runtime integrity assets');
   expect(workflow).toContain('blogposter-update');
   expect(workflow).toContain('CORE_UPDATE_RELEASE_TAG_MISMATCH');
+});
+
+test('production image pins the shared GitHub attestation verifier', () => {
+  const dockerfile = fs.readFileSync(path.join(rootDir, 'Dockerfile'), 'utf8');
+  expect(dockerfile).toContain('ARG GH_VERSION=2.96.0');
+  expect(dockerfile).toContain('sha256sum -c -');
+  expect(dockerfile).toContain('COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh');
+  expect(dockerfile).toContain('COPY .release-integrity/runtime-integrity-manifest.json /app/.integrity/');
+  expect(dockerfile).toContain('verify-runtime-integrity-baseline.js');
+  expect(dockerfile).not.toContain('COPY --from=build --chown=node:node /app /app');
+  expect(dockerfile).toContain('BLOGPOSTER_RUNTIME_INTEGRITY=required');
+  expect(dockerfile).not.toMatch(/PRIVATE_KEY|SIGNING_KEY/);
 });
 
 test('official Compose layout keeps mutable state and Git overlays outside the image', () => {

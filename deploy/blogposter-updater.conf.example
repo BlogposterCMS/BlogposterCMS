@@ -2,6 +2,7 @@
 # in BLOGPOSTER_ENV_FILE, referenced by the Compose file, and are never read by
 # this updater.
 BLOGPOSTER_UPDATE_MANIFEST_URL=https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json
+BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL=https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json
 BLOGPOSTER_UPDATE_REPOSITORY=BlogposterCMS/BlogposterCMS
 BLOGPOSTER_COMPOSE_FILE=/opt/blogposter/blogposter.compose.yml
 BLOGPOSTER_COMPOSE_PROJECT_DIR=/opt/blogposter

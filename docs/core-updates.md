@@ -14,6 +14,11 @@ a GitHub build-provenance attestation and attaches these assets to the release:
 
 - `blogposter-update.json`: source commit, version, image digest and rollback
   policy consumed by the updater;
+- `blogposter-update.bundle.json`: GitHub/Sigstore attestation bundle for the
+  update manifest;
+- `runtime-integrity-manifest.json` and its `.bundle.json`: the externally
+  signed SHA-256 baseline for application code, modules and production
+  dependencies;
 - `blogposter-update`: pull-only host updater;
 - `blogposter-updater.conf.example`: non-secret updater configuration;
 - `SHA256SUMS`: release-asset transport checksums;
@@ -42,9 +47,10 @@ installation state and other mutable private data.
 ## Host prerequisites
 
 The updater targets Linux Docker Compose hosts and requires `bash`, `curl`,
-`docker`, `flock`, `jq` and `sha256sum`. GitHub provenance mode additionally
-requires an authenticated GitHub CLI (`gh`). Production remains pull-only: do
-not install dependencies, build source or create images on the host.
+`docker`, `flock`, `jq`, `sha256sum` and GitHub CLI (`gh`). Verification uses
+the public release attestation bundle, so no private signing key belongs on the
+host. Production remains pull-only: do not install dependencies, build source,
+sign files or create images on the host.
 
 Create the deployment, release and updater files under a protected host
 directory, then validate the Compose configuration before the first update:
@@ -65,7 +71,9 @@ install -m 0755 blogposter-update /opt/blogposter/bin/blogposter-update
 /opt/blogposter/bin/blogposter-update apply --config /opt/blogposter/updater.conf
 ```
 
-The apply command fails closed unless the running image and candidate are both
+The check and apply commands first verify the detached update-manifest
+attestation against the fixed repository, release workflow and exact release
+tag. Apply then fails closed unless the running image and candidate are both
 digest-pinned. It verifies the configured trust mode, pulls the new image, runs
 the native SQLite/bcrypt/Express smoke, stops the single SQLite writer, archives
 the named `/app/data` and `/app/library` volumes with SHA-256 checksums, starts
@@ -101,3 +109,26 @@ Set an exact mirror reference including its digest, choose
 `BLOGPOSTER_TRUSTED_REGISTRY_PREFIX`. This mode trusts that registry and the
 operator's external source-build verification; it does not claim GitHub's
 attestation applies to a separately rebuilt image.
+
+## Runtime self-verification
+
+Every production image contains the integrity manifest and detached bundle
+created externally for its exact packaged version. The bundled `gh` verifier
+checks the GitHub/Sigstore signature offline against the same fixed repository,
+release workflow and source commit used by the host updater before Blogposter
+loads its event bus or any
+module. It then hashes the application code, community modules and production
+dependencies.
+
+A core or dependency deviation stops startup with
+`RUNTIME_INTEGRITY_CORE_MISMATCH`. A changed community module is recorded with
+`RUNTIME_INTEGRITY_MODULE_BLOCKED`, excluded before event registration and
+hashed once more immediately before each isolated module process starts. These
+events are emitted as structured audit log records. Read-only
+`data/module-overrides` remain outside the signed executable tree; their policy
+continues to deny backend entries and manifests.
+
+There is intentionally no local resign command. A new trusted baseline can be
+created only by the tag-triggered GitHub release workflow. Production also
+rejects `BLOGPOSTER_RUNTIME_INTEGRITY=off`; unavailable or invalid integrity
+artifacts therefore stop startup instead of silently weakening verification.

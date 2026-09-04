@@ -47,6 +47,17 @@ jobs:
           languages: javascript
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
+      - name: Keep only production dependencies for the signed runtime baseline
+        run: npm prune --omit=dev
+      - name: Create signed runtime integrity baseline
+        run: node tools/create-runtime-integrity-manifest.js runtime-integrity-manifest.json
+      - name: Attest runtime integrity baseline
+        id: runtime_integrity_attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: runtime-integrity-manifest.json
+      - name: Stage runtime integrity attestation bundle
+        run: cp "${{ steps.runtime_integrity_attestation.outputs.bundle-path }}" runtime-integrity-manifest.bundle.json
       - name: Zip Build Artifacts
         run: zip -r blogposter_cms_build.zip public/build/
 
@@ -54,7 +65,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: blogposter_cms_build
-          path: blogposter_cms_build.zip
+          path: |
+            blogposter_cms_build.zip
+            runtime-integrity-manifest.json
+            runtime-integrity-manifest.bundle.json
 
   publish_image:
     needs: validate
@@ -65,6 +79,11 @@ jobs:
       version: ${{ steps.image.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+      - name: Download signed runtime integrity assets
+        uses: actions/download-artifact@v4
+        with:
+          name: blogposter_cms_build
+          path: .release-integrity
       - name: Resolve immutable release identity
         id: image
         run: |
@@ -108,7 +127,13 @@ jobs:
           cp deploy/blogposter.compose.yml release-assets/blogposter.compose.yml
           cp deploy/deployment.env.example release-assets/deployment.env.example
           chmod 0755 release-assets/blogposter-update
-          (cd release-assets && sha256sum blogposter-update.json blogposter-update blogposter-updater.conf.example blogposter.compose.yml deployment.env.example > SHA256SUMS)
+      - name: Attest updater release manifest
+        id: updater_manifest_attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: release-assets/blogposter-update.json
+      - name: Stage updater manifest attestation bundle
+        run: cp "${{ steps.updater_manifest_attestation.outputs.bundle-path }}" release-assets/blogposter-update.bundle.json
       - name: Upload core updater assets
         uses: actions/upload-artifact@v4
         with:
@@ -130,6 +155,13 @@ jobs:
         with:
           name: blogposter_core_release
           path: ./release-assets
+
+      - name: Create transport checksums for every release asset
+        run: |
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\0' \
+            | sort -z \
+            | xargs -0 sha256sum > SHA256SUMS
 
       - name: Read CHANGELOG.md
         id: changelog

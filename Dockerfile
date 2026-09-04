@@ -11,15 +11,45 @@ COPY package.json package-lock.json ./
 # to install the reviewed lockfile and can be unreachable from regional builders.
 RUN npm ci --no-audit
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN npm run build \
+    && npm prune --omit=dev \
+    && node tools/verify-runtime-integrity-baseline.js .release-integrity/runtime-integrity-manifest.json \
+    && rm -rf /app/.release-integrity /app/tools
+
+# The runtime and host updater deliberately use the same GitHub/Sigstore
+# verifier. Pin and checksum the public CLI binary; no private signing key is
+# ever copied into the image.
+FROM ${NODE_IMAGE} AS github-cli
+ARG TARGETARCH
+ARG GH_VERSION=2.96.0
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y ca-certificates curl \
+    && case "$TARGETARCH" in \
+         amd64) GH_SHA256='83d5c2ccad5498f58bf6368acb1ab32588cf43ab3a4b1c301bf36328b1c8bd60' ;; \
+         arm64) GH_SHA256='06f86ec7103d41993b76cd78072f43595c34aaa56506d971d9860e67140bf909' ;; \
+         *) echo 'RUNTIME_INTEGRITY_GH_ARCH_UNSUPPORTED' >&2; exit 1 ;; \
+       esac \
+    && curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+         --output /tmp/gh.tar.gz "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${TARGETARCH}.tar.gz" \
+    && echo "${GH_SHA256}  /tmp/gh.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/gh.tar.gz --strip-components=2 -C /usr/local/bin \
+         "gh_${GH_VERSION}_linux_${TARGETARCH}/bin/gh" \
+    && gh version \
+    && rm -rf /var/lib/apt/lists/* /tmp/gh.tar.gz
 
 FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production APP_ENV=production PORT=3000 \
     CONTENT_DB_TYPE=sqlite SQLITE_STORAGE=/app/data \
     DEV_AUTOLOGIN=false DEV_AGENT_LOGIN=false BLOGPOSTER_DEV_RELOAD=false \
-    DEV_FILE_LOGS=false BLOGPOSTER_EVENT_TRACE=false
+    DEV_FILE_LOGS=false BLOGPOSTER_EVENT_TRACE=false \
+    BLOGPOSTER_RUNTIME_INTEGRITY=required
 WORKDIR /app
-COPY --from=build --chown=node:node /app /app
+# Core code and the verifier stay root-owned and read-only to the unprivileged
+# application user. Only explicit data directories become writable below.
+COPY --from=build /app /app
+COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh
+COPY .release-integrity/runtime-integrity-manifest.json /app/.integrity/runtime-integrity-manifest.json
+COPY .release-integrity/runtime-integrity-manifest.bundle.json /app/.integrity/runtime-integrity-manifest.bundle.json
 # Existing file-backed state follows the same persisted data volume as SQLite.
 # No customer database, secrets, media or install state enters the build context.
 RUN mkdir -p /app/data /app/library /app/logs /app/temp_uploads \

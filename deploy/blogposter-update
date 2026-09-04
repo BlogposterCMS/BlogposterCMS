@@ -3,7 +3,9 @@ set -Eeuo pipefail
 
 readonly UPDATER_VERSION='1.0.0'
 readonly DEFAULT_MANIFEST_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json'
-readonly ALLOWED_CONFIG_KEYS=' BLOGPOSTER_UPDATE_MANIFEST_URL BLOGPOSTER_UPDATE_REPOSITORY BLOGPOSTER_COMPOSE_FILE BLOGPOSTER_COMPOSE_PROJECT_DIR BLOGPOSTER_COMPOSE_ENV_FILE BLOGPOSTER_RELEASE_ENV_FILE BLOGPOSTER_SERVICE BLOGPOSTER_BACKUP_DIR BLOGPOSTER_STATE_DIR BLOGPOSTER_DATA_DESTINATIONS BLOGPOSTER_UPDATE_TIMEOUT_SECONDS BLOGPOSTER_ATTESTATION_MODE BLOGPOSTER_MIRROR_IMAGE BLOGPOSTER_TRUSTED_REGISTRY_PREFIX '
+readonly DEFAULT_MANIFEST_BUNDLE_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json'
+readonly TRUSTED_SIGNER_WORKFLOW='BlogposterCMS/BlogposterCMS/.github/workflows/release.yml'
+readonly ALLOWED_CONFIG_KEYS=' BLOGPOSTER_UPDATE_MANIFEST_URL BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL BLOGPOSTER_UPDATE_REPOSITORY BLOGPOSTER_COMPOSE_FILE BLOGPOSTER_COMPOSE_PROJECT_DIR BLOGPOSTER_COMPOSE_ENV_FILE BLOGPOSTER_RELEASE_ENV_FILE BLOGPOSTER_SERVICE BLOGPOSTER_BACKUP_DIR BLOGPOSTER_STATE_DIR BLOGPOSTER_DATA_DESTINATIONS BLOGPOSTER_UPDATE_TIMEOUT_SECONDS BLOGPOSTER_ATTESTATION_MODE BLOGPOSTER_MIRROR_IMAGE BLOGPOSTER_TRUSTED_REGISTRY_PREFIX '
 
 log() {
   printf '[%s] %s\n' "$1" "$2"
@@ -83,10 +85,27 @@ write_release_image() {
 }
 
 fetch_manifest() {
-  local output="$1"
+  local output="$1" bundle="$2" candidate_version candidate_commit
   curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
     --output "$output" "${BLOGPOSTER_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}" || \
     fail 'CORE_UPDATE_MANIFEST_DOWNLOAD_FAILED' 'Could not download the update manifest over HTTPS.'
+  curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+    --output "$bundle" "${BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL:-$DEFAULT_MANIFEST_BUNDLE_URL}" || \
+    fail 'CORE_UPDATE_MANIFEST_BUNDLE_DOWNLOAD_FAILED' 'Could not download the update manifest attestation bundle over HTTPS.'
+  # The candidate version is used only to constrain the signature identity. No
+  # manifest field is trusted until this detached attestation succeeds.
+  candidate_version="$(jq -er '.version | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"))' "$output" 2>/dev/null || true)"
+  [[ -n "$candidate_version" ]] || fail 'CORE_UPDATE_MANIFEST_INVALID' 'Update manifest has no safe release version.'
+  candidate_commit="$(jq -er '.source.commit | select(test("^[a-f0-9]{40}$"))' "$output" 2>/dev/null || true)"
+  [[ -n "$candidate_commit" ]] || fail 'CORE_UPDATE_MANIFEST_INVALID' 'Update manifest has no safe source commit.'
+  gh attestation verify "$output" \
+    --repo "$BLOGPOSTER_UPDATE_REPOSITORY" \
+    --bundle "$bundle" \
+    --signer-workflow "$TRUSTED_SIGNER_WORKFLOW" \
+    --source-ref "refs/tags/v${candidate_version}" \
+    --source-digest "$candidate_commit" \
+    --deny-self-hosted-runners >/dev/null || \
+    fail 'CORE_UPDATE_MANIFEST_ATTESTATION_INVALID' 'GitHub/Sigstore verification of the update manifest failed.'
   jq -e '
     .schemaVersion == 1 and
     .product == "blogpostercms" and
@@ -122,11 +141,15 @@ select_image_reference() {
 }
 
 verify_image_trust() {
-  local image_ref="$1" expected_repo="$2" mode="${BLOGPOSTER_ATTESTATION_MODE:-github}"
+  local image_ref="$1" expected_repo="$2" expected_version="$3" expected_commit="$4" mode="${BLOGPOSTER_ATTESTATION_MODE:-github}"
   case "$mode" in
     github)
       require_command gh
-      gh attestation verify "oci://$image_ref" --repo "$expected_repo" >/dev/null || \
+      gh attestation verify "oci://$image_ref" --repo "$expected_repo" \
+        --signer-workflow "$TRUSTED_SIGNER_WORKFLOW" \
+        --source-ref "refs/tags/v${expected_version}" \
+        --source-digest "$expected_commit" \
+        --deny-self-hosted-runners >/dev/null || \
         fail 'CORE_UPDATE_ATTESTATION_INVALID' 'GitHub build provenance verification failed.'
       ;;
     registry-digest)
@@ -242,14 +265,17 @@ recover_failed_apply() {
   compose_run up -d --no-deps --force-recreate "$BLOGPOSTER_SERVICE" >/dev/null || \
     fail 'CORE_UPDATE_ROLLBACK_FAILED' 'Previous image could not be restarted.'
   wait_healthy || fail 'CORE_UPDATE_ROLLBACK_FAILED' 'Previous image did not become healthy after rollback.'
-  rm -f "${MANIFEST_FILE:-}"
+  rm -f "${MANIFEST_FILE:-}" "${MANIFEST_BUNDLE_FILE:-}"
   log 'CORE_UPDATE_ROLLED_BACK' 'Previous image and data were restored successfully.'
   exit "$original_status"
 }
 
 prepare_environment() {
   BLOGPOSTER_UPDATE_MANIFEST_URL="${BLOGPOSTER_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}"
+  BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL="${BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL:-$DEFAULT_MANIFEST_BUNDLE_URL}"
   BLOGPOSTER_UPDATE_REPOSITORY="${BLOGPOSTER_UPDATE_REPOSITORY:-BlogposterCMS/BlogposterCMS}"
+  [[ "$BLOGPOSTER_UPDATE_REPOSITORY" == 'BlogposterCMS/BlogposterCMS' ]] || \
+    fail 'CORE_UPDATE_REPOSITORY_DENIED' 'Updater trust is pinned to BlogposterCMS/BlogposterCMS.'
   BLOGPOSTER_SERVICE="${BLOGPOSTER_SERVICE:-blogposter}"
   BLOGPOSTER_DATA_DESTINATIONS="${BLOGPOSTER_DATA_DESTINATIONS:-/app/data,/app/library}"
   BLOGPOSTER_UPDATE_TIMEOUT_SECONDS="${BLOGPOSTER_UPDATE_TIMEOUT_SECONDS:-180}"
@@ -267,7 +293,7 @@ prepare_environment() {
 
 run_check() {
   local id current_version target_version image_ref
-  fetch_manifest "$MANIFEST_FILE"
+  fetch_manifest "$MANIFEST_FILE" "$MANIFEST_BUNDLE_FILE"
   target_version="$(manifest_value '.version')"
   image_ref="$(select_image_reference)"
   id="$(container_id)"
@@ -282,11 +308,12 @@ run_check() {
 }
 
 run_apply() {
-  local id current_version target_version minimum_version target_image expected_repo timestamp backup_dir
-  fetch_manifest "$MANIFEST_FILE"
+  local id current_version target_version minimum_version target_image expected_repo expected_commit timestamp backup_dir
+  fetch_manifest "$MANIFEST_FILE" "$MANIFEST_BUNDLE_FILE"
   target_version="$(manifest_value '.version')"
   minimum_version="$(manifest_value '.minimumUpdaterVersion')"
   expected_repo="$(manifest_value '.source.repository')"
+  expected_commit="$(manifest_value '.source.commit')"
   [[ "$expected_repo" == "$BLOGPOSTER_UPDATE_REPOSITORY" ]] || \
     fail 'CORE_UPDATE_REPOSITORY_MISMATCH' 'Manifest repository does not match updater policy.'
   semver_greater "$minimum_version" "$UPDATER_VERSION" && \
@@ -302,7 +329,7 @@ run_apply() {
   [[ "$PREVIOUS_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || \
     fail 'CORE_UPDATE_CURRENT_IMAGE_MUTABLE' 'Running image is not pinned by digest; safe rollback cannot be guaranteed.'
 
-  verify_image_trust "$target_image" "$expected_repo"
+  verify_image_trust "$target_image" "$expected_repo" "$target_version" "$expected_commit"
   docker pull "$target_image" >/dev/null || fail 'CORE_UPDATE_IMAGE_PULL_FAILED' 'Target image could not be pulled.'
   docker run --rm --entrypoint node "$target_image" -e \
     "require('sqlite3').verbose();require('bcrypt');require('express')" >/dev/null || \
@@ -389,13 +416,15 @@ main() {
   require_command docker
   require_command flock
   require_command jq
+  require_command gh
   require_command sha256sum
   load_config "$config_file"
   prepare_environment
   exec 9>"$BLOGPOSTER_STATE_DIR/update.lock"
   flock -n 9 || fail 'CORE_UPDATE_LOCKED' 'Another Blogposter update is already running.'
   MANIFEST_FILE="$(mktemp "$BLOGPOSTER_STATE_DIR/manifest.XXXXXX.json")"
-  trap 'rm -f "${MANIFEST_FILE:-}"' EXIT
+  MANIFEST_BUNDLE_FILE="$(mktemp "$BLOGPOSTER_STATE_DIR/manifest-bundle.XXXXXX.json")"
+  trap 'rm -f "${MANIFEST_FILE:-}" "${MANIFEST_BUNDLE_FILE:-}"' EXIT
 
   case "$command" in
     check) run_check ;;
@@ -403,7 +432,7 @@ main() {
     rollback) run_rollback ;;
     *) usage; fail 'CORE_UPDATE_COMMAND_INVALID' 'Expected check, apply or rollback.' ;;
   esac
-  rm -f "$MANIFEST_FILE"
+  rm -f "$MANIFEST_FILE" "$MANIFEST_BUNDLE_FILE"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

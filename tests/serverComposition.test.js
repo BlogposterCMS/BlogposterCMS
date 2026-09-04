@@ -12,7 +12,8 @@ test('app.js stays a thin startup composition root', () => {
   const lineCount = appSource.split(/\r?\n/).length;
 
   expect(lineCount).toBeLessThanOrEqual(80);
-  expect(appSource).toContain("require('dotenv').config()");
+  expect(appSource).toContain('process.loadEnvFile()');
+  expect(appSource).toContain('await verifyRuntimeIntegrity');
   expect(appSource).toContain('createBlogposterApp');
   expect(appSource).toContain('attachShutdownHandlers');
   expect(appSource).not.toContain("require('express')");

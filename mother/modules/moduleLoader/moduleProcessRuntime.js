@@ -8,6 +8,7 @@ const {
 } = require('./moduleHost');
 const { buildModuleRuntimeEnv } = require('./moduleRuntimeEnv');
 const { cloneRuntimeData } = require('./moduleRuntimeUtils');
+const { verifyRuntimeModuleIntegrityNow } = require('../../security/runtimeIntegrity');
 
 const RUNNER_ENTRY = path.join(__dirname, 'moduleRunnerProcess.js');
 const DEFAULT_INIT_TIMEOUT_MS = 10000;
@@ -152,6 +153,9 @@ class CommunityModuleProcess {
   startChild() {
     if (this.child) return;
 
+    // Re-hash the signed module tree immediately before every health/runtime
+    // child process so a post-bootstrap file change cannot register handlers.
+    verifyRuntimeModuleIntegrityNow(this.moduleName);
     const env = buildModuleRuntimeEnv(this.moduleDir);
     const child = fork(RUNNER_ENTRY, [], {
       cwd: this.moduleDir,

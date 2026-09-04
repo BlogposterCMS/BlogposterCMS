@@ -69,6 +69,10 @@ const { getGrantedModuleEvents } = require('./moduleAccessPolicy');
 const {
   sharedModuleAccessConsentManager
 } = require('./moduleAccessConsent');
+const {
+  assertRuntimeModuleIntegrity,
+  verifyRuntimeModuleIntegrityNow
+} = require('../../security/runtimeIntegrity');
 
 const RESERVED_CORE_MODULES = CORE_OWNED_MODULE_NAMES;
 const MODULE_NAME = 'moduleLoader';
@@ -169,6 +173,9 @@ async function loadAllModules({ emitter, app, jwt }) {
     let moduleInfo = {};
 
     try {
+      // An unsigned or changed module is recorded as disabled before its
+      // manifest is trusted and before it can register any event handlers.
+      assertRuntimeModuleIntegrity(folder);
       moduleInfo = readCommunityModuleInfo(moduleFolderPath, folder, { modulesRoot: modulesPath });
     } catch (err) {
       console.error(`[MODULE LOADER] Invalid module folder "${folder}": ${err.message}`);
@@ -270,6 +277,7 @@ function serveStaticFrontend({ row, folderNames = [], modulesPath, app, modifica
   if (!row || !row.is_active || !app || typeof app.use !== 'function') return false;
 
   const moduleName = sanitizeModuleName(row.module_name);
+  assertRuntimeModuleIntegrity(moduleName);
   if (RESERVED_CORE_MODULES.has(moduleName)) return false;
   if (!folderNames.includes(moduleName)) return false;
 
@@ -320,6 +328,15 @@ async function attemptModuleLoad(
   if (!folderNames.includes(moduleName)) {
     console.warn(`[MODULE LOADER] No folder => ${moduleName}. Possibly was deleted.`);
     sharedModuleAccessConsentManager.rejectAllForModule(moduleName, 'Module folder missing.');
+    return false;
+  }
+
+  try {
+    // Use a fresh hash immediately before registering the module type; the
+    // cached startup result alone would leave a small post-start tamper window.
+    verifyRuntimeModuleIntegrityNow(moduleName);
+  } catch (err) {
+    await handleModuleError(err, moduleName, motherEmitter, jwt);
     return false;
   }
 

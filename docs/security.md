@@ -117,11 +117,21 @@ health check before swapping folders and keeps a backup for rollback.
 
 Core releases are complete OCI images, not file patches. The release workflow
 binds the package version, source commit and immutable image digest in
-`blogposter-update.json` and publishes GitHub build provenance. The external
-host updater verifies that identity, backs up named persistent volumes, checks
-the packaged version and automatically restores the previous digest and data
+`blogposter-update.json`, signs that manifest externally and publishes GitHub
+build provenance. The external host updater verifies the detached manifest
+attestation before trusting any update field, backs up named persistent
+volumes, checks the packaged version and automatically restores the previous digest and data
 when readiness fails. It never receives CMS runtime secrets and never writes
 inside the running application image. See [Safe core updates](core-updates.md).
+
+Production startup independently verifies the release's signed runtime hash
+baseline before importing the event bus or module loader. Core or dependency
+drift aborts startup; a changed community module is audit-logged, kept disabled
+and rechecked before every module child process. The verifier is pinned to the
+official repository, release workflow and exact package tag, uses the same
+GitHub/Sigstore trust chain as the updater, and cannot be bypassed in
+production. No private signing key or automatic local re-signing path is
+shipped.
 
 Module overlays are restricted to declared static directories. Backend entry
 files, module manifests, package-manager files, host folders and symlinks cannot

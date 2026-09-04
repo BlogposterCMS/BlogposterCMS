@@ -6,6 +6,11 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Extended the updater trust chain to the initial installation and every
+  production process start. Release automation now externally attests both the
+  update manifest and a complete runtime SHA-256 baseline; startup fails closed
+  on core/dependency drift and blocks changed community modules before event
+  registration, with stable audit codes and no local re-signing path.
 - Unified admin widget controls with the existing Studio UI kit: ShadowRoot
   widgets now receive the scoped form/button rules, dynamic single-selects use
   the shared non-native dropdown, Settings uses structured fields and action

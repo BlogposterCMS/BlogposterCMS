@@ -1,8 +1,11 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 require('dotenv').config();
 
 const crypto = require('crypto');
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const {
@@ -323,11 +326,8 @@ async function emitOptional(motherEmitter, eventName, payload) {
   if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
     return null;
   }
-  return await new Promise(resolve => {
-    motherEmitter.emit(eventName, payload, (err, result) => {
-      resolve(err ? { error: err.message } : result);
-    });
-  });
+  return requestBackendEvent(motherEmitter, eventName, payload)
+    .catch(err => ({ error: err.message }));
 }
 
 function optionalContentEntryTarget(payload) {
@@ -342,7 +342,7 @@ function optionalContentEntryTarget(payload) {
 async function updateContentStatusOptional(motherEmitter, jwt, payload, status) {
   const target = optionalContentEntryTarget(payload);
   if (!target) return null;
-  return emitOptional(motherEmitter, 'updateContentEntry', {
+  return emitOptional(motherEmitter, BACKEND_EVENTS.UPDATE_CONTENT_ENTRY, {
     jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',
@@ -354,7 +354,7 @@ async function updateContentStatusOptional(motherEmitter, jwt, payload, status) 
 async function publishContentOptional(motherEmitter, jwt, payload) {
   const target = optionalContentEntryTarget(payload);
   if (!target) return null;
-  return emitOptional(motherEmitter, 'publishContentEntry', {
+  return emitOptional(motherEmitter, BACKEND_EVENTS.PUBLISH_CONTENT_ENTRY, {
     jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',
@@ -363,10 +363,10 @@ async function publishContentOptional(motherEmitter, jwt, payload) {
 }
 
 function setupWorkflowEvents(motherEmitter) {
-  motherEmitter.on('acquireContentLock', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.ACQUIRE_CONTENT_LOCK, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'acquireContentLock');
+      assertCorePayload(payload, BACKEND_EVENTS.ACQUIRE_CONTENT_LOCK);
       requirePermission(payload, 'content.update');
       const result = await workflowDbUpdate(motherEmitter, payload.jwt, 'ACQUIRE_CONTENT_LOCK', normalizeLock(payload));
       if (result && result.locked === false) {
@@ -379,10 +379,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('refreshContentLock', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REFRESH_CONTENT_LOCK, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'refreshContentLock');
+      assertCorePayload(payload, BACKEND_EVENTS.REFRESH_CONTENT_LOCK);
       requirePermission(payload, 'content.update');
       const lock = normalizeLock(payload);
       const result = await workflowDbUpdate(motherEmitter, payload.jwt, 'REFRESH_CONTENT_LOCK', lock);
@@ -392,10 +392,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('releaseContentLock', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RELEASE_CONTENT_LOCK, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'releaseContentLock');
+      assertCorePayload(payload, BACKEND_EVENTS.RELEASE_CONTENT_LOCK);
       requirePermission(payload, 'content.update');
       const result = await workflowDbUpdate(motherEmitter, payload.jwt, 'RELEASE_CONTENT_LOCK', normalizeLockKey(payload));
       callback(null, result);
@@ -404,10 +404,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getContentLock', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_LOCK, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentLock');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_LOCK);
       const result = await workflowDbSelect(motherEmitter, payload.jwt, 'GET_CONTENT_LOCK', {
         ...normalizeTarget(payload),
         now: isoNow()
@@ -418,10 +418,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('saveContentAutosave', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SAVE_CONTENT_AUTOSAVE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'saveContentAutosave');
+      assertCorePayload(payload, BACKEND_EVENTS.SAVE_CONTENT_AUTOSAVE);
       requirePermission(payload, 'content.update');
       const result = await workflowDbUpdate(motherEmitter, payload.jwt, 'UPSERT_CONTENT_AUTOSAVE', normalizeAutosave(payload));
       callback(null, result);
@@ -430,10 +430,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getContentAutosave', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_AUTOSAVE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentAutosave');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_AUTOSAVE);
       const result = await workflowDbSelect(motherEmitter, payload.jwt, 'GET_CONTENT_AUTOSAVE', normalizeAutosaveQuery(payload));
       callback(null, Array.isArray(result) ? result[0] || null : result || null);
     } catch (err) {
@@ -441,10 +441,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listContentAutosaves', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_CONTENT_AUTOSAVES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listContentAutosaves');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_CONTENT_AUTOSAVES);
       requirePermission(payload, 'content.update');
       const result = await workflowDbSelect(motherEmitter, payload.jwt, 'LIST_CONTENT_AUTOSAVES', normalizeAutosaveQuery(payload));
       callback(null, result || []);
@@ -453,10 +453,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteContentAutosave', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_CONTENT_AUTOSAVE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteContentAutosave');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_CONTENT_AUTOSAVE);
       requirePermission(payload, 'content.update');
       const result = await workflowDbUpdate(motherEmitter, payload.jwt, 'DELETE_CONTENT_AUTOSAVE', normalizeAutosaveQuery(payload));
       callback(null, result);
@@ -465,10 +465,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('submitContentReview', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SUBMIT_CONTENT_REVIEW, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'submitContentReview');
+      assertCorePayload(payload, BACKEND_EVENTS.SUBMIT_CONTENT_REVIEW);
       requirePermission(payload, 'content.update');
       const review = await workflowDbUpdate(motherEmitter, payload.jwt, 'UPSERT_CONTENT_REVIEW', normalizeReview(payload));
       const contentUpdate = payload.updateEntryStatus === false
@@ -480,10 +480,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('approveContentReview', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.APPROVE_CONTENT_REVIEW, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'approveContentReview');
+      assertCorePayload(payload, BACKEND_EVENTS.APPROVE_CONTENT_REVIEW);
       requirePermission(payload, 'content.publish');
       const review = await workflowDbUpdate(
         motherEmitter,
@@ -498,10 +498,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('rejectContentReview', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REJECT_CONTENT_REVIEW, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'rejectContentReview');
+      assertCorePayload(payload, BACKEND_EVENTS.REJECT_CONTENT_REVIEW);
       requirePermission(payload, 'content.publish');
       const review = await workflowDbUpdate(
         motherEmitter,
@@ -518,10 +518,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getContentReview', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_REVIEW, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentReview');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_REVIEW);
       requirePermission(payload, 'content.publish');
       const result = await workflowDbSelect(motherEmitter, payload.jwt, 'GET_CONTENT_REVIEW', normalizeReviewQuery(payload));
       callback(null, Array.isArray(result) ? result[0] || null : result || null);
@@ -530,10 +530,10 @@ function setupWorkflowEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listContentReviewQueue', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_CONTENT_REVIEW_QUEUE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listContentReviewQueue');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_CONTENT_REVIEW_QUEUE);
       requirePermission(payload, 'content.publish');
       const result = await workflowDbSelect(motherEmitter, payload.jwt, 'LIST_CONTENT_REVIEWS', {
         ...normalizeReviewQuery(payload),

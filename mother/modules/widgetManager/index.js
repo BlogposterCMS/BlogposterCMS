@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/widgetManager/index.js
  *
@@ -19,7 +25,6 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const {
   formatWidgetDesignContractIssues,
@@ -144,50 +149,40 @@ async function ensureWidgetDatabases(motherEmitter, jwt, nonce) {
   console.log('[WIDGET SERVICE] Ensuring widget DB schemas...');
 
   // (A) widgets_public
-  await new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        jwt,
-        moduleName: 'widgetManager',
-        moduleType: 'core',
-        nonce,
-        table: '__rawSQL__',
-        data: { rawSQL: 'INIT_WIDGETS_TABLE_PUBLIC' }
-      },
-      err => {
-        if (err) {
-          console.error('[WIDGET SERVICE] Table creation (widgets_public) failed:', err.message);
-          return reject(err);
-        }
-        console.log('[WIDGET SERVICE] Table "widgets_public" ensured/created.');
-        resolve();
-      }
-    );
-  });
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  jwt,
+  moduleName: 'widgetManager',
+  moduleType: 'core',
+  nonce,
+  table: '__rawSQL__',
+  data: {
+    rawSQL: 'INIT_WIDGETS_TABLE_PUBLIC'
+  }
+}).then(() => {
+  console.log('[WIDGET SERVICE] Table "widgets_public" ensured/created.');
+  return;
+}, err => {
+  console.error('[WIDGET SERVICE] Table creation (widgets_public) failed:', err.message);
+  throw err;
+});
 
   // (B) widgets_admin
-  await new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        jwt,
-        moduleName: 'widgetManager',
-        moduleType: 'core',
-        nonce,
-        table: '__rawSQL__',
-        data: { rawSQL: 'INIT_WIDGETS_TABLE_ADMIN' }
-      },
-      err => {
-        if (err) {
-          console.error('[WIDGET SERVICE] Table creation (widgets_admin) failed:', err.message);
-          return reject(err);
-        }
-        console.log('[WIDGET SERVICE] Table "widgets_admin" ensured/created.');
-        resolve();
-      }
-    );
-  });
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  jwt,
+  moduleName: 'widgetManager',
+  moduleType: 'core',
+  nonce,
+  table: '__rawSQL__',
+  data: {
+    rawSQL: 'INIT_WIDGETS_TABLE_ADMIN'
+  }
+}).then(() => {
+  console.log('[WIDGET SERVICE] Table "widgets_admin" ensured/created.');
+  return;
+}, err => {
+  console.error('[WIDGET SERVICE] Table creation (widgets_admin) failed:', err.message);
+  throw err;
+});
 }
 
 /**
@@ -203,9 +198,9 @@ function setupWidgetManagerEvents(motherEmitter) {
   console.log('[WIDGET MANAGER] Setting up meltdown events...');
 
 // CREATE WIDGET
-motherEmitter.on('createWidget', async (payload, callback) => {
+motherEmitter.on(BACKEND_EVENTS.CREATE_WIDGET, async (payload, callback) => {
   try {
-    assertWidgetManagerPayload(payload, 'createWidget');
+    assertWidgetManagerPayload(payload, BACKEND_EVENTS.CREATE_WIDGET);
   } catch (err) {
     return callback(err);
   }
@@ -230,18 +225,13 @@ motherEmitter.on('createWidget', async (payload, callback) => {
 
   try {
     // Check existence first
-    const widgetExists = await new Promise((resolve, reject) => {
-      motherEmitter.emit('dbSelect', {
+    const widgetExists = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
         jwt,
         moduleName: 'widgetManager',
         moduleType: 'core',
         table: targetTable,
         where: { widget_id: widgetId }
-      }, (err, rows) => {
-        if (err) return reject(err);
-        resolve(rows && rows.length > 0);
-      });
-    });
+      }).then(rows => rows && rows.length > 0);
 
     if (widgetExists) {
       console.log(`[WM] Widget "${widgetId}" already exists.`);
@@ -249,7 +239,7 @@ motherEmitter.on('createWidget', async (payload, callback) => {
     }
 
     // create the widget
-    motherEmitter.emit('dbInsert', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'widgetManager',
       moduleType: 'core',
@@ -261,10 +251,14 @@ motherEmitter.on('createWidget', async (payload, callback) => {
         category:   category || '',
         created_at: new Date().toISOString()
       }
-    }, (insertErr, result) => {
-      if (insertErr) return callback(insertErr);
-      callback(null, { created: true, result });
-    });
+    }).then(result => {
+  callback(null, {
+    created: true,
+    result
+  });
+}, insertErr => {
+  return callback(insertErr);
+});
 
   } catch (ex) {
     callback(ex);
@@ -273,9 +267,9 @@ motherEmitter.on('createWidget', async (payload, callback) => {
 
 
   // GET WIDGETS
-  motherEmitter.on('getWidgets', (payload, callback) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_WIDGETS, (payload, callback) => {
     try {
-      assertWidgetManagerPayload(payload, 'getWidgets');
+      assertWidgetManagerPayload(payload, BACKEND_EVENTS.GET_WIDGETS);
       const { jwt, widgetType } = payload || {};
       if (!jwt) {
         return callback(new Error('[WM] getWidgets => No JWT provided.'));
@@ -296,42 +290,37 @@ motherEmitter.on('createWidget', async (payload, callback) => {
 
       const targetTable = pickTable(widgetType);
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'widgetManager',
           moduleType: 'core',
           table: targetTable,
           data: {} // SELECT * from that table
-        },
-        (err, rows = []) => {
-          if (err) return callback(err);
-
-          // Remap the DB rows from snake_case to JS object
-          // so downstream modules can read "widgetId," "createdAt," etc.
-          const mapped = rows.map(r => ({
-            widgetId:   r.widget_id,
-            label:      r.label,
-            content:    r.content,
-            category:   r.category,
-            createdAt:  r.created_at,
-            // If you have an "order" column or something else,
-            // you could map that here too.
-          }));
-
-          callback(null, mapped);
-        }
-      );
+        }).then((rows = []) => {
+  // Remap the DB rows from snake_case to JS object
+  // so downstream modules can read "widgetId," "createdAt," etc.
+  const mapped = rows.map(r => ({
+    widgetId: r.widget_id,
+    label: r.label,
+    content: r.content,
+    category: r.category,
+    createdAt: r.created_at
+    // If you have an "order" column or something else,
+    // you could map that here too.
+  }));
+  callback(null, mapped);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // UPDATE WIDGET
-  motherEmitter.on('updateWidget', (payload, callback) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_WIDGET, (payload, callback) => {
     try {
-      assertWidgetManagerPayload(payload, 'updateWidget');
+      assertWidgetManagerPayload(payload, BACKEND_EVENTS.UPDATE_WIDGET);
       const {
         jwt,
         widgetId,
@@ -355,9 +344,7 @@ motherEmitter.on('createWidget', async (payload, callback) => {
         ? 'UPDATE_WIDGET_ADMIN'
         : 'UPDATE_WIDGET_PUBLIC';
 
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: 'widgetManager',
           moduleType: 'core',
@@ -370,18 +357,16 @@ motherEmitter.on('createWidget', async (payload, callback) => {
             newCategory,
             newOrder
           }
-        },
-        callback
-      );
+        }).then(result => callback(null, result), error => callback(error));
     } catch (ex) {
       callback(ex);
     }
   });
 
   // DELETE WIDGET
-  motherEmitter.on('deleteWidget', (payload, callback) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_WIDGET, (payload, callback) => {
     try {
-      assertWidgetManagerPayload(payload, 'deleteWidget');
+      assertWidgetManagerPayload(payload, BACKEND_EVENTS.DELETE_WIDGET);
       const { jwt, widgetId, widgetType } = payload || {};
 
       if (!jwt || !widgetId || !widgetType) {
@@ -397,9 +382,7 @@ motherEmitter.on('createWidget', async (payload, callback) => {
         ? 'DELETE_WIDGET_ADMIN'
         : 'DELETE_WIDGET_PUBLIC';
 
-      motherEmitter.emit(
-        'dbDelete',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
           jwt,
           moduleName: 'widgetManager',
           moduleType: 'core',
@@ -408,18 +391,16 @@ motherEmitter.on('createWidget', async (payload, callback) => {
             rawSQL,
             widgetId
           }
-        },
-        callback
-      );
+        }).then(result => callback(null, result), error => callback(error));
     } catch (ex) {
       callback(ex);
     }
   });
 
   // SAVE LAYOUT (v1)
-  motherEmitter.on('saveLayout.v1', (payload, callback) => {
+  motherEmitter.on(BACKEND_EVENTS.SAVE_LAYOUT_V1, (payload, callback) => {
     try {
-      assertWidgetManagerPayload(payload, 'saveLayout.v1');
+      assertWidgetManagerPayload(payload, BACKEND_EVENTS.SAVE_LAYOUT_V1);
       const { jwt, moduleName, layout, lane } = payload || {};
       if (!jwt || !moduleName) {
         return callback(new Error('[WM] saveLayout.v1 => missing jwt or moduleName.'));
@@ -454,9 +435,7 @@ motherEmitter.on('createWidget', async (payload, callback) => {
       layout.forEach(({ widgetId, order }) => {
         if (!widgetId) return nextOne(); // skip
 
-        motherEmitter.emit(
-          'updateWidget',
-          {
+        requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPDATE_WIDGET, {
             jwt,
             moduleName: MODULE_NAME,
             moduleType: MODULE_TYPE,
@@ -466,12 +445,11 @@ motherEmitter.on('createWidget', async (payload, callback) => {
             newContent:  null,
             newCategory: null,
             newOrder:    order
-          },
-          err => {
-            if (err) console.error('[WM] saveLayout.v1 => updateWidget error:', err.message);
-            nextOne();
-          }
-        );
+          }).then(() => {
+  nextOne();
+}, err => {
+  console.error('[WM] saveLayout.v1 => updateWidget error:', err.message);
+});
       });
     } catch (ex) {
       callback(ex);
@@ -705,28 +683,19 @@ async function loadCommunityWidgets(motherEmitter, jwt) {
     const designReport = validateCommunityWidgetDesignContract(widgetDir, folderName);
     logWidgetDesignWarnings(widget.widgetId, designReport);
 
-    await new Promise(resolve => {
-      motherEmitter.emit(
-        'createWidget',
-        {
-          jwt,
-          moduleName: 'widgetManager',
-          moduleType: 'core',
-          widgetId: widget.widgetId,
-          widgetType: widget.widgetType,
-          label: widget.label,
-          category: widget.category,
-          content: `/widgets/${folderName}/widget.js`
-        },
-        onceCallback(err => {
-          if (err) {
-            console.error(`[WIDGET MANAGER] createWidget failed for ${widget.widgetId} =>`, err.message);
-          } else {
-            console.log(`[WIDGET MANAGER] Registered community widget ${widget.widgetId}.`);
-          }
-          resolve();
-        })
-      );
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_WIDGET, {
+      jwt,
+      moduleName: 'widgetManager',
+      moduleType: 'core',
+      widgetId: widget.widgetId,
+      widgetType: widget.widgetType,
+      label: widget.label,
+      category: widget.category,
+      content: `/widgets/${folderName}/widget.js`
+    }).then(() => {
+      console.log(`[WIDGET MANAGER] Registered community widget ${widget.widgetId}.`);
+    }, err => {
+      console.error(`[WIDGET MANAGER] createWidget failed for ${widget.widgetId} =>`, err.message);
     });
   }
 

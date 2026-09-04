@@ -1,4 +1,8 @@
 'use strict';
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
@@ -40,10 +44,10 @@ module.exports = {
       global.fontsList = Array.isArray(DEFAULT_FONTS) ? DEFAULT_FONTS.slice() : [];
     }
 
-    motherEmitter.on('listFontProviders', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.LIST_FONT_PROVIDERS, (payload, cb) => {
       cb = onceCallback(cb);
       try {
-        assertFontsPayload(payload, 'listFontProviders');
+        assertFontsPayload(payload, BACKEND_EVENTS.LIST_FONT_PROVIDERS);
       } catch (err) {
         return cb(err);
       }
@@ -55,10 +59,10 @@ module.exports = {
       cb(null, list);
     });
 
-    motherEmitter.on('setFontProviderEnabled', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.SET_FONT_PROVIDER_ENABLED, (payload, cb) => {
       cb = onceCallback(cb);
       try {
-        assertFontsPayload(payload, 'setFontProviderEnabled');
+        assertFontsPayload(payload, BACKEND_EVENTS.SET_FONT_PROVIDER_ENABLED);
       } catch (err) {
         return cb(err);
       }
@@ -81,7 +85,7 @@ module.exports = {
       cb(null, { success: true });
     });
 
-    motherEmitter.on('registerFontProvider', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.REGISTER_FONT_PROVIDER, (payload, cb) => {
       cb = onceCallback(cb);
       const secret = process.env.FONTS_MODULE_INTERNAL_SECRET;
       const { providerName, description, isEnabled = false, initFunction, fontsModuleSecret } = payload || {};
@@ -89,7 +93,7 @@ module.exports = {
         return cb(new Error('Invalid or missing fonts module secret.'));
       }
       try {
-        assertFontsPayload(payload, 'registerFontProvider');
+        assertFontsPayload(payload, BACKEND_EVENTS.REGISTER_FONT_PROVIDER);
       } catch (err) {
         return cb(err);
       }
@@ -104,21 +108,21 @@ module.exports = {
       cb(null, true);
     });
 
-    motherEmitter.on('listFonts', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.LIST_FONTS, (payload, cb) => {
       cb = onceCallback(cb);
       try {
-        assertFontsPayload(payload, 'listFonts');
+        assertFontsPayload(payload, BACKEND_EVENTS.LIST_FONTS);
       } catch (err) {
         return cb(err);
       }
       cb(null, Array.isArray(global.fontsList) ? global.fontsList : []);
     });
 
-    motherEmitter.on('addFont', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.ADD_FONT, (payload, cb) => {
       cb = onceCallback(cb);
       const { name, url, provider = 'custom' } = payload || {};
       try {
-        assertFontsPayload(payload, 'addFont');
+        assertFontsPayload(payload, BACKEND_EVENTS.ADD_FONT);
       } catch (err) {
         return cb(err);
       }

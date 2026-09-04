@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/emitters/motherEmitter.js
  *
@@ -25,15 +29,15 @@ const AUTH_MODULE_SECRET = process.env.AUTH_MODULE_INTERNAL_SECRET || '';
 
 /** Public events skip meltdown checks entirely */
 const PUBLIC_EVENTS = [
-  'issuePublicToken',
-  'ensurePublicToken',
-  'agentAccess.exchangeCode',
-  'agentAccess.createDevSession'
+  BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN,
+  BACKEND_EVENTS.ENSURE_PUBLIC_TOKEN,
+  BACKEND_EVENTS.AGENT_ACCESS_EXCHANGE_CODE,
+  BACKEND_EVENTS.AGENT_ACCESS_CREATE_DEV_SESSION
 ];
 
 const INTERNAL_SYSTEM_EVENTS = new Set([
-  'removeListenersByModule',
-  'deactivateModule'
+  BACKEND_EVENTS.REMOVE_LISTENERS_BY_MODULE,
+  BACKEND_EVENTS.DEACTIVATE_MODULE
 ]);
 const INTERNAL_SYSTEM_EVENT = Symbol('motherEmitter.internalSystemEvent');
 
@@ -42,10 +46,10 @@ const INTERNAL_SYSTEM_EVENT = Symbol('motherEmitter.internalSystemEvent');
  * and we have the correct authModuleSecret
  */
 const ALLOWED_SKIPJWT_EVENTS = [
-  'issueUserToken',
-  'issueModuleToken',
-  'registerLoginStrategy',
-  'validateToken'
+  BACKEND_EVENTS.ISSUE_USER_TOKEN,
+  BACKEND_EVENTS.ISSUE_MODULE_TOKEN,
+  BACKEND_EVENTS.REGISTER_LOGIN_STRATEGY,
+  BACKEND_EVENTS.VALIDATE_TOKEN
 ];
 
 /**
@@ -173,7 +177,7 @@ function removeListenersForModule(motherEmitter, moduleName) {
 function deactivateModuleRuntime(motherEmitter, moduleName, reason = 'Module deactivated') {
   if (!motherEmitter || typeof motherEmitter.emit !== 'function') return false;
   return motherEmitter.emit(
-    'deactivateModule',
+    BACKEND_EVENTS.DEACTIVATE_MODULE,
     markInternalSystemPayload({ moduleName, reason })
   );
 }
@@ -370,7 +374,7 @@ const motherEmitter = new MotherEmitter();
    const origEmit = motherEmitter.emit.bind(motherEmitter);
 
    motherEmitter.emit = function (event, payload, cb) {
-     if (event === 'getPageBySlug' && (!payload || !payload.jwt)) {
+     if (event === BACKEND_EVENTS.GET_PAGE_BY_SLUG && (!payload || !payload.jwt)) {
        console.trace('[DEBUG] getPageBySlug **without** JWT from here ⇧');
      }
      return origEmit(event, payload, cb);
@@ -379,7 +383,7 @@ const motherEmitter = new MotherEmitter();
 /** 
  * Public event => remove all event listeners for the given module
  */
-motherEmitter.on('removeListenersByModule', (payload) => {
+motherEmitter.on(BACKEND_EVENTS.REMOVE_LISTENERS_BY_MODULE, (payload) => {
   const modName = (typeof payload === 'string') ? payload : payload?.moduleName;
   removeListenersForModule(motherEmitter, modName);
 });
@@ -387,7 +391,7 @@ motherEmitter.on('removeListenersByModule', (payload) => {
 /**
  * Public event => "deactivateModule" means remove all the module’s listeners
  */
-motherEmitter.on('deactivateModule', (payload) => {
+motherEmitter.on(BACKEND_EVENTS.DEACTIVATE_MODULE, (payload) => {
   const { moduleName, reason } = payload || {};
   console.warn('[MotherEmitter] Deactivating module="%s" => reason="%s"', moduleName, reason);
   const loadedModule = global.loadedModules?.[moduleName];
@@ -396,6 +400,7 @@ motherEmitter.on('deactivateModule', (payload) => {
       console.error('[MotherEmitter] Failed to stop runner for module="%s": %s', moduleName, err.message);
     });
   }
+
   removeListenersForModule(motherEmitter, moduleName);
   if (global.loadedModules) delete global.loadedModules[moduleName];
 });

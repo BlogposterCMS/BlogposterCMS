@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const express = require('express');
 
 const MODULE_NAME = 'agentAccess';
@@ -36,9 +40,7 @@ function respondError(res, err) {
 }
 
 function emitAgentAccessEvent(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => (err ? reject(err) : resolve(result)));
-  });
+  return requestBackendEvent(motherEmitter, eventName, payload);
 }
 
 function basePayload(req, extra = {}) {
@@ -84,7 +86,7 @@ function createAgentAccessAdminRouter({ motherEmitter, validateAdminToken } = {}
 
   router.get('/codes', async (req, res) => {
     try {
-      const data = await emitAgentAccessEvent(motherEmitter, 'agentAccess.listCodes', basePayload(req));
+      const data = await emitAgentAccessEvent(motherEmitter, BACKEND_EVENTS.AGENT_ACCESS_LIST_CODES, basePayload(req));
       res.json({ data });
     } catch (err) {
       respondError(res, err);
@@ -93,7 +95,7 @@ function createAgentAccessAdminRouter({ motherEmitter, validateAdminToken } = {}
 
   router.post('/codes', async (req, res) => {
     try {
-      const data = await emitAgentAccessEvent(motherEmitter, 'agentAccess.createCode', basePayload(req, {
+      const data = await emitAgentAccessEvent(motherEmitter, BACKEND_EVENTS.AGENT_ACCESS_CREATE_CODE, basePayload(req, {
         label: req.body?.label,
         scope: req.body?.scope,
         ttlSeconds: req.body?.ttlSeconds,
@@ -107,7 +109,7 @@ function createAgentAccessAdminRouter({ motherEmitter, validateAdminToken } = {}
 
   router.delete('/codes/:codeId', async (req, res) => {
     try {
-      const data = await emitAgentAccessEvent(motherEmitter, 'agentAccess.revokeCode', basePayload(req, {
+      const data = await emitAgentAccessEvent(motherEmitter, BACKEND_EVENTS.AGENT_ACCESS_REVOKE_CODE, basePayload(req, {
         codeId: req.params.codeId
       }));
       res.json({ data });
@@ -128,7 +130,7 @@ function createAgentAccessPublicRouter({ motherEmitter } = {}) {
 
   router.post('/exchange', async (req, res) => {
     try {
-      const data = await emitAgentAccessEvent(motherEmitter, 'agentAccess.exchangeCode', {
+      const data = await emitAgentAccessEvent(motherEmitter, BACKEND_EVENTS.AGENT_ACCESS_EXCHANGE_CODE, {
         moduleName: MODULE_NAME,
         moduleType: MODULE_TYPE,
         code: req.body?.code
@@ -141,7 +143,7 @@ function createAgentAccessPublicRouter({ motherEmitter } = {}) {
 
   router.post('/dev-session', async (req, res) => {
     try {
-      const data = await emitAgentAccessEvent(motherEmitter, 'agentAccess.createDevSession', {
+      const data = await emitAgentAccessEvent(motherEmitter, BACKEND_EVENTS.AGENT_ACCESS_CREATE_DEV_SESSION, {
         moduleName: MODULE_NAME,
         moduleType: MODULE_TYPE,
         localRequest: isLocalRequest(req),

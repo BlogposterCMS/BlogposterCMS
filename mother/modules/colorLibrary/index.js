@@ -1,5 +1,7 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const {
@@ -48,31 +50,31 @@ function registerEvent(motherEmitter, eventName, permission, handler) {
 }
 
 function setupColorLibraryEvents(motherEmitter) {
-  registerEvent(motherEmitter, 'colorLibrary.list', 'builder.use', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_LIST, 'builder.use', payload =>
     readColorLibrary(motherEmitter, payload.jwt)
   );
-  registerEvent(motherEmitter, 'colorLibrary.listPublic', '', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_LIST_PUBLIC, '', payload =>
     readColorLibrary(motherEmitter, payload.jwt)
   );
-  registerEvent(motherEmitter, 'colorLibrary.create', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_CREATE, 'builder.publish', payload =>
     createSavedColor(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'colorLibrary.update', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_UPDATE, 'builder.publish', payload =>
     updateSavedColor(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'colorLibrary.delete', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_DELETE, 'builder.publish', payload =>
     deleteSavedColor(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'colorLibrary.createScheme', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_CREATE_SCHEME, 'builder.publish', payload =>
     createColorScheme(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'colorLibrary.updateScheme', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_UPDATE_SCHEME, 'builder.publish', payload =>
     updateColorScheme(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'colorLibrary.activateScheme', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_ACTIVATE_SCHEME, 'builder.publish', payload =>
     activateColorScheme(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'colorLibrary.deleteScheme', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.COLOR_LIBRARY_DELETE_SCHEME, 'builder.publish', payload =>
     deleteColorScheme(motherEmitter, payload.jwt, payload)
   );
 }

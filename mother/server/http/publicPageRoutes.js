@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
@@ -28,31 +32,19 @@ function createPublicPageRoutes({
       const slug = sanitizeSlug(req.params[0] || '');
 
       try {
-        global.pagesPublicToken = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'ensurePublicToken',
-            {
+        global.pagesPublicToken = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ENSURE_PUBLIC_TOKEN, {
               currentToken: global.pagesPublicToken,
               purpose: 'public',
               moduleName: 'publicRoute',
               moduleType: 'core'
-            },
-            (err, data) => (err ? reject(err) : resolve(data))
-          );
-        });
+            });
 
-        const page = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'getPageBySlug',
-            {
+        const page = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
               jwt: global.pagesPublicToken,
               moduleName: 'pagesManager',
               moduleType: 'core',
               slug
-            },
-            (err, result) => (err ? reject(err) : resolve(result))
-          );
-        });
+            });
 
         if (page?.id) return next();
       } catch (lookupErr) {
@@ -96,34 +88,29 @@ function createPublicPageRoutes({
       const slug = sanitizeSlug(typeof requestedSlug === 'string' ? requestedSlug : '');
 
       try {
-        global.pagesPublicToken = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'ensurePublicToken',
-            {
+        global.pagesPublicToken = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ENSURE_PUBLIC_TOKEN, {
               currentToken: global.pagesPublicToken,
               purpose: 'public',
               moduleName: 'publicRoute',
               moduleType: 'core'
-            },
-            (err, data) => (err ? reject(err) : resolve(data))
-          );
-        });
+            });
       } catch (tokenErr) {
         console.error('[SERVER] Failed to obtain public token ->', tokenErr);
         return res.status(500).send('Server misconfiguration');
       }
 
-      const page = await new Promise((resolve, reject) => {
-        const eventName = slug ? 'getPageBySlug' : 'getStartPage';
-        const payload = slug
-          ? { jwt: global.pagesPublicToken, moduleName: 'pagesManager', moduleType: 'core', slug }
-          : { jwt: global.pagesPublicToken, moduleName: 'pagesManager', moduleType: 'core' };
-
-        motherEmitter.emit(eventName, payload, (err, record) => {
-          if (err) return reject(err);
-          resolve(record);
-        });
-      });
+      const eventName = slug ? BACKEND_EVENTS.GET_PAGE_BY_SLUG : BACKEND_EVENTS.GET_START_PAGE;
+      const payload = slug ? {
+        jwt: global.pagesPublicToken,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        slug
+      } : {
+        jwt: global.pagesPublicToken,
+        moduleName: 'pagesManager',
+        moduleType: 'core'
+      };
+      const page = await requestBackendEvent(motherEmitter, eventName, payload);
 
       if (!page?.id) return next();
 

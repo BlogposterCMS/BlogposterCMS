@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/serverManager/index.js
  *
@@ -71,11 +77,11 @@ function setupServerManagerEventListeners(motherEmitter) {
   console.log('[SERVER MANAGER] Setting up meltdown event listeners for server locations...');
 
   // ADD SERVER LOCATION
-  motherEmitter.on('addServerLocation', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.ADD_SERVER_LOCATION, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, serverName, ipAddress, notes } = payload || {};
-      assertServerManagerPayload(payload, 'addServerLocation');
+      assertServerManagerPayload(payload, BACKEND_EVENTS.ADD_SERVER_LOCATION);
       if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'serverManager.createLocation')) {
         return callback(new Error('Forbidden – missing permission: serverManager.createLocation'));
       }
@@ -83,9 +89,7 @@ function setupServerManagerEventListeners(motherEmitter) {
         return callback(new Error('serverName and ipAddress are required to add a server location.'));
       }
 
-      motherEmitter.emit(
-        'dbInsert',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
           jwt,
           moduleName : MODULE_NAME,
           moduleType : MODULE_TYPE,
@@ -96,23 +100,25 @@ function setupServerManagerEventListeners(motherEmitter) {
             ipAddress,
             notes: notes || ''
           }
-        },
-        (err, result) => {
-          if (err) return callback(err);
-          callback(null, { success: true, location: result });
-        }
-      );
+        }).then(result => {
+  callback(null, {
+    success: true,
+    location: result
+  });
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // GET SERVER LOCATION by ID
-  motherEmitter.on('getServerLocation', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_SERVER_LOCATION, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, locationId } = payload || {};
-      assertServerManagerPayload(payload, 'getServerLocation');
+      assertServerManagerPayload(payload, BACKEND_EVENTS.GET_SERVER_LOCATION);
       if (!jwt) {
         return callback(new Error('[SERVER MANAGER] getServerLocation => missing jwt.'));
       }
@@ -123,9 +129,7 @@ function setupServerManagerEventListeners(motherEmitter) {
         return callback(new Error('locationId is required to fetch a server location.'));
       }
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE_NAME,
           moduleType: MODULE_TYPE,
@@ -134,23 +138,22 @@ function setupServerManagerEventListeners(motherEmitter) {
             rawSQL: 'SERVERMANAGER_GET_LOCATION',
             locationId
           }
-        },
-        (err, rows) => {
-          if (err) return callback(err);
-          callback(null, rows && rows.length ? rows[0] : null);
-        }
-      );
+        }).then(rows => {
+  callback(null, rows && rows.length ? rows[0] : null);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // LIST ALL SERVER LOCATIONS
-  motherEmitter.on('listServerLocations', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_SERVER_LOCATIONS, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt } = payload || {};
-      assertServerManagerPayload(payload, 'listServerLocations');
+      assertServerManagerPayload(payload, BACKEND_EVENTS.LIST_SERVER_LOCATIONS);
       if (!jwt) {
         return callback(new Error('[SERVER MANAGER] listServerLocations => missing jwt.'));
       }
@@ -158,31 +161,28 @@ function setupServerManagerEventListeners(motherEmitter) {
         return callback(new Error('Forbidden – missing permission: serverManager.viewLocations'));
       }
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE_NAME,
           moduleType: MODULE_TYPE,
           table     : '__rawSQL__',
           data      : { rawSQL: 'SERVERMANAGER_LIST_LOCATIONS' }
-        },
-        (err, rows) => {
-          if (err) return callback(err);
-          callback(null, rows || []);
-        }
-      );
+        }).then(rows => {
+  callback(null, rows || []);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // DELETE SERVER LOCATION
-  motherEmitter.on('deleteServerLocation', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_SERVER_LOCATION, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, locationId } = payload || {};
-      assertServerManagerPayload(payload, 'deleteServerLocation');
+      assertServerManagerPayload(payload, BACKEND_EVENTS.DELETE_SERVER_LOCATION);
       if (!jwt) {
         return callback(new Error('[SERVER MANAGER] deleteServerLocation => missing jwt.'));
       }
@@ -193,9 +193,7 @@ function setupServerManagerEventListeners(motherEmitter) {
         return callback(new Error('locationId is required.'));
       }
 
-      motherEmitter.emit(
-        'dbDelete',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
           jwt,
           moduleName: MODULE_NAME,
           moduleType: MODULE_TYPE,
@@ -204,23 +202,24 @@ function setupServerManagerEventListeners(motherEmitter) {
             rawSQL: 'SERVERMANAGER_DELETE_LOCATION',
             locationId
           }
-        },
-        (err) => {
-          if (err) return callback(err);
-          callback(null, { success: true });
-        }
-      );
+        }).then(() => {
+  callback(null, {
+    success: true
+  });
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // UPDATE SERVER LOCATION
-  motherEmitter.on('updateServerLocation', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_SERVER_LOCATION, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, locationId, newName, newIp, newNotes } = payload || {};
-      assertServerManagerPayload(payload, 'updateServerLocation');
+      assertServerManagerPayload(payload, BACKEND_EVENTS.UPDATE_SERVER_LOCATION);
       if (!jwt) {
         return callback(new Error('[SERVER MANAGER] updateServerLocation => missing jwt.'));
       }
@@ -231,9 +230,7 @@ function setupServerManagerEventListeners(motherEmitter) {
         return callback(new Error('locationId is required.'));
       }
 
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: MODULE_NAME,
           moduleType: MODULE_TYPE,
@@ -245,12 +242,14 @@ function setupServerManagerEventListeners(motherEmitter) {
             newIp,
             newNotes
           }
-        },
-        (err, result) => {
-          if (err) return callback(err);
-          callback(null, { success: true, updated: result });
-        }
-      );
+        }).then(result => {
+  callback(null, {
+    success: true,
+    updated: result
+  });
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }

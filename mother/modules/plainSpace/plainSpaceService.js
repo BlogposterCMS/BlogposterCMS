@@ -1,8 +1,12 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 // mother/modules/plainSpace/plainSpaceService.js
 // Because obviously we can’t keep these little helpers in index.js. That would be too straightforward.
 
 require('dotenv').config();
-const { onceCallback } = require('../../emitters/motherEmitter');
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const fs = require('fs');
 const path = require('path');
@@ -18,18 +22,7 @@ const notify = (payload) => {
 };
 
 function meltdownEmit(emitter, event, payload) {
-  return new Promise((resolve, reject) => {
-    const callback = onceCallback((err, res) => {
-      if (err) return reject(err);
-      resolve(res);
-    });
-
-    const emitted = emitter.emit(event, payload, callback);
-
-    if (!emitted) {
-      reject(new Error(`No listeners for event "${event}"`));
-    }
-  });
+  return requestBackendEvent(emitter, event, payload);
 }
 
 const MODULE      = 'plainspace';
@@ -157,7 +150,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       .replace(/^-+|-+$/g, '')
       .substring(0, 96);
 
-  if (!motherEmitter.listenerCount('getPageBySlug') || !motherEmitter.listenerCount('createPage')) {
+  if (!motherEmitter.listenerCount(BACKEND_EVENTS.GET_PAGE_BY_SLUG) || !motherEmitter.listenerCount(BACKEND_EVENTS.CREATE_PAGE)) {
     console.warn('[plainSpace] pagesManager not active. Skipping admin page seeding.');
     return;
   }
@@ -201,7 +194,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     }
 
     if (parentSlugRaw) {
-      parent = await meltdownEmit(motherEmitter, 'getPageBySlug', {
+      parent = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
         jwt,
         moduleName: 'pagesManager',
         moduleType: 'core',
@@ -212,7 +205,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       if (!parent) {
         const baseTitle = parentSegs[parentSegs.length - 1] || 'Page';
         const parentTitle = baseTitle.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        const res = await meltdownEmit(motherEmitter, 'createPage', {
+        const res = await meltdownEmit(motherEmitter, BACKEND_EVENTS.CREATE_PAGE, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -254,7 +247,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     }
     const pageLayout = cloneSeedLayout(page);
 
-    const existingPage = await meltdownEmit(motherEmitter, 'getPageBySlug', {
+    const existingPage = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
       jwt,
       moduleName: 'pagesManager',
       moduleType: 'core',
@@ -311,7 +304,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
       if (metaChanged || weightChanged) {
         try {
-          await meltdownEmit(motherEmitter, 'updatePage', {
+          await meltdownEmit(motherEmitter, BACKEND_EVENTS.UPDATE_PAGE, {
             jwt,
             moduleName: 'pagesManager',
             moduleType: 'core',
@@ -333,7 +326,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
       if (missingWidgets.length || retiredWidgets.length) {
         try {
-          const layoutRes = await meltdownEmit(motherEmitter, 'getLayoutForViewport', {
+          const layoutRes = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_LAYOUT_FOR_VIEWPORT, {
             jwt,
             moduleName: MODULE,
             moduleType: 'core',
@@ -352,7 +345,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
             layout.length
           );
           layout = [...layout, ...missingLayoutEntries];
-          await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
+          await meltdownEmit(motherEmitter, BACKEND_EVENTS.SAVE_LAYOUT_FOR_VIEWPORT, {
             jwt,
             moduleName: MODULE,
             moduleType: 'core',
@@ -383,7 +376,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       pageMeta.widgets = getSeedWidgetIds(page.config.widgets);
     }
 
-    const createRes = await meltdownEmit(motherEmitter, 'createPage', {
+    const createRes = await meltdownEmit(motherEmitter, BACKEND_EVENTS.CREATE_PAGE, {
       jwt,
       moduleName: 'pagesManager',
       moduleType: 'core',
@@ -414,7 +407,7 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       );
 
       try {
-        await meltdownEmit(motherEmitter, 'saveLayoutForViewport', {
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.SAVE_LAYOUT_FOR_VIEWPORT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
@@ -455,29 +448,20 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
   const tableName = (widgetType === ADMIN_LANE) ? 'widgets_admin' : 'widgets_public';
 
   // 1) Check if the widget already exists
-  const widgetExists = await new Promise((resolve) => {
-    motherEmitter.emit(
-      'dbSelect',
-      {
-        jwt,
-        moduleName: 'widgetManager',
-        moduleType: 'core',
-        table: tableName,
-        where: { widget_id: widgetId }
-      },
-      onceCallback((err, rows) => {
-        if (err) {
-          notify({
-            moduleName: MODULE,
-            notificationType: 'system',
-            priority: 'error',
-            message: `[plainSpace] Error checking widget "${widgetId}": ${err.message}`
-          });
-          return resolve(false);
-        }
-        resolve(Array.isArray(rows) && rows.length > 0);
-      })
-    );
+  const widgetExists = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    jwt,
+    moduleName: 'widgetManager',
+    moduleType: 'core',
+    table: tableName,
+    where: { widget_id: widgetId }
+  }).then(rows => Array.isArray(rows) && rows.length > 0, err => {
+    notify({
+      moduleName: MODULE,
+      notificationType: 'system',
+      priority: 'error',
+      message: `[plainSpace] Error checking widget "${widgetId}": ${err.message}`
+    });
+    return false;
   });
 
   if (widgetExists) {
@@ -486,29 +470,20 @@ async function checkOrCreateWidget(motherEmitter, jwt, widgetData) {
   }
 
   // 2) If not, create the widget
-  await new Promise((resolve) => {
-    motherEmitter.emit(
-      'createWidget',
-      {
-        jwt,
-        moduleName: 'widgetManager',
-        moduleType: 'core',
-        ...widgetData
-      },
-      onceCallback((err) => {
-        if (err) {
-          notify({
-            moduleName: MODULE,
-            notificationType: 'system',
-            priority: 'error',
-            message: `[plainSpace] createWidget failed for "${widgetId}": ${err.message}`
-          });
-        } else {
-          console.log(`[plainSpace] Widget "${widgetId}" successfully created.`);
-        }
-        resolve();
-      })
-    );
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_WIDGET, {
+    jwt,
+    moduleName: 'widgetManager',
+    moduleType: 'core',
+    ...widgetData
+  }).then(() => {
+    console.log(`[plainSpace] Widget "${widgetId}" successfully created.`);
+  }, err => {
+    notify({
+      moduleName: MODULE,
+      notificationType: 'system',
+      priority: 'error',
+      message: `[plainSpace] createWidget failed for "${widgetId}": ${err.message}`
+    });
   });
 }
 
@@ -532,7 +507,7 @@ async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) 
 
   const instanceId = `default.${widgetData.widgetId}`;
   try {
-    await meltdownEmit(motherEmitter, 'saveWidgetInstance', {
+    await meltdownEmit(motherEmitter, BACKEND_EVENTS.SAVE_WIDGET_INSTANCE, {
       jwt,
       moduleName: MODULE,
       moduleType: MODULE_TYPE,
@@ -565,9 +540,9 @@ async function seedAdminWidget(motherEmitter, jwt, widgetData, layoutOpts = {}) 
  */
 function registerPlainSpaceEvents(motherEmitter) {
   // 1) saveLayoutForViewport
-  motherEmitter.on('saveLayoutForViewport', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.SAVE_LAYOUT_FOR_VIEWPORT, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'saveLayoutForViewport');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.SAVE_LAYOUT_FOR_VIEWPORT);
       const { jwt, moduleName, pageId, lane, viewport, layout, decodedJWT } = payload || {};
       if (!jwt || !moduleName || !pageId || !lane || !viewport || !Array.isArray(layout)) {
         return cb(new Error('[plainSpace] Invalid payload in saveLayoutForViewport.'));
@@ -575,9 +550,7 @@ function registerPlainSpaceEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.saveLayout')) {
         return cb(new Error('Forbidden – missing permission: plainspace.saveLayout'));
       }
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: MODULE,
           moduleType: MODULE_TYPE,
@@ -586,25 +559,21 @@ function registerPlainSpaceEvents(motherEmitter) {
             rawSQL: 'UPSERT_PLAINSPACE_LAYOUT',
             params: [{ pageId, lane, viewport, layoutArr: layout }]
           }
-        },
-        cb
-      );
+        }).then(result => cb(null, result), error => cb(error));
     } catch (err) {
       cb(err);
     }
   });
 
   // 2) getLayoutForViewport
-  motherEmitter.on('getLayoutForViewport', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_LAYOUT_FOR_VIEWPORT, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'getLayoutForViewport');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.GET_LAYOUT_FOR_VIEWPORT);
       const { jwt, pageId, lane, viewport } = payload || {};
       if (!jwt || !pageId || !lane || !viewport) {
         return cb(new Error('[plainSpace] Missing arguments in getLayoutForViewport.'));
       }
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
@@ -613,35 +582,40 @@ function registerPlainSpaceEvents(motherEmitter) {
             rawSQL: 'GET_PLAINSPACE_LAYOUT',
             params: [{ pageId, lane, viewport }]
           }
-        },
-        (err, rows = []) => {
-          if (err) return cb(err);
-          if (!rows.length) {
-            return cb(null, { layout: [] });
-          }
-          let layoutArr = rows[0].layout_json || [];
-          if (typeof layoutArr === 'string') {
-            try { layoutArr = JSON.parse(layoutArr); } catch { layoutArr = []; }
-          }
-          cb(null, { layout: layoutArr });
-        }
-      );
+        }).then((rows = []) => {
+  if (!rows.length) {
+    return cb(null, {
+      layout: []
+    });
+  }
+  let layoutArr = rows[0].layout_json || [];
+  if (typeof layoutArr === 'string') {
+    try {
+      layoutArr = JSON.parse(layoutArr);
+    } catch {
+      layoutArr = [];
+    }
+  }
+  cb(null, {
+    layout: layoutArr
+  });
+}, err => {
+  return cb(err);
+});
     } catch (err) {
       cb(err);
     }
   });
 
   // 3) getAllLayoutsForPage
-  motherEmitter.on('getAllLayoutsForPage', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ALL_LAYOUTS_FOR_PAGE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'getAllLayoutsForPage');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.GET_ALL_LAYOUTS_FOR_PAGE);
       const { jwt, pageId, lane } = payload || {};
       if (!jwt || !pageId || !lane) {
         return cb(new Error('[plainSpace] Invalid payload in getAllLayoutsForPage.'));
       }
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
@@ -650,28 +624,36 @@ function registerPlainSpaceEvents(motherEmitter) {
             rawSQL: 'GET_ALL_PLAINSPACE_LAYOUTS',
             params: [{ pageId, lane }]
           }
-        },
-        (err, rows = []) => {
-          if (err) return cb(err);
-          const layouts = rows.map((r) => {
-            let layoutArr = r.layout_json || [];
-            if (typeof layoutArr === 'string') {
-              try { layoutArr = JSON.parse(layoutArr); } catch { layoutArr = []; }
-            }
-            return { viewport: r.viewport, layout: layoutArr };
-          });
-          cb(null, { layouts });
-        }
-      );
+        }).then((rows = []) => {
+  const layouts = rows.map(r => {
+    let layoutArr = r.layout_json || [];
+    if (typeof layoutArr === 'string') {
+      try {
+        layoutArr = JSON.parse(layoutArr);
+      } catch {
+        layoutArr = [];
+      }
+    }
+    return {
+      viewport: r.viewport,
+      layout: layoutArr
+    };
+  });
+  cb(null, {
+    layouts
+  });
+}, err => {
+  return cb(err);
+});
     } catch (err) {
       cb(err);
     }
   });
 
   // 4) saveLayoutTemplate
-  motherEmitter.on('saveLayoutTemplate', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'saveLayoutTemplate');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE);
       const { jwt, name, lane, viewport, layout, previewPath, decodedJWT } = payload || {};
       if (!jwt || !name || !lane || !viewport || !Array.isArray(layout)) {
         return cb(new Error('[plainSpace] Invalid payload in saveLayoutTemplate.'));
@@ -679,9 +661,7 @@ function registerPlainSpaceEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.saveLayoutTemplate')) {
         return cb(new Error('Forbidden – missing permission: plainspace.saveLayoutTemplate'));
       }
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
@@ -690,25 +670,21 @@ function registerPlainSpaceEvents(motherEmitter) {
             rawSQL: 'UPSERT_PLAINSPACE_LAYOUT_TEMPLATE',
             params: [{ name, lane, viewport, layoutArr: layout, previewPath }]
           }
-        },
-        cb
-      );
+        }).then(result => cb(null, result), error => cb(error));
     } catch (err) {
       cb(err);
     }
   });
 
   // 5) getLayoutTemplate
-  motherEmitter.on('getLayoutTemplate', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_LAYOUT_TEMPLATE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'getLayoutTemplate');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.GET_LAYOUT_TEMPLATE);
       const { jwt, name } = payload || {};
       if (!jwt || !name) {
         return cb(new Error('[plainSpace] Invalid payload in getLayoutTemplate.'));
       }
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
@@ -717,35 +693,40 @@ function registerPlainSpaceEvents(motherEmitter) {
             rawSQL: 'GET_PLAINSPACE_LAYOUT_TEMPLATE',
             params: [{ name }]
           }
-        },
-        (err, rows = []) => {
-          if (err) return cb(err);
-          if (!rows.length) {
-            return cb(null, { layout: [] });
-          }
-          let layoutArr = rows[0].layout_json || [];
-          if (typeof layoutArr === 'string') {
-            try { layoutArr = JSON.parse(layoutArr); } catch { layoutArr = []; }
-          }
-          cb(null, { layout: layoutArr });
-        }
-      );
+        }).then((rows = []) => {
+  if (!rows.length) {
+    return cb(null, {
+      layout: []
+    });
+  }
+  let layoutArr = rows[0].layout_json || [];
+  if (typeof layoutArr === 'string') {
+    try {
+      layoutArr = JSON.parse(layoutArr);
+    } catch {
+      layoutArr = [];
+    }
+  }
+  cb(null, {
+    layout: layoutArr
+  });
+}, err => {
+  return cb(err);
+});
     } catch (err) {
       cb(err);
     }
   });
 
   // 6) getLayoutTemplateNames
-  motherEmitter.on('getLayoutTemplateNames', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_LAYOUT_TEMPLATE_NAMES, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'getLayoutTemplateNames');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.GET_LAYOUT_TEMPLATE_NAMES);
       const { jwt, lane } = payload || {};
       if (!jwt || !lane) {
         return cb(new Error('[plainSpace] Invalid payload in getLayoutTemplateNames.'));
       }
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
@@ -754,57 +735,65 @@ function registerPlainSpaceEvents(motherEmitter) {
             rawSQL: 'GET_PLAINSPACE_LAYOUT_TEMPLATE_NAMES',
             params: [{ lane }]
           }
-        },
-        (err, rows = []) => {
-          if (err) return cb(err);
-          const templates = rows.map(r => ({
-            name: r.name,
-            previewPath: r.preview_path || '',
-            isGlobal: !!r.is_global,
-            updatedAt: r.updated_at || null
-          }));
-          cb(null, { templates });
-        }
-      );
+        }).then((rows = []) => {
+  const templates = rows.map(r => ({
+    name: r.name,
+    previewPath: r.preview_path || '',
+    isGlobal: !!r.is_global,
+    updatedAt: r.updated_at || null
+  }));
+  cb(null, {
+    templates
+  });
+}, err => {
+  return cb(err);
+});
     } catch (err) {
       cb(err);
     }
   });
 
   // 7) getGlobalLayoutTemplate
-  motherEmitter.on('getGlobalLayoutTemplate', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_GLOBAL_LAYOUT_TEMPLATE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'getGlobalLayoutTemplate');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.GET_GLOBAL_LAYOUT_TEMPLATE);
       const { jwt } = payload || {};
       if (!jwt) {
         return cb(new Error('[plainSpace] Invalid payload in getGlobalLayoutTemplate.'));
       }
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
           data: { rawSQL: 'GET_GLOBAL_LAYOUT_TEMPLATE', params: [{}] }
-        },
-        (err, rows = []) => {
-          if (err) return cb(err);
-          if (!rows.length) return cb(null, { layout: [], name: null });
-          let layoutArr = rows[0].layout_json || [];
-          if (typeof layoutArr === 'string') {
-            try { layoutArr = JSON.parse(layoutArr); } catch { layoutArr = []; }
-          }
-          cb(null, { layout: layoutArr, name: rows[0].name });
-        }
-      );
+        }).then((rows = []) => {
+  if (!rows.length) return cb(null, {
+    layout: [],
+    name: null
+  });
+  let layoutArr = rows[0].layout_json || [];
+  if (typeof layoutArr === 'string') {
+    try {
+      layoutArr = JSON.parse(layoutArr);
+    } catch {
+      layoutArr = [];
+    }
+  }
+  cb(null, {
+    layout: layoutArr,
+    name: rows[0].name
+  });
+}, err => {
+  return cb(err);
+});
     } catch (err) { cb(err); }
   });
 
   // 8) setGlobalLayoutTemplate
-  motherEmitter.on('setGlobalLayoutTemplate', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_GLOBAL_LAYOUT_TEMPLATE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'setGlobalLayoutTemplate');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.SET_GLOBAL_LAYOUT_TEMPLATE);
       const { jwt, name, decodedJWT } = payload || {};
       if (!jwt || !name) {
         return cb(new Error('[plainSpace] Invalid payload in setGlobalLayoutTemplate.'));
@@ -812,24 +801,20 @@ function registerPlainSpaceEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.saveLayoutTemplate')) {
         return cb(new Error('Forbidden – missing permission: plainspace.saveLayoutTemplate'));
       }
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
       data: { rawSQL: 'SET_GLOBAL_LAYOUT_TEMPLATE', params: [{ name }] }
-      },
-      cb
-    );
+      }).then(result => cb(null, result), error => cb(error));
   } catch (err) { cb(err); }
   });
 
   // 9) deleteLayoutTemplate
-  motherEmitter.on('deleteLayoutTemplate', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_LAYOUT_TEMPLATE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'deleteLayoutTemplate');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.DELETE_LAYOUT_TEMPLATE);
       const { jwt, name, decodedJWT } = payload || {};
       if (!jwt || !name) {
         return cb(new Error('[plainSpace] Invalid payload in deleteLayoutTemplate.'));
@@ -837,24 +822,20 @@ function registerPlainSpaceEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.saveLayoutTemplate')) {
         return cb(new Error('Forbidden – missing permission: plainspace.saveLayoutTemplate'));
       }
-      motherEmitter.emit(
-        'dbDelete',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
           where: { rawSQL: 'DELETE_LAYOUT_TEMPLATE', name }
-        },
-        cb
-      );
+        }).then(result => cb(null, result), error => cb(error));
     } catch (err) { cb(err); }
   });
 
   // 7) saveWidgetInstance
-  motherEmitter.on('saveWidgetInstance', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.SAVE_WIDGET_INSTANCE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'saveWidgetInstance');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.SAVE_WIDGET_INSTANCE);
       const { jwt, instanceId, content, decodedJWT } = payload || {};
       if (!jwt || !instanceId) {
         return cb(new Error('[plainSpace] Invalid payload in saveWidgetInstance.'));
@@ -862,26 +843,22 @@ function registerPlainSpaceEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.widgetInstance')) {
         return cb(new Error('Forbidden – missing permission: plainspace.widgetInstance'));
       }
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
           data: { rawSQL: 'UPSERT_WIDGET_INSTANCE', params: [{ instanceId, content }] }
-        },
-        cb
-      );
+        }).then(result => cb(null, result), error => cb(error));
     } catch (err) {
       cb(err);
     }
   });
 
   // 8) getWidgetInstance
-  motherEmitter.on('getWidgetInstance', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_WIDGET_INSTANCE, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'getWidgetInstance');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.GET_WIDGET_INSTANCE);
       const { jwt, instanceId, decodedJWT } = payload || {};
       if (!jwt || !instanceId) {
         return cb(new Error('[plainSpace] Invalid payload in getWidgetInstance.'));
@@ -889,30 +866,29 @@ function registerPlainSpaceEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.widgetInstance')) {
         return cb(new Error('Forbidden – missing permission: plainspace.widgetInstance'));
       }
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
           data: { rawSQL: 'GET_WIDGET_INSTANCE', params: [{ instanceId }] }
-        },
-        (err, rows = []) => {
-          if (err) return cb(err);
-          const content = rows.length ? rows[0].content || '' : '';
-          cb(null, { content });
-        }
-      );
+        }).then((rows = []) => {
+  const content = rows.length ? rows[0].content || '' : '';
+  cb(null, {
+    content
+  });
+}, err => {
+  return cb(err);
+});
     } catch (err) {
       cb(err);
     }
   });
 
   // 10) savePublishedDesignMeta
-  motherEmitter.on('savePublishedDesignMeta', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.SAVE_PUBLISHED_DESIGN_META, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'savePublishedDesignMeta');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.SAVE_PUBLISHED_DESIGN_META);
       const { jwt, name, path, files, decodedJWT } = payload || {};
       if (!jwt || !name || !path || !Array.isArray(files)) {
         return cb(new Error('[plainSpace] Invalid payload in savePublishedDesignMeta.'));
@@ -920,49 +896,52 @@ function registerPlainSpaceEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'plainspace.saveLayoutTemplate')) {
         return cb(new Error('Forbidden – missing permission: plainspace.saveLayoutTemplate'));
       }
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
           data: { rawSQL: 'UPSERT_PLAINSPACE_PUBLISHED_DESIGN', params: [{ name, path, files }] }
-        },
-        cb
-      );
+        }).then(result => cb(null, result), error => cb(error));
     } catch (err) {
       cb(err);
     }
   });
 
   // 11) getPublishedDesignMeta
-  motherEmitter.on('getPublishedDesignMeta', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_PUBLISHED_DESIGN_META, (payload, cb) => {
     try {
-      assertPlainSpacePayload(payload, 'getPublishedDesignMeta');
+      assertPlainSpacePayload(payload, BACKEND_EVENTS.GET_PUBLISHED_DESIGN_META);
       const { jwt, name } = payload || {};
       if (!jwt || !name) {
         return cb(new Error('[plainSpace] Invalid payload in getPublishedDesignMeta.'));
       }
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core',
           table: '__rawSQL__',
           data: { rawSQL: 'GET_PLAINSPACE_PUBLISHED_DESIGN', params: [{ name }] }
-        },
-        (err, rows = []) => {
-          if (err) return cb(err);
-          if (!rows.length) return cb(null, { path: '', files: [] });
-          let files = rows[0].files || [];
-          if (typeof files === 'string') {
-            try { files = JSON.parse(files); } catch { files = []; }
-          }
-          cb(null, { path: rows[0].path || '', files });
-        }
-      );
+        }).then((rows = []) => {
+  if (!rows.length) return cb(null, {
+    path: '',
+    files: []
+  });
+  let files = rows[0].files || [];
+  if (typeof files === 'string') {
+    try {
+      files = JSON.parse(files);
+    } catch {
+      files = [];
+    }
+  }
+  cb(null, {
+    path: rows[0].path || '',
+    files
+  });
+}, err => {
+  return cb(err);
+});
     } catch (err) {
       cb(err);
     }

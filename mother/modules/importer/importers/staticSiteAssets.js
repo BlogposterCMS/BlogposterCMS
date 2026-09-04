@@ -1,4 +1,8 @@
-const crypto = require('crypto');
+
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../../contracts/backendEventContracts');const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -356,15 +360,6 @@ async function loadManifest(options = {}) {
   }
 }
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (error, result) => {
-      if (error) reject(error);
-      else resolve(result);
-    });
-  });
-}
-
 function resultId(result) {
   return result?.id ?? result?.attachmentId ?? result?.insertedId ?? null;
 }
@@ -380,7 +375,7 @@ async function applyPlan(plan, options = {}) {
   const applied = { assets: [], relations: [], warnings: [] };
 
   for (const asset of plan.assets) {
-    const result = await emitAsync(motherEmitter, 'createMediaAttachment', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_MEDIA_ATTACHMENT, {
       ...mediaBase,
       fileName: asset.fileName,
       fileType: asset.fileType,
@@ -421,7 +416,7 @@ async function applyPlan(plan, options = {}) {
   for (const relation of plan.relations) {
     const pageKey = `${relation.lane}:${relation.language}:${relation.pageSlug}`;
     if (!pageCache.has(pageKey)) {
-      const page = await emitAsync(motherEmitter, 'getPageBySlug', {
+      const page = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
         ...pageBase,
         slug: relation.pageSlug,
         lane: relation.lane,
@@ -440,7 +435,7 @@ async function applyPlan(plan, options = {}) {
       continue;
     }
     const attachmentId = attachmentIds.get(relation.assetSourceId);
-    const linked = await emitAsync(motherEmitter, 'linkMediaToContent', {
+    const linked = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.LINK_MEDIA_TO_CONTENT, {
       ...mediaBase,
       attachmentId,
       targetType: 'source',

@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/moduleLoader/index.js
  *
@@ -378,7 +384,7 @@ async function attemptModuleLoad(
       wasDeactivated = true;
     }
   };
-  motherEmitter.on('deactivateModule', deactivationListener);
+  motherEmitter.on(BACKEND_EVENTS.DEACTIVATE_MODULE, deactivationListener);
 
   try {
     await runCommunityModuleHealthCheck({
@@ -411,7 +417,7 @@ async function attemptModuleLoad(
   }
 
   if (loadFailed) {
-    motherEmitter.off('deactivateModule', deactivationListener);
+    motherEmitter.off(BACKEND_EVENTS.DEACTIVATE_MODULE, deactivationListener);
     return false;
   }
 
@@ -421,32 +427,25 @@ async function attemptModuleLoad(
     // If auto-retry => reactivate module
   if (isAutoRetry) {
     console.log(`[MODULE LOADER] Auto-retry => reactivating "${moduleName}".`);
-    await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'activateModuleInRegistry',
-        {
-          jwt,
-          moduleName: 'moduleLoader',
-          moduleType: 'core',
-          targetModuleName: moduleName
-        },
-        (err2) => {
-          if (err2) {
-            notify({
-              moduleName,
-              notificationType: 'system',
-              priority: 'error',
-              message: `[MODULE LOADER] Failed to activate "${moduleName}": ${err2.message}`
-            });
-            return reject(err2);
-          }
-          resolve();
-        }
-      );
-    });
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ACTIVATE_MODULE_IN_REGISTRY, {
+  jwt,
+  moduleName: 'moduleLoader',
+  moduleType: 'core',
+  targetModuleName: moduleName
+}).then(() => {
+  return;
+}, err2 => {
+  notify({
+    moduleName,
+    notificationType: 'system',
+    priority: 'error',
+    message: `[MODULE LOADER] Failed to activate "${moduleName}": ${err2.message}`
+  });
+  throw err2;
+});
   }
   const deactivateAndReturn = () => {
-    motherEmitter.off('deactivateModule', deactivationListener);
+    motherEmitter.off(BACKEND_EVENTS.DEACTIVATE_MODULE, deactivationListener);
     return false;
   };
 
@@ -455,7 +454,7 @@ async function attemptModuleLoad(
     return deactivateAndReturn();
   }
 
-  motherEmitter.off('deactivateModule', deactivationListener);
+  motherEmitter.off(BACKEND_EVENTS.DEACTIVATE_MODULE, deactivationListener);
   global.loadedModules[moduleName] = modEntry.getRuntimeRecord();
   console.log(`[MODULE LOADER] Successfully loaded => ${moduleName}`);
   return true;

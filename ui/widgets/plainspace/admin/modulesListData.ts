@@ -298,7 +298,14 @@ export async function inspectModuleUpdate(
   targetModuleName: string
 ): Promise<ModuleUpdateInspection> {
   const meltdownEmit = requireEmitter(emit);
-  const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'inspectUpdate', { targetModuleName });
+  const res = await emitRuntimeAdmin(
+    meltdownEmit,
+    jwt,
+    'modules',
+    'inspectUpdate',
+    { targetModuleName },
+    65_000
+  );
   return toModuleUpdateInspection(res);
 }
 
@@ -312,7 +319,7 @@ export async function installModuleZip(
   await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installZip', {
     zipData,
     approvedAccess
-  });
+  }, 305_000);
 }
 
 export async function installModuleUpdate(
@@ -325,7 +332,7 @@ export async function installModuleUpdate(
   await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installUpdate', {
     targetModuleName,
     approvedAccess
-  });
+  }, 305_000);
 }
 
 export async function setModuleUpdateSource(

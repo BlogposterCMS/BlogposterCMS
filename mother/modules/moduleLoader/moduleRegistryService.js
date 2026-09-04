@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/moduleLoader/moduleRegistryService.js
  *
@@ -48,7 +54,7 @@ async function ensureModuleRegistrySchema(motherEmitter, jwt) {
  * meltdown => "getModuleRegistry"
  */
 function initGetModuleRegistryEvent(motherEmitter) {
-  motherEmitter.on('getModuleRegistry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_MODULE_REGISTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     if (!payload || typeof payload !== 'object') {
@@ -107,7 +113,7 @@ function initGetModuleRegistryEvent(motherEmitter) {
  * core event => "listActiveStaticFrontends"
  */
 function initListActiveStaticFrontendsEvent(motherEmitter) {
-  motherEmitter.on('listActiveStaticFrontends', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_ACTIVE_STATIC_FRONTENDS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     if (!payload || typeof payload !== 'object') {
@@ -149,7 +155,7 @@ function initListActiveStaticFrontendsEvent(motherEmitter) {
  * meltdown => "listSystemModules"
  */
 function initListSystemModulesEvent(motherEmitter) {
-  motherEmitter.on('listSystemModules', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_SYSTEM_MODULES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     if (!payload || typeof payload !== 'object') {
@@ -215,45 +221,31 @@ function readFsModuleInfo(moduleName) {
 }
 
 function updateModuleInfo(motherEmitter, jwt, moduleName, newInfo) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        jwt,
-        moduleName: 'moduleLoader',
-        moduleType: 'core',
-        table: 'module_registry',
-        where: { module_name: moduleName },
-        data: {
-          module_info: JSON.stringify(newInfo),
-          updated_at : new Date().toISOString()
-        }
-      },
-      (err) => {
-        if (err) {
-          console.error(`[MODULE LOADER] Error updating module_info for ${moduleName}:`, err.message);
-          return reject(err);
-        }
-        resolve();
-      }
-    );
-  });
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  jwt,
+  moduleName: 'moduleLoader',
+  moduleType: 'core',
+  table: 'module_registry',
+  where: {
+    module_name: moduleName
+  },
+  data: {
+    module_info: JSON.stringify(newInfo),
+    updated_at: new Date().toISOString()
+  }
+}).then(() => {
+  return;
+}, err => {
+  console.error(`[MODULE LOADER] Error updating module_info for ${moduleName}:`, err.message);
+  throw err;
+});
 }
 
 /**
  * meltdown => 'getModuleRegistry'
  */
 function getModuleRegistry(motherEmitter, jwt) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'getModuleRegistry',
-      { jwt, moduleName: 'moduleLoader', moduleType: 'core' },
-      (err, rows) => {
-        if (err) return reject(err);
-        resolve(rows);
-      }
-    );
-  });
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_MODULE_REGISTRY, { jwt, moduleName: 'moduleLoader', moduleType: 'core' });
 }
 
 async function getRegisteredModuleInfo(motherEmitter, jwt, moduleName) {
@@ -274,101 +266,73 @@ async function getRegisteredModuleInfo(motherEmitter, jwt, moduleName) {
  * meltdown => 'dbInsert' => insert into module_registry
  */
 function insertModuleRegistryEntry(motherEmitter, jwt, moduleName, isActive, lastError, moduleInfo) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbInsert',
-      {
-        jwt,
-        moduleName : 'moduleLoader',
-        moduleType : 'core',
-        table      : 'module_registry',
-        data       : {
-          module_name : moduleName,
-          is_active   : isActive,
-          last_error  : lastError,
-          module_info : JSON.stringify(moduleInfo || {}),
-          created_at  : new Date().toISOString(),
-          updated_at  : new Date().toISOString()
-        }
-      },
-      (err) => {
-        if (err) {
-          console.error(`[MODULE LOADER] Error inserting registry entry for ${moduleName}:`, err.message);
-          return reject(err);
-        }
-        resolve();
-      }
-    );
-  });
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+  jwt,
+  moduleName: 'moduleLoader',
+  moduleType: 'core',
+  table: 'module_registry',
+  data: {
+    module_name: moduleName,
+    is_active: isActive,
+    last_error: lastError,
+    module_info: JSON.stringify(moduleInfo || {}),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+}).then(() => {
+  return;
+}, err => {
+  console.error(`[MODULE LOADER] Error inserting registry entry for ${moduleName}:`, err.message);
+  throw err;
+});
 }
 
 /**
  * meltdown => 'dbUpdate' => set last_error, possibly is_active
  */
-function updateModuleLastError(motherEmitter, jwt, moduleName, lastError) {
-  return new Promise((resolve, reject) => {
-    const dataObj = {
-      last_error: lastError,
-      updated_at: new Date().toISOString()
-    };
-    if (lastError === null) {
-      dataObj.is_active = true;
-    }
-
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        jwt,
-        moduleName : 'moduleLoader',
-        moduleType : 'core',
-        table      : 'module_registry',
-        where      : { module_name: moduleName },
-        data       : dataObj
-      },
-      (err) => {
-        if (err) {
-          console.error(
-            `[MODULE LOADER] Error updating last_error for %s: %s`,
-            moduleName,
-            err.message
-          );
-          return reject(err);
-        }
-        resolve();
-      }
-    );
-  });
+async function updateModuleLastError(motherEmitter, jwt, moduleName, lastError) {
+  const dataObj = {
+    last_error: lastError,
+    updated_at: new Date().toISOString()
+  };
+  if (lastError === null) {
+    dataObj.is_active = true;
+  }
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      jwt,
+      moduleName: 'moduleLoader',
+      moduleType: 'core',
+      table: 'module_registry',
+      where: { module_name: moduleName },
+      data: dataObj
+    });
+  } catch (err) {
+    console.error(`[MODULE LOADER] Error updating last_error for %s: %s`, moduleName, err.message);
+    throw err;
+  }
 }
 
 function deactivateModule(motherEmitter, jwt, moduleName, errMsg) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        jwt,
-        moduleName : 'moduleLoader',
-        moduleType : 'core',
-        table      : 'module_registry',
-        where      : { module_name: moduleName },
-        data       : {
-          is_active  : false,
-          last_error : errMsg,
-      updated_at : new Date().toISOString()
-        }
-      },
-        (err) => {
-          if (err) {
-            console.error(
-              `[MODULE LOADER] Error deactivating module %s: %s`,
-              moduleName,
-              err.message
-            );
-            return reject(err);
-          }
-          resolve();
-        }
-    );
-  });
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  jwt,
+  moduleName: 'moduleLoader',
+  moduleType: 'core',
+  table: 'module_registry',
+  where: {
+    module_name: moduleName
+  },
+  data: {
+    is_active: false,
+    last_error: errMsg,
+    updated_at: new Date().toISOString()
+  }
+}).then(() => {
+  return;
+}, err => {
+  console.error(`[MODULE LOADER] Error deactivating module %s: %s`, moduleName, err.message);
+  throw err;
+});
 }
 
 /**
@@ -406,10 +370,7 @@ async function registerOrUpdateModule(motherEmitter, jwt, moduleName, moduleInfo
  * runDbUpdatePlaceholder, runDbSelectPlaceholder => meltdown bridging
  */
 function runDbUpdatePlaceholder(motherEmitter, jwt, rawSQLPlaceholder, dataObj) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbUpdate',
-      {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: 'moduleLoader',
         moduleType: 'core',
@@ -419,36 +380,25 @@ function runDbUpdatePlaceholder(motherEmitter, jwt, rawSQLPlaceholder, dataObj) 
           rawSQL: rawSQLPlaceholder,
           ...dataObj
         }
-      },
-      (err) => {
-        if (err) return reject(err);
-        resolve();
-      }
-    );
-  });
+      });
 }
 
 function runDbSelectPlaceholder(motherEmitter, jwt, rawSQLPlaceholder, dataObj) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbSelect',
-      {
-        jwt,
-        moduleName: 'moduleLoader',
-        moduleType: 'core',
-        table: '__rawSQL__',
-        data: {
-          rawSQL: rawSQLPlaceholder,
-          ...dataObj
-        }
-      },
-      (err, result) => {
-        if (err) return reject(err);
-        const rows = Array.isArray(result) ? result : (result?.rows || []);
-        resolve(rows);
-      }
-    );
-  });
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+  jwt,
+  moduleName: 'moduleLoader',
+  moduleType: 'core',
+  table: '__rawSQL__',
+  data: {
+    rawSQL: rawSQLPlaceholder,
+    ...dataObj
+  }
+}).then(result => {
+  const rows = Array.isArray(result) ? result : result?.rows || [];
+  return rows;
+}, err => {
+  throw err;
+});
 }
 
 async function getExistingColumns(motherEmitter, jwt, dataObj) {

@@ -1,46 +1,25 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const OPTIONAL_EMIT_TIMEOUT_MS = 1000;
 
-function once(originalCb) {
-  let fired = false;
-  return (...args) => {
-    if (fired) return;
-    fired = true;
-    if (typeof originalCb === 'function') originalCb(...args);
-  };
-}
-
-function emitOptional(motherEmitter, eventName, payload) {
-  return new Promise(resolve => {
-    let settled = false;
-    let timer = null;
-    const finish = value => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      resolve(value);
-    };
-
-    if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
-      return finish({ skipped: true });
-    }
-
-    timer = setTimeout(() => finish({ skipped: true, reason: 'timeout' }), OPTIONAL_EMIT_TIMEOUT_MS);
-
-    let emitted = false;
-    try {
-      emitted = motherEmitter.emit(eventName, payload, once((err, result) => {
-        finish({ err: err || null, result });
-      }));
-    } catch (err) {
-      return finish({ err });
-    }
-
-    if (!emitted) {
-      finish({ skipped: true });
-    }
-  });
+async function emitOptional(motherEmitter, eventName, payload) {
+  if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
+    return { skipped: true };
+  }
+  try {
+    const result = await requestBackendEvent(motherEmitter, eventName, payload, {
+      timeoutMs: OPTIONAL_EMIT_TIMEOUT_MS
+    });
+    return { err: null, result };
+  } catch (err) {
+    if (err?.code === 'EVENT_CONTRACT_TIMEOUT') return { skipped: true, reason: 'timeout' };
+    if (err?.code === 'EVENT_CONTRACT_NOT_REGISTERED') return { skipped: true };
+    return { err };
+  }
 }
 
 function firstDefined(...values) {
@@ -52,13 +31,13 @@ function firstDefined(...values) {
 
 function hasContentEngineMirrorListeners(motherEmitter) {
   if (!motherEmitter || typeof motherEmitter.listenerCount !== 'function') return true;
-  return ['getContentEntryBySource', 'createContentEntry', 'updateContentEntry']
+  return [BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, BACKEND_EVENTS.CREATE_CONTENT_ENTRY, BACKEND_EVENTS.UPDATE_CONTENT_ENTRY]
     .some(eventName => motherEmitter.listenerCount(eventName) > 0);
 }
 
 function hasContentEngineTrashListeners(motherEmitter) {
   if (!motherEmitter || typeof motherEmitter.listenerCount !== 'function') return true;
-  return ['getContentEntryBySource', 'trashContentEntry']
+  return [BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, BACKEND_EVENTS.TRASH_CONTENT_ENTRY]
     .some(eventName => motherEmitter.listenerCount(eventName) > 0);
 }
 
@@ -199,7 +178,7 @@ async function mirrorPageToContentEngine(motherEmitter, pageData) {
     return { skipped: true };
   }
 
-  const sourceLookup = await emitOptional(motherEmitter, 'getContentEntryBySource', {
+  const sourceLookup = await emitOptional(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, {
     jwt: pageData.jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',
@@ -213,7 +192,7 @@ async function mirrorPageToContentEngine(motherEmitter, pageData) {
 
   const entryPayload = buildPageContentEntryPayload(pageData);
   if (sourceLookup.result?.id) {
-    return emitOptional(motherEmitter, 'updateContentEntry', {
+    return emitOptional(motherEmitter, BACKEND_EVENTS.UPDATE_CONTENT_ENTRY, {
       ...entryPayload,
       entryId: sourceLookup.result.id
     });
@@ -223,7 +202,7 @@ async function mirrorPageToContentEngine(motherEmitter, pageData) {
     return { skipped: true, reason: 'incomplete-page-data' };
   }
 
-  return emitOptional(motherEmitter, 'createContentEntry', entryPayload);
+  return emitOptional(motherEmitter, BACKEND_EVENTS.CREATE_CONTENT_ENTRY, entryPayload);
 }
 
 async function trashPageContentEntry(motherEmitter, pageData = {}) {
@@ -235,7 +214,7 @@ async function trashPageContentEntry(motherEmitter, pageData = {}) {
     return { skipped: true };
   }
 
-  const sourceLookup = await emitOptional(motherEmitter, 'getContentEntryBySource', {
+  const sourceLookup = await emitOptional(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, {
     jwt: pageData.jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',
@@ -253,7 +232,7 @@ async function trashPageContentEntry(motherEmitter, pageData = {}) {
     return { skipped: true, reason: 'missing-content-entry' };
   }
 
-  return emitOptional(motherEmitter, 'trashContentEntry', {
+  return emitOptional(motherEmitter, BACKEND_EVENTS.TRASH_CONTENT_ENTRY, {
     jwt: pageData.jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',

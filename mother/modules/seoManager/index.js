@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 require('dotenv').config();
 
 const { onceCallback } = require('../../emitters/motherEmitter');
@@ -177,38 +181,32 @@ function buildSitemapXml(entries = [], rootUrl = baseUrl()) {
 
 async function getContentEntryForSeo(motherEmitter, jwt, payload) {
   if (payload.entryId || payload.contentEntryId || payload.entry_id) {
-    return await new Promise(resolve => {
-      motherEmitter.emit('getContentEntry', {
-        jwt,
-        moduleName: 'contentEngine',
-        moduleType: 'core',
-        entryId: payload.entryId || payload.contentEntryId || payload.entry_id
-      }, (err, entry) => resolve(err ? null : entry));
-    });
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY, {
+      jwt,
+      moduleName: 'contentEngine',
+      moduleType: 'core',
+      entryId: payload.entryId || payload.contentEntryId || payload.entry_id
+    }).catch(() => null);
   }
 
   if (payload.sourceModule && payload.sourceId) {
-    return await new Promise(resolve => {
-      motherEmitter.emit('getContentEntryBySource', {
-        jwt,
-        moduleName: 'contentEngine',
-        moduleType: 'core',
-        sourceModule: payload.sourceModule,
-        sourceId: payload.sourceId
-      }, (err, entry) => resolve(err ? null : entry));
-    });
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, {
+      jwt,
+      moduleName: 'contentEngine',
+      moduleType: 'core',
+      sourceModule: payload.sourceModule,
+      sourceId: payload.sourceId
+    }).catch(() => null);
   }
 
   if (payload.path || payload.permalink) {
-    return await new Promise(resolve => {
-      motherEmitter.emit('resolveContentPermalink', {
-        jwt,
-        moduleName: 'contentEngine',
-        moduleType: 'core',
-        permalink: payload.path || payload.permalink,
-        language: payload.language || 'en'
-      }, (err, entry) => resolve(err ? null : entry));
-    });
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_CONTENT_PERMALINK, {
+      jwt,
+      moduleName: 'contentEngine',
+      moduleType: 'core',
+      permalink: payload.path || payload.permalink,
+      language: payload.language || 'en'
+    }).catch(() => null);
   }
 
   return null;
@@ -233,10 +231,10 @@ function contentEntrySeo(entry) {
 }
 
 function setupSeoEvents(motherEmitter) {
-  motherEmitter.on('setSeoDefaults', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_SEO_DEFAULTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'setSeoDefaults');
+      assertCorePayload(payload, BACKEND_EVENTS.SET_SEO_DEFAULTS);
       requirePermission(payload, 'seo.manage');
       const result = await seoDbUpdate(motherEmitter, payload.jwt, 'UPSERT_SEO_META', normalizeSeoInput({
         ...payload,
@@ -249,10 +247,10 @@ function setupSeoEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getSeoDefaults', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_SEO_DEFAULTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getSeoDefaults');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_SEO_DEFAULTS);
       const result = await seoDbSelect(motherEmitter, payload.jwt, 'GET_SEO_META', {
         targetType: 'global',
         targetKey: 'default'
@@ -263,10 +261,10 @@ function setupSeoEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('upsertSeoMeta', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPSERT_SEO_META, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'upsertSeoMeta');
+      assertCorePayload(payload, BACKEND_EVENTS.UPSERT_SEO_META);
       requirePermission(payload, 'seo.manage');
       const result = await seoDbUpdate(motherEmitter, payload.jwt, 'UPSERT_SEO_META', normalizeSeoInput(payload));
       callback(null, result);
@@ -275,10 +273,10 @@ function setupSeoEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getSeoMeta', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_SEO_META, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getSeoMeta');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_SEO_META);
       const result = await seoDbSelect(motherEmitter, payload.jwt, 'GET_SEO_META', normalizeTarget(payload));
       callback(null, Array.isArray(result) ? result[0] || null : result || null);
     } catch (err) {
@@ -286,10 +284,10 @@ function setupSeoEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listSeoMeta', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_SEO_META, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listSeoMeta');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_SEO_META);
       requirePermission(payload, 'seo.manage');
       const result = await seoDbSelect(motherEmitter, payload.jwt, 'LIST_SEO_META', {
         targetType: payload.targetType ? normalizeTarget(payload).targetType : '',
@@ -302,10 +300,10 @@ function setupSeoEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteSeoMeta', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_SEO_META, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteSeoMeta');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_SEO_META);
       requirePermission(payload, 'seo.manage');
       const result = await seoDbUpdate(motherEmitter, payload.jwt, 'DELETE_SEO_META', normalizeTarget(payload));
       callback(null, result);
@@ -314,10 +312,10 @@ function setupSeoEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('resolveSeoMeta', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RESOLVE_SEO_META, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'resolveSeoMeta');
+      assertCorePayload(payload, BACKEND_EVENTS.RESOLVE_SEO_META);
       const defaults = await seoDbSelect(motherEmitter, payload.jwt, 'GET_SEO_META', {
         targetType: 'global',
         targetKey: 'default'
@@ -339,12 +337,11 @@ function setupSeoEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('generateSeoSitemap', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GENERATE_SEO_SITEMAP, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'generateSeoSitemap');
-      const entries = await new Promise((resolve, reject) => {
-        motherEmitter.emit('listContentEntries', {
+      assertCorePayload(payload, BACKEND_EVENTS.GENERATE_SEO_SITEMAP);
+      const entries = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.LIST_CONTENT_ENTRIES, {
           jwt: payload.jwt,
           moduleName: 'contentEngine',
           moduleType: 'core',
@@ -353,18 +350,17 @@ function setupSeoEvents(motherEmitter) {
           language: payload.language || '',
           limit: Math.min(Number(payload.limit) || 100, 100),
           offset: Math.max(Number(payload.offset) || 0, 0)
-        }, (err, result) => (err ? reject(err) : resolve(result || [])));
-      });
+        }).then(result => result || []);
       callback(null, buildSitemapXml(entries, baseUrl(payload.baseUrl)));
     } catch (err) {
       callback(err);
     }
   });
 
-  motherEmitter.on('generateRobotsTxt', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GENERATE_ROBOTS_TXT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'generateRobotsTxt');
+      assertCorePayload(payload, BACKEND_EVENTS.GENERATE_ROBOTS_TXT);
       const defaults = await seoDbSelect(motherEmitter, payload.jwt, 'GET_SEO_META', {
         targetType: 'global',
         targetKey: 'default'

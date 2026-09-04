@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 // mother/modules/dependencyLoader/index.js
 require('dotenv').config();
 const { builtinModules } = require('module');
@@ -114,7 +118,7 @@ module.exports = {
       await loadDependencies(motherEmitter, moduleJwt);
 
       // 4) meltdown => "requestDependency"
-      motherEmitter.on('requestDependency', (payload, originalCb) => {
+      motherEmitter.on(BACKEND_EVENTS.REQUEST_DEPENDENCY, (payload, originalCb) => {
         // We love not double-calling the same callback => onceCallback:
         const callback = onceCallback(originalCb);
 

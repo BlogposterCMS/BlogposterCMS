@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/auth/index.js
  *
@@ -64,10 +68,10 @@ module.exports = {
     }
 
     // meltdown => listActiveLoginStrategies
-    motherEmitter.on('listActiveLoginStrategies', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.LIST_ACTIVE_LOGIN_STRATEGIES, (payload, cb) => {
       const callback = onceCallback(cb);
       try {
-        requireCoreAuthPayload(payload, 'listActiveLoginStrategies');
+        requireCoreAuthPayload(payload, BACKEND_EVENTS.LIST_ACTIVE_LOGIN_STRATEGIES);
       } catch (err) {
         return callback(err);
       }
@@ -86,10 +90,10 @@ module.exports = {
     });
 
     // meltdown => listLoginStrategies
-    motherEmitter.on('listLoginStrategies', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.LIST_LOGIN_STRATEGIES, (payload, cb) => {
       const callback = onceCallback(cb);
       try {
-        requireCoreAuthPayload(payload, 'listLoginStrategies');
+        requireCoreAuthPayload(payload, BACKEND_EVENTS.LIST_LOGIN_STRATEGIES);
         requireAuthPermission(payload, AUTH_STRATEGY_VIEW_PERMISSIONS, 'auth.strategies.view');
       } catch (err) {
         return callback(err);
@@ -104,10 +108,10 @@ module.exports = {
     });
 
     // meltdown => setLoginStrategyEnabled
-    motherEmitter.on('setLoginStrategyEnabled', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.SET_LOGIN_STRATEGY_ENABLED, (payload, cb) => {
       const callback = onceCallback(cb);
       try {
-        requireCoreAuthPayload(payload, 'setLoginStrategyEnabled');
+        requireCoreAuthPayload(payload, BACKEND_EVENTS.SET_LOGIN_STRATEGY_ENABLED);
         requireAuthPermission(payload, AUTH_STRATEGY_MANAGE_PERMISSION);
       } catch (err) {
         return callback(err);
@@ -129,7 +133,7 @@ module.exports = {
     });
 
     // meltdown => registerLoginStrategy
-    motherEmitter.on('registerLoginStrategy', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.REGISTER_LOGIN_STRATEGY, (payload, cb) => {
       const callback = onceCallback(cb);
       const {
         skipJWT,
@@ -188,7 +192,7 @@ module.exports = {
 // ─────────────────────────────────────────────────────────────
 //  PUBLIC + CORE  loginWithStrategy listener
 // ─────────────────────────────────────────────────────────────
-motherEmitter.on('loginWithStrategy', (raw, cb) => {
+motherEmitter.on(BACKEND_EVENTS.LOGIN_WITH_STRATEGY, (raw, cb) => {
   const callback = onceCallback(cb);
 
   /* unpack meltdown meta + user payload */

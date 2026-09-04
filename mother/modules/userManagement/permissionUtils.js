@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/userManagement/permissionUtils.js
  *
@@ -7,6 +11,7 @@
  *
  * For handling the role permissions merging logic.
  */
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 function deepMerge(target, source) {
@@ -72,8 +77,7 @@ function mergeAllPermissions(motherEmitter, jwt, rolesArr, doneCallback) {
   // fix invalid roles in DB without raw SQL
   console.warn('[USER MGMT] mergeAllPermissions => Attempting to fix invalid perms in DB =>', invalidRoles);
 
-  const updates = invalidRoles.map(r => new Promise((resolve) => {
-    motherEmitter.emit('dbUpdate', {
+  const updates = invalidRoles.map(r => requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -82,13 +86,9 @@ function mergeAllPermissions(motherEmitter, jwt, rolesArr, doneCallback) {
         permissions: JSON.stringify(r.perms),
         updated_at: new Date().toISOString()
       }
-    }, (err) => {
-      if (err) {
-        console.error('[USER MGMT] mergeAllPermissions => Could not fix role', r.id, err.message);
-      }
-      resolve();
-    });
-  }));
+    }).catch(err => {
+      console.error('[USER MGMT] mergeAllPermissions => Could not fix role', r.id, err.message);
+    }));
 
   Promise.all(updates).finally(() => {
     doneCallback(merged); // proceed either way

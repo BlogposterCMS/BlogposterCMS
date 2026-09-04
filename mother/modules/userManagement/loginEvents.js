@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/userManagement/loginEvents.js
  *
@@ -23,7 +29,7 @@ function sanitizePayload(payload, hide = []) {
 
 function setupLoginEvents(motherEmitter) {
   // ================ userLogin ================
-  motherEmitter.on('userLogin', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.USER_LOGIN, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     const sanitized = sanitizePayload(payload, ['password']);
@@ -40,40 +46,36 @@ function setupLoginEvents(motherEmitter) {
     }
 
     // meltdown => getUserDetailsByUsername
-    motherEmitter.emit(
-      'getUserDetailsByUsername',
-      {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, {
         jwt,
         moduleName: 'userManagement',
         moduleType: 'core',
         username
-      },
-      async (err, userRecord) => {
-        if (err) return callback(err);
-        if (!userRecord) {
-          console.warn('[USER MGMT] userLogin => No user found => null.');
-          return callback(null, null);
-        }
-
-        // Compare password
-        const salted = password + (process.env.USER_PASSWORD_SALT || '');
-        try {
-          const isMatch = await bcrypt.compare(salted, userRecord.password);
-          if (!isMatch) {
-            console.warn('[USER MGMT] userLogin => Password mismatch.');
-            return callback(null, null);
-          }
-          // Success
-          callback(null, userRecord);
-        } catch (ex) {
-          callback(ex);
-        }
-      }
-    );
+      }).then(async userRecord => {
+  if (!userRecord) {
+    console.warn('[USER MGMT] userLogin => No user found => null.');
+    return callback(null, null);
+  }
+  // Compare password
+  const salted = password + (process.env.USER_PASSWORD_SALT || '');
+  try {
+    const isMatch = await bcrypt.compare(salted, userRecord.password);
+    if (!isMatch) {
+      console.warn('[USER MGMT] userLogin => Password mismatch.');
+      return callback(null, null);
+    }
+    // Success
+    callback(null, userRecord);
+  } catch (ex) {
+    callback(ex);
+  }
+}, err => {
+  return callback(err);
+});
   });
 
   // ================ finalizeUserLogin ================
-  motherEmitter.on('finalizeUserLogin', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.FINALIZE_USER_LOGIN, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "finalizeUserLogin" event =>', sanitizePayload(payload));
@@ -91,78 +93,65 @@ function setupLoginEvents(motherEmitter) {
     }
 
     // meltdown => getUserDetailsById
-    motherEmitter.emit(
-      'getUserDetailsById',
-      {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_ID, {
         jwt,
         moduleName: 'userManagement',
         moduleType: 'core',
         userId
-      },
-      (err, userRecord) => {
-        if (err) return callback(err);
-        if (!userRecord) {
-          return callback(new Error(`No user found => id=${userId}`));
+      }).then(userRecord => {
+  if (!userRecord) {
+    return callback(new Error(`No user found => id=${userId}`));
+  }
+  // meltdown => getRolesForUser => gather roles
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_ROLES_FOR_USER, {
+    jwt,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    userId
+  }).then(rolesArr => {
+    // Merge roles => permissions
+    mergeAllPermissions(motherEmitter, jwt, rolesArr, mergedPermissions => {
+      // e.g. roleNames
+      const roleNames = rolesArr.map(r => r.role_name);
+
+      // Check if admin => assign wildcard
+      const isAdmin = roleNames.includes('admin') || userRecord.role && userRecord.role.toLowerCase() === 'admin';
+      const finalPermissions = isAdmin ? {
+        '*': true
+      } // Admin gets wildcard
+      : mergedPermissions;
+
+      // meltdown => issueUserToken => embed finalPermissions + roles
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_USER_TOKEN, {
+        skipJWT: true,
+        authModuleSecret,
+        moduleName: 'auth',
+        moduleType: 'core',
+        userId: userRecord.id,
+        role: isAdmin ? 'admin' : userRecord.role || 'user',
+        customPermissions: finalPermissions,
+        customRoles: roleNames
+      }).then(finalToken => {
+        const finalUserObj = {
+          ...userRecord,
+          permissions: finalPermissions,
+          roles: roleNames,
+          jwt: finalToken
+        };
+        if (extraData && typeof extraData === 'object') {
+          Object.assign(finalUserObj, extraData);
         }
-
-        // meltdown => getRolesForUser => gather roles
-        motherEmitter.emit(
-          'getRolesForUser',
-          {
-            jwt,
-            moduleName: 'userManagement',
-            moduleType: 'core',
-            userId
-          },
-          (roleErr, rolesArr) => {
-            if (roleErr) return callback(roleErr);
-
-            // Merge roles => permissions
-            mergeAllPermissions(motherEmitter, jwt, rolesArr, (mergedPermissions) => {
-              // e.g. roleNames
-              const roleNames = rolesArr.map(r => r.role_name);
-
-              // Check if admin => assign wildcard
-              const isAdmin = roleNames.includes('admin')||
-              (userRecord.role && userRecord.role.toLowerCase() === 'admin');
-              const finalPermissions = isAdmin
-                ? { '*': true } // Admin gets wildcard
-                : mergedPermissions;
-
-              // meltdown => issueUserToken => embed finalPermissions + roles
-              motherEmitter.emit(
-                'issueUserToken',
-                {
-                  skipJWT         : true,
-                  authModuleSecret,
-                  moduleName      : 'auth',
-                  moduleType      : 'core',
-                  userId          : userRecord.id,
-                  role            : isAdmin ? 'admin' : (userRecord.role || 'user'),
-                  customPermissions: finalPermissions,
-                  customRoles      : roleNames
-                },
-                (tokenErr, finalToken) => {
-                  if (tokenErr) return callback(tokenErr);
-
-                  const finalUserObj = {
-                    ...userRecord,
-                    permissions: finalPermissions,
-                    roles: roleNames,
-                    jwt: finalToken
-                  };
-                  if (extraData && typeof extraData === 'object') {
-                    Object.assign(finalUserObj, extraData);
-                  }
-
-                  callback(null, finalUserObj);
-                }
-              );
-            });
-          }
-        );
-      }
-    );
+        callback(null, finalUserObj);
+      }, tokenErr => {
+        return callback(tokenErr);
+      });
+    });
+  }, roleErr => {
+    return callback(roleErr);
+  });
+}, err => {
+  return callback(err);
+});
   });
 }
 

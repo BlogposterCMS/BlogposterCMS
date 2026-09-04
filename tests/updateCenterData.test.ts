@@ -136,6 +136,6 @@ describe('updateCenterData', () => {
         targetModuleName: 'shopSync',
         approvedAccess: [{ resource: 'content', action: 'list' }]
       }
-    });
+    }, 305_000);
   });
 });

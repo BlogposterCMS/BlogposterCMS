@@ -1,5 +1,9 @@
 "use strict";
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const MODULE_NAME = "pagesManager";
 const MODULE_TYPE = "core";
 const DESIGNER_MODULE_NAME = "designer";
@@ -15,18 +19,6 @@ function canEmit(motherEmitter, eventName) {
   if (!motherEmitter || typeof motherEmitter.emit !== "function") return false;
   if (typeof motherEmitter.listenerCount !== "function") return true;
   return motherEmitter.listenerCount(eventName) > 0;
-}
-
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    const emitted = motherEmitter.emit(eventName, payload, (err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    });
-    if (!emitted) {
-      reject(new Error(`PAGES_COMING_SOON_EVENT_MISSING: ${eventName}`));
-    }
-  });
 }
 
 function parseRecord(value) {
@@ -263,12 +255,12 @@ function comingSoonDesignPayload() {
 }
 
 async function saveComingSoonDesign(motherEmitter, jwt) {
-  if (!canEmit(motherEmitter, "designer.saveDesign")) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.DESIGNER_SAVE_DESIGN)) {
     return { skipped: true, reason: "PAGES_COMING_SOON_DESIGNER_MISSING" };
   }
 
   try {
-    const saved = await emitAsync(motherEmitter, "designer.saveDesign", {
+    const saved = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DESIGNER_SAVE_DESIGN, {
       jwt,
       moduleName: DESIGNER_MODULE_NAME,
       moduleType: MODULE_TYPE,
@@ -285,10 +277,10 @@ async function saveComingSoonDesign(motherEmitter, jwt) {
 }
 
 async function setSetting(motherEmitter, jwt, key, value) {
-  if (!canEmit(motherEmitter, "setSetting")) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.SET_SETTING)) {
     return { skipped: true, reason: "PAGES_COMING_SOON_SETTINGS_MISSING" };
   }
-  await emitAsync(motherEmitter, "setSetting", {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_SETTING, {
     jwt,
     moduleName: SETTINGS_MODULE_NAME,
     moduleType: MODULE_TYPE,
@@ -300,10 +292,10 @@ async function setSetting(motherEmitter, jwt, key, value) {
 
 async function updatePageMeta(motherEmitter, jwt, pageId, meta) {
   if (!pageId) throw new Error("PAGES_COMING_SOON_PAGE_ID_MISSING");
-  if (!canEmit(motherEmitter, "updatePage")) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.UPDATE_PAGE)) {
     return { skipped: true, reason: "PAGES_COMING_SOON_UPDATE_PAGE_MISSING" };
   }
-  await emitAsync(motherEmitter, "updatePage", {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPDATE_PAGE, {
     jwt,
     moduleName: MODULE_NAME,
     moduleType: MODULE_TYPE,
@@ -314,8 +306,8 @@ async function updatePageMeta(motherEmitter, jwt, pageId, meta) {
 }
 
 async function getComingSoonPage(motherEmitter, jwt) {
-  if (!canEmit(motherEmitter, "getPageBySlug")) return null;
-  return emitAsync(motherEmitter, "getPageBySlug", {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG)) return null;
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
     jwt,
     moduleName: MODULE_NAME,
     moduleType: MODULE_TYPE,
@@ -326,10 +318,10 @@ async function getComingSoonPage(motherEmitter, jwt) {
 }
 
 async function createComingSoonPage(motherEmitter, jwt) {
-  if (!canEmit(motherEmitter, "createPage")) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.CREATE_PAGE)) {
     throw new Error("PAGES_COMING_SOON_CREATE_PAGE_MISSING");
   }
-  const result = await emitAsync(motherEmitter, "createPage", {
+  const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_PAGE, {
     jwt,
     moduleName: MODULE_NAME,
     moduleType: MODULE_TYPE,
@@ -421,7 +413,7 @@ module.exports = {
   _internals: {
     baseSeedMeta,
     canEmit,
-    emitAsync,
+
     isRetiredRawComingSoonSeedPage,
     isSeedOwned,
     parseRecord

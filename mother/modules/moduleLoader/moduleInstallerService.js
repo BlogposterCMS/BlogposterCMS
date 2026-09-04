@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/moduleLoader/moduleInstallerService.js
  *
@@ -148,20 +154,11 @@ function validateModuleInfo(moduleInfo = {}, options = {}) {
   }, moduleName, options);
 }
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
-}
-
 async function ensureModulePermissionDeclarations(motherEmitter, jwt, moduleInfo = {}) {
   const declarations = Array.isArray(moduleInfo.permissions) ? moduleInfo.permissions : [];
   if (!declarations.length) return;
 
-  const existingRows = await emitAsync(motherEmitter, 'dbSelect', {
+  const existingRows = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -173,7 +170,7 @@ async function ensureModulePermissionDeclarations(motherEmitter, jwt, moduleInfo
   for (const declaration of declarations) {
     const key = declaration.permission_key || declaration.key;
     if (!key || existing.has(key)) continue;
-    await emitAsync(motherEmitter, 'dbInsert', {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',
@@ -266,7 +263,7 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
     await ensureModulePermissionDeclarations(motherEmitter, jwt, normalizedModuleInfo);
 
     if (options.notifyAdmin) {
-      motherEmitter.emit('log', {
+      motherEmitter.emit(BACKEND_EVENTS.LOG, {
         level: 'info',
         message: `Module ${normalizedModuleInfo.moduleName} installed.`
       });

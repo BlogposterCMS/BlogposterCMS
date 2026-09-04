@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 // mother/modules/plainSpace/index.js
 // This is our proud aggregator of meltdown madness.
 
@@ -228,7 +234,7 @@ module.exports = {
       registerPlainSpaceEvents(motherEmitter);
 
       // 2) Ensure DB tables required for layouts and widgets
-      await meltdownEmit(motherEmitter, 'dbUpdate', {
+      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: MODULE,
         moduleType: 'core',
@@ -240,7 +246,7 @@ module.exports = {
         console.error('[plainSpace] Could not create "plainspace.layouts" table:', err.message);
       });
 
-      await meltdownEmit(motherEmitter, 'dbUpdate', {
+      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: MODULE,
         moduleType: 'core',
@@ -252,7 +258,7 @@ module.exports = {
         console.error('[plainSpace] Could not create "plainspace.layout_templates" table:', err.message);
       });
 
-      await meltdownEmit(motherEmitter, 'dbUpdate', {
+      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: MODULE,
         moduleType: 'core',
@@ -266,14 +272,14 @@ module.exports = {
 
       // Ensure a global layout exists
       try {
-        const globalRes = await meltdownEmit(motherEmitter, 'getGlobalLayoutTemplate', {
+        const globalRes = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_GLOBAL_LAYOUT_TEMPLATE, {
           jwt,
           moduleName: MODULE,
           moduleType: 'core'
         });
         if (!globalRes?.name) {
           const name = 'global-layout';
-          await meltdownEmit(motherEmitter, 'saveLayoutTemplate', {
+          await meltdownEmit(motherEmitter, BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE, {
             jwt,
             moduleName: MODULE,
             moduleType: 'core',
@@ -284,7 +290,7 @@ module.exports = {
             previewPath: '',
             isGlobal: true
           });
-          await meltdownEmit(motherEmitter, 'setGlobalLayoutTemplate', {
+          await meltdownEmit(motherEmitter, BACKEND_EVENTS.SET_GLOBAL_LAYOUT_TEMPLATE, {
             jwt,
             moduleName: MODULE,
             moduleType: 'core',
@@ -296,7 +302,7 @@ module.exports = {
         console.error('[plainSpace] Failed to ensure global layout:', err.message);
       }
 
-      await meltdownEmit(motherEmitter, 'dbUpdate', {
+      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: MODULE,
         moduleType: 'core',
@@ -344,24 +350,23 @@ module.exports = {
       await seedFromModules(motherEmitter, jwt);
 
       // 3) Issue a public token for front-end usage (why not?)
-      motherEmitter.emit(
-        'issuePublicToken',
-        { purpose: 'plainspacePublic', moduleName: 'auth' },
-        (err, token) => {
-          if (err || !token) {
-            console.error('[plainSpace] Could not issue publicToken =>', err?.message);
-          } else {
-            global.plainspacePublicToken = token;
-            console.log('[plainSpace] Public token for multi-viewport usage is ready ✔');
-          }
-        }
-      );
+      try {
+        const token = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN, {
+          purpose: 'plainspacePublic',
+          moduleName: 'auth'
+        });
+        if (!token) throw new Error('PLAINSPACE_PUBLIC_TOKEN_MISSING');
+        global.plainspacePublicToken = token;
+        console.log('[plainSpace] Public token for multi-viewport usage is ready ✔');
+      } catch (err) {
+        console.error('[plainSpace] Could not issue publicToken =>', err?.message);
+      }
 
       // 5) Listen for widget registry requests
       // widget.registry.request.v1 handler (plainSpace)
-      motherEmitter.on('widget.registry.request.v1', (payload, callback) => {
+      motherEmitter.on(BACKEND_EVENTS.WIDGET_REGISTRY_REQUEST_V1, (payload, callback) => {
         try {
-          assertPlainSpacePayload(payload, 'widget.registry.request.v1');
+          assertPlainSpacePayload(payload, BACKEND_EVENTS.WIDGET_REGISTRY_REQUEST_V1);
         } catch (err) {
           return callback(err);
         }
@@ -374,22 +379,25 @@ module.exports = {
         }
 
         // Forward the request to widgetManager
-        motherEmitter.emit('getWidgets', {
+        requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_WIDGETS, {
           jwt,
           moduleName: 'widgetManager',
           moduleType: MODULE_TYPE,
           widgetType: lane
-        }, (err, widgetRows = []) => {
-          if (err) {
-            console.error(`[plainSpace] Error fetching widgets from widgetManager: ${err.message}`);
-            return callback(null, { widgets: [] }); // graceful degradation
-          }
+        }).then((widgetRows = []) => {
+  const formattedWidgets = formatRegistryWidgets(widgetRows, lane);
 
-          const formattedWidgets = formatRegistryWidgets(widgetRows, lane);
-
-          // Send the formatted widget array to frontend
-          callback(null, { widgets: formattedWidgets });
-        });
+  // Send the formatted widget array to frontend
+  // Send the formatted widget array to frontend
+  callback(null, {
+    widgets: formattedWidgets
+  });
+}, err => {
+  console.error(`[plainSpace] Error fetching widgets from widgetManager: ${err.message}`);
+  return callback(null, {
+    widgets: []
+  }); // graceful degradation
+});
       });
 
 

@@ -1,5 +1,8 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -85,13 +88,13 @@ const COMMUNITY_STATIC_OPTION_KEYS = new Set([
 const FORBIDDEN_COMMUNITY_LISTENER_EVENTS = new Set([
   ...FORBIDDEN_COMMUNITY_EVENTS,
   ...SENSITIVE_COMMUNITY_QUERY_EVENTS,
-  'cmsAdminApiRequest',
-  'dbSelect',
-  'ensurePublicToken',
-  'finalizeUserLogin',
-  'issuePublicToken',
-  'publicRegister',
-  'userLogin'
+  BACKEND_EVENTS.CMS_ADMIN_API_REQUEST,
+  BACKEND_EVENTS.DB_SELECT,
+  BACKEND_EVENTS.ENSURE_PUBLIC_TOKEN,
+  BACKEND_EVENTS.FINALIZE_USER_LOGIN,
+  BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN,
+  BACKEND_EVENTS.PUBLIC_REGISTER,
+  BACKEND_EVENTS.USER_LOGIN
 ]);
 const COMMUNITY_LISTENER_PRIVATE_PAYLOAD_KEYS = new Set([
   'jwt',
@@ -457,40 +460,26 @@ function normalizeStorageObject(value, label, { allowEmpty = true } = {}) {
   return cloneRuntimeData(normalized);
 }
 
-function emitStorageEvent(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      reject(createModuleHostError(
+async function emitStorageEvent(motherEmitter, eventName, payload) {
+  try {
+    return await requestBackendEvent(motherEmitter, eventName, payload, {
+      timeoutMs: STORAGE_REQUEST_TIMEOUT_MS
+    });
+  } catch (err) {
+    if (err?.code === 'EVENT_CONTRACT_TIMEOUT') {
+      throw createModuleHostError(
         'E_MODULE_STORAGE_CALLBACK_TIMEOUT',
         `Storage event "${eventName}" did not call back for module "${payload.moduleName}".`
-      ));
-    }, STORAGE_REQUEST_TIMEOUT_MS);
-    timer.unref?.();
-
-    const callback = (err, result) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(result);
-    };
-
-    const emitted = motherEmitter.emit(eventName, payload, callback);
-    if (emitted === false && !settled) {
-      settled = true;
-      clearTimeout(timer);
-      reject(createModuleHostError(
+      );
+    }
+    if (err?.code === 'EVENT_CONTRACT_NOT_REGISTERED') {
+      throw createModuleHostError(
         'E_MODULE_STORAGE_EVENT_NOT_HANDLED',
         `Storage event "${eventName}" is not registered.`
-      ));
+      );
     }
-  });
+    throw err;
+  }
 }
 
 function createCommunityStorageFacade({
@@ -528,11 +517,11 @@ function createCommunityStorageFacade({
       const where = options && typeof options === 'object' && !Array.isArray(options) && 'where' in options
         ? options.where
         : options;
-      return run('dbSelect', 'select', tableName, { where });
+      return run(BACKEND_EVENTS.DB_SELECT, 'select', tableName, { where });
     }),
 
     insert: createBoundaryFunction(function insert(tableName, data = {}) {
-      return run('dbInsert', 'insert', tableName, { data });
+      return run(BACKEND_EVENTS.DB_INSERT, 'insert', tableName, { data });
     }),
 
     update: createBoundaryFunction(function update(tableName, where = {}, data) {
@@ -543,14 +532,14 @@ function createCommunityStorageFacade({
         ('where' in where || 'data' in where);
       const finalWhere = hasObjectPayload ? where.where : where;
       const finalData = hasObjectPayload ? where.data : data;
-      return run('dbUpdate', 'update', tableName, { where: finalWhere, data: finalData });
+      return run(BACKEND_EVENTS.DB_UPDATE, 'update', tableName, { where: finalWhere, data: finalData });
     }),
 
     delete: createBoundaryFunction(function remove(tableName, where = {}) {
       const finalWhere = where && typeof where === 'object' && !Array.isArray(where) && 'where' in where
         ? where.where
         : where;
-      return run('dbDelete', 'delete', tableName, { where: finalWhere });
+      return run(BACKEND_EVENTS.DB_DELETE, 'delete', tableName, { where: finalWhere });
     })
   });
 }
@@ -567,7 +556,7 @@ function isCommunityOwnedTable(moduleName, tableName) {
 
 function isCommunityQueryEvent(eventName) {
   const name = String(eventName || '');
-  if (name === 'dbSelect') return true;
+  if (name === BACKEND_EVENTS.DB_SELECT) return true;
   if (!SAFE_EVENT_NAME.test(name)) return false;
   if (MUTATING_EVENT_PREFIX.test(name)) return false;
   return PUBLIC_COMMUNITY_QUERY_EVENTS.has(name);
@@ -621,7 +610,7 @@ function assertCommunityEventAllowed(eventName, payload = {}, moduleName = '', a
     throw new Error(`[MODULE HOST] Community module events can only query module-owned data or emit module-owned lifecycle signals. Event "${eventName}" is not allowed.`);
   }
 
-  if (eventName === 'dbSelect') {
+  if (eventName === BACKEND_EVENTS.DB_SELECT) {
     if (
       payload.table === '__rawSQL__' ||
       payload?.data?.rawSQL ||

@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 require('dotenv').config();
 
 const { onceCallback } = require('../../emitters/motherEmitter');
@@ -319,10 +323,10 @@ function parseRecords(records) {
 }
 
 function setupMetadataEvents(motherEmitter) {
-  motherEmitter.on('registerMetaField', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REGISTER_META_FIELD, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'registerMetaField');
+      assertCorePayload(payload, BACKEND_EVENTS.REGISTER_META_FIELD);
       requirePermission(payload, 'metadata.manage');
       const result = await metadataDbUpdate(motherEmitter, payload.jwt, 'UPSERT_META_FIELD', normalizeField(payload));
       callback(null, result);
@@ -331,10 +335,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getMetaField', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_META_FIELD, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getMetaField');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_META_FIELD);
       const result = await metadataDbSelect(motherEmitter, payload.jwt, 'GET_META_FIELD', normalizeFieldKey(payload));
       const field = Array.isArray(result) ? result[0] || null : result || null;
       if (!canManageMetadata(payload) && field && field.public !== true) {
@@ -347,10 +351,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listMetaFields', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_META_FIELDS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listMetaFields');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_META_FIELDS);
       const manager = canManageMetadata(payload);
       const result = await metadataDbSelect(motherEmitter, payload.jwt, 'LIST_META_FIELDS', {
         targetType: payload.targetType ? normalizeTargetType(payload.targetType) : '',
@@ -364,10 +368,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteMetaField', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_META_FIELD, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteMetaField');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_META_FIELD);
       requirePermission(payload, 'metadata.manage');
       const result = await metadataDbUpdate(motherEmitter, payload.jwt, 'DELETE_META_FIELD', normalizeFieldKey(payload));
       callback(null, result);
@@ -376,10 +380,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('setMetadata', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_METADATA, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'setMetadata');
+      assertCorePayload(payload, BACKEND_EVENTS.SET_METADATA);
       requirePermission(payload, 'metadata.manage');
       const field = await getFieldDefinition(motherEmitter, payload.jwt, payload);
       const result = await metadataDbUpdate(
@@ -394,10 +398,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getMetadata', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_METADATA, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getMetadata');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_METADATA);
       const result = await metadataDbSelect(
         motherEmitter,
         payload.jwt,
@@ -410,10 +414,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getMetadataValue', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_METADATA_VALUE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getMetadataValue');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_METADATA_VALUE);
       const query = normalizeMetadataQuery(payload, canManageMetadata(payload));
       if (!query.metaKey) throw new Error('metaKey is required.');
       const result = await metadataDbSelect(motherEmitter, payload.jwt, 'GET_METADATA_VALUES', {
@@ -427,10 +431,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteMetadata', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_METADATA, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteMetadata');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_METADATA);
       requirePermission(payload, 'metadata.manage');
       const result = await metadataDbUpdate(
         motherEmitter,
@@ -444,10 +448,10 @@ function setupMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteMetadataForTarget', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_METADATA_FOR_TARGET, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteMetadataForTarget');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_METADATA_FOR_TARGET);
       requirePermission(payload, 'metadata.manage');
       const result = await metadataDbUpdate(
         motherEmitter,

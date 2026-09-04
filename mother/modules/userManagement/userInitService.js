@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/userManagement/userInitService.js
  *
@@ -12,13 +18,7 @@ require('dotenv').config();
 /* ------------------------------------------------------------- */
 /*  Generic Promise‑Wrapper für db‑Operationen via motherEmitter  */
 /* ------------------------------------------------------------- */
-function emitAsync(motherEmitter, event, payload) {
-  return new Promise((res, rej) => {
-    motherEmitter.emit(event, payload, (err, data) =>
-      err ? rej(err) : res(data)
-    );
-  });
-}
+
 
 const DEFAULT_PERMISSION_DEFINITIONS = Object.freeze([
   { permission_key: 'settings.core.view', description: 'View core settings' },
@@ -144,7 +144,7 @@ function makeAdminPermissionBlob(existing = {}) {
 /* ====================== 1) DB / Schema ======================= */
 async function ensureUserManagementDatabase(motherEmitter, jwt) {
   console.log('[USER SERVICE] Ensuring the userManagement data store…');
-  await emitAsync(motherEmitter, 'createDatabase', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core'
@@ -154,7 +154,7 @@ async function ensureUserManagementDatabase(motherEmitter, jwt) {
 
 async function ensureUserManagementSchemaAndTables(motherEmitter, jwt) {
   console.log('[USER SERVICE] Initialising user tables/collections…');
-  await emitAsync(motherEmitter, 'dbUpdate', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -168,7 +168,7 @@ async function ensureUserManagementSchemaAndTables(motherEmitter, jwt) {
 /* ===================== 2) Default‑Rollen ===================== */
 async function ensureDefaultRoles(motherEmitter, jwt) {
   console.log('[USER SERVICE] Checking default roles…');
-  const roles = await emitAsync(motherEmitter, 'dbSelect', {
+  const roles = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -181,7 +181,7 @@ async function ensureDefaultRoles(motherEmitter, jwt) {
   const tasks = [];
 
   if (!names.includes('admin')) {
-    tasks.push(emitAsync(motherEmitter, 'dbInsert', {
+    tasks.push(requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -198,7 +198,7 @@ async function ensureDefaultRoles(motherEmitter, jwt) {
     const adminPermissions = parsePermissionBlob(adminRole.permissions);
     if (adminPermissions['*'] !== true || Object.prototype.hasOwnProperty.call(adminPermissions, 'canAccessEverything')) {
       const where = adminRole.id != null ? { id: adminRole.id } : { role_name: adminRole.role_name || 'admin' };
-      tasks.push(emitAsync(motherEmitter, 'dbUpdate', {
+      tasks.push(requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: 'userManagement',
         moduleType: 'core',
@@ -213,7 +213,7 @@ async function ensureDefaultRoles(motherEmitter, jwt) {
   }
 
   if (!names.includes('standard')) {
-    tasks.push(emitAsync(motherEmitter, 'dbInsert', {
+    tasks.push(requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -235,7 +235,7 @@ async function ensureDefaultRoles(motherEmitter, jwt) {
 /* ==================== 2b) Default Permissions ==================== */
 async function ensureDefaultPermissions(motherEmitter, jwt) {
   console.log('[USER SERVICE] Checking default permissions…');
-  const perms = await emitAsync(motherEmitter, 'dbSelect', {
+  const perms = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -246,7 +246,7 @@ async function ensureDefaultPermissions(motherEmitter, jwt) {
     .map(p => (p.permission_key || '').toLowerCase()));
   const tasks = DEFAULT_PERMISSION_DEFINITIONS
     .filter(def => !existing.has(def.permission_key.toLowerCase()))
-    .map(def => emitAsync(motherEmitter, 'dbInsert', {
+    .map(def => requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',
@@ -265,7 +265,7 @@ async function ensureDefaultPermissions(motherEmitter, jwt) {
 
 async function ensureUserColorField(motherEmitter, jwt) {
   console.log('[USER SERVICE] Ensuring ui_color field…');
-  await emitAsync(motherEmitter, 'dbUpdate', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -281,7 +281,7 @@ async function ensureFirstUserIsAdmin(motherEmitter, jwt) {
   console.log('[USER SERVICE] Verifying that at least one admin exists…');
 
   // admin‑Role finden
-  const [adminRole] = await emitAsync(motherEmitter, 'dbSelect', {
+  const [adminRole] = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -295,7 +295,7 @@ async function ensureFirstUserIsAdmin(motherEmitter, jwt) {
   }
 
   // gibt es schon ein Mapping?
-  const existing = await emitAsync(motherEmitter, 'dbSelect', {
+  const existing = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -310,7 +310,7 @@ async function ensureFirstUserIsAdmin(motherEmitter, jwt) {
   }
 
   // ersten User holen
-  const [firstUser] = await emitAsync(motherEmitter, 'dbSelect', {
+  const [firstUser] = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -326,7 +326,7 @@ async function ensureFirstUserIsAdmin(motherEmitter, jwt) {
 
   // Mapping anlegen
   try {
-    await emitAsync(motherEmitter, 'dbInsert', {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'user_roles',

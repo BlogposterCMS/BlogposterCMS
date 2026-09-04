@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 require('dotenv').config();
 
 const { onceCallback } = require('../../emitters/motherEmitter');
@@ -203,31 +207,20 @@ function normalizeDateString(value, fallback = null) {
   return Number.isNaN(date.getTime()) ? fallback : date.toISOString();
 }
 
-function emitOptional(motherEmitter, eventName, payload) {
-  return new Promise(resolve => {
-    if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
-      return resolve({ skipped: true });
-    }
-
-    let settled = false;
-    let timer = null;
-    const finish = value => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      resolve(value);
-    };
-
-    timer = setTimeout(() => finish({ skipped: true, reason: 'timeout' }), OPTIONAL_SEARCH_TIMEOUT_MS);
-    try {
-      const emitted = motherEmitter.emit(eventName, payload, onceCallback((err, result) => {
-        finish({ err: err || null, result });
-      }));
-      if (!emitted) finish({ skipped: true });
-    } catch (err) {
-      finish({ err });
-    }
-  });
+async function emitOptional(motherEmitter, eventName, payload) {
+  if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
+    return { skipped: true };
+  }
+  try {
+    const result = await requestBackendEvent(motherEmitter, eventName, payload, {
+      timeoutMs: OPTIONAL_SEARCH_TIMEOUT_MS
+    });
+    return { err: null, result };
+  } catch (err) {
+    if (err?.code === 'EVENT_CONTRACT_TIMEOUT') return { skipped: true, reason: 'timeout' };
+    if (err?.code === 'EVENT_CONTRACT_NOT_REGISTERED') return { skipped: true };
+    return { err };
+  }
 }
 
 function stripHtml(value = '') {
@@ -283,7 +276,7 @@ function buildSearchDocumentPayload(jwt, entry = {}) {
 async function mirrorContentEntryToSearch(motherEmitter, jwt, entry) {
   const payload = buildSearchDocumentPayload(jwt, entry);
   if (!payload) return;
-  const result = await emitOptional(motherEmitter, 'indexSearchDocument', payload);
+  const result = await emitOptional(motherEmitter, BACKEND_EVENTS.INDEX_SEARCH_DOCUMENT, payload);
   if (result?.err) {
     console.warn('[CONTENT ENGINE] Search index mirror failed:', result.err.message);
   }
@@ -291,7 +284,7 @@ async function mirrorContentEntryToSearch(motherEmitter, jwt, entry) {
 
 async function removeContentEntryFromSearch(motherEmitter, jwt, entryId) {
   if (!entryId) return;
-  const result = await emitOptional(motherEmitter, 'removeSearchDocument', {
+  const result = await emitOptional(motherEmitter, BACKEND_EVENTS.REMOVE_SEARCH_DOCUMENT, {
     jwt,
     moduleName: 'searchManager',
     moduleType: 'core',
@@ -341,7 +334,7 @@ function sameContentEntryId(left, right) {
 async function assertContentEntryAddressAvailable(motherEmitter, jwt, entry) {
   if (
     typeof motherEmitter.listenerCount === 'function' &&
-    motherEmitter.listenerCount('dbSelect') === 0
+    motherEmitter.listenerCount(BACKEND_EVENTS.DB_SELECT) === 0
   ) {
     return;
   }
@@ -363,10 +356,10 @@ async function assertContentEntryAddressAvailable(motherEmitter, jwt, entry) {
 }
 
 function setupContentEngineEvents(motherEmitter) {
-  motherEmitter.on('registerContentType', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REGISTER_CONTENT_TYPE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'registerContentType');
+      assertCorePayload(payload, BACKEND_EVENTS.REGISTER_CONTENT_TYPE);
       requirePermission(payload, 'content.types.manage');
       const key = normalizeKey(payload.key);
       if (!key) throw new Error('Content type key is required.');
@@ -385,10 +378,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getContentType', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_TYPE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentType');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_TYPE);
       const key = normalizeKey(payload.key);
       if (!key) throw new Error('Content type key is required.');
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'GET_CONTENT_TYPE', { key });
@@ -398,10 +391,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listContentTypes', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_CONTENT_TYPES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listContentTypes');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_CONTENT_TYPES);
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'LIST_CONTENT_TYPES', {});
       callback(null, result || []);
     } catch (err) {
@@ -409,10 +402,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('createContentEntry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_CONTENT_ENTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'createContentEntry');
+      assertCorePayload(payload, BACKEND_EVENTS.CREATE_CONTENT_ENTRY);
       requirePermission(payload, 'content.create');
       const entry = normalizeEntryInput(payload);
       if (!entry.title) throw new Error('Content title is required.');
@@ -425,10 +418,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateContentEntry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_CONTENT_ENTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'updateContentEntry');
+      assertCorePayload(payload, BACKEND_EVENTS.UPDATE_CONTENT_ENTRY);
       requirePermission(payload, 'content.update');
       const entryId = normalizeScalarId(firstDefined(payload.entryId, payload.id));
       if (!entryId) throw new Error('entryId is required.');
@@ -445,25 +438,25 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('publishContentEntry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.PUBLISH_CONTENT_ENTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'publishContentEntry');
+      assertCorePayload(payload, BACKEND_EVENTS.PUBLISH_CONTENT_ENTRY);
       requirePermission(payload, 'content.publish');
-      motherEmitter.emit('updateContentEntry', {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPDATE_CONTENT_ENTRY, {
         ...payload,
         status: 'published',
         publishedAt: payload.publishedAt || new Date().toISOString()
-      }, callback);
+      }).then(result => callback(null, result), error => callback(error));
     } catch (err) {
       callback(err);
     }
   });
 
-  motherEmitter.on('getContentEntry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_ENTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentEntry');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_ENTRY);
       const entryId = normalizeScalarId(firstDefined(payload.entryId, payload.id));
       if (!entryId) throw new Error('entryId is required.');
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'GET_CONTENT_ENTRY', { entryId });
@@ -473,10 +466,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getContentEntryBySource', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentEntryBySource');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE);
       const sourceModule = normalizeModuleName(firstDefined(payload.sourceModule, payload.source_module, ''));
       const sourceId = normalizeScalarText(firstDefined(payload.sourceId, payload.source_id, ''), 160);
       if (!sourceModule || !sourceId) throw new Error('sourceModule and sourceId are required.');
@@ -490,10 +483,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('resolveContentPermalink', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RESOLVE_CONTENT_PERMALINK, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'resolveContentPermalink');
+      assertCorePayload(payload, BACKEND_EVENTS.RESOLVE_CONTENT_PERMALINK);
       const permalink = normalizePermalinkPath(firstDefined(payload.permalink, payload.path, ''));
       if (!permalink) throw new Error('permalink or path is required.');
       const language = normalizeLanguage(payload.language || 'en');
@@ -504,10 +497,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listContentEntries', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_CONTENT_ENTRIES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listContentEntries');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_CONTENT_ENTRIES);
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'LIST_CONTENT_ENTRIES', {
         contentTypeKey: normalizeKey(payload.contentTypeKey || payload.contentType || ''),
         status: payload.status ? normalizeStatus(payload.status) : '',
@@ -521,10 +514,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listTrashedContentEntries', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_TRASHED_CONTENT_ENTRIES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listTrashedContentEntries');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_TRASHED_CONTENT_ENTRIES);
       requirePermission(payload, 'content.delete');
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'LIST_TRASHED_CONTENT_ENTRIES', {
         contentTypeKey: normalizeKey(payload.contentTypeKey || payload.contentType || ''),
@@ -538,10 +531,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listScheduledContentEntries', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_SCHEDULED_CONTENT_ENTRIES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listScheduledContentEntries');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_SCHEDULED_CONTENT_ENTRIES);
       requirePermission(payload, 'content.publish');
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'LIST_SCHEDULED_CONTENT_ENTRIES', {
         contentTypeKey: normalizeKey(payload.contentTypeKey || payload.contentType || ''),
@@ -556,10 +549,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('publishScheduledContentEntries', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.PUBLISH_SCHEDULED_CONTENT_ENTRIES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'publishScheduledContentEntries');
+      assertCorePayload(payload, BACKEND_EVENTS.PUBLISH_SCHEDULED_CONTENT_ENTRIES);
       requirePermission(payload, 'content.publish');
       const due = await contentDbSelect(motherEmitter, payload.jwt, 'LIST_SCHEDULED_CONTENT_ENTRIES', {
         contentTypeKey: normalizeKey(payload.contentTypeKey || payload.contentType || ''),
@@ -573,13 +566,11 @@ function setupContentEngineEvents(motherEmitter) {
 
       for (const entry of due) {
         try {
-          const result = await new Promise((resolve, reject) => {
-            motherEmitter.emit('publishContentEntry', {
+          const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.PUBLISH_CONTENT_ENTRY, {
               ...payload,
               entryId: entry.id,
               publishedAt: new Date().toISOString()
-            }, (err, value) => (err ? reject(err) : resolve(value)));
-          });
+            });
           published.push(result);
         } catch (err) {
           errors.push({ entryId: entry.id, message: err.message });
@@ -592,10 +583,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getContentRevisions', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_REVISIONS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentRevisions');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_REVISIONS);
       const entryId = normalizeScalarId(firstDefined(payload.entryId, payload.id));
       if (!entryId) throw new Error('entryId is required.');
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'LIST_CONTENT_REVISIONS', { entryId });
@@ -605,10 +596,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getContentRevision', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CONTENT_REVISION, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getContentRevision');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_CONTENT_REVISION);
       const revisionId = normalizeScalarId(firstDefined(payload.revisionId, payload.revision_id));
       const entryId = normalizeScalarId(firstDefined(payload.entryId, payload.id));
       const version = normalizePositiveInteger(payload.version);
@@ -626,10 +617,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('restoreContentRevision', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RESTORE_CONTENT_REVISION, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'restoreContentRevision');
+      assertCorePayload(payload, BACKEND_EVENTS.RESTORE_CONTENT_REVISION);
       requirePermission(payload, 'content.update');
       const revisionId = normalizeScalarId(firstDefined(payload.revisionId, payload.revision_id));
       const entryId = normalizeScalarId(firstDefined(payload.entryId, payload.id));
@@ -654,10 +645,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('trashContentEntry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.TRASH_CONTENT_ENTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'trashContentEntry');
+      assertCorePayload(payload, BACKEND_EVENTS.TRASH_CONTENT_ENTRY);
       requirePermission(payload, 'content.delete');
       const entryId = normalizeScalarId(firstDefined(payload.entryId, payload.id));
       if (!entryId) throw new Error('entryId is required.');
@@ -672,10 +663,10 @@ function setupContentEngineEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('restoreContentEntry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RESTORE_CONTENT_ENTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'restoreContentEntry');
+      assertCorePayload(payload, BACKEND_EVENTS.RESTORE_CONTENT_ENTRY);
       requirePermission(payload, 'content.restore');
       const entryId = normalizeScalarId(firstDefined(payload.entryId, payload.id));
       if (!entryId) throw new Error('entryId is required.');

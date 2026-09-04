@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 require('dotenv').config();
 
 const { onceCallback } = require('../../emitters/motherEmitter');
@@ -86,14 +90,12 @@ function deserializeSettingValue(value) {
 }
 
 function emitSettingsManager(motherEmitter, jwt, eventName, payload = {}) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, {
+  return requestBackendEvent(motherEmitter, eventName, {
       ...payload,
       jwt,
       moduleName: 'settingsManager',
       moduleType: MODULE_TYPE
-    }, onceCallback((err, result) => (err ? reject(err) : resolve(result))));
-  });
+    });
 }
 
 function schemaFor(moduleName) {
@@ -128,19 +130,19 @@ function rowsToSettingsMap(moduleName, rows = []) {
 }
 
 async function listModuleSettingsValues(motherEmitter, jwt, moduleName) {
-  const rows = await emitSettingsManager(motherEmitter, jwt, 'listSettings', { prefix: `${moduleName}.` });
+  const rows = await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.LIST_SETTINGS, { prefix: `${moduleName}.` });
   return rowsToSettingsMap(moduleName, rows);
 }
 
 async function getModuleSettingValue(motherEmitter, jwt, moduleName, settingKey) {
-  const value = await emitSettingsManager(motherEmitter, jwt, 'getSetting', {
+  const value = await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.GET_SETTING, {
     key: prefixedKey(moduleName, settingKey)
   });
   return deserializeSettingValue(value);
 }
 
 async function updateModuleSettingValue(motherEmitter, jwt, moduleName, settingKey, value) {
-  return emitSettingsManager(motherEmitter, jwt, 'setSetting', {
+  return emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.SET_SETTING, {
     key: prefixedKey(moduleName, settingKey),
     value: serializeSettingValue(value)
   });
@@ -154,20 +156,20 @@ async function updateModuleSettings(motherEmitter, jwt, moduleName, settings = {
   for (const [rawKey, value] of Object.entries(settings)) {
     prefixed[prefixedKey(moduleName, rawKey)] = serializeSettingValue(value);
   }
-  return emitSettingsManager(motherEmitter, jwt, 'setSettings', { settings: prefixed });
+  return emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.SET_SETTINGS, { settings: prefixed });
 }
 
 async function deleteModuleSetting(motherEmitter, jwt, moduleName, settingKey) {
-  return emitSettingsManager(motherEmitter, jwt, 'deleteSetting', {
+  return emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.DELETE_SETTING, {
     key: prefixedKey(moduleName, settingKey)
   });
 }
 
 function initSettingsRegistry(motherEmitter) {
-  motherEmitter.on('registerModuleSettingsSchema', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REGISTER_MODULE_SETTINGS_SCHEMA, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'registerModuleSettingsSchema');
+      assertCorePayload(payload, BACKEND_EVENTS.REGISTER_MODULE_SETTINGS_SCHEMA);
       requirePermission(payload, 'settings.unified.editSchemas');
       const targetModule = targetModuleFromPayload(payload, payload.moduleName !== MODULE_NAME);
       const schema = registerSchema(targetModule, payload.settingsSchema || payload.schema);
@@ -177,10 +179,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('registerSettingsSection', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REGISTER_SETTINGS_SECTION, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'registerSettingsSection');
+      assertCorePayload(payload, BACKEND_EVENTS.REGISTER_SETTINGS_SECTION);
       requirePermission(payload, 'settings.unified.editSchemas');
       const targetModule = targetModuleFromPayload(payload, payload.moduleName !== MODULE_NAME);
       const existing = schemaFor(targetModule) || { moduleName: targetModule, sections: [] };
@@ -199,10 +201,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getModuleSettingsSchema', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_MODULE_SETTINGS_SCHEMA, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getModuleSettingsSchema', { requireUnifiedModule: true });
+      assertCorePayload(payload, BACKEND_EVENTS.GET_MODULE_SETTINGS_SCHEMA, { requireUnifiedModule: true });
       requirePermission(payload, 'settings.unified.viewSettings');
       const targetModule = targetModuleFromPayload(payload, false);
       callback(null, schemaFor(targetModule));
@@ -211,10 +213,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listModuleSettingsSchemas', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_MODULE_SETTINGS_SCHEMAS, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listModuleSettingsSchemas', { requireUnifiedModule: true });
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_MODULE_SETTINGS_SCHEMAS, { requireUnifiedModule: true });
       requirePermission(payload, 'settings.unified.viewSettings');
       callback(null, listSchemas());
     } catch (err) {
@@ -222,10 +224,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listRegisteredSettingsModules', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_REGISTERED_SETTINGS_MODULES, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listRegisteredSettingsModules', { requireUnifiedModule: true });
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_REGISTERED_SETTINGS_MODULES, { requireUnifiedModule: true });
       requirePermission(payload, 'settings.unified.viewSettings');
       callback(null, retrieveAllRegisteredModules());
     } catch (err) {
@@ -233,10 +235,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getModuleSettingValue', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_MODULE_SETTING_VALUE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getModuleSettingValue');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_MODULE_SETTING_VALUE);
       requirePermission(payload, 'settings.unified.viewSettings');
       const targetModule = targetModuleFromPayload(payload, payload.moduleName !== MODULE_NAME);
       callback(null, await getModuleSettingValue(
@@ -250,10 +252,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listModuleSettings', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_MODULE_SETTINGS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listModuleSettings', { requireUnifiedModule: true });
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_MODULE_SETTINGS, { requireUnifiedModule: true });
       requirePermission(payload, 'settings.unified.viewSettings');
       const targetModule = targetModuleFromPayload(payload, false);
       callback(null, await listModuleSettingsValues(motherEmitter, payload.jwt, targetModule));
@@ -262,10 +264,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getModuleSettings', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_MODULE_SETTINGS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getModuleSettings', { requireUnifiedModule: true });
+      assertCorePayload(payload, BACKEND_EVENTS.GET_MODULE_SETTINGS, { requireUnifiedModule: true });
       requirePermission(payload, 'settings.unified.viewSettings');
       const targetModule = targetModuleFromPayload(payload, false);
       callback(null, {
@@ -278,10 +280,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateModuleSettingValue', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_MODULE_SETTING_VALUE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'updateModuleSettingValue');
+      assertCorePayload(payload, BACKEND_EVENTS.UPDATE_MODULE_SETTING_VALUE);
       requirePermission(payload, 'settings.unified.editSettings');
       const targetModule = targetModuleFromPayload(payload, payload.moduleName !== MODULE_NAME);
       const value = Object.prototype.hasOwnProperty.call(payload, 'newValue') ? payload.newValue : payload.value;
@@ -297,10 +299,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateModuleSettings', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_MODULE_SETTINGS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'updateModuleSettings');
+      assertCorePayload(payload, BACKEND_EVENTS.UPDATE_MODULE_SETTINGS);
       requirePermission(payload, 'settings.unified.editSettings');
       const targetModule = targetModuleFromPayload(payload, payload.moduleName !== MODULE_NAME);
       callback(null, await updateModuleSettings(motherEmitter, payload.jwt, targetModule, payload.settings || payload.values));
@@ -309,10 +311,10 @@ function initSettingsRegistry(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteModuleSetting', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_MODULE_SETTING, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteModuleSetting');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_MODULE_SETTING);
       requirePermission(payload, 'settings.unified.editSettings');
       const targetModule = targetModuleFromPayload(payload, payload.moduleName !== MODULE_NAME);
       callback(null, await deleteModuleSetting(motherEmitter, payload.jwt, targetModule, payload.settingKey || payload.key));

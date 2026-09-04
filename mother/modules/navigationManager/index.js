@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 require('dotenv').config();
 
 const { onceCallback } = require('../../emitters/motherEmitter');
@@ -173,10 +177,10 @@ async function resolveMenu(motherEmitter, jwt, ref) {
 }
 
 function setupNavigationEvents(motherEmitter) {
-  motherEmitter.on('registerNavigationLocation', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REGISTER_NAVIGATION_LOCATION, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'registerNavigationLocation');
+      assertCorePayload(payload, BACKEND_EVENTS.REGISTER_NAVIGATION_LOCATION);
       requirePermission(payload, 'navigation.manage');
       const result = await navigationDbUpdate(motherEmitter, payload.jwt, 'UPSERT_NAVIGATION_LOCATION', normalizeLocationInput(payload));
       callback(null, result);
@@ -185,10 +189,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listNavigationLocations', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_NAVIGATION_LOCATIONS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listNavigationLocations');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_NAVIGATION_LOCATIONS);
       const result = await navigationDbSelect(motherEmitter, payload.jwt, 'LIST_NAVIGATION_LOCATIONS');
       callback(null, result || []);
     } catch (err) {
@@ -196,10 +200,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('upsertNavigationMenu', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPSERT_NAVIGATION_MENU, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'upsertNavigationMenu');
+      assertCorePayload(payload, BACKEND_EVENTS.UPSERT_NAVIGATION_MENU);
       requirePermission(payload, 'navigation.manage');
       const result = await navigationDbUpdate(motherEmitter, payload.jwt, 'UPSERT_NAVIGATION_MENU', normalizeMenuInput(payload));
       callback(null, result);
@@ -208,10 +212,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getNavigationMenu', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_NAVIGATION_MENU, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getNavigationMenu');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_NAVIGATION_MENU);
       const result = await navigationDbSelect(motherEmitter, payload.jwt, 'GET_NAVIGATION_MENU', normalizeMenuRef(payload));
       callback(null, Array.isArray(result) ? result[0] || null : result || null);
     } catch (err) {
@@ -219,10 +223,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listNavigationMenus', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_NAVIGATION_MENUS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listNavigationMenus');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_NAVIGATION_MENUS);
       const result = await navigationDbSelect(motherEmitter, payload.jwt, 'LIST_NAVIGATION_MENUS', {
         locationKey: normalizeKey(payload.locationKey || payload.location || '')
       });
@@ -232,10 +236,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('addNavigationMenuItem', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.ADD_NAVIGATION_MENU_ITEM, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'addNavigationMenuItem');
+      assertCorePayload(payload, BACKEND_EVENTS.ADD_NAVIGATION_MENU_ITEM);
       requirePermission(payload, 'navigation.manage');
       const menu = await resolveMenu(motherEmitter, payload.jwt, normalizeMenuRef(payload));
       const item = normalizeMenuItemInput({ ...payload, menuId: menu.id });
@@ -246,10 +250,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('setNavigationMenuItems', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_NAVIGATION_MENU_ITEMS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'setNavigationMenuItems');
+      assertCorePayload(payload, BACKEND_EVENTS.SET_NAVIGATION_MENU_ITEMS);
       requirePermission(payload, 'navigation.manage');
       const menu = await resolveMenu(motherEmitter, payload.jwt, normalizeMenuRef(payload));
       const rawItems = Array.isArray(payload.items) ? payload.items : [];
@@ -268,10 +272,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateNavigationMenuItem', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_NAVIGATION_MENU_ITEM, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'updateNavigationMenuItem');
+      assertCorePayload(payload, BACKEND_EVENTS.UPDATE_NAVIGATION_MENU_ITEM);
       requirePermission(payload, 'navigation.manage');
       const itemId = payload.itemId || payload.id;
       if (!itemId) throw new Error('itemId is required.');
@@ -286,10 +290,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteNavigationMenuItem', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_NAVIGATION_MENU_ITEM, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteNavigationMenuItem');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_NAVIGATION_MENU_ITEM);
       requirePermission(payload, 'navigation.manage');
       const itemId = payload.itemId || payload.id;
       if (!itemId) throw new Error('itemId is required.');
@@ -300,10 +304,10 @@ function setupNavigationEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getNavigationTree', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_NAVIGATION_TREE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getNavigationTree');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_NAVIGATION_TREE);
       if (!canManage(payload) && payload.status && payload.status !== 'active') {
         throw new Error('Forbidden - missing permission: navigation.manage');
       }

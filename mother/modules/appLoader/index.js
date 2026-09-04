@@ -1,5 +1,9 @@
 "use strict";
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 const fs   = require('fs');
 const path = require('path');
 const {
@@ -14,6 +18,14 @@ const {
   hasRawPlaceholderPayload
 } = require('../../utils/meltdownHttpPolicy');
 const notificationEmitter = require('../../emitters/notificationEmitter');
+const {
+  BACKEND_EVENT_CONTRACTS,
+  requestBackendEvent
+} = require('../../contracts/backendEventContracts');
+const {
+  registerEventContractHandler,
+  requestEvent
+} = require('../../contracts/eventContract');
 
 const MODULE_NAME = 'appLoader';
 const MODULE_TYPE = 'core';
@@ -86,19 +98,19 @@ const APP_FORBIDDEN_MANIFEST_FIELDS = new Map([
 ]);
 const APP_EVENT_ACCESS_LEVELS = new Set(['read', 'write']);
 const APP_RUNTIME_FACADE_EVENTS = new Set([
-  'cmsAdminApiRequest',
-  'cmsPublicRuntimeRequest'
+  BACKEND_EVENTS.CMS_ADMIN_API_REQUEST,
+  BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST
 ]);
 const AGENT_SURFACE_ALLOWED_EVENTS = Object.freeze([
-  { eventName: 'agent.getCapabilities', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
-  { eventName: 'agent.getApiDefinition', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
-  { eventName: 'agent.getSurfaceContext', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
-  { eventName: 'agent.getSurfaceAction', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
-  { eventName: 'agent.listSurfaceActions', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
-  { eventName: 'agent.listSurfaceCommands', moduleName: 'agentManager', moduleType: 'core', access: 'read' },
-  { eventName: 'agent.publishSurfaceSnapshot', moduleName: 'agentManager', moduleType: 'core', access: 'write' },
-  { eventName: 'agent.pollSurfaceCommands', moduleName: 'agentManager', moduleType: 'core', access: 'write' },
-  { eventName: 'agent.ackSurfaceCommand', moduleName: 'agentManager', moduleType: 'core', access: 'write' }
+  { eventName: BACKEND_EVENTS.AGENT_GET_CAPABILITIES, moduleName: 'agentManager', moduleType: 'core', access: 'read' },
+  { eventName: BACKEND_EVENTS.AGENT_GET_API_DEFINITION, moduleName: 'agentManager', moduleType: 'core', access: 'read' },
+  { eventName: BACKEND_EVENTS.AGENT_GET_SURFACE_CONTEXT, moduleName: 'agentManager', moduleType: 'core', access: 'read' },
+  { eventName: BACKEND_EVENTS.AGENT_GET_SURFACE_ACTION, moduleName: 'agentManager', moduleType: 'core', access: 'read' },
+  { eventName: BACKEND_EVENTS.AGENT_LIST_SURFACE_ACTIONS, moduleName: 'agentManager', moduleType: 'core', access: 'read' },
+  { eventName: BACKEND_EVENTS.AGENT_LIST_SURFACE_COMMANDS, moduleName: 'agentManager', moduleType: 'core', access: 'read' },
+  { eventName: BACKEND_EVENTS.AGENT_PUBLISH_SURFACE_SNAPSHOT, moduleName: 'agentManager', moduleType: 'core', access: 'write' },
+  { eventName: BACKEND_EVENTS.AGENT_POLL_SURFACE_COMMANDS, moduleName: 'agentManager', moduleType: 'core', access: 'write' },
+  { eventName: BACKEND_EVENTS.AGENT_ACK_SURFACE_COMMAND, moduleName: 'agentManager', moduleType: 'core', access: 'write' }
 ]);
 const AGENT_SURFACE_EVENT_NAMES = new Set(AGENT_SURFACE_ALLOWED_EVENTS.map(event => event.eventName));
 const READ_APP_EVENT_ACTIONS = new Set([
@@ -295,7 +307,7 @@ function assertAllowedAppEventAccess(eventName, descriptor = {}, options = {}) {
   if (descriptor.moduleName !== 'runtimeManager') {
     throw new Error(`[APP LOADER] App facade event "${eventName}" must declare moduleName "runtimeManager".`);
   }
-  if (eventName === 'cmsPublicRuntimeRequest' && access !== 'read') {
+  if (eventName === BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST && access !== 'read') {
     throw new Error(`[APP LOADER] App event "${eventName}" must declare read access in app.json.`);
   }
   return access;
@@ -447,14 +459,7 @@ function isLifecycleEvent(appName, eventName) {
   return APP_LIFECYCLE_EVENTS.has(eventName) || eventName === `${appName}-ready`;
 }
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
-}
+
 
 function assertAppFolderShape(appDir, appName) {
   const safeAppName = normalizeAppName(appName);
@@ -623,7 +628,7 @@ async function dispatchCmsAdminRequest(motherEmitter, payload, eventName) {
     throw new Error(`[APP LOADER] ${eventName} requires data.resource and data.action.`);
   }
 
-  return emitAsync(motherEmitter, 'cmsAdminApiRequest', {
+  return requestEvent(motherEmitter, BACKEND_EVENT_CONTRACTS.CMS_ADMIN_API_REQUEST, {
     jwt: payload.jwt,
     moduleName: 'runtimeManager',
     moduleType: 'core',
@@ -660,7 +665,7 @@ async function dispatchAllowedAppRuntimeEvent(motherEmitter, payload, manifest, 
     throw new Error('[APP LOADER] Raw database placeholders cannot be called by apps.');
   }
 
-  if (eventName === 'cmsAdminApiRequest' || eventName === 'cmsPublicRuntimeRequest') {
+  if (eventName === BACKEND_EVENTS.CMS_ADMIN_API_REQUEST || eventName === BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST) {
     const runtimePayload = {
       ...forwarded,
       jwt: payload.jwt,
@@ -674,7 +679,10 @@ async function dispatchAllowedAppRuntimeEvent(motherEmitter, payload, manifest, 
         coreOwned: isCoreOwnedApp(payload.appName)
       }
     };
-    return emitAsync(motherEmitter, eventName, runtimePayload);
+    const contract = eventName === BACKEND_EVENT_CONTRACTS.CMS_ADMIN_API_REQUEST.eventName
+      ? BACKEND_EVENT_CONTRACTS.CMS_ADMIN_API_REQUEST
+      : BACKEND_EVENT_CONTRACTS.CMS_PUBLIC_RUNTIME_REQUEST;
+    return requestEvent(motherEmitter, contract, runtimePayload);
   }
   if (!AGENT_SURFACE_EVENT_NAMES.has(eventName)) {
     throw new Error(`[APP LOADER] App event "${eventName}" must use a runtime facade contract.`);
@@ -704,7 +712,7 @@ async function dispatchAllowedAppRuntimeEvent(motherEmitter, payload, manifest, 
     forwarded.appName = payload.appName;
   }
 
-  return emitAsync(motherEmitter, eventName, forwarded);
+  return requestBackendEvent(motherEmitter, eventName, forwarded);
 }
 
 async function dispatchAllowedAppRuntimeBatch(motherEmitter, payload, manifest, bridgeEventName) {
@@ -730,7 +738,7 @@ async function dispatchAllowedAppRuntimeBatch(motherEmitter, payload, manifest, 
 }
 
 async function handleDispatchAppEvent(motherEmitter, payload, baseDir) {
-  assertAppLoaderPayload(payload, 'dispatchAppEvent');
+  assertAppLoaderPayload(payload, BACKEND_EVENTS.DISPATCH_APP_EVENT);
 
   const appName = normalizeAppName(payload.appName);
   const eventName = normalizeAppEvent(payload.event || payload.type);
@@ -770,7 +778,7 @@ async function handleDispatchAppEvent(motherEmitter, payload, baseDir) {
     throw new Error(`[APP LOADER] Unsupported app event: ${eventName}`);
   }
 
-  const result = await emitAsync(motherEmitter, 'appLoader:appEvent', {
+  const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.APP_LOADER_APP_EVENT, {
     jwt: payload.jwt,
     moduleName: 'appLoader',
     moduleType: 'core',
@@ -961,9 +969,9 @@ module.exports = {
     await loadAllApps({ motherEmitter, jwt, baseDir });
     const appsPath = appsRootFor(baseDir);
 
-    motherEmitter.on('listApps', async (payload, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.LIST_APPS, async (payload, callback) => {
       try {
-        assertAppLoaderPayload(payload, 'listApps');
+        assertAppLoaderPayload(payload, BACKEND_EVENTS.LIST_APPS);
         requireAnyPermission(payload, ['apps.list', 'builder.manage']);
         callback(null, await listAppRegistry(motherEmitter, payload.jwt));
       } catch (err) {
@@ -971,9 +979,9 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('getApp', async (payload, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.GET_APP, async (payload, callback) => {
       try {
-        assertAppLoaderPayload(payload, 'getApp');
+        assertAppLoaderPayload(payload, BACKEND_EVENTS.GET_APP);
         requireAnyPermission(payload, ['apps.list', 'builder.manage']);
         const appName = normalizeAppName(payload.appName || payload.name);
         callback(null, await getAppRegistryEntry(motherEmitter, payload.jwt, appName));
@@ -982,9 +990,9 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('getAppLaunchInfo', async (payload, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.GET_APP_LAUNCH_INFO, async (payload, callback) => {
       try {
-        assertAppLoaderPayload(payload, 'getAppLaunchInfo');
+        assertAppLoaderPayload(payload, BACKEND_EVENTS.GET_APP_LAUNCH_INFO);
         requireAnyPermission(payload, ['builder.use', 'apps.list', 'builder.manage']);
         callback(null, await getAppLaunchInfo({
           motherEmitter,
@@ -997,9 +1005,9 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('rescanApps', async (payload, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.RESCAN_APPS, async (payload, callback) => {
       try {
-        assertAppLoaderPayload(payload, 'rescanApps');
+        assertAppLoaderPayload(payload, BACKEND_EVENTS.RESCAN_APPS);
         requireAnyPermission(payload, ['apps.rescan', 'builder.manage']);
         await loadAllApps({ motherEmitter, jwt: payload.jwt, baseDir });
         callback(null, await listAppRegistry(motherEmitter, payload.jwt));
@@ -1008,9 +1016,9 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('installAppFromDirectory', async (payload, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.INSTALL_APP_FROM_DIRECTORY, async (payload, callback) => {
       try {
-        assertAppLoaderPayload(payload, 'installAppFromDirectory');
+        assertAppLoaderPayload(payload, BACKEND_EVENTS.INSTALL_APP_FROM_DIRECTORY);
         requireAnyPermission(payload, ['apps.install', 'builder.manage']);
         callback(null, await installAppFromDirectory({
           motherEmitter,
@@ -1024,9 +1032,9 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('uninstallApp', async (payload, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.UNINSTALL_APP, async (payload, callback) => {
       try {
-        assertAppLoaderPayload(payload, 'uninstallApp');
+        assertAppLoaderPayload(payload, BACKEND_EVENTS.UNINSTALL_APP);
         requireAnyPermission(payload, ['apps.delete', 'builder.manage']);
         callback(null, await uninstallApp({
           motherEmitter,
@@ -1039,9 +1047,9 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('listBuilderApps', async (payload, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.LIST_BUILDER_APPS, async (payload, callback) => {
       try {
-        assertAppLoaderPayload(payload, 'listBuilderApps');
+        assertAppLoaderPayload(payload, BACKEND_EVENTS.LIST_BUILDER_APPS);
         if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'builder.use')) {
           return callback(new Error('Forbidden'));
         }
@@ -1075,18 +1083,17 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('appLoader:appEvent', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.APP_LOADER_APP_EVENT, (payload, cb) => {
       if (typeof cb === 'function') {
         cb(null, { handled: false });
       }
     });
 
-    motherEmitter.on('dispatchAppEvent', async (payload, callback) => {
-      try {
-        callback(null, await handleDispatchAppEvent(motherEmitter, payload, baseDir));
-      } catch (err) {
-        callback(err);
-      }
-    });
+    registerEventContractHandler(
+      motherEmitter,
+      BACKEND_EVENT_CONTRACTS.DISPATCH_APP_EVENT,
+      payload => handleDispatchAppEvent(motherEmitter, payload, baseDir),
+      { moduleName: MODULE_NAME }
+    );
   }
 };

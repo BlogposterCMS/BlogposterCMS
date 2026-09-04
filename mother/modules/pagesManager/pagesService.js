@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/pagesManager/pageService.js
  *
@@ -9,123 +15,88 @@
 
 require('dotenv').config();
 
-function ensurePagesManagerDatabase(motherEmitter, jwt, nonce) {
-  return new Promise((resolve, reject) => {
-    console.log('[PAGE SERVICE] Ensuring pagesManager DB/Schema via createDatabase meltdown...');
-
-    const meltdownPayload = {
-      jwt,
-      moduleName : 'pagesManager',
-      moduleType : 'core',
-      nonce,
-      targetModuleName: 'pagesManager'
-    };
-
-    motherEmitter.emit('createDatabase', meltdownPayload, (err) => {
-      if (err) {
-        console.error('[PAGE SERVICE] Error creating/fixing pagesManager DB:', err.message);
-        return reject(err);
-      }
-      console.log('[PAGE SERVICE] pagesManager DB/Schema creation done (if needed).');
-      resolve();
-    });
-  });
+async function ensurePagesManagerDatabase(motherEmitter, jwt, nonce) {
+  console.log('[PAGE SERVICE] Ensuring pagesManager DB/Schema via createDatabase meltdown...');
+  const meltdownPayload = {
+    jwt,
+    moduleName: 'pagesManager',
+    moduleType: 'core',
+    nonce,
+    targetModuleName: 'pagesManager'
+  };
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, meltdownPayload);
+    console.log('[PAGE SERVICE] pagesManager DB/Schema creation done (if needed).');
+  } catch (err) {
+    console.error('[PAGE SERVICE] Error creating/fixing pagesManager DB:', err.message);
+    throw err;
+  }
 }
 
-function ensurePageSchemaAndTable(motherEmitter, jwt, nonce) {
-  return new Promise((resolve, reject) => {
-    console.log('[PAGE SERVICE] Creating schema & table/collection for pagesManager...');
+async function ensurePageSchemaAndTable(motherEmitter, jwt, nonce) {
+  console.log('[PAGE SERVICE] Creating schema & table/collection for pagesManager...');
+  const meltdownPayload = {
+    jwt,
+    moduleName: 'pagesManager',
+    moduleType: 'core',
+    nonce
+  };
 
-    const meltdownPayload = {
-      jwt,
-      moduleName : 'pagesManager',
-      moduleType : 'core',
-      nonce
-    };
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      ...meltdownPayload,
+      table: '__rawSQL__',
+      where: {},
+      data: { rawSQL: 'INIT_PAGES_SCHEMA' }
+    });
+    console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_SCHEMA" done.');
+  } catch (err) {
+    console.error('[PAGE SERVICE] Error creating pages schema =>', err.message);
+    throw err;
+  }
 
-    // meltdown => dbUpdate => 'INIT_PAGES_SCHEMA'
-    motherEmitter.emit(
-      'dbUpdate',
-      {
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      ...meltdownPayload,
+      table: '__rawSQL__',
+      where: {},
+      data: { rawSQL: 'INIT_PAGES_TABLE' }
+    });
+    console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_TABLE" done.');
+  } catch (err) {
+    console.error('[PAGE SERVICE] Error creating pages table =>', err.message);
+    throw err;
+  }
+
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         ...meltdownPayload,
         table: '__rawSQL__',
         where: {},
-        data: { rawSQL: 'INIT_PAGES_SCHEMA' }
-      },
-      async (schemaErr) => {
-        if (schemaErr) {
-          console.error('[PAGE SERVICE] Error creating pages schema =>', schemaErr.message);
-          return reject(schemaErr);
-        }
-        console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_SCHEMA" done.');
-
-        // meltdown => dbUpdate => 'INIT_PAGES_TABLE'
-        motherEmitter.emit(
-          'dbUpdate',
-          {
-            ...meltdownPayload,
-            table: '__rawSQL__',
-            where: {},
-            data: { rawSQL: 'INIT_PAGES_TABLE' }
-          },
-          (tableErr) => {
-            if (tableErr) {
-              console.error('[PAGE SERVICE] Error creating pages table =>', tableErr.message);
-              return reject(tableErr);
-            }
-            console.log('[PAGE SERVICE] Placeholder "INIT_PAGES_TABLE" done.');
-
-            // Ensure columns and indexes exist across databases
-            motherEmitter.emit(
-              'dbUpdate',
-              {
-                ...meltdownPayload,
-                table: '__rawSQL__',
-                where: {},
-                data: { rawSQL: 'CHECK_AND_ALTER_PAGES_TABLE' }
-              },
-              (alterErr) => {
-                if (alterErr) {
-                  console.error('[PAGE SERVICE] Error checking/altering pages table =>', alterErr.message);
-                  return reject(alterErr);
-                }
-                console.log('[PAGE SERVICE] Placeholder "CHECK_AND_ALTER_PAGES_TABLE" done.');
-                resolve();
-              }
-            );
-          }
-        );
-      }
-    );
-  });
+        data: { rawSQL: 'CHECK_AND_ALTER_PAGES_TABLE' }
+    });
+    console.log('[PAGE SERVICE] Placeholder "CHECK_AND_ALTER_PAGES_TABLE" done.');
+  } catch (err) {
+    console.error('[PAGE SERVICE] Error checking/altering pages table =>', err.message);
+    throw err;
+  }
 }
 
 async function getPageBySlugLocal(motherEmitter, jwt, slug, lane = 'public', language = 'en') {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbSelect',
-      {
-        jwt,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        table: '__rawSQL__',
-        data: {
-          rawSQL: 'GET_PAGE_BY_SLUG',
-          0: slug,
-          1: lane,
-          2: language
-        }
-      },
-      (err, result = null) => {
-        if (err) return reject(err);
-        const rows = Array.isArray(result)
-          ? result
-          : Array.isArray(result?.rows)
-            ? result.rows
-            : (result ? [result] : []);
-        resolve(rows[0] ?? null);
-      }
-    );
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    jwt,
+    moduleName: 'pagesManager',
+    moduleType: 'core',
+    table: '__rawSQL__',
+    data: {
+      rawSQL: 'GET_PAGE_BY_SLUG',
+      0: slug,
+      1: lane,
+      2: language
+    }
+  }).then((result = null) => {
+    const rows = Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : result ? [result] : [];
+    return rows[0] ?? null;
   });
 }
 

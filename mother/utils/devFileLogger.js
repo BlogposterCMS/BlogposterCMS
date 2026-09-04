@@ -1,11 +1,15 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../contracts/generatedBackendEventCatalog');
+
+
+
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const { sanitize } = require('./logSanitizer');
 
-const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug'];
+const CONSOLE_METHODS = [BACKEND_EVENTS.LOG, 'info', 'warn', 'error', 'debug'];
 let installedLogger = null;
 let writeFailureReported = false;
 

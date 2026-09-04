@@ -7,6 +7,30 @@ const {
   isHttpPublicTokenEvent,
   stripHttpPayloadAuthMeta
 } = require('../../utils/meltdownHttpPolicy');
+const { getHttpEventContract } = require('../../contracts/backendEventContracts');
+const {
+  EVENT_CONTRACT_ERROR_CODES,
+  EventContractError,
+  requestEvent,
+  serializeEventContractError
+} = require('../../contracts/eventContract');
+
+function missingContractError(eventName) {
+  return new EventContractError(
+    EVENT_CONTRACT_ERROR_CODES.NOT_REGISTERED,
+    `${EVENT_CONTRACT_ERROR_CODES.NOT_REGISTERED}: No HTTP event contract is registered for "${eventName}".`,
+    { eventName, status: 404 }
+  );
+}
+
+function httpBoundaryError(code, message, status, eventName = null, details = null) {
+  return new EventContractError(code, message, { eventName, status, details });
+}
+
+function respondWithEventError(res, error, contract) {
+  const status = Number(error?.status) || 500;
+  return res.status(status).json(serializeEventContractError(error, contract));
+}
 
 function createMeltdownRouter({
   motherEmitter,
@@ -21,9 +45,27 @@ function createMeltdownRouter({
     const targetEventName = eventName;
     const targetPayload = stripHttpPayloadAuthMeta(payload);
     const responseEventName = eventName;
+    if (!targetEventName) {
+      return respondWithEventError(res, httpBoundaryError(
+        EVENT_CONTRACT_ERROR_CODES.HTTP_EVENT_NAME_REQUIRED,
+        'Missing eventName',
+        400
+      ), { eventName: '' });
+    }
     const eventRejected = explainExternalEventRejection(targetEventName, targetPayload);
     if (eventRejected) {
-      return res.status(403).json({ error: eventRejected });
+      return respondWithEventError(res, httpBoundaryError(
+        EVENT_CONTRACT_ERROR_CODES.HTTP_EVENT_REJECTED,
+        eventRejected,
+        403,
+        responseEventName
+      ), { eventName: responseEventName });
+    }
+    const contract = getHttpEventContract(targetEventName);
+    if (!contract) {
+      return respondWithEventError(res, missingContractError(responseEventName), {
+        eventName: responseEventName
+      });
     }
 
     const isPublicEvent = isHttpPublicEvent(targetEventName);
@@ -34,14 +76,24 @@ function createMeltdownRouter({
     const jwt = headerJwt || cookieJwt;
 
     if (!jwt && !isPublicEvent) {
-      return res.status(401).json({ error: 'Authentication required: missing JWT.' });
+      return respondWithEventError(res, httpBoundaryError(
+        EVENT_CONTRACT_ERROR_CODES.HTTP_AUTH_REQUIRED,
+        'Authentication required: missing JWT.',
+        401,
+        responseEventName
+      ), contract);
     }
 
     if (!isPublicEvent && jwt) {
       try {
         const decoded = await validateAdminToken(jwt);
         if (!isHttpPublicTokenEvent(targetEventName) && !isHttpAdminPrincipal(decoded)) {
-          return res.status(403).json({ error: 'Admin authentication required.' });
+          return respondWithEventError(res, httpBoundaryError(
+            EVENT_CONTRACT_ERROR_CODES.HTTP_ADMIN_REQUIRED,
+            'Admin authentication required.',
+            403,
+            responseEventName
+          ), contract);
         }
         targetPayload.decodedJWT = decoded;
         targetPayload.jwt = jwt;
@@ -53,36 +105,38 @@ function createMeltdownRouter({
           sameSite: 'strict',
           secure: isProduction
         });
-        return res.status(401).json({ error: 'Invalid token' });
+        return respondWithEventError(res, httpBoundaryError(
+          EVENT_CONTRACT_ERROR_CODES.HTTP_TOKEN_INVALID,
+          'Invalid token',
+          401,
+          responseEventName
+        ), contract);
       }
     } else if (jwt) {
       targetPayload.jwt = jwt;
     }
 
-    if (
-      typeof motherEmitter.listenerCount === 'function' &&
-      motherEmitter.listenerCount(targetEventName) === 0
-    ) {
-      return res.status(404).json({ error: `Event "${responseEventName}" is not registered.` });
-    }
-
-    motherEmitter.emit(targetEventName, targetPayload, (err, data) => {
-      if (err) {
-        const safeEvent = String(responseEventName).replace(/[\n\r]/g, '');
-        console.error('[MELTDOWN] Event "%s" failed => %s', safeEvent, err.message);
-        return res.status(500).json({ error: err.message });
-      }
+    try {
+      const data = await requestEvent(motherEmitter, contract, targetPayload);
       return res.json({
         eventName: responseEventName,
         data
       });
-    });
+    } catch (err) {
+        const safeEvent = String(responseEventName).replace(/[\n\r]/g, '');
+        console.error('[MELTDOWN] Event "%s" failed => %s', safeEvent, err.message);
+        return respondWithEventError(res, err, contract);
+    }
   });
 
   router.post('/api/meltdown/batch', async (req, res) => {
     const { events } = req.body || {};
     if (!Array.isArray(events)) {
-      return res.status(400).json({ error: 'Invalid events array' });
+      return respondWithEventError(res, httpBoundaryError(
+        EVENT_CONTRACT_ERROR_CODES.HTTP_BATCH_INVALID,
+        'Invalid events array',
+        400
+      ), { eventName: 'batch' });
     }
 
     const headerJwt = req.get('X-Public-Token') || null;
@@ -93,7 +147,13 @@ function createMeltdownRouter({
     for (const ev of events) {
       const { eventName, payload = {} } = ev || {};
       if (!eventName) {
-        results.push({ error: 'Missing eventName' });
+        results.push({
+          ...serializeEventContractError(httpBoundaryError(
+            EVENT_CONTRACT_ERROR_CODES.HTTP_EVENT_NAME_REQUIRED,
+            'Missing eventName',
+            400
+          ), { eventName: '' })
+        });
         continue;
       }
 
@@ -102,7 +162,25 @@ function createMeltdownRouter({
       const responseEventName = eventName;
       const eventRejected = explainExternalEventRejection(targetEventName, targetPayload);
       if (eventRejected) {
-        results.push({ eventName: responseEventName, error: eventRejected });
+        results.push({
+          eventName: responseEventName,
+          ...serializeEventContractError(httpBoundaryError(
+            EVENT_CONTRACT_ERROR_CODES.HTTP_EVENT_REJECTED,
+            eventRejected,
+            403,
+            responseEventName
+          ), { eventName: responseEventName })
+        });
+        continue;
+      }
+      const contract = getHttpEventContract(targetEventName);
+      if (!contract) {
+        results.push({
+          eventName: responseEventName,
+          ...serializeEventContractError(missingContractError(responseEventName), {
+            eventName: responseEventName
+          })
+        });
         continue;
       }
 
@@ -112,7 +190,15 @@ function createMeltdownRouter({
       const jwt = globalJwt;
 
       if (!jwt && !isPublicEvent) {
-        results.push({ eventName: responseEventName, error: 'Authentication required: missing JWT.' });
+        results.push({
+          eventName: responseEventName,
+          ...serializeEventContractError(httpBoundaryError(
+            EVENT_CONTRACT_ERROR_CODES.HTTP_AUTH_REQUIRED,
+            'Authentication required: missing JWT.',
+            401,
+            responseEventName
+          ), contract)
+        });
         continue;
       }
 
@@ -120,34 +206,38 @@ function createMeltdownRouter({
         try {
           const decoded = await validateAdminToken(jwt);
           if (!isPublicTokenEvent && !isHttpAdminPrincipal(decoded)) {
-            results.push({ eventName: responseEventName, error: 'Admin authentication required.' });
+            results.push({
+              eventName: responseEventName,
+              ...serializeEventContractError(httpBoundaryError(
+                EVENT_CONTRACT_ERROR_CODES.HTTP_ADMIN_REQUIRED,
+                'Admin authentication required.',
+                403,
+                responseEventName
+              ), contract)
+            });
             continue;
           }
           targetPayload.decodedJWT = decoded;
           targetPayload.jwt = jwt;
         } catch (err) {
           console.warn('[POST /api/meltdown/batch] Invalid admin token =>', err.message);
-          results.push({ eventName: responseEventName, error: 'Invalid token' });
+          results.push({
+            eventName: responseEventName,
+            ...serializeEventContractError(httpBoundaryError(
+              EVENT_CONTRACT_ERROR_CODES.HTTP_TOKEN_INVALID,
+              'Invalid token',
+              401,
+              responseEventName
+            ), contract)
+          });
           continue;
         }
       } else if (jwt) {
         targetPayload.jwt = jwt;
       }
 
-      if (
-        typeof motherEmitter.listenerCount === 'function' &&
-        motherEmitter.listenerCount(targetEventName) === 0
-      ) {
-        results.push({ eventName: responseEventName, error: `Event "${responseEventName}" is not registered.` });
-        continue;
-      }
-
       try {
-        const data = await new Promise((resolve, reject) => {
-          motherEmitter.emit(targetEventName, targetPayload, (err, result) => (
-            err ? reject(err) : resolve(result)
-          ));
-        });
+        const data = await requestEvent(motherEmitter, contract, targetPayload);
         results.push({
           eventName: responseEventName,
           data
@@ -155,7 +245,10 @@ function createMeltdownRouter({
       } catch (err) {
         const safeEvent = String(responseEventName).replace(/[\n\r]/g, '');
         console.error('[MELTDOWN BATCH] Event "%s" failed => %s', safeEvent, err.message);
-        results.push({ eventName: responseEventName, error: err.message });
+        results.push({
+          eventName: responseEventName,
+          ...serializeEventContractError(err, contract)
+        });
       }
     }
 

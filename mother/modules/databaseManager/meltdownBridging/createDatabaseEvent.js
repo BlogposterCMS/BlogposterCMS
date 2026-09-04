@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/databaseManager/meltdownBridging/createDatabaseEvent.js
  *
@@ -19,7 +23,7 @@ const TIMEOUT_DURATION = 5000;
 
 function registerCreateDatabaseEvent(motherEmitter) {
   // meltdown => createDatabase
-  motherEmitter.on('createDatabase', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_DATABASE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     const safePayload = payload || {};
 
@@ -36,7 +40,7 @@ function registerCreateDatabaseEvent(motherEmitter) {
 
     try {
       const { moduleName } = safePayload;
-      assertDatabaseControlEventAllowed(motherEmitter, 'createDatabase', safePayload);
+      assertDatabaseControlEventAllowed(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, safePayload);
       const engine = getEngine();
       const isOwnDb = moduleHasOwnDb(moduleName);
       const dbType = getDbType();

@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/auth/strategies/facebook.js
  *
@@ -11,9 +17,7 @@ module.exports = {
   async initialize({ motherEmitter, JWT_SECRET, authModuleSecret }) {
     console.log('[FACEBOOK STRATEGY] Initializing Facebook login strategy...');
 
-    motherEmitter.emit(
-      'registerLoginStrategy',
-      {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.REGISTER_LOGIN_STRATEGY, {
         skipJWT         : true,
         moduleType      : 'core',
         moduleName      : 'auth',
@@ -54,104 +58,82 @@ module.exports = {
             // { id, name, email, picture: { data: { url: '...' } } }
 
             // 3) meltdown => issueModuleToken => so we can talk to userManagement
-            motherEmitter.emit(
-              'issueModuleToken',
-              {
+            requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
                 skipJWT         : true,
                 authModuleSecret: authModuleSecret,
                 moduleType      : 'core',
                 moduleName      : 'auth',
                 signAsModule    : 'userManagement',
                 trustLevel      : 'high'
-              },
-              (modErr, userMgmtToken) => {
-                if (modErr) {
-                  console.error('[FACEBOOK STRATEGY] issueModuleToken =>', modErr.message);
-                  return callback(modErr);
-                }
-
-                // 4) Try to find or create a local user with "facebook_id = userData.id"
-                motherEmitter.emit(
-                  'dbSelect',
-                  {
-                    jwt       : userMgmtToken,
-                    moduleName: 'userManagement',
-                    table     : 'users',
-                    where     : { facebook_id: userData.id }
-                  },
-                  (selErr, rows) => {
-                    if (selErr) return callback(selErr);
-
-                    if (!rows || rows.length === 0) {
-                      // not found => create new user
-                      motherEmitter.emit(
-                        'dbInsert',
-                        {
-                          jwt       : userMgmtToken,
-                          moduleName: 'userManagement',
-                          table     : 'users',
-                          data      : {
-                            username   : `fb_${userData.id}`,
-                            facebook_id: userData.id,
-                            email      : userData.email || null,
-                            full_name  : userData.name  || null,
-                            created_at : new Date().toISOString(),
-                            updated_at : new Date().toISOString()
-                          }
-                        },
-                        (insertErr, newUser) => {
-                          if (insertErr) return callback(insertErr);
-
-                          // finalize login
-                          doFinalize(newUser.id);
-                        }
-                      );
-                    } else {
-                      // user found
-                      doFinalize(rows[0].id);
-                    }
-                  }
-                );
-
-                function doFinalize(dbUserId) {
-                  // meltdown => finalizeUserLogin => merges roles, issues JWT
-                  motherEmitter.emit(
-                    'finalizeUserLogin',
-                    {
-                      jwt       : userMgmtToken,
-                      moduleName: 'userManagement',
-                      moduleType: 'core',
-                      userId    : dbUserId,
-                      extraData : {
-                        provider   : 'facebook',
-                        facebookId : userData.id,
-                        picture    : (userData.picture && userData.picture.data && userData.picture.data.url) || null
-                      }
-                    },
-                    (finalErr, finalUserObj) => {
-                      if (finalErr) {
-                        console.error('[FACEBOOK STRATEGY] finalizeUserLogin =>', finalErr.message);
-                        return callback(finalErr);
-                      }
-                      return callback(null, finalUserObj);
-                    }
-                  );
-                }
-              }
-            );
+              }).then(userMgmtToken => {
+  // 4) Try to find or create a local user with "facebook_id = userData.id"
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    jwt: userMgmtToken,
+    moduleName: 'userManagement',
+    table: 'users',
+    where: {
+      facebook_id: userData.id
+    }
+  }).then(rows => {
+    if (!rows || rows.length === 0) {
+      // not found => create new user
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+        jwt: userMgmtToken,
+        moduleName: 'userManagement',
+        table: 'users',
+        data: {
+          username: `fb_${userData.id}`,
+          facebook_id: userData.id,
+          email: userData.email || null,
+          full_name: userData.name || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      }).then(newUser => {
+        // finalize login
+        doFinalize(newUser.id);
+      }, insertErr => {
+        return callback(insertErr);
+      });
+    } else {
+      // user found
+      doFinalize(rows[0].id);
+    }
+  }, selErr => {
+    return callback(selErr);
+  });
+  function doFinalize(dbUserId) {
+    // meltdown => finalizeUserLogin => merges roles, issues JWT
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.FINALIZE_USER_LOGIN, {
+      jwt: userMgmtToken,
+      moduleName: 'userManagement',
+      moduleType: 'core',
+      userId: dbUserId,
+      extraData: {
+        provider: 'facebook',
+        facebookId: userData.id,
+        picture: userData.picture && userData.picture.data && userData.picture.data.url || null
+      }
+    }).then(finalUserObj => {
+      return callback(null, finalUserObj);
+    }, finalErr => {
+      console.error('[FACEBOOK STRATEGY] finalizeUserLogin =>', finalErr.message);
+      return callback(finalErr);
+    });
+  }
+}, modErr => {
+  console.error('[FACEBOOK STRATEGY] issueModuleToken =>', modErr.message);
+  return callback(modErr);
+});
           } catch (error) {
             console.error('[FACEBOOK STRATEGY] Error validating Facebook token:', error.message);
             callback(error);
           }
         },
-      },
-      (err, success) => {
-        if (err) {
-          console.error('[FACEBOOK STRATEGY] Failed to register strategy:', err.message);
-        } else {
-          console.log('[FACEBOOK STRATEGY] Strategy "facebook" registered successfully.');
-        }
-      }
-    );
+      }).then(success => {
+  console.log('[FACEBOOK STRATEGY] Strategy "facebook" registered successfully.');
+}, err => {
+  console.error('[FACEBOOK STRATEGY] Failed to register strategy:', err.message);
+});
   }
 };

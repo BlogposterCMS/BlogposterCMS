@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const MAINTENANCE_ALLOWED_PREFIXES = [
   '/admin',
   '/assets',
@@ -32,51 +36,34 @@ function createMaintenanceMiddleware({ getCachedCoreToken, motherEmitter }) {
     const settingsManagerToken = await getCachedCoreToken('settingsManager');
     const pagesManagerToken = await getCachedCoreToken('pagesManager');
 
-    const isMaintenance = await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'getSetting',
-        {
-          jwt: settingsManagerToken,
-          moduleName: 'settingsManager',
-          moduleType: 'core',
-          key: 'MAINTENANCE_MODE'
-        },
-        (err, value) => {
-          if (err) return reject(err);
-          const str = String(value).trim().toLowerCase();
-          resolve(str === 'true' || str === '1');
-        }
-      );
-    }).catch(() => false);
+    const isMaintenance = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_SETTING, {
+  jwt: settingsManagerToken,
+  moduleName: 'settingsManager',
+  moduleType: 'core',
+  key: 'MAINTENANCE_MODE'
+}).then(value => {
+  const str = String(value).trim().toLowerCase();
+  return str === 'true' || str === '1';
+}, err => {
+  throw err;
+}).catch(() => false);
 
-    const maintenancePageId = await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'getSetting',
-        {
+    const maintenancePageId = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_SETTING, {
           jwt: settingsManagerToken,
           moduleName: 'settingsManager',
           moduleType: 'core',
           key: 'MAINTENANCE_PAGE_ID'
-        },
-        (err, value) => err ? reject(err) : resolve(value || null)
-      );
-    }).catch(() => null);
+        }).then(value => value || null).catch(() => null);
 
     let maintenanceSlug = 'coming-soon';
     if (maintenancePageId) {
       try {
-        const page = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'getPageById',
-            {
+        const page = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_ID, {
               jwt: pagesManagerToken,
               moduleName: 'pagesManager',
               moduleType: 'core',
               pageId: maintenancePageId
-            },
-            (err, result) => err ? reject(err) : resolve(result)
-          );
-        });
+            });
         if (page?.slug) maintenanceSlug = page.slug;
       } catch {}
     }

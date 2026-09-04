@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/databaseManager/meltdownBridging/applySchemaDefinitionEvent.js
  */
@@ -14,17 +18,17 @@ const {
 } = require('./databaseEventBoundary');
 
 function registerApplySchemaDefinitionEvent(motherEmitter) {
-  motherEmitter.on('applySchemaDefinition', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.APPLY_SCHEMA_DEFINITION, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, filePath } = payload || {};
       if (!jwt || !moduleName || !filePath) {
         throw new Error('applySchemaDefinition => missing jwt, moduleName or filePath');
       }
-      assertDatabaseControlEventAllowed(motherEmitter, 'applySchemaDefinition', payload);
+      assertDatabaseControlEventAllowed(motherEmitter, BACKEND_EVENTS.APPLY_SCHEMA_DEFINITION, payload);
 
       const repoRoot = path.resolve(__dirname, '../../../..');
-      const resolved = resolveModuleFilePath(repoRoot, moduleName, filePath, 'applySchemaDefinition');
+      const resolved = resolveModuleFilePath(repoRoot, moduleName, filePath, BACKEND_EVENTS.APPLY_SCHEMA_DEFINITION);
 
       const raw = fs.readFileSync(resolved, 'utf8');
       let def;

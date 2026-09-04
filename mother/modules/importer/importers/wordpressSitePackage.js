@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../../contracts/backendEventContracts');
+
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -718,14 +722,6 @@ async function buildImportContext(options = {}) {
   return { reader, manifest, plan };
 }
 
-async function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
-}
 
 function hashText(value = '') {
   return crypto.createHash('sha1').update(String(value)).digest('hex');
@@ -757,8 +753,8 @@ function resolveImportUserId(options = {}) {
 
 function canUseMediaAssetPipeline(motherEmitter) {
   if (!motherEmitter || typeof motherEmitter.listenerCount !== 'function') return false;
-  return motherEmitter.listenerCount('uploadFileToFolder') > 0 &&
-    motherEmitter.listenerCount('makeFilePublic') > 0;
+  return motherEmitter.listenerCount(BACKEND_EVENTS.UPLOAD_FILE_TO_FOLDER) > 0 &&
+    motherEmitter.listenerCount(BACKEND_EVENTS.MAKE_FILE_PUBLIC) > 0;
 }
 
 function cleanImportText(value = '', max = 500) {
@@ -919,7 +915,7 @@ function sourceItemIdFromResult(item = {}) {
 
 async function restoreMenuItemParents({ motherEmitter, base, insertedItems, originalItems }) {
   const warnings = [];
-  if (!canEmit(motherEmitter, 'updateNavigationMenuItem')) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.UPDATE_NAVIGATION_MENU_ITEM)) {
     if (originalItems.some(item => item.meta?.wordpress?.parentId)) {
       warnings.push('Nested WordPress menu parents were kept as metadata because updateNavigationMenuItem is unavailable.');
     }
@@ -944,7 +940,7 @@ async function restoreMenuItemParents({ motherEmitter, base, insertedItems, orig
       warnings.push(`Skipped nested menu parent for WordPress item ${sourceId}: parent ${parentSourceId} was not returned by Navigation Manager.`);
       continue;
     }
-    await emitAsync(motherEmitter, 'updateNavigationMenuItem', {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPDATE_NAVIGATION_MENU_ITEM, {
       ...base,
       itemId,
       parentId
@@ -960,7 +956,7 @@ async function applyNavigationIfAvailable(context, options = {}) {
   const result = { skipped: false, menus: [], warnings: [] };
   if (!menus.length) return result;
   const { motherEmitter, jwt, decodedJWT } = options;
-  if (!canEmit(motherEmitter, 'upsertNavigationMenu') || !canEmit(motherEmitter, 'setNavigationMenuItems')) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.UPSERT_NAVIGATION_MENU) || !canEmit(motherEmitter, BACKEND_EVENTS.SET_NAVIGATION_MENU_ITEMS)) {
     return {
       skipped: true,
       reason: 'navigation-manager-listener-missing',
@@ -976,15 +972,15 @@ async function applyNavigationIfAvailable(context, options = {}) {
     for (const location of targets) {
       const key = menuKey(menu, index, location);
       try {
-        if (location && canEmit(motherEmitter, 'registerNavigationLocation')) {
-          await emitAsync(motherEmitter, 'registerNavigationLocation', {
+        if (location && canEmit(motherEmitter, BACKEND_EVENTS.REGISTER_NAVIGATION_LOCATION)) {
+          await requestBackendEvent(motherEmitter, BACKEND_EVENTS.REGISTER_NAVIGATION_LOCATION, {
             ...base,
             key: location.key,
             label: location.label,
             description: `Imported WordPress theme location ${location.key}.`
           });
         }
-        const menuRecord = await emitAsync(motherEmitter, 'upsertNavigationMenu', {
+        const menuRecord = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPSERT_NAVIGATION_MENU, {
           ...base,
           key,
           label: cleanImportText(menu.name || menu.label || menu.slug || key, 160),
@@ -998,7 +994,7 @@ async function applyNavigationIfAvailable(context, options = {}) {
           ...(menuId ? { menuId } : { menuKey: key }),
           items
         };
-        const setResult = await emitAsync(motherEmitter, 'setNavigationMenuItems', setPayload);
+        const setResult = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_NAVIGATION_MENU_ITEMS, setPayload);
         const parentResult = await restoreMenuItemParents({
           motherEmitter,
           base,
@@ -1032,10 +1028,10 @@ async function applySeoIfAvailable(context, options = {}) {
   const seo = isPlainObject(context.plan.seo) ? context.plan.seo : {};
   const result = { skipped: false, defaults: null, pages: [], warnings: [] };
   const { motherEmitter, jwt, decodedJWT } = options;
-  const canApplyPageSeo = canEmit(motherEmitter, 'upsertSeoMeta') && context.plan.pages.length > 0;
+  const canApplyPageSeo = canEmit(motherEmitter, BACKEND_EVENTS.UPSERT_SEO_META) && context.plan.pages.length > 0;
   const hasSeo = Object.keys(seo).length > 0 || canApplyPageSeo;
   if (!hasSeo) return result;
-  if (!canEmit(motherEmitter, 'setSeoDefaults') && !canEmit(motherEmitter, 'upsertSeoMeta')) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.SET_SEO_DEFAULTS) && !canEmit(motherEmitter, BACKEND_EVENTS.UPSERT_SEO_META)) {
     return {
       skipped: true,
       reason: 'seo-manager-listener-missing',
@@ -1046,9 +1042,9 @@ async function applySeoIfAvailable(context, options = {}) {
   }
 
   const base = { jwt, moduleName: 'seoManager', moduleType: 'core', decodedJWT };
-  if (canEmit(motherEmitter, 'setSeoDefaults')) {
+  if (canEmit(motherEmitter, BACKEND_EVENTS.SET_SEO_DEFAULTS)) {
     try {
-      result.defaults = await emitAsync(motherEmitter, 'setSeoDefaults', {
+      result.defaults = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_SEO_DEFAULTS, {
         ...base,
         title: cleanImportText(seo.homeTitle || context.manifest.site?.title || context.plan.theme.name, 240),
         description: cleanImportText(seo.homeDescription || context.manifest.site?.description || '', 500),
@@ -1065,12 +1061,12 @@ async function applySeoIfAvailable(context, options = {}) {
     }
   }
 
-  if (!canEmit(motherEmitter, 'upsertSeoMeta')) return result;
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.UPSERT_SEO_META)) return result;
   for (const page of context.plan.pages) {
     try {
       const pathKey = pageSeoPath(page);
       const pageSeo = page.wordpress?.seo || {};
-      const pageResult = await emitAsync(motherEmitter, 'upsertSeoMeta', {
+      const pageResult = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPSERT_SEO_META, {
         ...base,
         path: pathKey,
         title: cleanImportText(pageSeo.title || page.title, 240),
@@ -1125,7 +1121,7 @@ async function applyRedirectsIfAvailable(context, options = {}) {
   const result = { skipped: false, rules: [], warnings: [] };
   if (!redirects.length) return result;
   const { motherEmitter, jwt, decodedJWT } = options;
-  if (!canEmit(motherEmitter, 'upsertRedirectRule')) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.UPSERT_REDIRECT_RULE)) {
     return {
       skipped: true,
       reason: 'redirect-manager-listener-missing',
@@ -1142,7 +1138,7 @@ async function applyRedirectsIfAvailable(context, options = {}) {
       continue;
     }
     try {
-      const applied = await emitAsync(motherEmitter, 'upsertRedirectRule', {
+      const applied = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPSERT_REDIRECT_RULE, {
         ...base,
         ...rule
       });
@@ -1180,7 +1176,7 @@ async function materializePackageAssets(context, options = {}) {
       }
       const buffer = await context.reader.readBuffer(assetPath);
       const fileName = `${hashText(assetPath).slice(0, 10)}-${path.basename(assetPath)}`;
-      const uploaded = await emitAsync(motherEmitter, 'uploadFileToFolder', {
+      const uploaded = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPLOAD_FILE_TO_FOLDER, {
         jwt,
         moduleName: 'mediaManager',
         moduleType: 'core',
@@ -1190,7 +1186,7 @@ async function materializePackageAssets(context, options = {}) {
         fileData: buffer.toString('base64')
       });
       const finalName = uploaded?.fileName || fileName;
-      const published = await emitAsync(motherEmitter, 'makeFilePublic', {
+      const published = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.MAKE_FILE_PUBLIC, {
         jwt,
         moduleName: 'mediaManager',
         moduleType: 'core',
@@ -1249,10 +1245,10 @@ async function readNormalizedHtml(context, page, sourcePage) {
 
 async function createDesignerDraftIfAvailable(motherEmitter, jwt, page, designerDraft) {
   if (!designerDraft || !motherEmitter) return { skipped: true, reason: 'missing-designer-draft' };
-  if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount('designer.saveDesign') === 0) {
+  if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(BACKEND_EVENTS.DESIGNER_SAVE_DESIGN) === 0) {
     return { skipped: true, reason: 'designer-save-listener-missing' };
   }
-  const result = await emitAsync(motherEmitter, 'designer.saveDesign', {
+  const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DESIGNER_SAVE_DESIGN, {
     jwt,
     moduleName: 'designer',
     moduleType: 'community',
@@ -1302,12 +1298,12 @@ async function createPageProjectionIfAvailable({
   savedDesignerDraft,
   parentPageId = null
 }) {
-  if (!canEmit(motherEmitter, 'createPage')) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.CREATE_PAGE)) {
     return { skipped: true, reason: 'pages-manager-listener-missing' };
   }
 
   const designId = designIdFromDesignerDraft(savedDesignerDraft);
-  const result = await emitAsync(motherEmitter, 'createPage', {
+  const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_PAGE, {
     jwt,
     moduleName: 'pagesManager',
     moduleType: 'core',
@@ -1390,7 +1386,7 @@ async function applyImportContext(context, options = {}) {
 
   for (const media of context.plan.media) {
     const publicUrl = materializedAssets.assetUrlMap[media.path] || media.url;
-    const result = await emitAsync(motherEmitter, 'createMediaAttachment', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_MEDIA_ATTACHMENT, {
       ...mediaBase,
       fileName: media.fileName,
       mimeType: media.mimeType,
@@ -1455,7 +1451,7 @@ async function applyImportContext(context, options = {}) {
         designerDraft
       }
       : html;
-    const result = await emitAsync(motherEmitter, 'createContentEntry', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_CONTENT_ENTRY, {
       ...contentBase,
       contentType: page.contentType,
       title: page.title,

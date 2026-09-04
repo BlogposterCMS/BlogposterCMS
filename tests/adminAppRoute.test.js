@@ -127,7 +127,7 @@ test('GET /admin/app/badapp returns error when index missing', async () => {
 
 test('real admin app route keeps app iframe sandboxed', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/adminShellRoutes.js'), 'utf8');
-  expect(source).toContain('getAppLaunchInfo');
+  expect(source).toContain('BACKEND_EVENTS.GET_APP_LAUNCH_INFO');
   expect(source).toContain('<script type="module" src="/build/appFrameLoader.js"></script>');
   expect(source).toContain('<script type="module" src="/build/agentConsole.js"></script>');
   expect(source).toContain('<script src="/build/openExplorer.js"></script>');

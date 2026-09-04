@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/notificationManager/index.js
  */
@@ -65,11 +69,11 @@ module.exports = {
       }
     });
 
-    motherEmitter.on('getRecentNotifications', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.GET_RECENT_NOTIFICATIONS, (payload, cb) => {
       const callback = onceCallback(cb);
       try {
         const { limit = 10 } = payload || {};
-        assertNotificationPayload(payload, 'getRecentNotifications');
+        assertNotificationPayload(payload, BACKEND_EVENTS.GET_RECENT_NOTIFICATIONS);
         if (payload?.decodedJWT && !hasPermission(payload.decodedJWT, 'notifications.read')) {
           return callback(new Error('Forbidden - missing permission: notifications.read'));
         }

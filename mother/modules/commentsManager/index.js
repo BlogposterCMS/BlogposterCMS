@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 require('dotenv').config();
 
 const crypto = require('crypto');
@@ -186,10 +190,10 @@ function sanitizeCommentResult(result) {
 }
 
 function setupCommentsEvents(motherEmitter) {
-  motherEmitter.on('createComment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_COMMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'createComment');
+      assertCorePayload(payload, BACKEND_EVENTS.CREATE_COMMENT);
       if (payload.decodedJWT && !hasPermission(payload.decodedJWT, 'comments.create')) {
         throw new Error('Forbidden - missing permission: comments.create');
       }
@@ -204,10 +208,10 @@ function setupCommentsEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getComment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_COMMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getComment');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_COMMENT);
       const commentId = normalizeScalar(firstDefined(payload.commentId, payload.id), 160);
       if (!commentId) throw new Error('commentId is required.');
       const result = await commentsDbSelect(motherEmitter, payload.jwt, 'GET_COMMENT', { commentId });
@@ -217,10 +221,10 @@ function setupCommentsEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listCommentsForEntry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_COMMENTS_FOR_ENTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listCommentsForEntry');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_COMMENTS_FOR_ENTRY);
       const target = normalizeTarget(payload);
       const status = canModerate(payload)
         ? (payload.status ? normalizeStatus(payload.status, '') : '')
@@ -237,10 +241,10 @@ function setupCommentsEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateComment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_COMMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'updateComment');
+      assertCorePayload(payload, BACKEND_EVENTS.UPDATE_COMMENT);
       requirePermission(payload, 'comments.edit');
       const commentId = normalizeScalar(firstDefined(payload.commentId, payload.id), 160);
       if (!commentId) throw new Error('commentId is required.');
@@ -255,10 +259,10 @@ function setupCommentsEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateCommentStatus', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_COMMENT_STATUS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'updateCommentStatus');
+      assertCorePayload(payload, BACKEND_EVENTS.UPDATE_COMMENT_STATUS);
       requirePermission(payload, 'comments.moderate');
       const commentId = normalizeScalar(firstDefined(payload.commentId, payload.id), 160);
       if (!commentId) throw new Error('commentId is required.');
@@ -272,10 +276,10 @@ function setupCommentsEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteComment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_COMMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteComment');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_COMMENT);
       requirePermission(payload, 'comments.delete');
       const commentId = normalizeScalar(firstDefined(payload.commentId, payload.id), 160);
       if (!commentId) throw new Error('commentId is required.');

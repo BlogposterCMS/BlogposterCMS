@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/pagesManager/index.js
  *
@@ -97,40 +103,27 @@ function designLayoutForPage(page = {}) {
   };
 }
 
-function fetchPageRowForContentMirror(motherEmitter, { jwt, pageId, language = 'en' }) {
-  return new Promise(resolve => {
-    if (!hasContentEngineMirrorListeners(motherEmitter)) return resolve(null);
-    if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount('dbSelect') === 0) {
-      return resolve(null);
-    }
-
-    let settled = false;
-    const finish = page => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(page || null);
-    };
-    const timer = setTimeout(() => finish(null), MIRROR_FETCH_TIMEOUT);
-
-    const emitted = motherEmitter.emit(
-      'dbSelect',
-      {
-        jwt,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        table: '__rawSQL__',
-        data: {
-          rawSQL: 'GET_PAGE_BY_ID',
-          0: pageId,
-          1: language || 'en'
-        }
-      },
-      (err, page) => finish(err ? null : page)
-    );
-
-    if (!emitted) finish(null);
-  });
+async function fetchPageRowForContentMirror(motherEmitter, { jwt, pageId, language = 'en' }) {
+  if (!hasContentEngineMirrorListeners(motherEmitter)) return null;
+  if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(BACKEND_EVENTS.DB_SELECT) === 0) {
+    return null;
+  }
+  try {
+    const page = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      jwt,
+      moduleName: 'pagesManager',
+      moduleType: 'core',
+      table: '__rawSQL__',
+      data: {
+        rawSQL: 'GET_PAGE_BY_ID',
+        0: pageId,
+        1: language || 'en'
+      }
+    }, { timeoutMs: MIRROR_FETCH_TIMEOUT });
+    return page || null;
+  } catch {
+    return null;
+  }
 }
 
 async function mirrorPageWriteToContentEngine(motherEmitter, action, pageData) {
@@ -189,31 +182,27 @@ module.exports = {
       setupPagesManagerEvents(motherEmitter);
 
       // 4) Check if this module was already seeded using meltdown to call getSetting
-      const seededVal = await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'getSetting',
-          {
+      const seededVal = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_SETTING, {
             jwt,
             moduleName: 'settingsManager',
             moduleType: 'core',
             key: 'PAGESMANAGER_SEEDED'
-          },
-          (err, val) => (err ? reject(err) : resolve(val))
-        );
-      });
+          });
 
       if (seededVal !== 'true') {
         console.log('[PAGE MANAGER] First-time seeding of widgets and pages...');
 
 
         // Check if any pages exist. If none => seed "Coming Soon"
-        const pages = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'getAllPages',
-            { jwt, moduleName: 'pagesManager', moduleType: 'core' },
-            onceCallback((err, list = []) => (err ? reject(err) : resolve(list)))
-          );
-        });
+        const pages = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_ALL_PAGES, {
+  jwt,
+  moduleName: 'pagesManager',
+  moduleType: 'core'
+}).then((list = []) => {
+  return list;
+}, err => {
+  throw err;
+});
 
         const comingSoonSeed = await seedComingSoonPage(motherEmitter, jwt, {
           enableMaintenanceMode: pages.length === 0
@@ -228,19 +217,13 @@ module.exports = {
         }
 
         if (pages.length === 0 && comingSoonSeed.pageId) {
-          await new Promise((resolve, reject) => {
-            motherEmitter.emit(
-              'setAsStart',
-              {
+          await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_AS_START, {
                 jwt,
                 moduleName: 'pagesManager',
                 moduleType: 'core',
                 pageId: comingSoonSeed.pageId,
                 language: 'en'
-              },
-              onceCallback(err => (err ? reject(err) : resolve()))
-            );
-          });
+              });
 
           console.log('[PAGE MANAGER] Maintenance mode enabled.');
         }
@@ -250,30 +233,18 @@ module.exports = {
         }
 
         // Mark PAGESMANAGER_SEEDED => meltdown => setSetting
-        await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'setSetting',
-            {
+        await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_SETTING, {
               jwt,
               moduleName: 'settingsManager',
               moduleType: 'core',
               key: 'PAGESMANAGER_SEEDED',
               value: 'true'
-            },
-            onceCallback(err => (err ? reject(err) : resolve()))
-          );
-        });
+            });
         console.log('[PAGE MANAGER] Seeding completed successfully.');
       }
 
       // 5) Always issue a public token
-      global.pagesPublicToken = await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'issuePublicToken',
-          { purpose: 'public', moduleName: 'pagesManager' },
-          (err, publicToken) => (err ? reject(err) : resolve(publicToken))
-        );
-      });
+      global.pagesPublicToken = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN, { purpose: 'public', moduleName: 'pagesManager' });
       // Avoid leaking the actual token in logs. Show only a short prefix
       const truncated = (global.pagesPublicToken || '').slice(0, 8);
       console.log('[DEBUG] pagesManager init => public token issued (%s...)', truncated);
@@ -297,7 +268,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // CREATE PAGE (with auto-deduped slug logic)
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('createPage', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_PAGE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
   
     const {
@@ -384,9 +355,7 @@ function setupPagesManagerEvents(motherEmitter) {
     };
   
     const doInsert = () => {
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -407,47 +376,45 @@ function setupPagesManagerEvents(motherEmitter) {
               weight
             }
          }
-       },
-        async (err, createRes) => {
-          if (isDuplicateConstraintError(err)) {
-            if (!shouldAutoSuffix) {
-              return callback(createDuplicateSlugError(finalSlug, lane));
-            }
-            tries++;
-            if (tries > 20) {
-              return callback(new Error('Could not generate a unique slug after 20 attempts.'));
-            }
-            finalSlug = `${baseSlug}-${tries}`;
-            return doInsert();
-          }
-          if (err) return callback(err);
-  
-          const pageId = createRes?.insertedId ?? null;
-          if (!pageId) {
-            return callback(new Error('Could not retrieve newly created page ID.'));
-          }
-          // Importers may create page projections for existing content entries.
-          // In that case the mirror would duplicate the already imported entry.
-          if (!skipContentMirror) {
-            await mirrorPageWriteToContentEngine(motherEmitter, 'create', {
-              jwt,
-              pageId,
-              title: mainTitle,
-              slug: finalSlug,
-              status,
-              seo_image,
-              translations,
-              parent_id,
-              is_content,
-              lane,
-              language,
-              meta,
-              weight
-            });
-          }
-          callback(null, { pageId });
-        }
-      );
+       }).then(async createRes => {
+  const pageId = createRes?.insertedId ?? null;
+  if (!pageId) {
+    return callback(new Error('Could not retrieve newly created page ID.'));
+  }
+  if (!skipContentMirror) {
+    await mirrorPageWriteToContentEngine(motherEmitter, 'create', {
+      jwt,
+      pageId,
+      title: mainTitle,
+      slug: finalSlug,
+      status,
+      seo_image,
+      translations,
+      parent_id,
+      is_content,
+      lane,
+      language,
+      meta,
+      weight
+    });
+  }
+  callback(null, {
+    pageId
+  });
+}, err => {
+  if (isDuplicateConstraintError(err)) {
+    if (!shouldAutoSuffix) {
+      return callback(createDuplicateSlugError(finalSlug, lane));
+    }
+    tries++;
+    if (tries > 20) {
+      return callback(new Error('Could not generate a unique slug after 20 attempts.'));
+    }
+    finalSlug = `${baseSlug}-${tries}`;
+    return doInsert();
+  }
+  return callback(err);
+});
     };
   
     checkSlug();
@@ -458,7 +425,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GET ALL PAGES
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('getAllPages', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ALL_PAGES, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType } = payload || {};
@@ -470,21 +437,18 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching all pages.'));
       }, TIMEOUT_DURATION);
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
           table      : '__rawSQL__',
           data       : { rawSQL: 'GET_ALL_PAGES' }
-        },
-        (err, result) => {
-          clearTimeout(to);
-          if (err) return callback(err);
-          callback(null, result || []);
-        }
-      );
+        }).then(async result => {
+  clearTimeout(to);
+  callback(null, result || []);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
@@ -493,7 +457,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GET PAGES BY LANE (e.g. 'public' or 'admin')
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('getPagesByLane', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_PAGES_BY_LANE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, lane, language } = payload || {};
@@ -504,9 +468,7 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('A valid "lane" argument ("public"|"admin") is required.'));
       }
       const lang = language && typeof language === 'string' ? language.toLowerCase() : undefined;
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -515,12 +477,11 @@ function setupPagesManagerEvents(motherEmitter) {
             rawSQL: 'GET_PAGES_BY_LANE',
             params: { lane, language: lang }
           }
-        },
-        (err, rows = []) => {
-          if (err) return callback(err);
-          callback(null, rows);
-        }
-      );
+        }).then((rows = []) => {
+  callback(null, rows);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
@@ -529,7 +490,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GET PAGE BY ID
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('getPageById', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_PAGE_BY_ID, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, pageId } = payload || {};
@@ -544,9 +505,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching page by ID.'));
       }, TIMEOUT_DURATION);
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
@@ -557,13 +516,12 @@ function setupPagesManagerEvents(motherEmitter) {
             0: pageId,
             1: 'en'
           }
-        },
-        (err, result) => {
-          clearTimeout(to);
-          if (err) return callback(err);
-          callback(null, result || null);
-        }
-      );
+        }).then(async result => {
+  clearTimeout(to);
+  callback(null, result || null);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
@@ -572,7 +530,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GET PAGE BY SLUG
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('getPageBySlug', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_PAGE_BY_SLUG, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
   
     try {
@@ -598,9 +556,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching page by slug.'));
       }, TIMEOUT_DURATION);
   
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
@@ -611,20 +567,14 @@ function setupPagesManagerEvents(motherEmitter) {
             1      : lane,
             2      : language
           }
-        },
-        (err, result = null) => {
-          clearTimeout(to);          
-  
-          if (err) return callback(err);
-  
-          // ② Datensatz(e) normalisieren
-          const rows = Array.isArray(result)          ? result
-                     : Array.isArray(result?.rows)    ? result.rows
-                     : (result ? [result] : []);
-  
-          callback(null, rows[0] ?? null);           
-        }
-      );
+        }).then((result = null) => {
+  clearTimeout(to);
+  // ② Datensatz(e) normalisieren
+  const rows = Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : result ? [result] : [];
+  callback(null, rows[0] ?? null);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
@@ -633,7 +583,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GET START PAGE BY LANGUAGE
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('getStartPage', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_START_PAGE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -654,9 +604,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching start page.'));
       }, TIMEOUT_DURATION);
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -665,21 +613,13 @@ function setupPagesManagerEvents(motherEmitter) {
             rawSQL: 'GET_START_PAGE',
             0: safeLang
           }
-        },
-        (err, result = null) => {
-          clearTimeout(to);
-
-          if (err) return callback(err);
-
-          const rows = Array.isArray(result)
-            ? result
-            : Array.isArray(result?.rows)
-              ? result.rows
-              : (result ? [result] : []);
-
-          callback(null, rows[0] ?? null);
-        }
-      );
+        }).then((result = null) => {
+  clearTimeout(to);
+  const rows = Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : result ? [result] : [];
+  callback(null, rows[0] ?? null);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
@@ -688,7 +628,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GET CHILD PAGES BY PARENT ID
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('getChildPages', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CHILD_PAGES, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, parentId } = payload || {};
@@ -699,9 +639,7 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('parentId is required.'));
       }
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -710,9 +648,7 @@ function setupPagesManagerEvents(motherEmitter) {
             rawSQL: 'GET_CHILD_PAGES',
             params: [parentId]
           }
-        },
-        callback
-      );
+        }).then(result => callback(null, result), error => callback(error));
     } catch (ex) {
       callback(ex);
     }
@@ -721,7 +657,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GET ENVELOPE (public)
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('getEnvelope', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ENVELOPE, (payload, originalCb) => {
     const cb = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, slug = '', language = 'en' } = payload || {};
@@ -729,73 +665,69 @@ function setupPagesManagerEvents(motherEmitter) {
         return cb(new Error('[pagesManager] getEnvelope => invalid payload.'));
       }
 
-      motherEmitter.emit(
-        'getPageBySlug',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
           slug,
           lane: 'public',
           language
-        },
-        onceCallback((err, page) => {
-          if (err) return cb(err);
-          if (!page) return cb(new Error('Page not found'));
-
-          const { layoutRef, hasLinkedDesign } = designLayoutForPage(page);
-
-          const envelope = {
-            id: page.id,
-            slug: page.slug,
-            language: page.language || language,
-            lane: 'public',
-            meta: {
-              seoTitle: page.seo_title || page.title || '',
-              seoDesc: page.meta_desc || '',
-              seoKeywords: page.seo_keywords || ''
-            },
-            attachments: [
-              {
-                type: 'design',
-                source: 'designerManager',
-                descriptor: {
-                  engine: 'grid-v2',
-                  css: ['/assets/css/runtime.css'],
-                  layoutRef
-                },
-                priority: 10,
-                blocking: true,
-                cache: 'public,max-age=600'
-              },
-              {
-                type: 'html',
-                source: 'pagesManager',
-                descriptor: {
-                  htmlRef: `pageHtml:${page.id}@v1`,
-                  fallbackOnly: hasLinkedDesign,
-                  inline: {
-                    html: page.html || '',
-                    css: page.css || '',
-                    js: page.js || ''
-                  }
-                },
-                priority: 20,
-                blocking: false
-              },
-              {
-                type: 'widgets',
-                source: 'widgetManager',
-                descriptor: { registry: 'public', layoutRef },
-                priority: 30,
-                blocking: false
-              }
-            ]
-          };
-
-          cb(null, envelope);
-        })
-      );
+        }).then(page => {
+  if (!page) return cb(new Error('Page not found'));
+  const {
+    layoutRef,
+    hasLinkedDesign
+  } = designLayoutForPage(page);
+  const envelope = {
+    id: page.id,
+    slug: page.slug,
+    language: page.language || language,
+    lane: 'public',
+    meta: {
+      seoTitle: page.seo_title || page.title || '',
+      seoDesc: page.meta_desc || '',
+      seoKeywords: page.seo_keywords || ''
+    },
+    attachments: [{
+      type: 'design',
+      source: 'designerManager',
+      descriptor: {
+        engine: 'grid-v2',
+        css: ['/assets/css/runtime.css'],
+        layoutRef
+      },
+      priority: 10,
+      blocking: true,
+      cache: 'public,max-age=600'
+    }, {
+      type: 'html',
+      source: 'pagesManager',
+      descriptor: {
+        htmlRef: `pageHtml:${page.id}@v1`,
+        fallbackOnly: hasLinkedDesign,
+        inline: {
+          html: page.html || '',
+          css: page.css || '',
+          js: page.js || ''
+        }
+      },
+      priority: 20,
+      blocking: false
+    }, {
+      type: 'widgets',
+      source: 'widgetManager',
+      descriptor: {
+        registry: 'public',
+        layoutRef
+      },
+      priority: 30,
+      blocking: false
+    }]
+  };
+  cb(null, envelope);
+}, err => {
+  return cb(err);
+});
     } catch (e) {
       cb(e);
     }
@@ -804,7 +736,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // UPDATE PAGE
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('updatePage', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_PAGE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const {
@@ -861,9 +793,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while updating page.'));
       }, TIMEOUT_DURATION);
 
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
@@ -872,31 +802,36 @@ function setupPagesManagerEvents(motherEmitter) {
             rawSQL   : 'UPDATE_PAGE',
             params   : updateParams
           }
-        },
-        async (err, result) => {
-          clearTimeout(to);
-          if (err) return callback(err);
-          const mirrorFallback = {
-            jwt,
-            pageId,
-            title,
-            slug,
-            status,
-            seo_image: (typeof seoImage !== 'undefined' ? seoImage : seo_image),
-            translations,
-            parent_id,
-            is_content,
-            lane,
-            language,
-            meta,
-            ...(hasWeight ? { weight } : {})
-          };
-          const pageRow = await fetchPageRowForContentMirror(motherEmitter, { jwt, pageId, language });
-          const pageData = buildPageDataFromPageRow(jwt, pageRow, mirrorFallback) || mirrorFallback;
-          await mirrorPageWriteToContentEngine(motherEmitter, 'update', pageData);
-          callback(null, result || null);
-        }
-      );
+        }).then(async result => {
+  clearTimeout(to);
+  const mirrorFallback = {
+    jwt,
+    pageId,
+    title,
+    slug,
+    status,
+    seo_image: typeof seoImage !== 'undefined' ? seoImage : seo_image,
+    translations,
+    parent_id,
+    is_content,
+    lane,
+    language,
+    meta,
+    ...(hasWeight ? {
+      weight
+    } : {})
+  };
+  const pageRow = await fetchPageRowForContentMirror(motherEmitter, {
+    jwt,
+    pageId,
+    language
+  });
+  const pageData = buildPageDataFromPageRow(jwt, pageRow, mirrorFallback) || mirrorFallback;
+  await mirrorPageWriteToContentEngine(motherEmitter, 'update', pageData);
+  callback(null, result || null);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
@@ -905,7 +840,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // SET PAGE AS DELETED (status+slug update)
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('setAsDeleted', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_AS_DELETED, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, pageId } = payload || {};
@@ -921,42 +856,36 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('Forbidden – missing permission: pages.delete'));
       }
 
-      motherEmitter.emit(
-        'getPageById',
-        { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId },
-        (err, page) => {
-          if (err || !page) return callback(err || new Error('Page not found'));
+      const page = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_ID, {
+        jwt,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        pageId
+      });
+      if (!page) return callback(new Error('Page not found'));
 
-          motherEmitter.emit(
-            'updatePage',
-            {
-              jwt,
-              moduleName: 'pagesManager',
-              moduleType: 'core',
-              pageId,
-              slug: `deleted-${Date.now()}`,
-              status: 'deleted',
-              seoImage: page.seo_image,
-              parent_id: page.parent_id,
-              is_content: page.is_content,
-              lane: page.lane,
-              language: page.language,
-              title: page.title,
-              meta: page.meta,
-              translations: []
-            },
-            async (updateErr, updateResult) => {
-              if (updateErr) return callback(updateErr);
-              await mirrorPageTrashToContentEngine(motherEmitter, 'setAsDeleted', {
-                jwt,
-                pageId,
-                deletedBy: payload.userId || decodedJWT?.userId || decodedJWT?.id || decodedJWT?.sub || null
-              });
-              callback(null, updateResult || null);
-            }
-          );
-        }
-      );
+      const updateResult = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPDATE_PAGE, {
+        jwt,
+        moduleName: 'pagesManager',
+        moduleType: 'core',
+        pageId,
+        slug: `deleted-${Date.now()}`,
+        status: 'deleted',
+        seoImage: page.seo_image,
+        parent_id: page.parent_id,
+        is_content: page.is_content,
+        lane: page.lane,
+        language: page.language,
+        title: page.title,
+        meta: page.meta,
+        translations: []
+      });
+      await mirrorPageTrashToContentEngine(motherEmitter, BACKEND_EVENTS.SET_AS_DELETED, {
+        jwt,
+        pageId,
+        deletedBy: payload.userId || decodedJWT?.userId || decodedJWT?.id || decodedJWT?.sub || null
+      });
+      callback(null, updateResult || null);
     } catch (ex) {
       callback(ex);
     }
@@ -965,7 +894,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // SEARCH PAGES BY TITLE OR SLUG
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('searchPages', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SEARCH_PAGES, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const {
@@ -994,9 +923,7 @@ function setupPagesManagerEvents(motherEmitter) {
       const laneVal = ['all', 'public', 'admin'].includes(lane) ? lane : 'all';
       const limVal = Math.min(parseInt(limit, 10) || 20, 50);
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -1005,9 +932,7 @@ function setupPagesManagerEvents(motherEmitter) {
             rawSQL: 'SEARCH_PAGES',
             params: { query: safeQuery, lane: laneVal, limit: limVal }
           }
-        },
-        callback
-      );
+        }).then(result => callback(null, result), error => callback(error));
     } catch (ex) {
       callback(ex);
     }
@@ -1016,7 +941,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // DELETE PAGE
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('deletePage', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_PAGE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, pageId } = payload || {};
@@ -1032,49 +957,42 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('Forbidden – missing permission: pages.delete'));
       }
 
-      motherEmitter.emit(
-        'getPageById',
-        { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId },
-        (err, page) => {
-          if (err) return callback(err);
-          const slug = page?.slug || '';
-          const rootSlug = String(slug).split('/')[0];
-          if (['home', 'settings'].includes(rootSlug) && rootSlug === slug) {
-            return callback(new Error('Cannot delete essential workspace pages.'));
-          }
-
-          motherEmitter.emit(
-            'setAsDeleted',
-            { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId },
-            (err2) => {
-              if (err2) return callback(err2);
-
-              const to = setTimeout(() => {
-                callback(new Error('Timeout while deleting a page.'));
-              }, TIMEOUT_DURATION);
-
-              motherEmitter.emit(
-                'dbDelete',
-                {
-                  jwt,
-                  moduleName : 'pagesManager',
-                  moduleType : 'core',
-                  table      : '__rawSQL__',
-                  where      : {
-                    rawSQL: 'DELETE_PAGE',
-                    0     : pageId
-                  }
-                },
-                (err3, result) => {
-                  clearTimeout(to);
-                  if (err3) return callback(err3);
-                  callback(null, result || null);
-                }
-              );
-            }
-          );
-        }
-      );
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_ID, { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId }).then(page => {
+  const slug = page?.slug || '';
+  const rootSlug = String(slug).split('/')[0];
+  if (['home', 'settings'].includes(rootSlug) && rootSlug === slug) {
+    return callback(new Error('Cannot delete essential workspace pages.'));
+  }
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_AS_DELETED, {
+    jwt,
+    moduleName: 'pagesManager',
+    moduleType: 'core',
+    pageId
+  }).then(() => {
+    const to = setTimeout(() => {
+      callback(new Error('Timeout while deleting a page.'));
+    }, TIMEOUT_DURATION);
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+      jwt,
+      moduleName: 'pagesManager',
+      moduleType: 'core',
+      table: '__rawSQL__',
+      where: {
+        rawSQL: 'DELETE_PAGE',
+        0: pageId
+      }
+    }).then(result => {
+      clearTimeout(to);
+      callback(null, result || null);
+    }, err3 => {
+      return callback(err3);
+    });
+  }, err2 => {
+    return callback(err2);
+  });
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
@@ -1083,7 +1001,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // SET PAGE AS START (e.g. the homepage)
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('setAsStart', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_AS_START, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, pageId } = payload || {};
@@ -1099,33 +1017,29 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('Forbidden – missing permission: pages.manage'));
       }
 
-      motherEmitter.emit(
-        'getPageById',
-        { jwt, moduleName, moduleType, pageId },
-        (err, page) => {
-          if (err || !page) return callback(new Error('Page not found or error retrieving page.'));
-          if (page.status !== 'published') {
-            return callback(new Error('Only a published page can be set as the start page.'));
-          }
+      const page = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_ID, {
+        jwt,
+        moduleName,
+        moduleType,
+        pageId
+      });
+      if (!page) return callback(new Error('Page not found or error retrieving page.'));
+      if (page.status !== 'published') {
+        return callback(new Error('Only a published page can be set as the start page.'));
+      }
 
-          const finalLanguage = payload.language || page.language || 'en';
-
-          motherEmitter.emit(
-            'dbUpdate',
-            {
-              jwt,
-              moduleName,
-              moduleType,
-              table: '__rawSQL__',
-              data: {
-                rawSQL: 'SET_AS_START',
-                params: [ { pageId, language: finalLanguage } ]
-              }
-            },
-            callback
-          );
+      const finalLanguage = payload.language || page.language || 'en';
+      const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+        jwt,
+        moduleName,
+        moduleType,
+        table: '__rawSQL__',
+        data: {
+          rawSQL: 'SET_AS_START',
+          params: [{ pageId, language: finalLanguage }]
         }
-      );
+      });
+      callback(null, result);
     } catch (ex) {
       callback(ex);
     }
@@ -1134,7 +1048,7 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   // GENERATE XML SITEMAP
   // ─────────────────────────────────────────────────────────────────
-  motherEmitter.on('generateXmlSitemap', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GENERATE_XML_SITEMAP, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       const { jwt, moduleName, moduleType, languages } = payload || {};
@@ -1142,9 +1056,7 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('[pagesManager] generateXmlSitemap => invalid meltdown payload.'));
       }
 
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -1153,13 +1065,12 @@ function setupPagesManagerEvents(motherEmitter) {
             rawSQL: 'GENERATE_XML_SITEMAP',
             languages: languages || []
           }
-        },
-        (err, pages) => {
-          if (err) return callback(err);
-          const xml = buildSitemap(pages);
-          callback(null, xml);
-        }
-      );
+        }).then(pages => {
+  const xml = buildSitemap(pages);
+  callback(null, xml);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }

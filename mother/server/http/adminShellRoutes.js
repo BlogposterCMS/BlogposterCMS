@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
@@ -47,19 +51,13 @@ function prepareAdminShellHtml({
 }
 
 function fetchAdminPageBySlug({ adminJwt, motherEmitter, slug }) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'getPageBySlug',
-      {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
         jwt: adminJwt,
         moduleName: 'pagesManager',
         moduleType: 'core',
         slug,
         lane: 'admin'
-      },
-      (err, result) => (err ? reject(err) : resolve(result))
-    );
-  });
+      });
 }
 
 /**
@@ -77,12 +75,12 @@ async function fetchDesignerAppFrameDesign({
   const result = await dispatchAppLoaderEvent(
     adminJwt,
     decodedAdmin,
-    'dispatchAppEvent',
+    BACKEND_EVENTS.DISPATCH_APP_EVENT,
     {
       appName: 'designer',
       event: 'cms-app-runtime-request',
       data: {
-        eventName: 'cmsAdminApiRequest',
+        eventName: BACKEND_EVENTS.CMS_ADMIN_API_REQUEST,
         payload: {
           resource: 'designer',
           action: 'get',
@@ -271,7 +269,7 @@ function createAdminShellRoutes({
     const appDir = path.join(rootDir, 'apps', appName);
     let launchInfo;
     try {
-      launchInfo = await dispatchAppLoaderEvent(adminJwt, decoded, 'getAppLaunchInfo', { appName });
+      launchInfo = await dispatchAppLoaderEvent(adminJwt, decoded, BACKEND_EVENTS.GET_APP_LAUNCH_INFO, { appName });
     } catch (err) {
       console.warn('[GET /admin/app] launch info failed =>', err.message);
       if (/Forbidden/i.test(err.message)) return res.status(403).send('Forbidden');

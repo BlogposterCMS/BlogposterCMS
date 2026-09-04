@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -66,31 +70,23 @@ function createAuthRoutes({
     }
 
     try {
-      const loginJwt = await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'issuePublicToken',
-          { purpose: 'login', moduleName: 'auth' },
-          (err, token) => err ? reject(err) : resolve(token)
-        );
-      });
+      const loginJwt = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN, { purpose: 'login', moduleName: 'auth' });
 
-      const user = await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'loginWithStrategy',
-          {
-            jwt: loginJwt,
-            moduleName: 'loginRoute',
-            moduleType: 'public',
-            strategy: 'adminLocal',
-            payload: { username, password }
-          },
-          (err, result) => {
-            if (err) return reject(err);
-            if (!result) return reject(new Error('Invalid credentials'));
-            resolve(result);
-          }
-        );
-      });
+      const user = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.LOGIN_WITH_STRATEGY, {
+  jwt: loginJwt,
+  moduleName: 'loginRoute',
+  moduleType: 'public',
+  strategy: 'adminLocal',
+  payload: {
+    username,
+    password
+  }
+}).then(result => {
+  if (!result) throw new Error('Invalid credentials');
+  return result;
+}, err => {
+  throw err;
+});
 
       const secureFlag = isProduction;
       if (secureFlag && req.protocol !== 'https') {

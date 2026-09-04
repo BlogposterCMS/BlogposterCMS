@@ -16,6 +16,7 @@ This folder provides additional information on installing, configuring and exten
 - [Server Composition](server_composition.md)
 - [UI Architecture](ui_architecture.md)
 - [Event-First Transport Boundary](event_first_transport.md)
+- [Backend Event Contracts](backend-event-contracts.md)
 - [No-Legacy Purge Report](no_legacy_purge_report.md)
 - [Workboard](workboard.md)
 - [Agent Worklog](agent-worklog.md)

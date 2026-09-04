@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 const axios = require('axios');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const notificationEmitter = require('../../emitters/notificationEmitter');
@@ -80,7 +84,7 @@ module.exports = {
       message: '[REQUEST MANAGER] Initializing...'
     });
 
-    motherEmitter.on('httpRequest', (payload, originalCb) => {
+    motherEmitter.on(BACKEND_EVENTS.HTTP_REQUEST, (payload, originalCb) => {
       const callback = onceCallback(originalCb);
       (async () => {
         try {

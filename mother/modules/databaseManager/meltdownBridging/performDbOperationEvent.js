@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/databaseManager/meltdownBridging/performDbOperationEvent.js
  * * Registers the meltdown event listener for 'performDbOperation'.
@@ -25,7 +29,7 @@ const TIMEOUT_DURATION = RAW_TIMEOUT === 0 ? null : RAW_TIMEOUT;
  */
 function registerPerformDbOperationEvent(motherEmitter) {
   // Listen for database operation requests from other modules
-  motherEmitter.on('performDbOperation', Object.assign(async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.PERFORM_DB_OPERATION, Object.assign(async (payload, originalCb) => {
     // Ensure the callback is only called once, even if errors/timeouts occur
     const callback = onceCallback(originalCb); 
 

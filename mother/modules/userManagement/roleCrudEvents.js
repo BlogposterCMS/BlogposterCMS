@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/userManagement/roleCrudEvents.js
  *
@@ -42,7 +48,7 @@ function sanitizePayload(payload, hide = []) {
  */
 function setupRoleCrudEvents(motherEmitter) {
   // =============== createRole ===============
-  motherEmitter.on('createRole', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_ROLE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "createRole" event triggered. Payload:', sanitizePayload(payload));
@@ -60,7 +66,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     const permJson = permissions || {};
-    motherEmitter.emit('dbInsert', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -72,17 +78,20 @@ function setupRoleCrudEvents(motherEmitter) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
-    }, (err, insertedRow) => {
-      if (err) return callback(err);
-      if (!insertedRow || !insertedRow.id) {
-        return callback(new Error('No row inserted or missing "id"'));
-      }
-      callback(null, { roleId: insertedRow.id });
-    });
+    }).then(insertedRow => {
+  if (!insertedRow || !insertedRow.id) {
+    return callback(new Error('No row inserted or missing "id"'));
+  }
+  callback(null, {
+    roleId: insertedRow.id
+  });
+}, err => {
+  return callback(err);
+});
   });
 
   // =============== getAllRoles ===============
-  motherEmitter.on('getAllRoles', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ALL_ROLES, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "getAllRoles" event triggered. Payload:', sanitizePayload(payload));
@@ -96,21 +105,23 @@ function setupRoleCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.listRoles'));
     }
 
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles'
-    }, (err, rows) => {
-      if (err) return callback(err);
-      traceRuntimeEvent('[USER MGMT] getAllRoles => count:', rows?.length || 0);
-      // Sort by name
-      rows.sort((a, b) => (a.role_name || '').localeCompare(b.role_name || ''));
-      callback(null, rows);
-    });
+    }).then(rows => {
+  traceRuntimeEvent('[USER MGMT] getAllRoles => count:', rows?.length || 0);
+  // Sort by name
+  // Sort by name
+  rows.sort((a, b) => (a.role_name || '').localeCompare(b.role_name || ''));
+  callback(null, rows);
+}, err => {
+  return callback(err);
+});
   });
 
   // =============== getUserAccess ===============
-  motherEmitter.on('getUserAccess', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_USER_ACCESS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "getUserAccess" event triggered. Payload:', sanitizePayload(payload));
@@ -138,7 +149,7 @@ function setupRoleCrudEvents(motherEmitter) {
   });
 
   // =============== setUserAccess ===============
-  motherEmitter.on('setUserAccess', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_USER_ACCESS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "setUserAccess" event triggered. Payload:', sanitizePayload(payload));
@@ -162,7 +173,7 @@ function setupRoleCrudEvents(motherEmitter) {
   });
 
   // =============== updateRole ===============
-  motherEmitter.on('updateRole', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_ROLE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "updateRole" event triggered. Payload:', sanitizePayload(payload));
@@ -180,44 +191,49 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // First, fetch the existing role
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
       where: { id: roleId }
-    }, (err, rows) => {
-      if (err) return callback(err);
-      if (!rows || rows.length === 0) {
-        return callback(new Error('Role not found.'));
-      }
-
-      const existingRole = rows[0];
-      // Disallow renaming a system role (like 'admin')
-      if (existingRole.is_system_role && newRoleName) {
-        return callback(new Error('Cannot rename a system role (e.g., admin).'));
-      }
-
-      // Build the update payload
-      const updatedData = { updated_at: new Date().toISOString() };
-      if (newRoleName)    updatedData.role_name   = newRoleName;
-      if (newDescription) updatedData.description = newDescription;
-      if (newPermissions) updatedData.permissions = JSON.stringify(newPermissions);
-
-      motherEmitter.emit('dbUpdate', {
-        jwt,
-        moduleName: 'userManagement',
-        table: 'roles',
-        where: { id: roleId },
-        data: updatedData
-      }, (err2) => {
-        if (err2) return callback(err2);
-        callback(null, { success: true });
-      });
+    }).then(rows => {
+  if (!rows || rows.length === 0) {
+    return callback(new Error('Role not found.'));
+  }
+  const existingRole = rows[0];
+  // Disallow renaming a system role (like 'admin')
+  if (existingRole.is_system_role && newRoleName) {
+    return callback(new Error('Cannot rename a system role (e.g., admin).'));
+  }
+  // Build the update payload
+  const updatedData = {
+    updated_at: new Date().toISOString()
+  };
+  if (newRoleName) updatedData.role_name = newRoleName;
+  if (newDescription) updatedData.description = newDescription;
+  if (newPermissions) updatedData.permissions = JSON.stringify(newPermissions);
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+    jwt,
+    moduleName: 'userManagement',
+    table: 'roles',
+    where: {
+      id: roleId
+    },
+    data: updatedData
+  }).then(() => {
+    callback(null, {
+      success: true
     });
+  }, err2 => {
+    return callback(err2);
+  });
+}, err => {
+  return callback(err);
+});
   });
 
   // =============== deleteRole ===============
-  motherEmitter.on('deleteRole', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_ROLE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "deleteRole" event triggered. Payload:', sanitizePayload(payload));
@@ -235,46 +251,53 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // Check if the role is system or not
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
       where: { id: roleId }
-    }, (checkErr, rows) => {
-      if (checkErr) return callback(checkErr);
-      if (!rows || rows.length === 0) {
-        return callback(new Error('No role found with that ID.'));
+    }).then(rows => {
+  if (!rows || rows.length === 0) {
+    return callback(new Error('No role found with that ID.'));
+  }
+  const roleRow = rows[0];
+  if (roleRow.is_system_role) {
+    return callback(new Error('Cannot delete a system role (e.g. admin).'));
+  }
+  // 1) Remove references from user_roles
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+    jwt,
+    moduleName: 'userManagement',
+    table: 'user_roles',
+    where: {
+      role_id: roleId
+    }
+  }).then(() => {
+    // 2) Delete the role itself
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+      jwt,
+      moduleName: 'userManagement',
+      table: 'roles',
+      where: {
+        id: roleId
       }
-      const roleRow = rows[0];
-      if (roleRow.is_system_role) {
-        return callback(new Error('Cannot delete a system role (e.g. admin).'));
-      }
-
-      // 1) Remove references from user_roles
-      motherEmitter.emit('dbDelete', {
-        jwt,
-        moduleName: 'userManagement',
-        table: 'user_roles',
-        where: { role_id: roleId }
-      }, (delErr) => {
-        if (delErr) return callback(delErr);
-
-        // 2) Delete the role itself
-        motherEmitter.emit('dbDelete', {
-          jwt,
-          moduleName: 'userManagement',
-          table: 'roles',
-          where: { id: roleId }
-        }, (delErr2) => {
-          if (delErr2) return callback(delErr2);
-          callback(null, { success: true });
-        });
+    }).then(() => {
+      callback(null, {
+        success: true
       });
+    }, delErr2 => {
+      return callback(delErr2);
     });
+  }, delErr => {
+    return callback(delErr);
+  });
+}, checkErr => {
+  return callback(checkErr);
+});
   });
 
   // =============== assignRoleToUser ===============
-  motherEmitter.on('assignRoleToUser', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.ASSIGN_ROLE_TO_USER, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "assignRoleToUser" event triggered. Payload:', sanitizePayload(payload));
@@ -292,40 +315,44 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // Insert into user_roles
-    motherEmitter.emit('dbInsert', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'user_roles',
       data: { user_id: userId, role_id: roleId }
-    }, (err) => {
-      // If duplicate, just warn and continue
-      if (err) {
-        if (err.message && err.message.includes('duplicate key')) {
-          console.warn('[USER MGMT] assignRoleToUser => Already assigned, ignoring.');
-        } else {
-          return callback(err);
-        }
+    }).then(() => {
+  // On success => increment the user's token_version
+  const idField = getDbType() === 'mongodb' ? '_id' : 'id';
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+    jwt,
+    moduleName: 'userManagement',
+    table: 'users',
+    where: {
+      [idField]: userId
+    },
+    data: {
+      token_version: {
+        '__raw_expr': 'token_version + 1'
       }
-
-      // On success => increment the user's token_version
-      const idField = getDbType() === 'mongodb' ? '_id' : 'id';
-      motherEmitter.emit('dbUpdate', {
-        jwt,
-        moduleName: 'userManagement',
-        table: 'users',
-        where: { [idField]: userId },
-        data: {
-          token_version: { '__raw_expr': 'token_version + 1' }
-        }
-      }, (verr) => {
-        if (verr) console.error('[USER MGMT] assignRoleToUser => token_version error:', verr.message);
-        callback(null, { success: true });
-      });
+    }
+  }).then(() => {
+    callback(null, {
+      success: true
     });
+  }, verr => {
+    console.error('[USER MGMT] assignRoleToUser => token_version error:', verr.message);
+  });
+}, err => {
+  if (err.message && err.message.includes('duplicate key')) {
+    console.warn('[USER MGMT] assignRoleToUser => Already assigned, ignoring.');
+  } else {
+    return callback(err);
+  }
+});
   });
 
   // =============== getRolesForUser ===============
-  motherEmitter.on('getRolesForUser', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ROLES_FOR_USER, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "getRolesForUser" event triggered. Payload:', sanitizePayload(payload));
@@ -345,44 +372,42 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     traceRuntimeEvent('[USER MGMT] getRolesForUser => selecting roles for userId:', userId);
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'user_roles',
       where: { user_id: userId }
-    }, (err, userRoles) => {
-      if (err) {
-        console.error('[USER MGMT] getRolesForUser => Error selecting user_roles:', err.message);
-        return callback(err);
-      }
-      if (!userRoles || userRoles.length === 0) {
-        console.warn('[USER MGMT] getRolesForUser => No roles assigned to this user.');
-        return callback(null, []);
-      }
+    }).then(userRoles => {
+  if (!userRoles || userRoles.length === 0) {
+    console.warn('[USER MGMT] getRolesForUser => No roles assigned to this user.');
+    return callback(null, []);
+  }
+  // Normalize to string to avoid ObjectId strict equality issues
+  const roleIds = userRoles.map(ur => String(ur.role_id));
+  traceRuntimeEvent('[USER MGMT] getRolesForUser => role IDs:', roleIds);
 
-      // Normalize to string to avoid ObjectId strict equality issues
-      const roleIds = userRoles.map(ur => String(ur.role_id));
-      traceRuntimeEvent('[USER MGMT] getRolesForUser => role IDs:', roleIds);
-
-      // Now select from 'roles' to return role objects
-      motherEmitter.emit('dbSelect', {
-        jwt,
-        moduleName: 'userManagement',
-        table: 'roles'
-      }, (err2, allRoles) => {
-        if (err2) {
-          console.error('[USER MGMT] getRolesForUser => Error selecting roles:', err2.message);
-          return callback(err2);
-        }
-        const matched = (allRoles || []).filter(r => roleIds.includes(String(r.id)));
-        traceRuntimeEvent('[USER MGMT] getRolesForUser => matched roles:', matched?.length || 0);
-        callback(null, matched);
-      });
-    });
+  // Now select from 'roles' to return role objects
+  // Now select from 'roles' to return role objects
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    jwt,
+    moduleName: 'userManagement',
+    table: 'roles'
+  }).then(allRoles => {
+    const matched = (allRoles || []).filter(r => roleIds.includes(String(r.id)));
+    traceRuntimeEvent('[USER MGMT] getRolesForUser => matched roles:', matched?.length || 0);
+    callback(null, matched);
+  }, err2 => {
+    console.error('[USER MGMT] getRolesForUser => Error selecting roles:', err2.message);
+    return callback(err2);
+  });
+}, err => {
+  console.error('[USER MGMT] getRolesForUser => Error selecting user_roles:', err.message);
+  return callback(err);
+});
   });
 
   // =============== removeRoleFromUser ===============
-  motherEmitter.on('removeRoleFromUser', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REMOVE_ROLE_FROM_USER, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "removeRoleFromUser" event triggered. Payload:', sanitizePayload(payload));
@@ -400,33 +425,40 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // Delete the row from user_roles
-    motherEmitter.emit('dbDelete', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       jwt,
       moduleName: 'userManagement',
       table: 'user_roles',
       where: { user_id: userId, role_id: roleId }
-    }, (err) => {
-      if (err) return callback(err);
-
-      // Then increment token_version
-      const idField = getDbType() === 'mongodb' ? '_id' : 'id';
-      motherEmitter.emit('dbUpdate', {
-        jwt,
-        moduleName: 'userManagement',
-        table: 'users',
-        where: { [idField]: userId },
-        data: {
-          token_version: { '__raw_expr': 'token_version + 1' }
-        }
-      }, (verr) => {
-        if (verr) console.error('[USER MGMT] removeRoleFromUser => token_version error:', verr.message);
-        callback(null, { success: true });
-      });
+    }).then(() => {
+  // Then increment token_version
+  const idField = getDbType() === 'mongodb' ? '_id' : 'id';
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+    jwt,
+    moduleName: 'userManagement',
+    table: 'users',
+    where: {
+      [idField]: userId
+    },
+    data: {
+      token_version: {
+        '__raw_expr': 'token_version + 1'
+      }
+    }
+  }).then(() => {
+    callback(null, {
+      success: true
     });
+  }, verr => {
+    console.error('[USER MGMT] removeRoleFromUser => token_version error:', verr.message);
+  });
+}, err => {
+  return callback(err);
+});
   });
 
   // =============== incrementUserTokenVersion ===============
-  motherEmitter.on('incrementUserTokenVersion', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.INCREMENT_USER_TOKEN_VERSION, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] incrementUserTokenVersion => Event triggered. Payload:', sanitizePayload(payload));
@@ -443,37 +475,36 @@ function setupRoleCrudEvents(motherEmitter) {
 
     traceRuntimeEvent('[USER MGMT] incrementUserTokenVersion => fetching current version for userId:', userId);
     const idField = getDbType() === 'mongodb' ? '_id' : 'id';
-    motherEmitter.emit('dbSelect', {
-      jwt,
-      moduleName: 'userManagement',
-      moduleType: 'core',
-      table: 'users',
-      where: { [idField]: userId }
-    }, (selectErr, users) => {
-      if (selectErr || !users.length) {
-        console.error('[USER MGMT] incrementUserTokenVersion => Error or no user found:', selectErr?.message || 'No user');
-        return callback(selectErr || new Error('User not found'));
+    try {
+      const users = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+        jwt,
+        moduleName: 'userManagement',
+        moduleType: 'core',
+        table: 'users',
+        where: { [idField]: userId }
+      });
+      if (!users.length) {
+        console.error('[USER MGMT] incrementUserTokenVersion => No user found');
+        return callback(new Error('User not found'));
       }
 
       const currentTokenVersion = users[0].token_version || 0;
       traceRuntimeEvent(`[USER MGMT] incrementUserTokenVersion => current version is ${currentTokenVersion}`);
 
-      motherEmitter.emit('dbUpdate', {
+      await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: 'userManagement',
         moduleType: 'core',
         table: 'users',
         where: { [idField]: userId },
         data: { token_version: currentTokenVersion + 1 }
-      }, (updateErr) => {
-        if (updateErr) {
-          console.error('[USER MGMT] incrementUserTokenVersion => Error updating token_version:', updateErr.message);
-          return callback(updateErr);
-        }
-        traceRuntimeEvent('[USER MGMT] incrementUserTokenVersion => version incremented successfully.');
-        callback(null, { success: true });
       });
-    });
+      traceRuntimeEvent('[USER MGMT] incrementUserTokenVersion => version incremented successfully.');
+      callback(null, { success: true });
+    } catch (err) {
+      console.error('[USER MGMT] incrementUserTokenVersion => Error updating token_version:', err.message);
+      callback(err);
+    }
   });
 }
 

@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/userManagement/permissionCrudEvents.js
  *
@@ -20,7 +26,7 @@ function sanitizePayload(payload, hide = []) {
 
 function setupPermissionCrudEvents(motherEmitter) {
   // =============== createPermission ===============
-  motherEmitter.on('createPermission', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_PERMISSION, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     console.log('[USER MGMT] "createPermission" event triggered. Payload:', sanitizePayload(payload));
 
@@ -35,7 +41,7 @@ function setupPermissionCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.managePermissions'));
     }
 
-    motherEmitter.emit('dbInsert', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'permissions',
@@ -45,15 +51,18 @@ function setupPermissionCrudEvents(motherEmitter) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
-    }, (err, insertedRow) => {
-      if (err) return callback(err);
-      const id = Array.isArray(insertedRow) ? insertedRow[0]?.id : insertedRow?.insertedId;
-      callback(null, { permissionId: id });
-    });
+    }).then(insertedRow => {
+  const id = Array.isArray(insertedRow) ? insertedRow[0]?.id : insertedRow?.insertedId;
+  callback(null, {
+    permissionId: id
+  });
+}, err => {
+  return callback(err);
+});
   });
 
   // =============== getAllPermissions ===============
-  motherEmitter.on('getAllPermissions', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ALL_PERMISSIONS, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     console.log('[USER MGMT] "getAllPermissions" event triggered. Payload:', sanitizePayload(payload));
 
@@ -66,15 +75,16 @@ function setupPermissionCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.managePermissions'));
     }
 
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'permissions'
-    }, (err, rows) => {
-      if (err) return callback(err);
-      rows.sort((a, b) => (a.permission_key || '').localeCompare(b.permission_key || ''));
-      callback(null, rows);
-    });
+    }).then(rows => {
+  rows.sort((a, b) => (a.permission_key || '').localeCompare(b.permission_key || ''));
+  callback(null, rows);
+}, err => {
+  return callback(err);
+});
   });
 }
 

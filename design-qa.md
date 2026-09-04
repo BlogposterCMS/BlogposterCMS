@@ -430,3 +430,69 @@ click selected `widget-coming-soon-headline` and displayed the
 `Selected element actions` toolbar. No browser warnings or errors were emitted.
 
 final placement-mode widget selection result: passed
+
+---
+
+# Current follow-up: unified admin controls and PageList
+
+## Evidence
+
+- Source visual truth:
+  - `C:\Users\Matteo\AppData\Local\Temp\codex-clipboard-077565e4-f6d6-4678-b5d2-4f4bbf63b7fc.png`
+    (686 x 520 px; General Settings with browser-default fields).
+  - `C:\Users\Matteo\AppData\Local\Temp\codex-clipboard-fa48a6fd-4d1b-479f-affd-b17a457dc069.png`
+    (537 x 857 px; PageList with native selects, square actions and horizontal overflow).
+- Browser-rendered implementation:
+  - `C:\Users\Matteo\.codex\visualizations\2026\09\04\01a06c27-1678-77c0-920f-2bda6adc06c3\admin-general-settings.png`
+    (859 x 1273 px).
+  - `C:\Users\Matteo\.codex\visualizations\2026\09\04\01a06c27-1678-77c0-920f-2bda6adc06c3\admin-page-list.png`
+    (859 x 1273 px).
+  - `C:\Users\Matteo\.codex\visualizations\2026\09\04\01a06c27-1678-77c0-920f-2bda6adc06c3\admin-page-list-dropdown.png`
+    (859 x 1273 px; custom Parent dropdown open).
+  - `C:\Users\Matteo\.codex\visualizations\2026\09\04\01a06c27-1678-77c0-920f-2bda6adc06c3\admin-general-settings-comparison.png`
+    and `admin-page-list-comparison.png` (source and implementation paired).
+- Routes: `http://localhost:3000/admin/settings/general` and
+  `http://localhost:3000/admin/content`.
+- State: authenticated desktop admin, light theme, General Settings and the
+  PageList Parent dropdown.
+- Browser CSS viewport: 859 x 1273 px. The supplied references are narrower
+  crops, so the comparison targets component hierarchy, spacing and control
+  language rather than whole-page pixel parity.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing dashboard typography is unchanged and now
+  applies inside admin widget ShadowRoots.
+- Spacing and layout rhythm: Settings fields use one labelled field stack and
+  action group. At the verified viewport PageList rows become two-column cards
+  with actions inside the row instead of forcing page-level horizontal scroll.
+- Colors and visual tokens: all new rules reuse `--studio-*` surfaces, borders,
+  field radii, shadows, focus rings and motion values.
+- Image quality and asset fidelity: the existing `/assets/icons/*.svg` Lucide
+  set is reused. A rendered-image check found zero incomplete or zero-width
+  images.
+- Copy and content: existing settings labels, page titles, status values and
+  actions are preserved.
+
+## Interaction and accessibility verification
+
+- The Page filters are semantic buttons with pressed state.
+- Add, hierarchy, home and row actions are semantic buttons with accessible
+  names.
+- Parent selects rendered as the shared custom dropdown inside ShadowRoots;
+  opening the first control displayed the tokenized listbox rather than the
+  browser-native picker.
+- Settings labels resolve to generated control ids and status messages use a
+  polite live region.
+- The prior console inspection showed only the known missing
+  `registerWidgetUsage` listener warning and no icon/network errors.
+
+## Comparison result
+
+The references exposed missing UI-kit binding rather than a missing icon
+package. Adding `app-scope` and per-ShadowRoot select observation restored the
+existing Studio language. The post-fix comparison shows consistent rounded
+fields, custom dropdowns, neutral floating icon actions and contained
+responsive PageList rows. No actionable P0, P1 or P2 mismatch remains.
+
+final unified-admin-controls result: passed

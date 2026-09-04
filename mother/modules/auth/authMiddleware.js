@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/auth/authMiddleware.js
  *
@@ -16,17 +22,13 @@ const { motherEmitter } = require('../../emitters/motherEmitter');
 /* ──────────────────────────────────────────────────────────────── *
  *  Helper #1 – centralised token validation so we don’t copy‑paste
  * ──────────────────────────────────────────────────────────────── */
-function verifyToken(token, cb) {
-  motherEmitter.emit(
-    'validateToken',
-    {
+function verifyToken(token) {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.VALIDATE_TOKEN, {
       jwt            : token,
       moduleName     : 'auth',
       moduleType     : 'core',
       tokenToValidate: token
-    },
-    cb
-  );
+    });
 }
 
 /* ──────────────────────────────────────────────────────────────── *
@@ -60,56 +62,47 @@ function isLocalDevRequest(req) {
   ].some(isLoopbackAddress);
 }
 
-function issueDevAutologin({ emitter, req, res, next, finalize, devUser }) {
-  emitter.emit(
-    'issueModuleToken',
-    {
+async function issueDevAutologin({ emitter, req, res, next, finalize, devUser }) {
+  try {
+    const moduleTok = await requestBackendEvent(emitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
       skipJWT: true,
       authModuleSecret: process.env.AUTH_MODULE_INTERNAL_SECRET,
       moduleType: 'core',
       moduleName: 'auth',
       signAsModule: 'userManagement',
       trustLevel: 'high'
-    },
-    (err, moduleTok) => {
-      if (err || !moduleTok) {
-        return finalize(err || new Error('AUTH_DEV_AUTOLOGIN_MODULE_TOKEN_MISSING'));
-      }
-      emitter.emit(
-        'getUserDetailsByUsername',
-        { jwt: moduleTok, moduleName: 'userManagement', moduleType: 'core', username: devUser },
-        (uErr, user) => {
-          if (uErr || !user) {
-            return finalize(uErr || new Error('AUTH_DEV_AUTOLOGIN_USER_NOT_FOUND'));
-          }
-          emitter.emit(
-            'finalizeUserLogin',
-            {
-              jwt: moduleTok,
-              moduleName: 'userManagement',
-              moduleType: 'core',
-              userId: user.id,
-              extraData: { provider: 'devAutoLogin' }
-            },
-            (fErr, finalUser) => {
-              if (fErr || !finalUser) {
-                return finalize(fErr || new Error('AUTH_DEV_AUTOLOGIN_FINAL_USER_MISSING'));
-              }
-              res.cookie('admin_jwt', finalUser.jwt, {
-                path: '/',
-                httpOnly: true,
-                sameSite: 'strict',
-                secure: false,
-                maxAge: 2 * 60 * 60 * 1000
-              });
-              req.user = finalUser;
-              next();
-            }
-          );
-        }
-      );
-    }
-  );
+    });
+    if (!moduleTok) throw new Error('AUTH_DEV_AUTOLOGIN_MODULE_TOKEN_MISSING');
+
+    const user = await requestBackendEvent(emitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, {
+      jwt: moduleTok,
+      moduleName: 'userManagement',
+      moduleType: 'core',
+      username: devUser
+    });
+    if (!user) throw new Error('AUTH_DEV_AUTOLOGIN_USER_NOT_FOUND');
+
+    const finalUser = await requestBackendEvent(emitter, BACKEND_EVENTS.FINALIZE_USER_LOGIN, {
+      jwt: moduleTok,
+      moduleName: 'userManagement',
+      moduleType: 'core',
+      userId: user.id,
+      extraData: { provider: 'devAutoLogin' }
+    });
+    if (!finalUser) throw new Error('AUTH_DEV_AUTOLOGIN_FINAL_USER_MISSING');
+
+    res.cookie('admin_jwt', finalUser.jwt, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: false,
+      maxAge: 2 * 60 * 60 * 1000
+    });
+    req.user = finalUser;
+    next();
+  } catch (err) {
+    finalize(err);
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────── *
@@ -123,65 +116,15 @@ function requireAuthCookie(req, res, next) {
   if (!token && localDevMode && process.env.DEV_AUTOLOGIN !== 'false') {
     const devUser = process.env.DEV_USER || 'admin';
     if (isLocalDevRequest(req) && process.env.AUTH_MODULE_INTERNAL_SECRET) {
-      try {
-        motherEmitter.emit(
-          'issueModuleToken',
-          {
-            skipJWT: true,
-            authModuleSecret: process.env.AUTH_MODULE_INTERNAL_SECRET,
-            moduleType: 'core',
-            moduleName: 'auth',
-            signAsModule: 'userManagement',
-            trustLevel: 'high'
-          },
-          (err, moduleTok) => {
-            if (err || !moduleTok) {
-              return finalize();
-            }
-            motherEmitter.emit(
-              'getUserDetailsByUsername',
-              { jwt: moduleTok, moduleName: 'userManagement', moduleType: 'core', username: devUser },
-              (uErr, user) => {
-                if (uErr || !user) {
-                  // DEV-User fehlt → kein Auto-Login, normal zum Login umleiten
-                  return finalize();
-                }
-                console.log('[AUTH MIDDLEWARE] AUTH_DEV_AUTOLOGIN_FINALIZE_START');
-                motherEmitter.emit(
-                  'finalizeUserLogin',
-                  {
-                    jwt: moduleTok,
-                    moduleName: 'userManagement',
-                    moduleType: 'core',
-                    userId: user.id,
-                    extraData: { provider: 'devAutoLogin' }
-                  },
-                  (fErr, finalUser) => {
-                    if (fErr || !finalUser) {
-                      console.warn('[AUTH MIDDLEWARE] AUTH_DEV_AUTOLOGIN_FINALIZE_FAILED', fErr?.message || 'missing final user');
-                      return finalize();
-                    }
-                    console.log('[AUTH MIDDLEWARE] AUTH_DEV_AUTOLOGIN_FINALIZE_OK');
-                    res.cookie('admin_jwt', finalUser.jwt, {
-                      path: '/',
-                      httpOnly: true,
-                      sameSite: 'strict',
-                      secure: false,
-                      maxAge: 2 * 60 * 60 * 1000
-                    });
-                    token = finalUser.jwt;
-                    req.user = finalUser;
-                    next();
-                  }
-                );
-              }
-            );
-          }
-        );
-        return; // async path
-      } catch (e) {
-        // fall through to normal flow
-      }
+      issueDevAutologin({
+        emitter: motherEmitter,
+        req,
+        res,
+        next,
+        finalize,
+        devUser
+      });
+      return; // async path
     }
   }
 
@@ -194,15 +137,12 @@ function requireAuthCookie(req, res, next) {
     return finalize();
   }
 
-  verifyToken(token, (err, decoded) => {
-    if (err || !decoded) {
-      return finalize();
-    }
-
+  verifyToken(token).then(decoded => {
+    if (!decoded) return finalize();
     attachWildcardIfAdmin(decoded);
     req.user = decoded;
     next();
-  });
+  }, finalize);
 }
 
 /* ──────────────────────────────────────────────────────────────── *
@@ -216,14 +156,12 @@ function requireAuthHeader(req, res, next) {
   if (!token)
     return res.status(401).json({ error: 'Unauthorized – no token' });
 
-  verifyToken(token, (err, decoded) => {
-    if (err || !decoded)
-      return res.status(401).json({ error: 'Unauthorized – invalid token' });
-
+  verifyToken(token).then(decoded => {
+    if (!decoded) return res.status(401).json({ error: 'Unauthorized – invalid token' });
     attachWildcardIfAdmin(decoded);
     req.user = decoded;
     next();
-  });
+  }, () => res.status(401).json({ error: 'Unauthorized – invalid token' }));
 }
 
 /* ──────────────────────────────────────────────────────────────── *

@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/translationManager/translationService.js
  *
@@ -38,10 +44,7 @@ async function translateText({
   }
 
   // 2) Immediately log usage in "translation_usage"
-  await new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbInsert',
-      {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
         jwt: userJwt,
         moduleName: 'translationManager',
         table: 'translation_usage',
@@ -53,19 +56,10 @@ async function translateText({
           to_lang: toLang,
           created_at: new Date().toISOString()
         }
-      },
-      (err, insertedUsage) => {
-        if (err) return reject(err);
-        resolve(insertedUsage);
-      }
-    );
-  });
+      });
 
   // 3) Immediately store the translated text in "translation_cache"
-  await new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbInsert',
-      {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
         jwt: userJwt,
         moduleName: 'translationManager',
         table: 'translation_cache',
@@ -78,13 +72,7 @@ async function translateText({
           user_id: userId,
           created_at: new Date().toISOString()
         }
-      },
-      (err, insertedCache) => {
-        if (err) return reject(err);
-        resolve(insertedCache);
-      }
-    );
-  });
+      });
 
   // 4) Return the final translated text
   return translated;

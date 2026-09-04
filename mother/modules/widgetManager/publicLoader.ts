@@ -1,3 +1,7 @@
+
+
+import { BACKEND_EVENTS } from '../../contracts/generatedBackendEventCatalog';
+
 import { init as initCanvasGrid } from '/ui/runtime/main/canvasGrid.js';
 import { applyWidgetOptions } from '/ui/runtime/main/widgetOptions.js';
 import { executeJs } from '/ui/runtime/main/script-utils.js';
@@ -264,7 +268,7 @@ async function emitPublicRuntime<T>(
   if (typeof ctx.meltdownEmit !== 'function') {
     throw new Error('[WidgetPublicLoader:PUBLIC_RUNTIME_EMIT_MISSING] meltdownEmit is required.');
   }
-  const result = await ctx.meltdownEmit('cmsPublicRuntimeRequest', {
+  const result = await ctx.meltdownEmit(BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST, {
     jwt: ctx.publicToken,
     moduleName: 'runtimeManager',
     moduleType: 'core',

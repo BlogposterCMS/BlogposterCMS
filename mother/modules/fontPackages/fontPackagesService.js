@@ -1,7 +1,10 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const crypto = require('crypto');
-const { onceCallback } = require('../../emitters/motherEmitter');
 
 const FONT_PACKAGES_STORAGE_KEY = 'FONT_PACKAGES_V1';
 const FONT_PACKAGES_VERSION = 1;
@@ -440,18 +443,16 @@ function assertUniquePackageName(packages, name, ignoredId = '') {
 }
 
 function emitSettingsManager(motherEmitter, jwt, eventName, payload = {}) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, {
+  return requestBackendEvent(motherEmitter, eventName, {
       ...payload,
       jwt,
       moduleName: 'settingsManager',
       moduleType: 'core'
-    }, onceCallback((error, result) => (error ? reject(error) : resolve(result))));
-  });
+    });
 }
 
 async function readFontPackages(motherEmitter, jwt) {
-  const stored = await emitSettingsManager(motherEmitter, jwt, 'getSetting', {
+  const stored = await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.GET_SETTING, {
     key: FONT_PACKAGES_STORAGE_KEY
   });
   return parseStoredLibrary(stored);
@@ -459,7 +460,7 @@ async function readFontPackages(motherEmitter, jwt) {
 
 async function writeFontPackages(motherEmitter, jwt, library) {
   const normalized = parseStoredLibrary(library);
-  await emitSettingsManager(motherEmitter, jwt, 'setSetting', {
+  await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.SET_SETTING, {
     key: FONT_PACKAGES_STORAGE_KEY,
     value: JSON.stringify(normalized)
   });

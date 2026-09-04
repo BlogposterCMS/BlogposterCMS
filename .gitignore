@@ -33,6 +33,7 @@ modulePasswords.json
 
 # Local agent coordination scratch files
 /.agent-worklog/
+/.statem/
 
 # Durable local product workpapers and private notes
 /.local-worknotes/

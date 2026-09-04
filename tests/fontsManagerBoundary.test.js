@@ -3,6 +3,8 @@
 const assert = require('assert');
 const EventEmitter = require('events');
 const fontsManager = require('../mother/modules/fontsManager');
+const { requestBackendEvent } = require('../mother/contracts/backendEventContracts');
+const { BACKEND_EVENTS } = require('../mother/contracts/generatedBackendEventCatalog');
 
 function emitAsync(emitter, eventName, payload) {
   return new Promise(resolve => {
@@ -67,17 +69,18 @@ test('fontsManager accepts scoped core provider and font mutations', async () =>
     moduleType: 'core'
   };
 
-  const registered = await emitAsync(emitter, 'registerFontProvider', {
+  const initFunction = () => {
+    providerInitialized = true;
+  };
+  const registered = await requestBackendEvent(emitter, BACKEND_EVENTS.REGISTER_FONT_PROVIDER, {
     ...base,
     fontsModuleSecret: 'test-fonts-secret',
     providerName: 'codexFonts',
     description: 'Boundary test provider',
-    initFunction: () => {
-      providerInitialized = true;
-    }
+    initFunction
   });
-  assert.ifError(registered.err);
-  assert.strictEqual(registered.result, true);
+  assert.strictEqual(registered, true);
+  assert.strictEqual(global.fontProviders.codexFonts.initFunction, initFunction);
 
   const enabled = await emitAsync(emitter, 'setFontProviderEnabled', {
     ...base,

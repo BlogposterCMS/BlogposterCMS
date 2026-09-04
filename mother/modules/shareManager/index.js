@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/shareManager/index.js
  *
@@ -138,7 +144,7 @@ function setupShareEventListeners(motherEmitter) {
   console.log('[SHARE MANAGER] Setting up meltdown event listeners for share links...');
 
   // CREATE SHARE LINK
-  motherEmitter.on('createShareLink', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_SHARE_LINK, (payload, originalCb) => {
     // Wrapping meltdown callback
     const callback = onceCallback(originalCb);
 
@@ -151,7 +157,7 @@ function setupShareEventListeners(motherEmitter) {
         expiresAt       // optional timestamp
       } = payload || {};
 
-      assertSharePayload(payload, 'createShareLink');
+      assertSharePayload(payload, BACKEND_EVENTS.CREATE_SHARE_LINK);
       const safeFilePath = normalizeSharePath(filePath);
       userId = userId || actorIdFromPayload(payload);
       if (!userId) {
@@ -177,9 +183,7 @@ function setupShareEventListeners(motherEmitter) {
       }, TIMEOUT_DURATION);
 
       // meltdown => dbInsert => table='__rawSQL__', data.rawSQL='CREATE_SHARE_LINK'
-      motherEmitter.emit(
-        'dbInsert',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
           jwt,
           moduleName: 'shareManager',
           moduleType: 'core',
@@ -188,26 +192,28 @@ function setupShareEventListeners(motherEmitter) {
             rawSQL: 'CREATE_SHARE_LINK',
             ...dataObj
           }
-        },
-        (err, result) => {
-          clearTimeout(to);
-          if (err) return callback(err);
-
-          // Suppose bridging returns something, or we just build a final URL
-          const baseDomain = process.env.APP_BASE_URL || 'https://example.com';
-          const fileName = extractFileName(safeFilePath);
-          const shareURL = `${baseDomain}/s/${shortToken}/${fileName}`;
-
-          callback(null, { shortToken, shareURL, expiresAt: dataObj.expiresAt, result });
-        }
-      );
+        }).then(result => {
+  clearTimeout(to);
+  // Suppose bridging returns something, or we just build a final URL
+  const baseDomain = process.env.APP_BASE_URL || 'https://example.com';
+  const fileName = extractFileName(safeFilePath);
+  const shareURL = `${baseDomain}/s/${shortToken}/${fileName}`;
+  callback(null, {
+    shortToken,
+    shareURL,
+    expiresAt: dataObj.expiresAt,
+    result
+  });
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // REVOKE SHARE LINK
-  motherEmitter.on('revokeShareLink', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REVOKE_SHARE_LINK, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -217,7 +223,7 @@ function setupShareEventListeners(motherEmitter) {
         userId // who is revoking
       } = payload || {};
 
-      assertSharePayload(payload, 'revokeShareLink');
+      assertSharePayload(payload, BACKEND_EVENTS.REVOKE_SHARE_LINK);
       shortToken = normalizeShortToken(shortToken);
       userId = userId || actorIdFromPayload(payload);
       if (!userId) {
@@ -231,9 +237,7 @@ function setupShareEventListeners(motherEmitter) {
       }, TIMEOUT_DURATION);
 
       // meltdown => dbUpdate or dbDelete with placeholder
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: 'shareManager',
           moduleType: 'core',
@@ -243,25 +247,28 @@ function setupShareEventListeners(motherEmitter) {
             shortToken,
             userId
           }
-        },
-        (err, result) => {
-          clearTimeout(to);
-          if (err) return callback(err);
-          callback(null, { success: true, shortToken, result });
-        }
-      );
+        }).then(result => {
+  clearTimeout(to);
+  callback(null, {
+    success: true,
+    shortToken,
+    result
+  });
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // GET SHARE DETAILS
-  motherEmitter.on('getShareDetails', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_SHARE_DETAILS, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
       const { jwt } = payload || {};
-      assertSharePayload(payload, 'getShareDetails');
+      assertSharePayload(payload, BACKEND_EVENTS.GET_SHARE_DETAILS);
       const shortToken = normalizeShortToken(payload?.shortToken);
 
       requirePermission(payload, 'share.read');
@@ -271,9 +278,7 @@ function setupShareEventListeners(motherEmitter) {
       }, TIMEOUT_DURATION);
 
       // meltdown => dbSelect => table='__rawSQL__', data.rawSQL='GET_SHARE_LINK'
-      motherEmitter.emit(
-        'dbSelect',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'shareManager',
           moduleType: 'core',
@@ -282,20 +287,19 @@ function setupShareEventListeners(motherEmitter) {
             rawSQL: 'GET_SHARE_LINK',
             shortToken
           }
-        },
-        (err, rows) => {
-          clearTimeout(to);
-          if (err) return callback(err);
-          if (!rows || rows.length === 0) {
-            return callback(null, null);
-          }
-          const row = rows[0];
-          if (row.expiresAt && Date.now() > new Date(row.expiresAt).getTime()) {
-            return callback(null, null);
-          }
-          callback(null, row);
-        }
-      );
+        }).then(rows => {
+  clearTimeout(to);
+  if (!rows || rows.length === 0) {
+    return callback(null, null);
+  }
+  const row = rows[0];
+  if (row.expiresAt && Date.now() > new Date(row.expiresAt).getTime()) {
+    return callback(null, null);
+  }
+  callback(null, row);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }

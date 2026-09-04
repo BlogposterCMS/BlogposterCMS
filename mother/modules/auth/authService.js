@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/auth/authService.js
  *
@@ -97,9 +103,7 @@ function assertCorePayloadFrom(payload, eventName, allowedModuleNames) {
 
 /** ==================== Refresh Token Storage (DB-agnostic) ==================== **/
 function storeRefreshTokenInDB(userId, refreshToken, expiresAt, callback) {
-  motherEmitter.emit(
-    'dbInsert',
-    {
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       moduleName: 'authModule',
       table: 'refresh_tokens',
       data: {
@@ -108,33 +112,23 @@ function storeRefreshTokenInDB(userId, refreshToken, expiresAt, callback) {
         created_at: new Date().toISOString(),
         expires_at: expiresAt
       }
-    },
-    callback
-  );
+    }).then(result => callback(null, result), error => callback(error));
 }
 
 function getRefreshTokenFromDB(refreshToken, callback) {
-  motherEmitter.emit(
-    'dbSelect',
-    {
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       moduleName: 'authModule',
       table: 'refresh_tokens',
       where: { token_value: refreshToken }
-    },
-    callback
-  );
+    }).then(result => callback(null, result), error => callback(error));
 }
 
 function removeRefreshToken(refreshToken, callback) {
-  motherEmitter.emit(
-    'dbDelete',
-    {
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       moduleName: 'authModule',
       table: 'refresh_tokens',
       where: { token_value: refreshToken }
-    },
-    callback
-  );
+    }).then(result => callback(null, result), error => callback(error));
 }
 
 /** ==================== meltdown event listeners for the Auth Module ==================== **/
@@ -142,10 +136,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   console.log('[AUTH MODULE] Setting up meltdown events...like a boss.');
 
   // A) setModuleTokenExpiry
-  motherEmitter.on('setModuleTokenExpiry', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_MODULE_TOKEN_EXPIRY, (payload, cb) => {
     const callback = onceCallback(cb); // ensure 1 single response
     try {
-      assertCorePayloadFrom(payload, 'setModuleTokenExpiry', AUTH_MODULE_NAME);
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.SET_MODULE_TOKEN_EXPIRY, AUTH_MODULE_NAME);
     } catch (err) {
       return callback(err);
     }
@@ -159,10 +153,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // B) setUserTokenExpiry
-  motherEmitter.on('setUserTokenExpiry', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_USER_TOKEN_EXPIRY, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertCorePayloadFrom(payload, 'setUserTokenExpiry', AUTH_MODULE_NAME);
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.SET_USER_TOKEN_EXPIRY, AUTH_MODULE_NAME);
     } catch (err) {
       return callback(err);
     }
@@ -176,10 +170,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // C) issueModuleToken
-  motherEmitter.on('issueModuleToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.ISSUE_MODULE_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertInternalAuthPayload(payload, 'issueModuleToken');
+      assertInternalAuthPayload(payload, BACKEND_EVENTS.ISSUE_MODULE_TOKEN);
       const { moduleName, trustLevel, authModuleSecret, signAsModule } = payload || {};
       const actualModuleName = signAsModule || moduleName;
       const jti = crypto.randomBytes(16).toString('hex');
@@ -211,10 +205,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // D) issueUserToken
-  motherEmitter.on('issueUserToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.ISSUE_USER_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertInternalAuthPayload(payload, 'issueUserToken');
+      assertInternalAuthPayload(payload, BACKEND_EVENTS.ISSUE_USER_TOKEN);
       const {
         skipJWT,
         authModuleSecret,
@@ -228,82 +222,66 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
         customRoles
       } = payload || {};
 
-      motherEmitter.emit(
-        'issueModuleToken',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
           skipJWT: true,
           authModuleSecret: authModuleSecret,
           moduleName: 'auth',
           moduleType: 'core',
           trustLevel: 'high',
           signAsModule: 'userManagement'
-        },
-        (modErr, userMgmtToken) => {
-          if (modErr) {
-            console.error('[AUTH MODULE] issueUserToken => subcall => issueModuleToken failed =>', modErr.message);
-            return callback(modErr);
-          }
-
-          motherEmitter.emit(
-            'getUserDetailsById',
-            {
-              jwt: userMgmtToken,
-              moduleName: 'userManagement',
-              moduleType: 'core',
-              userId
-            },
-            (err, userObj) => {
-              if (err) return callback(err);
-              if (!userObj) {
-                return callback(new Error(`User not found => id=${userId}`));
-              }
-
-              const finalRole = role || userObj.role || 'user';
-              const trustLevel = mapRoleToTrustLevel(finalRole);
-              let expiresIn = getUserExpiry(finalRole, trustLevel);
-              if (userTokenLifetime) {
-                expiresIn = userTokenLifetime;
-              }
-
-              const jti = crypto.randomBytes(16).toString('hex');
-              const tokenVersion = userObj.token_version || 0;
-
-              const signPayload = {
-                userId,
-                role: finalRole,
-                trustLevel,
-                isUser: true,
-                jti,
-                tokenVersion
-              };
-
-              signPayload.permissions = {};
-              if (finalRole === 'admin') {
-                signPayload.permissions['*'] = true;
-              }
-              if (customPermissions) {
-                Object.assign(signPayload.permissions, customPermissions);
-              }
-              if (customRoles) {
-                signPayload.roles = customRoles;
-              }
-
-              const finalSecret = combineSecretWithSalt(JWT_SECRET, trustLevel);
-              const userToken = jwt.sign(signPayload, finalSecret, { expiresIn });
-
-              traceRuntimeEvent(
-                `[AUTH MODULE] issueUserToken => userId=${userId}, version=${tokenVersion}, jti=${jti}`
-              );
-              if (!userToJtiMapping[userId]) {
-                userToJtiMapping[userId] = [];
-              }
-              userToJtiMapping[userId].push(jti);
-
-              callback(null, userToken);
-            }
-          );
-        }
-      );
+        }).then(userMgmtToken => {
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_ID, {
+    jwt: userMgmtToken,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    userId
+  }).then(userObj => {
+    if (!userObj) {
+      return callback(new Error(`User not found => id=${userId}`));
+    }
+    const finalRole = role || userObj.role || 'user';
+    const trustLevel = mapRoleToTrustLevel(finalRole);
+    let expiresIn = getUserExpiry(finalRole, trustLevel);
+    if (userTokenLifetime) {
+      expiresIn = userTokenLifetime;
+    }
+    const jti = crypto.randomBytes(16).toString('hex');
+    const tokenVersion = userObj.token_version || 0;
+    const signPayload = {
+      userId,
+      role: finalRole,
+      trustLevel,
+      isUser: true,
+      jti,
+      tokenVersion
+    };
+    signPayload.permissions = {};
+    if (finalRole === 'admin') {
+      signPayload.permissions['*'] = true;
+    }
+    if (customPermissions) {
+      Object.assign(signPayload.permissions, customPermissions);
+    }
+    if (customRoles) {
+      signPayload.roles = customRoles;
+    }
+    const finalSecret = combineSecretWithSalt(JWT_SECRET, trustLevel);
+    const userToken = jwt.sign(signPayload, finalSecret, {
+      expiresIn
+    });
+    traceRuntimeEvent(`[AUTH MODULE] issueUserToken => userId=${userId}, version=${tokenVersion}, jti=${jti}`);
+    if (!userToJtiMapping[userId]) {
+      userToJtiMapping[userId] = [];
+    }
+    userToJtiMapping[userId].push(jti);
+    callback(null, userToken);
+  }, err => {
+    return callback(err);
+  });
+}, modErr => {
+  console.error('[AUTH MODULE] issueUserToken => subcall => issueModuleToken failed =>', modErr.message);
+  return callback(modErr);
+});
     } catch (ex) {
       console.error('[AUTH MODULE] issueUserToken => meltdown meltdown =>', ex.message);
       callback(ex);
@@ -311,7 +289,7 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // E) issuePublicToken
-  motherEmitter.on('issuePublicToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
 
@@ -338,7 +316,7 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // E2) ensurePublicToken – return a valid public token, refreshing if needed
-  motherEmitter.on('ensurePublicToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.ENSURE_PUBLIC_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     let current = global.pagesPublicToken;
     let needsRefresh = true;
@@ -357,15 +335,12 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
     }
 
     if (!current || needsRefresh) {
-      motherEmitter.emit(
-        'issuePublicToken',
-        { purpose: 'public', moduleName: 'auth' },
-        (err, newTok) => {
-          if (err) return callback(err);
-          global.pagesPublicToken = newTok;
-          callback(null, newTok);
-        }
-      );
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN, { purpose: 'public', moduleName: 'auth' }).then(newTok => {
+  global.pagesPublicToken = newTok;
+  callback(null, newTok);
+}, err => {
+  return callback(err);
+});
     } else {
       callback(null, current);
 
@@ -373,10 +348,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // F) validateToken
-  motherEmitter.on('validateToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.VALIDATE_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertCorePayloadFrom(payload, 'validateToken', AUTH_MODULE_NAME);
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.VALIDATE_TOKEN, AUTH_MODULE_NAME);
     } catch (err) {
       return callback(err);
     }
@@ -400,39 +375,32 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
       if (decodedVerified.isUser && decodedVerified.userId) {
         // Auth owns token validation, so the account/version lookup must not
         // depend on the permissions carried by the token being validated.
-        motherEmitter.emit(
-          'issueModuleToken',
-          {
+        requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
             skipJWT: true,
             authModuleSecret: process.env.AUTH_MODULE_INTERNAL_SECRET,
             moduleName: 'auth',
             moduleType: 'core',
             trustLevel: 'high',
             signAsModule: 'userManagement'
-          },
-          (tokenErr, userMgmtToken) => {
-            if (tokenErr) return callback(tokenErr);
-            motherEmitter.emit(
-              'getUserDetailsById',
-              {
-                jwt: userMgmtToken,
-                moduleName: 'userManagement',
-                moduleType: 'core',
-                userId: decodedVerified.userId
-              },
-              (err, userObj) => {
-                if (err) return callback(err);
-                if (!userObj) return callback(new Error('User not found => token invalid?'));
-
-                const dbVersion = userObj.token_version || 0;
-                if (dbVersion !== decodedVerified.tokenVersion) {
-                  return callback(new Error('Token version mismatch => user roles changed => token invalid'));
-                }
-                callback(null, decodedVerified);
-              }
-            );
-          }
-        );
+          }).then(userMgmtToken => {
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_ID, {
+    jwt: userMgmtToken,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    userId: decodedVerified.userId
+  }).then(userObj => {
+    if (!userObj) return callback(new Error('User not found => token invalid?'));
+    const dbVersion = userObj.token_version || 0;
+    if (dbVersion !== decodedVerified.tokenVersion) {
+      return callback(new Error('Token version mismatch => user roles changed => token invalid'));
+    }
+    callback(null, decodedVerified);
+  }, err => {
+    return callback(err);
+  });
+}, tokenErr => {
+  return callback(tokenErr);
+});
       } else {
         // presumably a module token or public token
         return callback(null, decodedVerified);
@@ -444,10 +412,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // G) revokeToken
-  motherEmitter.on('revokeToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.REVOKE_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertCorePayloadFrom(payload, 'revokeToken', AUTH_MODULE_NAME);
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.REVOKE_TOKEN, AUTH_MODULE_NAME);
     } catch (err) {
       return callback(err);
     }
@@ -461,10 +429,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // H) revokeAllTokensForUser
-  motherEmitter.on('revokeAllTokensForUser', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.REVOKE_ALL_TOKENS_FOR_USER, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertCorePayloadFrom(payload, 'revokeAllTokensForUser', [
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.REVOKE_ALL_TOKENS_FOR_USER, [
         AUTH_MODULE_NAME,
         USER_MANAGEMENT_MODULE_NAME
       ]);
@@ -483,10 +451,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
   });
 
   // I) Refresh Token meltdown events
-  motherEmitter.on('issueRefreshToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.ISSUE_REFRESH_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertCorePayloadFrom(payload, 'issueRefreshToken', AUTH_MODULE_NAME);
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.ISSUE_REFRESH_TOKEN, AUTH_MODULE_NAME);
       const { userId } = payload || {};
       if (!userId) {
         return callback(new Error('Missing userId. We can’t refresh for user 0.'));
@@ -503,10 +471,10 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
     }
   });
 
-  motherEmitter.on('refreshAccessToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.REFRESH_ACCESS_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertCorePayloadFrom(payload, 'refreshAccessToken', AUTH_MODULE_NAME);
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.REFRESH_ACCESS_TOKEN, AUTH_MODULE_NAME);
     } catch (err) {
       return callback(err);
     }
@@ -524,42 +492,37 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
         return callback(new Error('Refresh token expired – time to re-login, buddy.'));
       }
 
-      motherEmitter.emit(
-        'getUserDetailsById',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_ID, {
           jwt: 'skip-check',
           moduleName: 'userManagement',
           moduleType: 'core',
           userId: row.user_id
-        },
-        (uErr, userObj) => {
-          if (uErr) return callback(uErr);
-          if (!userObj) return callback(new Error('User not found => cannot refresh.'));
-
-          motherEmitter.emit(
-            'issueUserToken',
-            {
-              skipJWT: true,
-              moduleName: 'auth',
-              moduleType: 'core',
-              authModuleSecret: process.env.AUTH_MODULE_INTERNAL_SECRET,
-              userId: userObj.id,
-              role: userObj.role
-            },
-            (tokenErr, newAccessToken) => {
-              if (tokenErr) return callback(tokenErr);
-              callback(null, { accessToken: newAccessToken });
-            }
-          );
-        }
-      );
+        }).then(userObj => {
+  if (!userObj) return callback(new Error('User not found => cannot refresh.'));
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_USER_TOKEN, {
+    skipJWT: true,
+    moduleName: 'auth',
+    moduleType: 'core',
+    authModuleSecret: process.env.AUTH_MODULE_INTERNAL_SECRET,
+    userId: userObj.id,
+    role: userObj.role
+  }).then(newAccessToken => {
+    callback(null, {
+      accessToken: newAccessToken
+    });
+  }, tokenErr => {
+    return callback(tokenErr);
+  });
+}, uErr => {
+  return callback(uErr);
+});
     });
   });
 
-  motherEmitter.on('revokeRefreshToken', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.REVOKE_REFRESH_TOKEN, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
-      assertCorePayloadFrom(payload, 'revokeRefreshToken', AUTH_MODULE_NAME);
+      assertCorePayloadFrom(payload, BACKEND_EVENTS.REVOKE_REFRESH_TOKEN, AUTH_MODULE_NAME);
     } catch (err) {
       return callback(err);
     }

@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 
@@ -134,39 +138,33 @@ function normalizeLanguagePayload(payload = {}) {
 }
 
 function dbSelect(motherEmitter, jwt, rawSQL, params) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit('dbSelect', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: MODULE_NAME,
       moduleType: MODULE_TYPE,
       table: '__rawSQL__',
       data: { rawSQL, params }
-    }, onceCallback((err, result) => (err ? reject(err) : resolve(result))));
-  });
+    });
 }
 
 function dbUpdate(motherEmitter, jwt, rawSQL, params) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit('dbUpdate', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
       jwt,
       moduleName: MODULE_NAME,
       moduleType: MODULE_TYPE,
       table: '__rawSQL__',
       data: { rawSQL, params }
-    }, onceCallback((err, result) => (err ? reject(err) : resolve(result))));
-  });
+    });
 }
 
 function dbDelete(motherEmitter, jwt, rawSQL, params) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit('dbDelete', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       jwt,
       moduleName: MODULE_NAME,
       moduleType: MODULE_TYPE,
       table: '__rawSQL__',
       where: { rawSQL, params }
-    }, onceCallback((err, result) => (err ? reject(err) : resolve(result))));
-  });
+    });
 }
 
 function firstOrNull(result) {
@@ -176,10 +174,10 @@ function firstOrNull(result) {
 function setupTranslationCrudEvents(motherEmitter) {
   console.log('[TRANSLATION MANAGER] Setting up translation CRUD meltdown events...');
 
-  motherEmitter.on('createTranslatedText', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_TRANSLATED_TEXT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'createTranslatedText');
+      assertTranslationPayload(payload, BACKEND_EVENTS.CREATE_TRANSLATED_TEXT);
       requirePermission(payload, 'translations.create');
       callback(null, await dbUpdate(motherEmitter, payload.jwt, 'UPSERT_TRANSLATED_TEXT', normalizeTextPayload(payload)));
     } catch (err) {
@@ -187,10 +185,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('upsertTranslatedText', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPSERT_TRANSLATED_TEXT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'upsertTranslatedText');
+      assertTranslationPayload(payload, BACKEND_EVENTS.UPSERT_TRANSLATED_TEXT);
       requirePermission(payload, 'translations.update');
       callback(null, await dbUpdate(motherEmitter, payload.jwt, 'UPSERT_TRANSLATED_TEXT', normalizeTextPayload(payload)));
     } catch (err) {
@@ -198,10 +196,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getTranslatedText', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_TRANSLATED_TEXT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'getTranslatedText');
+      assertTranslationPayload(payload, BACKEND_EVENTS.GET_TRANSLATED_TEXT);
       requirePermission(payload, 'translations.read');
       callback(null, firstOrNull(await dbSelect(motherEmitter, payload.jwt, 'GET_TRANSLATED_TEXT', normalizeTextRef(payload))));
     } catch (err) {
@@ -209,10 +207,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listTranslatedTexts', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_TRANSLATED_TEXTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'listTranslatedTexts');
+      assertTranslationPayload(payload, BACKEND_EVENTS.LIST_TRANSLATED_TEXTS);
       requirePermission(payload, 'translations.read');
       callback(null, await dbSelect(motherEmitter, payload.jwt, 'LIST_TRANSLATED_TEXTS', {
         objectId: normalizeScalarId(payload.objectId ?? payload.object_id ?? payload.targetId),
@@ -227,10 +225,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateTranslatedText', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_TRANSLATED_TEXT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'updateTranslatedText');
+      assertTranslationPayload(payload, BACKEND_EVENTS.UPDATE_TRANSLATED_TEXT);
       requirePermission(payload, 'translations.update');
       callback(null, await dbUpdate(motherEmitter, payload.jwt, 'UPDATE_TRANSLATED_TEXT', normalizeTextPayload(payload)));
     } catch (err) {
@@ -238,10 +236,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteTranslatedText', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_TRANSLATED_TEXT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'deleteTranslatedText');
+      assertTranslationPayload(payload, BACKEND_EVENTS.DELETE_TRANSLATED_TEXT);
       requirePermission(payload, 'translations.delete');
       callback(null, await dbDelete(motherEmitter, payload.jwt, 'DELETE_TRANSLATED_TEXT', normalizeTextRef(payload)));
     } catch (err) {
@@ -249,10 +247,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('addLanguage', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.ADD_LANGUAGE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'addLanguage');
+      assertTranslationPayload(payload, BACKEND_EVENTS.ADD_LANGUAGE);
       requirePermission(payload, 'translations.addLanguage');
       callback(null, await dbUpdate(motherEmitter, payload.jwt, 'UPSERT_TRANSLATION_LANGUAGE', normalizeLanguagePayload(payload)));
     } catch (err) {
@@ -260,10 +258,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('upsertTranslationLanguage', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPSERT_TRANSLATION_LANGUAGE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'upsertTranslationLanguage');
+      assertTranslationPayload(payload, BACKEND_EVENTS.UPSERT_TRANSLATION_LANGUAGE);
       requirePermission(payload, 'translations.addLanguage');
       callback(null, await dbUpdate(motherEmitter, payload.jwt, 'UPSERT_TRANSLATION_LANGUAGE', normalizeLanguagePayload(payload)));
     } catch (err) {
@@ -271,10 +269,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getTranslationLanguage', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_TRANSLATION_LANGUAGE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'getTranslationLanguage');
+      assertTranslationPayload(payload, BACKEND_EVENTS.GET_TRANSLATION_LANGUAGE);
       requirePermission(payload, 'translations.listLanguages');
       const { languageCode } = normalizeLanguagePayload(payload);
       callback(null, firstOrNull(await dbSelect(motherEmitter, payload.jwt, 'GET_TRANSLATION_LANGUAGE', { languageCode })));
@@ -283,10 +281,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listLanguages', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_LANGUAGES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'listLanguages');
+      assertTranslationPayload(payload, BACKEND_EVENTS.LIST_LANGUAGES);
       requirePermission(payload, 'translations.listLanguages');
       callback(null, await dbSelect(motherEmitter, payload.jwt, 'LIST_TRANSLATION_LANGUAGES', {
         active: typeof payload.active === 'undefined' ? '' : payload.active
@@ -296,10 +294,10 @@ function setupTranslationCrudEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteTranslationLanguage', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_TRANSLATION_LANGUAGE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertTranslationPayload(payload, 'deleteTranslationLanguage');
+      assertTranslationPayload(payload, BACKEND_EVENTS.DELETE_TRANSLATION_LANGUAGE);
       requirePermission(payload, 'translations.delete');
       const { languageCode } = normalizeLanguagePayload(payload);
       callback(null, await dbDelete(motherEmitter, payload.jwt, 'DELETE_TRANSLATION_LANGUAGE', { languageCode }));

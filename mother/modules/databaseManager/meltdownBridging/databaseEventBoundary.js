@@ -1,11 +1,15 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
+
+
 const fs = require('fs');
 const path = require('path');
 
 const INTERNAL_DATABASE_CALL = Symbol('databaseManager.internalDatabaseCall');
 const INTERNAL_COMMUNITY_STORAGE_CALL = Symbol('databaseManager.internalCommunityStorageCall');
-const COMMUNITY_MUTATION_EVENTS = new Set(['dbInsert', 'dbUpdate', 'dbDelete']);
+const COMMUNITY_MUTATION_EVENTS = new Set([BACKEND_EVENTS.DB_INSERT, BACKEND_EVENTS.DB_UPDATE, BACKEND_EVENTS.DB_DELETE]);
 const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const SAFE_MODULE_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
 
@@ -101,11 +105,11 @@ function assertHighLevelCrudIdentifiers(eventName, payload = {}) {
 
   assertSafeDatabaseIdentifier(payload.table, 'table');
 
-  if (eventName === 'dbInsert' || eventName === 'dbUpdate') {
+  if (eventName === BACKEND_EVENTS.DB_INSERT || eventName === BACKEND_EVENTS.DB_UPDATE) {
     assertSafeObjectKeys(payload.data, 'data');
   }
 
-  if (eventName !== 'dbInsert') {
+  if (eventName !== BACKEND_EVENTS.DB_INSERT) {
     assertSafeObjectKeys(payload.where, 'where');
   }
 }

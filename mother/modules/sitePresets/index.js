@@ -1,5 +1,7 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const {
@@ -44,16 +46,16 @@ function registerEvent(motherEmitter, eventName, permission, handler) {
 }
 
 function setupSitePresetEvents(motherEmitter) {
-  registerEvent(motherEmitter, 'sitePresets.list', 'builder.use', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.SITE_PRESETS_LIST, 'builder.use', payload =>
     listSitePresets(motherEmitter, payload.jwt)
   );
-  registerEvent(motherEmitter, 'sitePresets.create', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.SITE_PRESETS_CREATE, 'builder.publish', payload =>
     createSitePreset(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'sitePresets.delete', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.SITE_PRESETS_DELETE, 'builder.publish', payload =>
     deleteSitePreset(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'sitePresets.apply', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.SITE_PRESETS_APPLY, 'builder.publish', payload =>
     applySitePreset(motherEmitter, payload.jwt, payload)
   );
 }

@@ -677,8 +677,9 @@ test('app meltdown route uses the shared HTTP policy', () => {
   assert.match(routerSource, /isHttpAdminPrincipal\(decoded\)/);
   assert.match(routerSource, /const jwt = globalJwt;/);
   assert.doesNotMatch(routerSource, /targetPayload\.jwt\s*\|\|\s*globalJwt/);
-  assert.match(routerSource, /listenerCount\(targetEventName\) === 0/);
-  assert.match(routerSource, /motherEmitter\.emit\(targetEventName, targetPayload/);
+  assert.match(routerSource, /getHttpEventContract\(targetEventName\)/);
+  assert.match(routerSource, /requestEvent\(motherEmitter, contract, targetPayload\)/);
+  assert.match(routerSource, /serializeEventContractError/);
   assert.doesNotMatch(routerSource, /unwrapData/);
 });
 

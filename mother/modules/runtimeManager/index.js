@@ -1,7 +1,16 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 const crypto = require('crypto');
 const { hasPermission } = require('../userManagement/permissionUtils');
+const {
+  BACKEND_EVENT_CONTRACTS,
+  requestBackendEvent
+} = require('../../contracts/backendEventContracts');
+const { registerEventContractHandler } = require('../../contracts/eventContract');
 
 const MODULE_NAME = 'runtimeManager';
 const MODULE_TYPE = 'core';
@@ -16,389 +25,12 @@ const PRIVATE_META_KEY_FRAGMENTS = ['password', 'secret', 'token', 'private', 'p
 const PUBLIC_READ_PRINCIPAL = { permissions: {} };
 const PUBLIC_COMMENT_PRINCIPAL = { permissions: { comments: { create: true } } };
 
-const CMS_ADMIN_ACTIONS = Object.freeze({
-  content: {
-    list: { eventName: 'listContentEntries', moduleName: 'contentEngine', permission: 'content.update' },
-    get: { eventName: 'getContentEntry', moduleName: 'contentEngine', permission: 'content.update' },
-    create: { eventName: 'createContentEntry', moduleName: 'contentEngine', permission: 'content.create' },
-    update: { eventName: 'updateContentEntry', moduleName: 'contentEngine', permission: 'content.update' },
-    publish: { eventName: 'publishContentEntry', moduleName: 'contentEngine', permission: 'content.publish' },
-    trash: { eventName: 'trashContentEntry', moduleName: 'contentEngine', permission: 'content.delete' },
-    restore: { eventName: 'restoreContentEntry', moduleName: 'contentEngine', permission: 'content.restore' },
-    revisions: { eventName: 'getContentRevisions', moduleName: 'contentEngine', permission: 'content.update' },
-    revision: { eventName: 'getContentRevision', moduleName: 'contentEngine', permission: 'content.update' },
-    restoreRevision: { eventName: 'restoreContentRevision', moduleName: 'contentEngine', permission: 'content.update' },
-    scheduled: { eventName: 'listScheduledContentEntries', moduleName: 'contentEngine', permission: 'content.publish' },
-    trashed: { eventName: 'listTrashedContentEntries', moduleName: 'contentEngine', permission: 'content.delete' }
-  },
-  pages: {
-    list: { eventName: 'getAllPages', moduleName: 'pagesManager', permission: 'pages.read' },
-    byLane: { eventName: 'getPagesByLane', moduleName: 'pagesManager', permission: 'pages.read' },
-    get: { eventName: 'getPageById', moduleName: 'pagesManager', permission: 'pages.read' },
-    getBySlug: { eventName: 'getPageBySlug', moduleName: 'pagesManager', permission: 'pages.read' },
-    start: { eventName: 'getStartPage', moduleName: 'pagesManager', permission: 'pages.read' },
-    children: { eventName: 'getChildPages', moduleName: 'pagesManager', permission: 'pages.read' },
-    envelope: { eventName: 'getEnvelope', moduleName: 'pagesManager', permission: 'pages.read' },
-    search: { eventName: 'searchPages', moduleName: 'pagesManager', permission: 'pages.read' },
-    create: { eventName: 'createPage', moduleName: 'pagesManager', permission: 'pages.create' },
-    update: { eventName: 'updatePage', moduleName: 'pagesManager', permission: 'pages.update' },
-    trash: { eventName: 'setAsDeleted', moduleName: 'pagesManager', permission: 'pages.delete' },
-    delete: { eventName: 'deletePage', moduleName: 'pagesManager', permission: 'pages.delete' },
-    setStart: { eventName: 'setAsStart', moduleName: 'pagesManager', permission: 'pages.manage' }
-  },
-  contentTypes: {
-    list: { eventName: 'listContentTypes', moduleName: 'contentEngine', permission: 'content.update' },
-    get: { eventName: 'getContentType', moduleName: 'contentEngine', permission: 'content.update' },
-    upsert: { eventName: 'registerContentType', moduleName: 'contentEngine', permission: 'content.types.manage' }
-  },
-  media: {
-    list: { eventName: 'listMediaAttachments', moduleName: 'mediaManager', permission: 'media.manage' },
-    get: { eventName: 'getMediaAttachment', moduleName: 'mediaManager', permission: 'media.manage' },
-    create: { eventName: 'createMediaAttachment', moduleName: 'mediaManager', permission: 'media.manage' },
-    update: { eventName: 'updateMediaAttachment', moduleName: 'mediaManager', permission: 'media.manage' },
-    delete: { eventName: 'deleteMediaAttachment', moduleName: 'mediaManager', permission: 'media.manage' },
-    upsertVariant: { eventName: 'upsertMediaVariant', moduleName: 'mediaManager', permission: 'media.manage' },
-    listVariants: { eventName: 'listMediaVariants', moduleName: 'mediaManager', permission: 'media.manage' },
-    deleteVariant: { eventName: 'deleteMediaVariant', moduleName: 'mediaManager', permission: 'media.manage' },
-    link: { eventName: 'linkMediaToContent', moduleName: 'mediaManager', permission: 'media.manage' },
-    unlink: { eventName: 'unlinkMediaFromContent', moduleName: 'mediaManager', permission: 'media.manage' },
-    listForContent: { eventName: 'listMediaForContent', moduleName: 'mediaManager', permission: 'media.manage' },
-    listContent: { eventName: 'listContentForMedia', moduleName: 'mediaManager', permission: 'media.manage' },
-    listLocalFolder: { eventName: 'listLocalFolder', moduleName: 'mediaManager', permission: 'media.manage' },
-    createLocalFolder: { eventName: 'createLocalFolder', moduleName: 'mediaManager', permission: 'media.manage' },
-    uploadToFolder: { eventName: 'uploadFileToFolder', moduleName: 'mediaManager', permission: 'media.manage' },
-    deleteLocalItem: { eventName: 'deleteLocalItem', moduleName: 'mediaManager', permission: 'media.manage' },
-    renameLocalItem: { eventName: 'renameLocalItem', moduleName: 'mediaManager', permission: 'media.manage' },
-    makeFilePublic: { eventName: 'makeFilePublic', moduleName: 'mediaManager', permission: 'media.manage' }
-  },
-  widgets: {
-    list: { eventName: 'getWidgets', moduleName: 'widgetManager', permission: 'widgets.read' },
-    create: { eventName: 'createWidget', moduleName: 'widgetManager', permission: 'widgets.create' },
-    update: { eventName: 'updateWidget', moduleName: 'widgetManager', permission: 'widgets.update' },
-    delete: { eventName: 'deleteWidget', moduleName: 'widgetManager', permission: 'widgets.delete' },
-    saveLayout: { eventName: 'saveLayout.v1', moduleName: 'widgetManager', permission: 'widgets.saveLayout' },
-    registerUsage: { eventName: 'registerWidgetUsage', moduleName: 'widgetManager', permission: 'widgets.read' }
-  },
-  plainSpace: {
-    widgetRegistry: { eventName: 'widget.registry.request.v1', moduleName: 'plainspace', permission: 'widgets.read' },
-    layoutForViewport: { eventName: 'getLayoutForViewport', moduleName: 'plainspace', permission: 'plainspace.read' },
-    allLayoutsForPage: { eventName: 'getAllLayoutsForPage', moduleName: 'plainspace', permission: 'plainspace.read' },
-    saveLayoutForViewport: { eventName: 'saveLayoutForViewport', moduleName: 'plainspace', permission: 'plainspace.saveLayout' },
-    layoutTemplate: { eventName: 'getLayoutTemplate', moduleName: 'plainspace', permission: 'plainspace.read' },
-    layoutTemplateNames: { eventName: 'getLayoutTemplateNames', moduleName: 'plainspace', permission: 'plainspace.read' },
-    saveLayoutTemplate: { eventName: 'saveLayoutTemplate', moduleName: 'plainspace', permission: 'plainspace.saveLayoutTemplate' },
-    deleteLayoutTemplate: { eventName: 'deleteLayoutTemplate', moduleName: 'plainspace', permission: 'plainspace.saveLayoutTemplate' },
-    globalLayoutTemplate: { eventName: 'getGlobalLayoutTemplate', moduleName: 'plainspace', permission: 'plainspace.read' },
-    setGlobalLayoutTemplate: { eventName: 'setGlobalLayoutTemplate', moduleName: 'plainspace', permission: 'plainspace.saveLayoutTemplate' },
-    widgetInstance: { eventName: 'getWidgetInstance', moduleName: 'plainspace', permission: 'plainspace.widgetInstance' },
-    saveWidgetInstance: { eventName: 'saveWidgetInstance', moduleName: 'plainspace', permission: 'plainspace.widgetInstance' },
-    publishedDesignMeta: { eventName: 'getPublishedDesignMeta', moduleName: 'plainspace', permission: 'plainspace.read' },
-    savePublishedDesignMeta: { eventName: 'savePublishedDesignMeta', moduleName: 'plainspace', permission: 'plainspace.saveLayoutTemplate' }
-  },
-  workflow: {
-    acquireLock: { eventName: 'acquireContentLock', moduleName: 'workflowManager', permission: 'content.update' },
-    refreshLock: { eventName: 'refreshContentLock', moduleName: 'workflowManager', permission: 'content.update' },
-    releaseLock: { eventName: 'releaseContentLock', moduleName: 'workflowManager', permission: 'content.update' },
-    getLock: { eventName: 'getContentLock', moduleName: 'workflowManager', permission: 'content.update' },
-    saveAutosave: { eventName: 'saveContentAutosave', moduleName: 'workflowManager', permission: 'content.update' },
-    getAutosave: { eventName: 'getContentAutosave', moduleName: 'workflowManager', permission: 'content.update' },
-    listAutosaves: { eventName: 'listContentAutosaves', moduleName: 'workflowManager', permission: 'content.update' },
-    deleteAutosave: { eventName: 'deleteContentAutosave', moduleName: 'workflowManager', permission: 'content.update' },
-    submitReview: { eventName: 'submitContentReview', moduleName: 'workflowManager', permission: 'content.update' },
-    approveReview: { eventName: 'approveContentReview', moduleName: 'workflowManager', permission: 'content.publish' },
-    rejectReview: { eventName: 'rejectContentReview', moduleName: 'workflowManager', permission: 'content.publish' },
-    getReview: { eventName: 'getContentReview', moduleName: 'workflowManager', permission: 'content.publish' },
-    reviewQueue: { eventName: 'listContentReviewQueue', moduleName: 'workflowManager', permission: 'content.publish' }
-  },
-  navigation: {
-    registerLocation: { eventName: 'registerNavigationLocation', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    locations: { eventName: 'listNavigationLocations', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    menus: { eventName: 'listNavigationMenus', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    getMenu: { eventName: 'getNavigationMenu', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    upsertMenu: { eventName: 'upsertNavigationMenu', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    addItem: { eventName: 'addNavigationMenuItem', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    setItems: { eventName: 'setNavigationMenuItems', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    updateItem: { eventName: 'updateNavigationMenuItem', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    deleteItem: { eventName: 'deleteNavigationMenuItem', moduleName: 'navigationManager', permission: 'navigation.manage' },
-    tree: { eventName: 'getNavigationTree', moduleName: 'navigationManager', permission: 'navigation.manage' }
-  },
-  seo: {
-    defaults: { eventName: 'getSeoDefaults', moduleName: 'seoManager', permission: 'seo.manage' },
-    setDefaults: { eventName: 'setSeoDefaults', moduleName: 'seoManager', permission: 'seo.manage' },
-    get: { eventName: 'getSeoMeta', moduleName: 'seoManager', permission: 'seo.manage' },
-    list: { eventName: 'listSeoMeta', moduleName: 'seoManager', permission: 'seo.manage' },
-    upsert: { eventName: 'upsertSeoMeta', moduleName: 'seoManager', permission: 'seo.manage' },
-    delete: { eventName: 'deleteSeoMeta', moduleName: 'seoManager', permission: 'seo.manage' },
-    resolve: { eventName: 'resolveSeoMeta', moduleName: 'seoManager', permission: 'seo.manage' }
-  },
-  comments: {
-    create: { eventName: 'createComment', moduleName: 'commentsManager', permission: 'comments.create' },
-    get: { eventName: 'getComment', moduleName: 'commentsManager', permission: 'comments.moderate' },
-    listForEntry: { eventName: 'listCommentsForEntry', moduleName: 'commentsManager', permission: 'comments.moderate' },
-    update: { eventName: 'updateComment', moduleName: 'commentsManager', permission: 'comments.edit' },
-    updateStatus: { eventName: 'updateCommentStatus', moduleName: 'commentsManager', permission: 'comments.moderate' },
-    delete: { eventName: 'deleteComment', moduleName: 'commentsManager', permission: 'comments.delete' }
-  },
-  metadata: {
-    registerField: { eventName: 'registerMetaField', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    getField: { eventName: 'getMetaField', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    listFields: { eventName: 'listMetaFields', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    deleteField: { eventName: 'deleteMetaField', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    set: { eventName: 'setMetadata', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    get: { eventName: 'getMetadata', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    getValue: { eventName: 'getMetadataValue', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    delete: { eventName: 'deleteMetadata', moduleName: 'metadataManager', permission: 'metadata.manage' },
-    deleteForTarget: { eventName: 'deleteMetadataForTarget', moduleName: 'metadataManager', permission: 'metadata.manage' }
-  },
-  redirects: {
-    upsert: { eventName: 'upsertRedirectRule', moduleName: 'redirectManager', permission: 'redirects.manage' },
-    get: { eventName: 'getRedirectRule', moduleName: 'redirectManager', permission: 'redirects.manage' },
-    list: { eventName: 'listRedirectRules', moduleName: 'redirectManager', permission: 'redirects.manage' },
-    delete: { eventName: 'deleteRedirectRule', moduleName: 'redirectManager', permission: 'redirects.manage' },
-    resolve: { eventName: 'resolveRedirect', moduleName: 'redirectManager', permission: 'redirects.manage' },
-    recordHit: { eventName: 'recordRedirectHit', moduleName: 'redirectManager', permission: 'redirects.manage' },
-    listHits: { eventName: 'listRedirectHits', moduleName: 'redirectManager', permission: 'redirects.manage' }
-  },
-  search: {
-    index: { eventName: 'indexSearchDocument', moduleName: 'searchManager', permission: 'search.manage' },
-    get: { eventName: 'getSearchDocument', moduleName: 'searchManager', permission: 'search.manage' },
-    remove: { eventName: 'removeSearchDocument', moduleName: 'searchManager', permission: 'search.manage' },
-    query: { eventName: 'searchDocuments', moduleName: 'searchManager', permission: 'search.manage' },
-    reindexContent: { eventName: 'reindexContentEntries', moduleName: 'searchManager', permission: 'search.manage' }
-  },
-  settings: {
-    list: { eventName: 'listSettings', moduleName: 'settingsManager', permission: 'settings.core.view' },
-    get: { eventName: 'getSetting', moduleName: 'settingsManager', permission: 'settings.core.view' },
-    public: { eventName: 'getPublicSettings', moduleName: 'settingsManager', permission: 'settings.core.view' },
-    cmsMode: { eventName: 'getCmsMode', moduleName: 'settingsManager', permission: 'settings.core.view' },
-    setCmsMode: { eventName: 'setCmsMode', moduleName: 'settingsManager', permission: 'settings.core.edit' },
-    set: { eventName: 'setSetting', moduleName: 'settingsManager', permission: 'settings.core.edit' },
-    bulk: { eventName: 'setSettings', moduleName: 'settingsManager', permission: 'settings.core.edit' },
-    delete: { eventName: 'deleteSetting', moduleName: 'settingsManager', permission: 'settings.core.edit' }
-  },
-  colors: {
-    list: { eventName: 'colorLibrary.list', moduleName: 'colorLibrary', permission: 'builder.use' },
-    create: { eventName: 'colorLibrary.create', moduleName: 'colorLibrary', permission: 'builder.publish' },
-    update: { eventName: 'colorLibrary.update', moduleName: 'colorLibrary', permission: 'builder.publish' },
-    delete: { eventName: 'colorLibrary.delete', moduleName: 'colorLibrary', permission: 'builder.publish' },
-    createScheme: { eventName: 'colorLibrary.createScheme', moduleName: 'colorLibrary', permission: 'builder.publish' },
-    updateScheme: { eventName: 'colorLibrary.updateScheme', moduleName: 'colorLibrary', permission: 'builder.publish' },
-    activateScheme: { eventName: 'colorLibrary.activateScheme', moduleName: 'colorLibrary', permission: 'builder.publish' },
-    deleteScheme: { eventName: 'colorLibrary.deleteScheme', moduleName: 'colorLibrary', permission: 'builder.publish' }
-  },
-  fontPackages: {
-    list: { eventName: 'fontPackages.list', moduleName: 'fontPackages', permission: 'builder.use' },
-    create: { eventName: 'fontPackages.create', moduleName: 'fontPackages', permission: 'builder.publish' },
-    update: { eventName: 'fontPackages.update', moduleName: 'fontPackages', permission: 'builder.publish' },
-    updateRole: { eventName: 'fontPackages.updateRole', moduleName: 'fontPackages', permission: 'builder.publish' },
-    resetRole: { eventName: 'fontPackages.resetRole', moduleName: 'fontPackages', permission: 'builder.publish' },
-    activate: { eventName: 'fontPackages.activate', moduleName: 'fontPackages', permission: 'builder.publish' },
-    delete: { eventName: 'fontPackages.delete', moduleName: 'fontPackages', permission: 'builder.publish' }
-  },
-  auth: {
-    loginStrategies: { eventName: 'listLoginStrategies', moduleName: 'auth', permission: 'auth.strategies.view' },
-    setStrategyEnabled: { eventName: 'setLoginStrategyEnabled', moduleName: 'auth', permission: 'auth.strategies.manage' }
-  },
-  users: {
-    list: { eventName: 'getAllUsers', moduleName: 'userManagement', permission: 'users.read' },
-    me: { eventName: 'getUserDetailsById', moduleName: 'userManagement', permission: 'users.read', useActorUserId: true },
-    get: { eventName: 'getUserDetailsById', moduleName: 'userManagement', permission: 'users.read' },
-    getByUsername: { eventName: 'getUserDetailsByUsername', moduleName: 'userManagement', permission: 'users.read' },
-    count: { eventName: 'getUserCount', moduleName: 'userManagement', permission: 'users.read' },
-    create: { eventName: 'createUser', moduleName: 'userManagement', permission: 'users.create' },
-    update: { eventName: 'updateUserProfile', moduleName: 'userManagement', permission: 'users.update' },
-    delete: { eventName: 'deleteUser', moduleName: 'userManagement', permission: 'users.delete' },
-    access: { eventName: 'getUserAccess', moduleName: 'userManagement', permission: 'userManagement.editUser' },
-    setAccess: { eventName: 'setUserAccess', moduleName: 'userManagement', permission: 'userManagement.editUser' }
-  },
-  roles: {
-    list: { eventName: 'getAllRoles', moduleName: 'userManagement', permission: 'userManagement.listRoles' },
-    create: { eventName: 'createRole', moduleName: 'userManagement', permission: 'userManagement.createRole' },
-    update: { eventName: 'updateRole', moduleName: 'userManagement', permission: 'userManagement.editRole' },
-    delete: { eventName: 'deleteRole', moduleName: 'userManagement', permission: 'userManagement.deleteRole' },
-    assign: { eventName: 'assignRoleToUser', moduleName: 'userManagement', permission: 'userManagement.editRole' },
-    remove: { eventName: 'removeRoleFromUser', moduleName: 'userManagement', permission: 'userManagement.editRole' },
-    forUser: { eventName: 'getRolesForUser', moduleName: 'userManagement', permission: 'userManagement.listRoles' },
-    incrementToken: { eventName: 'incrementUserTokenVersion', moduleName: 'userManagement', permission: 'userManagement.editUser' }
-  },
-  permissions: {
-    list: { eventName: 'getAllPermissions', moduleName: 'userManagement', permission: 'userManagement.managePermissions' },
-    create: { eventName: 'createPermission', moduleName: 'userManagement', permission: 'userManagement.managePermissions' }
-  },
-  modules: {
-    registry: { eventName: 'getModuleRegistry', moduleName: 'moduleLoader', permission: 'modules.list' },
-    system: { eventName: 'listSystemModules', moduleName: 'moduleLoader', permission: 'modules.list' },
-    activeStaticFrontends: { eventName: 'listActiveStaticFrontends', moduleName: 'moduleLoader', permission: 'modules.listActive' },
-    activate: { eventName: 'activateModuleInRegistry', moduleName: 'moduleLoader', permission: 'modules.activate' },
-    deactivate: { eventName: 'deactivateModuleInRegistry', moduleName: 'moduleLoader', permission: 'modules.deactivate' },
-    inspectZip: { eventName: 'inspectModuleZipAccess', moduleName: 'moduleLoader', permission: 'modules.install' },
-    installZip: { eventName: 'installModuleFromZip', moduleName: 'moduleLoader', permission: 'modules.install' },
-    checkUpdates: { eventName: 'checkModuleUpdates', moduleName: 'moduleLoader', permission: 'modules.list' },
-    inspectUpdate: { eventName: 'inspectModuleUpdate', moduleName: 'moduleLoader', permission: 'modules.install' },
-    installUpdate: { eventName: 'installModuleUpdate', moduleName: 'moduleLoader', permission: 'modules.install' },
-    setUpdateSource: { eventName: 'setModuleUpdateSource', moduleName: 'moduleLoader', permission: 'modules.install' },
-    accessRequests: { eventName: 'listPendingModuleAccessRequests', moduleName: 'moduleLoader', permission: 'modules.manageAccess' },
-    resolveAccessRequest: { eventName: 'resolveModuleAccessRequest', moduleName: 'moduleLoader', permission: 'modules.manageAccess' }
-  },
-  apps: {
-    list: { eventName: 'listApps', moduleName: 'appLoader', permission: 'apps.list' },
-    get: { eventName: 'getApp', moduleName: 'appLoader', permission: 'apps.list' },
-    builderList: { eventName: 'listBuilderApps', moduleName: 'appLoader', permission: 'builder.use' },
-    launchInfo: { eventName: 'getAppLaunchInfo', moduleName: 'appLoader', permission: 'builder.use' },
-    rescan: { eventName: 'rescanApps', moduleName: 'appLoader', permission: 'apps.rescan' }
-  },
-  fonts: {
-    listProviders: { eventName: 'listFontProviders', moduleName: 'fontsManager', permission: 'fonts.read' },
-    list: { eventName: 'listFonts', moduleName: 'fontsManager', permission: 'fonts.read' },
-    add: { eventName: 'addFont', moduleName: 'fontsManager', permission: 'fonts.manage' },
-    setProviderEnabled: { eventName: 'setFontProviderEnabled', moduleName: 'fontsManager', permission: 'fonts.manage' }
-  },
-  notifications: {
-    recent: { eventName: 'getRecentNotifications', moduleName: 'notificationManager', permission: 'notifications.read' }
-  },
-  importers: {
-    list: { eventName: 'listImporters', moduleName: 'importer', permission: 'importers.list' },
-    run: { eventName: 'runImport', moduleName: 'importer', permission: 'importers.run' }
-  },
-  exporters: {
-    list: { eventName: 'listExporters', moduleName: 'exportManager', permission: 'exporters.list' },
-    run: { eventName: 'runExport', moduleName: 'exportManager', permission: 'exporters.run' }
-  },
-  serverLocations: {
-    create: { eventName: 'addServerLocation', moduleName: 'serverManager', permission: 'serverManager.createLocation' },
-    get: { eventName: 'getServerLocation', moduleName: 'serverManager', permission: 'serverManager.viewLocations' },
-    list: { eventName: 'listServerLocations', moduleName: 'serverManager', permission: 'serverManager.viewLocations' },
-    update: { eventName: 'updateServerLocation', moduleName: 'serverManager', permission: 'serverManager.editLocation' },
-    delete: { eventName: 'deleteServerLocation', moduleName: 'serverManager', permission: 'serverManager.deleteLocation' }
-  },
-  shares: {
-    create: { eventName: 'createShareLink', moduleName: 'shareManager', permission: 'share.create' },
-    get: { eventName: 'getShareDetails', moduleName: 'shareManager', permission: 'share.read' },
-    revoke: { eventName: 'revokeShareLink', moduleName: 'shareManager', permission: 'share.revoke' }
-  },
-  unifiedSettings: {
-    registerSchema: { eventName: 'registerModuleSettingsSchema', moduleName: 'unifiedSettings', permission: 'settings.unified.editSchemas' },
-    registerSection: { eventName: 'registerSettingsSection', moduleName: 'unifiedSettings', permission: 'settings.unified.editSchemas' },
-    schema: { eventName: 'getModuleSettingsSchema', moduleName: 'unifiedSettings', permission: 'settings.unified.viewSettings' },
-    schemas: { eventName: 'listModuleSettingsSchemas', moduleName: 'unifiedSettings', permission: 'settings.unified.viewSettings' },
-    modules: { eventName: 'listRegisteredSettingsModules', moduleName: 'unifiedSettings', permission: 'settings.unified.viewSettings' },
-    get: { eventName: 'getModuleSettingValue', moduleName: 'unifiedSettings', permission: 'settings.unified.viewSettings' },
-    list: { eventName: 'listModuleSettings', moduleName: 'unifiedSettings', permission: 'settings.unified.viewSettings' },
-    bundle: { eventName: 'getModuleSettings', moduleName: 'unifiedSettings', permission: 'settings.unified.viewSettings' },
-    update: { eventName: 'updateModuleSettingValue', moduleName: 'unifiedSettings', permission: 'settings.unified.editSettings' },
-    bulk: { eventName: 'updateModuleSettings', moduleName: 'unifiedSettings', permission: 'settings.unified.editSettings' },
-    delete: { eventName: 'deleteModuleSetting', moduleName: 'unifiedSettings', permission: 'settings.unified.editSettings' }
-  },
-  sitePresets: {
-    list: { eventName: 'sitePresets.list', moduleName: 'sitePresets', permission: 'builder.use' },
-    create: { eventName: 'sitePresets.create', moduleName: 'sitePresets', permission: 'builder.publish' },
-    apply: { eventName: 'sitePresets.apply', moduleName: 'sitePresets', permission: 'builder.publish' },
-    delete: { eventName: 'sitePresets.delete', moduleName: 'sitePresets', permission: 'builder.publish' }
-  },
-  translations: {
-    create: { eventName: 'createTranslatedText', moduleName: 'translationManager', permission: 'translations.create' },
-    upsert: { eventName: 'upsertTranslatedText', moduleName: 'translationManager', permission: 'translations.update' },
-    get: { eventName: 'getTranslatedText', moduleName: 'translationManager', permission: 'translations.read' },
-    list: { eventName: 'listTranslatedTexts', moduleName: 'translationManager', permission: 'translations.read' },
-    update: { eventName: 'updateTranslatedText', moduleName: 'translationManager', permission: 'translations.update' },
-    delete: { eventName: 'deleteTranslatedText', moduleName: 'translationManager', permission: 'translations.delete' },
-    listLanguages: { eventName: 'listLanguages', moduleName: 'translationManager', permission: 'translations.listLanguages' },
-    getLanguage: { eventName: 'getTranslationLanguage', moduleName: 'translationManager', permission: 'translations.listLanguages' },
-    upsertLanguage: { eventName: 'upsertTranslationLanguage', moduleName: 'translationManager', permission: 'translations.addLanguage' },
-    deleteLanguage: { eventName: 'deleteTranslationLanguage', moduleName: 'translationManager', permission: 'translations.delete' }
-  },
-  designer: {
-    get: { eventName: 'designer.getDesign', moduleName: 'designerManager', permission: 'builder.use' },
-    getLayout: { eventName: 'designer.getLayout', moduleName: 'designerManager', permission: 'builder.use' },
-    list: { eventName: 'designer.listDesigns', moduleName: 'designerManager', permission: 'builder.use' },
-    layouts: { eventName: 'designer.listLayouts', moduleName: 'designerManager', permission: 'builder.use' },
-    save: { eventName: 'designer.saveDesign', moduleName: 'designerManager', permission: 'builder.publish' }
-  },
-  preview: {
-    token: { eventName: 'createContentPreviewToken', moduleName: 'runtimeManager', permission: 'content.update' }
-  }
-});
-
-const CMS_PUBLIC_RUNTIME_ACTIONS = Object.freeze({
-  settings: {
-    public: { eventName: 'getPublicSettings', moduleName: 'settingsManager' }
-  },
-  colors: {
-    list: { eventName: 'colorLibrary.listPublic', moduleName: 'colorLibrary' }
-  },
-  fontPackages: {
-    active: { eventName: 'fontPackages.getPublic', moduleName: 'fontPackages' }
-  },
-  users: {
-    count: { eventName: 'getUserCount', moduleName: 'userManagement' },
-    register: { eventName: 'publicRegister', moduleName: 'userManagement' }
-  },
-  pages: {
-    start: { eventName: 'getStartPage', moduleName: 'pagesManager' },
-    envelope: { eventName: 'getEnvelope', moduleName: 'pagesManager' },
-    getBySlug: { eventName: 'getPageBySlug', moduleName: 'pagesManager' },
-    get: { eventName: 'getPageById', moduleName: 'pagesManager' },
-    children: { eventName: 'getChildPages', moduleName: 'pagesManager' }
-  },
-  widgets: {
-    list: { eventName: 'getWidgets', moduleName: 'widgetManager' },
-    registerUsage: { eventName: 'registerWidgetUsage', moduleName: 'widgetManager' }
-  },
-  auth: {
-    activeLoginStrategies: { eventName: 'listActiveLoginStrategies', moduleName: 'auth' }
-  },
-  plainSpace: {
-    widgetRegistry: { eventName: 'widget.registry.request.v1', moduleName: 'plainspace' },
-    globalLayoutTemplate: { eventName: 'getGlobalLayoutTemplate', moduleName: 'plainspace' },
-    layoutTemplate: { eventName: 'getLayoutTemplate', moduleName: 'plainspace' },
-    layoutForViewport: { eventName: 'getLayoutForViewport', moduleName: 'plainspace' },
-    widgetInstance: { eventName: 'getWidgetInstance', moduleName: 'plainspace' }
-  },
-  designer: {
-    get: { eventName: 'designer.getDesign', moduleName: 'designerManager' },
-    getLayout: { eventName: 'designer.getLayout', moduleName: 'designerManager' }
-  },
-  fonts: {
-    list: { eventName: 'listFonts', moduleName: 'fontsManager' },
-    listProviders: { eventName: 'listFontProviders', moduleName: 'fontsManager' }
-  }
-});
-
-const APP_CONTEXT_READ_ACTIONS = Object.freeze({
-  content: new Set(['list', 'get', 'revisions', 'revision', 'scheduled', 'trashed']),
-  pages: new Set(['list', 'byLane', 'get', 'getBySlug', 'start', 'children', 'envelope', 'search']),
-  contentTypes: new Set(['list', 'get']),
-  media: new Set(['list', 'get', 'listVariants', 'listForContent', 'listContent']),
-  plainSpace: new Set([
-    'widgetRegistry',
-    'layoutForViewport',
-    'allLayoutsForPage',
-    'layoutTemplate',
-    'layoutTemplateNames',
-    'globalLayoutTemplate',
-    'widgetInstance',
-    'publishedDesignMeta'
-  ]),
-  navigation: new Set(['locations', 'menus', 'getMenu', 'tree']),
-  seo: new Set(['defaults', 'get', 'list', 'resolve']),
-  settings: new Set(['public']),
-  colors: new Set(['list']),
-  fonts: new Set(['list', 'listProviders']),
-  fontPackages: new Set(['active']),
-  sitePresets: new Set(['list']),
-  translations: new Set(['get', 'list', 'listLanguages', 'getLanguage'])
-});
-const APP_CONTEXT_CORE_OWNED_WRITE_BRIDGE_EVENTS = new Set([
-  'cms-app-runtime-request',
-  'cms-app-runtime-batch-request'
-]);
-const PUBLIC_PLAINSPACE_LANE_ACTIONS = new Set([
-  'widgetRegistry',
-  'globalLayoutTemplate',
-  'layoutTemplate',
-  'layoutForViewport'
-]);
-
+const {
+  adminApiDefinition,
+  adminApiEventDefinition,
+  publicRuntimeDefinition
+} = require('./facades/registry');
+const { createFacadeDispatchers } = require('./facades/dispatchers');
 const REDIRECT_SKIP_PREFIXES = [
   '/admin',
   '/api',
@@ -424,18 +56,7 @@ function once(originalCb) {
   };
 }
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
-      reject(new Error(`Missing event listener: ${eventName}`));
-      return;
-    }
-    motherEmitter.emit(eventName, payload, once((err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    }));
-  });
-}
+
 
 function assertRuntimePayload(payload, eventName) {
   const { jwt, moduleName, moduleType } = payload || {};
@@ -457,76 +78,13 @@ function requireAdminPrincipal(payload) {
   }
 }
 
-function normalizeAdminApiKey(value = '') {
-  return String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '');
-}
-
-function adminApiDefinition(resource, action) {
-  const normalizedResource = normalizeAdminApiKey(resource);
-  const normalizedAction = normalizeAdminApiKey(action);
-  return {
-    resource: normalizedResource,
-    action: normalizedAction,
-    definition: CMS_ADMIN_ACTIONS[normalizedResource]?.[normalizedAction] || null
-  };
-}
-
-function adminApiEventDefinition(eventName) {
-  const normalizedEventName = String(eventName || '').trim();
-  for (const [resource, actions] of Object.entries(CMS_ADMIN_ACTIONS)) {
-    for (const [action, definition] of Object.entries(actions)) {
-      if (definition?.eventName === normalizedEventName) {
-        return {
-          event: normalizedEventName,
-          resource,
-          action,
-          definition
-        };
-      }
-    }
-  }
-
-  return {
-    event: normalizedEventName,
-    resource: '',
-    action: '',
-    definition: null
-  };
-}
-
-function publicRuntimeDefinition(resource, action) {
-  const normalizedResource = normalizeAdminApiKey(resource);
-  const normalizedAction = normalizeAdminApiKey(action);
-  return {
-    resource: normalizedResource,
-    action: normalizedAction,
-    definition: CMS_PUBLIC_RUNTIME_ACTIONS[normalizedResource]?.[normalizedAction] || null
-  };
-}
-
-function isAppContextReadAction(resource, action) {
-  return APP_CONTEXT_READ_ACTIONS[resource]?.has(action) === true;
-}
-
-function isCoreOwnedWriteBridgeContext(appContext = {}) {
-  return appContext?.coreOwned === true &&
-    APP_CONTEXT_CORE_OWNED_WRITE_BRIDGE_EVENTS.has(String(appContext.event || ''));
-}
-
-function requireAppContextReadOnly(payload, resource, action) {
-  if (!payload?.appContext) return;
-  if (isAppContextReadAction(resource, action)) return;
-  if (isCoreOwnedWriteBridgeContext(payload.appContext)) return;
-  throw new Error(`Forbidden - apps can only query CMS admin API resources: ${resource}.${action}`);
-}
-
 async function emitOptionalAsync(motherEmitter, eventName, payload, fallback = null) {
   if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
     return fallback;
   }
 
   try {
-    return await emitAsync(motherEmitter, eventName, payload);
+    return await requestBackendEvent(motherEmitter, eventName, payload);
   } catch {
     return fallback;
   }
@@ -1038,7 +596,7 @@ function normalizeRedirectStatus(value) {
 
 async function isMaintenanceMode(motherEmitter, jwt) {
   try {
-    const value = await emitAsync(motherEmitter, 'getSetting', {
+    const value = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_SETTING, {
       jwt,
       moduleName: 'settingsManager',
       moduleType: 'core',
@@ -1056,14 +614,14 @@ async function ensurePublicContentTarget(motherEmitter, jwt, target, language = 
 
   let entry = null;
   if (target.entryId) {
-    entry = await emitOptionalAsync(motherEmitter, 'getContentEntry', {
+    entry = await emitOptionalAsync(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY, {
       jwt,
       moduleName: 'contentEngine',
       moduleType: 'core',
       entryId: target.entryId
     }, null);
   } else if (target.sourceModule && target.sourceId) {
-    entry = await emitOptionalAsync(motherEmitter, 'getContentEntryBySource', {
+    entry = await emitOptionalAsync(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, {
       jwt,
       moduleName: 'contentEngine',
       moduleType: 'core',
@@ -1082,7 +640,7 @@ async function ensurePublicContentTarget(motherEmitter, jwt, target, language = 
 async function loadContentEntryForTarget(motherEmitter, jwt, target, language = 'en') {
   if (!target) return null;
   if (target.entryId) {
-    return emitAsync(motherEmitter, 'getContentEntry', {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY, {
       jwt,
       moduleName: 'contentEngine',
       moduleType: 'core',
@@ -1090,7 +648,7 @@ async function loadContentEntryForTarget(motherEmitter, jwt, target, language = 
     });
   }
   if (target.sourceModule && target.sourceId) {
-    return emitAsync(motherEmitter, 'getContentEntryBySource', {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY_BY_SOURCE, {
       jwt,
       moduleName: 'contentEngine',
       moduleType: 'core',
@@ -1099,7 +657,7 @@ async function loadContentEntryForTarget(motherEmitter, jwt, target, language = 
     });
   }
   if (target.path) {
-    return emitAsync(motherEmitter, 'resolveContentPermalink', {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_CONTENT_PERMALINK, {
       jwt,
       moduleName: 'contentEngine',
       moduleType: 'core',
@@ -1137,7 +695,7 @@ function applyPreviewOverlay(entry = {}, overlay = {}, source = 'entry') {
 async function loadPreviewOverlay(motherEmitter, jwt, tokenPayload, entry) {
   const entryId = String(entry.id || entry.entryId || tokenPayload.entryId || '');
   if (tokenPayload.revisionId || tokenPayload.version) {
-    const revision = await emitAsync(motherEmitter, 'getContentRevision', {
+    const revision = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_CONTENT_REVISION, {
       jwt,
       moduleName: 'contentEngine',
       moduleType: 'core',
@@ -1152,7 +710,7 @@ async function loadPreviewOverlay(motherEmitter, jwt, tokenPayload, entry) {
   }
 
   if (tokenPayload.autosaveId || tokenPayload.useAutosave) {
-    const autosave = await emitOptionalAsync(motherEmitter, 'getContentAutosave', {
+    const autosave = await emitOptionalAsync(motherEmitter, BACKEND_EVENTS.GET_CONTENT_AUTOSAVE, {
       jwt,
       moduleName: 'workflowManager',
       moduleType: 'core',
@@ -1179,7 +737,7 @@ async function loadPreviewEntry(motherEmitter, jwt, tokenPayload) {
 async function resolvePublicContentByPath(motherEmitter, jwt, req, res) {
   const requestedPath = normalizePublicPath(publicPathFromRequest(req));
   const language = languageFromRequest(req, 'en');
-  const entry = await emitAsync(motherEmitter, 'resolveContentPermalink', {
+  const entry = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_CONTENT_PERMALINK, {
     jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',
@@ -1191,7 +749,7 @@ async function resolvePublicContentByPath(motherEmitter, jwt, req, res) {
     return sendPublicNotFound(res, 'content_not_found');
   }
 
-  const seoResult = await emitOptionalAsync(motherEmitter, 'resolveSeoMeta', {
+  const seoResult = await emitOptionalAsync(motherEmitter, BACKEND_EVENTS.RESOLVE_SEO_META, {
       jwt,
       moduleName: 'seoManager',
       moduleType: 'core',
@@ -1211,7 +769,7 @@ async function listPublicContent(motherEmitter, jwt, req, res) {
   const language = languageFromRequest(req, '');
   const limit = parseLimit(req.query?.limit);
   const offset = parseOffset(req.query?.offset);
-  const entries = await emitAsync(motherEmitter, 'listContentEntries', {
+  const entries = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.LIST_CONTENT_ENTRIES, {
     jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',
@@ -1237,7 +795,7 @@ async function renderPublicSearch(motherEmitter, jwt, req, res) {
   try {
     const limit = parseLimit(req.query?.limit, 20);
     const offset = parseOffset(req.query?.offset);
-    const results = await emitAsync(motherEmitter, 'searchDocuments', {
+    const results = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SEARCH_DOCUMENTS, {
       jwt,
       moduleName: 'searchManager',
       moduleType: 'core',
@@ -1266,7 +824,7 @@ async function renderPublicSearch(motherEmitter, jwt, req, res) {
 }
 
 async function createContentPreviewToken(motherEmitter, jwt, payload = {}) {
-  assertRuntimePayload(payload, 'createContentPreviewToken');
+  assertRuntimePayload(payload, BACKEND_EVENTS.CREATE_CONTENT_PREVIEW_TOKEN);
   requirePayloadPermission(payload, 'content.update');
 
   const target = previewTargetFromPayload(payload);
@@ -1314,158 +872,22 @@ function requirePublicRuntimePrincipal(payload) {
   }
 }
 
-function publicRuntimeParams(params = {}, resource = '', action = '') {
-  const source = params && typeof params === 'object' && !Array.isArray(params) ? params : {};
-  const safe = { ...source };
-  delete safe.jwt;
-  delete safe.decodedJWT;
-  delete safe.moduleName;
-  delete safe.moduleType;
-
-  if (resource === 'pages') {
-    safe.lane = 'public';
-    if (action === 'children') delete safe.lane;
-  }
-
-  if (resource === 'widgets' && action === 'list') {
-    safe.widgetType = 'public';
-  }
-
-  if (resource === 'plainSpace') {
-    if (PUBLIC_PLAINSPACE_LANE_ACTIONS.has(action)) {
-      safe.lane = 'public';
-    }
-    if (action === 'widgetInstance') {
-      const instanceId = String(safe.instanceId || '');
-      if (!/^default\.[A-Za-z0-9_.:-]{1,160}$/.test(instanceId)) {
-        throw new Error('Public widget instance requests are limited to default widget instances.');
-      }
-    }
-  }
-
-  if (resource === 'designer' && action === 'get') {
-    const id = String(safe.id || '').trim();
-    if (!id) throw new Error('Public design id is required.');
-    safe.id = id;
-  }
-  if (resource === 'designer' && action === 'getLayout') {
-    const layoutRef = String(safe.layoutRef || '').trim();
-    if (!/^layout:[A-Za-z0-9_.:-]+(?:@[^/\s]+)?$/.test(layoutRef)) {
-      throw new Error('[runtimeManager:PUBLIC_DESIGN_LAYOUT_REF_REQUIRED] Public design layoutRef is required.');
-    }
-    return { layoutRef };
-  }
-
-  return safe;
-}
-
-function publicRuntimeData(resource, action, data) {
-  if (resource === 'pages') {
-    if (action === 'children') {
-      return normalizeRuntimeRows(data)
-        .filter(isPublishedPublicPage)
-        .map(toPublicPage);
-    }
-    if (action === 'envelope') return data;
-    const page = normalizeRuntimeSingle(data);
-    return isPublishedPublicPage(page) ? toPublicPage(page) : null;
-  }
-
-  if (resource === 'widgets' && action === 'list') {
-    return normalizeRuntimeRows(data).filter(widget =>
-      String(widget.widgetType || widget.widget_type || 'public').toLowerCase() === 'public'
-    );
-  }
-
-  if (resource === 'designer' && action === 'get') {
-    return isPublicDesignResult(data) ? toPublicDesignResult(data) : null;
-  }
-  if (resource === 'designer' && action === 'getLayout') {
-    return toPublicDesignerLayout(data);
-  }
-
-  if (resource === 'plainSpace') {
-    return toPublicPlainSpaceData(data);
-  }
-
-  return data;
-}
-
-async function cmsPublicRuntimeRequest(motherEmitter, internalJwt, payload = {}) {
-  assertRuntimePayload(payload, 'cmsPublicRuntimeRequest');
-  requirePublicRuntimePrincipal(payload);
-
-  const { resource, action, definition } = publicRuntimeDefinition(payload.resource, payload.action);
-  if (!definition) {
-    throw new Error(`Unknown CMS public runtime action: ${payload.resource || ''}.${payload.action || ''}`);
-  }
-
-  const params = publicRuntimeParams(payload.params, resource, action);
-  const eventPayload = {
-    ...params,
-    jwt: internalJwt || payload.jwt,
-    moduleName: definition.moduleName,
-    moduleType: definition.moduleType || 'core'
-  };
-
-  if (resource === 'pages' && action === 'envelope') {
-    const page = await emitAsync(motherEmitter, 'getPageBySlug', {
-      ...eventPayload,
-      slug: params.slug || '',
-      lane: 'public'
-    });
-    if (!isPublishedPublicPage(normalizeRuntimeSingle(page))) {
-      throw new Error('Page not found');
-    }
-  }
-
-  const data = await emitAsync(motherEmitter, definition.eventName, eventPayload);
-  return {
-    resource,
-    action,
-    eventName: definition.eventName,
-    data: publicRuntimeData(resource, action, data)
-  };
-}
-
-async function cmsAdminApiRequest(motherEmitter, jwt, payload = {}) {
-  assertRuntimePayload(payload, 'cmsAdminApiRequest');
-  requireAdminPrincipal(payload);
-
-  const { resource, action, definition } = adminApiDefinition(payload.resource, payload.action);
-  if (!definition) {
-    throw new Error(`Unknown CMS admin API action: ${payload.resource || ''}.${payload.action || ''}`);
-  }
-
-  requireAppContextReadOnly(payload, resource, action);
-  requirePayloadPermission(payload, definition.permission);
-
-  const params = payload.params && typeof payload.params === 'object' && !Array.isArray(payload.params)
-    ? payload.params
-    : {};
-  const eventPayload = {
-    ...params,
-    jwt,
-    moduleName: definition.moduleName,
-    moduleType: definition.moduleType || 'core',
-    decodedJWT: payload.decodedJWT
-  };
-  if (definition.useActorUserId) {
-    const userId = actorIdFromPayload(payload);
-    if (!userId) {
-      throw new Error('[runtimeManager:ACTOR_USER_ID_REQUIRED] Current-user admin action requires an authenticated user id.');
-    }
-    eventPayload.userId = userId;
-  }
-  const data = await emitAsync(motherEmitter, definition.eventName, eventPayload);
-  return {
-    resource,
-    action,
-    eventName: definition.eventName,
-    data
-  };
-}
-
+const { cmsAdminApiRequest, cmsPublicRuntimeRequest } = createFacadeDispatchers({
+  actorIdFromPayload,
+  assertRuntimePayload,
+  isPublicDesignResult,
+  isPublishedPublicPage,
+  normalizeRuntimeRows,
+  normalizeRuntimeSingle,
+  requestEvent: (emitter, eventName, payload) => requestBackendEvent(emitter, eventName, payload),
+  requireAdminPrincipal,
+  requirePayloadPermission,
+  requirePublicRuntimePrincipal,
+  toPublicDesignerLayout,
+  toPublicDesignResult,
+  toPublicPage,
+  toPublicPlainSpaceData
+});
 async function renderPublicPreview(motherEmitter, jwt, req, res) {
   try {
     const rawToken = req.query?.token || String(req.get?.('authorization') || '').replace(/^Bearer\s+/i, '');
@@ -1484,7 +906,7 @@ async function renderPublicPreview(motherEmitter, jwt, req, res) {
     if (!preview) return sendPublicNotFound(res, 'preview_not_found');
 
     const entryId = preview.entry.id || preview.entry.entryId || tokenPayload.entryId;
-    const seoResult = await emitOptionalAsync(motherEmitter, 'resolveSeoMeta', {
+    const seoResult = await emitOptionalAsync(motherEmitter, BACKEND_EVENTS.RESOLVE_SEO_META, {
         jwt,
         moduleName: 'seoManager',
         moduleType: 'core',
@@ -1527,7 +949,7 @@ async function listPublicComments(motherEmitter, jwt, req, res) {
 
   const limit = parseLimit(req.query?.limit, 50);
   const offset = parseOffset(req.query?.offset);
-  const comments = await emitAsync(motherEmitter, 'listCommentsForEntry', {
+  const comments = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.LIST_COMMENTS_FOR_ENTRY, {
     jwt,
     moduleName: 'commentsManager',
     moduleType: 'core',
@@ -1580,7 +1002,7 @@ async function createPublicComment(motherEmitter, jwt, req, res) {
     status: 'pending',
     meta: publicMeta(body.meta || {})
   };
-  const result = await emitAsync(motherEmitter, 'createComment', input);
+  const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_COMMENT, input);
 
   res.set('Cache-Control', 'no-store');
   return res.status(201).json({
@@ -1611,7 +1033,7 @@ async function renderPublicNavigation(motherEmitter, jwt, req, res) {
       return res.status(400).json({ error: { code: 'invalid_location', message: 'Navigation location is required.' } });
     }
 
-    const result = await emitAsync(motherEmitter, 'getNavigationTree', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_NAVIGATION_TREE, {
       jwt,
       moduleName: 'navigationManager',
       moduleType: 'core',
@@ -1639,7 +1061,7 @@ function publicSettingKeysFromRequest(req) {
 async function renderPublicSettings(motherEmitter, jwt, req, res) {
   try {
     const keys = publicSettingKeysFromRequest(req);
-    const settings = await emitAsync(motherEmitter, 'getPublicSettings', {
+    const settings = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PUBLIC_SETTINGS, {
       jwt,
       moduleName: 'settingsManager',
       moduleType: 'core',
@@ -1661,7 +1083,7 @@ async function renderPublicSeo(motherEmitter, jwt, req, res) {
     let entry = null;
 
     if (requestedPath) {
-      entry = await emitOptionalAsync(motherEmitter, 'resolveContentPermalink', {
+      entry = await emitOptionalAsync(motherEmitter, BACKEND_EVENTS.RESOLVE_CONTENT_PERMALINK, {
         jwt,
         moduleName: 'contentEngine',
         moduleType: 'core',
@@ -1669,7 +1091,7 @@ async function renderPublicSeo(motherEmitter, jwt, req, res) {
         language
       }, null);
     } else if (entryId) {
-      entry = await emitOptionalAsync(motherEmitter, 'getContentEntry', {
+      entry = await emitOptionalAsync(motherEmitter, BACKEND_EVENTS.GET_CONTENT_ENTRY, {
         jwt,
         moduleName: 'contentEngine',
         moduleType: 'core',
@@ -1694,7 +1116,7 @@ async function renderPublicSeo(motherEmitter, jwt, req, res) {
       seoPayload.targetKey = 'default';
     }
 
-    const result = await emitAsync(motherEmitter, 'resolveSeoMeta', seoPayload);
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_SEO_META, seoPayload);
     res.set('Cache-Control', 'public, max-age=60');
     return res.json({
       target: result?.target || null,
@@ -1713,7 +1135,7 @@ async function handleRedirectRequest(motherEmitter, jwt, req, res, next) {
       return next();
     }
 
-    const resolved = await emitAsync(motherEmitter, 'resolveRedirect', {
+    const resolved = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_REDIRECT, {
       jwt,
       moduleName: 'redirectManager',
       moduleType: 'core',
@@ -1736,7 +1158,7 @@ async function handleRedirectRequest(motherEmitter, jwt, req, res, next) {
 
 async function renderSitemap(motherEmitter, jwt, req, res, next) {
   try {
-    const xml = await emitAsync(motherEmitter, 'generateSeoSitemap', {
+    const xml = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GENERATE_SEO_SITEMAP, {
       jwt,
       moduleName: 'seoManager',
       moduleType: 'core',
@@ -1753,7 +1175,7 @@ async function renderSitemap(motherEmitter, jwt, req, res, next) {
 
 async function renderRobots(motherEmitter, jwt, req, res, next) {
   try {
-    const txt = await emitAsync(motherEmitter, 'generateRobotsTxt', {
+    const txt = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GENERATE_ROBOTS_TXT, {
       jwt,
       moduleName: 'seoManager',
       moduleType: 'core',
@@ -1767,27 +1189,21 @@ async function renderRobots(motherEmitter, jwt, req, res, next) {
 }
 
 function setupRuntimeEvents(motherEmitter, runtimeJwt = '') {
-  motherEmitter.on('cmsAdminApiRequest', async (payload, originalCb) => {
-    const callback = once(originalCb);
-    try {
-      const result = await cmsAdminApiRequest(motherEmitter, payload?.jwt, payload);
-      callback(null, result);
-    } catch (err) {
-      callback(err);
-    }
-  });
+  registerEventContractHandler(
+    motherEmitter,
+    BACKEND_EVENT_CONTRACTS.CMS_ADMIN_API_REQUEST,
+    payload => cmsAdminApiRequest(motherEmitter, payload.jwt, payload),
+    { moduleName: MODULE_NAME }
+  );
 
-  motherEmitter.on('cmsPublicRuntimeRequest', async (payload, originalCb) => {
-    const callback = once(originalCb);
-    try {
-      const result = await cmsPublicRuntimeRequest(motherEmitter, runtimeJwt || payload?.jwt, payload);
-      callback(null, result);
-    } catch (err) {
-      callback(err);
-    }
-  });
+  registerEventContractHandler(
+    motherEmitter,
+    BACKEND_EVENT_CONTRACTS.CMS_PUBLIC_RUNTIME_REQUEST,
+    payload => cmsPublicRuntimeRequest(motherEmitter, runtimeJwt || payload.jwt, payload),
+    { moduleName: MODULE_NAME }
+  );
 
-  motherEmitter.on('createContentPreviewToken', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_CONTENT_PREVIEW_TOKEN, async (payload, originalCb) => {
     const callback = once(originalCb);
     try {
       const result = await createContentPreviewToken(motherEmitter, payload?.jwt, payload);
@@ -1815,10 +1231,10 @@ function registerPublicRuntimeRoutes(app, motherEmitter, jwt) {
 
 async function runScheduledPublisherOnce(motherEmitter, jwt, options = {}) {
   if (typeof motherEmitter.listenerCount === 'function' &&
-      motherEmitter.listenerCount('publishScheduledContentEntries') === 0) {
+      motherEmitter.listenerCount(BACKEND_EVENTS.PUBLISH_SCHEDULED_CONTENT_ENTRIES) === 0) {
     return { skipped: true, reason: 'missing-listener' };
   }
-  return emitAsync(motherEmitter, 'publishScheduledContentEntries', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.PUBLISH_SCHEDULED_CONTENT_ENTRIES, {
     jwt,
     moduleName: 'contentEngine',
     moduleType: 'core',

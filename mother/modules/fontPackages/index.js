@@ -1,5 +1,7 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const {
@@ -48,28 +50,28 @@ function registerEvent(motherEmitter, eventName, permission, handler) {
 }
 
 function setupFontPackageEvents(motherEmitter) {
-  registerEvent(motherEmitter, 'fontPackages.list', 'builder.use', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_LIST, 'builder.use', payload =>
     readFontPackages(motherEmitter, payload.jwt)
   );
-  registerEvent(motherEmitter, 'fontPackages.getPublic', '', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_GET_PUBLIC, '', payload =>
     readPublicFontPackage(motherEmitter, payload.jwt)
   );
-  registerEvent(motherEmitter, 'fontPackages.create', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_CREATE, 'builder.publish', payload =>
     createFontPackage(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'fontPackages.update', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_UPDATE, 'builder.publish', payload =>
     updateFontPackage(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'fontPackages.updateRole', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_UPDATE_ROLE, 'builder.publish', payload =>
     updateFontPackageRole(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'fontPackages.resetRole', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_RESET_ROLE, 'builder.publish', payload =>
     resetFontPackageRole(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'fontPackages.activate', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_ACTIVATE, 'builder.publish', payload =>
     activateFontPackage(motherEmitter, payload.jwt, payload)
   );
-  registerEvent(motherEmitter, 'fontPackages.delete', 'builder.publish', payload =>
+  registerEvent(motherEmitter, BACKEND_EVENTS.FONT_PACKAGES_DELETE, 'builder.publish', payload =>
     deleteFontPackage(motherEmitter, payload.jwt, payload)
   );
 }

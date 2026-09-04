@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const express = require('express');
 
 const MODULE_NAME = 'agentManager';
@@ -62,9 +66,7 @@ function eventStatus(err) {
 }
 
 function emitAgentEvent(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => (err ? reject(err) : resolve(result)));
-  });
+  return requestBackendEvent(motherEmitter, eventName, payload);
 }
 
 function parsePreviewDataUrl(value = '') {
@@ -89,7 +91,7 @@ async function handleAgentEvent(req, res, eventName, payload) {
 
 async function handlePreviewImage(req, res, payload) {
   try {
-    const preview = await emitAgentEvent(req.agentMotherEmitter, 'agent.getSurfacePreview', {
+    const preview = await emitAgentEvent(req.agentMotherEmitter, BACKEND_EVENTS.AGENT_GET_SURFACE_PREVIEW, {
       ...payload,
       includeData: true
     });
@@ -146,7 +148,7 @@ function addPreviewImageUrl(data, req, appName, surfaceId) {
 
 async function handleInspectSurface(req, res, payload, appName, surfaceId) {
   try {
-    const data = await emitAgentEvent(req.agentMotherEmitter, 'agent.inspectSurface', payload);
+    const data = await emitAgentEvent(req.agentMotherEmitter, BACKEND_EVENTS.AGENT_INSPECT_SURFACE, payload);
     res.json({
       data: data
         ? addPreviewImageUrl(data, req, appName, surfaceId)
@@ -314,19 +316,19 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
   });
 
   router.get('/capabilities', (req, res) => {
-    handleAgentEvent(req, res, 'agent.getCapabilities', baseAgentPayload(req));
+    handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_CAPABILITIES, baseAgentPayload(req));
   });
 
   router.get('/definition', (req, res) => {
-    handleAgentEvent(req, res, 'agent.getApiDefinition', baseAgentPayload(req));
+    handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_API_DEFINITION, baseAgentPayload(req));
   });
 
   router.get('/context', (req, res) => {
-    handleAgentEvent(req, res, 'agent.getSystemContext', baseAgentPayload(req, systemContextOptions(req.query)));
+    handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_SYSTEM_CONTEXT, baseAgentPayload(req, systemContextOptions(req.query)));
   });
 
   router.get('/surfaces', (req, res) => {
-    handleAgentEvent(req, res, 'agent.listSurfaceSnapshots', baseAgentPayload(req, includeDefined({
+    handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_LIST_SURFACE_SNAPSHOTS, baseAgentPayload(req, includeDefined({
       appName: pickFirst(req.query.appName),
       surfaceType: pickFirst(req.query.surfaceType),
       includeTree: maybeBoolean(req.query.includeTree),
@@ -335,12 +337,12 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
   });
 
   router.get('/activity', (req, res) => {
-    handleAgentEvent(req, res, 'agent.listActivity', baseAgentPayload(req, activityOptions(req.query)));
+    handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_LIST_ACTIVITY, baseAgentPayload(req, activityOptions(req.query)));
   });
 
   router.get('/surfaces/:appName/:surfaceId', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.getSurfaceSnapshot', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_SURFACE_SNAPSHOT, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId')
       }));
@@ -351,7 +353,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 
   router.get('/surfaces/:appName/:surfaceId/context', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.getSurfaceContext', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_SURFACE_CONTEXT, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         ...surfaceContextOptions(req.query)
@@ -377,7 +379,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 
   router.get('/surfaces/:appName/:surfaceId/preview', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.getSurfacePreview', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_SURFACE_PREVIEW, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         ...surfacePreviewOptions(req.query)
@@ -400,7 +402,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 
   router.get('/surfaces/:appName/:surfaceId/actions', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.listSurfaceActions', baseAgentPayload(req, includeDefined({
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_LIST_SURFACE_ACTIONS, baseAgentPayload(req, includeDefined({
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         category: pickFirst(req.query.category)
@@ -412,7 +414,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 
   router.get('/surfaces/:appName/:surfaceId/actions/:action', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.getSurfaceAction', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_SURFACE_ACTION, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         action: normalizeRouteToken(req.params.action, 'action')
@@ -424,7 +426,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 
   router.get('/surfaces/:appName/:surfaceId/commands', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.listSurfaceCommands', baseAgentPayload(req, includeDefined({
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_LIST_SURFACE_COMMANDS, baseAgentPayload(req, includeDefined({
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         limit: maybeNumber(req.query.limit)
@@ -437,7 +439,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
   router.post('/surfaces/:appName/:surfaceId/commands/validate', (req, res) => {
     try {
       const body = req.body || {};
-      handleAgentEvent(req, res, 'agent.validateSurfaceCommand', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_VALIDATE_SURFACE_COMMAND, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         command: commandPayload(body)
@@ -450,7 +452,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
   router.post('/surfaces/:appName/:surfaceId/workflows/validate', (req, res) => {
     try {
       const body = req.body || {};
-      handleAgentEvent(req, res, 'agent.validateSurfaceWorkflow', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_VALIDATE_SURFACE_WORKFLOW, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         ...workflowPayload(body)
@@ -465,7 +467,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
       const body = req.body || {};
       const appName = normalizeRouteToken(req.params.appName, 'appName');
       const surfaceId = normalizeRouteToken(req.params.surfaceId, 'surfaceId');
-      handleObservedSurfaceEvent(req, res, 'agent.invokeSurfaceWorkflow', baseAgentPayload(req, {
+      handleObservedSurfaceEvent(req, res, BACKEND_EVENTS.AGENT_INVOKE_SURFACE_WORKFLOW, baseAgentPayload(req, {
         appName,
         surfaceId,
         ...workflowPayload(body)
@@ -480,7 +482,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
       const body = req.body || {};
       const appName = normalizeRouteToken(req.params.appName, 'appName');
       const surfaceId = normalizeRouteToken(req.params.surfaceId, 'surfaceId');
-      handleObservedSurfaceEvent(req, res, 'agent.invokeSurfaceCommandAndObserve', baseAgentPayload(req, {
+      handleObservedSurfaceEvent(req, res, BACKEND_EVENTS.AGENT_INVOKE_SURFACE_COMMAND_AND_OBSERVE, baseAgentPayload(req, {
         appName,
         surfaceId,
         command: commandPayload(body),
@@ -496,7 +498,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
       const body = req.body || {};
       const appName = normalizeRouteToken(req.params.appName, 'appName');
       const surfaceId = normalizeRouteToken(req.params.surfaceId, 'surfaceId');
-      handleObservedSurfaceEvent(req, res, 'agent.refreshSurface', baseAgentPayload(req, {
+      handleObservedSurfaceEvent(req, res, BACKEND_EVENTS.AGENT_REFRESH_SURFACE, baseAgentPayload(req, {
         appName,
         surfaceId,
         ...refreshPayload(body)
@@ -508,7 +510,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 
   router.get('/surfaces/:appName/:surfaceId/commands/:commandId', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.getSurfaceCommand', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_GET_SURFACE_COMMAND, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         commandId: normalizeRouteToken(req.params.commandId, 'commandId')
@@ -522,8 +524,8 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
     try {
       const body = req.body || {};
       const eventName = shouldInvokeCommand(body)
-        ? 'agent.invokeSurfaceCommand'
-        : 'agent.enqueueSurfaceCommand';
+        ? BACKEND_EVENTS.AGENT_INVOKE_SURFACE_COMMAND
+        : BACKEND_EVENTS.AGENT_ENQUEUE_SURFACE_COMMAND;
       handleAgentEvent(req, res, eventName, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
@@ -537,7 +539,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 
   router.post('/surfaces/:appName/:surfaceId/commands/:commandId/wait', (req, res) => {
     try {
-      handleAgentEvent(req, res, 'agent.waitForSurfaceCommand', baseAgentPayload(req, {
+      handleAgentEvent(req, res, BACKEND_EVENTS.AGENT_WAIT_FOR_SURFACE_COMMAND, baseAgentPayload(req, {
         appName: normalizeRouteToken(req.params.appName, 'appName'),
         surfaceId: normalizeRouteToken(req.params.surfaceId, 'surfaceId'),
         commandId: normalizeRouteToken(req.params.commandId, 'commandId'),

@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 require('dotenv').config();
 
 const crypto = require('crypto');
@@ -291,10 +295,10 @@ function publicRule(rule, requestPath) {
 }
 
 function setupRedirectEvents(motherEmitter) {
-  motherEmitter.on('upsertRedirectRule', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPSERT_REDIRECT_RULE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'upsertRedirectRule');
+      assertCorePayload(payload, BACKEND_EVENTS.UPSERT_REDIRECT_RULE);
       requirePermission(payload, 'redirects.manage');
       const result = await redirectDbUpdate(motherEmitter, payload.jwt, 'UPSERT_REDIRECT_RULE', normalizeRedirectRule(payload));
       callback(null, result);
@@ -303,10 +307,10 @@ function setupRedirectEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getRedirectRule', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_REDIRECT_RULE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getRedirectRule');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_REDIRECT_RULE);
       requirePermission(payload, 'redirects.manage');
       const result = await redirectDbSelect(motherEmitter, payload.jwt, 'GET_REDIRECT_RULE', normalizeRuleKey(payload));
       callback(null, Array.isArray(result) ? result[0] || null : result || null);
@@ -315,10 +319,10 @@ function setupRedirectEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listRedirectRules', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_REDIRECT_RULES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listRedirectRules');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_REDIRECT_RULES);
       requirePermission(payload, 'redirects.manage');
       const result = await redirectDbSelect(motherEmitter, payload.jwt, 'LIST_REDIRECT_RULES', {
         matchType: payload.matchType ? normalizeMatchType(payload.matchType) : '',
@@ -333,10 +337,10 @@ function setupRedirectEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteRedirectRule', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_REDIRECT_RULE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteRedirectRule');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_REDIRECT_RULE);
       requirePermission(payload, 'redirects.manage');
       const result = await redirectDbUpdate(motherEmitter, payload.jwt, 'DELETE_REDIRECT_RULE', normalizeRuleKey(payload));
       callback(null, result);
@@ -345,10 +349,10 @@ function setupRedirectEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('resolveRedirect', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RESOLVE_REDIRECT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'resolveRedirect');
+      assertCorePayload(payload, BACKEND_EVENTS.RESOLVE_REDIRECT);
       const requestPath = normalizePath(payload.path || payload.url || payload.fromPath || '/');
       const candidates = await redirectDbSelect(motherEmitter, payload.jwt, 'RESOLVE_REDIRECT', {
         path: requestPath,
@@ -383,10 +387,10 @@ function setupRedirectEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('recordRedirectHit', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RECORD_REDIRECT_HIT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'recordRedirectHit');
+      assertCorePayload(payload, BACKEND_EVENTS.RECORD_REDIRECT_HIT);
       const result = await redirectDbUpdate(motherEmitter, payload.jwt, 'RECORD_REDIRECT_HIT', {
         ruleId: normalizeScalarId(firstDefined(payload.ruleId, payload.id)),
         fromPath: normalizePath(payload.fromPath || payload.path || '/'),
@@ -399,10 +403,10 @@ function setupRedirectEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listRedirectHits', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_REDIRECT_HITS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listRedirectHits');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_REDIRECT_HITS);
       requirePermission(payload, 'redirects.manage');
       const result = await redirectDbSelect(motherEmitter, payload.jwt, 'LIST_REDIRECT_HITS', {
         ruleId: normalizeScalarId(firstDefined(payload.ruleId, payload.id)),

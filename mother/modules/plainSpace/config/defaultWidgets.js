@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 // mother/modules/plainSpace/config/defaultWidgets.js
 // Core default widgets. Settings pages are rendered as dedicated panels, not widget layouts.
 
@@ -114,9 +118,9 @@ module.exports.DEFAULT_WIDGETS = [
         apiAction('plainSpace', 'layoutTemplateNames'),
         apiAction('pages', 'list'),
         apiAction('plainSpace', 'layoutTemplate'),
-        apiAction('plainSpace', 'saveLayoutTemplate'),
-        apiAction('plainSpace', 'setGlobalLayoutTemplate'),
-        apiAction('plainSpace', 'deleteLayoutTemplate')
+        apiAction('plainSpace', BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE),
+        apiAction('plainSpace', BACKEND_EVENTS.SET_GLOBAL_LAYOUT_TEMPLATE),
+        apiAction('plainSpace', BACKEND_EVENTS.DELETE_LAYOUT_TEMPLATE)
       ]
     }
   },
@@ -132,8 +136,8 @@ module.exports.DEFAULT_WIDGETS = [
         apiAction('apps', 'builderList'),
         apiAction('pages', 'update'),
         apiAction('plainSpace', 'layoutTemplateNames'),
-        apiAction('media', 'createLocalFolder'),
-        apiAction('media', 'listLocalFolder'),
+        apiAction('media', BACKEND_EVENTS.CREATE_LOCAL_FOLDER),
+        apiAction('media', BACKEND_EVENTS.LIST_LOCAL_FOLDER),
         apiAction('media', 'uploadToFolder')
       ]
     }
@@ -147,11 +151,11 @@ module.exports.DEFAULT_WIDGETS = [
     metadata: {
       layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
       apiActions: [
-        apiAction('media', 'createLocalFolder'),
+        apiAction('media', BACKEND_EVENTS.CREATE_LOCAL_FOLDER),
         apiAction('shares', 'create'),
-        apiAction('media', 'deleteLocalItem'),
-        apiAction('media', 'renameLocalItem'),
-        apiAction('media', 'listLocalFolder')
+        apiAction('media', BACKEND_EVENTS.DELETE_LOCAL_ITEM),
+        apiAction('media', BACKEND_EVENTS.RENAME_LOCAL_ITEM),
+        apiAction('media', BACKEND_EVENTS.LIST_LOCAL_FOLDER)
       ]
     }
   },
@@ -166,7 +170,7 @@ module.exports.DEFAULT_WIDGETS = [
       apiActions: [
         apiAction('plainSpace', 'layoutTemplateNames'),
         apiAction('pages', 'byLane'),
-        apiAction('plainSpace', 'saveLayoutTemplate')
+        apiAction('plainSpace', BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE)
       ]
     }
   },

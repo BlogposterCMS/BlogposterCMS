@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+
+
 const crypto = require('crypto');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const API_DEFINITION = require('./apiDefinition.json');
@@ -908,7 +912,7 @@ async function refreshSurface(payload = {}) {
     ...payload,
     command: {
       action: 'surface.refresh',
-      reason: payload.reason || 'agent.refreshSurface'
+      reason: payload.reason || BACKEND_EVENTS.AGENT_REFRESH_SURFACE
     },
     waitForResult: payload.waitForResult !== false,
     waitForFreshSnapshot: payload.waitForFreshSnapshot !== false,
@@ -1186,10 +1190,10 @@ function capabilities() {
 }
 
 function setupAgentManagerEvents(motherEmitter) {
-  motherEmitter.on('agent.getCapabilities', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_CAPABILITIES, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getCapabilities');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_CAPABILITIES);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, capabilities());
     } catch (err) {
@@ -1197,10 +1201,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.getApiDefinition', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_API_DEFINITION, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getApiDefinition');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_API_DEFINITION);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, API_DEFINITION);
     } catch (err) {
@@ -1208,10 +1212,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.getSystemContext', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_SYSTEM_CONTEXT, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getSystemContext');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_SYSTEM_CONTEXT);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, systemContext(payload));
     } catch (err) {
@@ -1219,10 +1223,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.publishSurfaceSnapshot', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_PUBLISH_SURFACE_SNAPSHOT, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.publishSurfaceSnapshot');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_PUBLISH_SURFACE_SNAPSHOT);
       requireAnyPermission(payload, SURFACE_WRITE_PERMISSIONS);
       const snapshot = normalizeSurfaceSnapshot(payload);
       surfaceSnapshots.set(surfaceKey(snapshot.appName, snapshot.surfaceId), snapshot);
@@ -1243,10 +1247,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.listSurfaceSnapshots', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_LIST_SURFACE_SNAPSHOTS, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.listSurfaceSnapshots');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_LIST_SURFACE_SNAPSHOTS);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, listSnapshots(payload));
     } catch (err) {
@@ -1254,10 +1258,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.getSurfaceSnapshot', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_SURFACE_SNAPSHOT, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getSurfaceSnapshot');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_SURFACE_SNAPSHOT);
       requireAnyPermission(payload, READ_PERMISSIONS);
       const appName = appNameFromPayload(payload);
       const surfaceId = surfaceIdFromPayload(payload);
@@ -1267,10 +1271,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.getSurfaceContext', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_SURFACE_CONTEXT, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getSurfaceContext');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_SURFACE_CONTEXT);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, surfaceContext(payload));
     } catch (err) {
@@ -1278,10 +1282,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.getSurfacePreview', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_SURFACE_PREVIEW, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getSurfacePreview');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_SURFACE_PREVIEW);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, surfacePreview(payload));
     } catch (err) {
@@ -1289,10 +1293,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.inspectSurface', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_INSPECT_SURFACE, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.inspectSurface');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_INSPECT_SURFACE);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, surfaceInspection(payload));
     } catch (err) {
@@ -1300,10 +1304,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.listSurfaceActions', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_LIST_SURFACE_ACTIONS, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.listSurfaceActions');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_LIST_SURFACE_ACTIONS);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, listSurfaceActions(payload));
     } catch (err) {
@@ -1311,10 +1315,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.getSurfaceAction', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_SURFACE_ACTION, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getSurfaceAction');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_SURFACE_ACTION);
       requireAnyPermission(payload, READ_PERMISSIONS);
       const appName = appNameFromPayload(payload);
       const surfaceId = surfaceIdFromPayload(payload);
@@ -1326,10 +1330,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.validateSurfaceCommand', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_VALIDATE_SURFACE_COMMAND, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.validateSurfaceCommand');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_VALIDATE_SURFACE_COMMAND);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, validateCommandRequest(payload));
     } catch (err) {
@@ -1337,10 +1341,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.validateSurfaceWorkflow', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_VALIDATE_SURFACE_WORKFLOW, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.validateSurfaceWorkflow');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_VALIDATE_SURFACE_WORKFLOW);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, validateSurfaceWorkflow(payload));
     } catch (err) {
@@ -1348,10 +1352,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.listActivity', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_LIST_ACTIVITY, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.listActivity');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_LIST_ACTIVITY);
       requireAnyPermission(payload, READ_PERMISSIONS);
       callback(null, listActivity(payload));
     } catch (err) {
@@ -1359,10 +1363,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.enqueueSurfaceCommand', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_ENQUEUE_SURFACE_COMMAND, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.enqueueSurfaceCommand');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_ENQUEUE_SURFACE_COMMAND);
       requireAnyPermission(payload, CONTROL_PERMISSIONS);
       callback(null, enqueueCommand(payload));
     } catch (err) {
@@ -1370,10 +1374,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.invokeSurfaceCommand', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_INVOKE_SURFACE_COMMAND, async (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.invokeSurfaceCommand');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_INVOKE_SURFACE_COMMAND);
       requireAnyPermission(payload, CONTROL_PERMISSIONS);
       const command = enqueueCommand(payload);
       if (payload.wait !== true && payload.waitForResult !== true) {
@@ -1386,10 +1390,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.invokeSurfaceCommandAndObserve', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_INVOKE_SURFACE_COMMAND_AND_OBSERVE, async (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.invokeSurfaceCommandAndObserve');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_INVOKE_SURFACE_COMMAND_AND_OBSERVE);
       requireAnyPermission(payload, CONTROL_PERMISSIONS);
       callback(null, await invokeCommandAndObserve(payload));
     } catch (err) {
@@ -1397,10 +1401,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.refreshSurface', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_REFRESH_SURFACE, async (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.refreshSurface');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_REFRESH_SURFACE);
       requireAnyPermission(payload, CONTROL_PERMISSIONS);
       callback(null, await refreshSurface(payload));
     } catch (err) {
@@ -1408,10 +1412,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.invokeSurfaceWorkflow', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_INVOKE_SURFACE_WORKFLOW, async (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.invokeSurfaceWorkflow');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_INVOKE_SURFACE_WORKFLOW);
       requireAnyPermission(payload, CONTROL_PERMISSIONS);
       callback(null, await invokeSurfaceWorkflow(payload));
     } catch (err) {
@@ -1419,10 +1423,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.pollSurfaceCommands', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_POLL_SURFACE_COMMANDS, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.pollSurfaceCommands');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_POLL_SURFACE_COMMANDS);
       requireAnyPermission(payload, SURFACE_WRITE_PERMISSIONS);
       const appName = appNameFromPayload(payload);
       const surfaceId = surfaceIdFromPayload(payload);
@@ -1450,10 +1454,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.ackSurfaceCommand', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_ACK_SURFACE_COMMAND, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.ackSurfaceCommand');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_ACK_SURFACE_COMMAND);
       requireAnyPermission(payload, SURFACE_WRITE_PERMISSIONS);
       const appName = appNameFromPayload(payload);
       const surfaceId = surfaceIdFromPayload(payload);
@@ -1482,10 +1486,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.listSurfaceCommands', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_LIST_SURFACE_COMMANDS, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.listSurfaceCommands');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_LIST_SURFACE_COMMANDS);
       requireAnyPermission(payload, READ_PERMISSIONS);
       const appName = appNameFromPayload(payload);
       const surfaceId = surfaceIdFromPayload(payload);
@@ -1496,10 +1500,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.getSurfaceCommand', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_GET_SURFACE_COMMAND, (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.getSurfaceCommand');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_GET_SURFACE_COMMAND);
       requireAnyPermission(payload, READ_PERMISSIONS);
       const appName = appNameFromPayload(payload);
       const surfaceId = surfaceIdFromPayload(payload);
@@ -1511,10 +1515,10 @@ function setupAgentManagerEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('agent.waitForSurfaceCommand', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_WAIT_FOR_SURFACE_COMMAND, async (payload, originalCb) => {
     const callback = once(originalCb);
     try {
-      assertAgentPayload(payload, 'agent.waitForSurfaceCommand');
+      assertAgentPayload(payload, BACKEND_EVENTS.AGENT_WAIT_FOR_SURFACE_COMMAND);
       requireAnyPermission(payload, READ_PERMISSIONS);
       const appName = appNameFromPayload(payload);
       const surfaceId = surfaceIdFromPayload(payload);

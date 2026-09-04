@@ -1,5 +1,7 @@
 "use strict";
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 const path = require("path");
 const designerService = require("./designerService");
 
@@ -29,11 +31,11 @@ function capabilities() {
     ownsResource: DESIGNER_RESOURCE_NAME,
     servicePath: SERVICE_PATH,
     events: [
-      "designer.saveDesign",
-      "designer.getDesign",
-      "designer.listDesigns",
-      "designer.getLayout",
-      "designer.listLayouts"
+      BACKEND_EVENTS.DESIGNER_SAVE_DESIGN,
+      BACKEND_EVENTS.DESIGNER_GET_DESIGN,
+      BACKEND_EVENTS.DESIGNER_LIST_DESIGNS,
+      BACKEND_EVENTS.DESIGNER_GET_LAYOUT,
+      BACKEND_EVENTS.DESIGNER_LIST_LAYOUTS
     ]
   };
 }

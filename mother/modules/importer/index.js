@@ -1,3 +1,7 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * modules/importer/index.js
  *
@@ -153,10 +157,10 @@ module.exports = {
     const baseDir = path.join(__dirname, 'importers');
     const importers = loadImporters(baseDir);
 
-    motherEmitter.on('listImporters', (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.LIST_IMPORTERS, (payload, cb) => {
       cb = onceCallback(cb);
       try {
-        assertImporterPayload(payload, 'listImporters');
+        assertImporterPayload(payload, BACKEND_EVENTS.LIST_IMPORTERS);
       } catch (err) {
         return cb(err);
       }
@@ -166,11 +170,11 @@ module.exports = {
       cb(null, Object.keys(importers));
     });
 
-    motherEmitter.on('runImport', async (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.RUN_IMPORT, async (payload, cb) => {
       cb = onceCallback(cb);
       const { jwt: callerJwt, importerName, options = {} } = payload || {};
       try {
-        assertImporterPayload(payload, 'runImport');
+        assertImporterPayload(payload, BACKEND_EVENTS.RUN_IMPORT);
       } catch (err) {
         return cb(err);
       }

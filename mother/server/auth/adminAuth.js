@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const { sanitizeCookieName, sanitizeCookiePath } = require('../../utils/cookieUtils');
 const {
   canUseDevAutologin,
@@ -9,54 +13,36 @@ const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 function createAdminAuthContext({ motherEmitter, authModuleSecret, isProduction }) {
   async function issueAppLoaderJwt() {
-    return new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'issueModuleToken',
-        {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
           skipJWT: true,
           authModuleSecret,
           moduleType: 'core',
           moduleName: 'auth',
           signAsModule: 'appLoader',
           trustLevel: 'high'
-        },
-        (err, token) => (err ? reject(err) : resolve(token))
-      );
-    });
+        });
   }
 
   async function dispatchAppLoaderEvent(_baseJwt, decodedJWT, eventName, data = {}) {
     const jwt = await issueAppLoaderJwt();
-    return new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        eventName,
-        {
+    return requestBackendEvent(motherEmitter, eventName, {
           jwt,
           moduleName: 'appLoader',
           moduleType: 'core',
           decodedJWT,
           ...data
-        },
-        (err, result) => (err ? reject(err) : resolve(result))
-      );
-    });
+        });
   }
 
   function validateAdminToken(token) {
-    return new Promise((resolve, reject) => {
-      if (!token) return reject(new Error('Missing token'));
-      motherEmitter.emit(
-        'validateToken',
-        {
-          skipJWT: true,
-          authModuleSecret,
-          jwt: token,
-          moduleName: 'auth',
-          moduleType: 'core',
-          tokenToValidate: token
-        },
-        (err, decoded) => (err ? reject(err) : resolve(decoded))
-      );
+    if (!token) return Promise.reject(new Error('Missing token'));
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.VALIDATE_TOKEN, {
+      skipJWT: true,
+      authModuleSecret,
+      jwt: token,
+      moduleName: 'auth',
+      moduleType: 'core',
+      tokenToValidate: token
     });
   }
 
@@ -69,28 +55,16 @@ function createAdminAuthContext({ motherEmitter, authModuleSecret, isProduction 
     const devAuto = localDevMode && process.env.DEV_AUTOLOGIN !== 'false';
     if (!devAuto) return false;
     try {
-      const moduleToken = await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'issueModuleToken',
-          {
+      const moduleToken = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
             skipJWT: true,
             authModuleSecret,
             moduleType: 'core',
             moduleName: 'auth',
             signAsModule: 'userManagement',
             trustLevel: 'high'
-          },
-          (err, token) => (err ? reject(err) : resolve(token))
-        );
-      });
+          });
       const devUser = process.env.DEV_USER || 'admin';
-      const user = await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'getUserDetailsByUsername',
-          { jwt: moduleToken, moduleName: 'userManagement', moduleType: 'core', username: devUser },
-          (err, result) => (err ? reject(err) : resolve(result))
-        );
-      });
+      const user = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, { jwt: moduleToken, moduleName: 'userManagement', moduleType: 'core', username: devUser });
       return Boolean(user);
     } catch {
       return false;

@@ -1,3 +1,4 @@
+import { BACKEND_EVENTS } from '../../contracts/generatedBackendEventCatalog';
 function preloadLink(href, rel = 'stylesheet') {
     const link = document.createElement('link');
     link.rel = rel;
@@ -26,7 +27,7 @@ async function emitPublicRuntime(ctx, resource, action, params = {}) {
     if (!ctx || typeof ctx.meltdownEmit !== 'function') {
         throw new Error('[DesignerPublicLoader:PUBLIC_RUNTIME_EMIT_MISSING] meltdownEmit is required.');
     }
-    const result = await ctx.meltdownEmit('cmsPublicRuntimeRequest', {
+    const result = await ctx.meltdownEmit(BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST, {
         jwt: ctx.publicToken,
         moduleName: 'runtimeManager',
         moduleType: 'core',

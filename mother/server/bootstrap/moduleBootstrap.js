@@ -1,25 +1,23 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const path = require('path');
 const { abortConfigError } = require('../config/environment');
 const { coreModulesForApp } = require('./coreModules');
 
 function createCoreModuleTokenFactory({ motherEmitter, authModuleSecret }) {
   return function getCoreModuleToken(moduleName) {
-    return new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'issueModuleToken',
-        {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
           skipJWT: true,
           authModuleSecret,
           moduleType: 'core',
           moduleName: 'auth',
           trustLevel: 'high',
           signAsModule: moduleName
-        },
-        (err, token) => err ? reject(err) : resolve(token)
-      );
-    });
+        });
   };
 }
 
@@ -27,27 +25,15 @@ async function verifyProductionCredentials({ motherEmitter, authModuleSecret }) 
   if (process.env.NODE_ENV !== 'production') return;
 
   try {
-    const umToken = await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'issueModuleToken',
-        {
+    const umToken = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
           skipJWT: true,
           authModuleSecret,
           moduleType: 'core',
           moduleName: 'auth',
           signAsModule: 'userManagement',
           trustLevel: 'high'
-        },
-        (err, token) => (err ? reject(err) : resolve(token))
-      );
-    });
-    const users = await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        'getAllUsers',
-        { jwt: umToken, moduleName: 'userManagement', moduleType: 'core' },
-        (err, data) => (err ? reject(err) : resolve(data || []))
-      );
-    });
+        });
+    const users = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_ALL_USERS, { jwt: umToken, moduleName: 'userManagement', moduleType: 'core' }).then(data => data || []);
     const weak = users.filter(user => (
       user.username === 'admin' || !user.password || user.password.length < 60
     ));

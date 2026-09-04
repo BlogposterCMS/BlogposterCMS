@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const crypto = require('crypto');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
@@ -126,11 +130,7 @@ function permissionsForScope(scope) {
   return { agent };
 }
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => (err ? reject(err) : resolve(result)));
-  });
-}
+
 
 async function issueAgentToken(motherEmitter, options = {}) {
   const authModuleSecret = options.authModuleSecret || process.env.AUTH_MODULE_INTERNAL_SECRET;
@@ -143,7 +143,7 @@ async function issueAgentToken(motherEmitter, options = {}) {
     DEFAULT_TOKEN_TTL_SECONDS,
     MAX_TOKEN_TTL_SECONDS
   );
-  const token = await emitAsync(motherEmitter, 'issueUserToken', {
+  const token = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_USER_TOKEN, {
     skipJWT: true,
     authModuleSecret,
     moduleName: 'auth',
@@ -163,7 +163,7 @@ async function issueAgentToken(motherEmitter, options = {}) {
 }
 
 async function getUserManagementToken(motherEmitter, authModuleSecret) {
-  return emitAsync(motherEmitter, 'issueModuleToken', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
     skipJWT: true,
     authModuleSecret,
     moduleName: 'auth',
@@ -174,7 +174,7 @@ async function getUserManagementToken(motherEmitter, authModuleSecret) {
 }
 
 async function findUserByUsername(motherEmitter, moduleToken, username) {
-  return emitAsync(motherEmitter, 'getUserDetailsByUsername', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, {
     jwt: moduleToken,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -183,7 +183,7 @@ async function findUserByUsername(motherEmitter, moduleToken, username) {
 }
 
 async function findFallbackDevUser(motherEmitter, moduleToken) {
-  const users = await emitAsync(motherEmitter, 'getAllUsers', {
+  const users = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_ALL_USERS, {
     jwt: moduleToken,
     moduleName: 'userManagement',
     moduleType: 'core'
@@ -199,7 +199,7 @@ async function findFallbackDevUser(motherEmitter, moduleToken) {
 }
 
 function createAgentAccessCode(payload = {}) {
-  assertAgentAccessPayload(payload, 'agentAccess.createCode');
+  assertAgentAccessPayload(payload, BACKEND_EVENTS.AGENT_ACCESS_CREATE_CODE);
   requireManagePermission(payload);
   pruneExpiredCodes();
 
@@ -268,7 +268,7 @@ async function exchangeAgentAccessCode(motherEmitter, payload = {}, authModuleSe
 }
 
 function listAgentAccessCodes(payload = {}) {
-  assertAgentAccessPayload(payload, 'agentAccess.listCodes');
+  assertAgentAccessPayload(payload, BACKEND_EVENTS.AGENT_ACCESS_LIST_CODES);
   requireManagePermission(payload);
   const now = Date.now();
   pruneExpiredCodes(now);
@@ -278,7 +278,7 @@ function listAgentAccessCodes(payload = {}) {
 }
 
 function revokeAgentAccessCode(payload = {}) {
-  assertAgentAccessPayload(payload, 'agentAccess.revokeCode');
+  assertAgentAccessPayload(payload, BACKEND_EVENTS.AGENT_ACCESS_REVOKE_CODE);
   requireManagePermission(payload);
   const codeId = normalizeSingleLine(payload.codeId, 64);
   if (!VALID_CODE_ID.test(codeId)) {
@@ -322,7 +322,7 @@ async function createDevAgentSession(motherEmitter, payload = {}, authModuleSecr
 function setupAgentAccessEvents(motherEmitter, options = {}) {
   const authModuleSecret = options.authModuleSecret || process.env.AUTH_MODULE_INTERNAL_SECRET;
 
-  motherEmitter.on('agentAccess.createCode', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_ACCESS_CREATE_CODE, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
       callback(null, createAgentAccessCode(payload));
@@ -331,7 +331,7 @@ function setupAgentAccessEvents(motherEmitter, options = {}) {
     }
   });
 
-  motherEmitter.on('agentAccess.exchangeCode', async (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_ACCESS_EXCHANGE_CODE, async (payload, cb) => {
     const callback = onceCallback(cb);
     try {
       callback(null, await exchangeAgentAccessCode(motherEmitter, payload, authModuleSecret));
@@ -340,7 +340,7 @@ function setupAgentAccessEvents(motherEmitter, options = {}) {
     }
   });
 
-  motherEmitter.on('agentAccess.createDevSession', async (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_ACCESS_CREATE_DEV_SESSION, async (payload, cb) => {
     const callback = onceCallback(cb);
     try {
       callback(null, await createDevAgentSession(motherEmitter, payload, authModuleSecret));
@@ -349,7 +349,7 @@ function setupAgentAccessEvents(motherEmitter, options = {}) {
     }
   });
 
-  motherEmitter.on('agentAccess.listCodes', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_ACCESS_LIST_CODES, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
       callback(null, listAgentAccessCodes(payload));
@@ -358,7 +358,7 @@ function setupAgentAccessEvents(motherEmitter, options = {}) {
     }
   });
 
-  motherEmitter.on('agentAccess.revokeCode', (payload, cb) => {
+  motherEmitter.on(BACKEND_EVENTS.AGENT_ACCESS_REVOKE_CODE, (payload, cb) => {
     const callback = onceCallback(cb);
     try {
       callback(null, revokeAgentAccessCode(payload));

@@ -1,4 +1,8 @@
-require('dotenv').config();
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');require('dotenv').config();
 
 const AUTH_DEV_AUTOLOGIN_ERRORS = {
   EMITTER_MISSING: 'AUTH_DEV_AUTOLOGIN_EMITTER_MISSING',
@@ -60,14 +64,7 @@ function canUseDevAutologin(req) {
       && Boolean(process.env.AUTH_MODULE_INTERNAL_SECRET);
 }
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    });
-  });
-}
+
 
 async function resolveDevAutologinUser({
   motherEmitter,
@@ -81,7 +78,7 @@ async function resolveDevAutologinUser({
     throw codedError(AUTH_DEV_AUTOLOGIN_ERRORS.SECRET_MISSING, 'AUTH_MODULE_INTERNAL_SECRET is required.');
   }
 
-  const moduleToken = await emitAsync(motherEmitter, 'issueModuleToken', {
+  const moduleToken = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
     skipJWT: true,
     authModuleSecret,
     moduleType: 'core',
@@ -90,7 +87,7 @@ async function resolveDevAutologinUser({
     trustLevel: 'high'
   });
 
-  const user = await emitAsync(motherEmitter, 'getUserDetailsByUsername', {
+  const user = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, {
     jwt: moduleToken,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -101,7 +98,7 @@ async function resolveDevAutologinUser({
     throw codedError(AUTH_DEV_AUTOLOGIN_ERRORS.USER_NOT_FOUND, `DEV_USER "${devUser}" was not found.`);
   }
 
-  const finalUser = await emitAsync(motherEmitter, 'finalizeUserLogin', {
+  const finalUser = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.FINALIZE_USER_LOGIN, {
     jwt: moduleToken,
     moduleName: 'userManagement',
     moduleType: 'core',

@@ -1,25 +1,11 @@
 'use strict';
 
-function once(originalCb) {
-  let fired = false;
-  return (...args) => {
-    if (fired) return;
-    fired = true;
-    if (typeof originalCb === 'function') originalCb(...args);
-  };
-}
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, once((err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    }));
-  });
-}
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 
 function commentsDbUpdate(motherEmitter, jwt, rawSQL, params = {}) {
-  return emitAsync(motherEmitter, 'dbUpdate', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: 'commentsManager',
     moduleType: 'core',
@@ -29,7 +15,7 @@ function commentsDbUpdate(motherEmitter, jwt, rawSQL, params = {}) {
 }
 
 function commentsDbSelect(motherEmitter, jwt, rawSQL, params = {}) {
-  return emitAsync(motherEmitter, 'dbSelect', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'commentsManager',
     moduleType: 'core',
@@ -39,7 +25,7 @@ function commentsDbSelect(motherEmitter, jwt, rawSQL, params = {}) {
 }
 
 async function ensureCommentsDatabase(motherEmitter, jwt, nonce) {
-  await emitAsync(motherEmitter, 'createDatabase', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, {
     jwt,
     moduleName: 'commentsManager',
     moduleType: 'core',
@@ -56,7 +42,7 @@ async function ensureCommentsSchema(motherEmitter, jwt) {
 module.exports = {
   commentsDbSelect,
   commentsDbUpdate,
-  emitAsync,
+
   ensureCommentsDatabase,
   ensureCommentsSchema
 };

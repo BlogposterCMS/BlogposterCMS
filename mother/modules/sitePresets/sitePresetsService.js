@@ -1,9 +1,12 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { onceCallback } = require('../../emitters/motherEmitter');
 const {
   normalizeColorValue,
   normalizeSchemeId,
@@ -363,18 +366,16 @@ function parseStoredUserPresets(value) {
 }
 
 function emitSettingsManager(motherEmitter, jwt, eventName, payload = {}) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, {
+  return requestBackendEvent(motherEmitter, eventName, {
       ...payload,
       jwt,
       moduleName: 'settingsManager',
       moduleType: 'core'
-    }, onceCallback((error, result) => (error ? reject(error) : resolve(result))));
-  });
+    });
 }
 
 async function readUserPresets(motherEmitter, jwt) {
-  const stored = await emitSettingsManager(motherEmitter, jwt, 'getSetting', {
+  const stored = await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.GET_SETTING, {
     key: SITE_PRESETS_STORAGE_KEY
   });
   return parseStoredUserPresets(stored);
@@ -382,7 +383,7 @@ async function readUserPresets(motherEmitter, jwt) {
 
 async function writeUserPresets(motherEmitter, jwt, presets) {
   const normalized = presets.map(entry => normalizePresetPackage(entry)).slice(0, MAX_PRESET_COUNT);
-  await emitSettingsManager(motherEmitter, jwt, 'setSetting', {
+  await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.SET_SETTING, {
     key: SITE_PRESETS_STORAGE_KEY,
     value: JSON.stringify({ version: SITE_PRESETS_VERSION, presets: normalized })
   });
@@ -394,7 +395,7 @@ async function listSitePresets(motherEmitter, jwt) {
   const installedIds = new Set(installed.map(preset => preset.id));
   const user = (await readUserPresets(motherEmitter, jwt))
     .filter(preset => !installedIds.has(preset.id));
-  const lastAppliedId = String(await emitSettingsManager(motherEmitter, jwt, 'getSetting', {
+  const lastAppliedId = String(await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.GET_SETTING, {
     key: SITE_PRESETS_LAST_APPLIED_KEY
   }) || '').trim().toLowerCase();
   return {
@@ -483,7 +484,7 @@ async function applySitePreset(motherEmitter, jwt, input = {}) {
       ...preset.fontPackage,
       activate: true
     });
-    await emitSettingsManager(motherEmitter, jwt, 'setSetting', {
+    await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.SET_SETTING, {
       key: SITE_PRESETS_LAST_APPLIED_KEY,
       value: preset.id
     });

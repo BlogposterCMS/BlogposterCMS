@@ -1,5 +1,9 @@
 "use strict";
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const path = require("path");
 const sanitizeHtmlLib = require("sanitize-html");
 const { registerCustomPlaceholder } = require("../databaseManager/placeholders/placeholderRegistry");
@@ -57,52 +61,32 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
   console.log("[DESIGNER MODULE] Initializing designer service...");
 
     // 1) Ensure dedicated database or schema for the designer module
-    await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        "createDatabase",
-        {
-          jwt,
-          moduleName: MODULE_NAME,
-          moduleType,
-          nonce,
-          targetModuleName: DESIGNER_RESOURCE_NAME,
-        },
-        (err) => {
-          if (err) {
-            console.error(
-              "[DESIGNER MODULE] Error ensuring designer database: %s",
-              err.message,
-            );
-            return reject(err);
-          }
-          resolve();
-        },
-      );
-    });
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, {
+  jwt,
+  moduleName: MODULE_NAME,
+  moduleType,
+  nonce,
+  targetModuleName: DESIGNER_RESOURCE_NAME
+}).then(() => {
+  return;
+}, err => {
+  console.error("[DESIGNER MODULE] Error ensuring designer database: %s", err.message);
+  throw err;
+});
 
     // 2) Apply generic schema definition for all supported databases
     const schemaPath = path.join(__dirname, "schemaDefinition.json");
-    await new Promise((resolve, reject) => {
-      motherEmitter.emit(
-        "applySchemaDefinition",
-        {
-          jwt,
-          moduleName: MODULE_NAME,
-          moduleType,
-          filePath: schemaPath,
-        },
-        (err) => {
-          if (err) {
-            console.error(
-              "[DESIGNER MODULE] Error applying schema: %s",
-              err.message,
-            );
-            return reject(err);
-          }
-          resolve();
-        },
-      );
-    });
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.APPLY_SCHEMA_DEFINITION, {
+  jwt,
+  moduleName: MODULE_NAME,
+  moduleType,
+  filePath: schemaPath
+}).then(() => {
+  return;
+}, err => {
+  console.error("[DESIGNER MODULE] Error applying schema: %s", err.message);
+  throw err;
+});
 
     registerCustomPlaceholder("DESIGNER_SAVE_DESIGN", {
       moduleName: MODULE_NAME,
@@ -126,7 +110,7 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
     });
 
     // 3) Listen for design save events and persist via custom placeholder
-    motherEmitter.on("designer.saveDesign", async (payload = {}, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.DESIGNER_SAVE_DESIGN, async (payload = {}, callback) => {
         try {
         if (!payload || typeof payload !== "object")
           throw new Error("Invalid payload");
@@ -256,10 +240,7 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
           });
         }
 
-        const result = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            "performDbOperation",
-            {
+        const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, {
               jwt,
               moduleName: MODULE_NAME,
               moduleType,
@@ -286,138 +267,117 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
                   layout,
                 },
               ],
-            },
-            onceCallback((err, res) => (err ? reject(err) : resolve(res))),
-          );
-        });
+            });
 
         if (typeof callback === "function") callback(null, result);
       } catch (err) {
         if (typeof callback === "function") callback(err);
       }
       });
-    motherEmitter.on("designer.getDesign", async (payload = {}, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.DESIGNER_GET_DESIGN, async (payload = {}, callback) => {
       try {
         if (!payload || typeof payload !== "object")
           throw new Error("Invalid payload");
         if (!payload.id) throw new Error("Missing design id");
-        const res = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            "performDbOperation",
-            {
+        const res = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, {
               jwt,
               moduleName: MODULE_NAME,
               moduleType,
               operation: "DESIGNER_GET_DESIGN",
               params: [payload],
-            },
-            onceCallback((err, r) => (err ? reject(err) : resolve(r)))
-          );
-        });
+            });
         if (typeof callback === "function") callback(null, res);
       } catch (err) {
         if (typeof callback === "function") callback(err);
       }
       });
 
-    motherEmitter.on("designer.getLayout", (payload = {}, originalCb) => {
+    motherEmitter.on(BACKEND_EVENTS.DESIGNER_GET_LAYOUT, (payload = {}, originalCb) => {
       const cb = onceCallback(originalCb);
       try {
         const { jwt: token, id, layoutRef = "" } = payload || {};
         if (!token) throw new Error("Missing jwt");
         if (id) {
-          motherEmitter.emit(
-            "performDbOperation",
-            {
+          requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, {
               jwt: token,
               moduleName: MODULE_NAME,
               moduleType,
               operation: "DESIGNER_GET_LAYOUT",
               params: [{ id }],
-            },
-            onceCallback((err, res) => (err ? cb(err) : cb(null, res)))
-          );
+            }).then(res => {
+  cb(null, res);
+}, err => {
+  cb(err);
+});
           return;
         }
         const match =
           typeof layoutRef === "string" && layoutRef.match(/^layout:([^@]+)(?:@.*)?$/);
         if (!match) throw new Error("Invalid layoutRef");
         const designId = match[1];
-        motherEmitter.emit(
-          "designer.getDesign",
-          {
+        requestBackendEvent(motherEmitter, BACKEND_EVENTS.DESIGNER_GET_DESIGN, {
             jwt: token,
             moduleName: MODULE_NAME,
             moduleType,
             nonce,
             id: designId,
-          },
-          onceCallback((err, res) => {
-            if (err) return cb(err);
-            if (!res) return cb(new Error("Design not found"));
-            const clamp = n => Math.min(100, Math.max(0, Number(n) || 0));
-            const items = Array.isArray(res.widgets)
-              ? res.widgets
-                  .map(w => ({
-                    instanceId: String(w.instance_id || ""),
-                    widgetId: String(w.widget_id || ""),
-                    xPercent: clamp(w.x_percent),
-                    yPercent: clamp(w.y_percent),
-                    wPercent: clamp(w.w_percent),
-                    hPercent: clamp(w.h_percent),
-                    zIndex: Number(w.z_index) || 0,
-                    rotationDeg: Number(w.rotation_deg) || 0,
-                    opacity: w.opacity == null ? 1 : Number(w.opacity) || 1,
-                    html: typeof w.html === "string" ? w.html : "",
-                    css: typeof w.css === "string" ? w.css : "",
-                    js: typeof w.js === "string" ? w.js : "",
-                    metadata: parseWidgetMetadata(w.metadata)
-                  }))
-                  .filter(it => it.instanceId && it.widgetId)
-              : [];
-            cb(null, { grid: { columns: 12, cellHeight: 8 }, items, layoutRef });
-          })
-        );
+          }).then(res => {
+  if (!res) return cb(new Error("Design not found"));
+  const clamp = n => Math.min(100, Math.max(0, Number(n) || 0));
+  const items = Array.isArray(res.widgets) ? res.widgets.map(w => ({
+    instanceId: String(w.instance_id || ""),
+    widgetId: String(w.widget_id || ""),
+    xPercent: clamp(w.x_percent),
+    yPercent: clamp(w.y_percent),
+    wPercent: clamp(w.w_percent),
+    hPercent: clamp(w.h_percent),
+    zIndex: Number(w.z_index) || 0,
+    rotationDeg: Number(w.rotation_deg) || 0,
+    opacity: w.opacity == null ? 1 : Number(w.opacity) || 1,
+    html: typeof w.html === "string" ? w.html : "",
+    css: typeof w.css === "string" ? w.css : "",
+    js: typeof w.js === "string" ? w.js : "",
+    metadata: parseWidgetMetadata(w.metadata)
+  })).filter(it => it.instanceId && it.widgetId) : [];
+  cb(null, {
+    grid: {
+      columns: 12,
+      cellHeight: 8
+    },
+    items,
+    layoutRef
+  });
+}, err => {
+  return cb(err);
+});
       } catch (e) {
         cb(e);
       }
     });
-    motherEmitter.on("designer.listDesigns", async (payload = {}, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.DESIGNER_LIST_DESIGNS, async (payload = {}, callback) => {
       try {
-        const designs = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            "performDbOperation",
-            {
+        const designs = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, {
               jwt,
               moduleName: MODULE_NAME,
               moduleType,
               operation: "DESIGNER_LIST_DESIGNS",
               params: [payload || {}],
-            },
-            onceCallback((err, res) => (err ? reject(err) : resolve(res)))
-          );
-        });
+            });
         if (typeof callback === "function") callback(null, { designs });
       } catch (err) {
         if (typeof callback === "function") callback(err);
       }
       });
 
-    motherEmitter.on("designer.listLayouts", async (payload = {}, callback) => {
+    motherEmitter.on(BACKEND_EVENTS.DESIGNER_LIST_LAYOUTS, async (payload = {}, callback) => {
       try {
-        const layouts = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            "performDbOperation",
-            {
+        const layouts = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, {
               jwt,
               moduleName: MODULE_NAME,
               moduleType,
               operation: "DESIGNER_LIST_LAYOUTS",
               params: [payload || {}],
-            },
-            onceCallback((err, res) => (err ? reject(err) : resolve(res)))
-          );
-        });
+            });
         if (typeof callback === "function") callback(null, { layouts });
       } catch (err) {
         if (typeof callback === "function") callback(err);

@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/databaseManager/dbSetup.js
  */
@@ -16,22 +22,16 @@ async function initializeDatabaseManagerDatabase(motherEmitter, coreToken) {
     message: '[DB MANAGER] Ensuring shared schema for "databaseManager" in the main DB...'
   });
 
-  await new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'createDatabase',
-      { jwt: coreToken, moduleName: 'databaseManager', moduleType: 'core' },
-      (err, result) => {
-        if (err) return reject(err);
-
-        notificationEmitter.notify({
-          moduleName: 'databaseManager',
-          notificationType: 'info',
-          priority: 'info',
-          message: '[DB MANAGER] Shared schema "databasemanager" creation done (if needed).'
-        });
-        resolve();
-      }
-    );
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, {
+    jwt: coreToken,
+    moduleName: 'databaseManager',
+    moduleType: 'core'
+  });
+  notificationEmitter.notify({
+    moduleName: 'databaseManager',
+    notificationType: 'info',
+    priority: 'info',
+    message: '[DB MANAGER] Shared schema "databasemanager" creation done (if needed).'
   });
 
   if (getDbType() === 'postgres') {

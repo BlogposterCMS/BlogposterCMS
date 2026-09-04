@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/userManagement/userCrudEvents.js
  *
@@ -39,7 +45,7 @@ function sanitizePayload(payload, hide = []) {
 
 function setupUserCrudEvents(motherEmitter) {
   // ==================== CREATE USER ====================
-  motherEmitter.on('createUser', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_USER, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
   const sanitized = sanitizePayload(payload, ['password']);
@@ -92,26 +98,14 @@ function setupUserCrudEvents(motherEmitter) {
 
     try {
       // 1) ensure username/email are unique
-      const existingUser = await new Promise((res, rej) => {
-        motherEmitter.emit(
-          'dbSelect',
-          { jwt, moduleName: 'userManagement', table: 'users', where: { username } },
-          (e, rows) => (e ? rej(e) : res(rows && rows[0]))
-        );
-      });
+      const existingUser = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, { jwt, moduleName: 'userManagement', table: 'users', where: { username } }).then(rows => rows && rows[0]);
       if (existingUser) {
         clearTimeout(timeout);
         return callback(new Error('Username already exists.'));
       }
       let existingEmail = null;
       if (email) {
-        existingEmail = await new Promise((res, rej) => {
-          motherEmitter.emit(
-            'dbSelect',
-            { jwt, moduleName: 'userManagement', table: 'users', where: { email } },
-            (e, rows) => (e ? rej(e) : res(rows && rows[0]))
-          );
-        });
+        existingEmail = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, { jwt, moduleName: 'userManagement', table: 'users', where: { email } }).then(rows => rows && rows[0]);
         if (existingEmail) {
           clearTimeout(timeout);
           return callback(new Error('Email already exists.'));
@@ -142,90 +136,85 @@ function setupUserCrudEvents(motherEmitter) {
       };
 
       // 3) Insert user
-      motherEmitter.emit('dbInsert', {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
         jwt,
         moduleName: 'userManagement',
         table: 'users',
         data: dataToInsert
-      }, (dbErr, insertedRows) => {
-        if (dbErr) {
-          clearTimeout(timeout);
-          return callback(dbErr);
-        }
-
-        // InsertOne on MongoDB returns an object with `insertedId`.
-        // PostgreSQL/SQLite return an array of rows. Normalize both.
-        let newUser;
-        if (Array.isArray(insertedRows)) {
-          newUser = insertedRows[0];
-        } else if (insertedRows && insertedRows.insertedId) {
-          // Reconstruct the created user object for MongoDB
-          newUser = { id: insertedRows.insertedId, ...dataToInsert };
-        } else {
-          newUser = insertedRows;
-        }
-
-        if (!newUser || !newUser.id) {
-          clearTimeout(timeout);
-          return callback(new Error('No valid inserted user row'));
-        }
-      
-        const userLog = { ...newUser };
-        if (userLog && userLog.password) userLog.password = '***';
-        traceRuntimeEvent('[USER MGMT] createUser => User inserted:', userLog);
-
-        if (hasAccessSelection) {
-          setUserAccess(motherEmitter, jwt, newUser.id, requestedRoleIds, directPermissions)
-            .then(() => {
-              clearTimeout(timeout);
-              callback(null, newUser);
-            })
-            .catch(accessErr => {
-              clearTimeout(timeout);
-              callback(accessErr);
-            });
-          return;
-        }
-      
-        if (!role) {
-          clearTimeout(timeout);
-          return callback(null, newUser);
-        }
-      
-        // Dann: DB-Select nach role_name
-        motherEmitter.emit('dbSelect', {
-          jwt,
-          moduleName: 'userManagement',
-          table: 'roles',
-          where: { role_name: role }
-        }, (roleErr, rolesArr) => {
-          if (roleErr) {
-            clearTimeout(timeout);
-            console.error('[USER MGMT] createUser => Error selecting roles:', roleErr.message);
-            return callback(roleErr);
-          }
-          if (!rolesArr || !rolesArr.length) {
-            clearTimeout(timeout);
-            console.warn(`[USER MGMT] createUser => role "${role}" not found. user created without role.`);
-            return callback(null, newUser);
-          }
-      
-          const foundRole = rolesArr[0];
-          motherEmitter.emit('assignRoleToUser', {
-            jwt,
-            moduleName: 'userManagement',
-            moduleType: 'core',
-            userId: newUser.id,
-            roleId: foundRole.id
-          }, (assignErr) => {
-            if (assignErr) {
-              console.warn('[USER MGMT] createUser => Error assigning role =>', assignErr.message);
-            }
-            clearTimeout(timeout);
-            callback(null, newUser);
-          });
-        });
-      });
+      }).then(insertedRows => {
+  // InsertOne on MongoDB returns an object with `insertedId`.
+  // PostgreSQL/SQLite return an array of rows. Normalize both.
+  let newUser;
+  if (Array.isArray(insertedRows)) {
+    newUser = insertedRows[0];
+  } else if (insertedRows && insertedRows.insertedId) {
+    // Reconstruct the created user object for MongoDB
+    newUser = {
+      id: insertedRows.insertedId,
+      ...dataToInsert
+    };
+  } else {
+    newUser = insertedRows;
+  }
+  if (!newUser || !newUser.id) {
+    clearTimeout(timeout);
+    return callback(new Error('No valid inserted user row'));
+  }
+  const userLog = {
+    ...newUser
+  };
+  if (userLog && userLog.password) userLog.password = '***';
+  traceRuntimeEvent('[USER MGMT] createUser => User inserted:', userLog);
+  if (hasAccessSelection) {
+    setUserAccess(motherEmitter, jwt, newUser.id, requestedRoleIds, directPermissions).then(() => {
+      clearTimeout(timeout);
+      callback(null, newUser);
+    }).catch(accessErr => {
+      clearTimeout(timeout);
+      callback(accessErr);
+    });
+    return;
+  }
+  if (!role) {
+    clearTimeout(timeout);
+    return callback(null, newUser);
+  }
+  // Dann: DB-Select nach role_name
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    jwt,
+    moduleName: 'userManagement',
+    table: 'roles',
+    where: {
+      role_name: role
+    }
+  }).then(rolesArr => {
+    if (!rolesArr || !rolesArr.length) {
+      clearTimeout(timeout);
+      console.warn(`[USER MGMT] createUser => role "${role}" not found. user created without role.`);
+      return callback(null, newUser);
+    }
+    const foundRole = rolesArr[0];
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.ASSIGN_ROLE_TO_USER, {
+      jwt,
+      moduleName: 'userManagement',
+      moduleType: 'core',
+      userId: newUser.id,
+      roleId: foundRole.id
+    }).then(() => {
+      clearTimeout(timeout);
+      callback(null, newUser);
+    }, assignErr => {
+      console.warn('[USER MGMT] createUser => Error assigning role =>', assignErr.message);
+    });
+  }, roleErr => {
+    clearTimeout(timeout);
+    console.error('[USER MGMT] createUser => Error selecting roles:', roleErr.message);
+    return callback(roleErr);
+  });
+}, dbErr => {
+  clearTimeout(timeout);
+  return callback(dbErr);
+});
     } catch (ex) {
       clearTimeout(timeout);
       console.error('[USER MGMT] createUser => Exception:', ex.message);
@@ -234,7 +223,7 @@ function setupUserCrudEvents(motherEmitter) {
   });
 
   // ==================== PUBLIC REGISTER ====================
-  motherEmitter.on('publicRegister', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.PUBLIC_REGISTER, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     const {
@@ -262,34 +251,22 @@ function setupUserCrudEvents(motherEmitter) {
     }
 
     try {
-      const firstInstallDone = await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'getPublicSetting',
-          {
+      const firstInstallDone = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PUBLIC_SETTING, {
             jwt,
             moduleName: 'settingsManager',
             moduleType: 'core',
             key: 'FIRST_INSTALL_DONE'
-          },
-          (err, val) => (err ? reject(err) : resolve(val))
-        );
-      });
+          });
 
       const installationFinished = String(firstInstallDone).toLowerCase() === 'true';
 
       if (installationFinished) {
-        const allowRegistration = await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'getPublicSetting',
-            {
+        const allowRegistration = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PUBLIC_SETTING, {
               jwt,
               moduleName: 'settingsManager',
               moduleType: 'core',
               key: 'ALLOW_REGISTRATION'
-            },
-            (err, val) => (err ? reject(err) : resolve(val))
-          );
-        });
+            });
 
         if (String(allowRegistration).toLowerCase() !== 'true') {
           return callback(new Error('Public registration is disabled.'));
@@ -300,39 +277,32 @@ function setupUserCrudEvents(motherEmitter) {
         ? 'standard'
         : (role === 'admin' ? 'admin' : (role || 'admin'));
 
-      motherEmitter.emit(
-        'issueModuleToken',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
           skipJWT: true,
           authModuleSecret,
           moduleName: 'auth',
           moduleType: 'core',
           trustLevel: 'high',
           signAsModule: 'userManagement'
-        },
-        (err, highTok) => {
-          if (err) return callback(err);
-          motherEmitter.emit(
-            'createUser',
-            {
-              jwt: highTok,
-              moduleName: 'userManagement',
-              moduleType: 'core',
-              username,
-              password,
-              role: targetRole
-            },
-            callback
-          );
-        }
-      );
+        }).then(highTok => {
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_USER, {
+    jwt: highTok,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    username,
+    password,
+    role: targetRole
+  }).then(result => callback(null, result), error => callback(error));
+}, err => {
+  return callback(err);
+});
     } catch (err) {
       callback(err);
     }
   });
 
   // ==================== GET ALL USERS ====================
-  motherEmitter.on('getAllUsers', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ALL_USERS, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "getAllUsers" event triggered. Payload:', sanitizePayload(payload));
@@ -351,22 +321,21 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout while fetching users.'));
     }, TIMEOUT_DURATION);
 
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users'
-    }, (err, rows) => {
-      clearTimeout(timeout);
-      if (err) {
-        console.error('[USER MGMT] getAllUsers => Error:', err.message);
-        return callback(err);
-      }
-      callback(null, rows);
-    });
+    }).then(rows => {
+  clearTimeout(timeout);
+  callback(null, rows);
+}, err => {
+  console.error('[USER MGMT] getAllUsers => Error:', err.message);
+  return callback(err);
+});
   });
 
   // ==================== DELETE USER ====================
-  motherEmitter.on('deleteUser', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_USER, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "deleteUser" event triggered. Payload:', sanitizePayload(payload));
@@ -388,35 +357,32 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout deleting user.'));
     }, TIMEOUT_DURATION);
 
-    motherEmitter.emit('dbDelete', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       jwt,
       moduleName: 'userManagement',
       table: 'users',
       where: { id: userId }
-    }, (err) => {
-      clearTimeout(timeout);
-      if (err) {
-        console.error('[USER MGMT] deleteUser => Error:', err.message);
-        return callback(err);
-      }
-
-      // Optional: Tokens löschen
-      motherEmitter.emit('revokeAllTokensForUser', {
-        jwt,
-        moduleName: 'userManagement',
-        moduleType: 'core',
-        userId
-      }, (revErr) => {
-        if (revErr) {
-          console.error('[USER MGMT] deleteUser => error revoking tokens =>', revErr.message);
-        }
-        callback(null);
-      });
-    });
+    }).then(() => {
+  clearTimeout(timeout);
+  // Optional: Tokens löschen
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.REVOKE_ALL_TOKENS_FOR_USER, {
+    jwt,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    userId
+  }).then(() => {
+    callback(null);
+  }, revErr => {
+    console.error('[USER MGMT] deleteUser => error revoking tokens =>', revErr.message);
+  });
+}, err => {
+  console.error('[USER MGMT] deleteUser => Error:', err.message);
+  return callback(err);
+});
   });
 
   // ==================== getUserDetailsByUsername ====================
-  motherEmitter.on('getUserDetailsByUsername', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "getUserDetailsByUsername" event triggered. Payload:', sanitizePayload(payload));
@@ -440,33 +406,32 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout while fetching user details by username.'));
     }, TIMEOUT_DURATION);
 
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users',
       where: { username }
-    }, (err, rows) => {
-      clearTimeout(timeout);
-      if (err) {
-        console.error('[USER MGMT] getUserDetailsByUsername => Error selecting user:', err.message);
-        return callback(err);
-      }
-      if (!rows || rows.length === 0) {
-        console.warn('[USER MGMT] getUserDetailsByUsername => No matching user found => meltdown meltdown.');
-        return callback(null, null);
-      }
-      // Never print credential fields. The trace only confirms which record was
-      // resolved when detailed event tracing is explicitly enabled.
-      traceRuntimeEvent('[USER MGMT] getUserDetailsByUsername => Found user:', {
-        id: rows[0].id ?? rows[0]._id ?? null,
-        username: rows[0].username || null
-      });
-      callback(null, rows[0]);
-    });
+    }).then(rows => {
+  clearTimeout(timeout);
+  if (!rows || rows.length === 0) {
+    console.warn('[USER MGMT] getUserDetailsByUsername => No matching user found => meltdown meltdown.');
+    return callback(null, null);
+  }
+  // Never print credential fields. The trace only confirms which record was
+  // resolved when detailed event tracing is explicitly enabled.
+  traceRuntimeEvent('[USER MGMT] getUserDetailsByUsername => Found user:', {
+    id: rows[0].id ?? rows[0]._id ?? null,
+    username: rows[0].username || null
+  });
+  callback(null, rows[0]);
+}, err => {
+  console.error('[USER MGMT] getUserDetailsByUsername => Error selecting user:', err.message);
+  return callback(err);
+});
   });
 
   // ==================== updateUserProfile ====================
-  motherEmitter.on('updateUserProfile', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_USER_PROFILE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     const sanitizedPayload = sanitizePayload(payload, ['newPassword']);
@@ -531,21 +496,22 @@ function setupUserCrudEvents(motherEmitter) {
         dataToUpdate.password = hashed;
       }
 
-      motherEmitter.emit('dbUpdate', {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: 'userManagement',
         table: 'users',
         where: { id: userId },
         data: dataToUpdate
-      }, (err) => {
-        clearTimeout(timeout);
-        if (err) {
-          console.error('[USER MGMT] updateUserProfile => meltdown meltdown => Error:', err.message);
-          return callback(err);
-        }
-        traceRuntimeEvent('[USER MGMT] updateUserProfile => Updated user profile for userId:', userId);
-        callback(null, { success: true });
-      });
+      }).then(() => {
+  clearTimeout(timeout);
+  traceRuntimeEvent('[USER MGMT] updateUserProfile => Updated user profile for userId:', userId);
+  callback(null, {
+    success: true
+  });
+}, err => {
+  console.error('[USER MGMT] updateUserProfile => meltdown meltdown => Error:', err.message);
+  return callback(err);
+});
     } catch (err) {
       clearTimeout(timeout);
       console.error('[USER MGMT] updateUserProfile => meltdown meltdown => Exception:', err.message);
@@ -554,7 +520,7 @@ function setupUserCrudEvents(motherEmitter) {
   });
 
   // ==================== getUserDetailsById ====================
-  motherEmitter.on('getUserDetailsById', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_USER_DETAILS_BY_ID, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "getUserDetailsById" event triggered. Payload:', sanitizePayload(payload));
@@ -585,23 +551,24 @@ function setupUserCrudEvents(motherEmitter) {
     ) {
       queryId = new ObjectId(userId);
     }
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users',
       where: { [idField]: queryId }
-    }, (err, rows) => {
-      clearTimeout(timeout);
-      if (err) return callback(err);
-      if (!rows || rows.length === 0) {
-        return callback(null, null);
-      }
-      callback(null, rows[0]);
-    });
+    }).then(rows => {
+  clearTimeout(timeout);
+  if (!rows || rows.length === 0) {
+    return callback(null, null);
+  }
+  callback(null, rows[0]);
+}, err => {
+  return callback(err);
+});
   });
 
   // ==================== getUserCount ====================
-  motherEmitter.on('getUserCount', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_USER_COUNT, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     traceRuntimeEvent('[USER MGMT] "getUserCount" event triggered. Payload:', sanitizePayload(payload));
@@ -625,20 +592,19 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout while counting users.'));
     }, TIMEOUT_DURATION);
 
-    motherEmitter.emit('dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users'
-    }, (err, rows) => {
-      clearTimeout(timeout);
-      if (err) {
-        console.error('[getUserCount] DB error:', err.message);
-        return callback(err);
-      }
-      const userCount = rows ? rows.length : 0;
-      traceRuntimeEvent('[USER MGMT] getUserCount => count:', userCount);
-      callback(null, userCount);
-    });
+    }).then(rows => {
+  clearTimeout(timeout);
+  const userCount = rows ? rows.length : 0;
+  traceRuntimeEvent('[USER MGMT] getUserCount => count:', userCount);
+  callback(null, userCount);
+}, err => {
+  console.error('[getUserCount] DB error:', err.message);
+  return callback(err);
+});
   });
 }
 

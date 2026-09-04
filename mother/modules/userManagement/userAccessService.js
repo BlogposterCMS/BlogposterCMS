@@ -1,19 +1,14 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const { getDbType } = require('../databaseManager/helpers/dbTypeHelpers');
 const { parsePermissionBlob } = require('./userInitService');
 
 const DIRECT_USER_ROLE_PREFIX = '__user_direct_';
 const FORBIDDEN_DIRECT_PERMISSION_KEYS = new Set(['*', 'canAccessEverything']);
-
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
-}
 
 function roleId(role) {
   return role?.id ?? role?._id;
@@ -97,7 +92,7 @@ async function validateDirectPermissionBlob(motherEmitter, jwt, directPermission
     }
   }
 
-  const rows = await emitAsync(motherEmitter, 'dbSelect', {
+  const rows = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -114,7 +109,7 @@ async function validateDirectPermissionBlob(motherEmitter, jwt, directPermission
 
 async function incrementUserTokenVersion(motherEmitter, jwt, userId) {
   const idField = getDbType() === 'mongodb' ? '_id' : 'id';
-  await emitAsync(motherEmitter, 'dbUpdate', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -124,7 +119,7 @@ async function incrementUserTokenVersion(motherEmitter, jwt, userId) {
       token_version: { '__raw_expr': 'token_version + 1' }
     }
   }).catch(async () => {
-    const rows = await emitAsync(motherEmitter, 'dbSelect', {
+    const rows = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',
@@ -132,7 +127,7 @@ async function incrementUserTokenVersion(motherEmitter, jwt, userId) {
       where: { [idField]: userId }
     });
     const current = Number(rows?.[0]?.token_version || 0);
-    await emitAsync(motherEmitter, 'dbUpdate', {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',
@@ -144,7 +139,7 @@ async function incrementUserTokenVersion(motherEmitter, jwt, userId) {
 }
 
 async function findRoleByName(motherEmitter, jwt, roleName) {
-  const rows = await emitAsync(motherEmitter, 'dbSelect', {
+  const rows = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -166,7 +161,7 @@ async function ensureDirectRole(motherEmitter, jwt, userId, permissions) {
   };
 
   if (existingRole) {
-    await emitAsync(motherEmitter, 'dbUpdate', {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',
@@ -177,7 +172,7 @@ async function ensureDirectRole(motherEmitter, jwt, userId, permissions) {
     return { ...existingRole, ...data };
   }
 
-  const inserted = await emitAsync(motherEmitter, 'dbInsert', {
+  const inserted = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -198,14 +193,14 @@ async function removeDirectRole(motherEmitter, jwt, userId) {
   const role = await findRoleByName(motherEmitter, jwt, roleName);
   if (!role) return;
 
-  await emitAsync(motherEmitter, 'dbDelete', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
     table: 'user_roles',
     where: { role_id: roleId(role) }
   });
-  await emitAsync(motherEmitter, 'dbDelete', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -215,7 +210,7 @@ async function removeDirectRole(motherEmitter, jwt, userId) {
 }
 
 async function readAllRoles(motherEmitter, jwt) {
-  const roles = await emitAsync(motherEmitter, 'dbSelect', {
+  const roles = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -226,7 +221,7 @@ async function readAllRoles(motherEmitter, jwt) {
 
 async function assignRolesToUser(motherEmitter, jwt, userId, roleIds) {
   for (const roleIdValue of roleIds) {
-    await emitAsync(motherEmitter, 'dbInsert', {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',
@@ -259,7 +254,7 @@ async function setUserAccess(motherEmitter, jwt, userId, roleIds = [], directPer
 
   const normalizedDirectPermissions = await validateDirectPermissionBlob(motherEmitter, jwt, directPermissions);
 
-  await emitAsync(motherEmitter, 'dbDelete', {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -287,7 +282,7 @@ async function setUserAccess(motherEmitter, jwt, userId, roleIds = [], directPer
 async function getUserAccess(motherEmitter, jwt, userId) {
   const [allRoles, userRoles] = await Promise.all([
     readAllRoles(motherEmitter, jwt),
-    emitAsync(motherEmitter, 'dbSelect', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',

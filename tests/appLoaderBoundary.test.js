@@ -93,7 +93,12 @@ test('app loader routes app backend commands through runtime admin facade', asyn
   let routedPayload = null;
   emitter.on('cmsAdminApiRequest', (payload, cb) => {
     routedPayload = payload;
-    cb(null, { resource: payload.resource, action: payload.action, rows: [] });
+    cb(null, {
+      resource: payload.resource,
+      action: payload.action,
+      eventName: 'listContentEntries',
+      data: []
+    });
   });
 
   const command = await emitAsync(emitter, 'dispatchAppEvent', adminPayload({

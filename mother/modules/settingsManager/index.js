@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 require('dotenv').config();
 
 const {
@@ -31,14 +35,7 @@ const PUBLIC_SETTING_KEYS = Object.freeze([
   'COMMENT_REGISTRATION_REQUIRED'
 ]);
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, onceCallback((err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    }));
-  });
-}
+
 
 function assertSettingsPayload(payload, eventName) {
   const { jwt, moduleName, moduleType } = payload || {};
@@ -94,7 +91,7 @@ function ensureSettingKey(payload, eventName) {
 }
 
 async function selectRaw(motherEmitter, jwt, rawSQL, fields = {}) {
-  return emitAsync(motherEmitter, 'dbSelect', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: MODULE_NAME,
     moduleType: MODULE_TYPE,
@@ -104,7 +101,7 @@ async function selectRaw(motherEmitter, jwt, rawSQL, fields = {}) {
 }
 
 async function updateRaw(motherEmitter, jwt, rawSQL, fields = {}) {
-  return emitAsync(motherEmitter, 'dbUpdate', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: MODULE_NAME,
     moduleType: MODULE_TYPE,
@@ -114,7 +111,7 @@ async function updateRaw(motherEmitter, jwt, rawSQL, fields = {}) {
 }
 
 async function deleteRaw(motherEmitter, jwt, rawSQL, fields = {}) {
-  return emitAsync(motherEmitter, 'dbDelete', {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
     jwt,
     moduleName: MODULE_NAME,
     moduleType: MODULE_TYPE,
@@ -200,20 +197,20 @@ function registerDeleteSettingEvent(motherEmitter, eventName) {
 function setupSettingsListeners(motherEmitter) {
   console.log('[SETTINGS MANAGER] Setting up meltdown event listeners...');
 
-  registerGetSettingEvent(motherEmitter, 'getSetting');
+  registerGetSettingEvent(motherEmitter, BACKEND_EVENTS.GET_SETTING);
   registerGetSettingEvent(motherEmitter, 'getOption');
-  registerSetSettingEvent(motherEmitter, 'setSetting');
+  registerSetSettingEvent(motherEmitter, BACKEND_EVENTS.SET_SETTING);
   registerSetSettingEvent(motherEmitter, 'updateOption');
-  registerListSettingsEvent(motherEmitter, 'listSettings');
+  registerListSettingsEvent(motherEmitter, BACKEND_EVENTS.LIST_SETTINGS);
   registerListSettingsEvent(motherEmitter, 'listOptions');
-  registerDeleteSettingEvent(motherEmitter, 'deleteSetting');
+  registerDeleteSettingEvent(motherEmitter, BACKEND_EVENTS.DELETE_SETTING);
   registerDeleteSettingEvent(motherEmitter, 'deleteOption');
 
-  motherEmitter.on('getPublicSetting', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_PUBLIC_SETTING, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertSettingsPayload(payload, 'getPublicSetting');
-      const key = ensureSettingKey(payload, 'getPublicSetting');
+      assertSettingsPayload(payload, BACKEND_EVENTS.GET_PUBLIC_SETTING);
+      const key = ensureSettingKey(payload, BACKEND_EVENTS.GET_PUBLIC_SETTING);
       if (!PUBLIC_SETTING_KEYS.includes(key)) throw new Error('Forbidden - key not allowed');
       callback(null, await getStoredSetting(motherEmitter, payload.jwt, key));
     } catch (err) {
@@ -221,10 +218,10 @@ function setupSettingsListeners(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getPublicSettings', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_PUBLIC_SETTINGS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertSettingsPayload(payload, 'getPublicSettings');
+      assertSettingsPayload(payload, BACKEND_EVENTS.GET_PUBLIC_SETTINGS);
       const requestedKeys = Array.isArray(payload.keys)
         ? payload.keys.map(normalizeSettingKey).filter(Boolean)
         : PUBLIC_SETTING_KEYS;
@@ -237,10 +234,10 @@ function setupSettingsListeners(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getAllSettings', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_ALL_SETTINGS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertSettingsPayload(payload, 'getAllSettings');
+      assertSettingsPayload(payload, BACKEND_EVENTS.GET_ALL_SETTINGS);
       requirePayloadPermission(payload, 'settings.core.view');
       callback(null, await selectRaw(motherEmitter, payload.jwt, 'GET_ALL_SETTINGS'));
     } catch (err) {
@@ -248,10 +245,10 @@ function setupSettingsListeners(motherEmitter) {
     }
   });
 
-  motherEmitter.on('setSettings', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_SETTINGS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertSettingsPayload(payload, 'setSettings');
+      assertSettingsPayload(payload, BACKEND_EVENTS.SET_SETTINGS);
       requirePayloadPermission(payload, 'settings.core.edit');
       const settings = payload.settings || payload.options || {};
       if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
@@ -269,10 +266,10 @@ function setupSettingsListeners(motherEmitter) {
     }
   });
 
-  motherEmitter.on('setCmsMode', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_CMS_MODE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertSettingsPayload(payload, 'setCmsMode');
+      assertSettingsPayload(payload, BACKEND_EVENTS.SET_CMS_MODE);
       requirePayloadPermission(payload, 'settings.core.edit');
       if (!payload.mode) throw new Error('Mode is required (e.g., cms, shop, headless)');
       callback(null, await setStoredSetting(motherEmitter, payload.jwt, 'CMS_MODE', payload.mode));
@@ -281,10 +278,10 @@ function setupSettingsListeners(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getCmsMode', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_CMS_MODE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertSettingsPayload(payload, 'getCmsMode');
+      assertSettingsPayload(payload, BACKEND_EVENTS.GET_CMS_MODE);
       requirePayloadPermission(payload, 'settings.core.view');
       callback(null, await getStoredSetting(motherEmitter, payload.jwt, 'CMS_MODE'));
     } catch (err) {

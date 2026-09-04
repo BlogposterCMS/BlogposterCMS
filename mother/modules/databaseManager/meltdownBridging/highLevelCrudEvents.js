@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/databaseManager/meltdownBridging/highLevelCrudEvents.js
  *
@@ -47,7 +53,7 @@ function registerHighLevelCrudEvents(motherEmitter) {
    * ========================
    */
   motherEmitter.on(
-    'dbInsert',
+    BACKEND_EVENTS.DB_INSERT,
     Object.assign(async (payload, originalCb) => {
       const callback = onceCallback(originalCb);
       const { moduleName, table, data } = payload || {};
@@ -57,8 +63,8 @@ function registerHighLevelCrudEvents(motherEmitter) {
           throw new Error('dbInsert => missing moduleName, table, or data.');
         }
 
-        assertHighLevelCrudAllowed(motherEmitter, 'dbInsert', payload);
-        assertHighLevelCrudIdentifiers('dbInsert', payload);
+        assertHighLevelCrudAllowed(motherEmitter, BACKEND_EVENTS.DB_INSERT, payload);
+        assertHighLevelCrudIdentifiers(BACKEND_EVENTS.DB_INSERT, payload);
 
         const remoteUrl = canUseRemoteDatabaseBridge(motherEmitter, payload)
           ? getRemoteUrlForModule(moduleName)
@@ -98,7 +104,7 @@ function registerHighLevelCrudEvents(motherEmitter) {
    * ========================
    */
   motherEmitter.on(
-    'dbSelect',
+    BACKEND_EVENTS.DB_SELECT,
     Object.assign(async (payload, originalCb) => {
       const callback = onceCallback(originalCb);
       const { moduleName, table } = payload || {};
@@ -108,8 +114,8 @@ function registerHighLevelCrudEvents(motherEmitter) {
           throw new Error('dbSelect => missing moduleName or table.');
         }
 
-        assertHighLevelCrudAllowed(motherEmitter, 'dbSelect', payload);
-        assertHighLevelCrudIdentifiers('dbSelect', payload);
+        assertHighLevelCrudAllowed(motherEmitter, BACKEND_EVENTS.DB_SELECT, payload);
+        assertHighLevelCrudIdentifiers(BACKEND_EVENTS.DB_SELECT, payload);
 
         const remoteUrl = canUseRemoteDatabaseBridge(motherEmitter, payload)
           ? getRemoteUrlForModule(moduleName)
@@ -150,7 +156,7 @@ function registerHighLevelCrudEvents(motherEmitter) {
    * ========================
    */
   motherEmitter.on(
-    'dbUpdate',
+    BACKEND_EVENTS.DB_UPDATE,
     Object.assign(async (payload, originalCb) => {
       const callback = onceCallback(originalCb);
       const { moduleName, table, data } = payload || {};
@@ -160,8 +166,8 @@ function registerHighLevelCrudEvents(motherEmitter) {
           throw new Error('dbUpdate => missing moduleName, table, or data.');
         }
 
-        assertHighLevelCrudAllowed(motherEmitter, 'dbUpdate', payload);
-        assertHighLevelCrudIdentifiers('dbUpdate', payload);
+        assertHighLevelCrudAllowed(motherEmitter, BACKEND_EVENTS.DB_UPDATE, payload);
+        assertHighLevelCrudIdentifiers(BACKEND_EVENTS.DB_UPDATE, payload);
 
         const remoteUrl = canUseRemoteDatabaseBridge(motherEmitter, payload)
           ? getRemoteUrlForModule(moduleName)
@@ -201,7 +207,7 @@ function registerHighLevelCrudEvents(motherEmitter) {
    * ========================
    */
   motherEmitter.on(
-    'dbDelete',
+    BACKEND_EVENTS.DB_DELETE,
     Object.assign(async (payload, originalCb) => {
       const callback = onceCallback(originalCb);
       const { moduleName, table, where } = payload || {};
@@ -211,8 +217,8 @@ function registerHighLevelCrudEvents(motherEmitter) {
           throw new Error('dbDelete => missing moduleName, table, or where.');
         }
 
-        assertHighLevelCrudAllowed(motherEmitter, 'dbDelete', payload);
-        assertHighLevelCrudIdentifiers('dbDelete', payload);
+        assertHighLevelCrudAllowed(motherEmitter, BACKEND_EVENTS.DB_DELETE, payload);
+        assertHighLevelCrudIdentifiers(BACKEND_EVENTS.DB_DELETE, payload);
 
         const remoteUrl = canUseRemoteDatabaseBridge(motherEmitter, payload)
           ? getRemoteUrlForModule(moduleName)
@@ -323,34 +329,27 @@ function localDbInsert(motherEmitter, payload, callback) {
     if (!data.rawSQL) {
       return callback(new Error('[localDbInsert] Missing data.rawSQL for "__rawSQL__"'));
     }
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: data.rawSQL,
         params: extractParamsIfNeeded(data, where)
-      }, 'raw'),
-      callback
-    );
+      }, 'raw')).then(result => callback(null, result), error => callback(error));
     return;
   }
 
   // Normal insert approach
   if (getDbType() === 'mongodb') {
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: 'insertOne',
         params: { collectionName: resolveCollectionName(payload), doc: data }
-      }, 'insert'),
-      (err, result) => {
-        if (err) return callback(err);
-        callback(null, result);
-      }
-    );
+      }, 'insert')).then(result => {
+  callback(null, result);
+}, err => {
+  return callback(err);
+});
     return;
   }
 
@@ -368,14 +367,11 @@ function localDbInsert(motherEmitter, payload, callback) {
     VALUES (${placeholders.join(', ')})
     RETURNING *;
   `;
-  motherEmitter.emit(
-    'performDbOperation',
-    markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: values }, 'insert'),
-    (err, result) => {
-      if (err) return callback(err);
-      callback(null, result?.rows || []);
-    }
-  );
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: values }, 'insert')).then(result => {
+  callback(null, result?.rows || []);
+}, err => {
+  return callback(err);
+});
 }
 
 function localDbSelect(motherEmitter, payload, callback) {
@@ -388,44 +384,44 @@ function localDbSelect(motherEmitter, payload, callback) {
     if (!rawSQL) {
       return callback(new Error('[localDbSelect] Missing rawSQL for "__rawSQL__" approach.'));
     }
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: rawSQL,
         params: extractParamsIfNeeded(data, where)
-      }, 'raw'),
-      (err, result) => {
-        if (err) return callback(err);
-        callback(null, result?.rows || result || []);
-      }
-    );
+      }, 'raw')).then(result => {
+  callback(null, result?.rows || result || []);
+}, err => {
+  return callback(err);
+});
     return;
   }
 
   // Normal SELECT approach
   if (getDbType() === 'mongodb') {
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: 'find',
         params: { collectionName: resolveCollectionName(payload), query: where || {} }
-      }, 'select'),
-      (err, result) => {
-        if (err) return callback(err);
-        const docs = (result || []).map(doc => {
-          if (doc && doc._id && !doc.id) {
-            const { _id, ...rest } = doc;
-            return { id: _id, ...rest };
-          }
-          return doc;
-        });
-        callback(null, docs);
-      }
-    );
+      }, 'select')).then(result => {
+  const docs = (result || []).map(doc => {
+    if (doc && doc._id && !doc.id) {
+      const {
+        _id,
+        ...rest
+      } = doc;
+      return {
+        id: _id,
+        ...rest
+      };
+    }
+    return doc;
+  });
+  callback(null, docs);
+}, err => {
+  return callback(err);
+});
     return;
   }
 
@@ -445,14 +441,11 @@ function localDbSelect(motherEmitter, payload, callback) {
     ${whereClause}
     ORDER BY id DESC
   `;
-  motherEmitter.emit(
-    'performDbOperation',
-    markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: values }, 'select'),
-    (err, result) => {
-      if (err) return callback(err);
-      callback(null, result?.rows || []);
-    }
-  );
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: values }, 'select')).then(result => {
+  callback(null, result?.rows || []);
+}, err => {
+  return callback(err);
+});
 }
 
 function localDbUpdate(motherEmitter, payload, callback) {
@@ -464,16 +457,12 @@ function localDbUpdate(motherEmitter, payload, callback) {
     if (!data.rawSQL) {
       return callback(new Error('[localDbUpdate] Missing data.rawSQL for "__rawSQL__"'));
     }
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: data.rawSQL,
         params: extractParamsIfNeeded(data, where)
-      }, 'raw'),
-      callback
-    );
+      }, 'raw')).then(result => callback(null, result), error => callback(error));
     return;
   }
 
@@ -509,19 +498,16 @@ function localDbUpdate(motherEmitter, payload, callback) {
     if (Object.keys(setOps).length) updateObj.$set = setOps;
     if (Object.keys(incOps).length) updateObj.$inc = incOps;
 
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: 'updateOne',
         params: { collectionName: resolveCollectionName(payload), query: where, update: updateObj }
-      }, 'update'),
-      (err, result) => {
-        if (err) return callback(err);
-        callback(null, result);
-      }
-    );
+      }, 'update')).then(result => {
+  callback(null, result);
+}, err => {
+  return callback(err);
+});
     return;
   }
 
@@ -566,14 +552,11 @@ function localDbUpdate(motherEmitter, payload, callback) {
     RETURNING *;
   `;
 
-  motherEmitter.emit(
-    'performDbOperation',
-    markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: allValues }, 'update'),
-    (err, result) => {
-      if (err) return callback(err);
-      callback(null, result?.rows || []);
-    }
-  );
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: allValues }, 'update')).then(result => {
+  callback(null, result?.rows || []);
+}, err => {
+  return callback(err);
+});
 }
 
 function localDbDelete(motherEmitter, payload, callback) {
@@ -583,16 +566,12 @@ function localDbDelete(motherEmitter, payload, callback) {
     if (moduleType !== 'core') {
       return callback(new Error('[localDbDelete] __rawSQL__ forbidden for non-core modules.'));
     }
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: rawSQL,
         params: extractParamsIfNeeded(data, where)
-      }, 'raw'),
-      callback
-    );
+      }, 'raw')).then(result => callback(null, result), error => callback(error));
     return;
   }
 
@@ -601,19 +580,16 @@ function localDbDelete(motherEmitter, payload, callback) {
     return callback(new Error('[localDbDelete] Empty WHERE => refusing to delete everything.'));
   }
   if (getDbType() === 'mongodb') {
-    motherEmitter.emit(
-      'performDbOperation',
-      markInternalDatabaseCall({
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({
         jwt,
         moduleName,
         operation: 'deleteOne',
         params: { collectionName: resolveCollectionName(payload), query: where }
-      }, 'delete'),
-      (err, result) => {
-        if (err) return callback(err);
-        callback(null, result);
-      }
-    );
+      }, 'delete')).then(result => {
+  callback(null, result);
+}, err => {
+  return callback(err);
+});
     return;
   }
 
@@ -627,14 +603,11 @@ function localDbDelete(motherEmitter, payload, callback) {
     RETURNING *;
   `;
 
-  motherEmitter.emit(
-    'performDbOperation',
-    markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: whereValues }, 'delete'),
-    (err, result) => {
-      if (err) return callback(err);
-      callback(null, result?.rows || []);
-    }
-  );
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, markInternalDatabaseCall({ jwt, moduleName, operation: sql, params: whereValues }, 'delete')).then(result => {
+  callback(null, result?.rows || []);
+}, err => {
+  return callback(err);
+});
 }
 
 /**

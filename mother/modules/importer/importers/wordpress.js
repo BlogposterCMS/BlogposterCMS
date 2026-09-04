@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../../contracts/backendEventContracts');
+
 const fs = require('fs');
 const path = require('path');
 const { parseStringPromise } = require('xml2js');
@@ -613,14 +617,7 @@ async function buildImportPlan(options = {}) {
   return plan;
 }
 
-function emitAsync(motherEmitter, eventName, payload) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, payload, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
-}
+
 
 function resultId(result, keys, fallback) {
   for (const key of keys) {
@@ -647,7 +644,7 @@ async function createCollectionPages(plan, options, decodedJWT) {
     warnings.push('WORDPRESS_COLLECTION_PAGES_DISABLED: category collections were planned but page creation was disabled.');
     return { collectionPageIds, applied, warnings };
   }
-  if (!canEmit(motherEmitter, 'createPage')) {
+  if (!canEmit(motherEmitter, BACKEND_EVENTS.CREATE_PAGE)) {
     warnings.push('WORDPRESS_COLLECTION_PAGES_UNAVAILABLE: pagesManager.createPage was unavailable, so category collections stayed as metadata.');
     return { collectionPageIds, applied, warnings };
   }
@@ -655,7 +652,7 @@ async function createCollectionPages(plan, options, decodedJWT) {
   const pageBase = { jwt, moduleName: 'pagesManager', moduleType: 'core', decodedJWT };
   for (const collection of plan.collections) {
     const parentId = collection.parentSlug ? collectionPageIds.get(collection.parentSlug) || null : null;
-    const result = await emitAsync(motherEmitter, 'createPage', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_PAGE, {
       ...pageBase,
       title: collection.title,
       slug: collection.slug,
@@ -694,7 +691,7 @@ async function createCollectionPages(plan, options, decodedJWT) {
 
 async function createEntryPageProjection(entry, context) {
   const { motherEmitter, jwt, decodedJWT, entryId, collections, collectionPageIds, entryPageIds, options } = context;
-  if (options.createPages === false || !canEmit(motherEmitter, 'createPage')) return null;
+  if (options.createPages === false || !canEmit(motherEmitter, BACKEND_EVENTS.CREATE_PAGE)) return null;
 
   const language = entry.language || 'en';
   const primaryCollection = primaryCollectionForEntry(entry, collections);
@@ -705,7 +702,7 @@ async function createEntryPageProjection(entry, context) {
       : null;
   const pageSlug = collectionChildSlug(entry, primaryCollection);
   const wordpressMeta = entry.metadata?.wordpress || {};
-  const result = await emitAsync(motherEmitter, 'createPage', {
+  const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_PAGE, {
     jwt,
     moduleName: 'pagesManager',
     moduleType: 'core',
@@ -776,7 +773,7 @@ async function applyImportPlan(plan, options = {}) {
 
   const contentTypes = new Set(plan.entries.map(entry => entry.contentType));
   for (const contentType of contentTypes) {
-    const result = await emitAsync(motherEmitter, 'registerContentType', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.REGISTER_CONTENT_TYPE, {
       ...contentBase,
       key: contentType,
       label: contentType.replace(/[_-]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()),
@@ -787,7 +784,7 @@ async function applyImportPlan(plan, options = {}) {
   }
 
   for (const attachment of plan.attachments) {
-    const result = await emitAsync(motherEmitter, 'createMediaAttachment', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_MEDIA_ATTACHMENT, {
       ...mediaBase,
       fileName: attachment.fileName,
       mimeType: attachment.mimeType,
@@ -811,7 +808,7 @@ async function applyImportPlan(plan, options = {}) {
   }
 
   for (const entry of plan.entries) {
-    const result = await emitAsync(motherEmitter, 'createContentEntry', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_CONTENT_ENTRY, {
       ...contentBase,
       contentType: entry.contentType,
       title: entry.title,
@@ -861,7 +858,7 @@ async function applyImportPlan(plan, options = {}) {
   for (const comment of plan.comments) {
     const targetId = entryIds.get(comment.postSourceId);
     if (!targetId) continue;
-    const result = await emitAsync(motherEmitter, 'createComment', {
+    const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_COMMENT, {
       ...commentBase,
       entryId: targetId,
       authorName: comment.authorName,

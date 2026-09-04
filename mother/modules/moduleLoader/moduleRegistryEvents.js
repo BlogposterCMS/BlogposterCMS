@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/moduleLoader/moduleRegistryEvents.js
  *
@@ -123,11 +129,11 @@ async function persistPermanentAccessGrant(motherEmitter, jwt, request, decodedJ
 }
 
 function initModuleRegistryAdminEvents(motherEmitter, app) {
-  motherEmitter.on('listPendingModuleAccessRequests', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_PENDING_MODULE_ACCESS_REQUESTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
-      assertRegistryAdminPayload(payload, 'listPendingModuleAccessRequests');
+      assertRegistryAdminPayload(payload, BACKEND_EVENTS.LIST_PENDING_MODULE_ACCESS_REQUESTS);
       requireModuleAccessManagePermission(payload);
       callback(null, sharedModuleAccessConsentManager.listPendingRequests({
         moduleName: payload.targetModuleName
@@ -137,11 +143,11 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
     }
   });
 
-  motherEmitter.on('resolveModuleAccessRequest', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RESOLVE_MODULE_ACCESS_REQUEST, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
-      assertRegistryAdminPayload(payload, 'resolveModuleAccessRequest');
+      assertRegistryAdminPayload(payload, BACKEND_EVENTS.RESOLVE_MODULE_ACCESS_REQUEST);
       requireModuleAccessManagePermission(payload);
 
       const requestId = String(payload.requestId || '').trim();
@@ -176,7 +182,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
   });
 
   // meltdown => 'activateModuleInRegistry'
-  motherEmitter.on('activateModuleInRegistry', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.ACTIVATE_MODULE_IN_REGISTRY, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -192,9 +198,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
       const safeTargetModuleName = assertUserManagedModuleName(targetModuleName, 'activated');
 
       // meltdown => dbUpdate => set is_active=TRUE
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: 'moduleLoader',
           moduleType: 'core',
@@ -205,28 +209,26 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
             last_error: null,
             updated_at: new Date().toISOString()
           }
-        },
-        async (err) => {
-          if (err) return callback(err);
-
-          console.log(`[REGISTRY EVENTS] Attempting immediate load => ${safeTargetModuleName}`);
-          const success = await attemptSingleLoad(safeTargetModuleName, motherEmitter, app, jwt, {
-            approvedAccess: payload.approvedAccess,
-            grantedBy: payload.decodedJWT?.userId
-          });
-          if (!success) {
-            return callback(new Error('Module load failed again. We tried.'));
-          }
-          callback(null);
-        }
-      );
+        }).then(async () => {
+  console.log(`[REGISTRY EVENTS] Attempting immediate load => ${safeTargetModuleName}`);
+  const success = await attemptSingleLoad(safeTargetModuleName, motherEmitter, app, jwt, {
+    approvedAccess: payload.approvedAccess,
+    grantedBy: payload.decodedJWT?.userId
+  });
+  if (!success) {
+    return callback(new Error('Module load failed again. We tried.'));
+  }
+  callback(null);
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // meltdown => 'deactivateModuleInRegistry'
-  motherEmitter.on('deactivateModuleInRegistry', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DEACTIVATE_MODULE_IN_REGISTRY, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -242,9 +244,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
       const safeTargetModuleName = assertUserManagedModuleName(targetModuleName, 'deactivated');
 
       // meltdown => dbUpdate => is_active=FALSE
-      motherEmitter.emit(
-        'dbUpdate',
-        {
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: 'moduleLoader',
           moduleType: 'core',
@@ -254,21 +254,23 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
             is_active: false,
             updated_at: new Date().toISOString()
           }
-        },
-        async (err) => {
-          if (err) return callback(err);
-          await cleanupModuleRuntime(motherEmitter, safeTargetModuleName, 'Module deactivated via registry.');
-          console.log(`[REGISTRY EVENTS] Deactivated module => ${safeTargetModuleName}`);
-          callback(null, { moduleName: safeTargetModuleName, deactivated: true });
-        }
-      );
+        }).then(async () => {
+  await cleanupModuleRuntime(motherEmitter, safeTargetModuleName, 'Module deactivated via registry.');
+  console.log(`[REGISTRY EVENTS] Deactivated module => ${safeTargetModuleName}`);
+  callback(null, {
+    moduleName: safeTargetModuleName,
+    deactivated: true
+  });
+}, err => {
+  return callback(err);
+});
     } catch (ex) {
       callback(ex);
     }
   });
 
   // meltdown => 'installModuleFromZip'
-  motherEmitter.on('inspectModuleZipAccess', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.INSPECT_MODULE_ZIP_ACCESS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -292,7 +294,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
   });
 
   // meltdown => 'installModuleFromZip'
-  motherEmitter.on('installModuleFromZip', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.INSTALL_MODULE_FROM_ZIP, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -323,7 +325,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
     }
   });
 
-  motherEmitter.on('checkModuleUpdates', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CHECK_MODULE_UPDATES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -345,7 +347,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
     }
   });
 
-  motherEmitter.on('inspectModuleUpdate', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.INSPECT_MODULE_UPDATE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -365,7 +367,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
     }
   });
 
-  motherEmitter.on('installModuleUpdate', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.INSTALL_MODULE_UPDATE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {
@@ -396,7 +398,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
     }
   });
 
-  motherEmitter.on('setModuleUpdateSource', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SET_MODULE_UPDATE_SOURCE, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     try {

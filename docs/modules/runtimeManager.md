@@ -10,6 +10,17 @@ module events, database events or system lifecycle events.
 
 Connects public HTTP behavior to backend core events.
 
+## Internal Facade Layout
+
+`index.js` remains the Runtime Manager entrypoint and owns initialization,
+public routes and shared runtime helpers. Facade declarations are grouped below
+`facades/domains/` by `content`, `presentation`, `access` and `platform`.
+`facades/registry.js` resolves every resource to exactly one domain, while
+`facades/dispatchers.js` preserves the existing admin/public event and response
+contracts. Resource-specific public validation and result shaping lives with
+the owning domain; adding a resource to more than one domain fails during
+module loading with `runtimeManager:FACADE_RESOURCE_DOMAIN_CONFLICT`.
+
 ## Startup
 
 - Core module loaded after the central Builder preset services.

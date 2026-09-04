@@ -1,7 +1,10 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const crypto = require('crypto');
-const { onceCallback } = require('../../emitters/motherEmitter');
 
 const COLOR_LIBRARY_STORAGE_KEY = 'COLOR_LIBRARY_V2';
 const LEGACY_COLOR_LIBRARY_STORAGE_KEY = 'COLOR_LIBRARY_V1';
@@ -232,22 +235,20 @@ function assertUniqueColorName(colors, name, ignoredId = '') {
 }
 
 function emitSettingsManager(motherEmitter, jwt, eventName, payload = {}) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(eventName, {
+  return requestBackendEvent(motherEmitter, eventName, {
       ...payload,
       jwt,
       moduleName: 'settingsManager',
       moduleType: 'core'
-    }, onceCallback((err, result) => (err ? reject(err) : resolve(result))));
-  });
+    });
 }
 
 async function readColorLibrary(motherEmitter, jwt) {
-  const stored = await emitSettingsManager(motherEmitter, jwt, 'getSetting', {
+  const stored = await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.GET_SETTING, {
     key: COLOR_LIBRARY_STORAGE_KEY
   });
   if (stored) return parseStoredLibrary(stored);
-  const legacy = await emitSettingsManager(motherEmitter, jwt, 'getSetting', {
+  const legacy = await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.GET_SETTING, {
     key: LEGACY_COLOR_LIBRARY_STORAGE_KEY
   });
   return parseStoredLibrary(legacy);
@@ -255,7 +256,7 @@ async function readColorLibrary(motherEmitter, jwt) {
 
 async function writeColorLibrary(motherEmitter, jwt, library) {
   const normalized = parseStoredLibrary(library);
-  await emitSettingsManager(motherEmitter, jwt, 'setSetting', {
+  await emitSettingsManager(motherEmitter, jwt, BACKEND_EVENTS.SET_SETTING, {
     key: COLOR_LIBRARY_STORAGE_KEY,
     value: JSON.stringify(normalized)
   });

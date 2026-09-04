@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/mediaManager/index.js
  *
@@ -538,10 +544,10 @@ function normalizeContentTarget(payload = {}) {
 }
 
 function setupMediaMetadataEvents(motherEmitter) {
-  motherEmitter.on('createMediaAttachment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_MEDIA_ATTACHMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'createMediaAttachment');
+      assertCorePayload(payload, BACKEND_EVENTS.CREATE_MEDIA_ATTACHMENT);
       requirePermission(payload, 'media.manage');
       const result = await mediaDbUpdate(motherEmitter, payload.jwt, 'UPSERT_MEDIA_ATTACHMENT', normalizeMediaAttachment(payload));
       callback(null, result);
@@ -550,10 +556,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('updateMediaAttachment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPDATE_MEDIA_ATTACHMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'updateMediaAttachment');
+      assertCorePayload(payload, BACKEND_EVENTS.UPDATE_MEDIA_ATTACHMENT);
       requirePermission(payload, 'media.manage');
       const key = normalizeAttachmentKey(payload);
       const result = await mediaDbUpdate(motherEmitter, payload.jwt, 'UPSERT_MEDIA_ATTACHMENT', {
@@ -566,10 +572,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getMediaAttachment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_MEDIA_ATTACHMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getMediaAttachment');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_MEDIA_ATTACHMENT);
       const result = await mediaDbSelect(motherEmitter, payload.jwt, 'GET_MEDIA_ATTACHMENT', normalizeAttachmentKey(payload));
       const record = Array.isArray(result) ? result[0] || null : result || null;
       if (!canManageMedia(payload) && record && (record.status !== 'active' || record.visibility !== 'public')) {
@@ -582,10 +588,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listMediaAttachments', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_MEDIA_ATTACHMENTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listMediaAttachments');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_MEDIA_ATTACHMENTS);
       const manager = canManageMedia(payload);
       const result = await mediaDbSelect(motherEmitter, payload.jwt, 'LIST_MEDIA_ATTACHMENTS', {
         category: normalizeKey(payload.category || '', 100),
@@ -604,10 +610,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteMediaAttachment', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_MEDIA_ATTACHMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteMediaAttachment');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_MEDIA_ATTACHMENT);
       requirePermission(payload, 'media.manage');
       const key = normalizeAttachmentKey(payload);
       const record = key.id ? key : await mediaDbSelect(motherEmitter, payload.jwt, 'GET_MEDIA_ATTACHMENT', key);
@@ -620,10 +626,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('upsertMediaVariant', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPSERT_MEDIA_VARIANT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'upsertMediaVariant');
+      assertCorePayload(payload, BACKEND_EVENTS.UPSERT_MEDIA_VARIANT);
       requirePermission(payload, 'media.manage');
       const result = await mediaDbUpdate(motherEmitter, payload.jwt, 'UPSERT_MEDIA_VARIANT', normalizeMediaVariant(payload));
       callback(null, result);
@@ -632,10 +638,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listMediaVariants', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_MEDIA_VARIANTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listMediaVariants');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_MEDIA_VARIANTS);
       const attachmentId = firstScalarId(payload.attachmentId, payload.attachment_id, payload.id);
       if (!attachmentId) throw new Error('attachmentId is required.');
       const result = await mediaDbSelect(motherEmitter, payload.jwt, 'LIST_MEDIA_VARIANTS', { attachmentId });
@@ -645,10 +651,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('deleteMediaVariant', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_MEDIA_VARIANT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteMediaVariant');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_MEDIA_VARIANT);
       requirePermission(payload, 'media.manage');
       const result = await mediaDbUpdate(motherEmitter, payload.jwt, 'DELETE_MEDIA_VARIANT', normalizeMediaVariant(payload));
       callback(null, result);
@@ -657,10 +663,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('linkMediaToContent', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LINK_MEDIA_TO_CONTENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'linkMediaToContent');
+      assertCorePayload(payload, BACKEND_EVENTS.LINK_MEDIA_TO_CONTENT);
       requirePermission(payload, 'media.manage');
       const result = await mediaDbUpdate(motherEmitter, payload.jwt, 'LINK_MEDIA_ATTACHMENT', normalizeMediaTarget(payload));
       callback(null, result);
@@ -669,10 +675,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('unlinkMediaFromContent', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UNLINK_MEDIA_FROM_CONTENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'unlinkMediaFromContent');
+      assertCorePayload(payload, BACKEND_EVENTS.UNLINK_MEDIA_FROM_CONTENT);
       requirePermission(payload, 'media.manage');
       const result = await mediaDbUpdate(motherEmitter, payload.jwt, 'UNLINK_MEDIA_ATTACHMENT', normalizeMediaTarget(payload));
       callback(null, result);
@@ -681,10 +687,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listMediaForContent', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_MEDIA_FOR_CONTENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listMediaForContent');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_MEDIA_FOR_CONTENT);
       const result = await mediaDbSelect(motherEmitter, payload.jwt, 'LIST_MEDIA_FOR_CONTENT', normalizeContentTarget(payload));
       const rows = Array.isArray(result) ? result : [];
       callback(null, canManageMedia(payload) ? rows : rows.filter(row => row.status === 'active' && row.visibility === 'public'));
@@ -693,10 +699,10 @@ function setupMediaMetadataEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('listContentForMedia', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_CONTENT_FOR_MEDIA, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listContentForMedia');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_CONTENT_FOR_MEDIA);
       requirePermission(payload, 'media.manage');
       const attachmentId = firstScalarId(payload.attachmentId, payload.attachment_id, payload.id);
       if (!attachmentId) throw new Error('attachmentId is required.');
@@ -730,11 +736,11 @@ function setupMediaManagerEvents(motherEmitter) {
   console.log('[MEDIA MANAGER] Setting up meltdown events for local FS actions...');
 
   // meltdown => listLocalFolder
-  motherEmitter.on('listLocalFolder', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_LOCAL_FOLDER, (payload, originalCb) => {
     const callback = onceCallback(originalCb); // we love single-callback sanity
 
     try {
-      assertCorePayload(payload, 'listLocalFolder');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_LOCAL_FOLDER);
       requireAnyPermission(payload, LOCAL_FILE_READ_PERMISSIONS);
       const { subPath } = payload || {};
 
@@ -774,10 +780,10 @@ function setupMediaManagerEvents(motherEmitter) {
   });
 
   // meltdown => createLocalFolder
-  motherEmitter.on('createLocalFolder', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.CREATE_LOCAL_FOLDER, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'createLocalFolder');
+      assertCorePayload(payload, BACKEND_EVENTS.CREATE_LOCAL_FOLDER);
       requireAnyPermission(payload, LOCAL_FILE_WRITE_PERMISSIONS);
       const { currentPath = '', newFolderName } = payload || {};
       if (!newFolderName) {
@@ -797,10 +803,10 @@ function setupMediaManagerEvents(motherEmitter) {
   });
 
   // meltdown => renameLocalItem
-  motherEmitter.on('renameLocalItem', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RENAME_LOCAL_ITEM, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'renameLocalItem');
+      assertCorePayload(payload, BACKEND_EVENTS.RENAME_LOCAL_ITEM);
       requireAnyPermission(payload, LOCAL_FILE_DELETE_PERMISSIONS);
       const { currentPath = '', oldName, newName } = payload || {};
       if (!oldName || !newName) {
@@ -820,10 +826,10 @@ function setupMediaManagerEvents(motherEmitter) {
   });
 
   // meltdown => deleteLocalItem
-  motherEmitter.on('deleteLocalItem', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.DELETE_LOCAL_ITEM, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'deleteLocalItem');
+      assertCorePayload(payload, BACKEND_EVENTS.DELETE_LOCAL_ITEM);
       requireAnyPermission(payload, LOCAL_FILE_DELETE_PERMISSIONS);
       const { currentPath = '', itemName } = payload || {};
       if (!itemName) {
@@ -842,10 +848,10 @@ function setupMediaManagerEvents(motherEmitter) {
   });
 
   // meltdown => uploadFileToFolder
-  motherEmitter.on('uploadFileToFolder', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.UPLOAD_FILE_TO_FOLDER, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'uploadFileToFolder');
+      assertCorePayload(payload, BACKEND_EVENTS.UPLOAD_FILE_TO_FOLDER);
       requireAnyPermission(payload, LOCAL_FILE_WRITE_PERMISSIONS);
       const {
         fileName,
@@ -897,7 +903,7 @@ function setupMediaManagerEvents(motherEmitter) {
    * physically moves the file to /public
    * meltdown => shareManager => createShareLink
    */
-  motherEmitter.on('makeFilePublic', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.MAKE_FILE_PUBLIC, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
     console.log('[MEDIA MANAGER] "makeFilePublic" event =>', {
@@ -985,24 +991,27 @@ function actuallyMoveFileToPublic(motherEmitter, { jwt, userId, filePath }, call
     console.log(`[MEDIA MANAGER] Moved file from "${sourceAbs}" to "${publicAbs}"`);
 
     const relativePublicPath = path.relative(libraryRoot, publicAbs);
-    motherEmitter.emit('createShareLink', {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_SHARE_LINK, {
       jwt,
       moduleName: 'shareManager',
       moduleType: 'core',
       filePath: relativePublicPath,
       userId,
       isPublic: true
-    }, (err, shareData) => {
-      if (err) {
-        console.warn('[MEDIA MANAGER] Could not create share link =>', err.message);
-        return callback(null, { success: true, publicPath: publicAbs, shareLink: null });
-      }
-      return callback(null, {
-        success: true,
-        publicPath: publicAbs,
-        shareLink: shareData.shareURL
-      });
-    });
+    }).then(shareData => {
+  return callback(null, {
+    success: true,
+    publicPath: publicAbs,
+    shareLink: shareData.shareURL
+  });
+}, err => {
+  console.warn('[MEDIA MANAGER] Could not create share link =>', err.message);
+  return callback(null, {
+    success: true,
+    publicPath: publicAbs,
+    shareLink: null
+  });
+});
   } catch (ex) {
     callback(ex);
   }

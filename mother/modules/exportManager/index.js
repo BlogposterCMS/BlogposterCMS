@@ -1,7 +1,10 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 require('dotenv').config();
 
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 
@@ -33,20 +36,14 @@ function requirePermission(payload, permission) {
 }
 
 function emitCore(motherEmitter, jwt, eventName, moduleName, params = {}) {
-  return new Promise((resolve, reject) => {
-    if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
-      resolve([]);
-      return;
-    }
-    motherEmitter.emit(eventName, {
-      jwt,
-      moduleName,
-      moduleType: MODULE_TYPE,
-      ...params
-    }, onceCallback((err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    }));
+  if (typeof motherEmitter.listenerCount === 'function' && motherEmitter.listenerCount(eventName) === 0) {
+    return Promise.resolve([]);
+  }
+  return requestBackendEvent(motherEmitter, eventName, {
+    jwt,
+    moduleName,
+    moduleType: MODULE_TYPE,
+    ...params
   });
 }
 
@@ -199,7 +196,7 @@ async function collectContentEntries(motherEmitter, jwt, options) {
     entries.push(...await collectPaged({
       motherEmitter,
       jwt,
-      eventName: 'listContentEntries',
+      eventName: BACKEND_EVENTS.LIST_CONTENT_ENTRIES,
       moduleName: 'contentEngine',
       pageSize: CONTENT_PAGE_SIZE,
       baseParams: {
@@ -213,7 +210,7 @@ async function collectContentEntries(motherEmitter, jwt, options) {
     entries.push(...await collectPaged({
       motherEmitter,
       jwt,
-      eventName: 'listTrashedContentEntries',
+      eventName: BACKEND_EVENTS.LIST_TRASHED_CONTENT_ENTRIES,
       moduleName: 'contentEngine',
       pageSize: CONTENT_PAGE_SIZE,
       baseParams
@@ -231,10 +228,10 @@ async function collectEntryDetails(motherEmitter, jwt, entries, options) {
     const id = entryId(entry);
     if (!id) continue;
     if (options.includeRevisions) {
-      revisionsByEntryId[id] = await emitCore(motherEmitter, jwt, 'getContentRevisions', 'contentEngine', { entryId: id });
+      revisionsByEntryId[id] = await emitCore(motherEmitter, jwt, BACKEND_EVENTS.GET_CONTENT_REVISIONS, 'contentEngine', { entryId: id });
     }
     if (options.includeMetadata) {
-      metadataByEntryId[id] = await emitCore(motherEmitter, jwt, 'getMetadata', 'metadataManager', {
+      metadataByEntryId[id] = await emitCore(motherEmitter, jwt, BACKEND_EVENTS.GET_METADATA, 'metadataManager', {
         targetType: 'contentEntry',
         targetId: String(id),
         public: false,
@@ -257,7 +254,7 @@ async function collectMedia(motherEmitter, jwt, options) {
       attachments.push(...await collectPaged({
         motherEmitter,
         jwt,
-        eventName: 'listMediaAttachments',
+        eventName: BACKEND_EVENTS.LIST_MEDIA_ATTACHMENTS,
         moduleName: 'mediaManager',
         pageSize: MEDIA_PAGE_SIZE,
         baseParams: { status, visibility }
@@ -274,13 +271,13 @@ async function collectMedia(motherEmitter, jwt, options) {
     const id = attachmentId(attachment);
     if (!id) continue;
     if (options.includeMediaVariants) {
-      variantsByAttachmentId[id] = await emitCore(motherEmitter, jwt, 'listMediaVariants', 'mediaManager', { attachmentId: id });
+      variantsByAttachmentId[id] = await emitCore(motherEmitter, jwt, BACKEND_EVENTS.LIST_MEDIA_VARIANTS, 'mediaManager', { attachmentId: id });
     }
     if (options.includeMediaRelations) {
-      relationsByAttachmentId[id] = await emitCore(motherEmitter, jwt, 'listContentForMedia', 'mediaManager', { attachmentId: id });
+      relationsByAttachmentId[id] = await emitCore(motherEmitter, jwt, BACKEND_EVENTS.LIST_CONTENT_FOR_MEDIA, 'mediaManager', { attachmentId: id });
     }
     if (options.includeMetadata) {
-      metadataByAttachmentId[id] = await emitCore(motherEmitter, jwt, 'getMetadata', 'metadataManager', {
+      metadataByAttachmentId[id] = await emitCore(motherEmitter, jwt, BACKEND_EVENTS.GET_METADATA, 'metadataManager', {
         targetType: 'mediaAttachment',
         targetId: String(id),
         public: false,
@@ -300,7 +297,7 @@ async function collectMedia(motherEmitter, jwt, options) {
 async function buildBlogposterPackage({ motherEmitter, jwt, options, exporterName }) {
   const generatedAt = new Date().toISOString();
   const contentTypes = options.includeContentTypes
-    ? await emitCore(motherEmitter, jwt, 'listContentTypes', 'contentEngine')
+    ? await emitCore(motherEmitter, jwt, BACKEND_EVENTS.LIST_CONTENT_TYPES, 'contentEngine')
     : [];
   const entries = options.includeContent
     ? await collectContentEntries(motherEmitter, jwt, options)
@@ -310,10 +307,10 @@ async function buildBlogposterPackage({ motherEmitter, jwt, options, exporterNam
     : { revisionsByEntryId: {}, metadataByEntryId: {} };
   const media = await collectMedia(motherEmitter, jwt, options);
   const settings = options.includeSettings
-    ? await emitCore(motherEmitter, jwt, 'listSettings', 'settingsManager', { prefix: options.settingsPrefix })
+    ? await emitCore(motherEmitter, jwt, BACKEND_EVENTS.LIST_SETTINGS, 'settingsManager', { prefix: options.settingsPrefix })
     : [];
   const metaFields = options.includeMetadata
-    ? await emitCore(motherEmitter, jwt, 'listMetaFields', 'metadataManager', { public: false, limit: 250 })
+    ? await emitCore(motherEmitter, jwt, BACKEND_EVENTS.LIST_META_FIELDS, 'metadataManager', { public: false, limit: 250 })
     : [];
 
   const manifest = {
@@ -572,10 +569,10 @@ function listExporterMetadata() {
 }
 
 function setupExportEvents(motherEmitter) {
-  motherEmitter.on('listExporters', (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.LIST_EXPORTERS, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'listExporters');
+      assertCorePayload(payload, BACKEND_EVENTS.LIST_EXPORTERS);
       requirePermission(payload, 'exporters.list');
       callback(null, listExporterMetadata());
     } catch (err) {
@@ -583,10 +580,10 @@ function setupExportEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('runExport', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.RUN_EXPORT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'runExport');
+      assertCorePayload(payload, BACKEND_EVENTS.RUN_EXPORT);
       requirePermission(payload, 'exporters.run');
       const exporterName = resolveExporterName(payload.exporterName || payload.exporter || payload.format);
       const exporter = EXPORTERS[exporterName];

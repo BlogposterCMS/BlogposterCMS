@@ -1,5 +1,7 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
 const {
   _internals: {
     adminApiDefinition,
@@ -36,29 +38,29 @@ const DENIED_GRANT_RESOURCES = new Set([
   'users'
 ]);
 const HARD_DENIED_GRANT_EVENTS = new Set([
-  'cmsAdminApiRequest',
-  'cmsPublicRuntimeRequest',
-  'createDatabase',
-  'dbDelete',
-  'dbInsert',
-  'dbSelect',
-  'dbUpdate',
-  'dispatchAppEvent',
-  'httpRequest',
-  'issueModuleToken',
-  'issuePublicToken',
-  'issueRefreshToken',
-  'issueUserToken',
-  'listPendingModuleAccessRequests',
-  'performDbOperation',
-  'refreshAccessToken',
-  'registerLoginStrategy',
-  'requestDependency',
-  'resolveModuleAccessRequest',
-  'revokeAllTokensForUser',
-  'revokeRefreshToken',
-  'revokeToken',
-  'validateToken'
+  BACKEND_EVENTS.CMS_ADMIN_API_REQUEST,
+  BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST,
+  BACKEND_EVENTS.CREATE_DATABASE,
+  BACKEND_EVENTS.DB_DELETE,
+  BACKEND_EVENTS.DB_INSERT,
+  BACKEND_EVENTS.DB_SELECT,
+  BACKEND_EVENTS.DB_UPDATE,
+  BACKEND_EVENTS.DISPATCH_APP_EVENT,
+  BACKEND_EVENTS.HTTP_REQUEST,
+  BACKEND_EVENTS.ISSUE_MODULE_TOKEN,
+  BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN,
+  BACKEND_EVENTS.ISSUE_REFRESH_TOKEN,
+  BACKEND_EVENTS.ISSUE_USER_TOKEN,
+  BACKEND_EVENTS.LIST_PENDING_MODULE_ACCESS_REQUESTS,
+  BACKEND_EVENTS.PERFORM_DB_OPERATION,
+  BACKEND_EVENTS.REFRESH_ACCESS_TOKEN,
+  BACKEND_EVENTS.REGISTER_LOGIN_STRATEGY,
+  BACKEND_EVENTS.REQUEST_DEPENDENCY,
+  BACKEND_EVENTS.RESOLVE_MODULE_ACCESS_REQUEST,
+  BACKEND_EVENTS.REVOKE_ALL_TOKENS_FOR_USER,
+  BACKEND_EVENTS.REVOKE_REFRESH_TOKEN,
+  BACKEND_EVENTS.REVOKE_TOKEN,
+  BACKEND_EVENTS.VALIDATE_TOKEN
 ]);
 
 function createModuleAccessError(code, message) {

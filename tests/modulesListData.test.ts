@@ -185,7 +185,7 @@ describe('modulesListData', () => {
         zipData: 'UEsDBAo=',
         approvedAccess: [{ event: 'listContentEntries' }]
       }
-    });
+    }, 305_000);
   });
 
   it('checks and installs module updates through the runtime admin facade', async () => {
@@ -234,7 +234,7 @@ describe('modulesListData', () => {
       resource: 'modules',
       action: 'inspectUpdate',
       params: { targetModuleName: 'shopSync' }
-    });
+    }, 65_000);
     expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
       moduleName: 'runtimeManager',
@@ -245,7 +245,7 @@ describe('modulesListData', () => {
         targetModuleName: 'shopSync',
         approvedAccess: [{ resource: 'content', action: 'list' }]
       }
-    });
+    }, 305_000);
     expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',
       moduleName: 'runtimeManager',

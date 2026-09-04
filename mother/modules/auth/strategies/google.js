@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/auth/strategies/google.js
  *
@@ -11,9 +17,7 @@ module.exports = {
   async initialize({ motherEmitter, JWT_SECRET, authModuleSecret }) {
     console.log('[GOOGLE STRATEGY] Initializing Google login strategy...');
 
-    motherEmitter.emit(
-      'registerLoginStrategy',
-      {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.REGISTER_LOGIN_STRATEGY, {
         skipJWT         : true,
         moduleType      : 'core',
         moduleName      : 'auth',
@@ -37,101 +41,80 @@ module.exports = {
             }
 
             // 2) meltdown => issueModuleToken => so we can talk to userManagement
-            motherEmitter.emit(
-              'issueModuleToken',
-              {
+            requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
                 skipJWT         : true,
                 authModuleSecret: authModuleSecret,
                 moduleType      : 'core',
                 moduleName      : 'auth',
                 signAsModule    : 'userManagement',
                 trustLevel      : 'high'
-              },
-              (modErr, userMgmtToken) => {
-                if (modErr) {
-                  console.error('[GOOGLE STRATEGY] issueModuleToken =>', modErr.message);
-                  return callback(modErr);
-                }
-
-                // 3) Find or create user in DB with google_id = payload.sub
-                motherEmitter.emit(
-                  'dbSelect',
-                  {
-                    jwt       : userMgmtToken,
-                    moduleName: 'userManagement',
-                    table     : 'users',
-                    where     : { google_id: payload.sub }
-                  },
-                  (selectErr, rows) => {
-                    if (selectErr) return callback(selectErr);
-
-                    if (!rows || rows.length === 0) {
-                      // user not found => create
-                      motherEmitter.emit(
-                        'dbInsert',
-                        {
-                          jwt       : userMgmtToken,
-                          moduleName: 'userManagement',
-                          table     : 'users',
-                          data      : {
-                            username   : `google_${payload.sub}`,
-                            google_id  : payload.sub,
-                            email      : payload.email || null,
-                            full_name  : payload.name  || null,
-                            created_at : new Date().toISOString(),
-                            updated_at : new Date().toISOString()
-                          }
-                        },
-                        (insertErr, newUser) => {
-                          if (insertErr) return callback(insertErr);
-                          doFinalize(newUser.id);
-                        }
-                      );
-                    } else {
-                      doFinalize(rows[0].id);
-                    }
-                  }
-                );
-
-                function doFinalize(dbUserId) {
-                  // meltdown => finalizeUserLogin => merges roles, issues JWT
-                  motherEmitter.emit(
-                    'finalizeUserLogin',
-                    {
-                      jwt       : userMgmtToken,
-                      moduleName: 'userManagement',
-                      moduleType: 'core',
-                      userId    : dbUserId,
-                      extraData : {
-                        provider : 'google',
-                        googleId : payload.sub,
-                        picture  : payload.picture || null
-                      }
-                    },
-                    (finalErr, finalUserObj) => {
-                      if (finalErr) {
-                        console.error('[GOOGLE STRATEGY] finalizeUserLogin =>', finalErr.message);
-                        return callback(finalErr);
-                      }
-                      return callback(null, finalUserObj);
-                    }
-                  );
-                }
-              }
-            );
+              }).then(userMgmtToken => {
+  // 3) Find or create user in DB with google_id = payload.sub
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    jwt: userMgmtToken,
+    moduleName: 'userManagement',
+    table: 'users',
+    where: {
+      google_id: payload.sub
+    }
+  }).then(rows => {
+    if (!rows || rows.length === 0) {
+      // user not found => create
+      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+        jwt: userMgmtToken,
+        moduleName: 'userManagement',
+        table: 'users',
+        data: {
+          username: `google_${payload.sub}`,
+          google_id: payload.sub,
+          email: payload.email || null,
+          full_name: payload.name || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      }).then(newUser => {
+        doFinalize(newUser.id);
+      }, insertErr => {
+        return callback(insertErr);
+      });
+    } else {
+      doFinalize(rows[0].id);
+    }
+  }, selectErr => {
+    return callback(selectErr);
+  });
+  function doFinalize(dbUserId) {
+    // meltdown => finalizeUserLogin => merges roles, issues JWT
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.FINALIZE_USER_LOGIN, {
+      jwt: userMgmtToken,
+      moduleName: 'userManagement',
+      moduleType: 'core',
+      userId: dbUserId,
+      extraData: {
+        provider: 'google',
+        googleId: payload.sub,
+        picture: payload.picture || null
+      }
+    }).then(finalUserObj => {
+      return callback(null, finalUserObj);
+    }, finalErr => {
+      console.error('[GOOGLE STRATEGY] finalizeUserLogin =>', finalErr.message);
+      return callback(finalErr);
+    });
+  }
+}, modErr => {
+  console.error('[GOOGLE STRATEGY] issueModuleToken =>', modErr.message);
+  return callback(modErr);
+});
           } catch (error) {
             console.error('[GOOGLE STRATEGY] Error validating Google token:', error.message);
             callback(error);
           }
         },
-      },
-      (err, success) => {
-        if (err) {
-          console.error('[GOOGLE STRATEGY] Failed to register strategy:', err.message);
-        } else {
-          console.log('[GOOGLE STRATEGY] Strategy "google" registered successfully.');
-        }
-      }
-    );
+      }).then(success => {
+  console.log('[GOOGLE STRATEGY] Strategy "google" registered successfully.');
+}, err => {
+  console.error('[GOOGLE STRATEGY] Failed to register strategy:', err.message);
+});
   }
 };

@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -56,10 +60,7 @@ function createInstallRoutes({
         return res.status(403).send('Already installed');
       }
 
-      await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'createUser',
-          {
+      await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_USER, {
             jwt: userManagementToken,
             moduleName: 'userManagement',
             moduleType: 'core',
@@ -69,39 +70,24 @@ function createInstallRoutes({
             displayName: trimmedUsername,
             uiColor: favoriteColor,
             role: 'admin'
-          },
-          err => (err ? reject(err) : resolve())
-        );
-      });
+          });
 
-      await new Promise((resolve, reject) => {
-        motherEmitter.emit(
-          'setSetting',
-          {
+      await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_SETTING, {
             jwt: settingsManagerToken,
             moduleName: 'settingsManager',
             moduleType: 'core',
             key: 'FIRST_INSTALL_DONE',
             value: 'true'
-          },
-          err => (err ? reject(err) : resolve())
-        );
-      });
+          });
 
       if (trimmedSiteName) {
-        await new Promise((resolve, reject) => {
-          motherEmitter.emit(
-            'setSetting',
-            {
+        await requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_SETTING, {
               jwt: settingsManagerToken,
               moduleName: 'settingsManager',
               moduleType: 'core',
               key: 'SITE_NAME',
               value: trimmedSiteName
-            },
-            err => (err ? reject(err) : resolve())
-          );
-        });
+            });
       }
 
       fs.writeFileSync(installLockPath, 'installed');

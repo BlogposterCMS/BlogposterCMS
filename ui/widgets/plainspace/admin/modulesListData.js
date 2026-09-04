@@ -131,7 +131,7 @@ export async function inspectModuleZip(emit, jwt, zipData) {
 }
 export async function inspectModuleUpdate(emit, jwt, targetModuleName) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'inspectUpdate', { targetModuleName });
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'inspectUpdate', { targetModuleName }, 65_000);
     return toModuleUpdateInspection(res);
 }
 export async function installModuleZip(emit, jwt, zipData, approvedAccess = []) {
@@ -139,14 +139,14 @@ export async function installModuleZip(emit, jwt, zipData, approvedAccess = []) 
     await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installZip', {
         zipData,
         approvedAccess
-    });
+    }, 305_000);
 }
 export async function installModuleUpdate(emit, jwt, targetModuleName, approvedAccess = []) {
     const meltdownEmit = requireEmitter(emit);
     await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installUpdate', {
         targetModuleName,
         approvedAccess
-    });
+    }, 305_000);
 }
 export async function setModuleUpdateSource(emit, jwt, targetModuleName, trustedUpdateSource) {
     const meltdownEmit = requireEmitter(emit);

@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 // mother/modules/settingsManager/settingsService.js
 
 require('dotenv').config();
@@ -7,32 +13,23 @@ require('dotenv').config();
  *   meltdown => "createDatabase" for "settingsManager"
  *   optionally uses "moduleDbSalt" as a nonce
  */
-function ensuresettingsManagerDatabase(motherEmitter, moduleDbSalt, jwt) {
-  return new Promise((resolve, reject) => {
-    console.log('[SETTINGS MANAGER] Ensuring settingsManager DB/Schema via createDatabase...');
-
-    const meltdownPayload = {
-      jwt,
-      moduleName : 'settingsManager',
-      moduleType : 'core'
-    };
-    if (moduleDbSalt) {
-      meltdownPayload.nonce = moduleDbSalt;
-    }
-
-    motherEmitter.emit(
-      'createDatabase',
-      meltdownPayload,
-      (err) => {
-        if (err) {
-          console.error('[SETTINGS MANAGER] Error creating/fixing settingsManager DB:', err.message);
-          return reject(err);
-        }
-        console.log('[SETTINGS MANAGER] settingsManager DB/Schema creation done (if needed).');
-        resolve();
-      }
-    );
-  });
+async function ensuresettingsManagerDatabase(motherEmitter, moduleDbSalt, jwt) {
+  console.log('[SETTINGS MANAGER] Ensuring settingsManager DB/Schema via createDatabase...');
+  const meltdownPayload = {
+    jwt,
+    moduleName: 'settingsManager',
+    moduleType: 'core'
+  };
+  if (moduleDbSalt) {
+    meltdownPayload.nonce = moduleDbSalt;
+  }
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, meltdownPayload);
+    console.log('[SETTINGS MANAGER] settingsManager DB/Schema creation done (if needed).');
+  } catch (err) {
+    console.error('[SETTINGS MANAGER] Error creating/fixing settingsManager DB:', err.message);
+    throw err;
+  }
 }
 
 /**
@@ -41,79 +38,54 @@ function ensuresettingsManagerDatabase(motherEmitter, moduleDbSalt, jwt) {
  *   meltdown => dbUpdate => 'INIT_SETTINGS_TABLES'
  *   meltdown => dbUpdate => 'CHECK_AND_ALTER_SETTINGS_TABLES'
  */
-function ensureSettingsSchemaAndTables(motherEmitter, jwt) {
-  return new Promise((resolve, reject) => {
-    console.log('[SETTINGS MANAGER] Creating schema & tables for settingsManager (yay placeholders).');
+async function ensureSettingsSchemaAndTables(motherEmitter, jwt) {
+  console.log('[SETTINGS MANAGER] Creating schema & tables for settingsManager (yay placeholders).');
 
-    // meltdown => dbUpdate => 'INIT_SETTINGS_SCHEMA'
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        jwt,
-        moduleName : 'settingsManager',
-        moduleType : 'core',
-        table      : '__rawSQL__',
-        data       : { rawSQL: 'INIT_SETTINGS_SCHEMA' }
-      },
-      (schemaErr) => {
-        if (schemaErr) {
-          console.error('[SETTINGS MANAGER] Error creating schema:', schemaErr.message);
-          return reject(schemaErr);
-        }
-        console.log('[SETTINGS MANAGER] Schema creation/verification done.');
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      jwt,
+      moduleName: 'settingsManager',
+      moduleType: 'core',
+      table: '__rawSQL__',
+      data: { rawSQL: 'INIT_SETTINGS_SCHEMA' }
+    });
+    console.log('[SETTINGS MANAGER] Schema creation/verification done.');
+  } catch (err) {
+    console.error('[SETTINGS MANAGER] Error creating schema:', err.message);
+    throw err;
+  }
 
-        // meltdown => dbUpdate => 'INIT_SETTINGS_TABLES'
-        motherEmitter.emit(
-          'dbUpdate',
-          {
-            jwt,
-            moduleName : 'settingsManager',
-            moduleType : 'core',
-            table      : '__rawSQL__',
-            data       : { rawSQL: 'INIT_SETTINGS_TABLES' }
-          },
-          async (tableErr) => {
-            if (tableErr) {
-              console.error('[SETTINGS MANAGER] Error creating settings tables:', tableErr.message);
-              return reject(tableErr);
-            }
-            console.log('[SETTINGS MANAGER] "cms_settings" & "module_events" creation/verification done.');
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      jwt,
+      moduleName: 'settingsManager',
+      moduleType: 'core',
+      table: '__rawSQL__',
+      data: { rawSQL: 'INIT_SETTINGS_TABLES' }
+    });
+    console.log('[SETTINGS MANAGER] "cms_settings" & "module_events" creation/verification done.');
+  } catch (err) {
+    console.error('[SETTINGS MANAGER] Error creating settings tables:', err.message);
+    throw err;
+  }
 
-            // meltdown => dbUpdate => 'CHECK_AND_ALTER_SETTINGS_TABLES'
-            try {
-              await checkAndAlterSettingsTables(motherEmitter, jwt);
-              resolve();
-            } catch (alterErr) {
-              reject(alterErr);
-            }
-          }
-        );
-      }
-    );
-  });
+  await checkAndAlterSettingsTables(motherEmitter, jwt);
 }
 
-function checkAndAlterSettingsTables(motherEmitter, jwt) {
-  return new Promise((resolve, reject) => {
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        jwt,
-        moduleName : 'settingsManager',
-        moduleType : 'core',
-        table      : '__rawSQL__',
-        data       : { rawSQL: 'CHECK_AND_ALTER_SETTINGS_TABLES' }
-      },
-      (err) => {
-        if (err) {
-          console.error('[SETTINGS MANAGER] Error checking/altering columns:', err.message);
-          return reject(err);
-        }
-        console.log('[SETTINGS MANAGER] All required columns ensured in cms_settings/module_events.');
-        resolve();
-      }
-    );
-  });
+async function checkAndAlterSettingsTables(motherEmitter, jwt) {
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      jwt,
+      moduleName: 'settingsManager',
+      moduleType: 'core',
+      table: '__rawSQL__',
+      data: { rawSQL: 'CHECK_AND_ALTER_SETTINGS_TABLES' }
+    });
+    console.log('[SETTINGS MANAGER] All required columns ensured in cms_settings/module_events.');
+  } catch (err) {
+    console.error('[SETTINGS MANAGER] Error checking/altering columns:', err.message);
+    throw err;
+  }
 }
 
 module.exports = {

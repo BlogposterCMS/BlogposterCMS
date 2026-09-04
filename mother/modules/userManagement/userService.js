@@ -1,4 +1,10 @@
-//mother/modules/userManagement/userService.js
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
+// mother/modules/userManagement/userService.js
 
 require('dotenv').config();
 
@@ -9,26 +15,21 @@ const ADMIN_PERMISSIONS = JSON.stringify({ '*': true });
  *   1) Emits "createDatabase" for the "userManagement" module.
  *   2) The database manager decides whether it's a dedicated DB or a shared schema.
  */
-function ensureUserManagementDatabase(motherEmitter, jwt, nonce) {
-  return new Promise((resolve, reject) => {
-    console.log('[USER SERVICE] Ensuring the userManagement data store (DB or equivalent) via createDatabase...');
-
-    const meltdownPayload = {
-      jwt,
-      moduleName: 'userManagement',
-      moduleType: 'core',
-      nonce
-    };
-
-    motherEmitter.emit('createDatabase', meltdownPayload, (err) => {
-      if (err) {
-        console.error('[USER SERVICE] Error creating/fixing userManagement data store:', err.message);
-        return reject(err);
-      }
-      console.log('[USER SERVICE] userManagement data store creation completed (if needed).');
-      resolve();
-    });
-  });
+async function ensureUserManagementDatabase(motherEmitter, jwt, nonce) {
+  console.log('[USER SERVICE] Ensuring the userManagement data store (DB or equivalent) via createDatabase...');
+  const meltdownPayload = {
+    jwt,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    nonce
+  };
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, meltdownPayload);
+    console.log('[USER SERVICE] userManagement data store creation completed (if needed).');
+  } catch (err) {
+    console.error('[USER SERVICE] Error creating/fixing userManagement data store:', err.message);
+    throw err;
+  }
 }
 
 /**
@@ -37,38 +38,26 @@ function ensureUserManagementDatabase(motherEmitter, jwt, nonce) {
  *   2) This tells the bridging layer (e.g., Postgres or Mongo) to create the necessary
  *      tables/collections ("users", "roles", "user_roles", etc.) for user management.
  */
-function ensureUserManagementSchemaAndTables(motherEmitter, jwt, nonce) {
-  return new Promise((resolve, reject) => {
-    console.log('[USER SERVICE] Initializing userManagement tables/collections...');
-
-    const meltdownPayload = {
-      jwt,
-      moduleName: 'userManagement',
-      moduleType: 'core',
-      nonce
-    };
-
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        ...meltdownPayload,
-        table: '__rawSQL__',
-        where: {},
-        data: {
-          // Tells the bridging logic to run "INIT_USER_MANAGEMENT"
-          rawSQL: 'INIT_USER_MANAGEMENT'
-        }
-      },
-      (err) => {
-        if (err) {
-          console.error('[USER SERVICE] Error initializing userManagement structures:', err.message);
-          return reject(err);
-        }
-        console.log('[USER SERVICE] userManagement data structures ensured successfully.');
-        resolve();
-      }
-    );
-  });
+async function ensureUserManagementSchemaAndTables(motherEmitter, jwt, nonce) {
+  console.log('[USER SERVICE] Initializing userManagement tables/collections...');
+  const meltdownPayload = {
+    jwt,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    nonce
+  };
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      ...meltdownPayload,
+      table: '__rawSQL__',
+      where: {},
+      data: { rawSQL: 'INIT_USER_MANAGEMENT' }
+    });
+    console.log('[USER SERVICE] userManagement data structures ensured successfully.');
+  } catch (err) {
+    console.error('[USER SERVICE] Error initializing userManagement structures:', err.message);
+    throw err;
+  }
 }
 
 /**
@@ -76,100 +65,57 @@ function ensureUserManagementSchemaAndTables(motherEmitter, jwt, nonce) {
  *   1) Emits a "dbSelect" for the 'roles' table to see if "admin"/"standard" exist.
  *   2) If not found, inserts them with default permissions.
  */
-function ensureDefaultRoles(motherEmitter, jwt, nonce) {
-  return new Promise((resolve, reject) => {
-    console.log('[USER SERVICE] Checking for default roles: "admin" and "standard"...');
+async function ensureDefaultRoles(motherEmitter, jwt, nonce) {
+  console.log('[USER SERVICE] Checking for default roles: "admin" and "standard"...');
+  const meltdownPayload = {
+    jwt,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    nonce
+  };
+  let existingRoles;
+  try {
+    existingRoles = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      ...meltdownPayload,
+      table: 'roles'
+    });
+  } catch (err) {
+    console.error('[USER SERVICE] Error retrieving existing roles:', err.message);
+    throw err;
+  }
 
-    const meltdownPayload = {
-      jwt,
-      moduleName: 'userManagement',
-      moduleType: 'core',
-      nonce
-    };
+  const foundNames = (existingRoles || []).map(role => (role.role_name || '').toLowerCase());
+  const rolesToCreate = [];
+  if (!foundNames.includes('admin')) {
+    rolesToCreate.push({
+      role_name: 'admin',
+      is_system_role: true,
+      description: 'System Admin Role',
+      permissions: ADMIN_PERMISSIONS
+    });
+  }
+  if (!foundNames.includes('standard')) {
+    rolesToCreate.push({
+      role_name: 'standard',
+      is_system_role: false,
+      description: 'Default basic user role',
+      permissions: JSON.stringify({})
+    });
+  }
+  if (!rolesToCreate.length) {
+    console.log('[USER SERVICE] Default roles "admin" and "standard" already exist.');
+    return;
+  }
 
-    motherEmitter.emit(
-      'dbSelect',
-      {
-        ...meltdownPayload,
-        table: 'roles'
-      },
-      (err, existingRoles) => {
-        if (err) {
-          console.error('[USER SERVICE] Error retrieving existing roles:', err.message);
-          return reject(err);
-        }
-
-        const foundNames = (existingRoles || []).map(r => (r.role_name || '').toLowerCase());
-
-        const needAdmin = !foundNames.includes('admin');
-        const needStandard = !foundNames.includes('standard');
-
-        if (!needAdmin && !needStandard) {
-          console.log('[USER SERVICE] Default roles "admin" and "standard" already exist.');
-          return resolve();
-        }
-
-        const tasks = [];
-
-        if (needAdmin) {
-          tasks.push(cb => {
-            motherEmitter.emit(
-              'dbInsert',
-              {
-                ...meltdownPayload,
-                table: 'roles',
-                data: {
-                  role_name: 'admin',
-                  is_system_role: true,
-                  description: 'System Admin Role',
-                  permissions: ADMIN_PERMISSIONS,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                }
-              },
-              cb
-            );
-          });
-        }
-
-        if (needStandard) {
-          tasks.push(cb => {
-            motherEmitter.emit(
-              'dbInsert',
-              {
-                ...meltdownPayload,
-                table: 'roles',
-                data: {
-                  role_name: 'standard',
-                  is_system_role: false,
-                  description: 'Default basic user role',
-                  permissions: JSON.stringify({}),
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                }
-              },
-              cb
-            );
-          });
-        }
-
-        // Execute tasks in series
-        let idx = 0;
-        function runNext() {
-          if (idx >= tasks.length) {
-            console.log('[USER SERVICE] Created default roles "admin" and/or "standard" if they were missing.');
-            return resolve();
-          }
-          tasks[idx]((err2) => {
-            if (err2) return reject(err2);
-            idx++;
-            runNext();
-          });
-        }
-        runNext();
-      }
-    );
-  });
+  for (const role of rolesToCreate) {
+    const timestamp = new Date().toISOString();
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+      ...meltdownPayload,
+      table: 'roles',
+      data: { ...role, created_at: timestamp, updated_at: timestamp }
+    });
+  }
+  console.log('[USER SERVICE] Created default roles "admin" and/or "standard" if they were missing.');
 }
 
 /**
@@ -177,37 +123,26 @@ function ensureDefaultRoles(motherEmitter, jwt, nonce) {
  *   1) Tells bridging code to run "INIT_B2B_FIELDS", e.g. adding columns for
  *      "company_name", "vat_number", "phone", etc.
  */
-function addB2BFields(motherEmitter, jwt, nonce) {
-  return new Promise((resolve, reject) => {
-    console.log('[USER SERVICE] Adding B2B fields (company_name, vat_number, phone, etc.)...');
-
-    const meltdownPayload = {
-      jwt,
-      moduleName: 'userManagement',
-      moduleType: 'core',
-      nonce
-    };
-
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        ...meltdownPayload,
-        table: '__rawSQL__',
-        where: {},
-        data: {
-          rawSQL: 'INIT_B2B_FIELDS'
-        }
-      },
-      (err) => {
-        if (err) {
-          console.error('[USER SERVICE] Error adding B2B fields:', err.message);
-          return reject(err);
-        }
-        console.log('[USER SERVICE] B2B fields have been added to the users table/collection.');
-        resolve();
-      }
-    );
-  });
+async function addB2BFields(motherEmitter, jwt, nonce) {
+  console.log('[USER SERVICE] Adding B2B fields (company_name, vat_number, phone, etc.)...');
+  const meltdownPayload = {
+    jwt,
+    moduleName: 'userManagement',
+    moduleType: 'core',
+    nonce
+  };
+  try {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      ...meltdownPayload,
+      table: '__rawSQL__',
+      where: {},
+      data: { rawSQL: 'INIT_B2B_FIELDS' }
+    });
+    console.log('[USER SERVICE] B2B fields have been added to the users table/collection.');
+  } catch (err) {
+    console.error('[USER SERVICE] Error adding B2B fields:', err.message);
+    throw err;
+  }
 }
 
 /**
@@ -227,35 +162,26 @@ function addB2BFields(motherEmitter, jwt, nonce) {
  * }
  */
 function addUserFieldDefinition(motherEmitter, payload) {
-  return new Promise((resolve, reject) => {
-    if (!payload || !payload.jwt) {
-      return reject(new Error('[USER SERVICE] addUserFieldDefinition => missing "jwt" in payload.'));
+  if (!payload || !payload.jwt) {
+    return Promise.reject(new Error('[USER SERVICE] addUserFieldDefinition => missing "jwt" in payload.'));
+  }
+
+  console.log(`[USER SERVICE] Adding custom user field => ${payload.fieldName}`);
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+    ...payload,
+    table: '__rawSQL__',
+    where: {},
+    data: {
+      rawSQL: 'ADD_USER_FIELD',
+      fieldName: payload.fieldName,
+      fieldType: payload.fieldType || 'TEXT',
+      defaultValue: payload.defaultValue || null
     }
-
-    console.log(`[USER SERVICE] Adding custom user field => ${payload.fieldName}`);
-
-    motherEmitter.emit(
-      'dbUpdate',
-      {
-        ...payload,
-        table: '__rawSQL__',
-        where: {},
-        data: {
-          rawSQL: 'ADD_USER_FIELD',
-          fieldName: payload.fieldName,
-          fieldType: payload.fieldType || 'TEXT',
-          defaultValue: payload.defaultValue || null
-        }
-      },
-      (err) => {
-        if (err) {
-          console.error('[USER SERVICE] Error adding custom user field:', err.message);
-          return reject(err);
-        }
-        console.log(`[USER SERVICE] Custom field "${payload.fieldName}" was added successfully.`);
-        resolve();
-      }
-    );
+  }).then(() => {
+    console.log(`[USER SERVICE] Custom field "${payload.fieldName}" was added successfully.`);
+  }, err => {
+    console.error('[USER SERVICE] Error adding custom user field:', err.message);
+    throw err;
   });
 }
 

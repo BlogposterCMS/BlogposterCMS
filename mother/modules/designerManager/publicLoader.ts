@@ -1,3 +1,7 @@
+
+
+import { BACKEND_EVENTS } from '../../contracts/generatedBackendEventCatalog';
+
 type DesignerLoaderContext = {
   meltdownEmit?: <T = unknown>(eventName: string, payload?: Record<string, unknown>) => Promise<T>;
   publicToken?: string | null;
@@ -62,7 +66,7 @@ async function emitPublicRuntime<T>(
   if (!ctx || typeof ctx.meltdownEmit !== 'function') {
     throw new Error('[DesignerPublicLoader:PUBLIC_RUNTIME_EMIT_MISSING] meltdownEmit is required.');
   }
-  const result = await ctx.meltdownEmit<RuntimeFacadeResponse<T>>('cmsPublicRuntimeRequest', {
+  const result = await ctx.meltdownEmit<RuntimeFacadeResponse<T>>(BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST, {
     jwt: ctx.publicToken,
     moduleName: 'runtimeManager',
     moduleType: 'core',

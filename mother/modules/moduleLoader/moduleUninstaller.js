@@ -1,3 +1,9 @@
+
+
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 /**
  * mother/modules/moduleLoader/moduleUninstaller.js
  *
@@ -49,25 +55,20 @@ async function uninstallModule(motherEmitter, jwt, moduleName, options = {}) {
 
     // 1) remove or deactivate from registry
     if (options.removeRegistryRow) {
-      await new Promise((resolveDelete, rejectDelete) => {
-        motherEmitter.emit(
-          'dbDelete',
-          {
-            jwt,
-            moduleName: 'moduleLoader',
-            moduleType: 'core',
-            table: 'module_registry',
-            where: { module_name: safeModuleName }
-          },
-          (err) => {
-            if (err) {
-              console.error('[UNINSTALL MODULE] DB error:', err.message);
-              return rejectDelete(err);
-            }
-            resolveDelete();
-          }
-        );
-      });
+      await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+  jwt,
+  moduleName: 'moduleLoader',
+  moduleType: 'core',
+  table: 'module_registry',
+  where: {
+    module_name: safeModuleName
+  }
+}).then(() => {
+  return;
+}, err => {
+  console.error('[UNINSTALL MODULE] DB error:', err.message);
+  throw err;
+});
     } else {
       // meltdown => standard approach => set is_active=false
       await deactivateModule(motherEmitter, jwt, safeModuleName, 'User uninstalled module');
@@ -76,28 +77,21 @@ async function uninstallModule(motherEmitter, jwt, moduleName, options = {}) {
     // 2) drop module database if requested
     if (options.removeDatabase) {
       const dbModuleName = safeModuleName.toLowerCase();
-      await new Promise((resolvePlaceholder, rejectPlaceholder) => {
-        motherEmitter.emit(
-          'dbUpdate',
-          {
-            jwt,
-            moduleName: 'moduleLoader',
-            moduleType: 'core',
-            table: '__rawSQL__',
-            data: {
-              rawSQL: 'DROP_MODULE_DATABASE',
-              params: [dbModuleName]
-            }
-          },
-          (err) => {
-            if (err) {
-              console.error('[UNINSTALL MODULE] Error dropping database/schema:', err.message);
-              return rejectPlaceholder(err);
-            }
-            resolvePlaceholder();
-          }
-        );
-      });
+      await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  jwt,
+  moduleName: 'moduleLoader',
+  moduleType: 'core',
+  table: '__rawSQL__',
+  data: {
+    rawSQL: 'DROP_MODULE_DATABASE',
+    params: [dbModuleName]
+  }
+}).then(() => {
+  return;
+}, err => {
+  console.error('[UNINSTALL MODULE] Error dropping database/schema:', err.message);
+  throw err;
+});
     }
 
     // 3) remove folder from /modules

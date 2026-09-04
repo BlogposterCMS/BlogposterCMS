@@ -1,5 +1,9 @@
 'use strict';
 
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+
 require('dotenv').config();
 
 const { onceCallback } = require('../../emitters/motherEmitter');
@@ -193,10 +197,10 @@ function normalizeQuery(value = '') {
 }
 
 function setupSearchEvents(motherEmitter) {
-  motherEmitter.on('indexSearchDocument', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.INDEX_SEARCH_DOCUMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'indexSearchDocument');
+      assertCorePayload(payload, BACKEND_EVENTS.INDEX_SEARCH_DOCUMENT);
       requirePermission(payload, 'search.manage');
       const result = await searchDbUpdate(motherEmitter, payload.jwt, 'UPSERT_SEARCH_DOCUMENT', normalizeSearchDocument(payload));
       callback(null, result);
@@ -205,10 +209,10 @@ function setupSearchEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('getSearchDocument', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.GET_SEARCH_DOCUMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'getSearchDocument');
+      assertCorePayload(payload, BACKEND_EVENTS.GET_SEARCH_DOCUMENT);
       const result = await searchDbSelect(motherEmitter, payload.jwt, 'GET_SEARCH_DOCUMENT', normalizeSource(payload));
       callback(null, Array.isArray(result) ? result[0] || null : result || null);
     } catch (err) {
@@ -216,10 +220,10 @@ function setupSearchEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('removeSearchDocument', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REMOVE_SEARCH_DOCUMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'removeSearchDocument');
+      assertCorePayload(payload, BACKEND_EVENTS.REMOVE_SEARCH_DOCUMENT);
       requirePermission(payload, 'search.manage');
       const result = await searchDbUpdate(motherEmitter, payload.jwt, 'DELETE_SEARCH_DOCUMENT', normalizeSource(payload));
       callback(null, result);
@@ -228,10 +232,10 @@ function setupSearchEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('searchDocuments', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.SEARCH_DOCUMENTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'searchDocuments');
+      assertCorePayload(payload, BACKEND_EVENTS.SEARCH_DOCUMENTS);
       const manager = canManageSearch(payload);
       const result = await searchDbSelect(motherEmitter, payload.jwt, 'SEARCH_DOCUMENTS', {
         query: normalizeQuery(payload.query || payload.q || ''),
@@ -248,13 +252,12 @@ function setupSearchEvents(motherEmitter) {
     }
   });
 
-  motherEmitter.on('reindexContentEntries', async (payload, originalCb) => {
+  motherEmitter.on(BACKEND_EVENTS.REINDEX_CONTENT_ENTRIES, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      assertCorePayload(payload, 'reindexContentEntries');
+      assertCorePayload(payload, BACKEND_EVENTS.REINDEX_CONTENT_ENTRIES);
       requirePermission(payload, 'search.manage');
-      const entries = await new Promise((resolve, reject) => {
-        motherEmitter.emit('listContentEntries', {
+      const entries = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.LIST_CONTENT_ENTRIES, {
           jwt: payload.jwt,
           moduleName: 'contentEngine',
           moduleType: 'core',
@@ -263,8 +266,7 @@ function setupSearchEvents(motherEmitter) {
           language: payload.language || '',
           limit: Math.min(Number(payload.limit) || 100, 100),
           offset: Math.max(Number(payload.offset) || 0, 0)
-        }, (err, result) => (err ? reject(err) : resolve(result || [])));
-      });
+        }).then(result => result || []);
       const indexed = [];
       const errors = [];
       for (const entry of entries) {

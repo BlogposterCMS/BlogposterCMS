@@ -61,6 +61,16 @@ browser, app, widget and public runtime helpers should keep using shared
 resource/action facade clients; new low-level event names must be added behind
 Runtime Manager or AppLoader, not exposed directly through HTTP.
 
+The direct HTTP event surface now comes from executable definitions in
+`mother/contracts/backendEventContracts.js`. Generated constants, executable
+schemas and TypeScript declarations cover every statically declared backend
+event; the public-token, Runtime Manager and AppLoader facade events additionally
+have narrowed explicit shapes. Backend Promise callers use one request helper
+with stable errors and declared deadlines; raw names and local callback adapters
+are rejected by the upgrade check. See
+[Backend Event Contracts](backend-event-contracts.md) for result types, error
+codes, deadlines and the update procedure.
+
 ## Transport Classes
 
 ### Allowed
@@ -120,14 +130,16 @@ Mitigation: add shared clients such as `cmsAdmin.request(resource, action,
 params)` and `cmsPublicRuntime.request(resource, action, params)` on top of the
 existing transport.
 
-### Error Contract Inconsistency
+### Domain Schema Precision
 
-Some paths return searchable error codes, while others return plain messages or
-regex-tested strings.
+All catalog events have event-specific payload declarations and result aliases.
+Generated internal results remain `JsonValue | undefined` where static code does
+not establish a narrower stable shape; the five external facade/token contracts
+validate exact top-level results.
 
-Mitigation: introduce a stable error shape with `code`, `message`, `status` and
-sanitized `details`, then require facade, HTTP and UI tests to preserve the
-code.
+Mitigation: narrow the existing explicit contract when an owning module changes,
+then regenerate the catalog artifacts; do not introduce a second registry or
+another local callback-to-Promise wrapper.
 
 ### Removed Standalone REST Configuration
 
@@ -183,7 +195,8 @@ points are the facade-backed routes documented here, not a second API server.
 
 ### Phase 6: Runtime Manager Modularization
 
-- Split facade maps and dispatch helpers by domain.
+- Facade maps and resource-specific dispatch rules are split across the
+  `content`, `presentation`, `access` and `platform` domains.
 - Preserve public event names and response shapes.
 - Add route inventory and error-code propagation tests before changing behavior.
 

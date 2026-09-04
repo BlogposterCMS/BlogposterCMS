@@ -1,3 +1,9 @@
+
+
+const { requestBackendEvent } = require('../../../contracts/backendEventContracts');
+
+const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
+
 /**
  * mother/modules/auth/strategies/adminLocal.js
  *
@@ -9,9 +15,7 @@ module.exports = {
     console.log('[ADMIN LOCAL STRATEGY] Initializing "adminLocal" login strategy... because local logins are oh so fancy.');
 
     // meltdown => registerLoginStrategy with skipJWT, because we’re the "auth" module. #privileged
-    motherEmitter.emit(
-      'registerLoginStrategy',
-      {
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.REGISTER_LOGIN_STRATEGY, {
         skipJWT         : true,
         moduleType      : 'core',
         moduleName      : 'auth', // meltdown sees "auth" => skipJWT is allowed
@@ -29,80 +33,59 @@ module.exports = {
             }
 
             // meltdown => issueModuleToken => obtains a high-trust token for "userManagement"
-            motherEmitter.emit(
-              'issueModuleToken',
-              {
+            requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
                 skipJWT         : true,
                 authModuleSecret: authModuleSecret,
                 moduleType      : 'core',
                 moduleName      : 'auth',
                 signAsModule    : 'userManagement',
                 trustLevel      : 'high'
-              },
-              (tokenErr, userManagementToken) => {
-                if (tokenErr) {
-                  console.error('[ADMIN LOCAL STRATEGY] userManagement token error =>', tokenErr.message);
-                  return callback(tokenErr);
-                }
-
-                // meltdown => userLogin => check username/password in userManagement
-                motherEmitter.emit(
-                  'userLogin',
-                  {
-                    jwt       : userManagementToken,
-                    moduleType: 'core',
-                    moduleName: 'userManagement',
-                    username,
-                    password
-                  },
-                  (err, userObj) => {
-                    if (err) {
-                      console.error('[ADMIN LOCAL STRATEGY] userLogin meltdown error =>', err.message);
-                      return callback(err);
-                    }
-                    if (!userObj) {
-                      // userObj===null => invalid credentials
-                      return callback(null, null);
-                    }
-
-                    // meltdown => finalizeUserLogin => merges roles & JSON permissions
-                    motherEmitter.emit(
-                      'finalizeUserLogin',
-                      {
-                        jwt       : userManagementToken,
-                        moduleName: 'userManagement',
-                        moduleType: 'core',
-                        userId    : userObj.id,
-                        extraData : { provider: 'adminLocal' }
-                      },
-                      (finalErr, finalUserObj) => {
-                        if (finalErr) {
-                          console.error('[ADMIN LOCAL STRATEGY] finalizeUserLogin meltdown error =>', finalErr.message);
-                          return callback(finalErr);
-                        }
-
-                        // finalUserObj now has .permissions, .role, .email, etc.
-                        return callback(null, finalUserObj);
-                      }
-                    );
-                  }
-                );
-              }
-            );
+              }).then(userManagementToken => {
+  // meltdown => userLogin => check username/password in userManagement
+  requestBackendEvent(motherEmitter, BACKEND_EVENTS.USER_LOGIN, {
+    jwt: userManagementToken,
+    moduleType: 'core',
+    moduleName: 'userManagement',
+    username,
+    password
+  }).then(userObj => {
+    if (!userObj) {
+      // userObj===null => invalid credentials
+      return callback(null, null);
+    }
+    // meltdown => finalizeUserLogin => merges roles & JSON permissions
+    requestBackendEvent(motherEmitter, BACKEND_EVENTS.FINALIZE_USER_LOGIN, {
+      jwt: userManagementToken,
+      moduleName: 'userManagement',
+      moduleType: 'core',
+      userId: userObj.id,
+      extraData: {
+        provider: 'adminLocal'
+      }
+    }).then(finalUserObj => {
+      // finalUserObj now has .permissions, .role, .email, etc.
+      return callback(null, finalUserObj);
+    }, finalErr => {
+      console.error('[ADMIN LOCAL STRATEGY] finalizeUserLogin meltdown error =>', finalErr.message);
+      return callback(finalErr);
+    });
+  }, err => {
+    console.error('[ADMIN LOCAL STRATEGY] userLogin meltdown error =>', err.message);
+    return callback(err);
+  });
+}, tokenErr => {
+  console.error('[ADMIN LOCAL STRATEGY] userManagement token error =>', tokenErr.message);
+  return callback(tokenErr);
+});
           } catch (ex) {
             console.error('[ADMIN LOCAL STRATEGY] loginFunction => oh dear =>', ex.message);
             callback(ex);
           }
         }
-      },
-      (err, success) => {
-        // final meltdown callback for registerLoginStrategy
-        if (err) {
-          console.error('[ADMIN LOCAL STRATEGY] Failed to register =>', err.message);
-        } else {
-          console.log('[ADMIN LOCAL STRATEGY] Strategy "adminLocal" registered successfully.');
-        }
-      }
-    );
+      }).then(success => {
+  console.log('[ADMIN LOCAL STRATEGY] Strategy "adminLocal" registered successfully.');
+}, err => {
+  console.error('[ADMIN LOCAL STRATEGY] Failed to register =>', err.message);
+});
   }
 };

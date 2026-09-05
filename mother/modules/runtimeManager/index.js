@@ -37,7 +37,6 @@ const REDIRECT_SKIP_PREFIXES = [
   '/assets',
   '/build',
   '/ui',
-  '/login',
   '/install',
   '/register',
   '/favicon.ico',

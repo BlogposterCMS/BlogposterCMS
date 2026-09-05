@@ -11,7 +11,6 @@ const MAINTENANCE_ALLOWED_PREFIXES = [
   '/build',
   '/media',
   '/ui',
-  '/login',
   '/favicon.ico',
   '/plainspace',
   '/apps',

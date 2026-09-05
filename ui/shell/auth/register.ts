@@ -23,7 +23,7 @@ async function checkRegistrationAvailability(): Promise<void> {
 
     if (!registrationAllowed) {
       alert('Public registration is disabled. Please use the login page.');
-      window.location.href = '/login';
+      window.location.href = '/admin/login';
     }
   } catch (err) {
     console.error('[register] registration availability check failed', err);
@@ -37,7 +37,7 @@ if (registerForm) {
     e.preventDefault();
     if (!registrationAllowed) {
       alert('Registration is currently disabled.');
-      window.location.href = '/login';
+      window.location.href = '/admin/login';
       return;
     }
 
@@ -57,7 +57,7 @@ if (registerForm) {
       });
 
       alert('Registration successful! Please log in now.');
-      window.location.href = '/login';
+      window.location.href = '/admin/login';
     } catch (err) {
       console.error(err);
       alert('Registration failed: ' + messageFromError(err));

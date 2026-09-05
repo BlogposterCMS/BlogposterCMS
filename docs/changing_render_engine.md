@@ -60,7 +60,7 @@ their own React frontend against BlogposterCMS APIs. To harden the instance:
 1. **Deny or gate `/admin` routes** – Add an Express guard *before* the
    dashboard routes in `app.js` that checks an `ADMIN_DASHBOARD_DISABLED`
    environment variable and returns `404` for `/admin`, `/admin/*`,
-   `/login`, `/register`, and `/admin/api/*`. Even when the middleware is in
+   `/admin/login`, `/register`, and `/admin/api/*`. Even when the middleware is in
    place, keep a reverse proxy ACL that only allows those paths from trusted
    IPs so accidental exposure is prevented at the edge.
 2. **Do not serve admin assets** – When the dashboard is disabled, block

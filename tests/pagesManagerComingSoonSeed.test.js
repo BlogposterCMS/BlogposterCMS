@@ -194,7 +194,7 @@ describe('Pages Manager Coming Soon seed', () => {
       label: 'Open admin',
       settings: {
         label: 'Open admin',
-        href: '/login',
+        href: '/admin/login',
         variant: 'primary'
       }
     });

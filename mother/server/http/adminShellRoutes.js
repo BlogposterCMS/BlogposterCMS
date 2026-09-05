@@ -149,10 +149,10 @@ function createAdminShellRoutes({
       if (await needsInitialSetup()) {
         return res.redirect('/install');
       }
-      return res.redirect('/login');
+      return res.redirect('/admin/login');
     } catch (err) {
       console.error('[GET /admin] Error:', err);
-      return res.redirect('/login');
+      return res.redirect('/admin/login');
     }
   });
 
@@ -246,7 +246,7 @@ function createAdminShellRoutes({
     }
 
     if (!adminJwt) {
-      const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+      const jump = `/admin/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
       return res.redirect(jump);
     }
 
@@ -261,7 +261,7 @@ function createAdminShellRoutes({
         sameSite: 'strict',
         secure: isProduction
       });
-      const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+      const jump = `/admin/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
       return res.redirect(jump);
     }
 
@@ -385,7 +385,7 @@ function createAdminShellRoutes({
     }
 
     if (!adminJwt) {
-      const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+      const jump = `/admin/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
       return res.redirect(jump);
     }
 
@@ -399,7 +399,7 @@ function createAdminShellRoutes({
         sameSite: 'strict',
         secure: isProduction
       });
-      const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+      const jump = `/admin/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
       return res.redirect(jump);
     }
 

@@ -2338,6 +2338,8 @@ test('runtime redirect matcher only checks public GET and HEAD requests', () => 
   assert.strictEqual(shouldCheckRedirect({ method: 'HEAD', path: '/old' }), true);
   assert.strictEqual(shouldCheckRedirect({ method: 'POST', path: '/old' }), false);
   assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/admin/home' }), false);
+  assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/admin/login' }), false);
+  assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/login' }), true);
   assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/api/meltdown' }), false);
   assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/widgets/weather/widget.js' }), false);
 });

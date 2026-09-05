@@ -107,7 +107,7 @@ async function issueDevAutologin({ emitter, req, res, next, finalize, devUser })
 
 /* ──────────────────────────────────────────────────────────────── *
  *  1) Cookie‑based auth for SSR routes
- *     – No token? → polite redirect to /login
+ *     – No token? → polite redirect to /admin/login
  * ──────────────────────────────────────────────────────────────── */
 function requireAuthCookie(req, res, next) {
   let token = req.cookies?.admin_jwt;
@@ -129,7 +129,7 @@ function requireAuthCookie(req, res, next) {
   }
 
   function finalize() {
-    const jump = `/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
+    const jump = `/admin/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
     return res.redirect(jump);
   }
 

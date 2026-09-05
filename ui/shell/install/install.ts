@@ -33,7 +33,7 @@ interface SiteFormElement extends HTMLFormElement {
   projectName: HTMLInputElement;
 }
 
-const DASHBOARD_ENTRY_URL = '/login?redirectTo=%2Fadmin%2Fhome';
+const DASHBOARD_ENTRY_URL = '/admin/login?redirectTo=%2Fadmin%2Fhome';
 
 function messageFromError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);

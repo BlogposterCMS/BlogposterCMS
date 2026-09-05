@@ -323,7 +323,7 @@ export function createBuilderHeader({
           const ref = document.referrer;
           if (ref) {
             const url = new URL(ref, location.href);
-            if (url.origin === location.origin && !url.pathname.startsWith('/login')) {
+            if (url.origin === location.origin && !url.pathname.startsWith('/admin/login')) {
               history.back();
               return;
             }

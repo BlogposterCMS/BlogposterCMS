@@ -6,6 +6,13 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-09-05
+
+- Moved the CMS sign-in page to `/admin/login`, including admin redirects,
+  logout, registration and installation links. Public `/login` now belongs to
+  site content and configured redirects instead of opening the CMS sign-in.
+  Authentication, CSRF protection and the login API remain unchanged.
+
 ## [0.9.2] - 2026-09-05
 
 - Restored native-browser loading of the public Designer and Widget loaders.

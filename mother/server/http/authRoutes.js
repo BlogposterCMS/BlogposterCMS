@@ -116,10 +116,12 @@ function createAuthRoutes({
       sameSite: 'strict',
       secure: isProduction
     });
-    res.redirect('/login');
+    res.redirect('/admin/login');
   });
 
-  router.get('/login', csrfProtection, async (req, res) => {
+  // Reserve CMS authentication for the admin namespace. Public /login pages and
+  // site-owned redirect rules must continue through the public runtime.
+  router.get('/admin/login', csrfProtection, async (req, res) => {
     try {
       if (await needsInitialSetup()) {
         return res.redirect('/install');
@@ -131,7 +133,7 @@ function createAuthRoutes({
           await validateAdminToken(adminJwt);
           return res.redirect('/admin/home');
         } catch (err) {
-          console.warn('[GET /login] Invalid admin token =>', err.message);
+          console.warn('[GET /admin/login] Invalid admin token =>', err.message);
           res.clearCookie('admin_jwt', {
             path: '/',
             httpOnly: true,
@@ -155,7 +157,7 @@ function createAuthRoutes({
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
       res.send(html);
     } catch (err) {
-      console.error('[GET /login] Error:', err);
+      console.error('[GET /admin/login] Error:', err);
       res.status(500).send('Server misconfiguration');
     }
   });

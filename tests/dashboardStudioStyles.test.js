@@ -22,6 +22,16 @@ function readCssRule(source, selector) {
 }
 
 describe('dashboard studio styles', () => {
+  it('ships a blue default accent with white foreground through the shared tokens', () => {
+    for (const file of ['public/assets/scss/_variables.scss', 'public/assets/css/site.css']) {
+      const rootRule = readCssRule(readProjectFile(file), ':root');
+      expect(rootRule).toContain('--accent-h: 215;');
+      expect(rootRule).toContain('--accent-s: 65%;');
+      expect(rootRule).toContain('--accent-l: 45%;');
+      expect(rootRule).toContain('--color-primary-contrast: #ffffff;');
+      expect(rootRule).toContain('--color-primary: var(--user-color);');
+    }
+  });
   it('defines shared studio, motion, and dark-mode tokens', () => {
     const variables = readProjectFile('public/assets/scss/_variables.scss');
     const fontScss = readProjectFile('public/assets/scss/_fonts.scss');

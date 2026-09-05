@@ -6,6 +6,11 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-09-05
+
+- Changed the shared default accent from bright teal to a restrained Studio
+  blue with a white foreground. Existing saved user accents remain authoritative.
+
 ## [0.9.3] - 2026-09-05
 
 - Moved the CMS sign-in page to `/admin/login`, including admin redirects,

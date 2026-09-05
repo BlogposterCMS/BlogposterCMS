@@ -12,12 +12,13 @@
   --color-white: #FFFFFF;
   --color-white-dark: #F7F7F7; // Slightly darker white for dropdown controls
   --color-border: #e5e7eb; // Neutral border color
-  --accent-h: 180; // Default teal hue
-  --accent-s: 70%; // Normalized saturation
-  --accent-l: 50%; // Normalized lightness
+  // Calm blue for the neutral Studio shell; saved user accents still override it.
+  --accent-h: 215;
+  --accent-s: 65%;
+  --accent-l: 45%;
   --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l)); // User-selected accent color
   --color-primary: var(--user-color);
-  --color-primary-contrast: #222222;
+  --color-primary-contrast: #ffffff;
   --brand: var(--color-primary);
   --brand-2: var(--color-primary);
   --color-card: #ffffff;

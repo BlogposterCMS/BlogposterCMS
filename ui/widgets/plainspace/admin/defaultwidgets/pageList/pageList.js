@@ -1,6 +1,10 @@
 import { bpDialog } from '/ui/shared/dialogs/bpDialog.js';
+import { registerWorkspaceAgent, readAgentForm, patchAgentForm, agentString } from '/ui/shared/agent/workspaceAgent.js';
+import { registerWorkspaceChanges } from '/ui/shared/navigation/workspaceChanges.js';
+import enhanceSelects from '/ui/shared/controls/customSelect.js';
 import { debounce } from '/ui/shared/utils/debounce.js';
 import { pageService, sanitizeSlug } from './pageService.js';
+import { deriveCollections } from '../collectionsList/collectionsListData.js';
 const escapeHtml = (str) => {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
     map['"'] = '&quot;';
@@ -61,6 +65,10 @@ export function getAllowedParentPages(pages, page) {
             return false;
         if (descendantIds.has(candidateId))
             return false;
+        // Preserve an existing relationship in the form, but never offer a trashed
+        // page as a new parent. Omitting the current parent would silently reparent.
+        if (candidate.status === 'deleted' && candidateId !== normalizePageId(page.parent_id))
+            return false;
         return true;
     });
 }
@@ -74,6 +82,9 @@ export function getParentValidationError(pages, page, parentId) {
     const parentPage = pages.find(candidate => normalizePageId(candidate.id) === normalizedParentId);
     if (!parentPage)
         return 'Selected parent page no longer exists.';
+    if (parentPage.status === 'deleted' && normalizedParentId !== normalizePageId(page.parent_id)) {
+        return 'A deleted page cannot be selected as a new parent.';
+    }
     const currentLane = page.lane || 'public';
     const parentLane = parentPage.lane || 'public';
     if (currentLane !== parentLane)
@@ -115,8 +126,10 @@ export function filterPages(pages, filter) {
             return pages.filter(p => p.status === 'draft');
         case 'Deleted':
             return pages.filter(p => p.status === 'deleted');
+        case 'Collections':
+            return deriveCollections(pages).map(collection => collection.page);
         default:
-            return pages;
+            return pages.filter(page => page.status !== 'deleted');
     }
 }
 export function buildPageHierarchyRows(pages) {
@@ -155,7 +168,8 @@ export function buildPageHierarchyRows(pages) {
         rows.push({
             page: item.page,
             rowId: item.rowId,
-            parentRowId: parentItem && parentItem !== item ? parentItem.rowId : null,
+            // A recovered orphan/cycle root has no visible parent, even if stale data points to one.
+            parentRowId: depth > 0 && parentItem && parentItem !== item ? parentItem.rowId : null,
             depth,
             childCount: children.length
         });
@@ -234,337 +248,369 @@ export function setupInlineEdit(li, page) {
         }
     });
 }
-export async function render(el) {
+export async function render(el, options = {}) {
     if (!el)
         return;
+    el.innerHTML = '<p role="status">Loading pages…</p>';
     try {
-        const pages = await fetchPages();
-        renderPageList(el, pages);
+        renderPageList(el, await fetchPages(), options);
     }
     catch (err) {
-        el.innerHTML = `<div class="error">Error loading pages: ${escapeHtml(errorMessage(err))}</div>`;
+        el.innerHTML = `<p role="alert">PAGE_MANAGER_LOAD_FAILED: ${escapeHtml(errorMessage(err))}</p><button type="button" class="button secondary sm">Retry</button>`;
+        el.querySelector('button')?.addEventListener('click', () => void render(el, options));
     }
 }
-export function renderPageList(el, pages) {
-    el.innerHTML = '';
-    const card = document.createElement('div');
-    card.className = 'page-list-card';
-    const inlineError = document.createElement('div');
-    inlineError.className = 'page-list-inline-error';
-    inlineError.hidden = true;
-    inlineError.setAttribute('role', 'alert');
-    const clearInlineError = () => {
-        inlineError.hidden = true;
-        inlineError.textContent = '';
-    };
-    const setInlineError = (message) => {
-        inlineError.hidden = !message;
-        inlineError.textContent = message || '';
-    };
-    const titleBar = document.createElement('div');
-    titleBar.className = 'page-title-bar';
-    const title = document.createElement('div');
-    title.className = 'page-title';
-    title.textContent = 'Pages';
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.innerHTML = icon('plus');
-    addBtn.setAttribute('aria-label', 'Add page');
-    addBtn.title = 'Add new page';
-    addBtn.className = 'icon-button lg add-page-btn';
-    addBtn.addEventListener('click', async () => {
-        clearInlineError();
-        const pageTitle = await bpDialog.prompt('New page title:');
-        if (!pageTitle)
+/** Include ancestors so a search result never loses its place in the page hierarchy. */
+export function matchingHierarchyRows(pages, filter, query) {
+    const rows = buildPageHierarchyRows(pages);
+    // Collections use the same Pages records, including their children. Their
+    // count remains the number of parent/marked pages, not the visible row count.
+    const candidates = filter === 'Collections'
+        ? deriveCollections(pages).flatMap(collection => [collection.page, ...collection.children.map(child => child.page)])
+        : filterPages(pages, filter);
+    const matches = new Set(candidates.filter(page => `${page.title || ''} ${page.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase())));
+    const included = new Set(rows.filter(row => matches.has(row.page)).map(row => row.rowId));
+    const byId = new Map(rows.map(row => [row.rowId, row]));
+    for (const rowId of Array.from(included)) {
+        let parent = byId.get(rowId)?.parentRowId;
+        const visited = new Set();
+        while (parent && !visited.has(parent)) {
+            visited.add(parent);
+            included.add(parent);
+            parent = byId.get(parent)?.parentRowId;
+        }
+    }
+    return rows.filter(row => included.has(row.rowId));
+}
+export function renderPageList(el, pages, options = {}) {
+    let currentFilter = options.initialFilter === 'Collections' ? 'Collections' : 'All';
+    const initialPages = filterPages(pages, currentFilter);
+    let selectedId = normalizePageId(initialPages.find(page => page.is_start)?.id ?? initialPages[0]?.id);
+    let query = '';
+    let creating = false;
+    let createParent = null;
+    let creatingCollection = false;
+    let dirty = false;
+    let busy = false;
+    let refreshPending = false;
+    let focusAfterAction = null;
+    let saveDraft = async () => { throw new Error('PAGE_MANAGER_NO_DRAFT: Select or create a page first.'); };
+    const expanded = new Set();
+    el.innerHTML = `
+    <section class="page-manager" aria-label="Page management">
+      <header class="page-manager__header">
+        <div><h2>Pages</h2><p>Organize your site, manage page details and open the content editor.</p></div>
+        <button type="button" class="button primary sm" data-action="add">${icon('plus')} Add page</button>
+      </header>
+      <div class="page-manager__feedback" role="status" aria-live="polite"></div>
+      <button type="button" class="button secondary sm" data-action="retry" hidden>Refresh pages</button>
+      <div class="page-manager__layout">
+        <section class="page-manager__structure" aria-label="Site pages">
+          <label class="page-manager__search"><span class="bp-sr-only">Search pages</span><input type="search" placeholder="Search pages…" aria-label="Search pages"></label>
+          <div class="page-manager__filters" role="group" aria-label="Filter pages"></div>
+          <div class="page-manager__tree" role="group" aria-label="Page hierarchy"></div>
+        </section>
+        <section class="page-manager__details" aria-label="Page details"></section>
+      </div>
+    </section>`;
+    const root = requireElement(el, '.page-manager');
+    registerWorkspaceChanges(root, { isDirty: () => dirty, isBusy: () => busy });
+    const tree = requireElement(root, '.page-manager__tree');
+    const details = requireElement(root, '.page-manager__details');
+    const filters = requireElement(root, '.page-manager__filters');
+    const feedback = requireElement(root, '.page-manager__feedback');
+    const retry = requireElement(root, '[data-action="retry"]');
+    function message(text, error = false) {
+        feedback.textContent = text;
+        feedback.dataset.error = String(error);
+        feedback.setAttribute('role', error ? 'alert' : 'status');
+    }
+    function setBusy(value) {
+        busy = value;
+        root.setAttribute('aria-busy', String(value));
+        root.querySelectorAll('.page-manager__header, .page-manager__layout').forEach(node => {
+            node.inert = value || refreshPending;
+        });
+        retry.hidden = !refreshPending;
+        retry.disabled = value;
+    }
+    async function canDiscard() {
+        return !dirty || bpDialog.confirm('Discard your unsaved page details?', {
+            title: 'Unsaved changes', confirmLabel: 'Discard changes'
+        });
+    }
+    async function run(code, action, allowRefresh = false, propagate = false) {
+        if (busy || (refreshPending && !allowRefresh)) {
+            if (propagate)
+                throw new Error('PAGE_MANAGER_RECOVERY_REQUIRED: Refresh the page list before continuing.');
             return;
-        const slugInput = await bpDialog.prompt('Slug (optional):');
-        const slug = slugInput ? sanitizeSlug(slugInput) : '';
+        }
+        setBusy(true);
         try {
-            await pageService.create({ title: pageTitle.trim(), slug });
-            pages.splice(0, pages.length, ...(await fetchPages()));
-            renderFilteredPages();
+            await action();
         }
         catch (err) {
-            const coded = err;
-            if (coded?.code === 'DUPLICATE_SLUG') {
-                setInlineError(coded.userMessage || 'This slug is already in use. Please choose another one.');
-                return;
+            message(`${code}: ${errorMessage(err)}`, true);
+            if (propagate)
+                throw err;
+        }
+        finally {
+            setBusy(false);
+            // Inputs cannot receive focus while their workspace is inert during an action.
+            focusAfterAction?.focus();
+            focusAfterAction = null;
+        }
+    }
+    async function refresh() {
+        // A successful write must not be submitted again if only the subsequent read fails.
+        // Keep the workspace inert until an explicit refresh recovers the owner's state.
+        refreshPending = true;
+        const updated = await fetchPages();
+        pages.splice(0, pages.length, ...updated);
+        if (!pages.some(page => normalizePageId(page.id) === selectedId)) {
+            selectedId = normalizePageId(pages[0]?.id);
+        }
+        refreshPending = false;
+        creating = false;
+        dirty = false;
+        renderTree();
+        renderDetails();
+        focusAfterAction = details.querySelector('h3');
+    }
+    async function afterWrite(success) {
+        dirty = false;
+        try {
+            await refresh();
+            message(success);
+        }
+        catch (err) {
+            throw new Error(`PAGE_MANAGER_SAVED_REFRESH_FAILED: Change saved. Refresh pages before continuing. ${errorMessage(err)}`);
+        }
+    }
+    async function select(id) {
+        if (!creating && selectedId === id)
+            return;
+        if (!(await canDiscard()))
+            return;
+        selectedId = id;
+        creating = false;
+        dirty = false;
+        message('');
+        renderTree();
+        renderDetails();
+        focusAfterAction = details.querySelector('h3');
+    }
+    async function add(parent) {
+        if (!(await canDiscard()))
+            return;
+        creating = true;
+        createParent = parent;
+        creatingCollection = parent === null && currentFilter === 'Collections';
+        dirty = false;
+        message('');
+        renderTree();
+        renderDetails();
+        focusAfterAction = details.querySelector('[name="title"]');
+    }
+    function renderTree() {
+        filters.innerHTML = ['All', 'Active', 'Drafts', 'Collections', 'Deleted'].map(filter => {
+            const label = filter === 'Active' ? 'Published' : filter;
+            return `<button class="filter" type="button" data-filter="${filter}" aria-pressed="${filter === currentFilter}">${label}<span>${filterPages(pages, filter).length}</span></button>`;
+        }).join('');
+        requireElement(root, '[data-action="add"]').innerHTML = `${icon('plus')} ${currentFilter === 'Collections' ? 'Add collection' : 'Add page'}`;
+        const rows = matchingHierarchyRows(pages, currentFilter, query);
+        const visible = new Set();
+        const showMatches = Boolean(query.trim()) || currentFilter !== 'All';
+        tree.innerHTML = rows.length ? '' : '<div class="page-manager__empty"><strong>No pages found</strong><p>Try another search or filter, or add your first page.</p></div>';
+        for (const row of rows) {
+            const id = normalizePageId(row.page.id);
+            const hasVisibleChildren = rows.some(candidate => candidate.parentRowId === row.rowId);
+            const isExpanded = hasVisibleChildren && (showMatches || expanded.has(row.rowId));
+            const hidden = !showMatches && Boolean(row.parentRowId && (!visible.has(row.parentRowId) || !expanded.has(row.parentRowId)));
+            if (!hidden)
+                visible.add(row.rowId);
+            const element = document.createElement('div');
+            element.className = 'page-manager__row';
+            element.dataset.pageRowId = row.rowId;
+            element.dataset.pageId = id || '';
+            element.dataset.depth = String(row.depth);
+            element.style.setProperty('--page-depth', String(row.depth));
+            element.hidden = hidden;
+            element.innerHTML = `
+        ${hasVisibleChildren ? `<button type="button" class="page-manager__toggle" aria-label="${isExpanded ? 'Hide' : 'Show'} child pages for ${escapeHtml(row.page.title || 'Untitled')}" aria-expanded="${isExpanded}" ${showMatches ? 'disabled' : ''}>${icon(isExpanded ? 'chevron-down' : 'chevron-right')}</button>` : '<span class="page-manager__toggle-space"></span>'}
+        <button type="button" class="page-manager__select" aria-pressed="${!creating && selectedId === id}" ${id ? '' : 'disabled'}>
+          <span class="page-manager__page-icon">${icon(row.page.is_start ? 'house' : 'file-text')}</span>
+          <span class="page-manager__identity"><strong class="page-name">${escapeHtml(row.page.title || 'Untitled')}</strong><span>/${escapeHtml(row.page.slug || '')}</span></span>
+          ${row.page.is_start ? '<span class="page-manager__home">Home</span>' : ''}
+          <span class="page-manager__status" data-status="${escapeHtml(row.page.status || 'draft')}">${escapeHtml(row.page.status || 'draft')}</span>
+        </button>`;
+            element.querySelector('button.page-manager__toggle')?.addEventListener('click', () => {
+                if (expanded.has(row.rowId))
+                    expanded.delete(row.rowId);
+                else
+                    expanded.add(row.rowId);
+                renderTree();
+                tree.querySelector(`[data-page-row-id="${row.rowId}"] .page-manager__toggle`)?.focus();
+            });
+            element.querySelector('.page-manager__select')?.addEventListener('click', () => void run('PAGE_MANAGER_SELECT_FAILED', () => select(id)));
+            tree.appendChild(element);
+        }
+        filters.querySelectorAll('[data-filter]').forEach(button => {
+            button.addEventListener('click', () => {
+                currentFilter = button.dataset.filter || 'All';
+                renderTree();
+                filters.querySelector('[aria-pressed="true"]')?.focus();
+            });
+        });
+    }
+    function renderDetails() {
+        const page = creating
+            ? { title: '', slug: '', status: 'draft', lane: 'public', parent_id: createParent }
+            : pages.find(candidate => normalizePageId(candidate.id) === selectedId);
+        if (!page) {
+            saveDraft = async () => { throw new Error('PAGE_MANAGER_NO_DRAFT: Select or create a page first.'); };
+            details.innerHTML = '<div class="page-manager__empty"><strong>Your site starts here</strong><p>Add a page to begin, then open the content editor to build it.</p></div>';
+            return;
+        }
+        const parentOptions = getAllowedParentPages(pages, page).map(parent => `<option value="${escapeHtml(parent.id)}" ${normalizePageId(parent.id) === normalizePageId(page.parent_id) ? 'selected' : ''}>${escapeHtml(parent.title || 'Untitled')} — /${escapeHtml(parent.slug || '')}</option>`).join('');
+        const adminBase = `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`;
+        const editorUrl = `${adminBase}/pages/edit/${encodeURIComponent(String(page.id))}`;
+        details.innerHTML = `
+      <button type="button" class="button text sm page-manager__back" data-action="back">${icon('arrow-left')} Back to pages</button>
+      <div class="page-manager__details-heading"><span>${creating ? 'NEW PAGE' : 'PAGE DETAILS'}</span><h3 tabindex="-1">${creating ? (creatingCollection ? 'Add a collection' : 'Add a page') : escapeHtml(page.title || 'Untitled')}</h3></div>
+      ${creating ? `<p class="page-manager__hint">${creatingCollection ? 'A collection is a page that groups child pages. Start with a draft, then add subpages.' : 'Start with a draft, then add content in the editor.'}</p>` : `<div class="page-manager__actions"><a class="button secondary sm" data-action="edit" href="${escapeHtml(editorUrl)}">${icon('pencil')} Edit content</a><button type="button" class="button text sm" data-action="view" ${page.status !== 'published' ? 'disabled' : ''}>${icon('external-link')} Open page</button></div>`}
+      <form class="page-manager__form">
+        <label><span>Title</span><input name="title" required value="${escapeHtml(page.title || '')}" autocomplete="off"></label>
+        <label><span>Page address</span><input name="slug" required value="${escapeHtml(page.slug || '')}" placeholder="docs/getting-started" autocomplete="off"><small>Full path after your domain, including any parent path.</small></label>
+        <label><span>Parent page</span><select name="parent_id" aria-label="Parent page" data-enhance="dropdown"><option value="">Top level</option>${parentOptions}</select></label>
+        <label><span>Status</span><select name="status" aria-label="Status" data-enhance="dropdown"><option value="draft" ${page.status === 'draft' ? 'selected' : ''}>Draft</option><option value="published" ${page.status === 'published' ? 'selected' : ''}>Published</option>${page.status === 'deleted' ? '<option value="deleted" selected>Deleted</option>' : ''}</select></label>
+        <div class="page-manager__save"><span class="page-manager__save-state">${creating ? 'Not created yet' : 'Saved'}</span><button class="button primary sm" type="submit" ${creating ? '' : 'disabled'}>${creating ? 'Create page' : 'Save changes'}</button></div>
+      </form>
+      ${creating ? '<button type="button" class="button text sm" data-action="cancel">Cancel</button>' : `<div class="page-manager__secondary"><button type="button" class="button text sm" data-action="child">${icon('plus')} Add subpage</button><button type="button" class="button text sm" data-action="share" ${page.status !== 'published' ? 'disabled' : ''}>${icon('link')} Copy link</button><button type="button" class="button text sm" data-action="home" ${page.is_start || page.status !== 'published' ? 'disabled' : ''}>${icon('house')} ${page.is_start ? 'Current home page' : 'Set as home page'}</button><button type="button" class="button text sm page-manager__delete" data-action="delete">${icon('trash-2')} Delete page</button></div>`}`;
+        enhanceSelects(details);
+        const form = requireElement(details, 'form');
+        let slugEdited = false;
+        form.addEventListener('input', event => {
+            const target = event.target;
+            if (target.name === 'slug')
+                slugEdited = true;
+            if (creating && target.name === 'title' && !slugEdited) {
+                const parent = pages.find(candidate => normalizePageId(candidate.id) === createParent);
+                const prefix = parent?.slug ? `${parent.slug}/` : '';
+                requireElement(form, '[name="slug"]').value = prefix + sanitizeSlug(target.value.replace(/\s+/g, '-'));
             }
-            await bpDialog.alert('Error: ' + errorMessage(err));
-        }
-    });
-    titleBar.appendChild(title);
-    titleBar.appendChild(addBtn);
-    card.appendChild(titleBar);
-    card.appendChild(inlineError);
-    const filters = ['All', 'Active', 'Drafts', 'Deleted'];
-    let currentFilter = filters[0];
-    const filterNav = document.createElement('nav');
-    filterNav.className = 'page-filters';
-    const tableWrap = document.createElement('div');
-    tableWrap.className = 'page-list-table-wrap';
-    const table = document.createElement('table');
-    table.className = 'page-list-table';
-    table.innerHTML = `
-    <thead>
-      <tr>
-        <th scope="col">Page</th>
-        <th scope="col">Slug</th>
-        <th scope="col">Status</th>
-        <th scope="col">Parent</th>
-        <th scope="col">Actions</th>
-      </tr>
-    </thead>`;
-    const tbody = document.createElement('tbody');
-    table.appendChild(tbody);
-    tableWrap.appendChild(table);
-    filters.forEach((filterName, idx) => {
-        const filterEl = document.createElement('button');
-        filterEl.type = 'button';
-        filterEl.className = 'filter';
-        filterEl.textContent = filterName;
-        if (idx === 0)
-            filterEl.classList.add('active');
-        filterEl.onclick = () => {
-            filterNav.querySelectorAll('.filter').forEach(f => {
-                f.classList.remove('active');
-                f.setAttribute('aria-pressed', 'false');
-            });
-            filterEl.classList.add('active');
-            filterEl.setAttribute('aria-pressed', 'true');
-            currentFilter = filterName;
-            renderFilteredPages();
-        };
-        filterEl.setAttribute('aria-pressed', String(idx === 0));
-        filterNav.appendChild(filterEl);
-    });
-    card.appendChild(filterNav);
-    card.appendChild(tableWrap);
-    el.appendChild(card);
-    function directChildrenOf(row) {
-        const rowId = row.dataset.pageRowId;
-        if (!rowId)
-            return [];
-        return Array.from(tbody.querySelectorAll('tr.page-list-row'))
-            .filter(child => child.dataset.parentRowId === rowId);
-    }
-    function setRowExpanded(row, expanded) {
-        const toggle = row.querySelector('.page-list-toggle');
-        if (!toggle)
-            return;
-        toggle.setAttribute('aria-expanded', String(expanded));
-        toggle.title = expanded ? 'Hide child pages' : 'Show child pages';
-        toggle.innerHTML = icon(expanded ? 'chevron-down' : 'chevron-right', 'expand-page');
-        row.classList.toggle('page-list-row-expanded', expanded);
-    }
-    function collapseDescendants(row) {
-        directChildrenOf(row).forEach(child => {
-            child.hidden = true;
-            setRowExpanded(child, false);
-            collapseDescendants(child);
+            markDirty();
         });
-    }
-    function toggleChildRows(row) {
-        const toggle = row.querySelector('.page-list-toggle');
-        if (!toggle)
-            return;
-        const expanded = toggle.getAttribute('aria-expanded') === 'true';
-        setRowExpanded(row, !expanded);
-        if (expanded) {
-            collapseDescendants(row);
-            return;
+        form.addEventListener('change', markDirty);
+        function markDirty() {
+            dirty = true;
+            requireElement(form, '.page-manager__save-state').textContent = 'Unsaved changes';
+            requireElement(form, '[type="submit"]').disabled = false;
         }
-        directChildrenOf(row).forEach(child => {
-            child.hidden = false;
-        });
-    }
-    function appendParentControls(row, page) {
-        const parentCell = requireElement(row, '.page-list-parent-cell');
-        const parentRow = document.createElement('div');
-        parentRow.className = 'page-parent-row';
-        const parentLabel = document.createElement('label');
-        parentLabel.className = 'page-parent-label';
-        const parentLabelText = document.createElement('span');
-        parentLabelText.className = 'page-parent-label-text';
-        parentLabelText.textContent = 'Parent';
-        const parentSelect = document.createElement('select');
-        parentSelect.className = 'page-parent-select';
-        parentSelect.setAttribute('aria-label', `Parent page for ${page.title}`);
-        const emptyOption = document.createElement('option');
-        emptyOption.value = '';
-        emptyOption.textContent = '-- No parent --';
-        parentSelect.appendChild(emptyOption);
-        const allowedParents = getAllowedParentPages(pages, page);
-        allowedParents.forEach(candidate => {
-            const option = document.createElement('option');
-            option.value = normalizePageId(candidate.id) || '';
-            option.textContent = candidate.title || `Page ${candidate.id}`;
-            parentSelect.appendChild(option);
-        });
-        const currentParentId = normalizePageId(page.parent_id);
-        if (currentParentId && !allowedParents.some(candidate => normalizePageId(candidate.id) === currentParentId)) {
-            const invalidOption = document.createElement('option');
-            invalidOption.value = currentParentId;
-            invalidOption.textContent = '(invalid parent)';
-            parentSelect.appendChild(invalidOption);
-        }
-        parentSelect.value = currentParentId || '';
-        const feedback = document.createElement('div');
-        feedback.className = 'page-parent-feedback';
-        feedback.setAttribute('aria-live', 'polite');
-        const setFeedback = (type, message) => {
-            feedback.textContent = message;
-            feedback.classList.remove('is-success', 'is-error');
-            if (type === 'success')
-                feedback.classList.add('is-success');
-            if (type === 'error')
-                feedback.classList.add('is-error');
-        };
-        parentSelect.addEventListener('change', async () => {
-            const previousParentId = normalizePageId(page.parent_id) || '';
-            parentSelect.disabled = true;
-            setFeedback('', 'Saving...');
-            const didUpdate = await persistParentChange({
-                pages,
-                page,
-                parentId: parentSelect.value || null,
-                setFeedback
-            });
-            parentSelect.disabled = false;
-            if (didUpdate) {
-                renderFilteredPages();
+        // One save handler serves the form and the structured agent command.
+        saveDraft = async () => {
+            const data = new FormData(form);
+            const title = String(data.get('title') || '').trim();
+            const rawSlug = String(data.get('slug') || '').trim();
+            const slug = sanitizeSlug(rawSlug);
+            if (!title || !slug)
+                throw new Error('PAGE_MANAGER_REQUIRED: Enter a title and page address.');
+            if (slug !== rawSlug.replace(/^\/+/, ''))
+                throw new Error('PAGE_MANAGER_SLUG_INVALID: Use lowercase letters, numbers, hyphens and slashes in the page address.');
+            const parent_id = normalizePageId(data.get('parent_id'));
+            const parentError = getParentValidationError(pages, page, parent_id);
+            if (parentError)
+                throw new Error(`PAGE_MANAGER_PARENT_INVALID: ${parentError}`);
+            if (pages.some(candidate => normalizePageId(candidate.id) !== normalizePageId(page.id) && candidate.slug === slug)) {
+                throw new Error('PAGES_SLUG_DUPLICATE: This page address is already in use.');
+            }
+            const status = String(data.get('status') || 'draft');
+            if (creating) {
+                const result = await pageService.create({ title, slug, status, parent_id,
+                    ...(creatingCollection ? { meta: { isCollection: true } } : {})
+                });
+                selectedId = normalizePageId(result?.pageId);
             }
             else {
-                parentSelect.value = previousParentId;
+                await pageService.update(page, { title, slug, parent_id, status });
             }
+            await afterWrite(creating ? 'Page created.' : 'Page details saved.');
+        };
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            void run('PAGE_MANAGER_SAVE_FAILED', saveDraft);
         });
-        parentLabel.appendChild(parentLabelText);
-        parentLabel.appendChild(parentSelect);
-        parentRow.appendChild(parentLabel);
-        parentRow.appendChild(feedback);
-        parentCell.appendChild(parentRow);
-    }
-    function renderPageRow(hierarchy) {
-        const { page } = hierarchy;
-        const row = document.createElement('tr');
-        row.className = 'page-list-row';
-        row.dataset.pageRowId = hierarchy.rowId;
-        if (hierarchy.parentRowId)
-            row.dataset.parentRowId = hierarchy.parentRowId;
-        row.hidden = hierarchy.depth > 0;
-        const hasChildren = hierarchy.childCount > 0;
-        row.innerHTML = `
-      <td class="page-list-title-cell">
-        <span class="page-list-title-inner" style="padding-left: ${hierarchy.depth * 18}px">
-          ${hasChildren
-            ? `<button class="page-list-toggle" type="button" aria-label="Show child pages for ${escapeHtml(page.title)}" aria-expanded="false" title="Show child pages">${icon('chevron-right', 'expand-page')}</button>`
-            : '<span class="page-list-toggle-placeholder"></span>'}
-          <span class="page-name" contenteditable="true">${escapeHtml(page.title)}</span>
-        </span>
-      </td>
-      <td class="page-list-slug-cell">
-        <span class="page-slug-row">
-          ${page.is_start
-            ? `<span class="page-list-home-indicator home-indicator" title="Current home page">${icon('house')}</span>`
-            : `<button class="page-list-home-button set-home" type="button" aria-label="Set ${escapeHtml(page.title)} as home page" title="Set as home page">${icon('house-plus')}</button>`}
-          <span class="page-slug" contenteditable="true">/${escapeHtml(page.slug)}</span>
-        </span>
-      </td>
-      <td class="page-list-status-cell">${escapeHtml(page.status || 'draft')}</td>
-      <td class="page-list-parent-cell"></td>
-      <td class="page-actions page-list-actions">
-        <button class="page-action-button edit-page" type="button" aria-label="Edit ${escapeHtml(page.title)}" title="Edit page">${icon('pencil')}</button>
-        <button class="page-action-button toggle-draft" type="button" aria-label="${page.status === 'draft' ? 'Publish' : 'Unpublish'} ${escapeHtml(page.title)}" title="${page.status === 'draft' ? 'Mark as published' : 'Mark as draft'}">${icon('drafting-compass')}</button>
-        <button class="page-action-button view-page" type="button" aria-label="Open ${escapeHtml(page.title)}" title="Open page">${icon('external-link')}</button>
-        <button class="page-action-button share-page" type="button" aria-label="Share ${escapeHtml(page.title)}" title="Share page link">${icon('share-2')}</button>
-        <button class="page-action-button delete-page" type="button" aria-label="Delete ${escapeHtml(page.title)}" title="Delete page">${icon('trash-2')}</button>
-      </td>`;
-        if (hasChildren) {
-            requireElement(row, '.page-list-toggle').addEventListener('click', () => {
-                toggleChildRows(row);
-            });
-        }
-        setupInlineEdit(row, page);
-        appendParentControls(row, page);
-        const setHomeBtn = row.querySelector('.set-home');
-        if (setHomeBtn)
-            setHomeBtn.addEventListener('click', async () => {
-                try {
-                    await pageService.setAsStart(page.id ?? '');
-                    pages.splice(0, pages.length, ...(await fetchPages()));
-                    renderFilteredPages();
-                }
-                catch (err) {
-                    await bpDialog.alert('Failed to set start page: ' + errorMessage(err));
-                }
-            });
-        requireElement(row, '.edit-page').addEventListener('click', () => editPage(page.id));
-        requireElement(row, '.toggle-draft').addEventListener('click', async () => {
-            const newStatus = page.status === 'draft' ? 'published' : 'draft';
-            const prevStatus = page.status;
-            page.status = newStatus;
-            renderFilteredPages();
-            try {
-                await pageService.updateStatus(page, newStatus);
-            }
-            catch (err) {
-                page.status = prevStatus;
-                renderFilteredPages();
-                await bpDialog.alert('Failed to update status: ' + errorMessage(err));
-            }
+        const bind = (action, handler) => {
+            details.querySelector(`[data-action="${action}"]`)?.addEventListener('click', () => void run(`PAGE_MANAGER_${action.toUpperCase()}_FAILED`, handler));
+        };
+        bind('cancel', () => select(selectedId));
+        bind('back', async () => {
+            focusAfterAction = root.querySelector('[type="search"]');
         });
-        requireElement(row, '.view-page').addEventListener('click', () => viewPage(page));
-        requireElement(row, '.share-page').addEventListener('click', () => {
-            void sharePage(page);
+        bind('child', () => add(selectedId));
+        bind('view', async () => { window.open(`/${page.slug || ''}`, '_blank', 'noopener'); });
+        bind('share', async () => {
+            await navigator.clipboard.writeText(`${window.location.origin}/${page.slug || ''}`);
+            message('Page link copied.');
         });
-        requireElement(row, '.delete-page').addEventListener('click', async () => {
-            if (!(await bpDialog.confirm('Are you sure you want to delete this page?')))
+        bind('home', async () => {
+            if (!(await canDiscard()))
                 return;
-            try {
-                await pageService.delete(page.id ?? '');
-                const idx = pages.indexOf(page);
-                if (idx > -1)
-                    pages.splice(idx, 1);
-                renderFilteredPages();
-            }
-            catch (err) {
-                await bpDialog.alert('Failed to delete page: ' + errorMessage(err));
-            }
+            await pageService.setAsStart(page.id ?? '');
+            await afterWrite('Home page updated.');
         });
-        return row;
+        bind('delete', async () => {
+            if (!(await bpDialog.confirm(`Delete “${page.title || 'Untitled'}”?${dirty ? ' Unsaved details will also be discarded.' : ''}`, { title: 'Delete page', confirmLabel: 'Delete page' })))
+                return;
+            await pageService.delete(page.id ?? '');
+            await afterWrite('Page deleted.');
+        });
     }
-    function renderFilteredPages() {
-        const filteredPages = filterPages(pages, currentFilter);
-        tbody.innerHTML = '';
-        if (!filteredPages.length) {
-            const empty = document.createElement('tr');
-            empty.className = 'page-list-empty-row';
-            const cell = document.createElement('td');
-            cell.className = 'empty-state';
-            cell.colSpan = 5;
-            cell.textContent = 'No pages found.';
-            empty.appendChild(cell);
-            tbody.appendChild(empty);
-            return;
-        }
-        buildPageHierarchyRows(filteredPages)
-            .forEach(hierarchy => tbody.appendChild(renderPageRow(hierarchy)));
-    }
-    renderFilteredPages();
-}
-async function editPage(id) {
-    window.location.href = `/admin/pages/edit/${id}`;
-}
-function viewPage(page) {
-    window.open(`/${page.slug || ''}`, '_blank');
-}
-async function sharePage(page) {
-    const url = `${window.location.origin}/${page.slug || ''}`;
-    try {
-        await navigator.clipboard.writeText(url);
-        await bpDialog.alert('Page link copied to clipboard');
-    }
-    catch {
-        await bpDialog.alert(url);
-    }
+    root.querySelector('[data-action="add"]')?.addEventListener('click', () => void run('PAGE_MANAGER_CREATE_FAILED', () => add(null)));
+    root.querySelector('[type="search"]')?.addEventListener('input', event => {
+        query = event.target.value;
+        renderTree();
+    });
+    retry.addEventListener('click', () => void run('PAGE_MANAGER_REFRESH_FAILED', async () => {
+        await refresh();
+        message('Pages refreshed.');
+    }, true));
+    renderTree();
+    renderDetails();
+    const editableFields = ['title', 'slug', 'parent_id', 'status'];
+    registerWorkspaceAgent({ root, id: 'pages', title: 'Pages',
+        read: () => ({ dirty, busy, error: feedback.dataset.error === 'true' ? feedback.textContent : null,
+            selection: selectedId, creating, refreshPending, filter: currentFilter, query,
+            draft: readAgentForm(details, editableFields),
+            pageCount: pages.length,
+            pages: matchingHierarchyRows(pages, currentFilter, query).map(({ page: { id, title, slug, status, parent_id, is_start } }) => ({ id, title, slug, status, parent_id, is_start }))
+        }),
+        actions: [
+            { action: 'pages.select', label: 'Select page', params: [{ name: 'id', type: 'string', required: true }], run: async (p) => {
+                    const id = agentString(p, 'id');
+                    if (!pages.some(page => normalizePageId(page.id) === id))
+                        throw new Error('PAGE_MANAGER_PAGE_NOT_FOUND');
+                    await select(id);
+                } },
+            { action: 'pages.search', label: 'Search pages', acceptsDraft: true, params: [{ name: 'query', type: 'string', required: true }], run: p => {
+                    if (typeof p.query !== 'string')
+                        throw new Error('CMS_AGENT_PARAM_INVALID: query must be a string.');
+                    query = p.query;
+                    root.querySelector('[type="search"]').value = query;
+                    renderTree();
+                } },
+            { action: 'pages.createDraft', label: 'Start a page draft', params: [{ name: 'parentId', type: 'string', required: false }], run: async (p) => {
+                    const parent = p.parentId == null ? null : agentString(p, 'parentId');
+                    if (parent && !pages.some(page => normalizePageId(page.id) === parent && page.status !== 'deleted'))
+                        throw new Error('PAGE_MANAGER_PARENT_INVALID');
+                    await add(parent);
+                } },
+            { action: 'pages.updateDraft', label: 'Update page details', acceptsDraft: true,
+                params: [{ name: 'fields', type: 'object', required: true }],
+                run: p => patchAgentForm(details, p.fields, editableFields) },
+            { action: 'pages.save', label: 'Save page details', acceptsDraft: true, confirm: true,
+                run: () => run('PAGE_MANAGER_SAVE_FAILED', saveDraft, false, true) },
+            { action: 'pages.refresh', label: 'Reload pages', run: () => run('PAGE_MANAGER_REFRESH_FAILED', refresh, true, true) }
+        ]
+    });
 }

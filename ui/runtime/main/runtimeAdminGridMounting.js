@@ -70,7 +70,7 @@ export function createAdminDashboardWidgetElement(def, meta = {}, index = 0) {
     const { wrapper, placeholder } = createAdminDashboardItem(def, normalizedMeta, instanceId);
     return { wrapper, placeholder, meta: normalizedMeta, instanceId };
 }
-export async function mountAdminGridWidgets({ gridEl, grid, layout, allWidgets, lane, widgetEmit, instanceMetaMap, deferHydration = true, debug = false }) {
+export async function mountAdminGridWidgets({ gridEl, grid, layout, allWidgets, lane, widgetEmit, instanceMetaMap, deferHydration = true, editable = true, debug = false }) {
     const pendingAdmin = [];
     normalizeDashboardEntries(layout, allWidgets).forEach(({ entry, index, def }) => {
         if (debug)
@@ -96,7 +96,7 @@ export async function mountAdminGridWidgets({ gridEl, grid, layout, allWidgets, 
             grid,
             emit: widgetEmit,
             lane,
-            afterRender: attachAdminDashboardControls
+            afterRender: editable ? attachAdminDashboardControls : undefined
         });
     }
 }

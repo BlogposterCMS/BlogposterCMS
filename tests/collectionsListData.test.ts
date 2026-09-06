@@ -74,52 +74,16 @@ describe('collectionsListData', () => {
     expect(getCollectionIndicator({ meta: 'not-json' })).toBe('Default');
   });
 
-  it('renders collections as a table instead of a design-only list', () => {
-    const host = document.createElement('div');
-    const onCreateCollection = jest.fn();
-    renderCollectionsList(host, deriveCollections(pages()), { onCreateCollection });
-
-    expect(host.querySelector('ul')).toBeNull();
-    expect(host.querySelector('table.collections-list-table')).not.toBeNull();
-    expect(Array.from(host.querySelectorAll('table.collections-list-table > thead th')).map(th => th.textContent)).toEqual([
-      'Collection',
-      'Slug',
-      'Status',
-      'Children',
-      'Layout',
-      'Actions'
-    ]);
-    expect(host.querySelectorAll('tbody tr.collections-list-row')).toHaveLength(2);
-    expect(host.querySelectorAll('table.collections-list-table > tbody > tr.collections-list-row .collections-list-actions a')).toHaveLength(4);
-
-    const addButton = host.querySelector<HTMLImageElement>('.add-collection-btn');
-    expect(addButton?.getAttribute('src')).toBe('/assets/icons/plus.svg');
-    expect(addButton?.getAttribute('title')).toBe('Add new collection');
-    expect(host.querySelector('.collections-list-inline-error')?.getAttribute('role')).toBe('alert');
-    addButton?.click();
-    expect(onCreateCollection).toHaveBeenCalledTimes(1);
-  });
-
-  it('expands collection rows to show child pages', () => {
+  it('opens stored collection snapshots in the canonical Pages hierarchy', () => {
     const host = document.createElement('div');
     renderCollectionsList(host, deriveCollections(pages()));
-
-    const childRow = host.querySelector<HTMLTableRowElement>('.collections-list-child-row');
-    const toggle = host.querySelector<HTMLButtonElement>('.collections-list-toggle');
-
-    expect(childRow?.hidden).toBe(true);
-    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-
-    toggle?.click();
-    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
-    expect(childRow?.hidden).toBe(false);
-    expect(childRow?.textContent).toContain('Bags');
-
-    toggle?.click();
-    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(childRow?.hidden).toBe(true);
+    expect(host.querySelector('table.collections-list-table')).toBeNull();
+    expect(host.querySelector('.page-manager')).not.toBeNull();
+    expect(host.querySelector('[data-filter="Collections"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(Array.from(host.querySelectorAll('.page-name')).map(node => node.textContent)).toEqual(['Archive', 'Products', 'Bags']);
+    expect(host.querySelectorAll('form')).toHaveLength(1);
+    expect(host.querySelector('[data-action="add"]')?.textContent).toContain('Add collection');
   });
-
   it('builds the runtime facade lane payload and fetches collections through meltdownEmit', async () => {
     const emit = jest.fn(async () => ({ data: pages() }));
 

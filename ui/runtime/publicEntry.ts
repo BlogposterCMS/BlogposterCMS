@@ -13,6 +13,7 @@ import {
   refreshFontPackages
 } from '../shared/fonts/fontPackages.js';
 import type { RuntimeEnvelope } from './envelope/orchestrator.js';
+import { readPublicBootstrap } from './publicBootstrap.js';
 
 interface StartPageResponse {
   slug?: unknown;
@@ -79,13 +80,15 @@ export async function bootPublicRuntime(): Promise<void> {
     token: window.PUBLIC_TOKEN,
     lane: 'public'
   });
-  await refreshColorLibrary().catch(error => {
+  // Start independent presentation reads alongside page discovery. Await them
+  // before rendering so linked colors and typography retain their first paint.
+  const presentationReady = Promise.all([refreshColorLibrary().catch(error => {
     console.warn('COLOR_LIBRARY_PUBLIC_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
-  });
-  await refreshFontPackages().catch(error => {
+  }), refreshFontPackages().catch(error => {
     console.warn('FONT_PACKAGES_PUBLIC_LOAD_FAILED: Content will use browser typography.', error);
-  });
-  let slug = location.pathname.replace(/^\/+/, '') || '';
+  })]);
+  const bootstrap = readPublicBootstrap();
+  let slug = bootstrap?.slug || location.pathname.replace(/^\/+/, '') || '';
   if (!slug) {
     const start = await emitRuntimePublic<StartPageResponse | null>(emit, window.PUBLIC_TOKEN, 'pages', 'start', {
       language: window.LANG || 'en'
@@ -96,18 +99,21 @@ export async function bootPublicRuntime(): Promise<void> {
     console.error('No start page configured');
     return;
   }
-  const envelope = await emitRuntimePublic<RuntimeEnvelope>(emit, window.PUBLIC_TOKEN, 'pages', 'envelope', {
+  const envelope = bootstrap?.envelope || await emitRuntimePublic<RuntimeEnvelope>(emit, window.PUBLIC_TOKEN, 'pages', 'envelope', {
     slug,
     language: window.LANG || 'en'
   });
   if (envelope?.meta?.seoTitle) {
     document.title = envelope.meta.seoTitle;
   }
-  await loadPublicRuntimeLoaders(envelope);
+  await Promise.all([loadPublicRuntimeLoaders(envelope), presentationReady]);
   const ctx = {
     meltdownEmit: emit,
     publicToken: window.PUBLIC_TOKEN,
-    env: 'csr'
+    env: 'csr',
+    initialLayoutResolved: bootstrap?.layoutResolved === true,
+    initialLayout: bootstrap?.layout,
+    initialHtml: bootstrap?.htmlRendered ? document.getElementById('bp-initial-html') : null
   } as const;
   await orchestrate(envelope, ctx);
 }

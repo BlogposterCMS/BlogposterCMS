@@ -11,6 +11,7 @@ jest.mock('../ui/runtime/main/runtimeWidgetContext', () => ({
 }));
 
 jest.mock('../ui/runtime/main/widgetRuntimeGateway', () => ({
+  mountWidgetModule: jest.requireActual('../ui/widgets/rendering/widgetModuleMount').mountWidgetModule,
   loadWidgetModule: jest.fn()
 }));
 

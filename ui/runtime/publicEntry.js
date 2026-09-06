@@ -3,6 +3,7 @@ import { importDesignerLivePreviewRuntime, loadPublicRuntimeLoaders } from './pu
 import { emitRuntimePublic } from '../shared/api-client/runtimeFacade.js';
 import { configureColorLibraryClient, refreshColorLibrary } from '../shared/colors/colorLibrary.js';
 import { configureFontPackagesClient, refreshFontPackages } from '../shared/fonts/fontPackages.js';
+import { readPublicBootstrap } from './publicBootstrap.js';
 const DESIGNER_LIVE_PREVIEW_QUERY = 'designer-live-preview';
 function hasDesignerLivePreviewQuery() {
     try {
@@ -60,13 +61,15 @@ export async function bootPublicRuntime() {
         token: window.PUBLIC_TOKEN,
         lane: 'public'
     });
-    await refreshColorLibrary().catch(error => {
-        console.warn('COLOR_LIBRARY_PUBLIC_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
-    });
-    await refreshFontPackages().catch(error => {
-        console.warn('FONT_PACKAGES_PUBLIC_LOAD_FAILED: Content will use browser typography.', error);
-    });
-    let slug = location.pathname.replace(/^\/+/, '') || '';
+    // Start independent presentation reads alongside page discovery. Await them
+    // before rendering so linked colors and typography retain their first paint.
+    const presentationReady = Promise.all([refreshColorLibrary().catch(error => {
+            console.warn('COLOR_LIBRARY_PUBLIC_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
+        }), refreshFontPackages().catch(error => {
+            console.warn('FONT_PACKAGES_PUBLIC_LOAD_FAILED: Content will use browser typography.', error);
+        })]);
+    const bootstrap = readPublicBootstrap();
+    let slug = bootstrap?.slug || location.pathname.replace(/^\/+/, '') || '';
     if (!slug) {
         const start = await emitRuntimePublic(emit, window.PUBLIC_TOKEN, 'pages', 'start', {
             language: window.LANG || 'en'
@@ -77,18 +80,21 @@ export async function bootPublicRuntime() {
         console.error('No start page configured');
         return;
     }
-    const envelope = await emitRuntimePublic(emit, window.PUBLIC_TOKEN, 'pages', 'envelope', {
+    const envelope = bootstrap?.envelope || await emitRuntimePublic(emit, window.PUBLIC_TOKEN, 'pages', 'envelope', {
         slug,
         language: window.LANG || 'en'
     });
     if (envelope?.meta?.seoTitle) {
         document.title = envelope.meta.seoTitle;
     }
-    await loadPublicRuntimeLoaders(envelope);
+    await Promise.all([loadPublicRuntimeLoaders(envelope), presentationReady]);
     const ctx = {
         meltdownEmit: emit,
         publicToken: window.PUBLIC_TOKEN,
-        env: 'csr'
+        env: 'csr',
+        initialLayoutResolved: bootstrap?.layoutResolved === true,
+        initialLayout: bootstrap?.layout,
+        initialHtml: bootstrap?.htmlRendered ? document.getElementById('bp-initial-html') : null
     };
     await orchestrate(envelope, ctx);
 }

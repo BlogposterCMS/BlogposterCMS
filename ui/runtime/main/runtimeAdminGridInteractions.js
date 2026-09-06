@@ -593,12 +593,18 @@ export function bindAdminDropTarget(gridEl, grid) {
         window.addDashboardWidget(def);
     });
 }
-export function exposeAdminGridGlobals(grid, pageId, lane, layout) {
+export function exposeAdminGridGlobals(grid, pageId, lane, layout, editable = true) {
     grid.setStatic(true);
+    document.body.classList.remove('dashboard-edit-mode');
     document.body.classList.add('grid-mode', 'dashboard-flow-mode');
     window.adminGrid = grid;
     window.adminPageContext = { pageId, lane };
     window.adminCurrentLayout = layout;
+    if (!editable) {
+        // Fixed workspaces must not retain mutation hooks from a previous dashboard.
+        delete window.addDashboardWidget;
+        delete window.saveAdminLayout;
+    }
 }
 export function serializeAdminDashboardLayout(gridEl, resolveMeta = () => ({})) {
     return Array.from(gridEl.querySelectorAll('.dashboard-widget'))

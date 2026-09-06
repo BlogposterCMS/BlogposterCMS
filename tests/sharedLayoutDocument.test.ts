@@ -35,7 +35,7 @@ describe('shared layout document contract', () => {
       }],
       children: [
         { type: 'leaf', nodeId: 'left', designRef: 'static-design' },
-        { type: 'leaf', workarea: true, nodeId: 'right' }
+        { type: 'leaf', workarea: true, isDynamicHost: true, nodeId: 'right' }
       ]
     });
   });

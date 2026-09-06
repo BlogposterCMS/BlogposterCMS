@@ -1,6 +1,3 @@
-import { runtimeAdminPayload, runtimePublicPayload } from '../../shared/api-client/runtimeFacade.js';
-import { normalizeWidgetApiActions } from '../../widgets/rendering/widgetEvents.js';
-
 type LooseRecord = Record<string, any>;
 
 export type RuntimeWidgetEventDefinition = {
@@ -42,25 +39,4 @@ export function createDebouncedEmitter(delay = 150) {
       }
     });
   };
-}
-
-export async function registerRuntimeWidgetEvents(
-  def: RuntimeWidgetEventDefinition,
-  lane: string
-): Promise<void> {
-  if (typeof window.meltdownEmit !== 'function') return;
-  const actions = normalizeWidgetApiActions(def?.metadata || {});
-  if (!actions.length) return;
-  const jwt = lane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
-  if (!jwt) return;
-  try {
-    await window.meltdownEmit(
-      lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest',
-      lane === 'admin'
-        ? runtimeAdminPayload(jwt, 'widgets', 'registerUsage', { actions })
-        : runtimePublicPayload(jwt, 'widgets', 'registerUsage', { actions })
-    );
-  } catch (err) {
-    console.warn(`[Renderer] registerWidgetUsage failed for ${def.id}`, err);
-  }
 }

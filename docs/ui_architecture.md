@@ -1,5 +1,9 @@
 # UI Architecture
 
+CMS workspace automation follows [agent CMS workflows](agent-cms-workflows.md).
+Each adapter reads the current UI/domain owner and invokes its existing handlers;
+the shared agent helper does not own a second model or persistence path.
+
 BlogposterCMS keeps the browser UI separate from the server runtime. The server
 can stay Node.js for now and later move core services to Go or Rust, while the
 UI keeps a stable TypeScript/JavaScript boundary.
@@ -98,9 +102,7 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `registerData.ts`. The public login shell uses the same Studio token
   contract as the dashboard for canvas, card, field, button and icon-control
   styling; it should not reintroduce login-only accent animations or gradient
-  chrome. The shared default accent is Studio blue (`hsl(215, 65%, 45%)`)
-  with a white foreground; saved user colors still override the shared tokens.
-  First-install status, user-count checks, and install POST payloads
+  chrome. First-install status, user-count checks, and install POST payloads
   are owned by `installData.ts`; the install shell still applies `userColor.ts`
   theme mode so Light, Dark and System follow the dashboard token contract.
   Dashboard page creation/layout-template event payloads, content-header admin
@@ -411,9 +413,8 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   `ui/widgets/plainspace/admin/defaultwidgets/contentSummaryData.ts`.
   Access-control setting normalization, loading, and public-registration
   persistence are owned by `ui/widgets/plainspace/admin/accessSettingsData.ts`.
-  Layout template normalization, public page usage mapping, template fetches,
-  and blank template creation are owned by
-  `ui/widgets/plainspace/admin/layoutTemplatesData.ts`.
+  Layout authoring belongs to Design Studio. The retired `layoutTemplatesWidget`
+  URL only re-exports `designerLayoutsWidget`; it has no template creation logic.
 
 ## Public Entry Points
 

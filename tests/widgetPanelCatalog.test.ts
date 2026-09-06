@@ -14,6 +14,28 @@ jest.mock('../ui/widgets/panel/widgetPanelAddWidget', () => ({
 }));
 
 describe('widgetPanelCatalog', () => {
+  it('shows empty search feedback and supports keyboard insertion', () => {
+    const panel = createPanel();
+    window.availableWidgets = [{ id: 'stats', metadata: { label: 'Stats' } }];
+    bindWidgetPanelCatalog(panel);
+    const card = panel.querySelector<HTMLElement>('.widget-card')!;
+    expect(card.tabIndex).toBe(0);
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(addDashboardWidget).toHaveBeenCalledTimes(1);
+    const search = panel.querySelector<HTMLInputElement>('.widgets-search')!;
+    search.value = 'missing';
+    search.dispatchEvent(new Event('input'));
+    expect(panel.querySelector('[role="status"]')?.textContent).toContain('No matching widgets');
+    search.value = '  stats  ';
+    search.dispatchEvent(new Event('input'));
+    expect(cardLabels(panel)).toEqual(['Stats']);
+  });
+
+  it('accepts category names that collide with object prototype properties', () => {
+    expect(groupWidgetsByCategory([{ id: 'x', metadata: { category: 'constructor' } }]).constructor).toEqual([
+      { id: 'x', metadata: { category: 'constructor' } }
+    ]);
+  });
   beforeEach(() => {
     document.body.innerHTML = '';
     window.availableWidgets = [];

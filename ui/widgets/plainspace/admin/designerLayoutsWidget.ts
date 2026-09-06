@@ -1,3 +1,4 @@
+import { registerWorkspaceAgent } from '../../../shared/agent/workspaceAgent.js';
 import {
   type DesignRecord,
   designUpdatedAt,
@@ -11,12 +12,30 @@ export async function render(el: HTMLElement | null): Promise<void> {
   const jwt = window.ADMIN_TOKEN;
   if (!el) return;
 
+  const loading = document.createElement('p');
+  loading.className = 'empty-state';
+  loading.setAttribute('role', 'status');
+  loading.textContent = 'Loading designs…';
+  el.replaceChildren(loading);
+
   let designs: DesignRecord[] = [];
   try {
     if (typeof meltdownEmit !== 'function') throw new Error('meltdownEmit unavailable');
     designs = await fetchDesignerLayouts(meltdownEmit, jwt);
   } catch (err) {
-    console.warn('[DesignerLayoutsWidget] failed to list designs', err);
+    // A failed read must not look like a genuinely empty design library.
+    console.warn('DESIGNER_LAYOUTS_LOAD_FAILED', err);
+    const message = document.createElement('p');
+    message.setAttribute('role', 'alert');
+    message.dataset.errorCode = 'DESIGNER_LAYOUTS_LOAD_FAILED';
+    message.textContent = 'Could not load designs. Please try again.';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'button secondary';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', () => { void render(el); });
+    el.replaceChildren(message, retry);
+    return;
   }
 
   const card = document.createElement('div');
@@ -29,11 +48,16 @@ export async function render(el: HTMLElement | null): Promise<void> {
   title.className = 'layout-gallery-title';
   title.textContent = 'Design Studio';
 
-  const addBtn = document.createElement('img');
-  addBtn.src = '/assets/icons/plus.svg';
-  addBtn.alt = 'Add design';
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.setAttribute('aria-label', 'Add design');
   addBtn.title = 'Create a new design in Design Studio';
-  addBtn.className = 'icon add-layout-btn';
+  addBtn.className = 'icon-button add-layout-btn';
+  const addIcon = document.createElement('img');
+  addIcon.src = '/assets/icons/plus.svg';
+  addIcon.alt = '';
+  addIcon.className = 'icon';
+  addBtn.appendChild(addIcon);
   addBtn.addEventListener('click', () => {
     window.open('/admin/studio/design', '_blank', 'noopener');
   });
@@ -55,6 +79,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
       .forEach(design => {
         const item = document.createElement('div');
         item.className = 'layout-gallery-item designer-layout-item';
+        item.dataset.designId = String(design.id);
 
         const img = document.createElement('img');
         img.className = 'layout-gallery-preview';
@@ -83,13 +108,13 @@ export async function render(el: HTMLElement | null): Promise<void> {
         const actions = document.createElement('div');
         actions.className = 'layout-gallery-actions';
 
-        const openBtn = document.createElement('button');
-        openBtn.type = 'button';
+        // A real destination works with keyboard navigation and popup-restricted hosts.
+        const openBtn = document.createElement('a');
+        openBtn.href = designUrl(design);
         openBtn.className = 'button small';
         openBtn.textContent = 'Open';
         openBtn.addEventListener('click', ev => {
           ev.stopPropagation();
-          window.open(designUrl(design), '_blank', 'noopener');
         });
         actions.appendChild(openBtn);
 
@@ -105,4 +130,9 @@ export async function render(el: HTMLElement | null): Promise<void> {
 
   card.appendChild(list);
   el.replaceChildren(card);
+  registerWorkspaceAgent({ root: card, id: 'designs', title: 'Design library',
+    read: () => ({ dirty: false, busy: false, designs: designs.map(design => ({
+      id: design.id, title: design.title, updatedAt: designUpdatedAt(design), editorUrl: designUrl(design)
+    })) }), actions: []
+  });
 }

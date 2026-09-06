@@ -12,13 +12,15 @@
   --color-white: #FFFFFF;
   --color-white-dark: #F7F7F7; // Slightly darker white for dropdown controls
   --color-border: #e5e7eb; // Neutral border color
-  // Calm blue for the neutral Studio shell; saved user accents still override it.
-  --accent-h: 215;
-  --accent-s: 65%;
-  --accent-l: 45%;
+  --accent-h: 0;
+  --accent-s: 0%;
+  --accent-l: 9%; // Neutral black default; readable inverse in dark mode.
+  --accent-dark-l: 92%;
+  --accent-contrast: #ffffff;
+  --accent-dark-contrast: #171717;
   --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l)); // User-selected accent color
   --color-primary: var(--user-color);
-  --color-primary-contrast: #ffffff;
+  --color-primary-contrast: var(--accent-contrast);
   --brand: var(--color-primary);
   --brand-2: var(--color-primary);
   --color-card: #ffffff;
@@ -43,6 +45,7 @@
   --studio-surface-solid: #ffffff;
   --studio-surface-muted: #f6f7f8;
   --studio-text: #1f2933;
+  --studio-icon-filter: none;
   --studio-text-muted: rgba(31, 41, 51, 0.58);
   --studio-border: rgba(17, 24, 39, 0.08);
   --studio-border-strong: rgba(17, 24, 39, 0.14);
@@ -85,8 +88,8 @@
     --color-bg: #1a1a1a;
     --color-secondary-light: #2a2a2a;
     --color-text: #f0f0f0;
-    --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
-    --color-primary-contrast: #f0f0f0;
+    --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-dark-l));
+    --color-primary-contrast: var(--accent-dark-contrast);
     --brand: var(--color-primary);
     --brand-2: var(--color-primary);
     --color-card: #2a2a2a;
@@ -107,6 +110,7 @@
     --studio-surface-solid: #242424;
     --studio-surface-muted: #2a2a2a;
     --studio-text: #f0f0f0;
+    --studio-icon-filter: brightness(0) invert(1);
     --studio-text-muted: rgba(240, 240, 240, 0.62);
     --studio-border: rgba(255, 255, 255, 0.09);
     --studio-border-strong: rgba(255, 255, 255, 0.16);
@@ -125,8 +129,8 @@
   --color-bg: #1a1a1a;
   --color-secondary-light: #2a2a2a;
   --color-text: #f0f0f0;
-  --user-color: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) * 0.8));
-  --color-primary-contrast: #f0f0f0;
+  --user-color: hsl(var(--accent-h), var(--accent-s), var(--accent-dark-l));
+  --color-primary-contrast: var(--accent-dark-contrast);
   --brand: var(--color-primary);
   --brand-2: var(--color-primary);
   --color-card: #2a2a2a;
@@ -147,6 +151,7 @@
   --studio-surface-solid: #242424;
   --studio-surface-muted: #2a2a2a;
   --studio-text: #f0f0f0;
+  --studio-icon-filter: brightness(0) invert(1);
   --studio-text-muted: rgba(240, 240, 240, 0.62);
   --studio-border: rgba(255, 255, 255, 0.09);
   --studio-border-strong: rgba(255, 255, 255, 0.16);

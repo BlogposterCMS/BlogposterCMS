@@ -18,6 +18,22 @@ function section(id: string) {
 }
 
 describe('Design Studio Section toolbar', () => {
+  it('routes container insertion and content-host selection from the owning Section', () => {
+    const root = document.createElement('main');
+    const hero = section('hero');
+    root.appendChild(hero);
+    const requests: unknown[] = [];
+    root.addEventListener('designerSectionStructureRequested', event => {
+      requests.push({ target: event.target, action: (event as CustomEvent).detail.action });
+    });
+    refreshBackgroundToolbars(root);
+    hero.querySelector<HTMLButtonElement>('.section-add-container')!.click();
+    hero.querySelector<HTMLButtonElement>('.section-content-host')!.click();
+    expect(requests).toEqual([{ target: hero, action: 'addContainer' }, { target: hero, action: 'contentHost' }]);
+    hero.dataset.dynamicHost = 'true';
+    refreshBackgroundToolbars(root);
+    expect(hero.querySelector('.section-content-host')?.getAttribute('aria-pressed')).toBe('true');
+  });
   afterEach(() => {
     hideBackgroundToolbar();
     document.body.replaceChildren();

@@ -3217,18 +3217,6 @@ export interface RegisterSettingsSectionPayload {
 }
 export type RegisterSettingsSectionResult = JsonValue | undefined;
 
-export interface RegisterWidgetUsagePayload {
-  "authModuleSecret"?: string;
-  "decodedJWT"?: null | JsonObject;
-  "isExternalRequest"?: boolean;
-  "jwt"?: null | string;
-  "moduleName": string;
-  "moduleType"?: null | string;
-  "skipJWT"?: boolean;
-  readonly [key: string]: BackendPayloadValue;
-}
-export type RegisterWidgetUsageResult = JsonValue | undefined;
-
 export interface ReindexContentEntriesPayload {
   "authModuleSecret"?: string;
   "contentType"?: JsonValue;
@@ -3406,12 +3394,16 @@ export type ResolveRedirectResult = JsonValue | undefined;
 
 export interface ResolveSeoMetaPayload {
   "authModuleSecret"?: string;
+  "contentFallback"?: JsonValue;
   "decodedJWT"?: null | JsonObject;
   "isExternalRequest"?: boolean;
   "jwt"?: null | string;
+  "language"?: JsonValue;
   "moduleName": string;
   "moduleType"?: null | string;
   "skipJWT"?: boolean;
+  "sourceId"?: JsonValue;
+  "sourceModule"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
 }
 export type ResolveSeoMetaResult = JsonValue | undefined;
@@ -4556,7 +4548,6 @@ export interface BackendEventContractMap {
   "registerModuleSettingsSchema": { payload: RegisterModuleSettingsSchemaPayload; result: RegisterModuleSettingsSchemaResult };
   "registerNavigationLocation": { payload: RegisterNavigationLocationPayload; result: RegisterNavigationLocationResult };
   "registerSettingsSection": { payload: RegisterSettingsSectionPayload; result: RegisterSettingsSectionResult };
-  "registerWidgetUsage": { payload: RegisterWidgetUsagePayload; result: RegisterWidgetUsageResult };
   "reindexContentEntries": { payload: ReindexContentEntriesPayload; result: ReindexContentEntriesResult };
   "rejectContentReview": { payload: RejectContentReviewPayload; result: RejectContentReviewResult };
   "releaseContentLock": { payload: ReleaseContentLockPayload; result: ReleaseContentLockResult };

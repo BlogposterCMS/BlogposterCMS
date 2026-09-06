@@ -76,3 +76,149 @@
 .template-widget:hover {
   box-shadow: 0 0 0 2px var(--user-color);
 }
+
+// Public widget library uses the same structure/details rhythm as the CMS tools.
+.widget-library {
+  container: widget-library / inline-size;
+  color: var(--studio-text);
+  font-family: var(--font-body);
+  min-width: 0;
+}
+.widget-library[aria-label]::after,
+.widget-library [aria-label]::after {
+  content: none;
+  display: none;
+}
+.widget-library__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.widget-library h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+.widget-library__header p,
+.widget-library__summary,
+.widget-library__details p,
+.widget-library__empty {
+  color: var(--studio-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.widget-library__header p {
+  margin-bottom: 0;
+}
+.widget-library__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
+  gap: 28px;
+  align-items: start;
+}
+.widget-library__browse {
+  min-width: 0;
+}
+.widget-library__search {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-surface-muted);
+  color: var(--studio-text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+.widget-library__filters {
+  display: flex;
+  gap: 6px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--studio-border);
+}
+.widget-library__filters button {
+  border: 0;
+  border-radius: var(--studio-field-radius);
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--studio-text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.widget-library__filters [aria-pressed='true'] {
+  background: var(--studio-surface-muted);
+  color: var(--studio-text);
+}
+.widget-library__list {
+  display: grid;
+  gap: 4px;
+}
+.widget-library__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  min-width: 0;
+  border: 0;
+  border-radius: var(--studio-field-radius);
+  background: transparent;
+  color: var(--studio-text);
+  font: inherit;
+  font-size: 0.87rem;
+  text-align: left;
+  cursor: pointer;
+}
+.widget-library__item strong {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.widget-library__item .icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+.widget-library__item:hover {
+  background: var(--studio-surface-muted);
+}
+.widget-library__item[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--brand) 7%, var(--studio-surface-solid));
+}
+.widget-library__details {
+  padding: 20px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.widget-library__details h3 {
+  font-size: 1.1rem;
+  margin: 6px 0 16px;
+}
+.widget-library__details .widget-library__kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+}
+.widget-library__summary[role='alert'] {
+  color: var(--color-error);
+}
+.widget-library__back {
+  display: none !important;
+}
+.widget-library :is(input, button):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 60%, transparent);
+  outline-offset: 2px;
+}
+@container widget-library (max-width: 800px) {
+  .widget-library__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .widget-library__back {
+    display: inline-flex !important;
+    margin-top: 16px;
+  }
+}

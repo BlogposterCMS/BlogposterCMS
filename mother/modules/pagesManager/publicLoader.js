@@ -72,16 +72,21 @@ export async function loadHtml(descriptor = {}, ctx) {
         }
         return;
     }
-    await ensureSanitizer();
+    // Server markup has already passed the public HTML sanitizer. Keep that DOM
+    // (and its early image requests) instead of replacing it during client startup.
+    const initialHtml = runtimeContext?.initialHtml;
+    const adopted = initialHtml?.id === 'bp-initial-html' && initialHtml.isConnected;
+    if (!adopted)
+        await ensureSanitizer();
     const css = inline.css || '';
     const js = inline.js || '';
-    if (css) {
+    if (css && !adopted) {
         const style = document.createElement('style');
         style.textContent = css;
         document.head.appendChild(style);
     }
     const root = document.getElementById('app') || document.body;
-    if (html) {
+    if (html && !adopted) {
         if (!sanitizeHtml || sanitizerUnavailable) {
             logStructuredError('UNTRUSTED_HTML_BLOCKED', new Error('Sanitizer unavailable'));
             appendBlockedPlaceholder(root);

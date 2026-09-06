@@ -23,7 +23,7 @@ export function sanitizeHtml(html: string): string {
   return div.innerHTML;
 }
 
-function sanitizeCss(css: string, inline = false): string {
+export function sanitizeCss(css: string, inline = false): string {
   const expr = /expression/i;
   const urlPattern = /url\(([^)]*)\)/gi;
   const importPattern = /@import\s+(?:url\(([^)]+)\)|(['"])([^'"]+)\2)/gi;

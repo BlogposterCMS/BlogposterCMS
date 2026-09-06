@@ -39,6 +39,10 @@ function galleryStyle(): HTMLStyleElement {
   grid-template-columns: repeat(var(--bp-gallery-columns, 3), minmax(0, 1fr));
   gap: var(--bp-gallery-gap, 10px);
 }
+.bp-gallery-widget__viewport {
+  min-width: 0;
+  overflow: hidden;
+}
 .bp-gallery-widget__items.is-row-limited {
   overflow-y: auto;
   scrollbar-gutter: stable;
@@ -93,6 +97,7 @@ function galleryStyle(): HTMLStyleElement {
   will-change: transform;
 }
 .bp-gallery-widget--carousel .bp-gallery-widget__item {
+  min-width: 0;
   flex: 0 0 calc((100% - (var(--bp-gallery-slides-to-show, 1) - 1) * var(--bp-gallery-gap, 10px)) / var(--bp-gallery-slides-to-show, 1));
 }
 .bp-gallery-widget--carousel[data-animation="instant"] .bp-gallery-widget__items {
@@ -306,6 +311,8 @@ function appendCarouselControls(
 
   const dots = document.createElement('div');
   dots.className = 'bp-gallery-widget__dots';
+  const previous = document.createElement('button');
+  const next = document.createElement('button');
   const dotCount = maxIndex + 1;
   for (let i = 0; i < dotCount; i += 1) {
     const dot = document.createElement('button');
@@ -319,13 +326,22 @@ function appendCarouselControls(
     const nextIndex = Math.max(0, Math.min(maxIndex, index));
     index = nextIndex;
     if (options.animation === 'fade') {
-      items.forEach((item, itemIndex) => item.classList.toggle('is-active', itemIndex === nextIndex));
+      items.forEach((item, itemIndex) => {
+        const active = itemIndex === nextIndex;
+        item.classList.toggle('is-active', active);
+        item.inert = !active;
+        item.setAttribute('aria-hidden', String(!active));
+      });
     } else {
-      const offset = items[nextIndex]?.offsetLeft || 0;
+      // offsetLeft may be relative to an ancestor outside this widget.
+      const offset = (items[nextIndex]?.offsetLeft || 0) - (items[0]?.offsetLeft || 0);
       list.style.transform = `translate3d(${-offset}px, 0, 0)`;
     }
+    previous.disabled = maxIndex === 0 || (!options.loop && nextIndex === 0);
+    next.disabled = maxIndex === 0 || (!options.loop && nextIndex === maxIndex);
     Array.from(dots.children).forEach((dot, dotIndex) => {
       dot.classList.toggle('is-active', dotIndex === nextIndex);
+      dot.setAttribute('aria-current', String(dotIndex === nextIndex));
     });
   }
 
@@ -345,10 +361,8 @@ function appendCarouselControls(
   if (options.showControls) {
   const controls = document.createElement('div');
   controls.className = 'bp-gallery-widget__controls';
-  const previous = document.createElement('button');
   previous.type = 'button';
   previous.textContent = 'Prev';
-  const next = document.createElement('button');
   next.type = 'button';
   next.textContent = 'Next';
     previous.addEventListener('click', () => step(-1));
@@ -377,6 +391,8 @@ function appendCarouselControls(
     }
   }
 
+  // Expose the correct initial state before the first paint, then measure layout.
+  apply();
   nextFrame(apply);
   window.addEventListener('resize', apply);
 }
@@ -424,7 +440,14 @@ export function render(el: HTMLElement | null, ctx: PublicWidgetContext = {}): v
     focalY,
     objectPosition
   })));
-  root.appendChild(list);
+  if (mode === 'carousel') {
+    const viewport = document.createElement('div');
+    viewport.className = 'bp-gallery-widget__viewport';
+    viewport.appendChild(list);
+    root.appendChild(viewport);
+  } else {
+    root.appendChild(list);
+  }
   setMeasuredHeight(root, heightMode);
   if (mode !== 'carousel') setRowLimit(root, list, rows);
   if (mode === 'carousel') {

@@ -7,11 +7,11 @@ import {
   buildPageUpdatePayload,
   clearPageEditorCache,
   errorMessage,
-  fetchPageEditorTemplates,
+
   savePageEditorPage,
   toPage,
-  toTemplates,
-  visibleTemplates
+
+
 } from '../ui/widgets/plainspace/admin/pageEditorWidgets/pageEditorData';
 
 const page = {
@@ -49,14 +49,6 @@ describe('pageEditorData', () => {
   it('normalizes pages, templates, and primitive values', () => {
     expect(toPage({ id: '1' })).toEqual({ id: '1' });
     expect(toPage(null)).toBeNull();
-    expect(toTemplates({
-      templates: ['Landing', { name: 'Global', isGlobal: true }, null]
-    })).toEqual([
-      { name: 'Landing' },
-      { name: 'Global', isGlobal: true }
-    ]);
-    expect(visibleTemplates({ templates: [{ name: 'Global', isGlobal: true }] }))
-      .toEqual([{ name: 'default' }]);
     expect(asString(null)).toBe('');
     expect(asString(42)).toBe('42');
     expect(errorMessage(new Error('boom'))).toBe('boom');
@@ -92,29 +84,9 @@ describe('pageEditorData', () => {
         meta: {
           keep: true,
           publish_at: '2026-06-17T12:00',
-          layoutTemplate: 'landing'
+          layoutTemplate: 'old-layout'
         }
       }
-    });
-  });
-
-  it('fetches non-global layout templates for the page lane', async () => {
-    const emit = jest.fn().mockResolvedValue({
-      templates: [
-        { name: 'Global', isGlobal: true },
-        { name: 'Landing' }
-      ]
-    });
-
-    await expect(fetchPageEditorTemplates(emit, 'admin-token', 'public'))
-      .resolves.toEqual([{ name: 'Landing' }]);
-    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
-      jwt: 'admin-token',
-      moduleName: 'runtimeManager',
-      moduleType: 'core',
-      resource: 'plainSpace',
-      action: 'layoutTemplateNames',
-      params: { lane: 'public' }
     });
   });
 

@@ -32,10 +32,19 @@ export function normalizeRuntimeDesignWidget(
     ?? meta.radius ?? meta.cornerRadius ?? meta.corner_radius;
   const elementName = widget.elementName ?? widget.element_name
     ?? meta.elementName ?? meta.element_name ?? meta.name;
+  // Designer documents also carry authored pixel geometry. Dropping it here
+  // moves free-placed widgets to the origin when no percent fallback exists.
+  const geometry: LooseRecord = {};
+  for (const key of ['x', 'y', 'w', 'h']) {
+    const value = finiteNumber(widget[key]);
+    if (value !== null) geometry[key] = value;
+  }
 
   return {
     id: widget.instance_id || widget.instanceId || widget.id,
     widgetId: widget.widget_id || widget.widgetId,
+    ...geometry,
+    ...(widget.responsivePlacement ? { responsivePlacement: widget.responsivePlacement } : {}),
     xPercent: widget.x_percent ?? widget.xPercent,
     yPercent: widget.y_percent ?? widget.yPercent,
     wPercent: widget.w_percent ?? widget.wPercent,

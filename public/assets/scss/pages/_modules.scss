@@ -105,7 +105,7 @@
 
 .modules-list li.is-selected {
   background: #f5f7fb;
-  box-shadow: inset 3px 0 0 var(--user-color);
+  background: color-mix(in srgb, var(--brand) 7%, var(--studio-surface-solid));
 }
 
 .module-detail-mount {

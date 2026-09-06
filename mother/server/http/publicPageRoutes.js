@@ -9,6 +9,8 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { verifyOriginToken } = require('../security/originToken');
+const { loadPublicPresentation, escapeHtml, scriptJson } = require('../../modules/pagesManager/publicPresentation');
+const { renderPublicSeoHead } = require('../../modules/seoManager/publicHead');
 
 function createPublicPageRoutes({
   injectDevReload = html => html,
@@ -99,18 +101,18 @@ function createPublicPageRoutes({
         return res.status(500).send('Server misconfiguration');
       }
 
-      const eventName = slug ? BACKEND_EVENTS.GET_PAGE_BY_SLUG : BACKEND_EVENTS.GET_START_PAGE;
-      const payload = slug ? {
-        jwt: global.pagesPublicToken,
-        moduleName: 'pagesManager',
-        moduleType: 'core',
-        slug
-      } : {
-        jwt: global.pagesPublicToken,
-        moduleName: 'pagesManager',
-        moduleType: 'core'
+      const requestPublic = async (resource, action, params = {}) => {
+        const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST, {
+          jwt: global.pagesPublicToken,
+          moduleName: 'runtimeManager',
+          moduleType: 'core',
+          resource, action, params
+        });
+        return result.data;
       };
-      const page = await requestBackendEvent(motherEmitter, eventName, payload);
+      // Reuse the public facade's publication/lane filtering even for server HTML.
+      // Never turn an admin session or a raw page record into public bootstrap data.
+      const page = await requestPublic('pages', slug ? 'getBySlug' : 'start', { slug, language: 'en' });
 
       if (!page?.id) return next();
 
@@ -119,8 +121,25 @@ function createPublicPageRoutes({
       const token = global.pagesPublicToken;
       const slugToUse = slug || sanitizeSlug(page.slug);
       const nonce = crypto.randomBytes(16).toString('base64');
+      const language = page.language || 'en';
+      // Signed Designer previews get their state from the existing parent bridge.
+      const presentation = livePreviewRequested ? null
+        : await loadPublicPresentation(requestPublic, slugToUse, language);
 
-      let html = fs.readFileSync(pageHtmlPath, 'utf8');
+      let html = await fs.promises.readFile(pageHtmlPath, 'utf8');
+      if (presentation) {
+        presentation.bootstrap.pathname = req.path;
+        html = html.replace('<html ', '<html data-bp-public-layout-ready="true" ');
+        html = html.replace(/<title>[\s\S]*?<\/title>/i,
+          () => `<title>${escapeHtml(presentation.bootstrap.envelope.meta?.seoTitle || page.title || '')}</title>`);
+        html = html.replace('</head>', () => presentation.head + '</head>');
+        const seoHead = renderPublicSeoHead(presentation.bootstrap.envelope.meta, {
+          baseUrl: process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`,
+          pathname: req.path
+        });
+        html = html.replace('</head>', () => seoHead + '</head>');
+        html = html.replace('<!-- public-initial-presentation -->', () => presentation.body);
+      }
       if (renderMode === 'server') {
         html = html.replace(
           /<script type="module" src="\/build\/pageRenderer.js"><\/script>\s*/i,
@@ -128,17 +147,21 @@ function createPublicPageRoutes({
         );
       }
       const inject = `<script nonce="${nonce}">
-      window.PAGE_ID = ${JSON.stringify(pageId)};
-      window.PAGE_SLUG = ${JSON.stringify(slugToUse)};
-      window.LANE    = ${JSON.stringify(lane)};
-      window.PUBLIC_TOKEN = ${JSON.stringify(token)};
-      window.PLAINSPACE_VERSION = ${JSON.stringify(plainSpaceVersion)};
-      window.NONCE  = ${JSON.stringify(nonce)};
+      window.PAGE_ID = ${scriptJson(pageId)};
+      window.PAGE_SLUG = ${scriptJson(slugToUse)};
+      window.LANE    = ${scriptJson(lane)};
+      window.LANG = ${scriptJson(language)};
+      window.PUBLIC_TOKEN = ${scriptJson(token)};
+      window.PLAINSPACE_VERSION = ${scriptJson(plainSpaceVersion)};
+      window.NONCE  = ${scriptJson(nonce)};
+      ${presentation ? `window.BP_PUBLIC_BOOTSTRAP = ${scriptJson(presentation.bootstrap)};` : ''}
     </script>`;
-      html = html.replace('</head>', inject + '</head>');
+      html = html.replace('</head>', () => inject + '</head>');
       html = injectDevReload(html);
 
       res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
+      // The HTML contains a short-lived public token and a fresh CSP nonce.
+      res.setHeader('Cache-Control', 'no-store');
       res.send(html);
     } catch (err) {
       console.error('[SERVER] /* render error ->', err);

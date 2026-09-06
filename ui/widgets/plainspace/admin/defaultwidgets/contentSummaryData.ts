@@ -9,6 +9,7 @@ export interface DesignRecord {
 }
 
 export interface PageRecord {
+  id?: string | number;
   slug?: string;
   title?: string;
   lane?: string;
@@ -70,6 +71,8 @@ export function uploadedContentPages(value: unknown): PageRecord[] {
   return toPages(value).filter(page => (
     page.is_content &&
     !page.meta?.layoutTemplate &&
+    !page.meta?.designId &&
+    page.status !== 'deleted' &&
     page.lane === 'public'
   ));
 }

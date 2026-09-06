@@ -3,7 +3,7 @@ const {
 } = require('../mother/modules/pagesManager');
 
 describe('Pages Manager public envelope layout selection', () => {
-  it('uses a linked Design Studio id before the slug layout fallback', () => {
+  it('uses a linked Design Studio id', () => {
     expect(designLayoutForPage({
       slug: 'coming-soon',
       meta: { designId: 42 }
@@ -23,12 +23,12 @@ describe('Pages Manager public envelope layout selection', () => {
     });
   });
 
-  it('falls back to the slug layout ref for pages without a linked design', () => {
+  it('does not invent a layout reference for pages without a linked design', () => {
     expect(designLayoutForPage({
       slug: 'landing',
       meta: null
     })).toEqual({
-      layoutRef: 'layout:landing@v1',
+      layoutRef: undefined,
       hasLinkedDesign: false
     });
   });

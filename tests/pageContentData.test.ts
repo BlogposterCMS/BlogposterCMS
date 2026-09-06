@@ -179,9 +179,11 @@ describe('pageContentData', () => {
 
   it('fetches and uploads HTML files through stable media paths', async () => {
     expect(htmlFileUrl('my file.html')).toBe('/media/page-content/my%20file.html');
-    const fetchImpl = jest.fn().mockResolvedValue({ text: jest.fn().mockResolvedValue('<h1>Hello</h1>') });
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: true, text: jest.fn().mockResolvedValue('<h1>Hello</h1>') });
     await expect(fetchHtmlFile(fetchImpl, 'my file.html')).resolves.toBe('<h1>Hello</h1>');
     expect(fetchImpl).toHaveBeenCalledWith('/media/page-content/my%20file.html');
+    await expect(fetchHtmlFile(jest.fn().mockResolvedValue({ ok: false, status: 404 }), 'missing.html'))
+      .rejects.toThrow('PAGE_CONTENT_HTML_FETCH_FAILED: HTTP 404');
 
     const emit = jest.fn(async (_eventName, payload) => (
       `${payload.resource}.${payload.action}` === 'media.uploadToFolder'

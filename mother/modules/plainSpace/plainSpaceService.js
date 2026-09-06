@@ -170,6 +170,21 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
       finalSlugForCheck = finalSlugRaw;
 
+    if (page.retired === true) {
+      // Retired core pages are tombstoned through pagesManager, never reseeded.
+      // Data belonging to existing public pages is deliberately preserved.
+      const result = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
+        jwt, moduleName: 'pagesManager', moduleType: 'core', slug: finalSlugForCheck, lane: page.lane
+      });
+      const retiredPage = Array.isArray(result) ? result[0] : result;
+      if (retiredPage && retiredPage.status !== 'deleted') {
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.UPDATE_PAGE, {
+          jwt, moduleName: 'pagesManager', moduleType: 'core', pageId: retiredPage.id, status: 'deleted'
+        });
+      }
+      continue;
+    }
+
     if (page.config?.icon) {
       if (typeof page.config.icon !== 'string' || !page.config.icon.startsWith('/assets/icons/')) {
         notify({
@@ -286,7 +301,16 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
 
       let missingWidgets = [];
       let retiredWidgets = [];
-      if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
+      if (page.config?.dashboardLayout === 'fixed') {
+        // Core tools own their composition. Preserve old saved layouts for
+        // rollback; the runtime uses these seeded fields for the fixed surface.
+        for (const key of ['dashboardLayout', 'widgets', 'widgetSlots']) {
+          if (!sameMetadataValue(currentMeta[key], page.config[key])) {
+            newMeta[key] = page.config[key];
+            metaChanged = true;
+          }
+        }
+      } else if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
         const seedWidgetIds = getSeedWidgetIds(page.config.widgets);
         const retiredSeedWidgetIds = getRetiredSeedWidgetIds(page);
         const existingWidgets = Array.isArray(newMeta.widgets) ? newMeta.widgets.slice() : [];
@@ -372,6 +396,10 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     if (page.config?.icon) pageMeta.icon = page.config.icon;
     if (pageWorkspace) pageMeta.workspace = pageWorkspace;
     if (pageLayout) pageMeta.layout = pageLayout;
+    if (page.config?.dashboardLayout === 'fixed') {
+      pageMeta.dashboardLayout = 'fixed';
+      pageMeta.widgetSlots = { ...page.config.widgetSlots };
+    }
     if (Array.isArray(page.config?.widgets) && page.config.widgets.length) {
       pageMeta.widgets = getSeedWidgetIds(page.config.widgets);
     }

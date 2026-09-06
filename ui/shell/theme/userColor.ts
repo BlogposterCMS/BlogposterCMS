@@ -1,4 +1,4 @@
-import { fetchUserColor, isValidHex } from './userColorData.js';
+import { DEFAULT_UI_COLOR, fetchUserColor, isValidHex } from './userColorData.js';
 
 const GOLD_COLOR = '#d4af37';
 const COLOR_SIMILARITY_THRESHOLD = 50;
@@ -211,13 +211,17 @@ export function bindThemeModeToggle(): void {
 export function setAccentVariables(hex: string): void {
   if (!isValidHex(hex)) return;
   const { h, s, l } = hexToHsl(hex);
-  const sNorm = clamp(s, 60, 75);
-  const lNorm = clamp(l, 40, 60);
+  // Neutral accents must stay neutral; saturation clamping used to turn black red.
+  const neutral = s < 8;
+  const sNorm = neutral ? 0 : clamp(s, 60, 75);
+  const lNorm = neutral ? 9 : clamp(l, 40, 60);
   document.documentElement.style.setProperty('--accent-h', String(h));
   document.documentElement.style.setProperty('--accent-s', `${sNorm}%`);
   document.documentElement.style.setProperty('--accent-l', `${lNorm}%`);
-  const contrast = lNorm > 50 ? '#000000' : '#ffffff';
-  document.documentElement.style.setProperty('--color-primary-contrast', contrast);
+  document.documentElement.style.setProperty('--accent-dark-l', `${neutral ? 92 : lNorm * 0.8}%`);
+  document.documentElement.style.setProperty('--accent-contrast', lNorm > 50 ? '#000000' : '#ffffff');
+  document.documentElement.style.setProperty('--accent-dark-contrast', neutral ? '#171717' : '#ffffff');
+  document.documentElement.style.removeProperty('--color-primary-contrast');
   const normalizedHex = hslToHex(h, sNorm, lNorm);
   window.USER_COLOR = normalizedHex;
   updateSharedColor(normalizedHex);
@@ -246,9 +250,7 @@ export async function applyUserColor(force = false): Promise<void> {
   if (!window.meltdownEmit || !jwt) return;
   try {
     const userColor = await fetchUserColor(window.meltdownEmit, jwt);
-    if (userColor) {
-      setAccentVariables(userColor);
-    }
+    setAccentVariables(userColor || DEFAULT_UI_COLOR);
   } catch (err) {
     console.error('[userColor] Failed to set user color', err);
   }

@@ -25,9 +25,9 @@
         </div>
       </div>
 
-      <div class="logo">
-        <img src="/assets/icons/blogpostercms-logo.svg" class="logo-icon" />
-      </div>
+      <button class="logo top-header__icon-button" type="button" aria-label="Open notifications" aria-expanded="false" aria-controls="notification-hub">
+        <img src="/assets/icons/blogpostercms-logo.svg" class="logo-icon" alt="" />
+      </button>
 
       <div class="right-icons">
         <div id="account-menu" class="account-menu">
@@ -64,6 +64,23 @@
       </div>
     </div>
   </div>
-<div id="notification-hub" class="notification-hub" hidden>
-  <ul></ul>
-</div>
+<section id="notification-hub" class="notification-hub app-scope" aria-labelledby="notification-hub-title" hidden>
+  <header class="notification-hub__header">
+    <div>
+      <h2 id="notification-hub-title">Notifications</h2>
+      <p>Recent activity</p>
+    </div>
+    <div class="notification-hub__actions">
+      <button type="button" class="notification-hub__control" data-notification-refresh aria-label="Refresh notifications">
+        <img src="/assets/icons/refresh-cw.svg" alt="" />
+      </button>
+      <button type="button" class="notification-hub__control" data-notification-close aria-label="Close notifications">
+        <img src="/assets/icons/x.svg" alt="" />
+      </button>
+    </div>
+  </header>
+  <div class="notification-hub__body">
+    <p class="notification-hub__status" role="status" hidden></p>
+    <ul aria-label="Recent notifications"></ul>
+  </div>
+</section>

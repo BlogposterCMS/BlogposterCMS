@@ -49,7 +49,9 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
     publishPanel.setAttribute('aria-hidden', 'true');
     let slugInput, suggestionsEl, warningEl, draftWrap, draftCb, infoEl, draftNote, confirmBtn, closeBtn, urlEl, usageStatusEl, usageListEl, usageRefreshBtn;
     let selectedPage = null;
-    fetchPartial('publish-panel', 'builder')
+    let publishing = false;
+    let publishAction = null;
+    const panelReady = fetchPartial('publish-panel', 'builder')
         .then(html => {
         publishPanel.innerHTML = sanitizeHtml(html);
         setupElements();
@@ -150,12 +152,30 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
                 hidePublishPanel();
             }
         });
-        confirmBtn.addEventListener('click', async () => {
+        // UI and agents await this same operation; neither infers completion from
+        // a success message left over from an earlier publication.
+        publishAction = async ({ slug: requestedSlug, draft: requestedDraft } = {}) => {
+            if (publishing)
+                throw new Error('DESIGNER_PUBLISH_BUSY: A publication is already running.');
+            if (requestedSlug !== undefined) {
+                if (typeof requestedSlug !== 'string' || sanitizeSlug(requestedSlug) !== requestedSlug)
+                    throw new Error('DESIGNER_PUBLISH_SLUG_INVALID');
+                slugInput.value = requestedSlug;
+                selectedPage = null;
+            }
+            if (requestedDraft !== undefined && typeof requestedDraft !== 'boolean')
+                throw new Error('DESIGNER_PUBLISH_DRAFT_INVALID');
+            if (requestedDraft !== undefined)
+                draftCb.checked = requestedDraft;
             const slug = sanitizeSlug(slugInput.value.trim());
             if (!slug) {
                 showWarning('Select a slug.', { focusEl: slugInput });
-                return;
+                throw new Error('DESIGNER_PUBLISH_SLUG_REQUIRED');
             }
+            publishing = true;
+            confirmBtn.disabled = true;
+            clearWarning();
+            clearInfo();
             try {
                 if (!selectedPage) {
                     const pages = await lookupPages(slug);
@@ -166,7 +186,7 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
                             showWarning('Failed to load existing page data. Please try again.', {
                                 focusEl: slugInput
                             });
-                            return;
+                            throw new Error('DESIGNER_PUBLISH_PAGE_LOAD_FAILED');
                         }
                         selectedPage = full;
                         draftCb.checked = selectedPage.status !== 'published';
@@ -208,6 +228,8 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
                     meta.designId = savedDesignId;
                     meta.designTitle = name;
                 }
+                if (requestedDraft !== undefined)
+                    draftCb.checked = requestedDraft;
                 if (thumbnailUrl)
                     meta.designThumbnail = thumbnailUrl;
                 const patch = {
@@ -218,14 +240,19 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
                 await runPublish(slug);
                 showSuccessMessage(slug);
                 void refreshPublicationUsage();
+                return { handled: true, published: true, slug, draft: draftCb.checked, pageId: selectedPage.id };
             }
             catch (err) {
-                if (err?.isValidationError)
-                    return;
                 publishLogger.error('publish flow error', err);
                 showWarning(`Publish failed: ${err?.message || err}`, { focusEl: confirmBtn });
+                throw err;
             }
-        });
+            finally {
+                publishing = false;
+                confirmBtn.disabled = false;
+            }
+        };
+        confirmBtn.addEventListener('click', () => { void publishAction().catch(() => { }); });
     }
     function showPublishPanel() {
         publishPanel.classList.remove('hidden');
@@ -644,4 +671,11 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
             infoEl.focus?.();
         }
     }
+    return {
+        publish: async (options) => { await panelReady; return publishAction(options); },
+        open: async () => { await panelReady; showPublishPanel(); },
+        snapshot: () => ({ busy: publishing, open: !publishPanel.classList.contains('hidden'),
+            slug: slugInput?.value || '', draft: draftCb?.checked ?? null,
+            error: warningEl && !warningEl.classList.contains('hidden') ? warningEl.textContent : null })
+    };
 }

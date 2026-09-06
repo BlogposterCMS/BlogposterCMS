@@ -150,6 +150,26 @@ describe('runtimeAdminGrid', () => {
     expect(window.addDashboardWidget).toHaveBeenCalledWith({ id: 'stats' });
   });
 
+  it('mounts fixed tools through the existing loader without personal layout controls or writes', async () => {
+    const emit = jest.fn().mockResolvedValue(undefined);
+    const result = await renderAdminRuntimeGrid({
+      page: { id: 'pages-1', meta: { dashboardLayout: 'fixed', widgets: ['pageList'], widgetSlots: { pageList: 'page' } } },
+      contentEl: document.createElement('main'),
+      globalLayout: [{ id: 'global-1', widgetId: 'global' }],
+      allWidgets: [{ id: 'pageList', metadata: { layout: { defaultSlot: 'page', supportedSlots: ['page'] } } }],
+      lane: 'admin', emit, widgetEmit: emit
+    });
+    expect(loadRuntimeLayoutForViewport).not.toHaveBeenCalled();
+    expect(renderRuntimeCanvasWidget).toHaveBeenCalledTimes(1);
+    expect(renderRuntimeCanvasWidget).toHaveBeenCalledWith(expect.objectContaining({ afterRender: undefined }));
+    expect(result.gridEl.dataset.dashboardLayout).toBe('fixed');
+    expect(result.layout.map(item => item.widgetId)).toEqual(['pageList']);
+    expect(renderAttachedRuntimeContent).not.toHaveBeenCalled();
+    expect(window.addDashboardWidget).toBeUndefined();
+    expect(window.saveAdminLayout).toBeUndefined();
+    expect(saveRuntimeLayoutForViewport).not.toHaveBeenCalled();
+  });
+
   it('serializes dashboard slot changes and saves the latest layout', async () => {
     const contentEl = document.createElement('main');
     const emit = jest.fn().mockResolvedValue(undefined);

@@ -133,6 +133,17 @@ describe('shared app bridge', () => {
     await tick();
   });
 
+  test.each([false, true])('respects a manual domain surface instead of creating a generic DOM controller (%s)', async enabled => {
+    document.head.innerHTML = '<meta name="agent-surface" content="manual">';
+    const parentWindow = { postMessage: jest.fn() } as unknown as Window;
+    Object.defineProperty(window, 'parent', { configurable: true, value: parentWindow });
+    installAppBridge();
+    dispatchParentMessage(parentWindow, { type: 'init-tokens', appBridge: true, appName: 'designer', agentSurface: enabled });
+    await tick();
+    expect(typeof window.meltdownEmit).toBe('function');
+    expect(window.blogposterAgent?.appBridgeSurface).toBeUndefined();
+  });
+
   test('does not start an agent surface without explicit opt-in', async () => {
     const parentWindow = {
       postMessage: jest.fn()

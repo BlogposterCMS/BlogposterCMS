@@ -21,6 +21,48 @@ function waitForAgentTick(): Promise<void> {
   return new Promise(resolve => window.setTimeout(resolve, 0));
 }
 
+test('unhandled domain actions are acknowledged as failed and publish a fresh snapshot', async () => {
+  const calls: any[] = [];
+  window.meltdownEmit = jest.fn(async (eventName, payload) => {
+    calls.push({ eventName, payload });
+    return eventName === 'agent.pollSurfaceCommands' ? [{ id: 'failed-1', action: 'design.save' }] : { ok: true };
+  });
+  const buildSnapshot = jest.fn(() => ({ state: { dirty: true } }));
+  const client = createAgentSurfaceClient({ appName: 'designer', surfaceId: 'test.failure',
+    snapshotIntervalMs: 0, pollIntervalMs: 0, commandSnapshotDelayMs: 0, buildSnapshot,
+    handleCommand: () => ({ handled: false, code: 'DESIGNER_SAVE_DENIED', reason: 'Permission denied' }) });
+  client.start();
+  await waitForAgentTick(); await waitForAgentTick();
+  client.stop();
+  expect(calls.find(call => call.eventName === 'agent.ackSurfaceCommand').payload).toMatchObject({
+    commandId: 'failed-1', status: 'failed', error: expect.stringContaining('DESIGNER_SAVE_DENIED')
+  });
+  expect(buildSnapshot).toHaveBeenCalledTimes(2);
+});
+
+test('a document handoff waits for acknowledgment and does not run when acknowledgment fails', async () => {
+  const order: string[] = [];
+  const onCommandSettled = jest.fn((_command, acknowledged) => { order.push(acknowledged ? 'navigate' : 'release'); });
+  let failAck = false;
+  const emit = jest.fn(async (event: string) => {
+    if (event === 'agent.pollSurfaceCommands') return [{ id: 'handoff', action: 'cms.openDesign' }];
+    if (event === 'agent.ackSurfaceCommand') {
+      order.push('ack');
+      if (failAck) throw new Error('ACK_OFFLINE');
+    }
+    return {};
+  });
+  const client = createAgentSurfaceClient({ appName: 'plainspace', surfaceId: 'cms.shell.test', emit,
+    buildSnapshot: () => ({}), handleCommand: () => ({ handled: true, navigation: 'scheduled' }),
+    onCommandSettled, onError: jest.fn() });
+  await client.pollCommands();
+  expect(order).toEqual(['ack', 'navigate']);
+  order.length = 0; failAck = true;
+  await client.pollCommands();
+  expect(order).not.toContain('navigate');
+  expect(order[order.length - 1]).toBe('release');
+});
+
 test('buildDomAgentSnapshot captures visible controls and selected canvas items', () => {
   document.body.innerHTML = `
     <button data-agent-id="publish" aria-label="Publish design">Publish</button>

@@ -2,6 +2,12 @@
    components/_dashboard-icons.scss - Shared dashboard icon color handling
    ============================================================================= */
 
+// Tokens inherit into widget ShadowRoots; document :root selectors do not.
+.app-scope img.icon,
+.app-scope img.logo-icon {
+  filter: var(--studio-icon-filter, none);
+}
+
 @mixin dark-dashboard-icons {
   .sidebar .sidebar-nav .sidebar-item .icon,
   .sidebar .sidebar-nav .sidebar-add-subpage .icon,
@@ -12,6 +18,12 @@
   .top-header .right-icons a .icon,
   .top-header .account-menu__item .icon,
   .content-header .icon,
+  .app-scope .page-actions .icon,
+  .app-scope .page-list-toggle .icon,
+  .app-scope .page-slug-row .icon,
+  .app-scope .collections-list-toggle .icon,
+  .app-scope .add-page-btn .icon,
+  .app-scope .top-header #account-menu-toggle img,
   .icon-btn img,
   .icon-btn svg {
     color: #fff;

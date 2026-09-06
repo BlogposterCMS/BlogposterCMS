@@ -30,7 +30,8 @@ export async function fetchAdminPagesByLane(emit, jwt) {
     const response = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', {
         lane: ADMIN_LANE
     });
-    return toAdminPages(response);
+    // The admin read includes recoverable deleted pages. They are not navigation entries.
+    return toAdminPages(response).filter(page => page.status !== 'deleted');
 }
 export async function fetchAdminPageBySlug(emit, jwt, slug) {
     const meltdownEmit = requireEmitter(emit);

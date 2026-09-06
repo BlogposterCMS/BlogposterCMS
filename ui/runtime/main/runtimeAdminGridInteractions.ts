@@ -814,13 +814,20 @@ export function exposeAdminGridGlobals(
   grid: RuntimeAdminDashboardController,
   pageId: unknown,
   lane: string,
-  layout: LayoutItem[]
+  layout: LayoutItem[],
+  editable = true
 ): void {
   grid.setStatic(true);
+  document.body.classList.remove('dashboard-edit-mode');
   document.body.classList.add('grid-mode', 'dashboard-flow-mode');
   window.adminGrid = grid;
   window.adminPageContext = { pageId, lane };
   window.adminCurrentLayout = layout;
+  if (!editable) {
+    // Fixed workspaces must not retain mutation hooks from a previous dashboard.
+    delete window.addDashboardWidget;
+    delete window.saveAdminLayout;
+  }
 }
 
 export function serializeAdminDashboardLayout(

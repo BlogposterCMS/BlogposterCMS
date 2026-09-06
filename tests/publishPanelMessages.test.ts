@@ -76,7 +76,7 @@ function createBasicContext(options: { meltdown?: jest.Mock; saveDesign?: jest.M
   (window as any).meltdownEmit = options.meltdown ?? jest.fn(() => Promise.resolve([]));
   (window as any).ADMIN_TOKEN = 'token';
 
-  initPublishPanel({
+  const controller = initPublishPanel({
     publishBtn,
     nameInput,
     gridEl,
@@ -92,7 +92,7 @@ function createBasicContext(options: { meltdown?: jest.Mock; saveDesign?: jest.M
     getDesignId: options.getDesignId ?? jest.fn(() => null)
   });
 
-  return { publishBtn };
+  return { publishBtn, controller };
 }
 
 function flushPromises() {
@@ -100,6 +100,31 @@ function flushPromises() {
 }
 
 describe('publish panel messaging', () => {
+  test('direct commands await publication, preserve draft status, and return the actual target', async () => {
+    const { controller } = createBasicContext();
+    await expect(controller.publish({ slug: 'agent-draft', draft: true })).resolves.toMatchObject({
+      handled: true, published: true, draft: true, slug: 'agent-draft', pageId: 'page-1'
+    });
+    expect(mockPageService.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'draft' }));
+    expect(mockPageService.update).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ status: 'draft' }));
+    expect(controller.snapshot().busy).toBe(false);
+  });
+
+  test('direct commands reject overlapping publications and return save failures without stale success', async () => {
+    let rejectSave!: (reason: Error) => void;
+    const saveDesign = jest.fn(() => new Promise((_resolve, reject) => { rejectSave = reject; }));
+    const { controller } = createBasicContext({ saveDesign });
+    const pending = controller.publish({ slug: 'agent-failure' });
+    const rejection = expect(pending).rejects.toThrow('SAVE_DENIED');
+    await flushPromises();
+    expect(controller.snapshot().busy).toBe(true);
+    await expect(controller.publish({ slug: 'other' })).rejects.toThrow('DESIGNER_PUBLISH_BUSY');
+    rejectSave(new Error('SAVE_DENIED'));
+    await rejection;
+    expect(controller.snapshot()).toMatchObject({ busy: false, error: expect.stringContaining('SAVE_DENIED') });
+    expect(mockPageService.update).not.toHaveBeenCalled();
+    await expect(controller.publish({ slug: 'other', draft: 'false' })).rejects.toThrow('DESIGNER_PUBLISH_DRAFT_INVALID');
+  });
   let warnSpy: jest.SpyInstance;
 
   beforeEach(() => {

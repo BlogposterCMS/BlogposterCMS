@@ -83,4 +83,18 @@ describe('collection archive public widget', () => {
     expect(el.querySelector('.bp-collection-archive__title')?.textContent).toBe('Child page');
     expect(el.querySelector('.bp-public-widget-message')).toBeNull();
   });
+  it('keeps unsafe or missing destinations out of the keyboard link flow', async () => {
+    const el = document.createElement('div');
+    await render(el, { instanceMetadata: { items: [
+      { id: 'unsafe', title: 'Unsafe', url: 'javascript:alert(1)' },
+      { id: 'missing', title: 'Missing' },
+      { id: 'valid', title: 'Valid', slug: 'docs/mobile' }
+    ] } });
+    const cards = el.querySelectorAll('.bp-collection-archive__card');
+    expect(cards).toHaveLength(3);
+    expect(cards[0].querySelector('a')).toBeNull();
+    expect(cards[1].querySelector('a')).toBeNull();
+    expect(cards[2].querySelector('a')?.getAttribute('href')).toBe('/docs/mobile');
+  });
+
 });

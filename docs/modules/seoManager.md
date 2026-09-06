@@ -47,6 +47,20 @@ add UI screens by itself.
   permission when no decoded user JWT is attached.
 
 ## Public Runtime
+- Published page envelopes resolve SEO through the existing `resolveSeoMeta`
+  event, using translated page fields as the content fallback. Explicit
+  source-owned SEO overrides retain precedence over those fields and global
+  defaults. A resolver failure logs `PUBLIC_SEO_RESOLVE_FAILED` and preserves
+  the published page's own metadata.
+- The first HTML response includes the title, description, Open Graph/Twitter
+  metadata and canonical link; it does not depend on client JavaScript.
+  `publicHead.js` escapes attribute values and expands root-relative image and
+  canonical URLs using `APP_BASE_URL`, or the request origin when unset.
+  Empty descriptions and images are omitted; no arbitrary content image is
+  selected. Configure these fields in the existing Page Editor SEO controls.
+- Regression coverage: `publicSeoHead.test.js`, `seoManagerEvents.test.js` and
+  `publicPageNestedRoutes.test.js` cover rendering, fallback/override precedence
+  and metadata in the first route response.
 - `GET /api/public/seo?path=/example` returns merged public SEO metadata for a
   path.
 - If the path maps to a non-published Content Engine entry, `runtimeManager`

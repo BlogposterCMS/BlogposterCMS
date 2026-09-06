@@ -56,20 +56,24 @@ export async function fetchGlobalWidgetIds(emit, jwt) {
         lane: 'public'
     });
     const pages = toPages(res);
-    if (pages.length > 20) {
-        console.warn('[widgetList] Too many pages, skipping global widget lookup');
-        return globalIds;
+    // Scan every page with bounded concurrency. A large site is not an empty site;
+    // failures reject the scan so the UI can report unknown usage instead of zero.
+    const validPages = pages.filter(page => page.id !== undefined && page.id !== null);
+    let nextPage = 0;
+    async function scan() {
+        while (nextPage < validPages.length) {
+            const page = validPages[nextPage++];
+            const layoutRes = await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'layoutForViewport', {
+                pageId: page.id,
+                lane: 'public',
+                viewport: 'desktop'
+            });
+            toLayoutItems(layoutRes).forEach(item => {
+                if (item.global && item.widgetId)
+                    globalIds.add(item.widgetId);
+            });
+        }
     }
-    for (const page of pages) {
-        const layoutRes = await emitRuntimeAdmin(meltdownEmit, jwt, 'plainSpace', 'layoutForViewport', {
-            pageId: page.id,
-            lane: 'public',
-            viewport: 'desktop'
-        });
-        toLayoutItems(layoutRes).forEach(item => {
-            if (item.global && item.widgetId)
-                globalIds.add(item.widgetId);
-        });
-    }
+    await Promise.all(Array.from({ length: Math.min(4, validPages.length) }, () => scan()));
     return globalIds;
 }

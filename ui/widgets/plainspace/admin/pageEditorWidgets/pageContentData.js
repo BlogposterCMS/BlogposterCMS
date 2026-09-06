@@ -147,6 +147,8 @@ export async function listHtmlFiles(emit, jwt) {
 }
 export async function fetchHtmlFile(fetchImpl, name) {
     const res = await fetchImpl(htmlFileUrl(name));
+    if (!res.ok)
+        throw new Error(`PAGE_CONTENT_HTML_FETCH_FAILED: HTTP ${res.status}`);
     return res.text();
 }
 export async function uploadHtmlFile(emit, jwt, fileName, html) {

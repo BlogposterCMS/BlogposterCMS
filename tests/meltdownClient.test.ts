@@ -9,6 +9,62 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 describe('meltdown client', () => {
+  it('lets a local picker load files through the same client before the user confirms it', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ data: { files: ['hero.png'] } }));
+    let close!: (value: unknown) => void;
+    let loaded!: Promise<unknown>;
+    const client = createMeltdownClient({
+      fetchImpl: fetchMock as typeof fetch, throttleDelay: 0,
+      customEventHandler: event => {
+        if (event !== 'openMediaExplorer') return undefined;
+        loaded = client.emit('cmsAdminApiRequest', { resource: 'media', action: 'listLocalFolder' });
+        return new Promise(resolve => { close = resolve; });
+      }
+    });
+    const picker = client.emit('openMediaExplorer');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(loaded).resolves.toEqual({ files: ['hero.png'] });
+    close({ cancelled: true });
+    await expect(picker).resolves.toEqual({ cancelled: true });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).eventName).toBe('cmsAdminApiRequest');
+  });
+
+  it('rejects local-handler errors without blocking later backend commands', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ data: 'ok' }));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch, throttleDelay: 0,
+      customEventHandler: event => { if (event === 'localFailure') throw new Error('local failure'); }
+    });
+    await expect(client.emit('localFailure')).rejects.toThrow('local failure');
+    await expect(client.emit('cmsAdminApiRequest')).resolves.toBe('ok');
+  });
+  it('bounds public reads at four and releases a slot after a failed request', async () => {
+    const pending: Array<{ resolve: (response: Response) => void; reject: (error: Error) => void }> = [];
+    const fetchMock = jest.fn(() => new Promise<Response>((resolve, reject) => pending.push({ resolve, reject })));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const requests = Array.from({ length: 5 }, () => client.emit('cmsPublicRuntimeRequest'));
+    const finished = Promise.allSettled(requests);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    pending[0]!.reject(new Error('network failure'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    pending.slice(1).forEach(item => item.resolve(jsonResponse({ data: 'ok' })));
+    expect((await finished).map(result => result.status)).toEqual(['rejected', 'fulfilled', 'fulfilled', 'fulfilled', 'fulfilled']);
+  });
+
+  it('keeps commands ordered while public reads can progress independently', async () => {
+    let release!: (response: Response) => void;
+    const fetchMock = jest.fn()
+      .mockImplementationOnce(() => new Promise<Response>(resolve => { release = resolve; }))
+      .mockImplementation(() => Promise.resolve(jsonResponse({ data: 'ok' })));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch, throttleDelay: 0 });
+    const first = client.emit('cmsAdminApiRequest', { action: 'save' });
+    const second = client.emit('cmsAdminApiRequest', { action: 'delete' });
+    await client.emit('cmsPublicRuntimeRequest');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    release(jsonResponse({ data: 'saved' }));
+    await Promise.all([first, second]);
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body).payload.action).toBe('delete');
+  });
   it('sends jwt as a header and keeps it out of the event body', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ data: { ok: true } }));
     const client = createMeltdownClient({

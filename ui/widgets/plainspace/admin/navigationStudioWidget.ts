@@ -1,4 +1,7 @@
 import { bpDialog } from '/ui/shared/dialogs/bpDialog.js';
+import { registerWorkspaceAgent, patchAgentForm, readAgentForm, agentString } from '/ui/shared/agent/workspaceAgent.js';
+import { registerWorkspaceChanges } from '/ui/shared/navigation/workspaceChanges.js';
+import enhanceSelects from '../../../shared/controls/customSelect.js';
 import { decodeAdminId } from './defaultwidgets/contentSummaryData.js';
 import {
   NAVIGATION_STUDIO_MAX_DEPTH,
@@ -47,6 +50,13 @@ interface NavigationStudioState {
   preview: PreviewMode;
   feedback: string;
   diagnostics: NavigationDiagnostic[];
+  query: string;
+  addOpen: boolean;
+  addParentId: string | number | null;
+  dirty: boolean;
+  busy: boolean;
+  draft: Record<string, string | boolean> | null;
+  collapsed: Set<string>;
 }
 
 const state: NavigationStudioState = {
@@ -60,12 +70,19 @@ const state: NavigationStudioState = {
   mode: 'simple',
   preview: 'desktop',
   feedback: '',
-  diagnostics: []
+  diagnostics: [],
+  query: '',
+  addOpen: false,
+  addParentId: null,
+  dirty: false,
+  busy: false,
+  draft: null,
+  collapsed: new Set()
 };
 
 let hostElement: HTMLElement | null = null;
 let dragItemId: string | number | null = null;
-const NAVIGATION_STUDIO_PANEL_CARD_CLASS = 'navigation-studio__panel navigation-studio__card navigation-studio__card--bordered';
+const NAVIGATION_STUDIO_PANEL_CARD_CLASS = 'navigation-studio__card';
 
 function escapeHtml(value: unknown): string {
   const map: Record<string, string> = {
@@ -140,6 +157,49 @@ function setFeedback(message: string): void {
   if (target) target.textContent = message;
 }
 
+// Keep the editor draft through local view changes; only explicit navigation
+// or a successful write may discard it.
+function captureDraft(): void {
+  if (!state.dirty) return;
+  const inputs = hostElement?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('[data-inspector-form] [name]');
+  if (!inputs?.length) return;
+  state.draft = { ...state.draft };
+  inputs.forEach(input => {
+    state.draft![input.name] = input instanceof HTMLInputElement && input.type === 'checkbox'
+      ? input.checked : input.value;
+  });
+}
+
+function clearDraft(): void {
+  state.dirty = false;
+  state.draft = null;
+}
+
+function setBusy(busy: boolean): void {
+  state.busy = busy;
+  hostElement?.querySelector('.navigation-studio')?.setAttribute('aria-busy', String(busy));
+  hostElement?.querySelectorAll<HTMLElement>('[data-nav-workspace]').forEach(el => { el.inert = busy; });
+}
+
+async function runAction(code: string, action: () => void | Promise<void>, discard = false, propagate = false): Promise<void> {
+  if (state.busy) return;
+  setBusy(true);
+  try {
+    if (discard && state.dirty) {
+      if (!(await bpDialog.confirm('Discard unsaved changes to this menu item?'))) return;
+    }
+    const previousFeedback = state.feedback;
+    setFeedback('Working…');
+    await action();
+    if (state.feedback === 'Working…') setFeedback(previousFeedback);
+  } catch (err) {
+    setFeedback(`${code}: ${err instanceof Error ? err.message : 'The action failed. Try again.'}`);
+    if (propagate) throw err;
+  } finally {
+    setBusy(false);
+  }
+}
+
 function menuLabel(menu: NavigationMenu | null): string {
   return menu?.label || menuKey(menu) || menuLocationKey(menu) || 'Menu';
 }
@@ -157,9 +217,14 @@ function titleCase(value: string): string {
 }
 
 function selectedParentId(): string | number | null {
-  const item = selectedItem();
-  if (!item) return null;
-  return itemId(item);
+  // Adding a root link must never silently inherit the selected editor item.
+  if (state.addParentId != null) {
+    const parent = findItem(state.items, state.addParentId);
+    if (!parent || parent.depth >= maxDepthForMode()) {
+      throw new Error('NAV_STUDIO_ADD_PARENT_INVALID: Choose a parent within the current nesting limit.');
+    }
+  }
+  return state.addParentId;
 }
 
 function childItemsForParent(parentId: string | number | null): NavigationMenuItem[] {
@@ -178,9 +243,8 @@ async function reloadTree(): Promise<void> {
   if (!state.selectedMenu) return;
   const { meltdownEmit, jwt } = getRuntime();
   state.items = await fetchNavigationTree(meltdownEmit, jwt, state.selectedMenu);
-  if (!selectedItem() && state.items[0]) {
-    state.selectedItemId = itemId(state.items[0]);
-  }
+  if (state.addParentId != null && !findItem(state.items, state.addParentId)) state.addParentId = null;
+  if (!selectedItem()) state.selectedItemId = itemId(state.items[0]);
   updateDiagnostics();
 }
 
@@ -199,13 +263,13 @@ async function reloadSnapshot(): Promise<void> {
   state.menus = menus;
   state.selectedMenu = state.selectedMenu
     ? menus.find(menu => idEquals(menu.id || menu.menuId || menu.key, state.selectedMenu?.id || state.selectedMenu?.menuId || state.selectedMenu?.key)) || menus[0] || null
-    : menus[0] || null;
+    : menus.find(menu => menuLocationKey(menu) === 'primary') || menus[0] || null;
   await reloadTree();
 }
 
 function renderModeTabs(): string {
   return (['simple', 'advanced', 'developer'] as StudioMode[]).map(mode => `
-    <button class="navigation-studio__mode ${state.mode === mode ? 'is-active' : ''}" type="button" data-mode="${mode}">
+    <button class="navigation-studio__mode ${state.mode === mode ? 'is-active' : ''}" type="button" data-mode="${mode}" aria-pressed="${state.mode === mode}">
       ${escapeHtml(titleCase(mode))}
     </button>
   `).join('');
@@ -214,7 +278,7 @@ function renderModeTabs(): string {
 function renderPreviewTabs(): string {
   const tabs: PreviewMode[] = ['desktop', 'tablet', 'mobile', 'mega', 'footer'];
   return tabs.map(tab => `
-    <button class="navigation-studio__preview-tab ${state.preview === tab ? 'is-active' : ''}" type="button" data-preview="${tab}">
+    <button class="navigation-studio__preview-tab ${state.preview === tab ? 'is-active' : ''}" type="button" data-preview="${tab}" aria-pressed="${state.preview === tab}">
       ${escapeHtml(titleCase(tab))}
     </button>
   `).join('');
@@ -227,16 +291,13 @@ function renderMenus(): string {
       (menuKey(menu) && menuKey(menu) === menuKey(state.selectedMenu))
     );
     return `
-      <button class="navigation-studio__menu ${active ? 'is-active' : ''}" type="button" data-menu-key="${escapeHtml(menuKey(menu))}">
-        <span>${escapeHtml(menuLabel(menu))}</span>
-        <small>${escapeHtml(menuLocationKey(menu) || 'unassigned')}</small>
-      </button>
+      <option value="${escapeHtml(menuKey(menu))}" ${active ? 'selected' : ''}>${escapeHtml(menuLabel(menu))} · ${escapeHtml(menuLocationKey(menu) || 'unassigned')}</option>
     `;
   }).join('');
 }
 
-function renderAddSearch(): string {
-  const query = hostElement?.querySelector<HTMLInputElement>('[data-nav-search]')?.value.trim() || '';
+function renderSearchResults(): string {
+  const query = state.query.trim();
   const filteredPages = query
     ? state.pages
       .filter(page => `${page.title || ''} ${page.slug || ''}`.toLowerCase().includes(query.toLowerCase()))
@@ -246,28 +307,38 @@ function renderAddSearch(): string {
   const pageRows = filteredPages.map(page => `
     <button class="navigation-studio__search-result" type="button" data-add-page="${escapeHtml(page.id)}">
       ${icon('file-text')}
-      <span>${escapeHtml(page.title || page.slug || page.id)}</span>
-      <small>${escapeHtml(page.slug ? `/${page.slug}` : '/')}</small>
+      <span><strong>${escapeHtml(page.title || page.slug || page.id)}</strong><small>${escapeHtml(page.slug ? `/${page.slug}` : '/')}</small></span>
+      ${icon('plus')}
     </button>
   `).join('');
 
   const customRow = query ? `
     <button class="navigation-studio__search-result" type="button" data-add-custom>
       ${icon('link')}
-      <span>Custom URL</span>
-      <small>${escapeHtml(query)}</small>
+      <span><strong>Add custom link</strong><small>${escapeHtml(query)}</small></span>
+      ${icon('plus')}
     </button>
   ` : '';
 
+  return `${pageRows || '<p class="navigation-studio__empty" role="status">No matching pages.</p>'}${customRow}`;
+}
+
+function renderAddSearch(): string {
+  const parents = flattenNavigationItems(state.items).filter(row => row.depth < maxDepthForMode());
   return `
-    <div class="navigation-studio__add">
+    <div class="navigation-studio__add" data-add-panel ${state.addOpen ? '' : 'hidden'}>
+      <label class="navigation-studio__add-target">Add to
+        <select data-add-parent aria-label="Add new links to">
+          <option value="">Top level</option>
+          ${parents.map(row => `<option value="${escapeHtml(itemId(row.item))}" ${idEquals(itemId(row.item), state.addParentId) ? 'selected' : ''}>${'— '.repeat(row.depth - 1)}${escapeHtml(itemLabel(row.item))}</option>`).join('')}
+        </select>
+      </label>
       <div class="navigation-studio__search">
         ${icon('search')}
-        <input data-nav-search type="search" placeholder="Search pages or type a URL" value="${escapeHtml(query)}" />
+        <input data-nav-search type="search" aria-label="Search pages or type a URL" placeholder="Search pages or type a URL" value="${escapeHtml(state.query)}" />
       </div>
-      <div class="navigation-studio__search-results">
-        ${pageRows}
-        ${customRow}
+      <div class="navigation-studio__search-results" data-search-results>
+        ${renderSearchResults()}
       </div>
     </div>
   `;
@@ -275,36 +346,40 @@ function renderAddSearch(): string {
 
 function renderTree(items: NavigationMenuItem[], depth = 1): string {
   if (!items.length && depth === 1) {
-    return '<div class="navigation-studio__empty">No items yet.</div>';
+    return '<div class="navigation-studio__empty"><strong>This menu has no links yet.</strong><p>Use Add link to choose a page or enter a URL.</p></div>';
   }
+  if (!items.length) return '';
   return `
     <ul class="navigation-studio__tree-list" data-depth="${depth}">
-      ${items.map(item => {
+      ${items.map((item, index) => {
         const id = itemId(item);
         const meta = itemMeta(item);
         const isSelected = id != null && idEquals(id, state.selectedItemId);
         const isMega = Boolean(meta.mega?.enabled);
+        const collapsed = state.collapsed.has(String(id));
+        const hasChildren = Boolean(item.children?.length);
         return `
           <li class="navigation-studio__tree-row" data-item-id="${escapeHtml(id)}" draggable="true">
-            <div class="navigation-studio__item ${isSelected ? 'is-selected' : ''}" data-select-item="${escapeHtml(id)}">
+            <div class="navigation-studio__item ${isSelected ? 'is-selected' : ''}">
               <span class="navigation-studio__item-grip" aria-hidden="true">${icon('grip-vertical')}</span>
-              <span class="navigation-studio__item-icon">${icon(meta.icon || (isMega ? 'panel-top' : 'link'))}</span>
-              <span class="navigation-studio__item-main">
+              ${hasChildren ? `<button type="button" data-collapse="${escapeHtml(id)}" aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Expand' : 'Collapse'} ${escapeHtml(itemLabel(item))}">${icon(collapsed ? 'chevron-right' : 'chevron-down')}</button>` : ''}
+              <button type="button" class="navigation-studio__item-main" data-select-item="${escapeHtml(id)}" aria-pressed="${isSelected}" aria-label="Edit ${escapeHtml(itemLabel(item))}">
                 <strong>${escapeHtml(itemLabel(item))}</strong>
                 <small>${escapeHtml(itemUrl(item))}</small>
-              </span>
+              </button>
               <span class="navigation-studio__item-badges">
                 ${isMega ? '<span class="navigation-studio__badge">Mega</span>' : ''}
-                <span class="navigation-studio__badge">${escapeHtml(item.status || 'active')}</span>
+                ${item.status && item.status !== 'active' ? `<span class="navigation-studio__badge">${escapeHtml(item.status)}</span>` : ''}
               </span>
               <span class="navigation-studio__item-actions">
-                <button type="button" data-move-up="${escapeHtml(id)}" aria-label="Move up">${icon('chevron-up')}</button>
-                <button type="button" data-move-down="${escapeHtml(id)}" aria-label="Move down">${icon('chevron-down')}</button>
-                <button type="button" data-outdent="${escapeHtml(id)}" aria-label="Move out">${icon('corner-up-left')}</button>
+                <button type="button" data-move-up="${escapeHtml(id)}" aria-label="Move ${escapeHtml(itemLabel(item))} up" ${index === 0 ? 'disabled' : ''}>${icon('chevron-up')}</button>
+                <button type="button" data-move-down="${escapeHtml(id)}" aria-label="Move ${escapeHtml(itemLabel(item))} down" ${index === items.length - 1 ? 'disabled' : ''}>${icon('chevron-down')}</button>
+                <button type="button" data-indent="${escapeHtml(id)}" aria-label="Nest ${escapeHtml(itemLabel(item))} under previous link" ${index === 0 || depth + branchDepth(item) > maxDepthForMode() ? 'disabled' : ''}>${icon('corner-down-right')}</button>
+                <button type="button" data-outdent="${escapeHtml(id)}" aria-label="Move ${escapeHtml(itemLabel(item))} to parent level" ${depth === 1 ? 'disabled' : ''}>${icon('corner-up-left')}</button>
               </span>
             </div>
             <div class="navigation-studio__drop-child" data-drop-child="${escapeHtml(id)}">Drop here to nest</div>
-            ${renderTree(item.children || [], depth + 1)}
+            ${collapsed ? '' : renderTree(item.children || [], depth + 1)}
           </li>
         `;
       }).join('')}
@@ -316,6 +391,7 @@ function previewItemsForMode(items: NavigationMenuItem[]): NavigationMenuItem[] 
   const device = state.preview === 'mobile' ? 'mobile' : 'desktop';
   return items
     .filter(item => {
+      if (item.status && item.status !== 'active') return false;
       const visibility = itemMeta(item).visibility || {};
       if (device === 'mobile') return visibility.mobile !== false;
       return visibility.desktop !== false;
@@ -355,17 +431,16 @@ function renderPreview(): string {
   const modeClass = `navigation-studio__preview navigation-studio__preview--${state.preview}`;
   const items = previewItemsForMode(state.items);
   return `
-    <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__preview-panel">
-      <div class="navigation-studio__panel-title">
-        <span>Preview</span>
-        <div class="navigation-studio__preview-tabs">${renderPreviewTabs()}</div>
-      </div>
+    <details class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__preview-panel" data-section="preview">
+      <summary class="navigation-studio__panel-title">Menu preview</summary>
+      <div class="navigation-studio__preview-tabs" aria-label="Preview format">${renderPreviewTabs()}</div>
+      <p class="navigation-studio__hint">Saved, active links only. The public site controls the final appearance.</p>
       <div class="${modeClass}">
         <nav aria-label="${escapeHtml(menuLabel(state.selectedMenu))}">
           ${items.length ? renderPreviewList(items) : '<div class="navigation-studio__empty">Preview is empty.</div>'}
         </nav>
       </div>
-    </section>
+    </details>
   `;
 }
 
@@ -386,8 +461,8 @@ function renderInspector(): string {
   if (!item) {
     return `
       <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__inspector">
-        <div class="navigation-studio__panel-title"><span>Inspector</span></div>
-        <div class="navigation-studio__empty">Select a menu item.</div>
+        <h3 class="navigation-studio__panel-title">Link details</h3>
+        <div class="navigation-studio__empty">Select a link in the menu structure to edit its label, target and visibility.</div>
       </section>
     `;
   }
@@ -411,10 +486,10 @@ function renderInspector(): string {
   return `
     <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__inspector">
       <div class="navigation-studio__panel-title">
-        <span>Inspector</span>
+        <h3>Link details · ${escapeHtml(itemLabel(item))}</h3>
         <button type="button" data-delete-item aria-label="Delete item">${icon('trash-2')}</button>
       </div>
-      <div class="navigation-studio__form" data-inspector-form>
+      <form class="navigation-studio__form" data-inspector-form>
         <label>
           <span>Label</span>
           <input name="title" value="${escapeHtml(item.title || '')}" />
@@ -422,30 +497,22 @@ function renderInspector(): string {
         <label>
           <span>Link type</span>
           <select name="type">
-            ${['page', 'custom', 'post', 'archive', 'entry'].map(type => `
-              <option value="${type}" ${item.type === type ? 'selected' : ''}>${type}</option>
+            ${Array.from(new Set(['page', 'custom', item.type || 'custom'])).map(type => `
+              <option value="${type}" ${item.type === type ? 'selected' : ''}>${type === 'page' ? 'Page' : type === 'custom' ? 'Custom link' : titleCase(type)}</option>
             `).join('')}
           </select>
         </label>
-        <label>
+        <label data-page-target>
           <span>Page target</span>
           <select name="sourceId">
             <option value="">No page selected</option>
             ${pageOptions}
           </select>
         </label>
-        <label>
+        <label data-url-target>
           <span>URL</span>
           <input name="url" value="${escapeHtml(item.url || '')}" />
         </label>
-        <label>
-          <span>Icon</span>
-          <input name="icon" value="${escapeHtml(meta.icon || '')}" placeholder="menu, search, file-text" />
-        </label>
-        <div class="navigation-studio__check-row">
-          <label><input name="desktop" type="checkbox" ${visibility.desktop === false ? '' : 'checked'} /> Desktop</label>
-          <label><input name="mobile" type="checkbox" ${visibility.mobile === false ? '' : 'checked'} /> Mobile</label>
-        </div>
         <label>
           <span>Status</span>
           <select name="status">
@@ -454,6 +521,17 @@ function renderInspector(): string {
             `).join('')}
           </select>
         </label>
+        <details data-section="options" class="navigation-studio__options">
+        <summary>Display and advanced options</summary>
+        <div class="navigation-studio__modes" aria-label="Editing mode">${renderModeTabs()}</div>
+        <label>
+          <span>Icon</span>
+          <input name="icon" value="${escapeHtml(meta.icon || '')}" placeholder="menu, search, file-text" />
+        </label>
+        <div class="navigation-studio__check-row">
+          <label><input name="desktop" type="checkbox" ${visibility.desktop === false ? '' : 'checked'} /> Desktop</label>
+          <label><input name="mobile" type="checkbox" ${visibility.mobile === false ? '' : 'checked'} /> Mobile</label>
+        </div>
         <label>
           <span>External target</span>
           <select name="target">
@@ -481,10 +559,9 @@ function renderInspector(): string {
             ${designOptions}
           </select>
         </label>
-        <div class="navigation-studio__inspector-actions">
+        <div class="navigation-studio__inspector-actions" data-mega-actions>
           <button class="button small" type="button" data-open-mega-design>${icon('external-link')}<span>Open</span></button>
           <button class="button small" type="button" data-create-mega-design>${icon('plus')}<span>Create</span></button>
-          <button class="button small" type="button" data-save-item>${icon('save')}<span>Save</span></button>
         </div>
         ${state.mode === 'developer' ? `
           <label class="navigation-studio__developer-json">
@@ -493,54 +570,93 @@ function renderInspector(): string {
           </label>
           <button class="button small" type="button" data-apply-meta-json>${icon('braces')}<span>Apply JSON</span></button>
         ` : ''}
-      </div>
+        </details>
+        <div class="navigation-studio__save-bar">
+          <span data-draft-status role="status">Saved</span>
+          <button class="button primary sm" type="submit" data-save-item><span>Save link</span></button>
+        </div>
+      </form>
     </section>
   `;
 }
 
 function renderShell(): void {
   if (!hostElement) return;
+  captureDraft();
+  const openSections = Array.from(hostElement.querySelectorAll<HTMLDetailsElement>('details[data-section][open]')).map(el => el.dataset.section);
   updateDiagnostics();
   hostElement.innerHTML = `
     <div class="navigation-studio">
       <header class="navigation-studio__header">
         <div>
           <h2>Navigation Studio</h2>
-          <p>${escapeHtml(menuLabel(state.selectedMenu))} uses theme-owned menu design. Mega panels can reference Design Studio layouts.</p>
+          <p>Manage menus, arrange links and edit their destinations.</p>
         </div>
-        <div class="navigation-studio__modes">${renderModeTabs()}</div>
+      <div class="navigation-studio__toolbar" data-nav-workspace>
+        <div class="navigation-studio__menu-picker"><select data-menu-select aria-label="Menu">${renderMenus()}</select></div>
+        <button class="button secondary sm" type="button" data-create-menu>${icon('plus')}<span>Create menu</span></button>
+      </div>
       </header>
-      <div class="navigation-studio__feedback" data-nav-feedback>${escapeHtml(state.feedback)}</div>
-      <div class="navigation-studio__layout">
-        <aside class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__menus">
+      <div class="navigation-studio__feedback" data-nav-feedback role="status" aria-live="polite">${escapeHtml(state.feedback)}</div>
+      <div class="navigation-studio__layout" data-nav-workspace>
+        <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__structure" aria-label="Menu structure">
           <div class="navigation-studio__panel-title">
-            <span>Menus</span>
-            <button type="button" data-create-menu aria-label="Create menu">${icon('plus')}</button>
+            <h3>${escapeHtml(menuLabel(state.selectedMenu))} <small>${flattenNavigationItems(state.items).length} ${flattenNavigationItems(state.items).length === 1 ? 'link' : 'links'}</small></h3>
+            <button class="button secondary sm" type="button" data-toggle-add aria-expanded="${state.addOpen}">${icon('plus')}<span>Add link</span></button>
           </div>
-          <div class="navigation-studio__menu-list">${renderMenus()}</div>
-        </aside>
-        <main class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__structure">
-          <div class="navigation-studio__panel-title">
-            <span>Structure</span>
-            <button type="button" data-generate-pages>${icon('sparkles')}<span>Generate from pages</span></button>
-          </div>
+          <p class="navigation-studio__hint">Select a link to edit. Use the arrows or drag to arrange links. Structure changes save immediately.</p>
           ${renderAddSearch()}
           <div class="navigation-studio__tree" data-root-drop>
             ${renderTree(state.items)}
+            <div class="navigation-studio__drop-child navigation-studio__drop-root">Drop here for top level</div>
           </div>
-        </main>
+          <details class="navigation-studio__tools" data-section="tools">
+            <summary>Menu tools</summary>
+            <button class="button small" type="button" data-generate-pages>${icon('sparkles')}<span>Generate from pages</span></button>
+            <p class="navigation-studio__hint">Replaces the current structure with links from public pages.</p>
+          </details>
+        </section>
         <aside class="navigation-studio__side">
-          ${renderPreview()}
           ${renderInspector()}
-          <section class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__diagnostics">
-            <div class="navigation-studio__panel-title"><span>Warnings</span></div>
+          <details class="${NAVIGATION_STUDIO_PANEL_CARD_CLASS} navigation-studio__diagnostics" data-section="warnings">
+            <summary class="navigation-studio__panel-title">Warnings (${state.diagnostics.length})</summary>
             ${renderDiagnostics()}
-          </section>
+          </details>
+          ${renderPreview()}
         </aside>
       </div>
     </div>
   `;
+  hostElement.querySelectorAll<HTMLDetailsElement>('details[data-section]').forEach(el => {
+    el.open = openSections.includes(el.dataset.section);
+  });
+  hostElement.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('[data-inspector-form] [name]').forEach(input => {
+    const value = state.draft?.[input.name];
+    if (value == null) return;
+    if (input instanceof HTMLInputElement && input.type === 'checkbox') input.checked = Boolean(value);
+    else input.value = String(value);
+  });
+  refreshEditorState();
+  hostElement.querySelectorAll('select').forEach(select => {
+    select.dataset.enhance = 'dropdown';
+    const label = select.closest('label')?.querySelector('span')?.textContent;
+    if (label && !select.hasAttribute('aria-label')) select.setAttribute('aria-label', label);
+  });
+  enhanceSelects(hostElement);
+  setBusy(state.busy);
   bindShellEvents();
+}
+
+function refreshEditorState(): void {
+  const form = hostElement?.querySelector<HTMLFormElement>('[data-inspector-form]');
+  if (!form) return;
+  const isPage = form.querySelector<HTMLSelectElement>('[name="type"]')?.value === 'page';
+  form.querySelector<HTMLElement>('[data-page-target]')!.hidden = !isPage;
+  form.querySelector<HTMLElement>('[data-url-target]')!.hidden = isPage;
+  const status = form.querySelector<HTMLElement>('[data-draft-status]');
+  if (status) status.textContent = state.dirty ? 'Unsaved changes' : 'Saved';
+  const save = form.querySelector<HTMLButtonElement>('[data-save-item]');
+  if (save) save.disabled = !state.dirty;
 }
 
 function menuByKey(key: string): NavigationMenu | null {
@@ -550,24 +666,48 @@ function menuByKey(key: string): NavigationMenu | null {
 async function selectMenu(key: string): Promise<void> {
   const menu = menuByKey(key);
   if (!menu) return;
-  state.selectedMenu = menu;
-  state.selectedItemId = null;
   setFeedback('Loading menu...');
-  await reloadTree();
+  const { meltdownEmit, jwt } = getRuntime();
+  // Commit the menu and tree together so a failed read cannot relabel old links.
+  const items = await fetchNavigationTree(meltdownEmit, jwt, menu);
+  state.selectedMenu = menu;
+  state.items = items;
+  state.selectedItemId = itemId(items[0]);
+  state.addOpen = false;
+  state.addParentId = null;
+  state.query = '';
+  state.collapsed.clear();
+  clearDraft();
   setFeedback('Menu loaded.');
   renderShell();
 }
 
 async function createMenu(): Promise<void> {
-  const name = await bpDialog.prompt('Menu name:');
-  if (!name?.trim()) return;
-  const location = await bpDialog.prompt('Location key:', name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-  const { meltdownEmit, jwt } = getRuntime();
-  await upsertNavigationMenu(meltdownEmit, jwt, {
-    label: name.trim(),
-    key: name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, ''),
-    locationKey: location || ''
+  const locationField = document.createElement('label');
+  locationField.className = 'form-field';
+  locationField.textContent = 'Menu location (optional)';
+  const locationInput = document.createElement('input');
+  locationInput.type = 'text';
+  locationInput.placeholder = 'e.g. primary or footer';
+  locationField.appendChild(locationInput);
+  const name = await bpDialog.prompt('Choose a name and where this menu is used.', '', {
+    title: 'Create menu',
+    submitLabel: 'Create menu',
+    prompt: { label: 'Menu name', required: true },
+    body: locationField
   });
+  if (!name?.trim()) return;
+  const key = name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!key) throw new Error('NAV_STUDIO_MENU_KEY_REQUIRED: Include a letter or number in the menu name.');
+  if (state.menus.some(menu => menuKey(menu) === key)) throw new Error('NAV_STUDIO_MENU_EXISTS: A menu with this name already exists.');
+  const { meltdownEmit, jwt } = getRuntime();
+  const created = await upsertNavigationMenu(meltdownEmit, jwt, {
+    label: name.trim(),
+    key,
+    locationKey: locationInput.value.trim()
+  });
+  state.selectedMenu = created;
+  clearDraft();
   await reloadSnapshot();
   renderShell();
 }
@@ -589,6 +729,7 @@ async function addPage(page: PageRecord): Promise<void> {
     meta: { visibility: { desktop: true, mobile: true } }
   });
   state.selectedItemId = itemId(created);
+  clearDraft();
   await reloadTree();
   setFeedback('Page link added.');
   renderShell();
@@ -598,7 +739,9 @@ async function addCustom(): Promise<void> {
   if (!state.selectedMenu || !hostElement) return;
   const input = hostElement.querySelector<HTMLInputElement>('[data-nav-search]');
   const raw = input?.value.trim() || '';
-  const label = await bpDialog.prompt('Menu item label:', raw.replace(/^https?:\/\//u, '').replace(/^\/+/u, '') || 'New link');
+  const label = await bpDialog.prompt(raw, raw.replace(/^https?:\/\//u, '').replace(/^\/+/u, '') || 'New link', {
+    title: 'Add custom link', submitLabel: 'Add link', prompt: { label: 'Link label', required: true }
+  });
   if (!label?.trim()) return;
   const { meltdownEmit, jwt } = getRuntime();
   const parentId = selectedParentId();
@@ -613,6 +756,7 @@ async function addCustom(): Promise<void> {
     meta: { visibility: { desktop: true, mobile: true } }
   });
   state.selectedItemId = itemId(created);
+  clearDraft();
   await reloadTree();
   setFeedback('Custom link added.');
   renderShell();
@@ -628,6 +772,10 @@ async function saveSelectedItem(): Promise<void> {
   const getInput = <T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(name: string): T | null =>
     form.querySelector<T>(`[name="${name}"]`);
   const selectedPage = state.pages.find(page => idEquals(page.id, getInput<HTMLSelectElement>('sourceId')?.value));
+  const type = getInput<HTMLSelectElement>('type')?.value || item.type || 'custom';
+  const title = getInput<HTMLInputElement>('title')?.value.trim();
+  if (!title) throw new Error('NAV_STUDIO_LABEL_REQUIRED: Enter a label for this link.');
+  if (type === 'page' && !selectedPage) throw new Error('NAV_STUDIO_PAGE_REQUIRED: Choose a page target.');
   const currentMeta = itemMeta(item);
   const megaLayoutId = getInput<HTMLSelectElement>('megaLayoutId')?.value || '';
   const selectedDesign = state.designs.find(design => idEquals(design.id, megaLayoutId));
@@ -636,6 +784,7 @@ async function saveSelectedItem(): Promise<void> {
     ...currentMeta,
     icon: getInput<HTMLInputElement>('icon')?.value.trim() || undefined,
     visibility: {
+      ...currentMeta.visibility,
       desktop: getInput<HTMLInputElement>('desktop')?.checked !== false,
       mobile: getInput<HTMLInputElement>('mobile')?.checked !== false
     },
@@ -652,23 +801,25 @@ async function saveSelectedItem(): Promise<void> {
   if (!megaEnabled) meta.mega = { enabled: false, fallback: 'children' };
 
   const patch: Partial<NavigationMenuItem> = {
-    title: getInput<HTMLInputElement>('title')?.value.trim() || item.title || '',
-    type: getInput<HTMLSelectElement>('type')?.value || item.type || 'custom',
+    title,
+    type,
     url: getInput<HTMLInputElement>('url')?.value.trim() || '',
-    sourceId: selectedPage?.id || null,
-    sourceModule: selectedPage ? 'pagesManager' : item.sourceModule ?? item.source_module ?? null,
+    sourceId: type === 'page' ? selectedPage!.id : type === 'custom' ? null : item.sourceId ?? item.source_id ?? null,
+    sourceModule: type === 'page' ? 'pagesManager' : type === 'custom' ? null : item.sourceModule ?? item.source_module ?? null,
+    entryId: type === 'page' || type === 'custom' ? null : item.entryId ?? item.entry_id ?? null,
     target: getInput<HTMLSelectElement>('target')?.value || '',
-    rel: getInput<HTMLInputElement>('rel')?.value.trim() || '',
+    rel: getInput<HTMLInputElement>('rel')?.value.trim() ?? item.rel ?? '',
     status: getInput<HTMLSelectElement>('status')?.value || 'active',
     meta
   };
 
-  if (selectedPage && !patch.url) {
+  if (type === 'page' && selectedPage) {
     patch.url = selectedPage.slug ? `/${String(selectedPage.slug).replace(/^\/+/u, '')}` : '/';
   }
 
   const { meltdownEmit, jwt } = getRuntime();
   await updateNavigationItem(meltdownEmit, jwt, item, patch);
+  clearDraft();
   await reloadTree();
   setFeedback('Item saved.');
   renderShell();
@@ -681,8 +832,12 @@ async function applyMetaJson(): Promise<void> {
   if (!item || !textarea) return;
   try {
     const parsed = JSON.parse(textarea.value) as NavigationItemMeta;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Metadata must be a JSON object.');
+    }
     const { meltdownEmit, jwt } = getRuntime();
     await updateNavigationItem(meltdownEmit, jwt, item, { meta: parsed });
+    clearDraft();
     await reloadTree();
     setFeedback('Meta JSON applied.');
     renderShell();
@@ -694,9 +849,10 @@ async function applyMetaJson(): Promise<void> {
 async function deleteSelectedItem(): Promise<void> {
   const item = selectedItem();
   if (!item) return;
-  if (!(await bpDialog.confirm(`Delete "${itemLabel(item)}"?`))) return;
+  if (!(await bpDialog.confirm(`Delete "${itemLabel(item)}"${item.children?.length ? ' and its child links' : ''}?`))) return;
   const { meltdownEmit, jwt } = getRuntime();
   await deleteNavigationItem(meltdownEmit, jwt, item);
+  clearDraft();
   state.selectedItemId = null;
   await reloadTree();
   setFeedback('Item deleted.');
@@ -708,6 +864,7 @@ async function generateFromPages(): Promise<void> {
   if (state.items.length && !(await bpDialog.confirm('Replace this menu with links generated from public pages?'))) return;
   const { meltdownEmit, jwt } = getRuntime();
   await replaceMenuItemsWithGeneratedPages(meltdownEmit, jwt, state.selectedMenu, state.items, state.pages);
+  clearDraft();
   state.selectedItemId = null;
   await reloadTree();
   setFeedback('Menu generated from public pages.');
@@ -740,11 +897,10 @@ function outdentItem(id: string | number): void {
   grandParent.splice(parentIndex + 1, 0, item);
 }
 
-function moveDraggedItem(targetId: string | number | null, mode: DropMode): boolean {
-  if (dragItemId == null) return false;
-  const dragged = findItem(state.items, dragItemId);
+function moveTreeItem(id: string | number, targetId: string | number | null, mode: DropMode): boolean {
+  const dragged = findItem(state.items, id);
   if (!dragged) return false;
-  if (targetId != null && idEquals(targetId, dragItemId)) return false;
+  if (targetId != null && idEquals(targetId, id)) return false;
   if (targetId != null && isDescendant(dragged.item, targetId)) return false;
 
   const [item] = dragged.parent.splice(dragged.index, 1);
@@ -776,7 +932,15 @@ function moveDraggedItem(targetId: string | number | null, mode: DropMode): bool
 
 async function persistMovedTree(): Promise<void> {
   const { meltdownEmit, jwt } = getRuntime();
-  await persistNavigationOrder(meltdownEmit, jwt, state.items);
+  try {
+    await persistNavigationOrder(meltdownEmit, jwt, state.items);
+  } catch (err) {
+    // Order writes use the existing per-item contract. Refresh partial failures
+    // from the owner instead of presenting the optimistic tree as saved.
+    await reloadTree();
+    renderShell();
+    throw err;
+  }
   await reloadTree();
   setFeedback('Menu order saved.');
   renderShell();
@@ -786,7 +950,7 @@ async function openMegaDesign(createIfMissing = false): Promise<void> {
   const item = selectedItem();
   if (!item) return;
   const meta = itemMeta(item);
-  const layoutId = meta.mega?.layoutId;
+  const layoutId = hostElement?.querySelector<HTMLSelectElement>('[name="megaLayoutId"]')?.value || meta.mega?.layoutId;
   if (layoutId) {
     window.open(designUrl({ id: layoutId }), '_blank', 'noopener');
     return;
@@ -818,6 +982,7 @@ async function openMegaDesign(createIfMissing = false): Promise<void> {
       }
     }
   });
+  clearDraft();
   state.designs = await fetchNavigationDesigns(meltdownEmit, jwt);
   await reloadTree();
   setFeedback('Mega Menu Design Studio panel created.');
@@ -827,6 +992,11 @@ async function openMegaDesign(createIfMissing = false): Promise<void> {
 
 function bindShellEvents(): void {
   if (!hostElement) return;
+  const bindAction = (selector: string, code: string, action: () => void | Promise<void>, discard = false) => {
+    hostElement?.querySelector<HTMLButtonElement>(selector)?.addEventListener('click', () => {
+      void runAction(code, action, discard);
+    });
+  };
   hostElement.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach(button => {
     button.addEventListener('click', () => {
       state.mode = button.dataset.mode as StudioMode;
@@ -839,116 +1009,212 @@ function bindShellEvents(): void {
       renderShell();
     });
   });
-  hostElement.querySelectorAll<HTMLButtonElement>('[data-menu-key]').forEach(button => {
-    button.addEventListener('click', () => {
-      void selectMenu(button.dataset.menuKey || '');
+  hostElement.querySelector<HTMLSelectElement>('[data-menu-select]')?.addEventListener('change', event => {
+    const key = (event.target as HTMLSelectElement).value;
+    void runAction('NAV_STUDIO_MENU_LOAD_FAILED', () => selectMenu(key), true).then(() => {
+      // A cancelled switch or failed read must keep the selector and tree aligned.
+      if (menuKey(state.selectedMenu) !== key) renderShell();
     });
   });
-  hostElement.querySelector<HTMLButtonElement>('[data-create-menu]')?.addEventListener('click', () => {
-    void createMenu();
-  });
-  hostElement.querySelector<HTMLButtonElement>('[data-generate-pages]')?.addEventListener('click', () => {
-    void generateFromPages();
-  });
-  hostElement.querySelector<HTMLInputElement>('[data-nav-search]')?.addEventListener('input', () => {
+  bindAction('[data-create-menu]', 'NAV_STUDIO_MENU_CREATE_FAILED', createMenu, true);
+  bindAction('[data-generate-pages]', 'NAV_STUDIO_GENERATE_FAILED', generateFromPages, true);
+  bindAction('[data-toggle-add]', 'NAV_STUDIO_ADD_PANEL_FAILED', () => {
+    state.addOpen = !state.addOpen;
     renderShell();
-    hostElement?.querySelector<HTMLInputElement>('[data-nav-search]')?.focus();
   });
-  hostElement.querySelectorAll<HTMLButtonElement>('[data-add-page]').forEach(button => {
-    button.addEventListener('click', () => {
+  hostElement.querySelector<HTMLSelectElement>('[data-add-parent]')?.addEventListener('change', event => {
+    state.addParentId = (event.target as HTMLSelectElement).value || null;
+  });
+  hostElement.querySelector<HTMLInputElement>('[data-nav-search]')?.addEventListener('input', event => {
+    state.query = (event.target as HTMLInputElement).value;
+    const results = hostElement?.querySelector('[data-search-results]');
+    // Do not replace the editor or search input on each keystroke.
+    if (results) results.innerHTML = renderSearchResults();
+  });
+  hostElement.querySelector('[data-search-results]')?.addEventListener('click', event => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('button');
+    if (!button) return;
+    if (button.hasAttribute('data-add-page')) {
       const page = state.pages.find(candidate => idEquals(candidate.id, button.dataset.addPage));
-      if (page) void addPage(page);
-    });
+      if (page) void runAction('NAV_STUDIO_ADD_FAILED', () => addPage(page), true);
+    } else if (button.hasAttribute('data-add-custom')) {
+      void runAction('NAV_STUDIO_ADD_FAILED', addCustom, true);
+    }
   });
-  hostElement.querySelector<HTMLButtonElement>('[data-add-custom]')?.addEventListener('click', () => {
-    void addCustom();
-  });
-  hostElement.querySelectorAll<HTMLElement>('[data-select-item]').forEach(row => {
-    row.addEventListener('click', event => {
-      if ((event.target as Element).closest('button')) return;
-      state.selectedItemId = row.dataset.selectItem || null;
-      renderShell();
-    });
-  });
-  hostElement.querySelector<HTMLButtonElement>('[data-save-item]')?.addEventListener('click', () => {
-    void saveSelectedItem();
-  });
-  hostElement.querySelector<HTMLButtonElement>('[data-apply-meta-json]')?.addEventListener('click', () => {
-    void applyMetaJson();
-  });
-  hostElement.querySelector<HTMLButtonElement>('[data-delete-item]')?.addEventListener('click', () => {
-    void deleteSelectedItem();
-  });
-  hostElement.querySelector<HTMLButtonElement>('[data-open-mega-design]')?.addEventListener('click', () => {
-    void openMegaDesign(false);
-  });
-  hostElement.querySelector<HTMLButtonElement>('[data-create-mega-design]')?.addEventListener('click', () => {
-    void openMegaDesign(true);
-  });
-  hostElement.querySelectorAll<HTMLButtonElement>('[data-move-up], [data-move-down], [data-outdent]').forEach(button => {
+  hostElement.querySelectorAll<HTMLButtonElement>('[data-select-item]').forEach(button => {
     button.addEventListener('click', () => {
-      const id = button.dataset.moveUp || button.dataset.moveDown || button.dataset.outdent;
+      if (idEquals(button.dataset.selectItem, state.selectedItemId)) return;
+      void runAction('NAV_STUDIO_SELECT_FAILED', () => {
+        state.selectedItemId = button.dataset.selectItem || null;
+        clearDraft();
+        renderShell();
+        hostElement?.querySelector<HTMLInputElement>('[name="title"]')?.focus();
+      }, true);
+    });
+  });
+  hostElement.querySelectorAll<HTMLButtonElement>('[data-collapse]').forEach(button => {
+    button.addEventListener('click', () => {
+      const id = button.dataset.collapse!;
+      if (state.collapsed.has(id)) state.collapsed.delete(id);
+      else state.collapsed.add(id);
+      renderShell();
+      Array.from(hostElement?.querySelectorAll<HTMLButtonElement>('[data-collapse]') || [])
+        .find(candidate => candidate.dataset.collapse === id)?.focus();
+    });
+  });
+  const form = hostElement.querySelector<HTMLFormElement>('[data-inspector-form]');
+  const onEdit = () => {
+    state.dirty = true;
+    refreshEditorState();
+  };
+  form?.addEventListener('input', onEdit);
+  form?.addEventListener('change', onEdit);
+  form?.addEventListener('submit', event => {
+    event.preventDefault();
+    void runAction('NAV_STUDIO_SAVE_FAILED', saveSelectedItem);
+  });
+  bindAction('[data-apply-meta-json]', 'NAV_STUDIO_META_SAVE_FAILED', applyMetaJson);
+  bindAction('[data-delete-item]', 'NAV_STUDIO_DELETE_FAILED', deleteSelectedItem);
+  bindAction('[data-open-mega-design]', 'NAV_STUDIO_DESIGN_OPEN_FAILED', () => openMegaDesign(false));
+  bindAction('[data-create-mega-design]', 'NAV_STUDIO_DESIGN_CREATE_FAILED', () => openMegaDesign(true), true);
+  hostElement.querySelectorAll<HTMLButtonElement>('[data-move-up], [data-move-down], [data-outdent], [data-indent]').forEach(button => {
+    button.addEventListener('click', () => {
+      const id = button.dataset.moveUp || button.dataset.moveDown || button.dataset.outdent || button.dataset.indent;
       if (!id) return;
-      if (button.dataset.moveUp) moveSibling(id, -1);
-      if (button.dataset.moveDown) moveSibling(id, 1);
-      if (button.dataset.outdent) outdentItem(id);
-      void persistMovedTree();
+      void runAction('NAV_STUDIO_ORDER_SAVE_FAILED', async () => {
+        if (button.dataset.moveUp) moveSibling(id, -1);
+        if (button.dataset.moveDown) moveSibling(id, 1);
+        if (button.dataset.outdent) outdentItem(id);
+        if (button.dataset.indent) {
+          const row = findItem(state.items, id);
+          const previous = row?.parent[(row?.index ?? 0) - 1];
+          if (!previous || !moveTreeItem(id, itemId(previous), 'child')) return;
+        }
+        await persistMovedTree();
+      });
     });
   });
   hostElement.querySelectorAll<HTMLElement>('.navigation-studio__tree-row').forEach(row => {
     row.addEventListener('dragstart', event => {
+      // Nested draggable rows must not let an ancestor take over the dragged id.
+      event.stopPropagation();
+      if (state.busy) { event.preventDefault(); return; }
       dragItemId = row.dataset.itemId || null;
       event.dataTransfer?.setData('text/plain', String(dragItemId || ''));
+      hostElement?.querySelector('.navigation-studio')?.classList.add('is-dragging');
     });
-    row.addEventListener('dragend', () => {
+    row.addEventListener('dragend', event => {
+      event.stopPropagation();
       dragItemId = null;
+      hostElement?.querySelector('.navigation-studio')?.classList.remove('is-dragging');
     });
   });
-  hostElement.querySelectorAll<HTMLElement>('[data-drop-child]').forEach(dropZone => {
-    dropZone.addEventListener('dragover', event => event.preventDefault());
-    dropZone.addEventListener('drop', event => {
-      event.preventDefault();
-      const moved = moveDraggedItem(dropZone.dataset.dropChild || null, 'child');
-      dragItemId = null;
-      if (moved) void persistMovedTree();
-    });
-  });
-  hostElement.querySelector<HTMLElement>('[data-root-drop]')?.addEventListener('drop', event => {
-    if ((event.target as Element).closest('[data-drop-child]')) return;
+  const drop = (event: DragEvent, targetId: string | null, mode: DropMode) => {
     event.preventDefault();
-    const moved = moveDraggedItem(null, 'root');
+    event.stopPropagation();
+    const id = dragItemId;
     dragItemId = null;
-    if (moved) void persistMovedTree();
+    hostElement?.querySelector('.navigation-studio')?.classList.remove('is-dragging');
+    if (id == null) return;
+    void runAction('NAV_STUDIO_ORDER_SAVE_FAILED', async () => {
+      if (moveTreeItem(id, targetId, mode)) await persistMovedTree();
+    });
+  };
+  hostElement.querySelectorAll<HTMLElement>('[data-drop-child]').forEach(zone => {
+    zone.addEventListener('dragover', event => { event.preventDefault(); event.stopPropagation(); });
+    zone.addEventListener('drop', event => drop(event, zone.dataset.dropChild || null, 'child'));
   });
-  hostElement.querySelector<HTMLElement>('[data-root-drop]')?.addEventListener('dragover', event => {
-    event.preventDefault();
-  });
+  hostElement.querySelector<HTMLElement>('[data-root-drop]')?.addEventListener('drop', event => drop(event, null, 'root'));
+  hostElement.querySelector<HTMLElement>('[data-root-drop]')?.addEventListener('dragover', event => event.preventDefault());
   hostElement.querySelectorAll<HTMLButtonElement>('[data-focus-diagnostic]').forEach(button => {
     button.addEventListener('click', () => {
       const id = button.dataset.focusDiagnostic;
-      if (id) {
+      if (!id) return;
+      void runAction('NAV_STUDIO_SELECT_FAILED', () => {
         state.selectedItemId = id;
+        clearDraft();
         renderShell();
-      }
+        hostElement?.querySelector<HTMLInputElement>('[name="title"]')?.focus();
+      }, true);
     });
+  });
+  hostElement.querySelector('.navigation-studio__preview')?.addEventListener('click', event => {
+    if ((event.target as Element).closest('a')) event.preventDefault();
   });
 }
 
 export async function render(el: HTMLElement | null): Promise<void> {
+  if (el) registerWorkspaceChanges(el, { isDirty: () => state.dirty, isBusy: () => state.busy });
   if (!el) return;
   hostElement = el;
-  el.innerHTML = '<div class="navigation-studio__loading">Loading Navigation Studio...</div>';
+  clearDraft();
+  state.busy = false;
+  state.addOpen = false;
+  state.query = '';
+  state.addParentId = null;
+  state.selectedMenu = null;
+  state.selectedItemId = null;
+  state.mode = 'simple';
+  state.preview = 'desktop';
+  state.collapsed.clear();
+  el.innerHTML = '<div class="navigation-studio__loading" role="status">Loading Navigation Studio...</div>';
   try {
     await reloadSnapshot();
-    setFeedback('Ready.');
+    setFeedback('');
     renderShell();
+    const editableFields = ['title', 'type', 'sourceId', 'url', 'status', 'icon', 'target', 'megaLayoutId', 'megaEnabled'];
+    registerWorkspaceAgent({ root: el, id: 'navigation', title: 'Navigation',
+      read: () => ({ dirty: state.dirty, busy: state.busy, error: /(?:FAILED|INVALID|ERROR):/.test(state.feedback) ? state.feedback : null, feedback: state.feedback,
+        selection: { menu: menuKey(state.selectedMenu), item: state.selectedItemId },
+        menus: state.menus, items: state.items, diagnostics: state.diagnostics,
+        draft: readAgentForm(el, editableFields),
+        pages: state.pages.map(({ id, title, slug, status }) => ({ id, title, slug, status }))
+      }),
+      actions: [
+        { action: 'navigation.selectMenu', label: 'Select menu', params: [{ name: 'key', type: 'string', required: true }], run: p => {
+          const key = agentString(p, 'key');
+          if (!menuByKey(key)) throw new Error('NAV_STUDIO_MENU_NOT_FOUND');
+          return runAction('NAV_STUDIO_MENU_LOAD_FAILED', () => selectMenu(key), false, true);
+        } },
+        { action: 'navigation.selectItem', label: 'Select menu item', params: [{ name: 'id', type: 'string', required: true }], run: p => {
+          const id = agentString(p, 'id');
+          if (!findItem(state.items, id)) throw new Error('NAV_STUDIO_ITEM_NOT_FOUND');
+          state.selectedItemId = id; clearDraft(); renderShell();
+        } },
+        { action: 'navigation.updateDraft', label: 'Update link details', acceptsDraft: true,
+          params: [{ name: 'fields', type: 'object', required: true }], run: p => patchAgentForm(el, p.fields, editableFields) },
+        { action: 'navigation.save', label: 'Save menu item', acceptsDraft: true, confirm: true,
+          run: () => {
+            if (!selectedItem()) throw new Error('NAV_STUDIO_ITEM_NOT_FOUND');
+            return runAction('NAV_STUDIO_SAVE_FAILED', saveSelectedItem, false, true);
+          } },
+        { action: 'navigation.addPage', label: 'Add a page link', confirm: true,
+          params: [{ name: 'pageId', type: 'string', required: true }, { name: 'parentId', type: 'string', required: false }],
+          run: p => {
+            const page = state.pages.find(candidate => idEquals(candidate.id, agentString(p, 'pageId')) && candidate.status !== 'deleted');
+            if (!page || !state.selectedMenu) throw new Error('NAV_STUDIO_PAGE_REQUIRED');
+            state.addParentId = p.parentId == null ? null : agentString(p, 'parentId');
+            return runAction('NAV_STUDIO_ADD_FAILED', () => addPage(page), false, true);
+          } },
+        { action: 'navigation.moveItem', label: 'Move a menu branch', confirm: true,
+          params: [{ name: 'id', type: 'string', required: true }, { name: 'parentId', type: 'string', required: false }],
+          run: p => runAction('NAV_STUDIO_MOVE_FAILED', async () => {
+            const id = agentString(p, 'id');
+            const parent = p.parentId == null ? null : agentString(p, 'parentId');
+            if (!moveTreeItem(id, parent, parent == null ? 'root' : 'child')) throw new Error('NAV_STUDIO_MOVE_INVALID: Check the target and nesting limit.');
+            await persistMovedTree();
+          }, false, true) }
+      ]
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Navigation Studio failed to load.';
     el.innerHTML = `
       <div class="navigation-studio__error" role="alert">
         <strong>PLAINSPACE_NAVIGATION_STUDIO_LOAD_FAILED</strong>
         <span>${escapeHtml(message)}</span>
+        <button class="button small" type="button" data-retry>Retry</button>
       </div>
     `;
+    el.querySelector<HTMLButtonElement>('[data-retry]')?.addEventListener('click', () => { void render(el); });
   }
 }

@@ -561,7 +561,7 @@ export function createAgentSurfaceClient(options) {
         title: options.title || options.surfaceId
     });
     const publishSnapshot = async (reason = 'manual') => {
-        const emit = getEmit();
+        const emit = options.emit || getEmit();
         if (!emit || publishing)
             return null;
         publishing = true;
@@ -595,7 +595,7 @@ export function createAgentSurfaceClient(options) {
         }
     };
     const ackCommand = async (command, status = 'acked', result = null) => {
-        const emit = getEmit();
+        const emit = options.emit || getEmit();
         const id = commandId(command);
         if (!emit || !id)
             return null;
@@ -607,7 +607,7 @@ export function createAgentSurfaceClient(options) {
         });
     };
     const pollCommands = async () => {
-        const emit = getEmit();
+        const emit = options.emit || getEmit();
         if (!emit || polling)
             return [];
         polling = true;
@@ -621,9 +621,11 @@ export function createAgentSurfaceClient(options) {
             let handledDomainCommand = false;
             let snapshotReason = 'command';
             for (const command of list) {
+                let acknowledged = false;
                 try {
                     if (commandAction(command) === 'surface.refresh') {
                         await ackCommand(command, 'acked', { handled: true, action: 'surface.refresh' });
+                        acknowledged = true;
                         handledAny = true;
                         if (!handledDomainCommand)
                             snapshotReason = 'refresh';
@@ -634,12 +636,23 @@ export function createAgentSurfaceClient(options) {
                     const result = options.handleCommand
                         ? await options.handleCommand(command)
                         : { handled: false };
+                    // Delivery is not success. Domain adapters report unsupported/failed
+                    // operations with handled=false; never acknowledge those as completed.
+                    if (result && typeof result === 'object' && 'handled' in result && result.handled === false) {
+                        const detail = result;
+                        throw new Error(`${detail.code || 'AGENT_SURFACE_COMMAND_UNHANDLED'}: ${detail.message || detail.reason || commandAction(command)}`);
+                    }
                     await ackCommand(command, 'acked', result ?? { handled: true });
+                    acknowledged = true;
                     handledAny = true;
                 }
                 catch (error) {
+                    handledAny = true;
                     await ackCommand(command, 'failed', error);
                     reportError(options, error);
+                }
+                finally {
+                    options.onCommandSettled?.(command, acknowledged);
                 }
             }
             if (handledAny && options.publishAfterCommand !== false) {

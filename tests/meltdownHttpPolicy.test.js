@@ -87,9 +87,10 @@ test('meltdown HTTP policy blocks direct internal and raw database events', () =
   assert.match(explainExternalEventRejection('revokeToken', {
     jti: 'abc'
   }), /internal/);
+  // The retired startup event stays rejected as an unknown external contract.
   assert.match(explainExternalEventRejection('registerWidgetUsage', {
     events: ['widget.loaded']
-  }), /internal/);
+  }), /not exposed/);
   assert.match(explainExternalEventRejection('listContentEntries', {
     table: '__rawSQL__',
     data: { rawSQL: 'CREATE_CONTENT_ENTRY' }

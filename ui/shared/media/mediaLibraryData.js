@@ -55,7 +55,12 @@ export function toFolderListing(value) {
         folders: toStringArray(candidate.folders),
         files: toStringArray(candidate.files),
         parentPath: typeof candidate.parentPath === 'string' ? candidate.parentPath : '',
-        currentPath: typeof candidate.currentPath === 'string' ? candidate.currentPath : ''
+        currentPath: typeof candidate.currentPath === 'string' ? candidate.currentPath : '',
+        ...(Array.isArray(candidate.details) ? { details: candidate.details.filter(item => item && typeof item === 'object' && typeof item.name === 'string').map(item => ({
+                name: item.name,
+                size: typeof item.size === 'number' && Number.isFinite(item.size) && item.size >= 0 ? item.size : null,
+                modifiedAt: typeof item.modifiedAt === 'string' ? item.modifiedAt : ''
+            })) } : {})
     };
 }
 export function mediaItemPath(path, name) {

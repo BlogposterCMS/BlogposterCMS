@@ -3,12 +3,25 @@ import {
   createMegaMenuDesign,
   ensureNavigationStudioDefaults,
   fetchNavigationTree,
+  fetchPublicPages,
   generateItemsFromPages,
   navigationItemPayload,
   replaceMenuItemsWithGeneratedPages
 } from '../ui/widgets/plainspace/admin/navigationStudioData';
 
 describe('navigationStudioData', () => {
+  it('excludes deleted pages from menu targets while keeping draft pages editable', async () => {
+    const emit = jest.fn().mockResolvedValue([{ id: 'gone', status: 'deleted' }, { id: 'draft', status: 'draft' }, { id: 'live', status: 'published' }]);
+    expect((await fetchPublicPages(emit, 'jwt')).map(page => page.id)).toEqual(['draft', 'live']);
+  });
+  it('honors explicit relationship clears over legacy database field names', () => {
+    expect(navigationItemPayload({
+      id: 'child', parent_id: 'parent', source_id: 'page',
+      source_module: 'pagesManager', entry_id: 'entry'
+    }, { parentId: null, sourceId: null, sourceModule: null, entryId: null }))
+      .toMatchObject({ parentId: null, sourceId: null, sourceModule: null, entryId: null });
+  });
+
   it('seeds missing studio locations and menus through navigation contracts', async () => {
     const emit = jest.fn().mockResolvedValue({});
 

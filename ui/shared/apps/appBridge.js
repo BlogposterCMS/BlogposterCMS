@@ -135,6 +135,10 @@ function installBridgeApi() {
     }
 }
 function maybeStartAgentSurface(message) {
+    // Apps with a structured domain adapter opt out of the generic DOM controller.
+    // AppLoader still grants the same agentSurface event contract to that adapter.
+    if (metaContent('agent-surface') === 'manual')
+        return;
     if ((!shouldStartAgentSurface() && !messageWantsAgentSurface(message)) || state.agentSurface)
         return;
     const config = messageAgentSurfaceConfig(message);

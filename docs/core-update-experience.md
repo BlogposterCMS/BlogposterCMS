@@ -91,5 +91,7 @@ completed states. It did not replace a container.
 
 The local Docker Desktop Linux engine is unavailable. Real systemd provisioning,
 Unix-socket group access from the container, volume backup/replacement/rollback
-and production notification-to-settings acceptance remain release gates. No
-production host was changed and no release of this new control flow was made.
+and production notification-to-settings acceptance remain stable-release gates.
+Version 0.10.0-rc.1 publishes this control flow as a prerelease for host acceptance;
+GitHub's stable latest-release endpoint continues to serve the previous stable
+version. No production host was changed.

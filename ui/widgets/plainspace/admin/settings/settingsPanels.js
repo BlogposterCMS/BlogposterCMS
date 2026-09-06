@@ -1,8 +1,11 @@
 import { errorMessage, fetchDesignSettings, fetchGeneralSettings, fetchSecuritySettings, fetchSeoSettings, pickMediaShareUrl, saveAllowRegistration, saveFaviconUrl, saveGeneralSettings, saveGoogleFontsApiKey, saveMaintenanceSettings, saveSeoSettings } from './settingsPanelsData.js';
 import { approvedAccessDescriptors, fetchUpdateCenterRows, inspectUpdateCenterRow, installUpdateCenterRow, updateCenterRowLabel, updateInspectionLabel, updateInstallVersion } from './updateCenterData.js';
 import { renderUiKitGallery } from './uiKitGallery.js';
+import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
 import { createFormActions, createFormChoice as createChoice, createFormField } from '/ui/shared/forms/formField.js';
 import { createTabSystem } from '/ui/shared/navigation/tabs.js';
+import { registerWorkspaceChanges } from '../../../../shared/navigation/workspaceChanges.js';
+import { registerWorkspaceAgent, patchAgentForm, readAgentForm, agentString } from '../../../../shared/agent/workspaceAgent.js';
 const EMBEDDED_WIDGET_PANEL_PATHS = {
     modules: '/ui/widgets/plainspace/admin/modulesListWidget.js',
     providers: '/ui/widgets/plainspace/admin/loginStrategiesWidget.js',
@@ -35,7 +38,79 @@ function createShell(title, subtitle) {
     root.appendChild(tabs);
     root.appendChild(content);
     root.appendChild(status);
-    return { root, tabs, content, status };
+    const savedValues = new Map();
+    let saving = false;
+    const agentGroups = [];
+    const valueOf = (field) => field instanceof HTMLInputElement && field.type === 'checkbox'
+        ? String(field.checked) : field.value;
+    registerWorkspaceChanges(root, {
+        isDirty: () => [...savedValues].some(([field, value]) => valueOf(field) !== value),
+        isBusy: () => saving
+    });
+    // Each tab keeps its own saved baseline; saving branding must not clear a
+    // pending typography edit. Lock the shared surface while a write is pending.
+    function bindSave(button, fields, action, message, agent) {
+        fields.forEach(field => savedValues.set(field, valueOf(field)));
+        async function save(propagate = false) {
+            if (saving)
+                return;
+            saving = true;
+            content.inert = true;
+            button.disabled = true;
+            status.setAttribute('role', 'status');
+            status.textContent = 'Saving…';
+            try {
+                await action();
+                fields.forEach(field => savedValues.set(field, valueOf(field)));
+                status.textContent = message;
+            }
+            catch (err) {
+                status.setAttribute('role', 'alert');
+                status.textContent = `SETTINGS_SAVE_FAILED: ${errorMessage(err)}`;
+                if (propagate)
+                    throw err;
+            }
+            finally {
+                saving = false;
+                content.inert = false;
+                button.disabled = false;
+            }
+        }
+        button.addEventListener('click', () => void save());
+        // Only explicitly declared non-secret fields enter the agent surface.
+        // Credential controls keep their existing dedicated management workflow.
+        if (agent) {
+            Object.entries(agent.fields).forEach(([name, input]) => { input.name = name; });
+            agentGroups.push({ id: agent.id, fields: Object.keys(agent.fields), save: () => save(true) });
+        }
+    }
+    function mount(parent) {
+        parent.replaceChildren(root);
+        if (!agentGroups.length)
+            return;
+        registerWorkspaceAgent({ root, id: `settings-${agentGroups[0].id}`, title,
+            read: () => ({ dirty: [...savedValues].some(([field, value]) => valueOf(field) !== value), busy: saving,
+                error: status.getAttribute('role') === 'alert' ? status.textContent : null,
+                groups: agentGroups.map(group => ({ id: group.id, fields: readAgentForm(root, group.fields) })) }),
+            actions: [
+                { action: 'settings.updateDraft', label: 'Update settings fields', acceptsDraft: true,
+                    params: [{ name: 'group', type: 'string', required: true }, { name: 'fields', type: 'object', required: true }],
+                    run: p => {
+                        const group = agentGroups.find(group => group.id === agentString(p, 'group'));
+                        if (!group)
+                            throw new Error('SETTINGS_AGENT_GROUP_UNAVAILABLE');
+                        patchAgentForm(root, p.fields, group.fields);
+                    } },
+                { action: 'settings.save', label: 'Save a settings group', acceptsDraft: true, confirm: true,
+                    params: [{ name: 'group', type: 'string', required: true }], run: p => {
+                        const group = agentGroups.find(group => group.id === agentString(p, 'group'));
+                        if (!group)
+                            throw new Error('SETTINGS_AGENT_GROUP_UNAVAILABLE');
+                        return group.save();
+                    } }
+            ] });
+    }
+    return { root, tabs, content, status, bindSave, mount };
 }
 function dialogApi() {
     return window.bpDialog || null;
@@ -141,25 +216,11 @@ async function renderGeneral(ctx) {
     save.type = 'button';
     save.className = 'button primary';
     save.textContent = 'Save general settings';
-    save.addEventListener('click', async () => {
-        save.disabled = true;
-        shell.status.textContent = 'Saving…';
-        try {
-            await saveGeneralSettings(ctx.meltdownEmit, ctx.jwt, {
-                siteTitle: titleInput.value.trim(),
-                siteDescription: descInput.value.trim()
-            });
-            shell.status.textContent = 'General settings saved.';
-        }
-        catch (err) {
-            shell.status.textContent = `Failed to save general settings: ${errorMessage(err)}`;
-        }
-        finally {
-            save.disabled = false;
-        }
-    });
+    shell.bindSave(save, [titleInput, descInput], () => saveGeneralSettings(ctx.meltdownEmit, ctx.jwt, {
+        siteTitle: titleInput.value.trim(), siteDescription: descInput.value.trim()
+    }), 'General settings saved.', { id: 'general', fields: { siteTitle: titleInput, siteDescription: descInput } });
     identity.append(createFormField('Site Title', titleInput), createFormField('Site Description', descInput), createFormActions(save));
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
 }
 async function renderDesign(ctx) {
     const shell = createShell('Design Settings', 'Branding assets and typography integrations.');
@@ -189,15 +250,7 @@ async function renderDesign(ctx) {
     favSave.type = 'button';
     favSave.className = 'button primary';
     favSave.textContent = 'Save favicon';
-    favSave.addEventListener('click', async () => {
-        try {
-            await saveFaviconUrl(ctx.meltdownEmit, ctx.jwt, favInput.value.trim());
-            shell.status.textContent = 'Favicon updated.';
-        }
-        catch (err) {
-            shell.status.textContent = `Failed to save favicon: ${errorMessage(err)}`;
-        }
-    });
+    shell.bindSave(favSave, [favInput], () => saveFaviconUrl(ctx.meltdownEmit, ctx.jwt, favInput.value.trim()), 'Favicon updated.', { id: 'branding', fields: { faviconUrl: favInput } });
     const fontInput = document.createElement('input');
     fontInput.type = 'text';
     fontInput.value = designSettings.googleFontsApiKey;
@@ -205,18 +258,10 @@ async function renderDesign(ctx) {
     fontSave.type = 'button';
     fontSave.className = 'button primary';
     fontSave.textContent = 'Save typography settings';
-    fontSave.addEventListener('click', async () => {
-        try {
-            await saveGoogleFontsApiKey(ctx.meltdownEmit, ctx.jwt, fontInput.value.trim());
-            shell.status.textContent = 'Typography settings saved.';
-        }
-        catch (err) {
-            shell.status.textContent = `Failed to save typography settings: ${errorMessage(err)}`;
-        }
-    });
+    shell.bindSave(fontSave, [fontInput], () => saveGoogleFontsApiKey(ctx.meltdownEmit, ctx.jwt, fontInput.value.trim()), 'Typography settings saved.');
     branding.append(createFormField('Favicon URL', favInput), createFormActions(pickBtn, favSave));
     typography.append(createFormField('Google Fonts API Key', fontInput), createFormActions(fontSave));
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
 }
 async function renderSeo(ctx) {
     const shell = createShell('SEO Settings', 'Search visibility and metadata defaults.');
@@ -235,21 +280,11 @@ async function renderSeo(ctx) {
     save.type = 'button';
     save.className = 'button primary';
     save.textContent = 'Save SEO settings';
-    save.addEventListener('click', async () => {
-        try {
-            await saveSeoSettings(ctx.meltdownEmit, ctx.jwt, {
-                titleTemplate: titleInput.value.trim(),
-                metaDescription: descInput.value.trim(),
-                indexingEnabled: indexInput.checked
-            });
-            shell.status.textContent = 'SEO settings saved.';
-        }
-        catch (err) {
-            shell.status.textContent = `Failed to save SEO settings: ${errorMessage(err)}`;
-        }
-    });
+    shell.bindSave(save, [titleInput, descInput, indexInput], () => saveSeoSettings(ctx.meltdownEmit, ctx.jwt, {
+        titleTemplate: titleInput.value.trim(), metaDescription: descInput.value.trim(), indexingEnabled: indexInput.checked
+    }), 'SEO settings saved.', { id: 'seo', fields: { titleTemplate: titleInput, metaDescription: descInput, indexingEnabled: indexInput } });
     defaults.append(createFormField('SEO Title Template', titleInput), createFormField('Default Meta Description', descInput), createChoice('Allow Search Engine Indexing', indexInput), createFormActions(save));
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
 }
 async function renderSecurity(ctx) {
     const shell = createShell('Security Settings', 'Registration controls and maintenance safety options.');
@@ -269,15 +304,7 @@ async function renderSecurity(ctx) {
     accessSave.type = 'button';
     accessSave.className = 'button primary';
     accessSave.textContent = 'Save access settings';
-    accessSave.addEventListener('click', async () => {
-        try {
-            await saveAllowRegistration(ctx.meltdownEmit, ctx.jwt, allowRegistration.checked);
-            shell.status.textContent = 'Access settings saved.';
-        }
-        catch (err) {
-            shell.status.textContent = `Failed to save access settings: ${errorMessage(err)}`;
-        }
-    });
+    shell.bindSave(accessSave, [allowRegistration], () => saveAllowRegistration(ctx.meltdownEmit, ctx.jwt, allowRegistration.checked), 'Access settings saved.', { id: 'registration', fields: { allowRegistration } });
     const maintenanceToggle = document.createElement('input');
     maintenanceToggle.type = 'checkbox';
     maintenanceToggle.checked = securitySettings.maintenanceMode;
@@ -298,25 +325,20 @@ async function renderSecurity(ctx) {
     maintenanceSave.type = 'button';
     maintenanceSave.className = 'button primary';
     maintenanceSave.textContent = 'Save maintenance settings';
-    maintenanceSave.addEventListener('click', async () => {
-        try {
-            await saveMaintenanceSettings(ctx.meltdownEmit, ctx.jwt, maintenanceToggle.checked, pageSelect.value);
-            shell.status.textContent = 'Maintenance settings saved.';
-        }
-        catch (err) {
-            shell.status.textContent = `Failed to save maintenance settings: ${errorMessage(err)}`;
-        }
-    });
+    shell.bindSave(maintenanceSave, [maintenanceToggle, pageSelect], () => saveMaintenanceSettings(ctx.meltdownEmit, ctx.jwt, maintenanceToggle.checked, pageSelect.value), 'Maintenance settings saved.', { id: 'maintenance', fields: { maintenanceMode: maintenanceToggle, maintenancePageId: pageSelect } });
     accessTab.append(createChoice('Allow public registration', allowRegistration), installState, createFormActions(accessSave));
     maintenanceTab.append(createChoice('Enable maintenance mode', maintenanceToggle), createFormField('Maintenance page', pageSelect), createFormActions(maintenanceSave));
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
 }
 async function loadEmbeddedWidgetPanel(key) {
     const cached = embeddedWidgetPanelPromises.get(key);
     if (cached)
         return cached;
     const importPath = EMBEDDED_WIDGET_PANEL_PATHS[key];
-    const promise = import(/* webpackIgnore: true */ importPath);
+    const promise = import(/* webpackIgnore: true */ importPath).catch(error => {
+        embeddedWidgetPanelPromises.delete(key);
+        throw error;
+    });
     embeddedWidgetPanelPromises.set(key, promise);
     return promise;
 }
@@ -336,7 +358,7 @@ async function renderModules(ctx) {
     const providersPanel = tabs.addTab('Auth providers');
     await renderEmbeddedWidgetPanel(modulesPanel, 'modules');
     await renderEmbeddedWidgetPanel(providersPanel, 'providers');
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
 }
 async function renderUiKit(ctx) {
     renderUiKitGallery(ctx.el);
@@ -430,8 +452,9 @@ function renderUpdateRow(row, status, mount, ctx) {
     return item;
 }
 async function renderUpdates(ctx) {
-    const shell = createShell('Update Center', 'GitHub release updates for installed community modules.');
+    const shell = createShell('Update Center', 'Keep Blogposter and your installed modules up to date.');
     const tabs = createTabSystem(shell.content, shell.tabs);
+    const corePanel = tabs.addTab('Blogposter');
     const updatesPanel = tabs.addTab('Module updates');
     const refresh = document.createElement('button');
     refresh.type = 'button';
@@ -453,7 +476,8 @@ async function renderUpdates(ctx) {
         }
     });
     updatesPanel.append(refresh, rowsMount);
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
+    await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt);
     await renderUpdateRows(rowsMount, shell.status, ctx);
 }
 async function renderUsersAccess(ctx) {
@@ -463,7 +487,7 @@ async function renderUsersAccess(ctx) {
     const accessPanel = tabs.addTab('Registration');
     await renderEmbeddedWidgetPanel(usersPanel, 'users');
     await renderEmbeddedWidgetPanel(accessPanel, 'access');
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
 }
 async function renderImportExport(ctx) {
     const shell = createShell('Import / Export', 'Operational data portability and backups.');
@@ -478,7 +502,7 @@ async function renderImportExport(ctx) {
     importNote.textContent = 'Import actions are intentionally disabled by default for security. Install a trusted module before enabling writes.';
     exportTab.append(exportNote);
     importTab.append(importNote);
-    ctx.el.replaceChildren(shell.root);
+    shell.mount(ctx.el);
 }
 const SURFACE_RENDERERS = {
     general: renderGeneral,
@@ -498,14 +522,16 @@ export async function renderSettingsSurface(el, page) {
         return false;
     }
     const slugParts = String(page?.slug || '').split('/').filter(Boolean);
-    if (slugParts[0] !== 'settings' || !slugParts[1]) {
+    if (slugParts[0] !== 'settings') {
         return false;
     }
-    const surfaceKey = slugParts[1];
+    // The account-menu entry points at /settings; it must open an actual panel.
+    const surfaceKey = (slugParts[1] || 'general');
     const renderer = SURFACE_RENDERERS[surfaceKey];
     if (!renderer) {
         return false;
     }
+    el.textContent = 'Loading settings…';
     try {
         await renderer({ el, page, jwt, meltdownEmit });
         return true;
@@ -514,8 +540,14 @@ export async function renderSettingsSurface(el, page) {
         el.innerHTML = '';
         const error = document.createElement('div');
         error.className = 'error';
-        error.textContent = `Failed to load settings surface: ${errorMessage(err)}`;
-        el.appendChild(error);
+        error.setAttribute('role', 'alert');
+        error.textContent = `SETTINGS_LOAD_FAILED: ${errorMessage(err)}`;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'button secondary';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => { void renderSettingsSurface(el, page); });
+        el.append(error, retry);
         return true;
     }
 }

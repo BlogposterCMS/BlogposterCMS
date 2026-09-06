@@ -13,14 +13,26 @@ function createAdminGrid(contentEl) {
     return { gridEl, grid };
 }
 export async function renderAdminRuntimeGrid({ page, contentEl, globalLayout = [], allWidgets, lane, emit, widgetEmit, debug = false }) {
-    let layout = await loadRuntimeLayoutForViewport(emit, page.id, lane);
+    const fixed = page.meta?.dashboardLayout === 'fixed';
+    // Fixed CMS tools still use the normal widget loader and module contracts.
+    // Their composition comes from the page owner, not personal dashboard slots.
+    const layout = fixed
+        ? (page.meta.widgets || []).map((widgetId, index) => ({
+            id: `workspace-${page.id}-${widgetId}`,
+            widgetId,
+            slot: page.meta.widgetSlots?.[widgetId] || 'page',
+            order: index * 10
+        }))
+        : await loadRuntimeLayoutForViewport(emit, page.id, lane);
     if (debug)
         console.debug('[Renderer] admin layout', layout);
-    const combinedAdmin = [...globalLayout, ...layout];
+    const combinedAdmin = fixed ? layout : [...globalLayout, ...layout];
     clearContentKeepHeader(contentEl);
     const { gridEl, grid } = createAdminGrid(contentEl);
-    exposeAdminGridGlobals(grid, page.id, lane, layout);
-    bindAdminDropTarget(gridEl, grid);
+    gridEl.dataset.dashboardLayout = fixed ? 'fixed' : 'custom';
+    exposeAdminGridGlobals(grid, page.id, lane, layout, !fixed);
+    if (!fixed)
+        bindAdminDropTarget(gridEl, grid);
     const instanceMetaMap = new Map();
     await mountAdminGridWidgets({
         gridEl,
@@ -30,24 +42,27 @@ export async function renderAdminRuntimeGrid({ page, contentEl, globalLayout = [
         lane,
         widgetEmit,
         instanceMetaMap,
+        editable: !fixed,
         debug
     });
-    await renderAttachedRuntimeContent({
-        page,
-        lane,
-        allWidgets,
-        container: contentEl,
-        emit,
-        widgetEmit
-    });
-    bindAdminLayoutPersistence({
-        grid,
-        gridEl,
-        instanceMetaMap,
-        layout,
-        pageId: page.id,
-        lane,
-        emit
-    });
+    if (!fixed)
+        await renderAttachedRuntimeContent({
+            page,
+            lane,
+            allWidgets,
+            container: contentEl,
+            emit,
+            widgetEmit
+        });
+    if (!fixed)
+        bindAdminLayoutPersistence({
+            grid,
+            gridEl,
+            instanceMetaMap,
+            layout,
+            pageId: page.id,
+            lane,
+            emit
+        });
     return { gridEl, grid, layout };
 }

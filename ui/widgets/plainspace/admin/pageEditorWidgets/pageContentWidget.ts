@@ -1,357 +1,258 @@
-import { sanitizeSlug } from '../defaultwidgets/pageList/pageService.js';
+import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
 import { sanitizeHtml } from '../../../../shared/sanitize/sanitizer.js';
 import {
-  attachDesignMeta,
-  attachHtmlMeta,
-  clearPageContentCache,
-  detachDesignMeta,
-  detachHtmlMeta,
-  errorMessage,
-  fetchBuilderApps,
-  fetchHtmlFile,
-  fetchPublishedDesigns,
-  listHtmlFiles,
-  savePageContent,
-  toPage,
-  uploadHtmlFile,
-  type BuilderApp,
-  type DesignRecord
+  attachDesignMeta, attachHtmlMeta, clearPageContentCache, detachDesignMeta,
+  detachHtmlMeta, errorMessage, fetchBuilderApps, fetchHtmlFile, fetchPublishedDesigns,
+  listHtmlFiles, savePageContent, toPage, uploadHtmlFile,
+  type DesignRecord, type PageContentUpdateValues, type PageRecord
 } from './pageContentData.js';
 
-export async function render(el: HTMLElement | null): Promise<void> {
-  const jwt = window.ADMIN_TOKEN;
-  const meltdownEmit = window.meltdownEmit;
-  const pageCandidate = toPage(await window.pageDataPromise);
+export interface PageContentOptions {
+  page?: PageRecord;
+  // The fixed editor stages attachments with its metadata and saves once through
+  // Pages. Stored standalone content widgets retain their explicit writes.
+  onChange?: () => void;
+  onBusy?: (busy: boolean) => void;
+  onController?: (controller: PageContentController) => void;
+}
+
+export interface PageContentController {
+  read: () => Record<string, unknown>;
+  attach: (kind: 'design' | 'html', id: string) => Promise<void>;
+  detach: () => Promise<void>;
+}
+
+export async function render(el: HTMLElement | null, options: PageContentOptions = {}): Promise<void> {
   if (!el) return;
-  if (!jwt || !pageCandidate || typeof meltdownEmit !== 'function') {
-    el.innerHTML = '<p>Missing credentials or page id.</p>';
+  const emit = window.meltdownEmit;
+  const jwt = window.ADMIN_TOKEN;
+  const candidate = options.page || toPage(await window.pageDataPromise);
+  if (!jwt || candidate?.id == null || typeof emit !== 'function') {
+    el.innerHTML = '<p role="alert">PAGE_CONTENT_CONTEXT_MISSING: Open a page from Page Management.</p>';
     return;
   }
-  const page = pageCandidate;
-  page.meta ??= {};
+  const page = candidate;
+  const root = document.createElement('section');
+  root.className = 'page-content-widget';
+  root.setAttribute('aria-label', 'Page content');
+  root.innerHTML = `
+    <header class="content-title-bar"><div><h3>Content</h3><p>Attach a published design or an HTML file.</p></div></header>
+    <div class="page-content-actions"><button type="button" class="button secondary sm" data-upload>Upload HTML</button></div>
+    <input type="file" accept=".html,.htm,text/html" hidden>
+    <p class="page-content-feedback" role="status" aria-live="polite"></p>
+    <div class="selected-content" aria-label="Attached content"></div>
+    <label class="page-content-search"><span class="bp-sr-only">Search available content</span><input type="search" placeholder="Search designs and HTML files…" aria-label="Search available content"></label>
+    <div class="page-content-library-status" aria-live="polite"></div>
+    <div class="design-gallery" aria-label="Available content"></div>`;
+  el.replaceChildren(root);
+  const selected = root.querySelector<HTMLElement>('.selected-content')!;
+  const gallery = root.querySelector<HTMLElement>('.design-gallery')!;
+  const feedback = root.querySelector<HTMLElement>('.page-content-feedback')!;
+  const libraryStatus = root.querySelector<HTMLElement>('.page-content-library-status')!;
+  const search = root.querySelector<HTMLInputElement>('input[type=search]')!;
+  const fileInput = root.querySelector<HTMLInputElement>('input[type=file]')!;
+  const actions = root.querySelector<HTMLElement>('.page-content-actions')!;
+  let busy = false;
+  let designs: DesignRecord[] = [];
+  let files: string[] = [];
+  let libraryFailed = false;
+  let loading = false;
 
-  let builderApps: BuilderApp[] | null = null;
-  async function getBuilderApps(): Promise<BuilderApp[]> {
-    if (builderApps !== null) return builderApps;
-    try {
-      builderApps = await fetchBuilderApps(meltdownEmit, jwt);
-    } catch (err) {
-      console.warn('Failed to fetch builder apps', err);
-      builderApps = [];
+  function message(text: string, code = ''): void {
+    feedback.textContent = code ? `${code}: ${text}` : text;
+    feedback.dataset.errorCode = code;
+    feedback.setAttribute('role', code ? 'alert' : 'status');
+  }
+
+  async function run(action: () => Promise<void>, propagate = false): Promise<void> {
+    if (busy) return;
+    busy = true;
+    options.onBusy?.(true);
+    root.inert = true;
+    root.setAttribute('aria-busy', 'true');
+    try { await action(); }
+    catch (error) { message(errorMessage(error), 'PAGE_CONTENT_ACTION_FAILED'); if (propagate) throw error; }
+    finally {
+      busy = false;
+      root.inert = false;
+      root.setAttribute('aria-busy', 'false');
+      options.onBusy?.(false);
     }
-    return builderApps;
   }
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'page-content-widget';
-
-  const titleBar = document.createElement('div');
-  titleBar.className = 'content-title-bar';
-  const titleEl = document.createElement('div');
-  titleEl.className = 'content-title';
-  titleEl.textContent = 'Page Content';
-  const addBtn = document.createElement('img');
-  addBtn.src = '/assets/icons/plus.svg';
-  addBtn.alt = 'Upload HTML';
-  addBtn.title = 'Upload HTML';
-  addBtn.className = 'icon add-content-btn';
-  titleBar.appendChild(titleEl);
-  titleBar.appendChild(addBtn);
-  wrapper.appendChild(titleBar);
-
-  const selectedHeader = document.createElement('div');
-  selectedHeader.className = 'section-title';
-  selectedHeader.textContent = 'Attached Content';
-  wrapper.appendChild(selectedHeader);
-
-  const selectedWrap = document.createElement('ul');
-  selectedWrap.className = 'selected-content';
-  wrapper.appendChild(selectedWrap);
-
-  const galleryHeader = document.createElement('div');
-  galleryHeader.className = 'section-title';
-  galleryHeader.textContent = 'Available Designs';
-  wrapper.appendChild(galleryHeader);
-
-  const gallery = document.createElement('ul');
-  gallery.className = 'design-gallery';
-  wrapper.appendChild(gallery);
-
-  function clearPageDataCache(): void {
-    clearPageContentCache(window.pageDataLoader, page);
+  async function apply(values: PageContentUpdateValues): Promise<void> {
+    if (!options.onChange) {
+      await savePageContent(emit, jwt, page, values);
+      clearPageContentCache(window.pageDataLoader, page);
+    }
+    page.html = values.html;
+    page.meta = values.meta;
+    options.onChange?.();
+    message(options.onChange ? 'Content changed. Save the page to apply it.' : 'Content saved.');
+    renderSelected();
+    renderGallery();
   }
 
-  function createDesignCard(template: DesignRecord, isSelected = false): HTMLLIElement {
-    const li = document.createElement('li');
-    li.className = 'design-card' + (isSelected ? ' selected' : '');
+  async function canReplace(): Promise<boolean> {
+    return !(page.html || page.meta?.designId) || bpDialog.confirm('Replace the attached content?', {
+      title: 'Replace content', confirmLabel: 'Replace'
+    });
+  }
 
-    const img = document.createElement('img');
-    img.className = 'design-preview';
-    img.alt = `${template.title || 'Design'} preview`;
-    img.src = template.thumbnail || '/assets/icons/file.svg';
-
-    const name = document.createElement('div');
-    name.className = 'design-name';
-    name.textContent = template.title || 'Design';
-
-    li.appendChild(img);
-    li.appendChild(name);
-
-    if (isSelected) {
-      const remove = document.createElement('img');
-      remove.src = '/assets/icons/trash.svg';
-      remove.className = 'icon delete-content-btn';
-      remove.alt = 'Remove';
-      remove.title = 'Detach content';
-      remove.addEventListener('click', async e => {
-        e.stopPropagation();
-        if (!confirm('Remove attached design?')) return;
-        const newMeta = detachDesignMeta(page);
-        try {
-          await savePageContent(meltdownEmit, jwt, page, { html: page.html || '', meta: newMeta });
-          clearPageDataCache();
-          page.meta = newMeta;
-          renderSelected();
-          renderGallery();
-        } catch (err) {
-          alert(`Failed to detach design: ${errorMessage(err)}`);
-        }
-      });
-      li.appendChild(remove);
+  async function attach(kind: 'design' | 'html', id: string): Promise<void> {
+    if (loading) throw new Error('PAGE_CONTENT_BUSY: Wait for the content library.');
+    if (kind === 'design') {
+      const design = designs.find(item => String(item.id) === id);
+      if (!design) throw new Error('PAGE_CONTENT_DESIGN_NOT_FOUND: Choose an available published design.');
+      await apply({ html: '', meta: attachDesignMeta(page, design) });
     } else {
-      li.addEventListener('click', async () => {
-        if (page.html || page.meta?.designId) {
-          const ok = confirm('Replace existing attached content?');
-          if (!ok) return;
-        }
-        const newMeta = attachDesignMeta(page, template);
-        try {
-          await savePageContent(meltdownEmit, jwt, page, { html: '', meta: newMeta });
-          clearPageDataCache();
-          page.meta = newMeta;
-          page.html = '';
-          renderSelected();
-          renderGallery();
-        } catch (err) {
-          alert(`Failed to attach design: ${errorMessage(err)}`);
-        }
-      });
+      if (!files.includes(id)) throw new Error('PAGE_CONTENT_FILE_NOT_FOUND: Choose an available HTML file.');
+      const html = sanitizeHtml(await fetchHtmlFile(fetch, id));
+      await apply({ html, meta: attachHtmlMeta(page, id) });
     }
-
-    return li;
-  }
-
-  function createHtmlCard(name: string, html: string, isSelected = false): HTMLLIElement {
-    const li = document.createElement('li');
-    li.className = 'design-card html-card' + (isSelected ? ' selected' : '');
-
-    const preview = document.createElement('div');
-    preview.className = 'html-preview';
-    preview.innerHTML = sanitizeHtml(html);
-
-    const title = document.createElement('div');
-    title.className = 'design-name';
-    title.textContent = name;
-
-    li.appendChild(preview);
-    li.appendChild(title);
-
-    if (isSelected) {
-      const remove = document.createElement('img');
-      remove.src = '/assets/icons/trash.svg';
-      remove.className = 'icon delete-content-btn';
-      remove.alt = 'Remove';
-      remove.title = 'Detach content';
-      remove.addEventListener('click', async e => {
-        e.stopPropagation();
-        if (!confirm('Remove uploaded HTML?')) return;
-        const newMeta = detachHtmlMeta(page);
-        try {
-          await savePageContent(meltdownEmit, jwt, page, { html: '', meta: newMeta });
-          clearPageDataCache();
-          page.html = '';
-          page.meta = newMeta;
-          renderSelected();
-          renderGallery();
-        } catch (err) {
-          alert(`Failed to detach HTML: ${errorMessage(err)}`);
-        }
-      });
-      li.appendChild(remove);
-    } else {
-      li.addEventListener('click', async () => {
-        if (page.html || page.meta?.designId) {
-          const ok = confirm('Replace existing attached content?');
-          if (!ok) return;
-        }
-        try {
-          const fileHtml = sanitizeHtml(await fetchHtmlFile(fetch, name));
-          const newMeta = attachHtmlMeta(page, name);
-          await savePageContent(meltdownEmit, jwt, page, { html: fileHtml, meta: newMeta });
-          clearPageDataCache();
-          page.html = fileHtml;
-          page.meta = newMeta;
-          renderSelected();
-          renderGallery();
-        } catch (err) {
-          alert(`Failed to attach HTML: ${errorMessage(err)}`);
-        }
-      });
-    }
-
-    return li;
   }
 
   function renderSelected(): void {
-    selectedWrap.innerHTML = '';
-    const hasLayout = Boolean(page.meta?.designId);
-    const hasHtml = Boolean(page.html);
+    selected.replaceChildren();
+    const designerLink = actions.querySelector<HTMLAnchorElement>('[data-builder="designer"]');
+    if (designerLink) designerLink.href = builderUrl('designer');
+    const title = document.createElement('strong');
+    const hasDesign = page.meta?.designId != null;
+    title.textContent = hasDesign ? page.meta?.designTitle || 'Attached design'
+      : page.html ? page.meta?.htmlFileName || 'Attached HTML' : 'No content attached';
+    selected.append(title);
+    if (!hasDesign && !page.html) return;
+    const detach = document.createElement('button');
+    detach.type = 'button';
+    detach.className = 'button ghost sm';
+    detach.textContent = 'Detach';
+    detach.addEventListener('click', () => void run(async () => {
+      if (!(await bpDialog.confirm('Detach the content from this page?', { confirmLabel: 'Detach' }))) return;
+      await apply({ html: '', meta: hasDesign ? detachDesignMeta(page) : detachHtmlMeta(page) });
+    }));
+    selected.append(detach);
+  }
 
-    if (hasLayout) {
-      const card = createDesignCard({
-        id: page.meta?.designId,
-        title: page.meta?.designTitle || 'Design',
-        thumbnail: page.meta?.designThumbnail || ''
-      }, true);
-      selectedWrap.appendChild(card);
-    } else if (hasHtml) {
-      const card = createHtmlCard(page.meta?.htmlFileName || 'HTML Attachment', page.html || '', true);
-      selectedWrap.appendChild(card);
-    } else {
-      const empty = document.createElement('div');
+  function contentButton(title: string, kind: string, select: () => Promise<void>, thumbnail?: string): void {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'design-card';
+    button.setAttribute('aria-label', `Attach ${title}`);
+    if (thumbnail) {
+      const image = document.createElement('img');
+      image.className = 'design-preview';
+      image.src = thumbnail;
+      image.alt = '';
+      image.loading = 'lazy';
+      button.append(image);
+    }
+    const label = document.createElement('strong');
+    label.className = 'design-name';
+    label.textContent = title;
+    const type = document.createElement('span');
+    type.textContent = kind;
+    button.append(label, type);
+    button.addEventListener('click', () => void run(async () => {
+      if (await canReplace()) await select();
+    }));
+    gallery.append(button);
+  }
+
+  function renderGallery(): void {
+    gallery.replaceChildren();
+    const query = search.value.trim().toLowerCase();
+    designs.filter(design => design.id != null && String(design.id) !== String(page.meta?.designId))
+      .filter(design => (design.title || 'Untitled design').toLowerCase().includes(query))
+      .forEach(design => contentButton(design.title || 'Untitled design', 'Published design', async () => {
+        await attach('design', String(design.id));
+      }, design.thumbnail));
+    files.filter(name => name !== page.meta?.htmlFileName && name.toLowerCase().includes(query))
+      .forEach(name => contentButton(name, 'HTML file', async () => {
+        // Fetch file contents only when selected, not every HTML file on mount.
+        await attach('html', name);
+      }));
+    if (!gallery.children.length && !loading && !libraryFailed) {
+      const empty = document.createElement('p');
       empty.className = 'empty-state';
-      empty.textContent = 'No content attached.';
-      selectedWrap.appendChild(empty);
+      empty.textContent = query ? 'No matching content.' : 'No other published designs or HTML files available.';
+      gallery.append(empty);
     }
   }
 
-  async function loadDesigns(): Promise<DesignRecord[]> {
-    try {
-      return fetchPublishedDesigns(meltdownEmit, jwt);
-    } catch (err) {
-      console.warn('Failed to fetch designs', err);
-      return [];
+  async function loadLibrary(): Promise<void> {
+    if (loading) return;
+    loading = true;
+    libraryStatus.textContent = 'Loading available content…';
+    libraryStatus.setAttribute('role', 'status');
+    const results = await Promise.allSettled([fetchPublishedDesigns(emit, jwt), listHtmlFiles(emit, jwt)]);
+    designs = results[0].status === 'fulfilled' ? results[0].value : [];
+    files = results[1].status === 'fulfilled' ? results[1].value : [];
+    libraryFailed = results.some(result => result.status === 'rejected');
+    loading = false;
+    libraryStatus.replaceChildren();
+    if (libraryFailed) {
+      libraryStatus.setAttribute('role', 'alert');
+      libraryStatus.textContent = 'PAGE_CONTENT_LIBRARY_FAILED: Some content could not be loaded. ';
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'button secondary sm';
+      retry.textContent = 'Retry';
+      retry.addEventListener('click', () => void loadLibrary());
+      libraryStatus.append(retry);
     }
+    renderGallery();
   }
 
-  async function loadHtmlFiles(): Promise<string[]> {
-    try {
-      return listHtmlFiles(meltdownEmit, jwt);
-    } catch (err) {
-      console.warn('Failed to list HTML files', err);
-      return [];
-    }
-  }
-
-  async function renderGallery(): Promise<void> {
-    gallery.innerHTML = '';
-    const templates = (await loadDesigns()).filter(
-      template => template.id !== page.meta?.designId
-    );
-    const htmlFiles = (await loadHtmlFiles()).filter(
-      file => file !== page.meta?.htmlFileName
-    );
-    if (!templates.length && !htmlFiles.length) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.textContent = 'No designs available.';
-      gallery.appendChild(empty);
-      return;
-    }
-    templates.forEach(template => gallery.appendChild(createDesignCard(template)));
-    for (const name of htmlFiles) {
-      try {
-        const html = await fetchHtmlFile(fetch, name);
-        gallery.appendChild(createHtmlCard(name, html));
-      } catch (err) {
-        console.warn('Failed to load HTML file', name, err);
-      }
-    }
-  }
-
-  async function handleFile(file: File): Promise<void> {
-    if (!/\.html?$/i.test(file.name)) {
-      alert('Only HTML files are allowed.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      const html = sanitizeHtml(String(ev.target?.result || ''));
-      if (page.html || page.meta?.designId) {
-        const ok = confirm('Replace existing attached content?');
-        if (!ok) return;
-      }
-      let savedName = file.name;
-      try {
-        savedName = await uploadHtmlFile(meltdownEmit, jwt, file.name, html);
-      } catch (err) {
-        alert(`Failed to save file: ${errorMessage(err)}`);
-        return;
-      }
-      const newMeta = attachHtmlMeta(page, savedName);
-      try {
-        await savePageContent(meltdownEmit, jwt, page, { html, meta: newMeta });
-        clearPageDataCache();
-        page.html = html;
-        page.meta = newMeta;
-        renderSelected();
-        renderGallery();
-      } catch (err) {
-        alert(`Failed to add content: ${errorMessage(err)}`);
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  addBtn.addEventListener('click', async e => {
-    e.stopPropagation();
-    const existing = titleBar.querySelector('.content-upload-menu');
-    if (existing) existing.remove();
-
-    const menu = document.createElement('ul');
-    menu.className = 'content-upload-menu';
-
-    const uploadLi = document.createElement('li');
-    uploadLi.textContent = 'Upload HTML';
-    uploadLi.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.html,.htm,text/html';
-      input.addEventListener('change', () => {
-        const file = input.files?.[0];
-        if (file) void handleFile(file);
-      });
-      input.click();
+  actions.querySelector('button')!.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
+    if (!file) return;
+    void run(async () => {
+      if (!/\.html?$/i.test(file.name)) throw new Error('PAGE_CONTENT_FILE_TYPE: Choose an HTML file.');
+      if (!(await canReplace())) return;
+      const html = sanitizeHtml(await file.text());
+      const name = await uploadHtmlFile(emit, jwt, file.name, html);
+      if (!files.includes(name)) files.push(name);
+      await apply({ html, meta: attachHtmlMeta(page, name) });
     });
-    menu.appendChild(uploadLi);
-
-    const builders = await getBuilderApps();
-    builders.forEach(app => {
-      const li = document.createElement('li');
-      li.textContent = app.title || app.name;
-      li.addEventListener('click', () => {
-        const base = `/admin/app/${encodeURIComponent(app.name)}`;
-        let targetId: string | number | undefined = page.id;
-        if (app.name === 'designer') {
-          const did = sanitizeSlug(page.meta?.designId || '');
-          targetId = did || '';
-        }
-        window.location.href = targetId ? `${base}/${encodeURIComponent(String(targetId))}` : base;
-      });
-      menu.appendChild(li);
-    });
-
-    titleBar.appendChild(menu);
-
-    const close = () => {
-      menu.remove();
-      document.removeEventListener('click', close);
-    };
-    setTimeout(() => document.addEventListener('click', close), 0);
+  });
+  search.addEventListener('input', renderGallery);
+  el.addEventListener('page-content-saved', () => { if (root.isConnected) message(''); });
+  renderSelected();
+  void loadLibrary();
+  options.onController?.({
+    read: () => ({ loading, busy, libraryFailed, error: feedback.dataset.errorCode ? feedback.textContent : null,
+      selected: { designId: page.meta?.designId || null, htmlFileName: page.meta?.htmlFileName || null },
+      designs: designs.map(({ id, title }) => ({ id, title })), files }),
+    // The caller supplies the common revision/draft/confirmation guard.
+    attach: (kind, id) => attach(kind, id),
+    detach: () => apply({ html: '', meta: page.meta?.designId ? detachDesignMeta(page) : detachHtmlMeta(page) })
   });
 
-  el.innerHTML = '';
-  el.appendChild(wrapper);
-  renderSelected();
-  void renderGallery();
+  // Preserve installed builder discovery and the canonical Design Studio route.
+  function builderUrl(name: string): string {
+    const adminBase = `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`;
+    const designId = page.meta?.designId;
+    return name === 'designer'
+      ? `${adminBase}/studio/design${designId != null ? `/${encodeURIComponent(String(designId))}` : ''}`
+      : `${adminBase}/app/${encodeURIComponent(name)}/${encodeURIComponent(String(page.id))}`;
+  }
+  try {
+    const builders = await fetchBuilderApps(emit, jwt);
+    for (const builder of builders) {
+      const link = document.createElement('a');
+      link.className = 'button ghost sm';
+      link.dataset.builder = builder.name;
+      link.href = builderUrl(builder.name);
+      link.textContent = builder.name === 'designer' ? 'Open Design Studio' : `Open ${builder.title || builder.name}`;
+      actions.append(link);
+    }
+  } catch (error) {
+    console.warn('PAGE_CONTENT_BUILDERS_FAILED', error);
+    const warning = document.createElement('p');
+    warning.textContent = 'PAGE_CONTENT_BUILDERS_FAILED: Builder shortcuts are unavailable.';
+    warning.setAttribute('role', 'status');
+    actions.append(warning);
+  }
 }

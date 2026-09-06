@@ -4,3 +4,10 @@ export {
   attachAdminDashboardControls,
   renderAdminSettingsSurface
 } from './adminWidgetSurfaces.js';
+
+export { mountWidgetModule } from '../../widgets/rendering/widgetModuleMount.js';
+export {
+  renderWidgetInlineCode,
+  hasInlineWidgetCode,
+  instanceMetadataFromCode
+} from '../../widgets/rendering/widgetInlineCode.js';

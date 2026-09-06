@@ -57,12 +57,13 @@ export const pageService = {
     async getAll() {
         return this.getPagesByLane('public');
     },
-    async create({ title, slug, status = 'published', meta }) {
+    async create({ title, slug, status = 'published', parent_id, meta }) {
         return requestPageAction('create', {
             title,
             slug,
             lane: 'public',
             status,
+            ...(parent_id !== undefined ? { parent_id } : {}),
             ...(meta ? { meta } : {})
         });
     },

@@ -35,7 +35,9 @@ declare global {
 }
 
 const REGION_ID = 'bp-toast-region';
-const DEFAULT_DURATION = 4500;
+const DEFAULT_DURATION = 3000;
+const MAX_VISIBLE_TOASTS = 3;
+const REMOVE_EVENT = 'bp-toast:remove';
 
 const ICON_BY_TONE: Record<BpToastTone, string> = {
   neutral: 'bell',
@@ -59,9 +61,7 @@ function ensureRegion(): HTMLElement | null {
   const region = document.createElement('section');
   region.id = REGION_ID;
   region.className = 'bp-toast-region app-scope';
-  region.setAttribute('aria-label', 'Notifications');
-  region.setAttribute('aria-live', 'polite');
-  region.setAttribute('aria-relevant', 'additions');
+  region.setAttribute('aria-label', 'Status messages');
   document.body.appendChild(region);
   return region;
 }
@@ -92,6 +92,9 @@ export function showToast(options: BpToastOptions): BpToastHandle {
   icon.src = `/assets/icons/${ICON_BY_TONE[tone]}.svg`;
   icon.alt = '';
   icon.setAttribute('aria-hidden', 'true');
+  const symbol = document.createElement('span');
+  symbol.className = 'bp-toast__symbol';
+  symbol.appendChild(icon);
 
   const content = document.createElement('div');
   content.className = 'bp-toast__content';
@@ -104,21 +107,36 @@ export function showToast(options: BpToastOptions): BpToastHandle {
   const message = document.createElement('p');
   message.className = 'bp-toast__message';
   message.textContent = messageText(options.message);
+  message.title = message.textContent;
   content.appendChild(message);
 
   let settled = false;
   let timer: number | null = null;
-  const duration = Math.max(0, Number(options.duration ?? DEFAULT_DURATION));
+  let exitTimer: number | null = null;
+  let hovered = false;
+  let focused = false;
+  let startedAt = 0;
+  const requestedDuration = Number(options.duration ?? DEFAULT_DURATION);
+  const duration = Number.isFinite(requestedDuration) ? Math.max(0, requestedDuration) : DEFAULT_DURATION;
+  let remaining = duration;
+
+  const remove = () => {
+    settled = true;
+    if (timer !== null) window.clearTimeout(timer);
+    if (exitTimer !== null) window.clearTimeout(exitTimer);
+    toast.remove();
+    if (!region.childElementCount) region.remove();
+  };
+  // Different browser bundles share the existing DOM region. Disposing through
+  // its card also cancels that card's timers without introducing another store.
+  toast.addEventListener(REMOVE_EVENT, remove, { once: true });
 
   const dismiss = () => {
     if (settled) return;
     settled = true;
     if (timer !== null) window.clearTimeout(timer);
     toast.classList.add('is-leaving');
-    window.setTimeout(() => {
-      toast.remove();
-      if (!region.childElementCount) region.remove();
-    }, 160);
+    exitTimer = window.setTimeout(remove, 160);
   };
 
   const actions = document.createElement('div');
@@ -129,7 +147,9 @@ export function showToast(options: BpToastOptions): BpToastHandle {
     action.className = 'button text sm bp-toast__action';
     action.textContent = options.action.label;
     action.addEventListener('click', () => {
-      Promise.resolve(options.action?.onClick()).catch(error => {
+      if (settled) return;
+      action.disabled = true;
+      Promise.resolve().then(() => options.action?.onClick()).catch(error => {
         console.error('BP_TOAST_ACTION_FAILED: Toast action failed.', error);
       });
       dismiss();
@@ -151,31 +171,48 @@ export function showToast(options: BpToastOptions): BpToastHandle {
     actions.appendChild(close);
   }
 
-  toast.append(icon, content, actions);
-  region.appendChild(toast);
-  nextFrame(() => toast.classList.add('is-visible'));
+  toast.append(symbol, content, actions);
+  region.prepend(toast);
+  // Drop the oldest immediately, including any exit animation, so a burst
+  // never paints a fourth card. Persistent notifications retain their own hub.
+  while (region.childElementCount > MAX_VISIBLE_TOASTS) {
+    const oldest = region.lastElementChild!;
+    oldest.dispatchEvent(new Event(REMOVE_EVENT));
+    // A card left by an older bundle may not have the disposal listener yet.
+    oldest.remove();
+  }
+  nextFrame(() => { if (!settled) toast.classList.add('is-visible'); });
 
   // Pausing while the toast is being read keeps short-lived feedback usable
   // for keyboard and pointer users without making all messages permanent.
   const scheduleDismiss = () => {
-    if (!duration || settled) return;
-    timer = window.setTimeout(dismiss, duration);
+    if (!duration || settled || hovered || focused || timer !== null) return;
+    startedAt = Date.now();
+    timer = window.setTimeout(dismiss, remaining);
   };
   const pauseDismiss = () => {
-    if (timer !== null) window.clearTimeout(timer);
+    if (timer !== null) {
+      remaining = Math.max(0, remaining - (Date.now() - startedAt));
+      window.clearTimeout(timer);
+    }
     timer = null;
   };
-  toast.addEventListener('mouseenter', pauseDismiss);
-  toast.addEventListener('mouseleave', scheduleDismiss);
-  toast.addEventListener('focusin', pauseDismiss);
-  toast.addEventListener('focusout', scheduleDismiss);
+  toast.addEventListener('mouseenter', () => { hovered = true; pauseDismiss(); });
+  toast.addEventListener('mouseleave', () => { hovered = false; scheduleDismiss(); });
+  toast.addEventListener('focusin', () => { focused = true; pauseDismiss(); });
+  toast.addEventListener('focusout', event => {
+    if (event.relatedTarget instanceof Node && toast.contains(event.relatedTarget)) return;
+    focused = false;
+    scheduleDismiss();
+  });
   scheduleDismiss();
 
   return { element: toast, dismiss };
 }
 
 function clearToasts(): void {
-  document.getElementById(REGION_ID)?.remove();
+  document.getElementById(REGION_ID)?.querySelectorAll('.bp-toast')
+    .forEach(toast => toast.dispatchEvent(new Event(REMOVE_EVENT)));
 }
 
 export const bpToast: BpToastApi = {

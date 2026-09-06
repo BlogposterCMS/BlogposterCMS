@@ -1,5 +1,40 @@
 # Security Notes
 
+## Shared widget rendering
+
+Studio now uses the same allowed widget module loader and HTML sanitizer as
+the catalog and public runtime. The shared module lifecycle does not choose
+credentials or grant permissions: runtime context still excludes `ADMIN_TOKEN`
+from public widgets. Inline scripts retain the existing nonce-aware executor;
+the runtime retains its Shadow DOM isolation. No new trust flag or API is added.
+
+## Widget API metadata
+
+`metadata.apiActions` describes dependencies; it never grants runtime permissions.
+Renderers no longer issue the unimplemented `widgets.registerUsage` startup call,
+and the facade no longer advertises that action. Admin reads/writes and public
+reads still use their existing Runtime Manager principal, scope, permission and
+published-data checks. No registration ACK, permission grant or alternate API
+has been introduced. Deploy the updated browser bundles with the facade change.
+
+## Initial public presentation
+
+The public page route resolves pages, envelopes and linked layouts through
+`cmsPublicRuntimeRequest` using a validated public principal. Publication/lane
+filtering remains in Runtime Manager; admin cookies cannot select drafts for
+the initial response. Pages Manager's `publicPresentation.js` renders only that
+public result. It uses the installed HTML sanitizer, removes active HTML/event
+attributes, restricts URL schemes and applies the existing shared CSS policy.
+Authored scripts remain on the client nonce-controlled execution path.
+
+All bootstrap values escape HTML-significant characters before entering the
+nonce-bearing script. The initial DOM has reserved ownership markers for client
+adoption; stale pathname/language handoffs discard their owned nodes before CSR.
+Responses carry `Cache-Control: no-store` because they contain a short-lived
+public token and fresh nonce. No new endpoint, admin token or cache authority is
+introduced. Signed Designer Live Preview bypasses initial public presentation
+and continues to require the existing verified origin token and parent bridge.
+
 ## Dependency security baseline
 
 The supported CI/container runtime is Node.js 24. Keep the full-tree
@@ -139,7 +174,6 @@ must contain only the intended CMS container, not interactive untrusted users.
 This grants an authorized CMS administrator the ability to restart its service
 onto an approved signed stable release; it is not a general host administration API.
 
-
 Core releases are complete OCI images, not file patches. The release workflow
 binds the package version, source commit and immutable image digest in
 `blogposter-update.json`, signs that manifest externally and publishes GitHub
@@ -187,3 +221,19 @@ When writing your own modules keep these best practices in mind:
 4. Document the permissions your module requires in `moduleInfo.json` so administrators understand the impact.
 
 Following these rules helps protect the entire system as it grows.
+
+The media Explorer's directory metadata uses the existing permission-checked
+folder listing. It does not follow symlinks for size/date information. Preview
+URLs are limited to files already served below `library/public`; browsing or
+selecting a file does not create a share or change its visibility. File mutations
+acknowledge completed operations with JSON data; authorization checks are intact.
+
+CMS workspace agents use the existing AgentManager contract. The admin facade's
+`agentSurface.publish/poll/ack` adapters accept only `plainspace/cms.*` surfaces;
+AgentManager enforces its existing surface-write permissions. There is no public
+runtime mapping, command-enqueue shortcut, or app-context read grant for these
+host adapters. Tokens/CSRF and domain write permissions remain enforced.
+Only explicit non-secret form fields appear in workspace snapshots and patches.
+Draft revisions and confirmation flags prevent unintended concurrent edits;
+they are workflow checks, not authorization credentials. See
+[agent CMS workflows](agent-cms-workflows.md) for the shared draft protocol.

@@ -12,6 +12,15 @@ import {
 } from '../ui/shell/dashboard/workspacesData';
 
 describe('workspacesData', () => {
+  it('omits retired pages from workspace navigation without discarding their records', async () => {
+    const emit = jest.fn().mockResolvedValue([
+      { slug: 'content/layouts', status: 'deleted' },
+      { slug: 'content/designer-layouts', status: 'published' }
+    ]);
+    await expect(fetchAdminPagesByLane(emit, 'admin-token')).resolves.toEqual([
+      { slug: 'content/designer-layouts', status: 'published' }
+    ]);
+  });
   it('normalizes admin page result containers', () => {
     expect(ADMIN_LANE).toBe('admin');
     expect(toAdminPages([{ slug: 'home' }])).toEqual([{ slug: 'home' }]);

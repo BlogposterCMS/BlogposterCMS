@@ -4,6 +4,7 @@ import {
 } from './runtimeDesignLayouts.js';
 import {
   getRuntimeDesignDocument,
+  getRuntimeDesignContentMount,
   renderRuntimeDesignDocument
 } from './runtimeDesignDocument.js';
 import { renderAttachedRuntimeContent } from './runtimeAttachedContent.js';
@@ -51,9 +52,7 @@ function mergedPresentationPage(page: LooseRecord, config: LooseRecord = {}): Lo
 }
 
 function inheritedContentMount(contentEl: HTMLElement): HTMLElement {
-  return contentEl.querySelector<HTMLElement>('.runtime-design-document [data-workarea="true"]')
-    || contentEl.querySelector<HTMLElement>('.runtime-design-document .runtime-layout-container:not([data-split="true"])')
-    || contentEl;
+  return getRuntimeDesignContentMount(contentEl);
 }
 
 function appendInheritedPageHtml(
@@ -61,8 +60,12 @@ function appendInheritedPageHtml(
   page: LooseRecord,
   presentation: RuntimePresentationSource
 ): void {
-  if (!presentation.inherited || !page.html) return;
-  appendRuntimeHtmlContent(inheritedContentMount(contentEl), page.html);
+  if (!page.html) return;
+  const mount = inheritedContentMount(contentEl);
+  // A reusable design can also be assigned directly to several content pages.
+  // Legacy complete-page designs retain their existing replacement behavior.
+  if (!presentation.inherited && mount.dataset.dynamicHost !== 'true') return;
+  appendRuntimeHtmlContent(mount, page.html);
 }
 
 export type RuntimePublicPageContentOptions = {
@@ -108,13 +111,14 @@ export async function renderPublicRuntimePageContent({
       const renderedDocument = await renderRuntimeDesignDocument(contentEl, designDocument, allWidgets, lane, {
         emit,
         widgetEmit,
-        globalLayout
+        globalLayout,
+        designPath: [String(presentation.designId)]
       });
       if (!renderedDocument) {
         await renderStaticRuntimeGrid(contentEl, combined, allWidgets, lane, { widgetEmit });
       }
       appendInheritedPageHtml(contentEl, page, presentation);
-      await renderAttachedRuntimeContent({ page, lane, allWidgets, container: contentEl, emit, widgetEmit });
+      await renderAttachedRuntimeContent({ page, lane, allWidgets, container: inheritedContentMount(contentEl), emit, widgetEmit });
       return;
     } catch (err) {
       console.warn('[Renderer] failed to load design', err);

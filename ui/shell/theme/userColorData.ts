@@ -1,4 +1,5 @@
 import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
+export const DEFAULT_UI_COLOR = '#171717';
 
 export interface TokenValidationResult {
   userId?: string | number;

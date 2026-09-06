@@ -1,10 +1,9 @@
+import { PUBLIC_CANVAS_STYLE_ID, PUBLIC_CANVAS_CSS, publicCanvasStyle, publicItemStyle, publicPlacement } from '/ui/shared/layout/publicCanvasPresentation.js';
 
 
 // The loader is fetched as browser ESM rather than bundled server code.
 import { emitRuntimePublic } from '/ui/shared/api-client/runtimeFacade.js';
 
-import { init as initCanvasGrid } from '/ui/runtime/main/canvasGrid.js';
-import { applyWidgetOptions } from '/ui/runtime/main/widgetOptions.js';
 import { executeJs } from '/ui/runtime/main/script-utils.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
 
@@ -71,9 +70,9 @@ type WidgetDescriptor = {
   layoutRef?: unknown;
 };
 
-const PUBLIC_CANVAS_STYLE_ID = 'bp-public-canvas-runtime-style';
-const PUBLIC_CANVAS_MIN_HEIGHT_PERCENT = 100;
-const PUBLIC_CANVAS_MAX_HEIGHT_PERCENT = 400;
+
+
+
 const PUBLIC_WIDGETS_READY_EVENT = 'bp:public-widgets-ready';
 
 function toNumber(value: unknown, fallback: number): number {
@@ -84,111 +83,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function toBoundedPercent(value: unknown, fallback: number, max = 100): number {
-  const num = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(num)) return fallback;
-  return Math.min(max, Math.max(0, num));
-}
-
-function publicCanvasHeightPercent(layout: PublicWidgetLayout): number {
-  const maxPercent = (layout.items || []).reduce((max, item) => {
-    const y = toBoundedPercent(item.yPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
-    const h = toBoundedPercent(item.hPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
-    return Math.max(max, y + h);
-  }, PUBLIC_CANVAS_MIN_HEIGHT_PERCENT);
-  return Math.min(
-    PUBLIC_CANVAS_MAX_HEIGHT_PERCENT,
-    Math.max(PUBLIC_CANVAS_MIN_HEIGHT_PERCENT, Math.ceil(maxPercent))
-  );
-}
-
 function ensurePublicCanvasStyles(): void {
   if (document.getElementById(PUBLIC_CANVAS_STYLE_ID)) return;
   const style = document.createElement('style');
   style.id = PUBLIC_CANVAS_STYLE_ID;
-  style.textContent = `
-.bp-public-canvas {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  overflow: visible;
-  contain: none;
-  background: var(--studio-canvas, #fff);
-  color: var(--studio-text, #1f2933);
-}
-.bp-public-canvas,
-.bp-public-canvas * {
-  box-sizing: border-box;
-}
-.bp-public-canvas > .canvas-item {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
-  user-select: auto;
-  -webkit-user-select: auto;
-  backdrop-filter: none;
-  transition: none;
-}
-.bp-public-canvas > .canvas-item::before,
-.bp-public-canvas .resize-handle,
-.bp-public-canvas .bounding-box {
-  display: none !important;
-}
-.bp-public-canvas .widget {
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-}
-@media (max-width: 760px) {
-  .bp-public-canvas {
-    display: grid;
-    gap: 16px;
-    height: auto !important;
-    min-height: auto !important;
-    padding: 24px !important;
-  }
-  .bp-public-canvas > .canvas-item {
-    position: relative !important;
-    left: auto !important;
-    top: auto !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
-    transform: none !important;
-  }
-  .bp-public-canvas .widget {
-    height: auto;
-    min-height: 0;
-  }
-}
-  `.trim();
+  style.textContent = PUBLIC_CANVAS_CSS;
   document.head.appendChild(style);
 }
-
 function preparePublicCanvas(gridEl: HTMLElement, layout: PublicWidgetLayout): void {
   ensurePublicCanvasStyles();
-  const height = `${publicCanvasHeightPercent(layout)}vh`;
   gridEl.classList.add('bp-public-canvas');
-  gridEl.style.width = '100%';
-  gridEl.style.minHeight = height;
-  gridEl.style.height = height;
-  gridEl.style.position = 'relative';
-  gridEl.style.overflow = 'visible';
-  gridEl.style.setProperty('--studio-canvas', '#ffffff');
-  gridEl.style.setProperty('--studio-surface-solid', '#ffffff');
-  gridEl.style.setProperty('--studio-surface-muted', '#f6f7f8');
-  gridEl.style.setProperty('--studio-text', '#1f2933');
-  gridEl.style.setProperty('--studio-text-muted', 'rgba(31,41,51,.62)');
-  gridEl.style.setProperty('--studio-border', 'rgba(17,24,39,.08)');
-  gridEl.style.setProperty('--studio-border-strong', 'rgba(17,24,39,.14)');
-  gridEl.style.setProperty('--studio-radius-panel', '18px');
-  gridEl.style.setProperty('--studio-radius-control', '999px');
-  gridEl.style.setProperty('--studio-shadow-soft', '0 1px 2px rgba(0,0,0,.04), 0 14px 36px rgba(17,24,39,.08)');
+  Object.entries(publicCanvasStyle(layout)).forEach(([key, value]) => gridEl.style.setProperty(key, value));
 }
-
 function markPublicWidgetsReady(layout: PublicWidgetLayout, renderedCount: number): void {
   document.documentElement.dataset.bpPublicWidgetsReady = 'true';
   window.dispatchEvent(new CustomEvent(PUBLIC_WIDGETS_READY_EVENT, {
@@ -200,25 +106,13 @@ function markPublicWidgetsReady(layout: PublicWidgetLayout, renderedCount: numbe
 }
 
 function applyPublicPercentPosition(itemEl: HTMLElement, item: PublicWidgetLayoutItem): void {
-  const x = toBoundedPercent(item.xPercent, 0);
-  const y = toBoundedPercent(item.yPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
-  const w = toBoundedPercent(item.wPercent, 100);
-  const h = toBoundedPercent(item.hPercent, 0, PUBLIC_CANVAS_MAX_HEIGHT_PERCENT);
+  const { x, y, w, h } = publicPlacement(item);
   itemEl.dataset.xPercent = String(x);
   itemEl.dataset.yPercent = String(y);
   itemEl.dataset.wPercent = String(w);
   itemEl.dataset.hPercent = String(h);
-  itemEl.style.position = 'absolute';
-  itemEl.style.left = `${x}%`;
-  itemEl.style.top = `${y}%`;
-  itemEl.style.width = `${Math.max(1, w)}%`;
-  itemEl.style.height = h > 0 ? `${h}%` : 'auto';
-  if (Number.isFinite(Number(item.zIndex))) itemEl.style.zIndex = String(Number(item.zIndex));
-  if (Number.isFinite(Number(item.opacity))) itemEl.style.opacity = String(Number(item.opacity));
-  const rotation = Number(item.rotationDeg);
-  itemEl.style.transform = Number.isFinite(rotation) && rotation !== 0 ? `rotate(${rotation}deg)` : '';
+  Object.entries(publicItemStyle(item)).forEach(([key, value]) => itemEl.style.setProperty(key, value));
 }
-
 function normalizePublicWidgetLayout(value: unknown): PublicWidgetLayout | null {
   if (!isRecord(value)) return null;
   const items = Array.isArray(value.items) ? value.items : [];
@@ -333,11 +227,27 @@ async function loadWidgets(
     return;
   }
 
-  const registry = typeof ctx.meltdownEmit === 'function'
-    ? await emitPublicRuntime<PublicWidgetDefinition[]>(ctx, 'widgets', 'list').catch(() => [])
+  // HTML-only pages return above without downloading the interactive grid's
+  // dependency graph. Import concrete shared helpers instead of the runtime
+  // barrel, whose re-exports also pull admin surfaces into public page startup.
+  const runtimeReady = Promise.all([
+    import(/* webpackIgnore: true */ '/ui/shared/grid/canvasGrid.js'),
+    import(/* webpackIgnore: true */ '/ui/widgets/options/widgetOptions.js')
+  ]).catch(error => {
+    throw new Error('WIDGET_PUBLIC_RUNTIME_IMPORT_FAILED: Unable to load canvas dependencies.', { cause: error });
+  });
+  const registryReady = typeof ctx.meltdownEmit === 'function'
+    ? emitPublicRuntime<PublicWidgetDefinition[]>(ctx, 'widgets', 'list').catch(() => [])
     : [];
+  const [[{ init: initCanvasGrid }, { applyWidgetOptions }], registry] = await Promise.all([
+    runtimeReady,
+    registryReady
+  ]);
 
-  const gridEl = document.createElement('div');
+  // Adopt only the server shell for this document. Widget data and module
+  // execution remain on the existing client facade/rendering path.
+  const initialGrid = root.querySelector<HTMLElement>('#bp-grid[data-bp-initial-layout="true"]');
+  const gridEl = initialGrid || document.createElement('div');
   gridEl.id = 'bp-grid';
   preparePublicCanvas(gridEl, layout);
   root.appendChild(gridEl);
@@ -361,10 +271,12 @@ async function loadWidgets(
   }
 
   let renderedCount = 0;
-  for (const item of layout.items || []) {
+  for (const [itemIndex, item] of (layout.items || []).entries()) {
     const def = registry.find(widget => widget.widgetId === item.widgetId);
     if (!def) continue;
-    const itemEl = document.createElement('div');
+    const itemEl = initialGrid?.querySelector<HTMLElement>(`[data-bp-initial-item="${itemIndex}"]`)
+      || document.createElement('div');
+    delete itemEl.dataset.bpInitialItem;
     itemEl.className = 'canvas-item';
     itemEl.dataset.instanceId = createInstanceId(item);
 
@@ -411,6 +323,9 @@ async function loadWidgets(
     applyPublicPercentPosition(itemEl, item);
     renderedCount += 1;
   }
+  // Missing widget definitions must not leave an unhydrated server placeholder.
+  gridEl.querySelectorAll('[data-bp-initial-item]').forEach(element => element.remove());
+  delete gridEl.dataset.bpInitialLayout;
   preparePublicCanvas(gridEl, layout);
   markPublicWidgetsReady(layout, renderedCount);
 }

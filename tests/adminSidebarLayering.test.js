@@ -8,11 +8,12 @@ function readProjectFile(relativePath) {
 }
 
 function readCssRule(source, selector) {
-  const start = source.indexOf(selector);
-  if (start < 0) return '';
-  const open = source.indexOf('{', start);
-  const close = source.indexOf('}', open);
-  return source.slice(open + 1, close);
+  // A selector can have several rules; inspect its full cascade, not a substring match.
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
+  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(match => match[1].trim().split(',').some(value => value.trim() === selector))
+    .map(match => match[2])
+    .join('\n');
 }
 
 describe('admin sidebar layering', () => {

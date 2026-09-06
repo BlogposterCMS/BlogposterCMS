@@ -191,7 +191,7 @@ export function attachContainerBar(el, ctx) {
   });
   const delBtn = makeBtn('bar-delete', 'trash', STRINGS.containerDelete, () => actions.deleteContainer?.(el));
 
-  if (el.dataset.workarea === 'true') hostBtn.classList.add('active');
+  if (el.dataset.dynamicHost === 'true') hostBtn.classList.add('active');
   if (el.dataset.designRef) designBtn.classList.add('active');
   if (styleSourceBtn) styleSourceBtn.classList.add('active');
   if (el.classList.contains('layout-root') || el.classList.contains('layout-section')) {

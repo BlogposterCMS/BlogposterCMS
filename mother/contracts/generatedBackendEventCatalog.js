@@ -240,7 +240,6 @@ const BACKEND_EVENTS = Object.freeze({
   REGISTER_MODULE_SETTINGS_SCHEMA: "registerModuleSettingsSchema",
   REGISTER_NAVIGATION_LOCATION: "registerNavigationLocation",
   REGISTER_SETTINGS_SECTION: "registerSettingsSection",
-  REGISTER_WIDGET_USAGE: "registerWidgetUsage",
   REINDEX_CONTENT_ENTRIES: "reindexContentEntries",
   REJECT_CONTENT_REVIEW: "rejectContentReview",
   RELEASE_CONTENT_LOCK: "releaseContentLock",

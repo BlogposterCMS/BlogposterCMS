@@ -1,12 +1,18 @@
 import { capturePreview as defaultCapturePreview } from './capturePreview.js';
 import { designerState } from '../managers/designerState.js';
 import { serializeLayout } from './layoutSerialize.js';
-import { adminFacadePayload, emitAdminFacade } from '../runtime/runtimeFacade.js';
+import { emitAdminFacade } from '../runtime/runtimeFacade.js';
 
 export function createSaveManager(state, ctx) {
+  let saveQueue = Promise.resolve();
+  let changeVersion = 0;
+  let queuedSaves = 0;
+  let lastSaveError = null;
   function scheduleAutosave() {
-    if (!state.autosaveEnabled || !state.pageId) return;
+    changeVersion += 1;
     state.pendingSave = true;
+    // Untitled/manual-only designs still have a draft that collaborators must see.
+    if (!state.autosaveEnabled || !state.designId) return;
     clearTimeout(state.saveTimer);
     state.saveTimer = setTimeout(() => {
       saveCurrentLayout({ autosave: true });
@@ -17,7 +23,7 @@ export function createSaveManager(state, ctx) {
 
   function startAutosave() {
     if (state.autosaveInterval) clearInterval(state.autosaveInterval);
-    if (state.autosaveEnabled && state.pageId) {
+    if (state.autosaveEnabled && state.designId) {
       state.autosaveInterval = setInterval(() => {
         if (state.pendingSave) saveCurrentLayout({ autosave: true });
       }, 30000);
@@ -25,29 +31,37 @@ export function createSaveManager(state, ctx) {
   }
 
   async function saveCurrentLayout({ autosave = false } = {}) {
-    const { updateAllWidgetContents, getCurrentLayout, pushState } = ctx;
-    if (!state.pageId) return;
-    updateAllWidgetContents();
-    const layout = getCurrentLayout();
-    const layoutStr = JSON.stringify(layout);
-    if (autosave && layoutStr === state.lastSavedLayoutStr) { state.pendingSave = false; return; }
-    if (!autosave) pushState(layout);
+    if (!state.designId || typeof ctx.getDesignSaveOptions !== 'function') return;
+    const savingVersion = changeVersion;
     try {
-      await emitAdminFacade(window.meltdownEmit, 'plainSpace', 'saveLayoutForViewport', {
-        pageId: state.pageId,
-        lane: 'public',
-        viewport: 'desktop',
-        layout,
-        layer: typeof ctx.getLayer === 'function' ? ctx.getLayer() : 0
-      });
-      state.lastSavedLayoutStr = layoutStr;
-      state.pendingSave = false;
+      // Autosave shares the full LayoutTree/placement contract with manual Save.
+      await saveDesign(ctx.getDesignSaveOptions());
+      if (savingVersion === changeVersion) state.pendingSave = false;
     } catch (err) {
-      console.error('[Designer] saveLayoutForViewport error', err);
+      console.error('[Designer] DESIGNER_AUTOSAVE_FAILED', err);
     }
   }
 
-  async function saveDesign({
+  function saveDesign(options) {
+    // Serialize versioned writes so manual Save cannot race an autosave.
+    queuedSaves += 1;
+    const operation = saveQueue.then(async () => {
+      const savingVersion = changeVersion;
+      try {
+        const result = await persistDesign(options);
+        if (savingVersion === changeVersion) state.pendingSave = false;
+        lastSaveError = null;
+        return result;
+      } catch (error) {
+        lastSaveError = error instanceof Error ? error.message : String(error);
+        throw error;
+      } finally { queuedSaves -= 1; }
+    });
+    saveQueue = operation.catch(() => {});
+    return operation;
+  }
+
+  async function persistDesign({
     name,
     description = '',
     gridEl,
@@ -62,7 +76,7 @@ export function createSaveManager(state, ctx) {
     isLayout = false,
     isGlobal = false
   }) {
-    if (!name) { alert('Enter a name'); return; }
+    if (!name?.trim()) throw new Error('DESIGNER_SAVE_NAME_REQUIRED: Enter a design name before saving.');
     updateAllWidgetContents();
     const layout = getCurrentLayoutForLayer(gridEl, getActiveLayer(), ensureCodeMap());
     const rootLayout = layoutRoot?.classList?.contains('layout-container')
@@ -141,17 +155,6 @@ export function createSaveManager(state, ctx) {
         designerState.bgMediaId = bg.mediaId || '';
         designerState.bgMediaUrl = bg.mediaUrl || '';
       }
-      const targetIds = pageId ? [pageId] : [];
-      const events = targetIds.map(id => ({
-        eventName: 'cmsAdminApiRequest',
-        payload: adminFacadePayload('plainSpace', 'saveLayoutForViewport', {
-          pageId: id,
-          lane: 'public',
-          viewport: 'desktop',
-          layout
-        })
-      }));
-      if (events.length) await window.meltdownEmitBatch(events);
       return {
         ...(res && typeof res === 'object' ? res : {}),
         thumbnailUrl
@@ -159,7 +162,7 @@ export function createSaveManager(state, ctx) {
     } catch (err) {
       if (err.name === 'AbortError') {
         console.error('[Designer] saveDesign timed out', err);
-        alert('Saving design timed out. Please try again.');
+        // Propagate to the UI/agent caller instead of blocking automation with alert().
       } else {
         console.error('[Designer] saveDesign error', err);
       }
@@ -167,5 +170,11 @@ export function createSaveManager(state, ctx) {
     }
   }
 
-  return { scheduleAutosave, startAutosave, saveCurrentLayout, saveDesign };
+  const getSaveState = () => ({
+    dirty: Boolean(state.pendingSave), busy: queuedSaves > 0,
+    error: lastSaveError, designId: state.designId || null,
+    designVersion: state.designVersion || null, changeVersion,
+    autosaveEnabled: Boolean(state.autosaveEnabled && state.designId)
+  });
+  return { scheduleAutosave, startAutosave, saveCurrentLayout, saveDesign, getSaveState };
 }

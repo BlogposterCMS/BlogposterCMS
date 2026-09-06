@@ -6,7 +6,7 @@ const expectedResources = Object.freeze({
   content: ['comments', 'content', 'contentTypes', 'exporters', 'importers', 'media', 'metadata', 'preview', 'search', 'workflow'],
   presentation: ['colors', 'designer', 'fontPackages', 'fonts', 'navigation', 'pages', 'plainSpace', 'redirects', 'seo', 'sitePresets', 'translations', 'widgets'],
   access: ['auth', 'permissions', 'roles', 'users'],
-  platform: ['apps', 'coreUpdates', 'modules', 'notifications', 'serverLocations', 'settings', 'shares', 'unifiedSettings']
+  platform: ['agentSurface', 'apps', 'coreUpdates', 'modules', 'notifications', 'serverLocations', 'settings', 'shares', 'unifiedSettings']
 });
 
 test('runtime facade resources have one stable domain owner', () => {
@@ -54,6 +54,8 @@ test('runtime facade registry preserves public definitions and reverse admin loo
 });
 
 test('runtime facade domain lookups remain fail closed', () => {
+  assert.strictEqual(registry.resolveAdminDomain('widgets', 'registerUsage').definition, null);
+  assert.strictEqual(registry.resolvePublicDomain('widgets', 'registerUsage').definition, null);
   assert.strictEqual(registry.adminApiDefinition('unknown/resource', 'list').definition, null);
   assert.strictEqual(registry.publicRuntimeDefinition('pages', 'unknown/action').definition, null);
   assert.strictEqual(registry.resolveAdminDomain('unknown', 'list').domain, null);

@@ -1,4 +1,5 @@
 import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
+export const DEFAULT_UI_COLOR = '#171717';
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('SHELL_USER_COLOR_EMITTER_UNAVAILABLE: meltdownEmit unavailable');

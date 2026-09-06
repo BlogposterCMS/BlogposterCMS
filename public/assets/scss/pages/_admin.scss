@@ -1,8 +1,17 @@
+// Admin chrome uses the same canvas as its widgets, including the viewport edge.
+body:has(> .admin-panel) {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--studio-canvas-subtle);
+  color: var(--studio-text);
+}
+
 .main-content {
   display: flex;
   flex-direction: row;
   min-height: 100vh;
-  background: var(--studio-canvas);
+  // Keep the shared canvas visible behind the floating sidebar buttons.
+  background: transparent;
 }
 
 .main-content > #sidebar {
@@ -42,6 +51,51 @@
 .main-content:has(#adminGrid > .dashboard-widget[data-dashboard-slot='page']),
 .main-content:has(#adminGrid > .dashboard-drop-placeholder[data-dashboard-slot='page']) {
   min-height: 0;
+}
+
+// Fixed CMS tools fill the space left by the real header heights. Dashboard
+// slot estimates and the sidebar's full-viewport height must not add a second
+// page of space below them; the bottom navigation reserves its height once.
+.admin-panel:has(#content[data-dashboard-layout='fixed']) {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+
+  > #top-header,
+  > #main-header { flex: 0 0 auto; }
+
+  > .main-content {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  #sidebar { min-height: 0; }
+  .sidebar {
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  #content {
+    min-height: 0;
+    background: transparent;
+  }
+
+  #adminGrid {
+    flex: 1 1 0;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    background: transparent;
+  }
+
+  #adminGrid > .dashboard-widget[data-dashboard-slot='page'] {
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+body.has-content-footer .admin-panel #content[data-dashboard-layout='fixed'] {
+  padding-bottom: var(--studio-content-footer-height, 60px);
 }
 
 #adminGrid::after {

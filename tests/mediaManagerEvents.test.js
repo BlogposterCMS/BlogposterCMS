@@ -299,3 +299,55 @@ test('media manager initializer enforces core module loading', async () => {
   assert.strictEqual(mediaManager.MODULE_NAME, 'mediaManager');
   assert.strictEqual(mediaManager.MODULE_TYPE, 'core');
 });
+
+test('local folder mutations return JSON acknowledgments accepted by the admin facade', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const os = require('os');
+  const { assertSchema } = require('../mother/contracts/eventContract');
+  const { BACKEND_EVENT_CONTRACTS } = require('../mother/contracts/backendEventContracts');
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-media-event-'));
+  const cwd = jest.spyOn(process, 'cwd').mockReturnValue(tempRoot);
+  const emitter = new EventEmitter();
+  emitter.on('createDatabase', (_payload, cb) => cb(null, { ok: true }));
+  emitter.on('dbUpdate', (_payload, cb) => cb(null, { ok: true }));
+  const payload = { jwt: 'test', moduleName: 'mediaManager', moduleType: 'core',
+    decodedJWT: { permissions: { media: { manage: true } } }, currentPath: '' };
+  try {
+    await mediaManager.initialize({ motherEmitter: emitter, isCore: true, jwt: 'test' });
+    fs.writeFileSync(path.join(tempRoot, 'library', 'sample.txt'), 'hello');
+    const listing = await emitAsync(emitter, 'listLocalFolder', { ...payload, subPath: '' });
+    assert.ifError(listing.err);
+    expect(listing.result.files).toContain('sample.txt');
+    expect(listing.result.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'sample.txt', size: 5, modifiedAt: expect.any(String) }),
+      expect.objectContaining({ name: 'public', size: null })
+    ]));
+    const operations = [
+      ['createLocalFolder', { newFolderName: 'created' }],
+      ['renameLocalItem', { oldName: 'created', newName: 'renamed' }],
+      ['deleteLocalItem', { itemName: 'renamed' }]
+    ];
+    for (const [eventName, params] of operations) {
+      const { err, result } = await emitAsync(emitter, eventName, { ...payload, ...params });
+      assert.ifError(err);
+      expect(result).toEqual({ ok: true });
+      expect(() => assertSchema(BACKEND_EVENT_CONTRACTS.CMS_ADMIN_API_REQUEST, 'result', {
+        resource: 'media', action: eventName, eventName, data: result
+      })).not.toThrow();
+    }
+    expect(fs.existsSync(path.join(tempRoot, 'library', 'created'))).toBe(false);
+    expect(fs.existsSync(path.join(tempRoot, 'library', 'renamed'))).toBe(false);
+    const denied = await emitAsync(emitter, 'createLocalFolder', {
+      ...payload, decodedJWT: { permissions: {} }, newFolderName: 'denied'
+    });
+    expect(denied.err).toBeTruthy();
+    expect(fs.existsSync(path.join(tempRoot, 'library', 'denied'))).toBe(false);
+  } finally {
+    cwd.mockRestore();
+    // Remove only the directory this test allocated below the OS temp root.
+    assert.strictEqual(path.dirname(path.resolve(tempRoot)), path.resolve(os.tmpdir()));
+    assert(path.basename(tempRoot).startsWith('cms-media-event-'));
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});

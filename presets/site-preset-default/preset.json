@@ -14,7 +14,7 @@
     "id": "color-scheme-default",
     "name": "Default",
     "colors": [
-      { "id": "default-1", "name": "Primary", "value": "#00C4CC" },
+      { "id": "default-1", "name": "Primary", "value": "#171717" },
       { "id": "default-2", "name": "Text", "value": "#111827" },
       { "id": "default-3", "name": "Background", "value": "#FFFFFF" },
       { "id": "default-4", "name": "Muted", "value": "#6B7280" },

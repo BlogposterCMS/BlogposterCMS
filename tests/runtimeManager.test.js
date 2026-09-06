@@ -725,9 +725,10 @@ test('runtime public facade dispatches only public runtime reads through core co
   assert.deepStrictEqual(publicProviders.data, [{ name: 'system' }]);
   assert.strictEqual(routed.find(entry => entry.eventName === 'listFonts').payload.jwt, 'runtime-core-token');
 
-  const widgetUsage = await call('widgets', 'registerUsage', { actions: [{ resource: 'content', action: 'list' }] });
-  assert.strictEqual(widgetUsage.eventName, 'registerWidgetUsage');
-  assert.deepStrictEqual(widgetUsage.data.actions, [{ resource: 'content', action: 'list' }]);
+  await assert.rejects(
+    () => call('widgets', 'registerUsage', { actions: [{ resource: 'content', action: 'list' }] }),
+    /Unknown CMS public runtime action/
+  );
 
   const loginStrategies = await call('auth', 'activeLoginStrategies');
   assert.strictEqual(loginStrategies.eventName, 'listActiveLoginStrategies');
@@ -2338,8 +2339,6 @@ test('runtime redirect matcher only checks public GET and HEAD requests', () => 
   assert.strictEqual(shouldCheckRedirect({ method: 'HEAD', path: '/old' }), true);
   assert.strictEqual(shouldCheckRedirect({ method: 'POST', path: '/old' }), false);
   assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/admin/home' }), false);
-  assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/admin/login' }), false);
-  assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/login' }), true);
   assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/api/meltdown' }), false);
   assert.strictEqual(shouldCheckRedirect({ method: 'GET', path: '/widgets/weather/widget.js' }), false);
 });

@@ -19,7 +19,7 @@ const COLOR_ID_PATTERN = /^default-[1-9][0-9]{0,2}$/;
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 const DEFAULT_COLORS = Object.freeze([
-  { id: 'default-1', name: 'Primary', value: '#00C4CC' },
+  { id: 'default-1', name: 'Primary', value: '#171717' },
   { id: 'default-2', name: 'Text', value: '#111827' },
   { id: 'default-3', name: 'Background', value: '#FFFFFF' },
   { id: 'default-4', name: 'Muted', value: '#6B7280' },

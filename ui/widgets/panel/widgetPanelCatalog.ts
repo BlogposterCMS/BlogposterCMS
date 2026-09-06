@@ -15,7 +15,7 @@ export function getAvailableWidgetDefinitions(input: unknown = window.availableW
 }
 
 export function groupWidgetsByCategory(widgets: WidgetDefinition[]): Record<string, WidgetDefinition[]> {
-  const categories: Record<string, WidgetDefinition[]> = {};
+  const categories: Record<string, WidgetDefinition[]> = Object.create(null);
   widgets.forEach(def => {
     const cat = def.metadata?.category || 'Other';
     (categories[cat] ||= []).push(def);
@@ -28,6 +28,14 @@ function createWidgetCard(def: WidgetDefinition): HTMLElement {
   const card = document.createElement('div');
   card.className = 'widget-card';
   card.draggable = true;
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', `Add ${label} widget`);
+  card.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    card.click();
+  });
 
   if (def.metadata?.icon) {
     const img = document.createElement('img');
@@ -94,6 +102,13 @@ function renderWidgetCategories(
   Object.keys(categories).sort().forEach(category => {
     renderWidgetCategory(container, category, categories[category] || [], term);
   });
+  if (!container.children.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state';
+    empty.setAttribute('role', 'status');
+    empty.textContent = term ? 'No matching widgets. Try another search.' : 'No widgets available.';
+    container.appendChild(empty);
+  }
 }
 
 export function bindWidgetPanelCatalog(panel: HTMLElement): void {
@@ -103,7 +118,7 @@ export function bindWidgetPanelCatalog(panel: HTMLElement): void {
 
   const categories = groupWidgetsByCategory(getAvailableWidgetDefinitions());
   const render = () => {
-    renderWidgetCategories(container, categories, searchInput.value.toLowerCase());
+    renderWidgetCategories(container, categories, searchInput.value.trim().toLowerCase());
   };
   searchInput.addEventListener('input', render);
   render();

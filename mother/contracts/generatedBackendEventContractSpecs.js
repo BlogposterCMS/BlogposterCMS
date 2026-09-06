@@ -3442,6 +3442,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
         "moduleName"
       ],
       "properties": {
+        "action": {
+          "type": "json"
+        },
         "authModuleSecret": {
           "type": "string",
           "minLength": 1
@@ -3485,20 +3488,17 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
             }
           ]
         },
+        "params": {
+          "type": "json"
+        },
+        "resource": {
+          "type": "json"
+        },
         "skipJWT": {
           "type": "boolean"
         }
       },
-      "additionalProperties": {
-        "anyOf": [
-          {
-            "type": "json"
-          },
-          {
-            "type": "function"
-          }
-        ]
-      }
+      "additionalProperties": false
     },
     "resultSchema": {
       "anyOf": [
@@ -19559,84 +19559,6 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
     },
     "resultType": "RegisterSettingsSectionResult"
   },
-  "registerWidgetUsage": {
-    "description": "Generated internal backend contract for registerWidgetUsage.",
-    "payloadSchema": {
-      "type": "object",
-      "required": [
-        "moduleName"
-      ],
-      "properties": {
-        "authModuleSecret": {
-          "type": "string",
-          "minLength": 1
-        },
-        "decodedJWT": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "object"
-            }
-          ]
-        },
-        "isExternalRequest": {
-          "type": "boolean"
-        },
-        "jwt": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "string",
-              "minLength": 1
-            }
-          ]
-        },
-        "moduleName": {
-          "type": "string",
-          "minLength": 1
-        },
-        "moduleType": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "string",
-              "minLength": 1
-            }
-          ]
-        },
-        "skipJWT": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": {
-        "anyOf": [
-          {
-            "type": "json"
-          },
-          {
-            "type": "function"
-          }
-        ]
-      }
-    },
-    "resultSchema": {
-      "anyOf": [
-        {
-          "type": "json"
-        },
-        {
-          "type": "undefined"
-        }
-      ]
-    },
-    "resultType": "RegisterWidgetUsageResult"
-  },
   "reindexContentEntries": {
     "description": "Generated internal backend contract for reindexContentEntries.",
     "payloadSchema": {
@@ -20672,6 +20594,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
           "type": "string",
           "minLength": 1
         },
+        "contentFallback": {
+          "type": "json"
+        },
         "decodedJWT": {
           "anyOf": [
             {
@@ -20696,6 +20621,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
             }
           ]
         },
+        "language": {
+          "type": "json"
+        },
         "moduleName": {
           "type": "string",
           "minLength": 1
@@ -20713,6 +20641,12 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
         },
         "skipJWT": {
           "type": "boolean"
+        },
+        "sourceId": {
+          "type": "json"
+        },
+        "sourceModule": {
+          "type": "json"
         }
       },
       "additionalProperties": {

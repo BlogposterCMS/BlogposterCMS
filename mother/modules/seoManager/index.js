@@ -328,7 +328,10 @@ function setupSeoEvents(motherEmitter) {
         entry,
         seo: mergeSeoMeta(
           Array.isArray(defaults) ? defaults[0] : defaults,
-          contentEntrySeo(entry),
+          // Page-owned translated fields can supply a current fallback when
+          // a legacy page has no Content Engine mirror. Explicit SEO records
+          // still win; the caller cannot replace the SEO store or defaults.
+          { ...contentEntrySeo(entry), ...(payload.contentFallback || {}) },
           Array.isArray(explicit) ? explicit[0] : explicit
         )
       });

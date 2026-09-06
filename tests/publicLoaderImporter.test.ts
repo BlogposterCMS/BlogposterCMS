@@ -10,7 +10,7 @@ const mockMotherWidgetRegisterLoaders = jest.fn((register: typeof LR.register) =
   register('mock:widgetManager', jest.fn());
 });
 
-jest.mock('/modules/pagesManager/publicLoader.js', () => ({
+jest.mock('/mother/modules/pagesManager/publicLoader.js', () => ({
   registerLoaders: mockPagesRegisterLoaders
 }), { virtual: true });
 
@@ -44,7 +44,7 @@ describe('publicLoaderImporter', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('falls back to explicitly allowed mother module loaders', async () => {
+  it('loads explicitly allowed core modules directly', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     await expect(tryImportPublicLoader('widgetManager')).resolves.toBe(true);

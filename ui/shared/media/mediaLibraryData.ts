@@ -3,6 +3,7 @@ export interface FolderListing {
   files: string[];
   parentPath: string;
   currentPath: string;
+  details?: Array<{ name: string; size: number | null; modifiedAt: string }>;
 }
 
 export interface ShareLinkResult {
@@ -88,6 +89,7 @@ export function toFolderListing(value: unknown): FolderListing {
       files?: unknown;
       parentPath?: unknown;
       currentPath?: unknown;
+      details?: unknown;
     }
     : {};
 
@@ -95,7 +97,14 @@ export function toFolderListing(value: unknown): FolderListing {
     folders: toStringArray(candidate.folders),
     files: toStringArray(candidate.files),
     parentPath: typeof candidate.parentPath === 'string' ? candidate.parentPath : '',
-    currentPath: typeof candidate.currentPath === 'string' ? candidate.currentPath : ''
+    currentPath: typeof candidate.currentPath === 'string' ? candidate.currentPath : '',
+    ...(Array.isArray(candidate.details) ? { details: candidate.details.filter(item =>
+      item && typeof item === 'object' && typeof item.name === 'string'
+    ).map(item => ({
+      name: item.name,
+      size: typeof item.size === 'number' && Number.isFinite(item.size) && item.size >= 0 ? item.size : null,
+      modifiedAt: typeof item.modifiedAt === 'string' ? item.modifiedAt : ''
+    })) } : {})
   };
 }
 

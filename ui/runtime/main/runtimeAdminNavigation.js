@@ -1,3 +1,5 @@
+import { confirmWorkspaceNavigation, getWorkspaceChangeState } from '../../shared/navigation/workspaceChanges.js';
+import { registerWorkspaceAgent, agentString } from '../../shared/agent/workspaceAgent.js';
 const ADMIN_NAV_STATE_KEY = 'bpAdminContentNavigation';
 function normaliseAdminBase(base) {
     const trimmed = base.trim() || '/admin/';
@@ -37,6 +39,11 @@ function announceNavigation(url) {
 export function bindAdminContentNavigation({ render, adminBase }) {
     const resolvedAdminBase = resolveAdminBase(adminBase);
     let navigationPromise = Promise.resolve();
+    let checking = false;
+    let currentUrl = window.location.href;
+    let currentIndex = Number(window.history.state?.[ADMIN_NAV_STATE_KEY]) || 0;
+    let restoringHistory = false;
+    window.history.replaceState({ ...window.history.state, [ADMIN_NAV_STATE_KEY]: currentIndex }, '', currentUrl);
     async function renderUrl(url) {
         const pathname = url.pathname;
         navigationPromise = navigationPromise
@@ -55,9 +62,8 @@ export function bindAdminContentNavigation({ render, adminBase }) {
     function handleClick(event) {
         if (!isPlainLeftClick(event))
             return;
-        const target = event.target instanceof Element
-            ? event.target.closest('a[href]')
-            : null;
+        // Widget links live inside shadow roots, where event.target is the host.
+        const target = event.composedPath().find(node => node instanceof HTMLAnchorElement);
         if (!target)
             return;
         const url = new URL(target.href, window.location.href);
@@ -67,24 +73,116 @@ export function bindAdminContentNavigation({ render, adminBase }) {
         if (url.pathname === window.location.pathname && url.search === window.location.search) {
             return;
         }
-        window.history.pushState({ [ADMIN_NAV_STATE_KEY]: true }, '', url.href);
-        void renderUrl(url).catch(error => {
-            console.error('[BP-ADMIN-NAV-RENDER] content navigation failed', error);
-            window.location.assign(url.href);
-        });
+        if (checking)
+            return;
+        checking = true;
+        void (async () => {
+            try {
+                if (!(await confirmWorkspaceNavigation()))
+                    return;
+                currentIndex += 1;
+                currentUrl = url.href;
+                window.history.pushState({ [ADMIN_NAV_STATE_KEY]: currentIndex }, '', url.href);
+                await renderUrl(url);
+            }
+            catch (error) {
+                console.error('[BP-ADMIN-NAV-RENDER] content navigation failed', error);
+                window.location.assign(url.href);
+            }
+            finally {
+                checking = false;
+            }
+        })();
     }
     function handlePopState() {
+        if (restoringHistory) {
+            restoringHistory = false;
+            return;
+        }
         const url = new URL(window.location.href);
         if (!canHandleAnchor(document.createElement('a'), url, resolvedAdminBase))
             return;
-        void renderUrl(url).catch(error => {
+        const targetIndex = window.history.state?.[ADMIN_NAV_STATE_KEY];
+        void (async () => {
+            if (!(await confirmWorkspaceNavigation())) {
+                // Restore a known SPA history entry without destroying Forward history.
+                if (typeof targetIndex === 'number' && targetIndex !== currentIndex) {
+                    restoringHistory = true;
+                    window.history.go(currentIndex - targetIndex);
+                }
+                else {
+                    window.history.replaceState({ ...window.history.state, [ADMIN_NAV_STATE_KEY]: currentIndex }, '', currentUrl);
+                }
+                return;
+            }
+            currentUrl = url.href;
+            currentIndex = typeof targetIndex === 'number' ? targetIndex : currentIndex;
+            await renderUrl(url);
+        })().catch(error => {
             console.error('[BP-ADMIN-NAV-POP] popstate render failed', error);
             window.location.reload();
         });
     }
     document.addEventListener('click', handleClick);
     window.addEventListener('popstate', handlePopState);
+    const destinations = {
+        home: '/home', pages: '/content/pages', media: '/content/media', navigation: '/content/menu',
+        widgets: '/content/widgets', designs: '/content/designer-layouts', settings: '/settings',
+        branding: '/settings/design', seo: '/settings/seo', security: '/settings/security'
+    };
+    const shell = document.querySelector('.admin-panel');
+    let pendingDesignUrl = null;
+    async function openAgentRoute(path) {
+        if (checking)
+            throw new Error('CMS_AGENT_NAVIGATION_BUSY');
+        checking = true;
+        try {
+            const url = new URL(`${resolvedAdminBase}${path}`, window.location.origin);
+            currentIndex += 1;
+            currentUrl = url.href;
+            window.history.pushState({ [ADMIN_NAV_STATE_KEY]: currentIndex }, '', url.href);
+            await renderUrl(url);
+        }
+        finally {
+            checking = false;
+        }
+    }
+    const shellAgent = shell ? registerWorkspaceAgent({ root: shell, id: 'shell', title: 'CMS navigation',
+        read: () => ({ ...getWorkspaceChangeState(), route: window.location.pathname, workspaces: destinations, pendingDesignUrl }),
+        onCommandSettled: (command, acknowledged) => {
+            if (command.action !== 'cms.openDesign' || !pendingDesignUrl)
+                return;
+            const url = pendingDesignUrl;
+            pendingDesignUrl = null;
+            // Studio owns a separate app document. Acknowledge the handoff before
+            // unloading this host; its new surface reports actual loading/ready state.
+            if (acknowledged)
+                window.location.assign(url);
+        },
+        actions: [
+            { action: 'cms.openWorkspace', label: 'Open a CMS workspace', params: [{ name: 'workspace', type: 'string', required: true }], run: p => {
+                    const path = destinations[agentString(p, 'workspace')];
+                    if (!path)
+                        throw new Error('CMS_AGENT_WORKSPACE_UNKNOWN');
+                    return openAgentRoute(path);
+                } },
+            { action: 'cms.openPage', label: 'Open page editor', params: [{ name: 'id', type: 'string', required: true }], run: p => {
+                    const id = agentString(p, 'id');
+                    if (!/^\d+$/.test(id))
+                        throw new Error('CMS_AGENT_PAGE_ID_INVALID');
+                    return openAgentRoute(`/pages/edit/${id}`);
+                } },
+            { action: 'cms.openDesign', label: 'Open Design Studio', params: [{ name: 'id', type: 'string', required: false }], run: p => {
+                    const id = p.id == null ? '' : agentString(p, 'id');
+                    if (id && !/^\d+$/.test(id))
+                        throw new Error('CMS_AGENT_DESIGN_ID_INVALID');
+                    pendingDesignUrl = `${resolvedAdminBase}/studio/design${id ? `/${id}` : ''}`;
+                    return { navigation: 'scheduled', url: pendingDesignUrl, nextSurface: 'studio.designer' };
+                } }
+        ]
+    }) : null;
     return () => {
+        shellAgent?.stop();
         document.removeEventListener('click', handleClick);
         window.removeEventListener('popstate', handlePopState);
     };

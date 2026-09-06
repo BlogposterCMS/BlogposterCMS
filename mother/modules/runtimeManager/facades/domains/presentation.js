@@ -32,8 +32,7 @@ const adminActions = Object.freeze({
     create: { eventName: BACKEND_EVENTS.CREATE_WIDGET, moduleName: 'widgetManager', permission: 'widgets.create' },
     update: { eventName: BACKEND_EVENTS.UPDATE_WIDGET, moduleName: 'widgetManager', permission: 'widgets.update' },
     delete: { eventName: BACKEND_EVENTS.DELETE_WIDGET, moduleName: 'widgetManager', permission: 'widgets.delete' },
-    saveLayout: { eventName: BACKEND_EVENTS.SAVE_LAYOUT_V1, moduleName: 'widgetManager', permission: 'widgets.saveLayout' },
-    registerUsage: { eventName: BACKEND_EVENTS.REGISTER_WIDGET_USAGE, moduleName: 'widgetManager', permission: 'widgets.read' }
+    saveLayout: { eventName: BACKEND_EVENTS.SAVE_LAYOUT_V1, moduleName: 'widgetManager', permission: 'widgets.saveLayout' }
   }),
   plainSpace: Object.freeze({
     widgetRegistry: { eventName: BACKEND_EVENTS.WIDGET_REGISTRY_REQUEST_V1, moduleName: 'plainspace', permission: 'widgets.read' },
@@ -148,8 +147,7 @@ const publicActions = Object.freeze({
     children: { eventName: BACKEND_EVENTS.GET_CHILD_PAGES, moduleName: 'pagesManager' }
   }),
   widgets: Object.freeze({
-    list: { eventName: BACKEND_EVENTS.GET_WIDGETS, moduleName: 'widgetManager' },
-    registerUsage: { eventName: BACKEND_EVENTS.REGISTER_WIDGET_USAGE, moduleName: 'widgetManager' }
+    list: { eventName: BACKEND_EVENTS.GET_WIDGETS, moduleName: 'widgetManager' }
   }),
   plainSpace: Object.freeze({
     widgetRegistry: { eventName: BACKEND_EVENTS.WIDGET_REGISTRY_REQUEST_V1, moduleName: 'plainspace' },

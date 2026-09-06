@@ -24,6 +24,8 @@ export function toPages(value) {
 export function uploadedContentPages(value) {
     return toPages(value).filter(page => (page.is_content &&
         !page.meta?.layoutTemplate &&
+        !page.meta?.designId &&
+        page.status !== 'deleted' &&
         page.lane === 'public'));
 }
 export function decodeAdminId(jwt, decodeBase64 = typeof globalThis.atob === 'function'

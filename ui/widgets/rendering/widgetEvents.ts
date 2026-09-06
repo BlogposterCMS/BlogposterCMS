@@ -1,5 +1,3 @@
-import { runtimeAdminPayload, runtimePublicPayload } from '../../shared/api-client/runtimeFacade.js';
-
 export type WidgetEventDefinition = {
   id: string;
   metadata?: Record<string, any>;
@@ -30,25 +28,4 @@ export function normalizeWidgetApiActions(metadata: Record<string, any> = {}): W
     actions.push({ resource, action });
     return actions;
   }, []);
-}
-
-export async function registerWidgetEvents(widgetDef: WidgetEventDefinition): Promise<void> {
-  if (typeof window.meltdownEmit !== 'function') return;
-  const actions = normalizeWidgetApiActions(widgetDef.metadata || {});
-  if (!actions.length) return;
-
-  const isAdmin = Boolean(window.ADMIN_TOKEN);
-  const jwt = isAdmin ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
-  if (!jwt) return;
-
-  try {
-    await window.meltdownEmit(
-      isAdmin ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest',
-      isAdmin
-        ? runtimeAdminPayload(jwt, 'widgets', 'registerUsage', { actions })
-        : runtimePublicPayload(jwt, 'widgets', 'registerUsage', { actions })
-    );
-  } catch (err) {
-    console.warn('[Widgets] registerWidgetUsage failed for', widgetDef.id, err);
-  }
 }

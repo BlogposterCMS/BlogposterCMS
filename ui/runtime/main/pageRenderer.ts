@@ -8,7 +8,6 @@ import {
 import { hydrateRuntimeShellPartials } from './runtimeShellPartials.js';
 import {
   fetchRuntimePageBySlug,
-  fetchRuntimePublicSettings,
   fetchRuntimeWidgetRegistry,
   initializeRuntimeDesignDefaults,
   loadRuntimeGlobalLayout,
@@ -17,6 +16,7 @@ import {
 import { renderPublicRuntimePageContent } from './runtimePageComposition.js';
 import { renderAdminRuntimeGrid } from './runtimeAdminGrid.js';
 import { bindAdminContentNavigation } from './runtimeAdminNavigation.js';
+import { applyRuntimeGlobalBackground } from './runtimeGlobalBackground.js';
 import {
   type RuntimeWidgetDefinition
 } from './runtimeWidgetRenderer.js';
@@ -36,27 +36,7 @@ type RuntimeRenderMode = 'full' | 'content-only';
 declare const meltdownEmit: (eventName: string, payload?: LooseRecord) => Promise<any>;
 
 const emitDebounced = createDebouncedEmitter(100);
-const GLOBAL_BODY_BACKGROUND_KEY = 'DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND';
 let unbindAdminNavigation: (() => void) | null = null;
-
-function validRuntimeBackground(value: unknown): string {
-  const color = String(value || '').trim();
-  return /^#[0-9a-f]{6}$/i.test(color) ? color : '#f2f3f7';
-}
-
-async function applyRuntimeGlobalBackground(lane: string): Promise<void> {
-  try {
-    const settings = await fetchRuntimePublicSettings(
-      meltdownEmit,
-      lane,
-      [GLOBAL_BODY_BACKGROUND_KEY]
-    );
-    document.body.style.backgroundColor = validRuntimeBackground(settings[GLOBAL_BODY_BACKGROUND_KEY]);
-  } catch (err) {
-    console.warn('[Renderer] RUNTIME_GLOBAL_BACKGROUND_LOAD_FAILED', err);
-    document.body.style.backgroundColor = '#f2f3f7';
-  }
-}
 
 function beginContentTransition(contentEl: HTMLElement, mode: RuntimeRenderMode): () => void {
   if (mode !== 'content-only') return () => undefined;
@@ -78,7 +58,7 @@ export async function renderRuntimePage(
 ): Promise<void> {
   const { slug, lane, debug } = context;
   ensureGlobalStyle(lane);
-  await applyRuntimeGlobalBackground(lane);
+  await applyRuntimeGlobalBackground(lane, meltdownEmit);
   if (debug) console.debug('[Renderer] boot', { slug, lane, mode });
 
   const page = await fetchRuntimePageBySlug(meltdownEmit, slug, lane);
@@ -95,6 +75,7 @@ export async function renderRuntimePage(
   const contentEl = document.getElementById('content');
 
   if (!contentEl) return;
+  contentEl.dataset.dashboardLayout = lane === 'admin' && config.dashboardLayout === 'fixed' ? 'fixed' : 'custom';
   const finishContentTransition = beginContentTransition(contentEl, mode);
 
   try {

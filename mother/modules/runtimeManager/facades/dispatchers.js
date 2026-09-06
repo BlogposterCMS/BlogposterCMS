@@ -48,11 +48,10 @@ function createFacadeDispatchers(runtime) {
 
     const genericParams = publicRuntimeParams(payload.params);
     const params = domain.preparePublicParams
-      ? domain.preparePublicParams({ resource, action, params: genericParams, actor: payload.decodedJWT })
+      ? domain.preparePublicParams({ resource, action, params: genericParams })
       : genericParams;
-    const prepared = domain.prepareAdminParams ? domain.prepareAdminParams({ resource, action, params, actor: payload.decodedJWT }) : params;
     const eventPayload = {
-      ...prepared,
+      ...params,
       jwt: internalJwt || payload.jwt,
       moduleName: definition.moduleName,
       moduleType: definition.moduleType || 'core'
@@ -91,9 +90,10 @@ function createFacadeDispatchers(runtime) {
     requireAppContextReadOnly(payload, resource, action);
     runtime.requirePayloadPermission(payload, definition.permission);
 
-    const params = payload.params && typeof payload.params === 'object' && !Array.isArray(payload.params)
+    const genericParams = payload.params && typeof payload.params === 'object' && !Array.isArray(payload.params)
       ? payload.params
       : {};
+    const params = domain.prepareAdminParams ? domain.prepareAdminParams({ resource, action, params: genericParams, actor: payload.decodedJWT }) : genericParams;
     const eventPayload = {
       ...params,
       jwt,

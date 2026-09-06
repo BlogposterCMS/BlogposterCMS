@@ -44,6 +44,25 @@ function createSeedingEmitter(existingPage = null, existingLayout = []) {
 }
 
 describe('PlainSpace admin page seeding', () => {
+  it('uses fixed single-tool compositions and retires the duplicate Collections page', () => {
+    for (const [slug, widgetId] of [['media', 'mediaExplorer'], ['widgets', 'widgetList'], ['designer-layouts', 'designerLayouts']]) {
+      const page = ADMIN_PAGES.find(entry => entry.slug === slug && entry.parentSlug === 'content');
+      expect(page.config).toMatchObject({ dashboardLayout: 'fixed', widgets: [widgetId], widgetSlots: { [widgetId]: 'page' } });
+    }
+    expect(ADMIN_PAGES.find(entry => entry.slug === 'collections' && entry.parentSlug === 'content').retired).toBe(true);
+  });
+  it('retires the old Layouts entry without recreating it or deleting templates', async () => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'layouts');
+    expect(seed.retired).toBe(true);
+    const existing = createSeedingEmitter({ id: 'old-layouts', status: 'published' });
+    await seedAdminPages(existing, 'admin-jwt', [seed]);
+    expect(existing.calls.find(call => call.eventName === 'updatePage')?.payload)
+      .toMatchObject({ pageId: 'old-layouts', status: 'deleted' });
+    expect(existing.calls.some(call => call.eventName === 'createPage')).toBe(false);
+    const fresh = createSeedingEmitter();
+    await seedAdminPages(fresh, 'admin-jwt', [seed]);
+    expect(fresh.calls.map(call => call.eventName)).toEqual(['getPageBySlug']);
+  });
   const editorLayout = {
     header: 'top-header',
     sidebar: 'empty-sidebar',
@@ -157,13 +176,39 @@ describe('PlainSpace admin page seeding', () => {
     const contentPage = ADMIN_PAGES.find(page => page.slug === 'content' && page.lane === 'admin');
 
     expect(contentPage).toBeTruthy();
-    expect(contentPage.config.widgets).toEqual(['pageList', 'pageStats', 'contentSummary']);
+    expect(contentPage.config.widgets).toEqual(['pageList']);
+    expect(contentPage.config.dashboardLayout).toBe('fixed');
     expect(contentPage.config.widgetSlots).toMatchObject({
-      pageList: 'twoThird',
-      pageStats: 'third',
-      contentSummary: 'full'
+      pageList: 'page'
     });
     expect(contentPage.config.actionButton.action).toBe('createNewPage');
+  });
+
+  it('consolidates page details and attachment editing in one fixed editor', () => {
+    const editor = ADMIN_PAGES.find(page => page.slug === 'edit' && page.parentSlug === 'pages');
+    expect(editor.config).toMatchObject({
+      dashboardLayout: 'fixed', widgets: ['pageEditorWidget'], widgetSlots: { pageEditorWidget: 'page' }
+    });
+    expect(editor.config.widgetSlots.pageContent).toBeUndefined();
+  });
+
+  it('migrates fixed CMS composition while preserving personal saved layouts and other metadata', async () => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'content' && page.lane === 'admin');
+    const existing = { id: 'content-1', lane: 'admin', slug: 'content', meta: { widgets: ['pageList', 'pageStats', 'customWidget'], customSetting: true } };
+    const emitter = createSeedingEmitter(existing, [{ id: 'custom-1', widgetId: 'customWidget' }]);
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    const update = emitter.calls.find(call => call.eventName === 'updatePage');
+    expect(update.payload.meta).toMatchObject({ dashboardLayout: 'fixed', widgets: ['pageList'], widgetSlots: { pageList: 'page' }, customSetting: true });
+    expect(emitter.calls.some(call => call.eventName === 'saveLayoutForViewport')).toBe(false);
+  });
+
+  it('sets fixed composition metadata on first install too', async () => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'content' && page.lane === 'admin');
+    const emitter = createSeedingEmitter();
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    expect(emitter.calls.find(call => call.eventName === 'createPage').payload.meta).toMatchObject({
+      dashboardLayout: 'fixed', widgets: ['pageList'], widgetSlots: { pageList: 'page' }
+    });
   });
 
   it('seeds Design Studio as a dedicated page-sized workspace widget', () => {
@@ -204,4 +249,13 @@ describe('PlainSpace admin page seeding', () => {
     expect(uiKitPage.config.icon).toBe('/assets/icons/component.svg');
     expect(uiKitPage.config.widgets).toEqual([]);
   });
+  it('retires the inactive Import / Export placeholder without removing module tools', async () => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'import-export');
+    expect(seed.retired).toBe(true);
+    const emitter = createSeedingEmitter({ id: 'legacy-import', slug: 'settings/import-export', lane: 'admin', status: 'published' });
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    expect(emitter.calls.find(call => call.eventName === 'updatePage').payload).toMatchObject({ pageId: 'legacy-import', status: 'deleted' });
+    expect(ADMIN_PAGES.find(page => page.slug === 'modules').retired).not.toBe(true);
+  });
+
 });

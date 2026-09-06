@@ -6,7 +6,7 @@ const expectedResources = Object.freeze({
   content: ['comments', 'content', 'contentTypes', 'exporters', 'importers', 'media', 'metadata', 'preview', 'search', 'workflow'],
   presentation: ['colors', 'designer', 'fontPackages', 'fonts', 'navigation', 'pages', 'plainSpace', 'redirects', 'seo', 'sitePresets', 'translations', 'widgets'],
   access: ['auth', 'permissions', 'roles', 'users'],
-  platform: ['apps', 'modules', 'notifications', 'serverLocations', 'settings', 'shares', 'unifiedSettings']
+  platform: ['apps', 'coreUpdates', 'modules', 'notifications', 'serverLocations', 'settings', 'shares', 'unifiedSettings']
 });
 
 test('runtime facade resources have one stable domain owner', () => {

@@ -48,10 +48,11 @@ function createFacadeDispatchers(runtime) {
 
     const genericParams = publicRuntimeParams(payload.params);
     const params = domain.preparePublicParams
-      ? domain.preparePublicParams({ resource, action, params: genericParams })
+      ? domain.preparePublicParams({ resource, action, params: genericParams, actor: payload.decodedJWT })
       : genericParams;
+    const prepared = domain.prepareAdminParams ? domain.prepareAdminParams({ resource, action, params, actor: payload.decodedJWT }) : params;
     const eventPayload = {
-      ...params,
+      ...prepared,
       jwt: internalJwt || payload.jwt,
       moduleName: definition.moduleName,
       moduleType: definition.moduleType || 'core'
@@ -82,7 +83,7 @@ function createFacadeDispatchers(runtime) {
     runtime.assertRuntimePayload(payload, BACKEND_EVENTS.CMS_ADMIN_API_REQUEST);
     runtime.requireAdminPrincipal(payload);
 
-    const { resource, action, definition } = resolveAdminDomain(payload.resource, payload.action);
+    const { resource, action, definition, domain } = resolveAdminDomain(payload.resource, payload.action);
     if (!definition) {
       throw new Error(`Unknown CMS admin API action: ${payload.resource || ''}.${payload.action || ''}`);
     }

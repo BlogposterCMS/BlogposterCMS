@@ -27,6 +27,7 @@ import type {
   ModuleUpdateInspection
 } from '../modulesListData.js';
 import { renderUiKitGallery } from './uiKitGallery.js';
+import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
 import {
   createFormActions,
   createFormChoice as createChoice,
@@ -593,8 +594,9 @@ function renderUpdateRow(
 }
 
 async function renderUpdates(ctx: RenderCtx) {
-  const shell = createShell('Update Center', 'GitHub release updates for installed community modules.');
+  const shell = createShell('Update Center', 'Keep Blogposter and your installed modules up to date.');
   const tabs = createTabSystem(shell.content, shell.tabs);
+  const corePanel = tabs.addTab('Blogposter');
   const updatesPanel = tabs.addTab('Module updates');
 
   const refresh = document.createElement('button');

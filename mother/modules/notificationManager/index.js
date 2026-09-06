@@ -9,6 +9,7 @@ const notificationEmitter = require('../../emitters/notificationEmitter');
 const { loadIntegrations, getRecentNotifications } = require('./notificationManagerService');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
+const { getCoreUpdateStatus, coreUpdateNotification } = require('../moduleLoader/coreUpdateService');
 
 const MODULE_NAME = 'notificationManager';
 const MODULE_TYPE = 'core';
@@ -69,7 +70,7 @@ module.exports = {
       }
     });
 
-    motherEmitter.on(BACKEND_EVENTS.GET_RECENT_NOTIFICATIONS, (payload, cb) => {
+    motherEmitter.on(BACKEND_EVENTS.GET_RECENT_NOTIFICATIONS, async (payload, cb) => {
       const callback = onceCallback(cb);
       try {
         const { limit = 10 } = payload || {};
@@ -78,6 +79,12 @@ module.exports = {
           return callback(new Error('Forbidden - missing permission: notifications.read'));
         }
         const list = getRecentNotifications(limit, stateOptions);
+        // A single stable, current notification; host state owns release discovery.
+        // Editors without update permission never see host update information.
+        if (payload.includeCoreUpdates === true && payload?.decodedJWT && hasPermission(payload.decodedJWT, 'settings.core.edit')) {
+          const notice = coreUpdateNotification(await getCoreUpdateStatus());
+          if (notice) list.unshift(notice);
+        }
         callback(null, list);
       } catch (err) {
         callback(err);

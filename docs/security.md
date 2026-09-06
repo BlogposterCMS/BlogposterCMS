@@ -115,6 +115,31 @@ health check before swapping folders and keeps a backup for rollback.
 
 ## Core Update Supply Chain
 
+The optional host update agent is a new, explicitly authorized CMS-to-host
+control boundary. Runtime Manager's `coreUpdates.status/check/install` actions
+require `settings.core.edit`; Module Loader owns the event handlers. Notification
+visibility is decided from the original verified caller before its JWT is
+replaced by a service JWT. Browser flags cannot grant update visibility.
+
+Only the CMS backend receives a read-only directory mount containing a Unix
+socket (0660, dedicated supplementary group). No TCP control listener, Docker
+socket, host state folder or CMS runtime secrets cross this boundary. The
+root-owned host service accepts three fixed operations and a bounded exact
+version/image pair; it never accepts commands, configuration paths, URLs or
+manual rollback requests. The existing updater re-verifies the signed candidate
+and rejects target drift before image replacement. Concurrent jobs are locked;
+state survives CMS restarts. Host-agent interruption fails closed and requires
+operator recovery instead of automatically replaying an update.
+
+Host adapter executables, service and Compose overlay are separately attested
+by the release workflow. Provisioning verifies their bundle before installation.
+The downloaded provisioning script itself must be verified before execution.
+Service configuration and state remain root-owned. The dedicated socket group
+must contain only the intended CMS container, not interactive untrusted users.
+This grants an authorized CMS administrator the ability to restart its service
+onto an approved signed stable release; it is not a general host administration API.
+
+
 Core releases are complete OCI images, not file patches. The release workflow
 binds the package version, source commit and immutable image digest in
 `blogposter-update.json`, signs that manifest externally and publishes GitHub

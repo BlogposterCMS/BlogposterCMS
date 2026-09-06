@@ -4,7 +4,13 @@ const { BACKEND_EVENTS } = require('../../../../contracts/generatedBackendEventC
 
 // Platform administration resources remain facade declarations; this split
 // does not change their module owners, permissions or emitted event names.
+const { hasPermission } = require('../../../userManagement/permissionUtils');
 const adminActions = Object.freeze({
+  coreUpdates: Object.freeze({
+    status: { eventName: BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, moduleName: 'moduleLoader', permission: 'settings.core.edit' },
+    check: { eventName: BACKEND_EVENTS.CHECK_CORE_UPDATE, moduleName: 'moduleLoader', permission: 'settings.core.edit' },
+    install: { eventName: BACKEND_EVENTS.INSTALL_CORE_UPDATE, moduleName: 'moduleLoader', permission: 'settings.core.edit' }
+  }),
   settings: Object.freeze({
     list: { eventName: BACKEND_EVENTS.LIST_SETTINGS, moduleName: 'settingsManager', permission: 'settings.core.view' },
     get: { eventName: BACKEND_EVENTS.GET_SETTING, moduleName: 'settingsManager', permission: 'settings.core.view' },
@@ -81,5 +87,10 @@ module.exports = Object.freeze({
   name: 'platform',
   adminActions,
   publicActions,
-  appContextReadActions
+  appContextReadActions,
+  prepareAdminParams({ resource, params, actor }) {
+    // Decide visibility from the verified actor before the service JWT replaces it.
+    if (resource === "notifications") return { ...params, includeCoreUpdates: Boolean(actor && !actor.isPublic && hasPermission(actor, "settings.core.edit")) };
+    return params;
+  }
 });

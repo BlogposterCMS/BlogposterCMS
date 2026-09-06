@@ -138,9 +138,25 @@ jobs:
           node tools/create-core-update-manifest.js release-assets/blogposter-update.json
           cp deploy/blogposter-update release-assets/blogposter-update
           cp deploy/blogposter-updater.conf.example release-assets/blogposter-updater.conf.example
+          cp deploy/update-agent.js release-assets/update-agent.js
+          cp deploy/blogposter-update-agent.service release-assets/blogposter-update-agent.service
+          cp deploy/blogposter-updates.compose.yml release-assets/blogposter-updates.compose.yml
+          cp deploy/install-update-agent release-assets/install-update-agent
           cp deploy/blogposter.compose.yml release-assets/blogposter.compose.yml
           cp deploy/deployment.env.example release-assets/deployment.env.example
           chmod 0755 release-assets/blogposter-update
+      - name: Attest host update control assets
+        id: update_control_attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            release-assets/update-agent.js
+            release-assets/blogposter-update
+            release-assets/blogposter-update-agent.service
+            release-assets/blogposter-updates.compose.yml
+            release-assets/install-update-agent
+      - name: Stage host update control attestation
+        run: cp "${{ steps.update_control_attestation.outputs.bundle-path }}" release-assets/update-control.bundle.json
       - name: Attest updater release manifest
         id: updater_manifest_attestation
         uses: actions/attest@v4
@@ -189,5 +205,7 @@ jobs:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          makeLatest: ${{ contains(github.ref_name, '-') && 'false' || 'true' }}
           body: ${{ env.notes }}
           artifacts: "./release-assets/*"

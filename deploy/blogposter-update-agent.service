@@ -1,0 +1,25 @@
+[Unit]
+Description=Blogposter core update control
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /opt/blogposter/bin/update-agent.js
+Restart=on-failure
+RestartSec=5
+User=root
+Group=blogposter-updater
+RuntimeDirectory=blogposter-updater
+RuntimeDirectoryMode=0750
+StateDirectory=blogposter-update-agent
+StateDirectoryMode=0700
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+# Keep the fixed host updater alive when the CMS container restarts.
+KillMode=control-group
+TimeoutStopSec=900
+
+[Install]
+WantedBy=multi-user.target

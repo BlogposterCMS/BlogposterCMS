@@ -6,6 +6,10 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+- Added in-app core update discovery, administrator notifications, exact-release installation and persistent progress through the existing Update Center.
+- Added the restricted local host adapter and attested provisioning assets; the existing updater retains signature verification, backups and rollback.
+- Preview limitation: real host provisioning and container cutover acceptance are pending. This release is not offered through the stable OTA endpoint.
+
 ## [0.9.5] - 2026-09-06
 
 - Fixed expired JWTs permanently disabling Auth: expiry now rejects only the

@@ -17,6 +17,7 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^\\./coreUpdatePanel\\.js$': '<rootDir>/ui/widgets/plainspace/admin/settings/coreUpdatePanel.ts',
     '^\\./grid-utils\\.js$': '<rootDir>/ui/runtime/main/grid-utils.ts',
     '^\\./globalEvents\\.js$': '<rootDir>/ui/runtime/main/globalEvents.ts',
     '^\\./BoundingBoxManager\\.js$': '<rootDir>/ui/runtime/main/BoundingBoxManager.ts',

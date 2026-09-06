@@ -1,0 +1,13 @@
+# Overlay for hosts provisioned with blogposter-update-agent.service.
+# CMS can connect to this socket but cannot replace it or control Docker.
+services:
+  blogposter:
+    group_add:
+      - "${BLOGPOSTER_UPDATER_GID:?Set the dedicated host updater group id}"
+    volumes:
+      - type: bind
+        source: /run/blogposter-updater
+        target: /run/blogposter-updater
+        read_only: true
+        bind:
+          create_host_path: false

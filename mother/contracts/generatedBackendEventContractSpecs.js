@@ -3197,6 +3197,84 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
     },
     "resultType": "AssignRoleToUserResult"
   },
+  "checkCoreUpdate": {
+    "description": "Generated internal backend contract for checkCoreUpdate.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "CheckCoreUpdateResult"
+  },
   "checkModuleUpdates": {
     "description": "Generated internal backend contract for checkModuleUpdates.",
     "payloadSchema": {
@@ -10652,6 +10730,84 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
     },
     "resultType": "GetContentTypeResult"
   },
+  "getCoreUpdateStatus": {
+    "description": "Generated internal backend contract for getCoreUpdateStatus.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "GetCoreUpdateStatusResult"
+  },
   "getEnvelope": {
     "description": "Generated internal backend contract for getEnvelope.",
     "payloadSchema": {
@@ -12362,6 +12518,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
               "type": "object"
             }
           ]
+        },
+        "includeCoreUpdates": {
+          "type": "json"
         },
         "isExternalRequest": {
           "type": "boolean"
@@ -14272,6 +14431,90 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
       ]
     },
     "resultType": "InstallAppFromDirectoryResult"
+  },
+  "installCoreUpdate": {
+    "description": "Generated internal backend contract for installCoreUpdate.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "image": {
+          "type": "json"
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "json"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "InstallCoreUpdateResult"
   },
   "installModuleFromZip": {
     "description": "Generated internal backend contract for installModuleFromZip.",

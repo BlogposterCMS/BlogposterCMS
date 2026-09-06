@@ -25,7 +25,7 @@ function requireSemver(value, label) {
   return normalized;
 }
 
-function buildManifest({ packageInfo, policy, env = process.env, now = new Date() }) {
+function buildManifest({ packageInfo, policy, releaseNotes = '', env = process.env, now = new Date() }) {
   const version = requireSemver(packageInfo?.version, 'package version');
   const tag = String(env.GITHUB_REF_NAME || `v${version}`).trim();
   if (tag !== `v${version}`) {
@@ -60,6 +60,7 @@ function buildManifest({ packageInfo, policy, env = process.env, now = new Date(
     product: 'blogpostercms',
     version,
     channel: version.includes('-') ? 'prerelease' : 'stable',
+    releaseNotes: String(releaseNotes).slice(0, 16000),
     publishedAt: now.toISOString(),
     minimumUpdaterVersion: requireSemver(policy.minimumUpdaterVersion, 'minimum updater version'),
     source: {
@@ -81,9 +82,14 @@ function buildManifest({ packageInfo, policy, env = process.env, now = new Date(
 
 function main() {
   const rootDir = path.resolve(__dirname, '..');
+  const packageInfo = readJson(path.join(rootDir, 'package.json'), 'CORE_UPDATE_PACKAGE_READ_FAILED');
+  const changelog = fs.readFileSync(path.join(rootDir, 'CHANGELOG.md'), 'utf8');
+  // Include only this release's notes in the externally attested manifest.
+  const section = changelog.split(/^## /m).find(value => value.startsWith(`[${packageInfo.version}]`));
   const outputPath = path.resolve(process.argv[2] || path.join(rootDir, 'blogposter-update.json'));
   const manifest = buildManifest({
-    packageInfo: readJson(path.join(rootDir, 'package.json'), 'CORE_UPDATE_PACKAGE_READ_FAILED'),
+    packageInfo,
+    releaseNotes: section ? section.slice(section.indexOf('\n') + 1).trim() : '',
     policy: readJson(path.join(rootDir, 'deploy', 'update-policy.json'), 'CORE_UPDATE_POLICY_READ_FAILED')
   });
   fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });

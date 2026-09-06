@@ -34,6 +34,52 @@ must not be relabelled as compatible merely to pass the workflow.
 
 ## Installation layout
 
+### In-app control (Linux systemd hosts)
+
+The existing `/admin/settings/updates` now contains Blogposter core updates
+alongside module updates. The host agent checks at startup and every six hours;
+the Notification Center displays one current release notice to administrators
+with `settings.core.edit`. Checks do not install or restart automatically.
+The UI submits the exact reviewed version/digest, follows host progress across
+the CMS restart, and reports success, rollback or required operator recovery.
+
+Provision once as part of a managed installation (or migrate existing hosts
+once). End users need no shell commands for subsequent CMS updates. The host
+needs Node.js 24+ at `/usr/bin/node`, systemd and the existing updater prerequisites.
+Download a single release's `install-update-agent`, `update-agent.js`,
+`blogposter-update`, `blogposter-update-agent.service`,
+`blogposter-updates.compose.yml` and `update-control.bundle.json` together.
+Before running the provisioning script, verify it:
+
+```sh
+gh attestation verify install-update-agent --bundle update-control.bundle.json \
+  --repo BlogposterCMS/BlogposterCMS \
+  --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml
+sudo bash install-update-agent
+```
+
+The installer verifies the remaining control assets, installs a dedicated
+systemd service and group, records the Compose overlay in the existing updater
+configuration, records its supplementary GID in the Compose environment and
+recreates the CMS container once to mount the socket. Existing updater setup
+must already be at `/opt/blogposter/updater.conf`. Both installation and rollback
+keep the overlay. Never add untrusted host users to `blogposter-updater`.
+
+Without the agent the UI reports hosting setup is required. If the connection
+fails it reports unavailable, not up to date. Existing releases without embedded
+notes retain the official release-notes link. Host-agent state under
+`/var/lib/blogposter-update-agent` is separate from backed-up CMS volumes.
+`CORE_UPDATE_AGENT_INTERRUPTED` blocks further jobs: the operator must inspect
+the running image, updater lock, volume backup and recovery outcome before
+reinitializing agent state. Do not clear it to bypass an unresolved recovery.
+
+The ordinary CMS image update does not replace the host agent. Future changes
+to the local control protocol need an explicit host-agent compatibility and
+upgrade plan. Non-systemd hosts retain the existing CLI updater until an
+equivalent supervised host adapter is provisioned.
+
+### Persistent application layout
+
 Use `deploy/blogposter.compose.yml` with three separate environment files:
 
 1. a protected CMS runtime environment referenced by `BLOGPOSTER_ENV_FILE`;

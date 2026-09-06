@@ -113,6 +113,12 @@ Run these together with `npm run test:ui` and `npm run build`.
 
 ## Release limits
 
+The combined 0.10.0-rc.1 source snapshot includes the completed CMS workspaces,
+shared rendering, agent controls, neutral theme, notifications and core-update
+preview. The unfinished measured HTML importer and its shared-file changes are
+excluded. Build artifacts are regenerated from that snapshot. The release uses
+GitHub prerelease status while real host update acceptance remains pending.
+
 The local seeded database is not proof of YiTaiCOS production behavior. No commit,
 push or deployment is implied by these checks. Release acceptance still requires
 nested public routes, draft visibility, publish/preview parity, module-specific

@@ -88,7 +88,7 @@ function comingSoonTranslation() {
       '<div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:24px;padding:8px 12px;border:1px solid var(--studio-border);border-radius:var(--studio-radius-control);background:var(--studio-surface-solid);box-shadow:var(--studio-shadow-soft);font-size:13px;font-weight:650;color:var(--studio-text-muted);"><span style="width:8px;height:8px;border-radius:99px;background:#35c49f;display:inline-block;"></span>Design Studio Tech Preview</div>',
       '<h1 style="margin:0;max-width:760px;font-size:clamp(48px,7vw,88px);line-height:.96;font-weight:720;letter-spacing:0;color:var(--studio-text);">Coming Soon</h1>',
       '<p style="margin:22px 0 0;max-width:600px;font-size:clamp(17px,2vw,21px);line-height:1.58;color:var(--studio-text-muted);">This page is seeded as an editable Design Studio preview. Clean dashboard surfaces, public widgets and runtime layout are already wired.</p>',
-      '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:30px;"><a href="/login" style="display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border-radius:var(--studio-radius-control);background:var(--studio-text);color:var(--studio-surface-solid);text-decoration:none;font-weight:700;">Open admin</a><span style="display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border:1px solid var(--studio-border);border-radius:var(--studio-radius-control);background:var(--studio-surface-solid);color:var(--studio-text-muted);font-weight:600;">Seeded on install</span></div>',
+      '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:30px;"><a href="/admin/login" style="display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border-radius:var(--studio-radius-control);background:var(--studio-text);color:var(--studio-surface-solid);text-decoration:none;font-weight:700;">Open admin</a><span style="display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border:1px solid var(--studio-border);border-radius:var(--studio-radius-control);background:var(--studio-surface-solid);color:var(--studio-text-muted);font-weight:600;">Seeded on install</span></div>',
       "</div>",
       '<div style="border:1px solid var(--studio-border);border-radius:var(--studio-radius-panel);background:var(--studio-surface-solid);box-shadow:var(--studio-shadow-soft);padding:18px;">',
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--studio-border);"><strong style="font-size:14px;">Studio canvas</strong><span style="font-size:12px;color:var(--studio-text-muted);">editable seed</span></div>',
@@ -209,7 +209,7 @@ function comingSoonDesignPayload() {
       code: {
         meta: widgetMeta("Open admin", {
           label: "Open admin",
-          href: "/login",
+          href: "/admin/login",
           variant: "primary"
         })
       }

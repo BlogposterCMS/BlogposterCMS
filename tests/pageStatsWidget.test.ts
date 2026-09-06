@@ -56,7 +56,8 @@ describe('pageStats widget', () => {
 
     await render(el);
 
-    expect(el.querySelector('.error')?.textContent)
+    expect(el.querySelector('[role="alert"]')?.textContent)
       .toContain('PLAINSPACE_PAGE_STATS_RENDER_EMITTER_UNAVAILABLE');
+    expect(el.querySelector('button')?.textContent).toBe('Retry');
   });
 });

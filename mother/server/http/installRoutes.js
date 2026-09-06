@@ -102,7 +102,7 @@ function createInstallRoutes({
     try {
       const installationStatus = await getInstallationStatus();
       if (installationStatus.complete || installationStatus.hasPersistentData) {
-        return res.redirect('/login');
+        return res.redirect('/admin/login');
       }
 
       const devAutoLoginAllowed = await isDevAutoLoginAllowed();

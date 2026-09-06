@@ -38,8 +38,11 @@ First follow the [Installation](installation.md) guide if you have not yet set u
    npm start
    ```
    The server listens on the port configured in `.env` (default `3000`). Visit
-   `http://localhost:3000/` to access the CMS.
-   During local non-production setup, `DEV_AUTOLOGIN=true` lets `/login` and
+   `http://localhost:3000/admin/login` to access the CMS. The root `/login`
+   pathname belongs to public site content and configured redirects; the CMS
+   does not reserve it or redirect it to admin authentication. Update existing
+   bookmarks and site-authored admin links to `/admin/login` when upgrading.
+   During local non-production setup, `DEV_AUTOLOGIN=true` lets `/admin/login` and
    protected admin routes issue a local dev session for `DEV_USER` (default
    `admin`) when that user exists. It also lets the first-run installer prefill
    the default `admin` / `123` development account and allows that weak password

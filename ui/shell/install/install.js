@@ -3,7 +3,7 @@ import { bpDialog } from '../../shared/dialogs/bpDialog.js';
 import { resolveShellPublicClient } from '../data/publicMeltdownClient.js';
 import { applyThemeMode, setAccentVariables } from '../theme/userColor.js';
 import { fetchFirstInstallState, isAlreadyInstalledSubmitError, submitInstallRequest } from './installData.js';
-const DASHBOARD_ENTRY_URL = '/login?redirectTo=%2Fadmin%2Fhome';
+const DASHBOARD_ENTRY_URL = '/admin/login?redirectTo=%2Fadmin%2Fhome';
 function messageFromError(err) {
     return err instanceof Error ? err.message : String(err);
 }

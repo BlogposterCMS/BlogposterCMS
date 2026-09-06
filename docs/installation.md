@@ -38,3 +38,11 @@ The project ships with several core modules enabled by default. Optional modules
 
 For the independent server image and its persistence/reverse-proxy requirements,
 see [Container deployment](container-deployment.md).
+
+## Installation-check failures
+
+The browser redirects to `/install` only after the completion check succeeds
+and the public user count is confirmed as zero. Failed checks retain the current
+page and log `SHELL_INSTALL_CHECK_FAILED`; malformed counts report
+`SHELL_INSTALL_USER_COUNT_INVALID`. An outage is not an empty installation.
+Deploy the regenerated `firstInstallCheck` browser bundle with the server fix.

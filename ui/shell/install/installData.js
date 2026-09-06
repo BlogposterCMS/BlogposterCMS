@@ -24,7 +24,11 @@ export async function fetchFirstInstallState(client) {
 }
 export async function fetchPublicUserCount(client, publicToken) {
     const result = unwrapRuntimeFacadeData(await client.emit('cmsPublicRuntimeRequest', runtimePublicPayload(String(publicToken || ''), 'users', 'count')));
-    return typeof result === 'number' ? result : 0;
+    // Only a confirmed zero may participate in an installation redirect.
+    if (typeof result !== 'number' || !Number.isSafeInteger(result) || result < 0) {
+        throw new Error('SHELL_INSTALL_USER_COUNT_INVALID: expected a non-negative integer');
+    }
+    return result;
 }
 export async function submitInstallRequest(win, csrfToken, data) {
     const response = await installFetch(win)('/install', {

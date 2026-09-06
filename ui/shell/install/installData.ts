@@ -58,7 +58,11 @@ export async function fetchPublicUserCount(client: ShellPublicClient, publicToke
     'users',
     'count'
   )));
-  return typeof result === 'number' ? result : 0;
+  // Only a confirmed zero may participate in an installation redirect.
+  if (typeof result !== 'number' || !Number.isSafeInteger(result) || result < 0) {
+    throw new Error('SHELL_INSTALL_USER_COUNT_INVALID: expected a non-negative integer');
+  }
+  return result;
 }
 
 export async function submitInstallRequest(

@@ -12,6 +12,14 @@ Token issuance and lifecycle events require `moduleName: "auth"`,
 The Auth Module validates credentials and issues JWTs for the rest of the system. It **must** run as a core module so it can manage login strategies and sign tokens securely.
 
 ## Startup
+
+JWT expiry at MotherEmitter returns `AUTH_TOKEN_EXPIRED` to the caller without
+dispatching the protected event or disabling the module. Valid subsequent
+requests and public-token issuance remain available. Other integrity checks keep
+their existing module-meltdown behavior. This does not renew or accept expired
+tokens. A process already locked by the old behavior requires a restart after
+the corrected code is deployed.
+
 - Loaded during server boot by the core loader.
 - Requires `JWT_SECRET` and `AUTH_MODULE_INTERNAL_SECRET` in the environment.
 - Automatically loads any strategy files under `mother/modules/auth/strategies`.

@@ -15,6 +15,31 @@ function createEmitter() {
   return new Cls();
 }
 
+test('expired JWT rejects once without locking Auth or dispatching the protected event', () => {
+  const em = createEmitter();
+  const secret = em.combineSecretWithSalt(process.env.JWT_SECRET, 'low');
+  const expired = jwt.sign({ trustLevel: 'low' }, secret, { expiresIn: -1 });
+  const valid = jwt.sign({ trustLevel: 'low' }, secret, { expiresIn: 60 });
+  const protectedHandler = jest.fn((payload, cb) => cb(null, 'validated'));
+  const publicHandler = jest.fn((payload, cb) => cb(null, 'public-token'));
+  em.on('validateToken', protectedHandler);
+  em.on('issuePublicToken', publicHandler);
+  const rejected = jest.fn();
+
+  expect(em.emit('validateToken', { moduleName: 'auth', jwt: expired }, rejected)).toBe(false);
+  expect(rejected).toHaveBeenCalledTimes(1);
+  expect(rejected.mock.calls[0][0]).toMatchObject({ code: 'AUTH_TOKEN_EXPIRED' });
+  expect(protectedHandler).not.toHaveBeenCalled();
+  // No callback must still reject without throwing or disabling the module.
+  expect(em.emit('validateToken', { moduleName: 'auth', jwt: expired })).toBe(false);
+  const accepted = jest.fn();
+  em.emit('validateToken', { moduleName: 'auth', jwt: valid }, accepted);
+  expect(accepted).toHaveBeenCalledWith(null, 'validated');
+  const publicResult = jest.fn();
+  em.emit('issuePublicToken', { moduleName: 'auth' }, publicResult);
+  expect(publicResult).toHaveBeenCalledWith(null, 'public-token');
+});
+
 test('emits error when moduleName is missing', done => {
   const em = createEmitter();
   em.on('dummy', (p, cb) => cb(null, true));

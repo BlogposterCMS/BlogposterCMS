@@ -6,6 +6,17 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-09-06
+
+- Fixed expired JWTs permanently disabling Auth: expiry now rejects only the
+  current request with `AUTH_TOKEN_EXPIRED`; valid subsequent requests and
+  public-token issuance remain available.
+- Fixed the login/install redirect loop during failed installation checks.
+  Request failures and invalid user-count responses retain the current page
+  instead of treating an unavailable check as an empty installation.
+- No database migration. Existing instances locked by the previous expiry
+  behavior recover when the update replaces and restarts the container.
+
 ## [0.9.4] - 2026-09-05
 
 - Changed the shared default accent from bright teal to a restrained Studio

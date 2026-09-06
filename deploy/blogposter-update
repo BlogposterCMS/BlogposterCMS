@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly UPDATER_VERSION='1.0.0'
+readonly UPDATER_VERSION='1.1.0'
 readonly DEFAULT_MANIFEST_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json'
 readonly DEFAULT_MANIFEST_BUNDLE_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json'
 readonly TRUSTED_SIGNER_WORKFLOW='BlogposterCMS/BlogposterCMS/.github/workflows/release.yml'
-readonly ALLOWED_CONFIG_KEYS=' BLOGPOSTER_UPDATE_MANIFEST_URL BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL BLOGPOSTER_UPDATE_REPOSITORY BLOGPOSTER_COMPOSE_FILE BLOGPOSTER_COMPOSE_PROJECT_DIR BLOGPOSTER_COMPOSE_ENV_FILE BLOGPOSTER_RELEASE_ENV_FILE BLOGPOSTER_SERVICE BLOGPOSTER_BACKUP_DIR BLOGPOSTER_STATE_DIR BLOGPOSTER_DATA_DESTINATIONS BLOGPOSTER_UPDATE_TIMEOUT_SECONDS BLOGPOSTER_ATTESTATION_MODE BLOGPOSTER_MIRROR_IMAGE BLOGPOSTER_TRUSTED_REGISTRY_PREFIX '
+readonly ALLOWED_CONFIG_KEYS=' BLOGPOSTER_UPDATE_MANIFEST_URL BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL BLOGPOSTER_UPDATE_REPOSITORY BLOGPOSTER_COMPOSE_FILE BLOGPOSTER_COMPOSE_UPDATES_FILE BLOGPOSTER_COMPOSE_PROJECT_DIR BLOGPOSTER_COMPOSE_ENV_FILE BLOGPOSTER_RELEASE_ENV_FILE BLOGPOSTER_SERVICE BLOGPOSTER_BACKUP_DIR BLOGPOSTER_STATE_DIR BLOGPOSTER_DATA_DESTINATIONS BLOGPOSTER_UPDATE_TIMEOUT_SECONDS BLOGPOSTER_ATTESTATION_MODE BLOGPOSTER_MIRROR_IMAGE BLOGPOSTER_TRUSTED_REGISTRY_PREFIX '
 
 log() {
   printf '[%s] %s\n' "$1" "$2"
@@ -67,6 +67,7 @@ compose_args() {
   COMPOSE_ARGS=(compose --project-directory "$BLOGPOSTER_COMPOSE_PROJECT_DIR")
   [[ -n "${BLOGPOSTER_COMPOSE_ENV_FILE:-}" ]] && COMPOSE_ARGS+=(--env-file "$BLOGPOSTER_COMPOSE_ENV_FILE")
   COMPOSE_ARGS+=(--env-file "$BLOGPOSTER_RELEASE_ENV_FILE" -f "$BLOGPOSTER_COMPOSE_FILE")
+  [[ -z "${BLOGPOSTER_COMPOSE_UPDATES_FILE:-}" ]] || COMPOSE_ARGS+=(-f "$BLOGPOSTER_COMPOSE_UPDATES_FILE")
 }
 
 compose_run() {
@@ -305,6 +306,8 @@ prepare_environment() {
     [[ -n "${!required:-}" ]] || fail 'CORE_UPDATE_CONFIG_MISSING' "Required config value is missing: $required"
   done
   [[ -f "$BLOGPOSTER_COMPOSE_FILE" ]] || fail 'CORE_UPDATE_COMPOSE_MISSING' 'Compose file does not exist.'
+  [[ -z "${BLOGPOSTER_COMPOSE_UPDATES_FILE:-}" || -f "$BLOGPOSTER_COMPOSE_UPDATES_FILE" ]] || \
+    fail 'CORE_UPDATE_COMPOSE_MISSING' 'Configured update-control overlay does not exist.'
   [[ -z "${BLOGPOSTER_COMPOSE_ENV_FILE:-}" || -f "$BLOGPOSTER_COMPOSE_ENV_FILE" ]] || \
     fail 'CORE_UPDATE_COMPOSE_ENV_MISSING' 'Compose interpolation environment file does not exist.'
   mkdir -p "$BLOGPOSTER_STATE_DIR" "$BLOGPOSTER_BACKUP_DIR"
@@ -320,6 +323,11 @@ run_check() {
   [[ -n "$id" ]] || fail 'CORE_UPDATE_CONTAINER_MISSING' 'The configured Blogposter service is not running.'
   current_version="$(docker exec "$id" node -p "require('/app/package.json').version" 2>/dev/null || true)"
   [[ -n "$current_version" ]] || fail 'CORE_UPDATE_CURRENT_VERSION_UNKNOWN' 'Cannot read the running Blogposter version.'
+  # Machine-readable output is produced only after manifest signature verification.
+  local available=false
+  if semver_greater "$target_version" "$current_version"; then available=true; fi
+  log 'CORE_UPDATE_SNAPSHOT' "$(jq -c --arg currentVersion "$current_version" --arg image "$image_ref" --argjson available "$available" \
+    '{currentVersion:$currentVersion,latestVersion:.version,image:$image,available:$available,releaseNotes:(.releaseNotes // ""),releaseUrl:("https://github.com/BlogposterCMS/BlogposterCMS/releases/tag/" + .source.tag)}' "$MANIFEST_FILE")"
   if semver_greater "$target_version" "$current_version"; then
     log 'CORE_UPDATE_AVAILABLE' "$current_version -> $target_version ($image_ref)"
   else
@@ -340,6 +348,12 @@ run_apply() {
     fail 'CORE_UPDATE_UPDATER_TOO_OLD' "Updater $UPDATER_VERSION cannot install a release requiring $minimum_version."
   target_image="$(select_image_reference)"
 
+  # UI approval applies to one immutable candidate, even if latest changes later.
+  if [[ -n "${EXPECTED_VERSION:-}" || -n "${EXPECTED_IMAGE:-}" ]]; then
+    [[ "$target_version" == "$EXPECTED_VERSION" && "$target_image" == "$EXPECTED_IMAGE" ]] || \
+      fail 'CORE_UPDATE_TARGET_CHANGED' 'The reviewed release changed; check and review the update again.'
+  fi
+
   id="$(container_id)"
   [[ -n "$id" ]] || fail 'CORE_UPDATE_CONTAINER_MISSING' 'The configured Blogposter service is not running.'
   current_version="$(docker exec "$id" node -p "require('/app/package.json').version" 2>/dev/null || true)"
@@ -349,6 +363,7 @@ run_apply() {
   [[ "$PREVIOUS_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || \
     fail 'CORE_UPDATE_CURRENT_IMAGE_MUTABLE' 'Running image is not pinned by digest; safe rollback cannot be guaranteed.'
 
+  log 'CORE_UPDATE_DOWNLOADING' 'Verifying and downloading the reviewed image.'
   verify_image_trust "$target_image" "$expected_repo" "$target_version" "$expected_commit"
   docker pull "$target_image" >/dev/null || fail 'CORE_UPDATE_IMAGE_PULL_FAILED' 'Target image could not be pulled.'
   docker run --rm --entrypoint node "$target_image" -e \
@@ -363,13 +378,16 @@ run_apply() {
   migrate_notification_state "$id"
   DATA_MAY_HAVE_CHANGED=0
   trap 'recover_failed_apply $?' EXIT
+  log 'CORE_UPDATE_BACKING_UP' 'Stopping the writer and backing up persistent data.'
   compose_run stop "$BLOGPOSTER_SERVICE" >/dev/null
   create_volume_backups "$id" "$PREVIOUS_IMAGE" "$backup_dir"
   write_release_image "$target_image"
   compose_args
   compose_run config --quiet
   DATA_MAY_HAVE_CHANGED=1
+  log 'CORE_UPDATE_RESTARTING' 'Replacing and restarting the application container.'
   compose_run up -d --no-deps --force-recreate "$BLOGPOSTER_SERVICE" >/dev/null
+  log 'CORE_UPDATE_VERIFYING' 'Checking readiness and the installed version.'
   wait_healthy || fail 'CORE_UPDATE_READINESS_FAILED' 'Updated service did not become healthy before the timeout.'
   verify_running_version "$target_version" || fail 'CORE_UPDATE_VERSION_MISMATCH' 'Running container version does not match the release manifest.'
 
@@ -419,6 +437,16 @@ main() {
         ;;
       --confirm-data-loss)
         CONFIRM_DATA_LOSS=1
+        ;;
+      --expected-version)
+        shift
+        EXPECTED_VERSION="${1:-}"
+        [[ "$EXPECTED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'CORE_UPDATE_TARGET_INVALID' 'Expected a stable version.'
+        ;;
+      --expected-image)
+        shift
+        EXPECTED_IMAGE="${1:-}"
+        [[ "$EXPECTED_IMAGE" =~ ^[a-z0-9.-]+/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]] || fail 'CORE_UPDATE_TARGET_INVALID' 'Expected an immutable image.'
         ;;
       --version)
         printf '%s\n' "$UPDATER_VERSION"

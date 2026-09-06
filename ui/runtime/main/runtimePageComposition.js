@@ -1,5 +1,5 @@
 import { applyRuntimeDesignStyles, getRuntimeDesignLayout } from './runtimeDesignLayouts.js';
-import { getRuntimeDesignDocument, renderRuntimeDesignDocument } from './runtimeDesignDocument.js';
+import { getRuntimeDesignDocument, getRuntimeDesignContentMount, renderRuntimeDesignDocument } from './runtimeDesignDocument.js';
 import { renderAttachedRuntimeContent } from './runtimeAttachedContent.js';
 import { clearContentKeepHeader } from './runtimePageShell.js';
 import { appendRuntimeEmptyState, appendRuntimeHtmlContent } from './runtimeContentFallbacks.js';
@@ -23,14 +23,17 @@ function mergedPresentationPage(page, config = {}) {
     };
 }
 function inheritedContentMount(contentEl) {
-    return contentEl.querySelector('.runtime-design-document [data-workarea="true"]')
-        || contentEl.querySelector('.runtime-design-document .runtime-layout-container:not([data-split="true"])')
-        || contentEl;
+    return getRuntimeDesignContentMount(contentEl);
 }
 function appendInheritedPageHtml(contentEl, page, presentation) {
-    if (!presentation.inherited || !page.html)
+    if (!page.html)
         return;
-    appendRuntimeHtmlContent(inheritedContentMount(contentEl), page.html);
+    const mount = inheritedContentMount(contentEl);
+    // A reusable design can also be assigned directly to several content pages.
+    // Legacy complete-page designs retain their existing replacement behavior.
+    if (!presentation.inherited && mount.dataset.dynamicHost !== 'true')
+        return;
+    appendRuntimeHtmlContent(mount, page.html);
 }
 export async function renderPublicRuntimePageContent({ page, config = page.meta || {}, contentEl, globalLayout = [], allWidgets, lane, emit, widgetEmit = noopWidgetEmit, debug = false }) {
     const presentation = await resolveRuntimePresentationCascade(mergedPresentationPage(page, config), emit, lane);
@@ -48,13 +51,14 @@ export async function renderPublicRuntimePageContent({ page, config = page.meta 
             const renderedDocument = await renderRuntimeDesignDocument(contentEl, designDocument, allWidgets, lane, {
                 emit,
                 widgetEmit,
-                globalLayout
+                globalLayout,
+                designPath: [String(presentation.designId)]
             });
             if (!renderedDocument) {
                 await renderStaticRuntimeGrid(contentEl, combined, allWidgets, lane, { widgetEmit });
             }
             appendInheritedPageHtml(contentEl, page, presentation);
-            await renderAttachedRuntimeContent({ page, lane, allWidgets, container: contentEl, emit, widgetEmit });
+            await renderAttachedRuntimeContent({ page, lane, allWidgets, container: inheritedContentMount(contentEl), emit, widgetEmit });
             return;
         }
         catch (err) {

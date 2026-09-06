@@ -1,10 +1,23 @@
 'use strict';
 
 const { BACKEND_EVENTS } = require('../../../../contracts/generatedBackendEventCatalog');
+const { hasPermission } = require('../../../userManagement/permissionUtils');
 
 // Platform administration resources remain facade declarations; this split
 // does not change their module owners, permissions or emitted event names.
 const adminActions = Object.freeze({
+  coreUpdates: Object.freeze({
+    status: { eventName: BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, moduleName: 'moduleLoader', permission: 'settings.core.edit' },
+    check: { eventName: BACKEND_EVENTS.CHECK_CORE_UPDATE, moduleName: 'moduleLoader', permission: 'settings.core.edit' },
+    install: { eventName: BACKEND_EVENTS.INSTALL_CORE_UPDATE, moduleName: 'moduleLoader', permission: 'settings.core.edit' }
+  }),
+  // AgentManager owns the existing any-of surfaceWrite permission check.
+  // Only the host adapter operations are exposed, never command control.
+  agentSurface: Object.freeze({
+    publish: { eventName: BACKEND_EVENTS.AGENT_PUBLISH_SURFACE_SNAPSHOT, moduleName: 'agentManager' },
+    poll: { eventName: BACKEND_EVENTS.AGENT_POLL_SURFACE_COMMANDS, moduleName: 'agentManager' },
+    ack: { eventName: BACKEND_EVENTS.AGENT_ACK_SURFACE_COMMAND, moduleName: 'agentManager' }
+  }),
   settings: Object.freeze({
     list: { eventName: BACKEND_EVENTS.LIST_SETTINGS, moduleName: 'settingsManager', permission: 'settings.core.view' },
     get: { eventName: BACKEND_EVENTS.GET_SETTING, moduleName: 'settingsManager', permission: 'settings.core.view' },
@@ -81,5 +94,15 @@ module.exports = Object.freeze({
   name: 'platform',
   adminActions,
   publicActions,
-  appContextReadActions
+  appContextReadActions,
+  prepareAdminParams({ resource, params, actor }) {
+    // Internal service JWTs replace actor JWTs downstream. Decide visibility
+    // here from the verified caller, never from a browser-supplied flag.
+    if (resource === 'notifications') return { ...params, includeCoreUpdates: Boolean(actor && !actor.isPublic && hasPermission(actor, 'settings.core.edit')) };
+    if (resource !== 'agentSurface') return params;
+    if (params.appName !== 'plainspace' || typeof params.surfaceId !== 'string' || !/^cms\.[a-z0-9.-]+$/.test(params.surfaceId)) {
+      throw new Error('CMS_AGENT_SURFACE_INVALID: The admin host can only report its own CMS workspaces.');
+    }
+    return params;
+  }
 });

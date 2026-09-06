@@ -269,6 +269,7 @@ export function createBuilderHeader({
   hidePreviewHeader,
   livePreviewController,
   openDesignSettings,
+  onPublishController,
   undo,
   redo
 }) {
@@ -340,6 +341,7 @@ export function createBuilderHeader({
         try { nameInput.value = layoutName; } catch {}
         nameInput.addEventListener('input', () => {
           layoutName = nameInput.value;
+          document.dispatchEvent(new CustomEvent('designerContentChanged'));
         });
       }
       const headerActions = topBar.querySelector('.header-actions') || topBar;
@@ -422,7 +424,7 @@ export function createBuilderHeader({
               isLayout: getActiveLayer() === 0,
               isGlobal: getActiveLayer() === 0
             });
-            alert(getActiveLayer() === 0 ? 'Layout template saved' : 'Design saved');
+            alert('Design saved');
           } catch (err) {
             alert('Save failed: ' + err.message);
           }
@@ -452,7 +454,7 @@ export function createBuilderHeader({
       }
 
       if (publishBtn) {
-        initPublishPanel({
+        const publishController = initPublishPanel({
           publishBtn,
           nameInput,
           gridEl,
@@ -467,6 +469,7 @@ export function createBuilderHeader({
           saveDesign,
           getDesignId: () => state.designId || document.body.dataset.designId || null
         });
+        onPublishController?.(publishController);
       }
     } catch (err) {
       headerLogger.error('failed to render header', err);

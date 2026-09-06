@@ -17,7 +17,7 @@ function request(server, requestPath) {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', chunk => { body += chunk; });
-      res.on('end', () => resolve({ status: res.statusCode, body }));
+      res.on('end', () => resolve({ status: res.statusCode, body, headers: res.headers }));
     });
     req.on('error', reject);
     req.end();
@@ -31,11 +31,14 @@ function createEmitter(expectedSlug, seenSlugs) {
         callback(null, 'public-token');
         return;
       }
-      if (eventName === 'getPageBySlug') {
-        seenSlugs.push(payload.slug);
-        callback(null, payload.slug === expectedSlug
-          ? { id: 'page-1', slug: expectedSlug }
-          : null);
+      if (eventName === 'cmsPublicRuntimeRequest') {
+        seenSlugs.push(payload.params.slug);
+        const data = payload.action === 'envelope' ? {
+          meta: { seoTitle: 'Published <title>', seoDesc: 'Published description', seoImage: '/cover.png' },
+          attachments: [{ type: 'html', descriptor: { inline: { html: '<h1>Initial content</h1>' } } }]
+        }
+          : payload.params.slug === expectedSlug ? { id: 'page-1', slug: expectedSlug } : null;
+        callback(null, { resource: payload.resource, action: payload.action, eventName: 'test', data });
         return;
       }
       callback(null, null);
@@ -68,6 +71,13 @@ describe('nested public page routes', () => {
       expect(response.status).toBe(200);
       expect(seenSlugs).toContain(expectedSlug);
       expect(response.body).toContain(`window.PAGE_SLUG = ${JSON.stringify(expectedSlug)}`);
+      expect(response.body).toContain('<h1>Initial content</h1>');
+      expect(response.body).toContain('<title>Published &lt;title&gt;</title>');
+      expect(response.body).toContain('<meta name="description" content="Published description">');
+      expect(response.body).toMatch(/<meta property="og:image" content="https?:\/\/[^"\s]+\/cover.png">/);
+      expect(response.body).toContain('window.BP_PUBLIC_BOOTSTRAP');
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.headers['content-security-policy']).toContain("script-src 'self' blob: 'nonce-");
     } finally {
       await new Promise(resolve => server.close(resolve));
     }

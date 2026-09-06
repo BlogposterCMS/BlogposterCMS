@@ -1,7 +1,6 @@
+import { mountWidgetModule } from './widgetModuleMount.js';
 import { loadWidgetModule } from './widgetModuleLoader.js';
-export async function renderWidgetModule(container, widgetDef, instanceId, instanceMetadata = {}) {
-    if (!widgetDef.codeUrl)
-        return;
+export async function renderWidgetModule(container, widgetDef, instanceId, instanceMetadata = {}, scene) {
     const ctx = {
         id: instanceId,
         widgetId: widgetDef.id,
@@ -10,15 +9,7 @@ export async function renderWidgetModule(container, widgetDef, instanceId, insta
     };
     if (window.ADMIN_TOKEN)
         ctx.jwt = window.ADMIN_TOKEN;
-    try {
-        const module = await loadWidgetModule(widgetDef.codeUrl);
-        if (!module) {
-            console.warn('[Widgets] blocked widget import path', widgetDef.id, widgetDef.codeUrl);
-            return;
-        }
-        module.render?.(container, ctx);
-    }
-    catch (err) {
-        console.error('[Widgets] widget import error', err);
-    }
+    if (scene)
+        ctx.scene = scene;
+    await mountWidgetModule(container, widgetDef, loadWidgetModule, () => ctx);
 }

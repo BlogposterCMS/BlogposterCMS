@@ -10,6 +10,18 @@ const { executeJs } = require('/ui/runtime/main/script-utils.js');
 const { loadHtml, __setLoaderTestDeps } = require('../mother/modules/pagesManager/publicLoader.js');
 
 describe('pagesManager public html loader security', () => {
+  test('adopts initial server HTML without duplication, sanitizer fetch or replacement', async () => {
+    document.body.innerHTML = '<div id="bp-initial-html" class="bp-page-html"><h1>Published</h1></div>';
+    const initialHtml = document.getElementById('bp-initial-html');
+    const importer = jest.fn().mockRejectedValue(new Error('must not fetch'));
+    __setLoaderTestDeps({ sanitizerImporter: importer });
+    (window as any).NONCE = 'test-nonce';
+    await loadHtml({ inline: { html: '<h1>Published</h1>', js: 'start()' } }, { initialHtml });
+    expect(importer).not.toHaveBeenCalled();
+    expect(document.querySelectorAll('h1')).toHaveLength(1);
+    expect(document.querySelector('h1')?.parentElement).toBe(initialHtml);
+    expect(executeJs).toHaveBeenCalledTimes(1);
+  });
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div>';
     document.head.innerHTML = '';

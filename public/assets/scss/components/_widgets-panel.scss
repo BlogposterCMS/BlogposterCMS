@@ -110,6 +110,10 @@
   transform: translateY(-1px);
 }
 
+.widget-card:focus-visible {
+  box-shadow: var(--studio-focus-ring);
+}
+
 .widget-card:active {
   cursor: grabbing;
 }

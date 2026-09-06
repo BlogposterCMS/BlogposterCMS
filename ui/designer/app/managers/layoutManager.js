@@ -235,11 +235,15 @@ export function applyLayout(layout, {
     wrapper.dataset.responsivePlacement = JSON.stringify(responsivePlacement);
     const w = Math.max(1, Math.round(geometry.widthPx));
     const h = Math.max(1, Math.round(geometry.heightPx / cellH));
-    const x = Math.round(projectResponsiveHorizontalPosition(geometry, viewportWidth));
+    const placementWidth = gridEl.classList.contains('layout-grid-container') ? (gridEl.clientWidth || viewportWidth) : viewportWidth;
+    const x = Math.round(projectResponsiveHorizontalPosition(geometry, placementWidth));
     const y = Math.max(0, Math.round(geometry.yPx / cellH));
     wrapper.dataset.x = x;
     wrapper.dataset.y = y;
-    wrapper.style.zIndex = layerIndex.toString();
+    // The editing layer and visual stacking order are separate persisted concepts.
+    const stackOrder = Number.isFinite(item.zIndex) ? item.zIndex : layerIndex;
+    wrapper.style.zIndex = String(stackOrder);
+    wrapper.dataset.layerOrder = String(stackOrder);
     wrapper.setAttribute('gs-w', w);
     wrapper.setAttribute('gs-h', h);
     wrapper.setAttribute('gs-min-w', Math.max(1, Math.round(geometry.minWidthPx || 1)));

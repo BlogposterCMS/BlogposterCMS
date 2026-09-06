@@ -7,6 +7,60 @@ jest.mock('../ui/designer/app/renderer/capturePreview.js', () => ({
 }));
 
 describe('designer save manager sections', () => {
+  it('tracks untitled drafts, pending writes, intervening edits, and rejected saves', async () => {
+    const state: any = { designId: null, designVersion: 0, autosaveEnabled: false };
+    const manager = createSaveManager(state, {});
+    const root = document.createElement('div');
+    const options = { name: 'Shared draft', gridEl: root, layoutRoot: root,
+      getCurrentLayoutForLayer: () => [], getActiveLayer: () => 1, ensureCodeMap: () => ({}),
+      updateAllWidgetContents: jest.fn(), capturePreview: async () => '' };
+    window.ADMIN_TOKEN = 'token';
+    let release!: (value: unknown) => void;
+    window.meltdownEmit = jest.fn(() => new Promise(resolve => { release = resolve; }));
+    manager.scheduleAutosave();
+    expect(manager.getSaveState()).toMatchObject({ dirty: true, busy: false, designId: null, autosaveEnabled: false });
+    const pending = manager.saveDesign(options);
+    expect(manager.getSaveState().busy).toBe(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    manager.scheduleAutosave();
+    release({ id: 'saved', version: 1 });
+    await pending;
+    expect(manager.getSaveState()).toMatchObject({ dirty: true, busy: false });
+    window.meltdownEmit = jest.fn().mockRejectedValue(new Error('SAVE_DENIED'));
+    const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(manager.saveDesign(options)).rejects.toThrow('SAVE_DENIED');
+    expect(manager.getSaveState()).toMatchObject({ dirty: true, busy: false, error: 'SAVE_DENIED' });
+    errorLog.mockRestore();
+    window.meltdownEmit = jest.fn().mockResolvedValue({ id: 'saved', version: 2 });
+    await manager.saveDesign(options);
+    expect(manager.getSaveState()).toMatchObject({ dirty: false, busy: false, error: null });
+    manager.scheduleAutosave();
+    await expect(manager.saveDesign({ ...options, name: '' })).rejects.toThrow('DESIGNER_SAVE_NAME_REQUIRED');
+    expect(manager.getSaveState().dirty).toBe(true);
+  });
+  it('autosaves standalone designs through the complete Designer contract', async () => {
+    const root = document.createElement('div');
+    root.className = 'layout-container';
+    root.dataset.nodeId = 'content';
+    root.dataset.dynamicHost = 'true';
+    const state: any = { designId: 'saved', designVersion: 1, autosaveEnabled: true, pageId: null };
+    window.ADMIN_TOKEN = 'token';
+    window.meltdownEmit = jest.fn().mockResolvedValue({ id: 'saved', version: 2 });
+    const options = {
+      name: 'Saved design', layoutRoot: root, gridEl: root,
+      getCurrentLayoutForLayer: () => [], getActiveLayer: () => 1,
+      ensureCodeMap: () => ({}), updateAllWidgetContents: jest.fn(),
+      capturePreview: async () => '', pageId: null
+    };
+    const manager = createSaveManager(state, { getDesignSaveOptions: () => options });
+    await manager.saveCurrentLayout({ autosave: true });
+    expect(window.meltdownEmit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
+      resource: 'designer', action: 'save', params: expect.objectContaining({
+        layout: expect.objectContaining({ nodeId: 'content', isDynamicHost: true })
+      })
+    }), expect.anything());
+    expect(state.designVersion).toBe(2);
+  });
   it('saves empty Sections on canonical LayoutTree nodes without a duplicate scene list', async () => {
     const layoutRoot = document.createElement('div');
     layoutRoot.className = 'layout-root layout-container layout-page-root';

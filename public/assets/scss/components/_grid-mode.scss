@@ -1,5 +1,6 @@
 body.grid-mode {
-  .canvas-item {
+  // Dashboard cards keep their shared surface border in grid mode.
+  .canvas-item:not(:where(.dashboard-widget)) {
     border: none;
   }
 

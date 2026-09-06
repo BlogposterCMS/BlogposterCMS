@@ -300,6 +300,8 @@ export interface BuildDomSnapshotOptions {
 }
 
 export interface AgentSurfaceClientOptions {
+  /** Host adapter; embedded apps retain their AppLoader emitter. */
+  emit?: AgentEmit;
   appName: string;
   surfaceId: string;
   surfaceType?: string;
@@ -313,6 +315,7 @@ export interface AgentSurfaceClientOptions {
   publishAfterCommand?: boolean;
   commandSnapshotDelayMs?: number;
   onError?: (error: unknown) => void;
+  onCommandSettled?: (command: AgentSurfaceCommand, acknowledged: boolean) => void;
 }
 
 export interface DomAgentSurfaceOptions extends AgentSurfaceClientOptions {
@@ -980,7 +983,7 @@ export function createAgentSurfaceClient(options: AgentSurfaceClientOptions): Ag
   });
 
   const publishSnapshot = async (reason = 'manual'): Promise<unknown> => {
-    const emit = getEmit();
+    const emit = options.emit || getEmit();
     if (!emit || publishing) return null;
     publishing = true;
     try {
@@ -1016,7 +1019,7 @@ export function createAgentSurfaceClient(options: AgentSurfaceClientOptions): Ag
     status: 'acked' | 'failed' = 'acked',
     result: unknown = null
   ): Promise<unknown> => {
-    const emit = getEmit();
+    const emit = options.emit || getEmit();
     const id = commandId(command);
     if (!emit || !id) return null;
     return emit('agent.ackSurfaceCommand', {
@@ -1028,7 +1031,7 @@ export function createAgentSurfaceClient(options: AgentSurfaceClientOptions): Ag
   };
 
   const pollCommands = async (): Promise<AgentSurfaceCommand[]> => {
-    const emit = getEmit();
+    const emit = options.emit || getEmit();
     if (!emit || polling) return [];
     polling = true;
     try {
@@ -1041,9 +1044,11 @@ export function createAgentSurfaceClient(options: AgentSurfaceClientOptions): Ag
       let handledDomainCommand = false;
       let snapshotReason = 'command';
       for (const command of list) {
+        let acknowledged = false;
         try {
           if (commandAction(command) === 'surface.refresh') {
             await ackCommand(command, 'acked', { handled: true, action: 'surface.refresh' });
+            acknowledged = true;
             handledAny = true;
             if (!handledDomainCommand) snapshotReason = 'refresh';
             continue;
@@ -1053,11 +1058,21 @@ export function createAgentSurfaceClient(options: AgentSurfaceClientOptions): Ag
           const result = options.handleCommand
             ? await options.handleCommand(command)
             : { handled: false };
+          // Delivery is not success. Domain adapters report unsupported/failed
+          // operations with handled=false; never acknowledge those as completed.
+          if (result && typeof result === 'object' && 'handled' in result && result.handled === false) {
+            const detail = result as Record<string, unknown>;
+            throw new Error(`${detail.code || 'AGENT_SURFACE_COMMAND_UNHANDLED'}: ${detail.message || detail.reason || commandAction(command)}`);
+          }
           await ackCommand(command, 'acked', result ?? { handled: true });
+          acknowledged = true;
           handledAny = true;
         } catch (error) {
+          handledAny = true;
           await ackCommand(command, 'failed', error);
           reportError(options, error);
+        } finally {
+          options.onCommandSettled?.(command, acknowledged);
         }
       }
       if (handledAny && options.publishAfterCommand !== false) {

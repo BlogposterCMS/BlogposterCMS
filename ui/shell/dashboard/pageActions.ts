@@ -11,6 +11,16 @@ interface DashboardActionsWindow extends Window {
 }
 
 export async function createNewPage(): Promise<void> {
+  // The fixed Pages workspace owns creation; the shell's shortcut enters that same form.
+  const content = document.getElementById('content');
+  if (content?.dataset.dashboardLayout === 'fixed') {
+    const widgetShell = content.querySelector('[data-widget-id="pageList"] .canvas-item-content');
+    const workspaceRoot = widgetShell?.shadowRoot || content;
+    const addPage = workspaceRoot.querySelector<HTMLButtonElement>('.page-manager [data-action="add"]');
+    if (addPage) addPage.click();
+    else await bpDialog.alert('PAGE_MANAGER_NOT_READY: Wait for page management to load, then try again.');
+    return;
+  }
   const title = await bpDialog.prompt('New page title:', '', {
     prompt: { label: 'Page title', required: true }
   });

@@ -9,7 +9,7 @@ export const STRINGS = {
   containerToolbar: 'Container tools',
   containerAdd: 'Add container',
   containerPlace: 'Place container',
-  containerHost: 'Use as design area',
+  containerHost: 'Use as page content area',
   containerDesign: 'Assign design',
   containerDesignPrompt: 'Enter design ID',
   containerDelete: 'Delete container',

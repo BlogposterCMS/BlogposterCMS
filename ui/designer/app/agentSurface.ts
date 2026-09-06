@@ -8,6 +8,8 @@ import {
   type BuildSnapshotContext
 } from '/ui/shared/agent/agentSurfaceClient.js';
 import { capturePreview } from './renderer/capturePreview.js';
+import { createWorkspaceCommandGuard, workspaceActionCatalog } from '/ui/shared/agent/workspaceAgent.js';
+import { registerWorkspaceChanges } from '/ui/shared/navigation/workspaceChanges.js';
 import { livePreviewFeedbackState } from './renderer/livePreviewFrame.js';
 import {
   activateColorScheme,
@@ -39,6 +41,7 @@ import {
   sitePresetsAgentState
 } from '/ui/shared/presets/sitePresets.js';
 import { getBuilderViewportState } from './renderer/viewportState.js';
+import { readDesignerDraftInputs } from './renderer/draftInputs.js';
 import {
   normalizeResponsivePlacementContract,
   resolveResponsivePlacementGeometry,
@@ -55,6 +58,14 @@ const EFFECT_LABELS: Record<string, string> = {
   moveY: 'Move Y'
 };
 const DESIGNER_AGENT_ACTIONS = Object.freeze([
+  {
+    action: 'container.contentHost.set', label: 'Use container for page content', category: 'container',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'container.designRef.set', label: 'Attach a reusable design', category: 'container',
+    params: [{ name: 'id', type: 'string', required: true }, { name: 'designId', type: 'number|null', required: true }]
+  },
   ...SURFACE_AGENT_ACTIONS,
   {
     action: 'feedback.refresh',
@@ -721,6 +732,7 @@ function layoutNodeFeedback(el: HTMLElement, index: number): Record<string, unkn
     label: el.dataset.label || el.dataset.nodeId || el.dataset.designRef || id,
     selected: el.classList.contains('layout-container--active') || el.classList.contains('tree-selected'),
     workarea: el.dataset.workarea === 'true',
+    isDynamicHost: el.dataset.dynamicHost === 'true',
     containsWorkspace: el.classList.contains('layout-grid-surface'),
     gridSurfaceId: el.dataset.gridSurfaceId || null,
     parentGridSurfaceId: parentGridSurface?.dataset.gridSurfaceId || null,
@@ -832,10 +844,21 @@ function widgetPlacementFeedback(): Record<string, unknown>[] {
       range: rangeOf(el),
       effects: effectsOf(el),
       responsivePlacement: responsivePlacementFeedback(el),
+      htmlImport: htmlImportFeedback(el),
       styleSource: styleSourceState(el),
       bounds: elementBounds(el)
     };
   });
+}
+
+function htmlImportFeedback(el: HTMLElement): Record<string, unknown> | null {
+  if (!el.dataset.htmlImport) return null;
+  try {
+    const value = JSON.parse(el.dataset.htmlImport);
+    return value && value.version === 1 ? value : null;
+  } catch {
+    return { warnings: ['DESIGNER_AGENT_FEEDBACK_HTML_IMPORT_INVALID'] };
+  }
 }
 
 function styleSourceEntry(node: Record<string, unknown>): Record<string, unknown> | null {
@@ -944,6 +967,10 @@ function designerFeedbackWarnings(
   widgets: Record<string, unknown>[]
 ): Record<string, unknown>[] {
   const warnings: Record<string, unknown>[] = [];
+  const handoff = designerHandoffState();
+  if (handoff.dirty) warnings.push({ code: 'DESIGNER_AGENT_FEEDBACK_UNSAVED_DRAFT', severity: 'info', message: 'Read the shared draft and explicitly accept it before editing or saving.' });
+  if (handoff.busy) warnings.push({ code: 'DESIGNER_AGENT_FEEDBACK_OPERATION_PENDING', severity: 'info', message: 'Wait for the current save, publication or agent command to finish.' });
+  if (handoff.error) warnings.push({ code: 'DESIGNER_AGENT_FEEDBACK_OPERATION_FAILED', severity: 'warning', message: handoff.error });
   const hasLayoutRoot = Boolean(document.getElementById('layoutRoot'));
   const hasCommandPort = Boolean(window.blogposterDesignerCommands && typeof window.blogposterDesignerCommands.execute === 'function');
   const zeroSizeWidgets = widgets.filter(widget => {
@@ -1012,7 +1039,7 @@ function designerFeedbackWarnings(
     warnings.push({
       code: 'DESIGNER_AGENT_FEEDBACK_NO_COMMAND_PORT',
       severity: 'warning',
-      message: 'window.blogposterDesignerCommands.execute is missing, so write commands can only use fallback DOM actions.'
+      message: 'window.blogposterDesignerCommands.execute is missing. Agent writes are unavailable until the Designer is ready.'
     });
   }
   if (zeroSizeWidgets.length > 0) {
@@ -1127,6 +1154,8 @@ function buildDesignerAgentFeedback(
       sectionToolbarInsetPlacement: true,
       sectionResizeZoomInvariant: true,
       placementModeIndependentWidgetSelection: true,
+      singleDocumentLayoutEditing: true,
+      persistentContentHost: true,
       sectionBackgroundDeselectsWidget: true,
       widgetActionBarHidesOnCanvasScroll: true,
       flowingSectionCanvas: true,
@@ -1527,6 +1556,7 @@ export async function buildDesignerAgentSnapshot(
       colorLibrary,
       fontPackages,
       sitePresets,
+      collaboration: designerHandoffState(),
       feedback
     },
     selection: selectionState(),
@@ -1545,7 +1575,7 @@ export async function buildDesignerAgentSnapshot(
       }
     ],
     controls: availableControls(),
-    actions: DESIGNER_AGENT_ACTIONS,
+    actions: workspaceActionCatalog(designerActions()),
     visual,
     feedback,
     meta: {
@@ -1789,11 +1819,55 @@ async function handleSitePresetsCommand(
   return { handled: false, reason: 'unsupported-site-presets-command', action };
 }
 
+const designerCommandGuard = createWorkspaceCommandGuard(() => {
+  const snapshot = window.blogposterDesignerCommands?.snapshot?.() || {};
+  const save = snapshot.save as Record<string, unknown> | undefined;
+  const publishing = snapshot.publishing as Record<string, unknown> | undefined;
+  return {
+    dirty: Boolean(save?.dirty), busy: Boolean(save?.busy || publishing?.busy), error: String(save?.error || publishing?.error || ''),
+    save, publishing, document: snapshot.document, selection: snapshot.selection,
+    draftInputs: readDesignerDraftInputs(),
+    viewport: snapshot.viewport, activeScene: snapshot.activeScene,
+    colorLibrary: colorLibraryAgentState(), fontPackages: fontPackagesAgentState(), sitePresets: sitePresetsAgentState()
+  };
+});
+
+export const designerHandoffState = () => designerCommandGuard.snapshot();
+
+function designerActions() {
+  return DESIGNER_AGENT_ACTIONS.map(action => ({
+    ...action,
+    action: String(action.action),
+    readOnly: action.action === 'surface.refresh' || String(action.action).endsWith('.refresh'),
+    acceptsDraft: true,
+    confirm: action.action === 'design.publish' || String(action.action).endsWith('.delete'),
+    run: (params: Record<string, unknown>) => dispatchDesignerAgentCommand({ action: action.action, params })
+  }));
+}
+
 export async function handleDesignerAgentCommand(command: AgentSurfaceCommand): Promise<Record<string, unknown>> {
+  if (!window.blogposterDesignerCommands?.execute && !commandAction(command).endsWith('.refresh')) {
+    throw new Error('DESIGNER_AGENT_COMMAND_PORT_UNAVAILABLE: Wait until the Designer finishes loading.');
+  }
+  // Legacy target/value aliases remain accepted, but the same revision guard
+  // protects every supported write, including central style-library operations.
+  const root = document.body;
+  const wasInert = root?.inert;
+  try {
+    const operation = designerCommandGuard.execute(command, designerActions().map(action => ({
+      ...action, run: () => dispatchDesignerAgentCommand(command)
+    })));
+    if (root) root.inert = true;
+    return await operation;
+  } finally { if (root) root.inert = Boolean(wasInert); }
+}
+
+async function dispatchDesignerAgentCommand(command: AgentSurfaceCommand): Promise<Record<string, unknown>> {
   const commandPort = window.blogposterDesignerCommands;
   if (commandPort && typeof commandPort.execute === 'function') {
     const result = await commandPort.execute(command);
     if (result && result.handled !== false) return result;
+    if (result && result.reason !== 'unsupported-command') return result;
   }
   const action = commandAction(command);
   if (action === 'feedback.refresh') return { handled: true, feedback: 'refresh-requested' };
@@ -1809,6 +1883,10 @@ export async function handleDesignerAgentCommand(command: AgentSurfaceCommand): 
 export function startDesignerAgentSurface(): AgentSurfaceClient | null {
   if (typeof window === 'undefined') return null;
   const root = document.getElementById('builderRow') || document.body;
+  registerWorkspaceChanges(root, {
+    isDirty: () => designerHandoffState().dirty,
+    isBusy: () => designerHandoffState().busy
+  });
   const client = createAgentSurfaceClient({
     appName: APP_NAME,
     surfaceId: SURFACE_ID,

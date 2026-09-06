@@ -113,3 +113,41 @@ application packages are attachments with category `download` and artifact
 metadata; immutable versions remain separate attachment records. A provider
 uploader may be added behind this boundary later, but it must not introduce a
 second media catalog or expose provider credentials to Pages or public HTML.
+
+## Explorer workspace
+
+The existing `ui/shared/media/mediaExplorerSurface.ts` serves the Media workspace
+and the editor picker. A click selects; double-click / Enter opens a folder.
+Back/Forward follow local folder history; Up navigates to the parent. The sidebar
+loads children on demand, and search is explicitly scoped to the current folder.
+Name/type/date/size sorting keeps folders first. Selection is cleared when its
+file disappears from search results so toolbar actions cannot affect hidden files.
+
+Manage mode defaults to a file list with one contextual toolbar. Picker mode
+uses the same navigation and offers an explicit **Use selected file** action;
+unsupported file types remain visible but cannot be selected for insertion.
+Grid and details previews use the existing `/media/` URL only for raster images
+already under `public/`. Browsing never creates share links or moves files.
+Private files keep their icon until explicitly shared by the existing action.
+
+`listLocalFolder` retains its `folders` / `files` name arrays and adds optional
+`details: [{ name, size, modifiedAt }]`. Folder sizes are null; file sizes are
+bytes; timestamps are ISO strings. Metadata collection uses lstat, skips symlinks
+and retains the existing permissions and library containment checks. Older
+callers can ignore details and newer clients tolerate responses without them.
+Create-folder, rename and delete events return `{ ok: true }` after the actual
+filesystem operation, satisfying the admin facade's JSON result contract.
+
+The Explorer has no independent persistence or file API. Multi-select, copy/move,
+attachment metadata editing and usage discovery are not implied by this file
+browser; they need corresponding owning-module workflows before UI is exposed.
+The `cms.media.*` agent surface exposes folder navigation, search, selection,
+refresh and the surface's enabled create-folder/rename/delete operations through
+the existing handlers. Picker acceptance retains its type filter. Revision,
+busy and confirmation checks follow [CMS agent workflows](../agent-cms-workflows.md).
+File upload has no command adapter here; it remains owned by Media Manager.
+
+Local `openMediaExplorer` handlers run outside the shared HTTP command queue.
+The dialog loads its files through that same client while awaiting a selection;
+queuing the dialog itself would block those requests indefinitely. Backend writes
+remain serialized, and the public-read concurrency limit is unchanged.

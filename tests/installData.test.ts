@@ -57,7 +57,7 @@ describe('installData', () => {
       .mockResolvedValueOnce({ resource: 'users', action: 'count', data: 'unexpected' });
 
     await expect(fetchPublicUserCount({ emit }, 'public-token')).resolves.toBe(2);
-    await expect(fetchPublicUserCount({ emit }, 'public-token')).resolves.toBe(0);
+    await expect(fetchPublicUserCount({ emit }, 'public-token')).rejects.toThrow('SHELL_INSTALL_USER_COUNT_INVALID');
     expect(emit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
       jwt: 'public-token',
       moduleName: 'runtimeManager',

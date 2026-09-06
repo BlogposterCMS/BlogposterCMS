@@ -234,6 +234,7 @@ function readNodePlacement(el) {
         responsivePlacement = undefined;
     }
     return normalizeLayoutNodePlacement({
+        zIndex: el.dataset.layerOrder === undefined ? undefined : el.style.zIndex || el.dataset.layerOrder,
         x: el.dataset.x,
         y: el.dataset.y,
         w: el.getAttribute('gs-w'),
@@ -248,6 +249,11 @@ function readNodePlacement(el) {
 function writeNodePlacement(el, placement) {
     if (!placement)
         return;
+    // Containers participate in their parent's visual stack, independently from editor layer selection.
+    if (placement.zIndex !== undefined) {
+        el.dataset.layerOrder = String(placement.zIndex);
+        el.style.zIndex = String(placement.zIndex);
+    }
     if (placement.x !== undefined)
         el.dataset.x = String(placement.x);
     if (placement.y !== undefined)
@@ -333,6 +339,10 @@ function assignLeafState(targetEl, existing) {
         existing.dataset.workareaLabel = targetEl.dataset.workareaLabel || DEFAULT_LABELS.workareaLabel;
         targetEl.removeAttribute('data-workarea');
         targetEl.removeAttribute('data-workarea-label');
+    }
+    if (targetEl.dataset.dynamicHost === 'true') {
+        existing.dataset.dynamicHost = 'true';
+        delete targetEl.dataset.dynamicHost;
     }
     if (targetEl.dataset.designRef) {
         existing.dataset.designRef = targetEl.dataset.designRef;
@@ -444,6 +454,7 @@ export function serializeLayout(container) {
         return null;
     const isSplit = container.dataset.split === 'true';
     const workarea = container.dataset.workarea === 'true';
+    const dynamicHost = container.dataset.dynamicHost === 'true';
     const nodeId = container.dataset.nodeId;
     const section = readSection(container);
     const placement = container.classList.contains('layout-grid-container')
@@ -464,6 +475,7 @@ export function serializeLayout(container) {
             orientation,
             children,
             ...(workarea ? { workarea: true } : {}),
+            ...(dynamicHost ? { isDynamicHost: true } : {}),
             ...(nodeId ? { nodeId } : {}),
             ...(section ? { section } : {}),
             ...(placement ? { placement } : {}),
@@ -478,6 +490,7 @@ export function serializeLayout(container) {
     const leaf = {
         type: 'leaf',
         ...(workarea ? { workarea: true } : {}),
+        ...(dynamicHost ? { isDynamicHost: true } : {}),
         ...(nodeId ? { nodeId } : {}),
         ...(section ? { section } : {}),
         ...(placement ? { placement } : {}),
@@ -530,6 +543,10 @@ export function deserializeLayout(obj, container, options = {}) {
         writeStyleSourceSettings(container, node.styleSource || {});
     }
     container.dataset.emptyHint = labels.splitHint;
+    if (node.isDynamicHost)
+        container.dataset.dynamicHost = 'true';
+    else
+        delete container.dataset.dynamicHost;
     if (node.workarea) {
         container.dataset.workarea = 'true';
         container.dataset.workareaLabel = labels.workareaLabel;
@@ -627,6 +644,8 @@ export function renderLayoutTree(tree, mountEl) {
             el.dataset.nodeId = String(current.nodeId);
             map.set(String(current.nodeId), el);
         }
+        if (current.isDynamicHost)
+            el.dataset.dynamicHost = 'true';
         if (current.workarea) {
             el.dataset.workarea = 'true';
         }
@@ -890,15 +909,15 @@ export function setContainerSettings(el, settings = {}) {
 export function setDynamicHost(layoutRoot, el, options = {}) {
     if (!layoutRoot)
         return;
-    const labels = labelsFor(options);
-    layoutRoot.querySelectorAll('.layout-container[data-workarea="true"]').forEach(node => {
-        node.removeAttribute('data-workarea');
-        node.removeAttribute('data-workarea-label');
+    // Selecting a scene updates workarea; it must never move the saved content slot.
+    if (el && el !== layoutRoot && !layoutRoot.contains(el))
+        return;
+    delete layoutRoot.dataset.dynamicHost;
+    layoutRoot.querySelectorAll('[data-dynamic-host="true"]').forEach(node => {
+        delete node.dataset.dynamicHost;
     });
-    if (el) {
-        el.dataset.workarea = 'true';
-        el.dataset.workareaLabel = labels.workareaLabel;
-    }
+    if (el)
+        el.dataset.dynamicHost = 'true';
 }
 export function setDesignRef(el, designId) {
     if (!el)
@@ -995,6 +1014,8 @@ function collapseSingleChildSplit(parent) {
         only.dataset.workarea = 'true';
         only.dataset.workareaLabel = parent.dataset.workareaLabel || DEFAULT_LABELS.workareaLabel;
     }
+    if (parent.dataset.dynamicHost === 'true')
+        only.dataset.dynamicHost = 'true';
     parent.replaceWith(only);
 }
 export function deleteContainer(targetEl, { onAfterChange } = {}) {

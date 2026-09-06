@@ -87,7 +87,7 @@
 }
 
 @mixin page-list-empty-state {
-  color: #bbb;
+  color: var(--studio-text-muted);
   padding: 20px 0 8px 0;
   text-align: center;
   font-size: 16px;
@@ -96,7 +96,7 @@
 
 @mixin page-list-item {
   border-radius: 8px;
-  background: #fafbfc;
+  background: var(--studio-surface-muted);
   box-shadow: 0 1px 6px rgba(0,0,0,0.04);
   display: flex;
   flex-direction: column;
@@ -126,7 +126,7 @@
 @mixin page-name {
   font-family: var(--font-body);
   font-size: 1.04rem;
-  color: #181818;
+  color: var(--studio-text);
   font-weight: 600;
   letter-spacing: 0.01em;
   flex: 1;
@@ -140,9 +140,9 @@
   border: 1px solid transparent;
   transition: border 0.18s;
   &[contenteditable="true"]:focus {
-    border: 1px solid #ddd;
-    background: #fff0ff;
-    color: #181818;
+    border: 1px solid var(--studio-border-strong);
+    background: var(--studio-surface-solid);
+    color: var(--studio-text);
   }
 }
 

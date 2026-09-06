@@ -5,6 +5,8 @@ BLOGPOSTER_UPDATE_MANIFEST_URL=https://github.com/BlogposterCMS/BlogposterCMS/re
 BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL=https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json
 BLOGPOSTER_UPDATE_REPOSITORY=BlogposterCMS/BlogposterCMS
 BLOGPOSTER_COMPOSE_FILE=/opt/blogposter/blogposter.compose.yml
+# Enable for the in-app update service; included on every update and rollback.
+# BLOGPOSTER_COMPOSE_UPDATES_FILE=/opt/blogposter/blogposter-updates.compose.yml
 BLOGPOSTER_COMPOSE_PROJECT_DIR=/opt/blogposter
 BLOGPOSTER_COMPOSE_ENV_FILE=/opt/blogposter/deployment.env
 BLOGPOSTER_RELEASE_ENV_FILE=/opt/blogposter/release.env

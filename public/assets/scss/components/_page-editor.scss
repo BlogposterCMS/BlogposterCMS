@@ -76,3 +76,33 @@
 .color-picker.hidden {
   display: none;
 }
+
+// Metadata and content are sections of one fixed editor, not grid widgets.
+.page-editor-workspace {
+  container: page-editor / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: clamp(16px, 2vw, 28px);
+  color: var(--studio-text);
+  .page-editor-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  h2 { margin: 10px 0 6px; font-size: 23px; overflow-wrap: anywhere; }
+  h3 { margin: 0; font-size: 15px; }
+  p { margin: 0; color: var(--studio-text-muted); line-height: 1.5; }
+  .page-editor-back { color: var(--studio-text-muted); font-size: 13px; }
+  .page-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .page-editor-feedback:empty { display: none; }
+  [role='alert'] { color: var(--color-error); }
+  .page-editor-body { display: grid; grid-template-columns: minmax(250px, 330px) minmax(0, 1fr); gap: 28px; }
+  .page-editor-widget { padding: 20px; background: var(--studio-surface-muted); border-radius: 12px; gap: 18px; min-width: 0; }
+  .page-editor-content { min-width: 0; }
+  .form-field { min-width: 0; margin: 0; }
+  .form-field input, .form-field textarea, .form-field select { width: 100%; }
+  .form-field textarea { resize: vertical; }
+  &::after, [aria-label]::after { display: none !important; }
+  @container page-editor (max-width: 850px) {
+    .page-editor-body { grid-template-columns: minmax(0, 1fr); }
+    .page-editor-actions { width: 100%; }
+  }
+}

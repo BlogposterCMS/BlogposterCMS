@@ -7,6 +7,34 @@ same Design Studio surface.
 
 ## Boundary
 
+### Shared rendering implementation
+
+`ui/widgets/rendering/widgetModuleMount.ts` owns module load/render sequencing,
+async completion and the existing `WIDGET_RUNTIME_*` diagnostics for Studio,
+the widget catalog and the website. `widgetInlineCode.ts` owns saved-code
+detection, instance metadata precedence (`meta` overrides `metadata`), HTML
+sanitization and the existing nonce-aware script executor. Metadata-only
+instances continue to render their registered module.
+
+Studio delegates to `widgetRenderer.ts` and adds only scene context, editable
+registration and text selection helpers. Runtime consumes the shared helpers
+through `widgetRuntimeGateway.ts`; its adapter retains public/admin credentials,
+event context and Shadow DOM/CSS isolation. Do not duplicate module execution
+or saved-content parsing in these adapters. Layout geometry and editor chrome
+remain outside this shared content renderer; this is not a claim of pixel-level
+equivalence between editor and public page.
+
+`tests/widgetRenderingParity.test.ts` exercises all three real entry points for
+saved settings, async completion, sanitization, errors and public token isolation.
+It also compares a real bundled button's generated content and component styles.
+
+Local verification on 2026-09-05: all 28 parity regressions and the focused
+rendering/architecture suites passed; Webpack production bundling passed.
+The full build attempt was blocked by concurrent `agentSurface.ts` action-catalog
+typing errors (`TS2345`, `TS18048`), and its existing source assertion still
+expected the earlier catalog expression. No live visual or deployment acceptance
+is claimed by these DOM-level tests.
+
 Layout primitives are not widgets. Sections, splits, rows, columns, workareas,
 global header/footer regions and static `designRef` containers belong to the
 shared `DesignDocument.layoutTree` contract in `ui/shared/layout/`.

@@ -1,57 +1,38 @@
 # Changing the Render Engine
 
-BlogposterCMS ships with a client-driven renderer by default. The public runtime
-starts in `ui/runtime/entries/publicEntry.ts` and is emitted to
-`/build/publicEntry.js`; the dashboard renderer starts in
-`ui/runtime/entries/pageRenderer.ts` and is emitted to
-`/build/pageRenderer.js`. Some deployments may prefer a traditional server-side
-approach instead of relying entirely on JavaScript on the client. This document
-explains where to hook in your own rendering logic and what to consider for both
-strategies.
+## Default public flow: layout first, client data afterwards
 
-## Switching via Environment Variables
+Normal public pages use the existing server/module pipeline to resolve the
+published public envelope and linked layout. Pages Manager sanitizes initial
+HTML or emits the shared canvas geometry with reserved widget surfaces. CSS and
+image references can therefore be discovered in the first HTML response.
 
-To avoid editing core files, you can toggle the renderer using the `RENDER_MODE` environment variable or by creating `config/runtime.local.js`. Set `RENDER_MODE=server` for server-side rendering or `RENDER_MODE=client` for the default client-side approach. When overriding via `runtime.local.js`, you may export `{ features: { renderMode: "server" } }` – Blogposter merges this with existing feature flags, so other settings remain intact. The application reads this flag during start-up so you modify configuration only, not the code. When `renderMode` is `server`, Blogposter automatically strips the bundled runtime renderer script from the served HTML files. Currently there is no in-app toggle; switching via environment variables or `runtime.local.js` is the supported approach.
+Keep `/build/publicEntry.js` enabled: it adopts this initial DOM and envelope,
+loads presentation libraries and lets existing widget loaders fetch their data.
+It does not request the start page, envelope or resolved layout again. Public
+shells without a compatible handoff fall back to client discovery. Signed
+Designer Live Preview continues to use its protected parent bridge.
 
+This hybrid startup is the default and does not need `RENDER_MODE=server`.
+The legacy `RENDER_MODE` hooks are not a complete SSR engine; in particular,
+removing the public client entry would disable widget hydration and interactions.
+No separate renderer, template store or public data API is required.
 
-## Server-Side Rendering
+## Extension boundaries
 
-1. **Disable the default client renderer** – Remove or comment out the
-   `<script type="module" src="/build/publicEntry.js"></script>` line in
-   `public/index.html` and the `/build/pageRenderer.js` line in admin shells
-   where applicable. With the script gone the server must provide fully rendered
-   HTML.
-2. **Implement a render function** – Modify `app.js` to call your preferred view
-   engine (e.g. EJS, Pug, React SSR) when responding to page requests. The
-   existing middleware already fetches page data via the meltdown event bus, so
-   pass that data into your templates before sending the response.
-3. **Sanitize any dynamic content** – When rendering on the server be mindful of
-   cross-site scripting risks. Escape user input and use an established templating
-   engine that auto‑escapes HTML by default.
-4. **Cache carefully** – To keep load times reasonable, enable caching headers
-   or server-side memoization. Never cache private content or pages containing
-   user-specific data without additional controls.
+- HTTP composition belongs in `mother/server/http/publicPageRoutes.js`, not
+  `app.js`. The route owns CSP, escaped bootstrap values and no-store headers.
+- Page presentation belongs in `mother/modules/pagesManager/publicPresentation.js`.
+  Read through the existing public facade so draft/lane checks stay effective.
+- Server and browser share `ui/shared/layout/publicCanvasPresentation.ts` for
+  canvas CSS/geometry. Keep client widget data and scripts behind their existing
+  module/facade and nonce-controlled execution boundaries.
+- Do not cache token/nonce-bearing HTML or add long immutable cache lifetimes to
+  unversioned loader imports. A different cache/render architecture needs its own
+  publish/revision/language invalidation and security review.
 
-## Client-Side Rendering (CSR)
-
-1. **Keep the runtime bundle enabled** – Ensure the script tag for
-   `/build/publicEntry.js` remains in public HTML and `/build/pageRenderer.js`
-   remains in the dashboard shell. These bundles load widgets and layouts via
-   API calls and assemble the page in the browser.
-2. **Expose only needed APIs** – CSR requires the browser to fetch page data.
-   Review the REST endpoints opened in `app.js` and disable any you do not need
-   publicly. Use strict CORS and CSRF protections to guard admin APIs.
-3. **Monitor bundle size** – Complex client renderers grow quickly. Use the
-   provided Webpack config to split vendor libraries and enable compression so
-   pages load fast even with many widgets.
-4. **Consider a hydration step** – If SEO or first render speed is important,
-   you can pre-generate minimal markup on the server and let the runtime bundle
-   hydrate it. This hybrid approach keeps interactive features without fully
-   committing to SSR.
-
-Changing the render engine involves editing core files. Back up your instance
-and test thoroughly before deploying new rendering logic.
-
+See [public startup performance](public-startup-performance.md) for measurements
+and the remaining native-module import/bandwidth costs.
 ## Running without the bundled admin dashboard
 
 Some deployments prefer to disable the built-in `/admin` shell entirely and use
@@ -133,3 +114,4 @@ await orchestrate(envelope.data, { api: '/api', jwt, mount: renderIntoDom });
 The example keeps loaders modular, carries the admin JWT in headers, and avoids
 inline scripts. In production, host the orchestrator modules on the same origin
 as the React bundle to avoid CORS preflights and ensure subresource integrity.
+

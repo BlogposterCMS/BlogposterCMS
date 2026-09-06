@@ -86,11 +86,13 @@ export const pageService = {
     title,
     slug,
     status = 'published',
+    parent_id,
     meta
   }: {
     title: string;
     slug: string;
     status?: string;
+    parent_id?: string | number | null;
     meta?: Record<string, unknown>;
   }): Promise<unknown> {
     return requestPageAction('create', {
@@ -98,6 +100,7 @@ export const pageService = {
       slug,
       lane: 'public',
       status,
+      ...(parent_id !== undefined ? { parent_id } : {}),
       ...(meta ? { meta } : {})
     });
   },

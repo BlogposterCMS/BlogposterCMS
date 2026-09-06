@@ -19,54 +19,41 @@
   border-bottom: 1px solid var(--studio-border);
   box-shadow: none;
 
+  // Maintenance is an operating state; reuse the calm dashboard notice surface.
   .maintenance-banner {
-    position: relative;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
     width: 100%;
-    padding: 0.65rem 1rem;
-    border-radius: var(--studio-radius-panel);
+    padding: 10px 14px;
+    border: 1px solid var(--studio-border);
+    border-radius: var(--studio-field-radius);
+    background: var(--studio-surface-muted);
+    color: var(--studio-text);
     font: inherit;
-    font-size: 0.95rem;
-    font-weight: 600;
-    border: 1px solid color-mix(in srgb, var(--color-error) 45%, var(--color-border) 55%);
-    background: color-mix(in srgb, var(--studio-surface-solid) 80%, var(--color-error) 20%);
-    color: color-mix(in srgb, var(--color-error) 65%, var(--color-text) 35%);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: left;
     cursor: pointer;
-    transition:
-      background-color var(--motion-duration-base) var(--motion-ease-standard),
-      color var(--motion-duration-base) var(--motion-ease-standard),
-      border-color var(--motion-duration-base) var(--motion-ease-standard),
-      transform var(--motion-duration-fast) var(--motion-ease-standard);
-    text-align: center;
 
-    &:hover,
+    &[hidden] { display: none; }
+
+    &:hover {
+      background: var(--studio-surface-solid);
+      border-color: var(--studio-border-strong);
+    }
+
     &:focus-visible {
-      background: color-mix(in srgb, var(--studio-surface-solid) 70%, var(--color-error) 30%);
-      border-color: color-mix(in srgb, var(--color-error) 60%, var(--color-border) 40%);
-      color: color-mix(in srgb, var(--color-error) 55%, var(--color-text) 45%);
-      transform: translateY(-1px);
-      outline: none;
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 35%, transparent 65%);
+      box-shadow: var(--studio-focus-ring);
     }
 
-    &:focus:not(:focus-visible) {
-      outline: none;
-      box-shadow: none;
-    }
-
-    &__label {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
+    &__label { color: var(--studio-text-muted); }
 
     &__action {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: color-mix(in srgb, var(--color-error) 70%, var(--color-text) 30%);
+      color: var(--studio-text);
+      font-weight: 600;
       text-decoration: underline;
       text-underline-offset: 3px;
     }

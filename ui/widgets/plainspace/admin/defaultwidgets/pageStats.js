@@ -20,6 +20,7 @@ function renderStatRows(stats) {
 export async function render(el) {
     if (!el)
         return;
+    el.innerHTML = '<p role="status">Loading page counts…</p>';
     try {
         const jwt = window.ADMIN_TOKEN;
         const emit = window.meltdownEmit;
@@ -37,6 +38,14 @@ export async function render(el) {
     `;
     }
     catch (err) {
-        el.innerHTML = `<div class="error">Error loading stats: ${errorMessage(err)}</div>`;
+        const message = document.createElement('p');
+        message.setAttribute('role', 'alert');
+        message.textContent = `PAGE_STATS_LOAD_FAILED: ${errorMessage(err)}`;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'button secondary sm';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => void render(el));
+        el.replaceChildren(message, retry);
     }
 }

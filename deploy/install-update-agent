@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Host provisioning only. End users install subsequent releases inside the CMS.
+[[ "$(id -u)" == 0 ]] || { echo 'CORE_UPDATE_SETUP_ROOT_REQUIRED'; exit 1; }
+[[ -x /usr/bin/node ]] && /usr/bin/node -e 'if(+process.versions.node.split(".")[0]<24)process.exit(1)' || {
+  echo 'CORE_UPDATE_SETUP_NODE_REQUIRED: install Node.js 24 or newer at /usr/bin/node'; exit 1;
+}
+for command in systemctl getent groupadd install gh; do
+  command -v "$command" >/dev/null || { echo "CORE_UPDATE_SETUP_TOOL_MISSING: $command"; exit 1; }
+done
+asset_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# Verify every executable/configuration asset before granting host privileges.
+for asset in update-agent.js blogposter-update blogposter-update-agent.service blogposter-updates.compose.yml; do
+  gh attestation verify "$asset_dir/$asset" --bundle "$asset_dir/update-control.bundle.json" \
+    --repo BlogposterCMS/BlogposterCMS \
+    --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml >/dev/null
+done
+[[ -f /opt/blogposter/updater.conf && ! -L /opt/blogposter/updater.conf ]] || { echo 'CORE_UPDATE_SETUP_CONFIG_REQUIRED'; exit 1; }
+
+# Reuse the updater's strict KEY=VALUE parser; never source runtime environment files.
+source "$asset_dir/blogposter-update"
+load_config /opt/blogposter/updater.conf
+[[ -n "${BLOGPOSTER_COMPOSE_ENV_FILE:-}" && -f "$BLOGPOSTER_COMPOSE_ENV_FILE" && ! -L "$BLOGPOSTER_COMPOSE_ENV_FILE" ]] || {
+  echo 'CORE_UPDATE_SETUP_COMPOSE_ENV_REQUIRED'; exit 1;
+}
+getent group blogposter-updater >/dev/null || groupadd --system blogposter-updater
+updater_gid="$(getent group blogposter-updater | cut -d: -f3)"
+[[ "$updater_gid" =~ ^[0-9]+$ ]] || { echo 'CORE_UPDATE_SETUP_GROUP_INVALID'; exit 1; }
+install -d -m 0755 /opt/blogposter/bin
+install -m 0755 "$asset_dir/blogposter-update" /opt/blogposter/bin/blogposter-update
+install -m 0644 "$asset_dir/update-agent.js" /opt/blogposter/bin/update-agent.js
+install -m 0644 "$asset_dir/blogposter-updates.compose.yml" /opt/blogposter/blogposter-updates.compose.yml
+install -m 0644 "$asset_dir/blogposter-update-agent.service" /etc/systemd/system/blogposter-update-agent.service
+
+set_owned_value() {
+  local file="$1" key="$2" value="$3" temp
+  temp="$(mktemp "${file}.XXXXXX")"
+  awk -v key="$key" '$0 !~ "^" key "="' "$file" > "$temp"
+  printf '\n%s=%s\n' "$key" "$value" >> "$temp"
+  chmod --reference="$file" "$temp"
+  chown --reference="$file" "$temp"
+  mv -f -- "$temp" "$file"
+}
+set_owned_value /opt/blogposter/updater.conf BLOGPOSTER_COMPOSE_UPDATES_FILE /opt/blogposter/blogposter-updates.compose.yml
+set_owned_value "$BLOGPOSTER_COMPOSE_ENV_FILE" BLOGPOSTER_UPDATER_GID "$updater_gid"
+load_config /opt/blogposter/updater.conf
+prepare_environment
+compose_run config --quiet
+systemctl daemon-reload
+systemctl enable --now blogposter-update-agent.service
+# Apply the socket mount once. Future versions preserve the overlay automatically.
+compose_run up -d --no-deps "$BLOGPOSTER_SERVICE"
+echo 'CORE_UPDATE_SETUP_COMPLETE: update controls are connected.'

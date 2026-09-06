@@ -68,8 +68,28 @@ PlainSpace `navigationStudio` widget on the Content > Navigation Studio page.
   menu a page or move menu design ownership out of central widgets and settings.
 - The Studio chrome uses its own shadowless local card utility:
   `navigation-studio__card` is borderless by default, while
-  `navigation-studio__card--bordered` adds the grey 2px panel border used by
-  the editor surface.
+  `navigation-studio__card--bordered` remains an optional grey 2px border.
+  The main structure is flat; one muted side surface groups link details,
+  warnings and preview. All surfaces use Studio light/dark tokens.
+- Menu selection lives in the header; the primary menu opens initially. Link
+  details sit beside the structure and move below it when the widget is narrow.
+  Add link opens a compact page/URL picker with an explicit parent destination;
+  selecting an existing link for editing never silently nests new links.
+- Structure changes save immediately through the existing navigation facade.
+  Arrow controls support ordering, nesting and outdenting without drag. Nested
+  drags retain the child id, cycles/depth limits are checked, and failed order
+  writes refresh from Navigation Manager rather than showing an optimistic save.
+- Link fields save explicitly. Search, preview, expansion and editing-mode
+  changes retain the local draft. Menu/item switches ask before discarding it.
+  Failed writes retain input and show a `NAV_STUDIO_*` error. These drafts are
+  local to the mounted editor; leaving the admin page does not persist them.
+- Page targets derive their URL from the chosen page. Conversion to a custom
+  link clears source/entry ownership. Explicit null relationship patches take
+  precedence over database snake_case aliases, including during outdent.
+- Preview shows saved active links and device visibility, without navigating
+  away when clicked. It is a structure preview; the public menu widget owns
+  the final appearance. Advanced settings and Design Studio references are
+  collapsed by default. Loading failures expose Retry.
 
 ## Notes
 - Navigation URLs must be internal paths/fragments/queries, plain relative paths

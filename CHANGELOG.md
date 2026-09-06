@@ -1,5 +1,173 @@
 # Changelog
 
+## [Unreleased]
+
+- Notification Center now uses compact rows and shared Blogposter light/dark
+  surfaces, with keyboard access, loading/empty/error states and refresh recovery.
+  Floating feedback shows at most three toasts for three seconds by default;
+  hover/focus pauses the remaining time and overflow removes the oldest card.
+  Existing update actions and persistent notification ownership are preserved.
+
+- Added core updates to the existing Settings Update Center and administrator
+  Notification Center. Signed releases are checked in the background by a
+  host-side adapter; administrators can review and install an exact release,
+  follow backup/restart/verification progress and see rollback outcomes.
+  Provision the optional Unix-socket adapter once during host deployment;
+  the CMS never receives Docker or arbitrary command access.
+
+- Added structured agent commands to Pages, the page editor, Navigation, Media,
+  widget/design libraries, ordinary settings and CMS navigation. Agents inspect
+  and edit the same drafts as people, with revision checks, draft handoff,
+  explicit confirmations, busy states and visible operation feedback.
+- Designer now reports actual pending/failed saves and publications, supports
+  direct content-host and reusable-design commands, and awaits the same publish
+  operation as the UI. Its domain adapter replaces the duplicate generic DOM
+  controller. Failed commands can no longer be acknowledged as successful.
+- CMS host surface reporting uses three permission-checked adapters in the
+  existing admin facade; AgentManager/AppLoader remain the transport owners.
+- Default account accents and the Default preset now use neutral black, with a
+  light inverse and dark labels in dark mode. Page, navigation, widget and module
+  selections no longer have a leading accent stripe; page rows use the list's
+  full width, with child disclosure controls at the trailing edge.
+
+- Fixed expired JWTs permanently disabling Auth: expiry now rejects only the
+  current request with `AUTH_TOKEN_EXPIRED`. First-install checks no longer
+  redirect to `/install` on request failures or invalid user-count responses,
+  preventing the installed-site login/install redirect loop.
+
+- Added measured HTML capture import through the existing Importer and Design
+  Studio draft flow. Text, images, links and backgrounds retain measured
+  responsive geometry and local styling; review warnings identify unsupported
+  behavior and source asset dependencies. Safe image markup and text editing
+  hooks now survive Designer saves. Imports never publish a page automatically.
+  Loading widgets and leaving text edit mode preserve their visual stacking
+  order independently of the active editing layer.
+  HTML imports now retain semantic Sections and nested source Containers,
+  validate parent ownership, report structure counts, and keep child coordinates
+  relative to their owning Container across captured viewports.
+  Initial Section hydration preserves saved Containers; child pointer events
+  no longer drag ancestor Containers. Page-wide backgrounds are split by Section.
+
+- Designer, widget catalog and public runtime now share widget module execution,
+  saved metadata handling and inline HTML rendering. Studio uses the existing
+  allowed-path loader and sanitizer, awaits asynchronous widgets, and displays
+  the same searchable module errors as the website. Editor controls and public
+  credential/CSS isolation remain in their existing adapters.
+
+- Fixed CMS workspaces now fill the available browser height down to the bottom
+  navigation. Header heights, sidebar sizing and footer spacing no longer leave
+  an empty strip beneath the media Explorer or force the whole page to scroll.
+
+- Fixed a media-picker deadlock: local dialogs no longer occupy the backend
+  request queue while waiting for a file selection. Their own file reads can
+  complete; actual backend commands keep ordered delivery.
+- The Settings entry now opens General instead of an empty dashboard.
+
+- Reworked the shared media Explorer around folder navigation, Back/Forward/Up,
+  selectable files, sortable name/type/date/size columns and one contextual
+  toolbar. Grid previews and file details retain the shared CMS theme; the editor
+  picker now confirms a compatible file explicitly. Browsing creates no shares.
+- Media folder creation, rename and deletion now return valid JSON acknowledgments
+  after completion, fixing errors reported after successful filesystem writes.
+  Folder listings add optional metadata without changing existing name arrays.
+
+- Public pages now include resolved SEO descriptions, canonical links and
+  Open Graph/Twitter title, description and image metadata in the first HTML
+  response. Existing page SEO fields feed SEO Manager with source override
+  precedence; relative image URLs become absolute and empty fields stay omitted.
+
+- Settings now retain independent tab drafts, protect navigation and pending
+  saves, and offer Retry after loading failures. The inactive Import / Export
+  placeholder is retired; installed module tools retain their ownership.
+- Media Explorer ignores stale folder responses, serializes actions and preserves
+  load errors through filtering and view changes. Deleted pages are excluded from
+  new parent/menu targets and the default Pages filter. Invalid collection-card
+  destinations no longer create links back to the current page.
+- Removed the unused widget-registration startup RPC and facade entry that caused
+  `EVENT_CONTRACT_NOT_REGISTERED` on widget mounts. Actual widget requests retain
+  the existing runtime facade permission checks; deploy matching frontend/backend.
+
+- Collections now use a filter in Page Manager, including parent/child context
+  and draft collection creation. The duplicate sidebar/catalog entry is retired;
+  stored Collections widgets delegate to the same Pages workspace.
+- Media, Widgets, Design Studio's library and Page Editor now have fixed CMS
+  compositions. Page Editor combines metadata, SEO and content in one explicit
+  save, with retained drafts on errors, discard confirmation and pending-write
+  protection. The attachment picker supports search, keyboard controls and Retry;
+  HTML files load only on selection and HTTP failures cannot become saved HTML.
+- Unsaved Pages, Navigation and Page Editor changes now guard CMS navigation,
+  browser history and reload. Links inside widget shadow roots use the existing
+  admin navigation lifecycle.
+- The Widget library now distinguishes available widgets, global instances and
+  browser-local templates, with search and recoverable errors. Global usage
+  scans all saved page layouts with bounded concurrency instead of returning a
+  false empty result on sites with more than 20 pages.
+- Home links recent content to the canonical editors and separates failed reads
+  from empty results. Demo/checklist widgets are hidden from new catalog insertion
+  while existing instances remain loadable.
+
+- Public pages now return their published initial HTML or shared canvas layout
+  shell with early asset references. The existing client loaders adopt that DOM
+  and envelope, then load widget data without duplicate page/layout requests.
+  Initial HTML is sanitized, bootstrap JSON is escaped, responses use no-store,
+  and signed Designer previews retain their parent-bridge flow.
+
+- Layout hierarchy and widget editing now operate on the same Designer document;
+  opening Layout no longer switches to an empty legacy layer or locks the canvas.
+- Autosave for saved standalone designs now writes the complete Designer document,
+  including containers and content hosts. Manual and automatic writes are serialized;
+  the old additional page-grid save path is removed.
+
+- Designer content destinations now persist independently of the selected scene.
+  Embedded and attached designs preserve their container trees; recursive design
+  references are bounded. Attached content uses the outer design's content host.
+- Retired the legacy Layouts admin entry on startup and removed its assignment
+  selector from page metadata editing, preventing SEO saves from changing layouts.
+- Section properties now hide inactive Auto/Grid controls in Free placement;
+  field styling no longer overrides the hidden state.
+- Restored access to existing container insertion and content-host actions in
+  the Section toolbar. Public design normalization preserves authored pixel
+  positions and sizes instead of losing Free placement without percentages.
+- Design library Open actions expose their actual destination and work without
+  requiring a popup window.
+
+- Public HTML-only pages no longer download canvas, resize/snap and admin gateway
+  dependencies before rendering. Widget pages load the existing canvas helpers
+  on demand alongside their registry read, with a searchable import error.
+  See `docs/public-startup-performance.md` for the remaining startup waterfall.
+
+- Simplified Navigation Studio around menu selection, link structure and a
+  compact editor using existing Blogposter fields and theme surfaces. Adding
+  links uses an explicit parent; advanced options and preview are secondary.
+- Navigation edits survive local view changes, report write errors and prevent
+  duplicate in-flight actions. Fixed nested drag bubbling, page-target URLs,
+  inactive preview links and clearing legacy parent/source references.
+
+- Page Management now combines a searchable page hierarchy, status counts and
+  selected-page details in one workspace. Details save explicitly together;
+  draft/subpage creation, unsaved-change confirmation and failed-refresh recovery
+  use the existing Pages service. Content, Pages and Navigation have fixed
+  compositions with no widget placement controls; Home remains customizable.
+
+- Admin widget cards now reuse the login card's subtle border, solid surface and
+  soft shadow in both themes; grid mode preserves their border and edit feedback.
+
+- Admin backgrounds now follow light/dark theme tokens instead of public website
+  colors. Sidebar backing, widget icons, collection/layout surfaces and scrollbars
+  follow the shared theme. The maintenance notice uses existing neutral surfaces
+  and correctly respects its hidden state.
+- Widget catalogs support keyboard insertion and explicit empty-search feedback.
+  Gallery sliders clip their track, calculate relative slide offsets, disable
+  unavailable directions and prevent focus on hidden fade slides. Design library
+  loading failures are distinct from empty results and provide Retry.
+
+- Fixed public startup waterfalls: public facade reads run with at most four
+  concurrent requests, while commands retain their ordered queue. Page discovery,
+  colors and font packages load concurrently before rendering.
+- Core public loaders use their explicit mount directly, avoiding failed community
+  path probes. HTML-only pages no longer fabricate a Designer layout reference
+  and wait for a failing layout request; linked designs retain ordered loading.
+
 All notable changes to BlogposterCMS are documented here. This log starts at
 the BlogposterCMS root rebaseline. Earlier detailed history remains preserved
 in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.

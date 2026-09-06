@@ -47,4 +47,17 @@ describe('contentHeaderActions', () => {
       '/cms/admin/pages/edit/1'
     ]);
   });
+
+  it('hides layout controls for fixed tools and restores them on customizable dashboards', () => {
+    document.body.innerHTML = '<main id="content" data-dashboard-layout="fixed"><div class="content-header"><button id="widgets-toggle-inline"></button><button id="edit-toggle"></button></div></main>';
+    document.body.classList.add('dashboard-edit-mode');
+    initContentHeader();
+    expect(document.getElementById('widgets-toggle-inline')?.hidden).toBe(true);
+    expect(document.getElementById('edit-toggle')?.hidden).toBe(true);
+    expect(document.body.classList.contains('dashboard-edit-mode')).toBe(false);
+    document.getElementById('content')!.dataset.dashboardLayout = 'custom';
+    initContentHeader();
+    expect(document.getElementById('widgets-toggle-inline')?.hidden).toBe(false);
+    expect(document.getElementById('edit-toggle')?.hidden).toBe(false);
+  });
 });

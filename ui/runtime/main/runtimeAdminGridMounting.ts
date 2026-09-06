@@ -34,6 +34,7 @@ export type RuntimeAdminGridMountOptions = {
   widgetEmit: RuntimeWidgetEmitter;
   instanceMetaMap: Map<string, RuntimeAdminGridLayoutItem>;
   deferHydration?: boolean;
+  editable?: boolean;
   debug?: boolean;
 };
 
@@ -164,6 +165,7 @@ export async function mountAdminGridWidgets({
   widgetEmit,
   instanceMetaMap,
   deferHydration = true,
+  editable = true,
   debug = false
 }: RuntimeAdminGridMountOptions): Promise<void> {
   const pendingAdmin: Array<{
@@ -198,7 +200,7 @@ export async function mountAdminGridWidgets({
       grid,
       emit: widgetEmit,
       lane,
-      afterRender: attachAdminDashboardControls
+      afterRender: editable ? attachAdminDashboardControls : undefined
     });
   }
 }

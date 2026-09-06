@@ -357,7 +357,8 @@ export async function startLayoutMode(ctx) {
   mountSitePresetsPanel(ctx);
   ctx.setSidebarPanel?.('layout');
   ctx.hideToolbar();
-  if (ctx.gridEl) ctx.gridEl.style.pointerEvents = 'none';
+  // The hierarchy panel must not lock the same document's canvas interactions.
+  if (ctx.gridEl) ctx.gridEl.style.pointerEvents = '';
   try { ctx.refreshContainerBars?.(); } catch { }
   try { ctx.refreshLayoutTree?.(); } catch { }
 }

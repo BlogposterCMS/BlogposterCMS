@@ -1,11 +1,93 @@
 # Design Studio Agent Feedback
 
+Imported Section/Container trees hydrate before navigation reconciliation. Their
+stable node ids remain present after save/reload; nested widget pointer events
+do not select or drag ancestor Containers. Imported page bounds can shrink again
+after switching from a taller captured viewport.
+
+Measured HTML imports keep provenance in widget metadata. The shared inline
+renderer projects the bounded `htmlImport` record onto the ordinary canvas
+item; `feedback.widgetPlacements[].htmlImport` exposes its source ID, kind,
+captured widths, parent Container ID, owning Section ID and warning codes. The
+existing recursive layout tree exposes imported Sections and nested Containers.
+A malformed record reports
+`DESIGNER_AGENT_FEEDBACK_HTML_IMPORT_INVALID`. Existing selection, text update,
+geometry, save and preview actions remain authoritative. Capture preparation
+is a local CLI operation; there is no new Designer-only import transport.
+The existing placement `zIndex` reflects the saved visual stack after loading;
+the active editing layer is separate and is not a replacement for that value.
+Container `placement.zIndex` is preserved by the canonical LayoutTree/DOM
+adapter. Nested placement uses the owning container width while breakpoint
+selection continues to use the authored page viewport.
+
+Widget content rendering now delegates to the same module lifecycle and inline
+content helpers as the public runtime. The existing `agentSurface` remains the
+feedback authority: instance ids, selection, bounds and saved placements retain
+their contract. Widget load/render failures appear on the canvas as
+`.widget-runtime-message[data-error-code]` using existing `WIDGET_RUNTIME_*`
+codes, including asynchronous render failures. These DOM diagnostics are not a
+new agent action or a substitute for the structured snapshot. Changes to render
+ownership must retain Studio editable registration and text selection helpers.
+
+Widget rendering no longer waits for the unused `widgets.registerUsage` call.
+The agent surface still reports actual widget placements, selections and render
+warnings through its existing snapshots; API dependency metadata does not grant
+permissions. Canvas state, command adapters and module ownership are unchanged.
+
 Design Studio must remain agent-readable through the existing
 AgentManager/AppLoader `agentSurface` contract. The canonical browser-side
 adapter is `ui/designer/app/agentSurface.ts`; do not create a parallel
 Designer-only agent API for the same state.
 
 ## Snapshot Contract
+
+The shared handoff state is `state.collaboration`: actual draft dirty state,
+save/publication busy and error state, current document, selection and
+`stateRevision`. All domain writes require that revision as `expectedRevision`;
+an existing draft requires `acceptDraft: true`. Publication/deletion also require
+the catalog's explicit confirmation flag. Follow
+[the CMS handoff protocol](agent-cms-workflows.md), including re-reading after
+errors. `DESIGNER_AGENT_FEEDBACK_UNSAVED_DRAFT`, `_OPERATION_PENDING` and
+`_OPERATION_FAILED` mirror the real save manager and publish controller.
+
+`collaboration.draftInputs` includes the existing layout-name and scene-inspector
+fields in the revision. Typing can precede a field's change handler; a command
+based on the earlier value must fail with `CMS_AGENT_STATE_CHANGED` before it
+can replace that input. This reader does not own or persist a separate draft.
+
+`design.publish` awaits the same publication promise as the Publish button.
+It no longer clicks a control or infers success from a previous success notice.
+The editor's manual agent-surface mode retains AppLoader permissions and exposes
+only the structured Studio controller, avoiding a duplicate generic DOM path.
+
+The Layout panel inspects the same editable document as widget editing. It does
+not activate a second legacy layer or disable canvas pointer events. Saved
+standalone designs autosave through the same serialized Designer save command
+as manual Save. A new untitled document requires its first explicit Save;
+`DESIGNER_AUTOSAVE_FAILED` reports unsuccessful automatic writes.
+
+Layout nodes expose `isDynamicHost` for the persistent page-content destination.
+This is separate from `workarea`, which follows the editor's active Section.
+Changing scenes must not move the content destination. Runtime mounts attached
+content in the outer document's destination and renders `designRef` documents
+through the same structural renderer, preserving nested Containers. Recursive
+references stop with `RUNTIME_DESIGN_REF_CYCLE_OR_DEPTH` (maximum depth 16).
+The existing container host command owns this setting; no separate API is added.
+The Section toolbar routes Add container and Use as page content area through
+the existing `placeContainer`/`setDynamicHost` handlers. The content-host button
+exposes `aria-pressed`; `layoutTree.nodes[].isDynamicHost` is the saved state.
+`container.contentHost.set` and `container.designRef.set` call the same layout
+handlers as the visible controls. Use stable container ids; `designId: null`
+detaches a reusable design. No Designer-only transport is introduced.
+Section inspector direction is visible only in Auto, columns only in Grid,
+and gap/alignment only in Auto or Grid. `layoutTree.nodes[].settings.mode`
+remains the authority; invisible controls must not suggest extra Free rules.
+
+Public gallery navigation preserves widget placement ids and bounds contracts.
+The slider track is clipped inside its own viewport; controls sit outside it.
+Fade slides expose `aria-hidden`/`inert`, and dot selection uses `aria-current`.
+The existing `livePreview` adapter remains the preview authority. Per-slide
+playback is not a separate agent command family; no parallel gallery API exists.
 
 Every Design Studio snapshot should include the `feedback` block at the top
 level, in `state.feedback`, and a compact `meta.agentFeedback` summary. The
@@ -236,6 +318,14 @@ diagnostic image.
 
 ## Agent Usage
 
+Normal published pages now mark `data-bp-public-layout-ready="true"` when their
+initial HTML/layout structure is present in the response. This is not a paint
+or widget-data completion signal. Continue using `bp:public-widgets-ready` and
+the established surface feedback for hydrated widget inspection. Signed Designer
+Live Preview does not consume `BP_PUBLIC_BOOTSTRAP`; its parent-bridge payload
+and existing agentSurface remain authoritative. Server and browser share public
+canvas geometry, so this startup change does not add a Designer-only API.
+
 Controllers can inspect Design Studio through `/admin/api/agent` surface
 context endpoints or through the app-published snapshot carried by the
 `agentSurface` bridge. The useful fields are `feedback`, `state.feedback`,
@@ -244,3 +334,7 @@ context endpoints or through the app-published snapshot carried by the
 The browser helper installed by the surface is `window.blogposterAgent.designer`.
 Its paired control helper is `window.blogposterAgent.designerControl`; both use
 the shared agent-surface client rather than private Designer transport.
+
+Collection archive cards retain their stable item and Style Source identifiers.
+Cards with rejected/missing URLs have no action link; this does not change widget
+placements or the agent snapshot contract.

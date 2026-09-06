@@ -9,6 +9,10 @@ import {
 } from '../ui/runtime/main/runtimeDesignLayouts';
 
 describe('runtimeDesignLayouts', () => {
+  it('preserves authored Free pixel geometry when no percentages exist', () => {
+    expect(normalizeRuntimeDesignWidget({ id: 'free', widgetId: 'text', x: 80, y: 120, w: 320, h: 72 }))
+      .toMatchObject({ id: 'free', x: 80, y: 120, w: 320, h: 72 });
+  });
   beforeEach(() => {
     document.body.innerHTML = '';
   });

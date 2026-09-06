@@ -12,6 +12,7 @@ import {
 import type { RuntimeWidgetDefinition } from './runtimeWidgetRenderer.js';
 import { appendRuntimeHtmlContent } from './runtimeContentFallbacks.js';
 import { renderStaticRuntimeGrid } from './runtimeStaticGrid.js';
+import { getRuntimeDesignDocument, renderRuntimeDesignDocument } from './runtimeDesignDocument.js';
 import type { RuntimeEmitter as RuntimeWidgetEmitter } from './runtimeWidgetInstances.js';
 
 type LooseRecord = Record<string, any>;
@@ -45,14 +46,20 @@ export async function renderAttachedRuntimeContent({
 
       const section = document.createElement('section');
       section.className = 'attached-content';
-      if (childPage.meta?.designId) {
+      const designId = childPage.designId ?? childPage.design_id ?? childPage.meta?.designId ?? childPage.meta?.design_id;
+      if (designId) {
         try {
-          const res = await fetchRuntimeDesign(emit, childPage.meta.designId, lane);
+          const res = await fetchRuntimeDesign(emit, designId, lane);
           const layout = getRuntimeDesignLayout(res);
           applyRuntimeDesignStyles(section, res?.design);
-          await renderStaticRuntimeGrid(section, layout, allWidgets, lane, { widgetEmit });
+          // Attached content preserves the authored container tree and nested designs.
+          const rendered = await renderRuntimeDesignDocument(
+            section, getRuntimeDesignDocument({ ...res, placements: layout }), allWidgets, lane,
+            { emit, widgetEmit, designPath: [String(designId)] }
+          );
+          if (!rendered) await renderStaticRuntimeGrid(section, layout, allWidgets, lane, { widgetEmit });
         } catch (err) {
-          console.warn('[Renderer] failed to load design', err);
+          console.warn('[Renderer] RUNTIME_ATTACHED_DESIGN_LOAD_FAILED', err);
         }
       } else if (childPage.meta?.layoutTemplate) {
         let layoutArr: LayoutItem[] = [];

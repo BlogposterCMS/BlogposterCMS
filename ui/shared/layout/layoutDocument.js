@@ -96,6 +96,7 @@ export function normalizeLayoutNodePlacement(value) {
     const source = isRecord(value) ? value : {};
     const placement = {};
     const numericKeys = [
+        'zIndex',
         'x',
         'y',
         'w',
@@ -219,6 +220,7 @@ export function normalizeLayoutTree(value) {
     const inferredSplit = declaredType === 'split' || rawChildren.length > 0 || typeof source.orientation === 'string';
     const common = {
         workarea: normalizeBoolean(source.workarea ?? source.isDynamicHost),
+        isDynamicHost: normalizeBoolean(source.isDynamicHost),
         nodeId: normalizeNodeId(source.nodeId ?? source.node_id),
         section: normalizeSceneSection(source.section ?? (source.sectionId || source.section_id
             ? {
@@ -242,6 +244,7 @@ export function normalizeLayoutTree(value) {
     };
     const commonFields = {
         ...(common.workarea ? { workarea: true } : {}),
+        ...(common.isDynamicHost ? { isDynamicHost: true } : {}),
         ...(common.nodeId ? { nodeId: common.nodeId } : {}),
         ...(common.section ? { section: common.section } : {}),
         ...(common.scenes.length ? { scenes: common.scenes } : {}),

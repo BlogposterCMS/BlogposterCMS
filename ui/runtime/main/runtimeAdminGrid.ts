@@ -63,14 +63,25 @@ export async function renderAdminRuntimeGrid({
   widgetEmit,
   debug = false
 }: RuntimeAdminGridOptions): Promise<RuntimeAdminGridResult> {
-  let layout = await loadRuntimeLayoutForViewport(emit, page.id, lane);
+  const fixed = page.meta?.dashboardLayout === 'fixed';
+  // Fixed CMS tools still use the normal widget loader and module contracts.
+  // Their composition comes from the page owner, not personal dashboard slots.
+  const layout: LayoutItem[] = fixed
+    ? (page.meta.widgets || []).map((widgetId: string, index: number) => ({
+        id: `workspace-${page.id}-${widgetId}`,
+        widgetId,
+        slot: page.meta.widgetSlots?.[widgetId] || 'page',
+        order: index * 10
+      }))
+    : await loadRuntimeLayoutForViewport(emit, page.id, lane);
   if (debug) console.debug('[Renderer] admin layout', layout);
-  const combinedAdmin = [...globalLayout, ...layout];
+  const combinedAdmin = fixed ? layout : [...globalLayout, ...layout];
 
   clearContentKeepHeader(contentEl);
   const { gridEl, grid } = createAdminGrid(contentEl);
-  exposeAdminGridGlobals(grid, page.id, lane, layout);
-  bindAdminDropTarget(gridEl, grid);
+  gridEl.dataset.dashboardLayout = fixed ? 'fixed' : 'custom';
+  exposeAdminGridGlobals(grid, page.id, lane, layout, !fixed);
+  if (!fixed) bindAdminDropTarget(gridEl, grid);
 
   const instanceMetaMap = new Map<string, LayoutItem>();
   await mountAdminGridWidgets({
@@ -81,10 +92,11 @@ export async function renderAdminRuntimeGrid({
     lane,
     widgetEmit,
     instanceMetaMap,
+    editable: !fixed,
     debug
   });
 
-  await renderAttachedRuntimeContent({
+  if (!fixed) await renderAttachedRuntimeContent({
     page,
     lane,
     allWidgets,
@@ -93,7 +105,7 @@ export async function renderAdminRuntimeGrid({
     widgetEmit
   });
 
-  bindAdminLayoutPersistence({
+  if (!fixed) bindAdminLayoutPersistence({
     grid,
     gridEl,
     instanceMetaMap,

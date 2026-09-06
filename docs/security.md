@@ -1,5 +1,55 @@
 # Security Notes
 
+## Measured HTML imports
+
+`htmlPage` accepts bounded capture JSON through existing `importers.run`
+permissions. The backend does not fetch URLs, run source scripts, read arbitrary
+files or install fonts. The separate local export CLI renders an explicitly
+selected URL in a browser session. Imported markup passes the installed HTML
+parser/sanitizer and computed CSS property allowlist before Designer's normal
+save sanitization. Script/event attributes, executable URL schemes, CSS escapes,
+comments and arbitrary selectors are excluded. Unknown behavior is reported.
+Designer saves now retain safe images/buttons, the `editable` hook and generated
+`bp-import-node-*` classes; arbitrary source classes remain stripped. Public
+sanitization and draft/publication permissions are unchanged.
+Structural captures are bounded to 500 nodes and reject cycles, missing parents,
+cross-Section ownership and ownership changes between captured widths.
+
+## Shared widget rendering
+
+Studio now uses the same allowed widget module loader and HTML sanitizer as
+the catalog and public runtime. The shared module lifecycle does not choose
+credentials or grant permissions: runtime context still excludes `ADMIN_TOKEN`
+from public widgets. Inline scripts retain the existing nonce-aware executor;
+the runtime retains its Shadow DOM isolation. No new trust flag or API is added.
+
+## Widget API metadata
+
+`metadata.apiActions` describes dependencies; it never grants runtime permissions.
+Renderers no longer issue the unimplemented `widgets.registerUsage` startup call,
+and the facade no longer advertises that action. Admin reads/writes and public
+reads still use their existing Runtime Manager principal, scope, permission and
+published-data checks. No registration ACK, permission grant or alternate API
+has been introduced. Deploy the updated browser bundles with the facade change.
+
+## Initial public presentation
+
+The public page route resolves pages, envelopes and linked layouts through
+`cmsPublicRuntimeRequest` using a validated public principal. Publication/lane
+filtering remains in Runtime Manager; admin cookies cannot select drafts for
+the initial response. Pages Manager's `publicPresentation.js` renders only that
+public result. It uses the installed HTML sanitizer, removes active HTML/event
+attributes, restricts URL schemes and applies the existing shared CSS policy.
+Authored scripts remain on the client nonce-controlled execution path.
+
+All bootstrap values escape HTML-significant characters before entering the
+nonce-bearing script. The initial DOM has reserved ownership markers for client
+adoption; stale pathname/language handoffs discard their owned nodes before CSR.
+Responses carry `Cache-Control: no-store` because they contain a short-lived
+public token and fresh nonce. No new endpoint, admin token or cache authority is
+introduced. Signed Designer Live Preview bypasses initial public presentation
+and continues to require the existing verified origin token and parent bridge.
+
 ## Dependency security baseline
 
 The supported CI/container runtime is Node.js 24. Keep the full-tree
@@ -115,6 +165,30 @@ health check before swapping folders and keeps a backup for rollback.
 
 ## Core Update Supply Chain
 
+The optional host update agent is a new, explicitly authorized CMS-to-host
+control boundary. Runtime Manager's `coreUpdates.status/check/install` actions
+require `settings.core.edit`; Module Loader owns the event handlers. Notification
+visibility is decided from the original verified caller before its JWT is
+replaced by a service JWT. Browser flags cannot grant update visibility.
+
+Only the CMS backend receives a read-only directory mount containing a Unix
+socket (0660, dedicated supplementary group). No TCP control listener, Docker
+socket, host state folder or CMS runtime secrets cross this boundary. The
+root-owned host service accepts three fixed operations and a bounded exact
+version/image pair; it never accepts commands, configuration paths, URLs or
+manual rollback requests. The existing updater re-verifies the signed candidate
+and rejects target drift before image replacement. Concurrent jobs are locked;
+state survives CMS restarts. Host-agent interruption fails closed and requires
+operator recovery instead of automatically replaying an update.
+
+Host adapter executables, service and Compose overlay are separately attested
+by the release workflow. Provisioning verifies their bundle before installation.
+The downloaded provisioning script itself must be verified before execution.
+Service configuration and state remain root-owned. The dedicated socket group
+must contain only the intended CMS container, not interactive untrusted users.
+This grants an authorized CMS administrator the ability to restart its service
+onto an approved signed stable release; it is not a general host administration API.
+
 Core releases are complete OCI images, not file patches. The release workflow
 binds the package version, source commit and immutable image digest in
 `blogposter-update.json`, signs that manifest externally and publishes GitHub
@@ -162,3 +236,19 @@ When writing your own modules keep these best practices in mind:
 4. Document the permissions your module requires in `moduleInfo.json` so administrators understand the impact.
 
 Following these rules helps protect the entire system as it grows.
+
+The media Explorer's directory metadata uses the existing permission-checked
+folder listing. It does not follow symlinks for size/date information. Preview
+URLs are limited to files already served below `library/public`; browsing or
+selecting a file does not create a share or change its visibility. File mutations
+acknowledge completed operations with JSON data; authorization checks are intact.
+
+CMS workspace agents use the existing AgentManager contract. The admin facade's
+`agentSurface.publish/poll/ack` adapters accept only `plainspace/cms.*` surfaces;
+AgentManager enforces its existing surface-write permissions. There is no public
+runtime mapping, command-enqueue shortcut, or app-context read grant for these
+host adapters. Tokens/CSRF and domain write permissions remain enforced.
+Only explicit non-secret form fields appear in workspace snapshots and patches.
+Draft revisions and confirmation flags prevent unintended concurrent edits;
+they are workflow checks, not authorization credentials. See
+[agent CMS workflows](agent-cms-workflows.md) for the shared draft protocol.

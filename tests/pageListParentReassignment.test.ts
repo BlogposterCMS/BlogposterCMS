@@ -11,6 +11,20 @@ const {
 } = require('../ui/widgets/plainspace/admin/defaultwidgets/pageList/pageList.js');
 
 describe('page parent reassignment helpers', () => {
+  test('keeps expanded nested pages when switching filters and back', () => {
+    const host = document.createElement('div');
+    renderPageList(host, basePages());
+    const row = (name: string) => Array.from(host.querySelectorAll<HTMLTableRowElement>('.page-manager__row'))
+      .find(item => item.querySelector('.page-name')?.textContent === name)!;
+    row('Home').querySelector<HTMLButtonElement>('.page-manager__toggle')!.click();
+    row('About').querySelector<HTMLButtonElement>('.page-manager__toggle')!.click();
+    const filter = (name: string) => Array.from(host.querySelectorAll<HTMLButtonElement>('.filter'))
+      .find(item => item.dataset.filter === name)!.click();
+    filter('Active');
+    filter('All');
+    expect(row('Team').hidden).toBe(false);
+    expect(row('Home').querySelector('.page-manager__toggle')?.getAttribute('aria-label')).toBe('Hide child pages for Home');
+  });
   const basePages = () => [
     { id: 1, title: 'Home', lane: 'public', parent_id: null },
     { id: 2, title: 'About', lane: 'public', parent_id: 1 },
@@ -23,6 +37,13 @@ describe('page parent reassignment helpers', () => {
     const allowedForAbout = getAllowedParentPages(pages, pages[1]);
 
     expect(allowedForAbout.map((page: { id: number }) => page.id)).toEqual([1]);
+  });
+
+  test('excludes trashed parents while retaining a current relationship for metadata edits', () => {
+    const pages = [...basePages(), { id: 5, title: 'Deleted', lane: 'public', status: 'deleted', parent_id: null }];
+    expect(getAllowedParentPages(pages, pages[1]).some((page: { id: number }) => page.id === 5)).toBe(false);
+    expect(getParentValidationError(pages, pages[1], 5)).toBe('A deleted page cannot be selected as a new parent.');
+    expect(getAllowedParentPages(pages, { ...pages[1], parent_id: 5 }).some((page: { id: number }) => page.id === 5)).toBe(true);
   });
 
   test('buildPageHierarchyRows nests visible child pages without top-level duplicates', () => {
@@ -38,45 +59,6 @@ describe('page parent reassignment helpers', () => {
       { title: 'Team', depth: 2, childCount: 0 },
       { title: 'Admin page', depth: 0, childCount: 0 },
     ]);
-  });
-
-  test('renderPageList exposes child pages through expandable table rows', () => {
-    const host = document.createElement('div');
-    renderPageList(host, basePages());
-
-    expect(host.querySelector('ul.page-list')).toBeNull();
-    expect(host.querySelector('table.page-list-table')).not.toBeNull();
-    expect(host.querySelector('button.add-page-btn')?.getAttribute('aria-label')).toBe('Add page');
-    expect(host.querySelector('button.filter')?.getAttribute('aria-pressed')).toBe('true');
-
-    const pageRows = Array.from(host.querySelectorAll<HTMLTableRowElement>('tr.page-list-row'));
-    const byTitle = (title: string) => pageRows.find(row => (
-      row.querySelector('.page-name')?.textContent === title
-    )) as HTMLTableRowElement;
-    const homeRow = byTitle('Home');
-    const aboutRow = byTitle('About');
-    const teamRow = byTitle('Team');
-
-    expect(homeRow.hidden).toBe(false);
-    expect(aboutRow.hidden).toBe(true);
-    expect(teamRow.hidden).toBe(true);
-
-    const homeToggle = homeRow.querySelector<HTMLButtonElement>('.page-list-toggle');
-    expect(homeToggle?.getAttribute('aria-label')).toBe('Show child pages for Home');
-    expect(homeToggle?.getAttribute('aria-expanded')).toBe('false');
-    homeToggle?.click();
-    expect(homeToggle?.getAttribute('aria-expanded')).toBe('true');
-    expect(aboutRow.hidden).toBe(false);
-    expect(teamRow.hidden).toBe(true);
-
-    aboutRow.querySelector<HTMLButtonElement>('.page-list-toggle')?.click();
-    expect(teamRow.hidden).toBe(false);
-
-    homeToggle?.click();
-    expect(homeToggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(aboutRow.hidden).toBe(true);
-    expect(teamRow.hidden).toBe(true);
-    expect(aboutRow.querySelector('.page-list-toggle')?.getAttribute('aria-expanded')).toBe('false');
   });
 
   test('getParentValidationError catches cyclic and lane violations', () => {

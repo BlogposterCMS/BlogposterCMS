@@ -24,7 +24,7 @@ export function sanitizeHtml(html) {
     });
     return div.innerHTML;
 }
-function sanitizeCss(css, inline = false) {
+export function sanitizeCss(css, inline = false) {
     const expr = /expression/i;
     const urlPattern = /url\(([^)]*)\)/gi;
     const importPattern = /@import\s+(?:url\(([^)]+)\)|(['"])([^'"]+)\2)/gi;

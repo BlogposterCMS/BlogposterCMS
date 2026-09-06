@@ -129,7 +129,7 @@ function setupUserCrudEvents(motherEmitter) {
         website     : website     || null,
         avatar_url  : avatarUrl   || null,
         bio         : bio         || null,
-        ui_color    : uiColor     || null,
+        ui_color    : uiColor     || '#171717',
         token_version: 0,
         created_at  : new Date().toISOString(),
         updated_at  : new Date().toISOString()

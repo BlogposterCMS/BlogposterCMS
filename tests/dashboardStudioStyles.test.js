@@ -14,14 +14,74 @@ function listProjectFiles(relativePath) {
 function readCssRule(source, selector) {
   const normalisedSource = source.replace(/\r\n/g, '\n');
   const normalisedSelector = selector.replace(/\r\n/g, '\n');
-  const start = normalisedSource.indexOf(normalisedSelector);
+  // Match a selector at the start of a CSS line, not the same suffix inside a
+  // more specific workspace rule (for example `.sidebar` inside `.admin ...`).
+  const start = normalisedSource.startsWith(normalisedSelector)
+    ? 0
+    : normalisedSource.indexOf(`\n${normalisedSelector}`);
   if (start < 0) return '';
   const open = normalisedSource.indexOf('{', start);
   const close = normalisedSource.indexOf('}', open);
   return normalisedSource.slice(open + 1, close);
 }
 
+// Guard the complete height chain: a correct card height alone still leaves a
+// gap when the sidebar or the footer padding expands its containing workspace.
+test('fixed CMS workspaces fill the viewport below their headers without a footer gap', () => {
+  const css = readProjectFile('public/assets/css/site.css');
+  const workspace = '.admin-panel:has(#content[data-dashboard-layout=fixed])';
+  expect(readCssRule(css, `${workspace} {`)).toContain('height: 100dvh');
+  expect(readCssRule(css, `${workspace} > .main-content {`)).toContain('flex: 1 1 0');
+  expect(readCssRule(css, `${workspace} > .main-content {`)).toContain('min-height: 0');
+  expect(readCssRule(css, `${workspace} .sidebar {`)).toContain('height: 100%');
+  expect(readCssRule(css, `${workspace} .sidebar {`)).toContain('overflow-y: auto');
+  expect(readCssRule(css, `${workspace} #content {`)).toContain('background: transparent');
+  expect(readCssRule(css, `${workspace} #adminGrid {`)).toContain('grid-template-rows: minmax(0, 1fr)');
+  const card = readCssRule(css, `${workspace} #adminGrid > .dashboard-widget[data-dashboard-slot=page] {`);
+  expect(card).toContain('height: 100%');
+  expect(card).toContain('min-height: 0');
+  const footer = readCssRule(css, 'body.has-content-footer .admin-panel #content[data-dashboard-layout=fixed] {');
+  expect(footer).toContain('padding-bottom: var(--studio-content-footer-height, 60px)');
+  expect(footer).not.toContain('+ 16px');
+});
+
 describe('dashboard studio styles', () => {
+  it('uses the login card surface for admin widgets without removing its grid border', () => {
+    const css = readProjectFile('public/assets/css/site.css');
+    const login = readCssRule(css, '.app-scope.login-page .login-form {');
+    const widget = readCssRule(css, ':where(#adminGrid) .canvas-item {');
+    for (const property of ['background', 'border', 'border-radius', 'box-shadow']) {
+      const declaration = login.match(new RegExp(`(?:^|\\n)\\s*${property}: ([^;]+);`));
+      expect(declaration).not.toBeNull();
+      expect(widget).toContain(`${property}: ${declaration[1]};`);
+    }
+    expect(widget).toContain('backdrop-filter: none');
+    expect(readCssRule(css, 'body.grid-mode .canvas-item:not(:where(.dashboard-widget)) {')).toContain('border: none');
+    expect(css).not.toMatch(/body\.grid-mode \.canvas-item\s*\{[^}]*border: none/);
+  });
+
+  it('keeps page row backgrounds stable during hover and expansion', () => {
+    const css = readProjectFile('public/assets/css/site.css');
+    const states = readCssRule(css, '.page-list-row:hover > td,\n.page-list-row-expanded > td');
+    expect(states).toContain('border-color: var(--studio-border-strong)');
+    expect(states).not.toMatch(/background(?:-color)?\s*:/);
+    expect(readCssRule(css, '.page-list-table td {')).toContain('background: var(--studio-surface-muted)');
+  });
+  it('keeps admin canvas, widget icons and compact table cells theme-aware', () => {
+    const css = readProjectFile('public/assets/css/site.css');
+    expect(readCssRule(css, 'body:has(> .admin-panel)')).toContain('margin: 0');
+    expect(readCssRule(css, '.main-content {')).toContain('background: transparent');
+    expect(readCssRule(css, '.app-scope img.icon')).toContain('var(--studio-icon-filter, none)');
+    expect(css).toContain('--studio-icon-filter: brightness(0) invert(1)');
+    expect(readCssRule(css, '.page-list-actions-cell {')).toContain('display: table-cell');
+    expect(css).toContain('.page-list-parent-cell .page-parent-feedback:empty');
+    expect(css).toContain('scrollbar-color: var(--studio-text-muted) transparent');
+    expect(readCssRule(css, '.top-header .maintenance-banner {')).toContain('background: var(--studio-surface-muted)');
+    expect(readCssRule(css, '.top-header .maintenance-banner[hidden]')).toContain('display: none');
+    const labels = readProjectFile('public/assets/scss/components/_floating-labels.scss');
+    expect(labels).toContain('background: var(--studio-surface-solid)');
+    expect(labels).not.toContain('var(--color-white)');
+  });
   it('defines shared studio, motion, and dark-mode tokens', () => {
     const variables = readProjectFile('public/assets/scss/_variables.scss');
     const fontScss = readProjectFile('public/assets/scss/_fonts.scss');
@@ -478,7 +538,7 @@ describe('dashboard studio styles', () => {
     expect(pagesScss).toContain('tr.collections-list-row:hover');
     expect(pagesScss).toContain('@include p.page-list-empty-state');
     expect(siteCss).toContain('.collections-list-table > tbody > tr.collections-list-row > td');
-    expect(siteCss).toContain('background: #fafbfc');
+    expect(readCssRule(siteCss, '.collections-list-table > tbody > tr.collections-list-row > td')).toContain('background: var(--studio-surface-muted)');
     expect(siteCss).toContain('border-color: var(--user-color)');
     expect(siteCss).toContain('.collections-list-empty-row .empty-state');
   });

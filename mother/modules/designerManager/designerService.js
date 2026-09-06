@@ -165,14 +165,19 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
         };
         const sanitizeHtml = html =>
           sanitizeHtmlLib(html || '', {
-            allowedTags: sanitizeHtmlLib.defaults.allowedTags,
+            // Images and safe button markup are content, while event handlers and scripts remain excluded.
+            allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img', 'button']),
             allowedAttributes: {
               ...sanitizeHtmlLib.defaults.allowedAttributes,
               '*': [
                 ...(sanitizeHtmlLib.defaults.allowedAttributes['*'] || []),
                 'style',
+                'class',
+                'data-text-editable',
               ],
             },
+            // Keep only editor hooks and generated import selectors, never arbitrary source classes.
+            allowedClasses: { '*': ['editable', /^bp-import-node-\d+$/] },
             allowedSchemes: ['http', 'https', 'data'],
             allowProtocolRelative: false,
             transformTags: {

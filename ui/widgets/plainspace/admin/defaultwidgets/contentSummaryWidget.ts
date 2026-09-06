@@ -1,177 +1,81 @@
-import { sanitizeSlug } from './pageList/pageService.js';
-import {
-  type DesignRecord,
-  type PageRecord,
-  createDraftDesign,
-  decodeAdminId,
-  fetchContentDesigns,
-  fetchUploadedContentPages
-} from './contentSummaryData.js';
+import { fetchContentDesigns, fetchUploadedContentPages } from './contentSummaryData.js';
 
 export async function render(el: HTMLElement | null): Promise<void> {
-  const meltdownEmit = window.meltdownEmit;
-  const jwt = window.ADMIN_TOKEN;
   if (!el) return;
+  const emit = window.meltdownEmit;
+  const adminBase = `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`;
+  const root = document.createElement('section');
+  root.className = 'layout-gallery-card content-summary';
+  root.innerHTML = `
+    <div class="layout-gallery-title-bar"><h3 class="layout-gallery-title">Continue working</h3><a class="button ghost sm" data-all>Open Design Studio</a></div>
+    <div class="widget-tabs" role="group" aria-label="Content type"><button type="button" class="widget-tab active" aria-pressed="true" data-view="designs">Designs</button><button type="button" class="widget-tab" aria-pressed="false" data-view="uploads">HTML pages</button></div>
+    <div class="content-summary-status" aria-live="polite"></div><div class="layout-gallery"></div>`;
+  el.replaceChildren(root);
+  const list = root.querySelector<HTMLElement>('.layout-gallery')!;
+  const status = root.querySelector<HTMLElement>('.content-summary-status')!;
+  const all = root.querySelector<HTMLAnchorElement>('[data-all]')!;
+  let view: 'designs' | 'uploads' = 'designs';
+  let request = 0;
 
-  let templates: DesignRecord[] = [];
-  try {
-    if (typeof meltdownEmit !== 'function') throw new Error('meltdownEmit unavailable');
-    templates = await fetchContentDesigns(meltdownEmit, jwt);
-  } catch (err) {
-    console.warn('[ContentSummaryWidget] failed to load designs', err);
-  }
-
-  let uploads: PageRecord[] = [];
-  try {
-    if (typeof meltdownEmit !== 'function') throw new Error('meltdownEmit unavailable');
-    uploads = await fetchUploadedContentPages(meltdownEmit, jwt);
-  } catch (err) {
-    console.warn('[ContentSummaryWidget] failed to load uploads', err);
-  }
-
-  el.innerHTML = '';
-
-  const card = document.createElement('div');
-  card.className = 'layout-gallery-card';
-
-  const titleBar = document.createElement('div');
-  titleBar.className = 'layout-gallery-title-bar';
-
-  const title = document.createElement('div');
-  title.className = 'layout-gallery-title';
-  title.textContent = 'Your Content';
-
-  const tabs = document.createElement('div');
-  tabs.className = 'widget-tabs';
-  const tabDesigns = document.createElement('button');
-  tabDesigns.className = 'widget-tab active';
-  tabDesigns.textContent = 'Designs';
-  const tabUploads = document.createElement('button');
-  tabUploads.className = 'widget-tab';
-  tabUploads.textContent = 'Uploaded';
-  tabs.appendChild(tabDesigns);
-  tabs.appendChild(tabUploads);
-
-  const addBtn = document.createElement('img');
-  addBtn.src = '/assets/icons/plus.svg';
-  addBtn.alt = 'Add design';
-  addBtn.title = 'Create new design';
-  addBtn.className = 'icon add-layout-btn';
-
-  addBtn.addEventListener('click', async () => {
-    const ownerId = decodeAdminId(jwt);
-    addBtn.classList.add('is-loading');
-    addBtn.style.pointerEvents = 'none';
-
-    try {
-      if (typeof meltdownEmit !== 'function') throw new Error('meltdownEmit unavailable');
-      const newId = await createDraftDesign(meltdownEmit, jwt, ownerId);
-      if (newId) {
-        window.location.href = `/admin/app/designer/${encodeURIComponent(String(newId))}`;
-        return;
-      }
-    } catch (err) {
-      console.warn('[ContentSummaryWidget] failed to create design', err);
-      alert('Failed to create a new design. Opening the designer without a template.');
-    } finally {
-      addBtn.classList.remove('is-loading');
-      addBtn.style.pointerEvents = '';
-    }
-
-    window.location.href = '/admin/app/designer';
-  });
-
-  const rightWrap = document.createElement('div');
-  rightWrap.className = 'layout-title-actions';
-  rightWrap.appendChild(tabs);
-  rightWrap.appendChild(addBtn);
-
-  titleBar.appendChild(title);
-  titleBar.appendChild(rightWrap);
-  card.appendChild(titleBar);
-
-  const designList = document.createElement('div');
-  designList.className = 'layout-gallery';
-
-  const uploadList = document.createElement('div');
-  uploadList.className = 'layout-gallery uploaded-gallery';
-  uploadList.style.display = 'none';
-
-  function createItem(template: DesignRecord): HTMLDivElement {
-    const item = document.createElement('div');
-    item.className = 'layout-gallery-item';
-    item.addEventListener('click', () => {
-      const designId = sanitizeSlug(template.id);
-      if (!designId) return;
-      window.open(`/admin/app/designer/${encodeURIComponent(designId)}`, '_blank');
+  async function load(): Promise<void> {
+    // A later tab selection owns the result, so slow reads cannot replace it.
+    const currentRequest = ++request;
+    const selectedView = view;
+    root.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(button => {
+      const active = button.dataset.view === view;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
     });
-
-    const img = document.createElement('img');
-    img.className = 'layout-gallery-preview';
-    img.alt = `${template.title || 'Untitled'} preview`;
-    img.src = template.thumbnail || '/assets/icons/file.svg';
-
-    const span = document.createElement('span');
-    span.className = 'layout-gallery-name';
-    span.textContent = template.title || 'Untitled';
-
-    item.appendChild(img);
-    item.appendChild(span);
-    return item;
-  }
-
-  if (templates.length) {
-    templates.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
-    templates.forEach(template => designList.appendChild(createItem(template)));
-  } else {
-    const empty = document.createElement('div');
-    empty.className = 'empty-state';
-    empty.textContent = 'No designs found.';
-    designList.appendChild(empty);
-  }
-
-  function renderUploads(): void {
-    uploadList.innerHTML = '';
-    if (uploads.length) {
-      uploads.forEach(upload => {
-        const item = document.createElement('div');
-        item.className = 'layout-gallery-item';
-        item.addEventListener('click', () => {
-          window.open(`/admin/${upload.slug || ''}`, '_blank');
-        });
-
-        const span = document.createElement('span');
-        span.className = 'layout-gallery-name';
-        span.textContent = upload.title || upload.slug || 'Untitled';
-
-        item.appendChild(span);
-        uploadList.appendChild(item);
-      });
-    } else {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.textContent = 'No uploads found.';
-      uploadList.appendChild(empty);
+    all.href = `${adminBase}/content/${view === 'designs' ? 'designer-layouts' : 'pages'}`;
+    all.textContent = view === 'designs' ? 'Open Design Studio' : 'Open Pages';
+    list.replaceChildren();
+    status.textContent = 'Loading content…';
+    status.setAttribute('role', 'status');
+    try {
+      if (typeof emit !== 'function') throw new Error('CMS connection unavailable.');
+      const items = selectedView === 'designs'
+        ? await fetchContentDesigns(emit, window.ADMIN_TOKEN)
+        : await fetchUploadedContentPages(emit, window.ADMIN_TOKEN);
+      if (currentRequest !== request) return;
+      const available = items.filter(item => item.id != null && item.status !== 'deleted');
+      available.sort((a, b) => new Date(String(b.updated_at || 0)).getTime() - new Date(String(a.updated_at || 0)).getTime());
+      status.textContent = available.length ? 'Recently updated' : selectedView === 'designs'
+        ? 'No designs yet. Open Design Studio to create one.' : 'No HTML pages yet. Attach HTML from the page editor.';
+      for (const item of available.slice(0, 6)) {
+        const link = document.createElement('a');
+        link.className = 'layout-gallery-item';
+        link.href = selectedView === 'designs'
+          ? `${adminBase}/studio/design/${encodeURIComponent(String(item.id))}`
+          : `${adminBase}/pages/edit/${encodeURIComponent(String(item.id))}`;
+        const name = document.createElement('strong');
+        name.className = 'layout-gallery-name';
+        name.textContent = item.title || 'Untitled';
+        if (selectedView === 'designs' && item.thumbnail) {
+          const image = document.createElement('img');
+          image.className = 'layout-gallery-preview';
+          image.alt = '';
+          image.src = String(item.thumbnail);
+          image.loading = 'lazy';
+          link.append(image);
+        }
+        link.append(name);
+        list.append(link);
+      }
+    } catch (error) {
+      if (currentRequest !== request) return;
+      status.setAttribute('role', 'alert');
+      status.textContent = `CONTENT_SUMMARY_LOAD_FAILED: ${error instanceof Error ? error.message : 'Could not load content.'} `;
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'button secondary sm';
+      retry.textContent = 'Retry';
+      retry.addEventListener('click', () => void load());
+      status.append(retry);
     }
   }
-
-  renderUploads();
-
-  card.appendChild(designList);
-  card.appendChild(uploadList);
-  el.appendChild(card);
-
-  tabDesigns.addEventListener('click', () => {
-    tabDesigns.classList.add('active');
-    tabUploads.classList.remove('active');
-    designList.style.display = '';
-    uploadList.style.display = 'none';
-  });
-
-  tabUploads.addEventListener('click', () => {
-    tabUploads.classList.add('active');
-    tabDesigns.classList.remove('active');
-    uploadList.style.display = '';
-    designList.style.display = 'none';
-  });
+  root.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(button => button.addEventListener('click', () => {
+    view = button.dataset.view === 'uploads' ? 'uploads' : 'designs';
+    void load();
+  }));
+  await load();
 }

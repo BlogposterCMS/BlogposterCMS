@@ -98,7 +98,8 @@ function designLayoutForPage(page = {}) {
   if (designId) return { layoutRef: `layout:${designId}@v1`, hasLinkedDesign: true };
 
   return {
-    layoutRef: `layout:${page.slug || 'default'}@v1`,
+    // A page slug is not a Designer id. Unlinked HTML needs no layout lookup.
+    layoutRef: undefined,
     hasLinkedDesign: false
   };
 }
@@ -672,8 +673,23 @@ function setupPagesManagerEvents(motherEmitter) {
           slug,
           lane: 'public',
           language
-        }).then(page => {
+        }).then(async page => {
   if (!page) return cb(new Error('Page not found'));
+  const pageSeo = {
+    title: page.seo_title || page.title || '',
+    description: page.meta_desc || '',
+    keywords: page.seo_keywords || '',
+    ogImage: page.seo_image || ''
+  };
+  const resolvedSeo = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_SEO_META, {
+    jwt, moduleName: 'seoManager', moduleType: 'core',
+    sourceModule: 'pagesManager', sourceId: String(page.id),
+    language, contentFallback: pageSeo
+  }).catch(error => {
+    console.warn('PUBLIC_SEO_RESOLVE_FAILED: Using the published page metadata.', error.message);
+    return null;
+  });
+  const seo = resolvedSeo?.seo || pageSeo;
   const {
     layoutRef,
     hasLinkedDesign
@@ -684,9 +700,12 @@ function setupPagesManagerEvents(motherEmitter) {
     language: page.language || language,
     lane: 'public',
     meta: {
-      seoTitle: page.seo_title || page.title || '',
-      seoDesc: page.meta_desc || '',
-      seoKeywords: page.seo_keywords || ''
+      seoTitle: seo.title || pageSeo.title,
+      seoDesc: seo.description || '',
+      seoKeywords: seo.keywords || '',
+      seoImage: seo.ogImage || '',
+      canonicalUrl: seo.canonicalUrl || '',
+      robots: seo.robots || 'index,follow'
     },
     attachments: [{
       type: 'design',

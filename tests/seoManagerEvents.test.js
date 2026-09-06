@@ -85,6 +85,24 @@ test('resolveSeoMeta merges defaults, content entry data and explicit overrides'
   assert.deepStrictEqual(result.seo.meta, { site: true, contentTypeKey: 'post', entryId: 42, explicit: true });
 });
 
+test('page metadata fills a missing mirror while explicit SEO overrides still win', async () => {
+  const emitter = new EventEmitter();
+  setupSeoEvents(emitter);
+  emitter.on('dbSelect', (payload, cb) => cb(null,
+    payload.data.params.targetType === 'global' ? { title: 'Site', description: 'Default' }
+      : { title: 'Explicit page title' }));
+  emitter.on('getContentEntryBySource', (_payload, cb) => cb(null, null));
+  const { err, result } = await emitAsync(emitter, 'resolveSeoMeta', {
+    jwt: 't', moduleName: 'seoManager', moduleType: 'core',
+    sourceModule: 'pagesManager', sourceId: '7',
+    contentFallback: { title: 'Page title', description: 'Page description', ogImage: '/cover.png' }
+  });
+  assert.ifError(err);
+  assert.strictEqual(result.seo.title, 'Explicit page title');
+  assert.strictEqual(result.seo.description, 'Page description');
+  assert.strictEqual(result.seo.ogImage, '/cover.png');
+});
+
 test('generateSeoSitemap renders published content entries', async () => {
   const emitter = new EventEmitter();
   setupSeoEvents(emitter);

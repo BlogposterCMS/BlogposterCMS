@@ -105,6 +105,15 @@ function apiAction(resource, action) {
   return { resource, action };
 }
 
+// Both the canonical Pages workspace and stored Collections instances use it.
+const PAGE_MANAGER_ACTIONS = ['byLane', 'create', 'update', 'setStart', 'delete']
+  .map(action => apiAction('pages', action));
+
+const PAGE_CONTENT_ACTIONS = [
+  apiAction('apps', 'builderList'), apiAction('pages', 'update'), apiAction('designer', 'list'),
+  apiAction('media', BACKEND_EVENTS.CREATE_LOCAL_FOLDER), apiAction('media', BACKEND_EVENTS.LIST_LOCAL_FOLDER), apiAction('media', 'uploadToFolder')
+];
+
 module.exports.DEFAULT_WIDGETS = [
   {
     widgetId: 'contentSummary',
@@ -115,12 +124,8 @@ module.exports.DEFAULT_WIDGETS = [
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
       apiActions: [
-        apiAction('plainSpace', 'layoutTemplateNames'),
-        apiAction('pages', 'list'),
-        apiAction('plainSpace', 'layoutTemplate'),
-        apiAction('plainSpace', BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE),
-        apiAction('plainSpace', BACKEND_EVENTS.SET_GLOBAL_LAYOUT_TEMPLATE),
-        apiAction('plainSpace', BACKEND_EVENTS.DELETE_LAYOUT_TEMPLATE)
+        apiAction('designer', 'list'),
+        apiAction('pages', 'list')
       ]
     }
   },
@@ -131,15 +136,9 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/pageEditorWidgets/pageContentWidget.js',
     category: 'core',
     metadata: {
+      hiddenFromCatalog: true,
       layout: dashboardLayout('twoThird', ['twoThird', 'full'], BREAKPOINTS.twoThirdFull),
-      apiActions: [
-        apiAction('apps', 'builderList'),
-        apiAction('pages', 'update'),
-        apiAction('plainSpace', 'layoutTemplateNames'),
-        apiAction('media', BACKEND_EVENTS.CREATE_LOCAL_FOLDER),
-        apiAction('media', BACKEND_EVENTS.LIST_LOCAL_FOLDER),
-        apiAction('media', 'uploadToFolder')
-      ]
+      apiActions: PAGE_CONTENT_ACTIONS
     }
   },
   {
@@ -166,11 +165,10 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/layoutTemplatesWidget.js',
     category: 'core',
     metadata: {
+      hiddenFromCatalog: true,
       layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
       apiActions: [
-        apiAction('plainSpace', 'layoutTemplateNames'),
-        apiAction('pages', 'byLane'),
-        apiAction('plainSpace', BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE)
+        apiAction('designer', 'list')
       ]
     }
   },
@@ -218,7 +216,7 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/widgetListWidget.js',
     category: 'core',
     metadata: {
-      layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly, 'scroll'),
+      layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
       apiActions: [
         apiAction('plainSpace', 'widgetRegistry'),
         apiAction('pages', 'byLane'),
@@ -233,14 +231,8 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/defaultwidgets/pageList/pageList.js',
     category: 'core',
     metadata: {
-      layout: dashboardLayout('twoThird', ['twoThird', 'full'], BREAKPOINTS.twoThirdFull, 'scroll'),
-      apiActions: [
-        apiAction('pages', 'byLane'),
-        apiAction('pages', 'create'),
-        apiAction('pages', 'update'),
-        apiAction('pages', 'setStart'),
-        apiAction('pages', 'delete')
-      ]
+      layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
+      apiActions: PAGE_MANAGER_ACTIONS
     }
   },
   {
@@ -250,10 +242,9 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/defaultwidgets/collectionsList/collectionsList.js',
     category: 'core',
     metadata: {
-      layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly, 'scroll'),
-      apiActions: [
-        apiAction('pages', 'byLane')
-      ]
+      hiddenFromCatalog: true,
+      layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
+      apiActions: PAGE_MANAGER_ACTIONS
     }
   },
   {
@@ -276,11 +267,8 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/pageEditorWidgets/pageEditorWidget.js',
     category: 'core',
     metadata: {
-      layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
-      apiActions: [
-        apiAction('plainSpace', 'layoutTemplateNames'),
-        apiAction('pages', 'update')
-      ]
+      layout: dashboardLayout('page', ['page'], BREAKPOINTS.pageOnly, 'scroll'),
+      apiActions: PAGE_CONTENT_ACTIONS
     }
   },
   {
@@ -301,6 +289,7 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/roadmapWidget.js',
     category: 'core',
     metadata: {
+      hiddenFromCatalog: true,
       layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull),
       apiActions: []
     }
@@ -312,6 +301,7 @@ module.exports.DEFAULT_WIDGETS = [
     content: '/ui/widgets/plainspace/admin/dragInfoWidget.js',
     category: 'core',
     metadata: {
+      hiddenFromCatalog: true,
       layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
       apiActions: []
     }

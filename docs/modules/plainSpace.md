@@ -160,10 +160,10 @@ Seed pages choose where each widget may start with `config.widgetSlots`:
 
 ```js
 config: {
-  widgets: ['pageList', 'pageStats'],
+  dashboardLayout: 'fixed',
+  widgets: ['pageList'],
   widgetSlots: {
-    pageList: 'twoThird',
-    pageStats: 'third'
+    pageList: 'page'
   }
 }
 ```
@@ -173,8 +173,9 @@ Widget `content` values are browser URLs. New seeds should use
 `ui/widgets/plainspace/`; community widgets use `/widgets/{folder}/widget.js`.
 
 The default Media page seeds `mediaExplorer` as a page-slot admin widget, and
-the default Layouts and Design Studio pages seed `layoutTemplates` and
-`designerLayouts` the same way so these browsers own the workspace instead of
+the Design Studio page seeds `designerLayouts` the same way. The former Layouts
+page is retired on startup; its old widget URL delegates to Design Studio and
+is hidden from the catalog. These browsers own the workspace instead of
 appearing as half-width cards. The Media widget itself is only a PlainSpace
 mount point; folder browsing, upload, share-link creation, rename and delete
 are provided by the shared Explorer surface in `ui/shared/media/` so the shell
@@ -183,3 +184,21 @@ picker and global media modal can reuse the same Media Manager integration.
 Seed files run without validation; only load admin seeds from trusted modules.
 Community seeds that need default render data can still pass non-layout
 `options`; saved options can be read later with `getWidgetInstance`.
+
+Content, Pages, Navigation, Media, Widgets, Design Studio's library and Page Editor
+are fixed tools. Home remains a customizable overview. Collections is a filter
+in Pages; Layouts delegates to Design Studio. Neither retirement removes public
+records or saved user layouts. The old page-content and demo/checklist modules
+remain loadable but are hidden from catalog insertion.
+
+The public Widget library uses the existing public registry. Its Global view
+scans saved desktop page layouts lazily with at most four concurrent reads; a
+failed scan is an error with Retry, never a zero count. It does not claim to index
+Designer document references. Templates are browser-local and still edited or
+placed by Design Studio. Home displays up to six recent designs or HTML pages
+and opens their canonical editors without a second design-creation path.
+
+Settings reuse the shared workspace navigation guard, with separate saved field
+baselines per tab. Failed loads offer Retry and failed saves retain inputs.
+The core Import / Export placeholder is retired; it never invoked the module
+import/export contracts. Installed module tools are unaffected.

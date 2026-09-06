@@ -4,6 +4,7 @@
 
 import { resolveObjectSnap } from '../ui/shared/grid/snapGuides';
 import { CanvasGrid } from '../ui/shared/grid/canvasGrid';
+import { PixelGrid } from '../ui/designer/app/main/pixelGrid';
 
 class ResizeObserverMock {
   observe(): void {}
@@ -31,6 +32,67 @@ describe('CanvasGrid object snap guides', () => {
       return 1;
     };
     (globalThis as { cancelAnimationFrame?: unknown }).cancelAnimationFrame = jest.fn();
+  });
+
+  it.each([CanvasGrid, PixelGrid])('preserves imported stacking through geometry updates and temporary text elevation (%p)', Grid => {
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    const grid = new Grid({ columns: 1440, cellHeight: 1, columnWidth: 1, rows: 20000 }, root);
+    const widget = document.createElement('div');
+    widget.className = 'canvas-item';
+    widget.dataset.layer = '1';
+    widget.dataset.layerOrder = '37';
+    root.appendChild(widget);
+    grid.makeWidget(widget);
+    grid.update(widget, { x: 10, y: 20, w: 100, h: 50 });
+    expect(widget.style.zIndex).toBe('37');
+    widget.classList.add('editing');
+    widget.dataset.layer = '9999';
+    grid.update(widget, { locked: true });
+    expect(widget.style.zIndex).toBe('9999');
+  });
+
+  it('selects a page breakpoint but projects child geometry inside its owning container', () => {
+    const root = document.createElement('div');
+    root.className = 'layout-grid-container';
+    Object.defineProperty(root, 'clientWidth', { value: 480 });
+    Object.defineProperty(root, 'clientHeight', { value: 300 });
+    document.body.appendChild(root);
+    const grid = new CanvasGrid({ columnWidth: 1, cellHeight: 1, columns: 1440, responsivePlacement: true }, root);
+    const widget = document.createElement('div');
+    root.appendChild(widget);
+    grid._applyResponsiveGeometry(widget, { centerXPercent: 50, yPx: 20, widthPx: 100, heightPx: 50 }, 1440);
+    expect(widget.dataset.x).toBe('190');
+  });
+
+  it('keeps a nested widget pointer from selecting and dragging its ancestor container', () => {
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    const grid = new CanvasGrid({ columnWidth: 1, cellHeight: 1 }, root);
+    const parent = document.createElement('div');
+    parent.className = 'canvas-item layout-grid-container';
+    const child = document.createElement('div');
+    child.className = 'canvas-item';
+    parent.appendChild(child);
+    root.appendChild(parent);
+    grid.makeWidget(parent);
+    const select = jest.spyOn(grid, 'select');
+    child.dispatchEvent(pointerEvent('pointerdown', 10, 10));
+    expect(select).not.toHaveBeenCalled();
+    expect(parent.classList.contains('dragging')).toBe(false);
+  });
+
+  it('keeps a short Section independent from the editor viewport height', () => {
+    const viewport = document.createElement('div');
+    Object.defineProperty(viewport, 'clientHeight', { value: 900 });
+    const root = document.createElement('div');
+    root.className = 'layout-section';
+    root.style.minHeight = '120px';
+    viewport.appendChild(root);
+    document.body.appendChild(viewport);
+    const grid = new CanvasGrid({ columnWidth: 1, cellHeight: 1, scrollContainer: viewport }, root);
+    grid._updateGridHeight();
+    expect(root.style.height).toBe('120px');
   });
 
   it('snaps a moving object edge to the object below and returns a horizontal guide', () => {

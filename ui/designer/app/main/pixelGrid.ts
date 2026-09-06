@@ -115,7 +115,9 @@ export class PixelGrid {
     el.setAttribute('gs-w', w);
     el.setAttribute('gs-h', h);
     const layer = +el.dataset.layer || 0;
-    el.style.zIndex = layer.toString();
+    // Preserve visual stacking independently from the active editing layer.
+    const stackOrder = el.classList.contains('editing') ? layer : Number(el.dataset.layerOrder ?? layer);
+    el.style.zIndex = String(Number.isFinite(stackOrder) ? stackOrder : layer);
 
     el.style.position = 'absolute';
     el.style.transform =

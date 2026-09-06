@@ -13,11 +13,11 @@ const applyWidgetOptions = jest.fn();
 const executeJs = jest.fn();
 const mockRenderTextWidget = jest.fn();
 
-jest.mock('/ui/runtime/main/canvasGrid.js', () => ({
+jest.mock('/ui/shared/grid/canvasGrid.js', () => ({
   init: initCanvasGrid,
 }), { virtual: true });
 
-jest.mock('/ui/runtime/main/widgetOptions.js', () => ({
+jest.mock('/ui/widgets/options/widgetOptions.js', () => ({
   applyWidgetOptions,
 }), { virtual: true });
 
@@ -71,6 +71,9 @@ describe('widgetManager public loader', () => {
   });
 
   test('renders public widgets into the active layout grid', async () => {
+    document.getElementById('app')!.innerHTML = '<div id="bp-grid" data-bp-initial-layout="true"><div class="canvas-item" data-bp-initial-item="0"></div></div>';
+    const initialGrid = document.getElementById('bp-grid');
+    const initialItem = initialGrid!.firstElementChild;
     const activeLayout = {
       grid: { columns: 12, cellHeight: 10, rows: 20 },
       items: [
@@ -108,6 +111,10 @@ describe('widgetManager public loader', () => {
     const gridEl = document.getElementById('bp-grid') as HTMLElement;
     const item = gridEl.querySelector<HTMLElement>('.canvas-item');
     const widget = item?.querySelector<HTMLElement>('.widget');
+    expect(gridEl).toBe(initialGrid);
+    expect(item).toBe(initialItem);
+    expect(document.querySelectorAll('#bp-grid')).toHaveLength(1);
+    expect(gridEl.dataset.bpInitialLayout).toBeUndefined();
 
     expect(initCanvasGrid).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -10,6 +10,7 @@ import { fetchRuntimeDesign, type RuntimeEmitter as RuntimeDataEmitter } from '.
 import { renderStaticRuntimeGrid } from './runtimeStaticGrid.js';
 import {
   getRuntimeDesignLayout,
+  applyRuntimeDesignStyles,
   type RuntimeDesignLayoutItem
 } from './runtimeDesignLayouts.js';
 import type { RuntimeEmitter as RuntimeWidgetEmitter } from './runtimeWidgetInstances.js';
@@ -18,6 +19,8 @@ type RuntimeDesignDocumentOptions = {
   emit?: RuntimeDataEmitter;
   widgetEmit?: RuntimeWidgetEmitter;
   globalLayout?: RuntimeDesignLayoutItem[];
+  /** Branch-local ancestry permits reuse in siblings while stopping recursive designs. */
+  designPath?: string[];
 };
 
 function collectLeaves(node: LayoutNode | null, leaves: LayoutNode[] = []): LayoutNode[] {
@@ -120,10 +123,25 @@ async function renderDesignRefLeaf({
   options: RuntimeDesignDocumentOptions;
 }): Promise<void> {
   if (leaf.type !== 'leaf' || !leaf.designRef || typeof options.emit !== 'function') return;
+  const designPath = options.designPath || [];
+  if (designPath.includes(String(leaf.designRef)) || designPath.length >= 16) {
+    console.warn('[RuntimeDesignDocument] RUNTIME_DESIGN_REF_CYCLE_OR_DEPTH', leaf.designRef);
+    return;
+  }
   try {
     const response = await fetchRuntimeDesign(options.emit, leaf.designRef, lane);
     const layout = getRuntimeDesignLayout(response);
-    if (layout.length) {
+    // Embedded designs use the same structural renderer as the outer page.
+    // Do not flatten their containers or repeat the page's global widgets.
+    applyRuntimeDesignStyles(container, response?.design);
+    const rendered = await renderRuntimeDesignDocument(
+      container,
+      getRuntimeDesignDocument({ ...response, placements: layout }),
+      allWidgets,
+      lane,
+      { emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, String(leaf.designRef)] }
+    );
+    if (!rendered && layout.length) {
       await renderStaticRuntimeGrid(container, layout, allWidgets, lane, {
         widgetEmit: options.widgetEmit
       });
@@ -135,6 +153,17 @@ async function renderDesignRefLeaf({
 
 export function getRuntimeDesignDocument(response: unknown): DesignDocument {
   return extractDesignDocument(response);
+}
+
+/** Resolve only the outer document's slot; nested designs own their own hosts. */
+export function getRuntimeDesignContentMount(target: HTMLElement): HTMLElement {
+  const shell = target.querySelector<HTMLElement>('.runtime-design-document');
+  if (!shell) return target;
+  const ownHosts = Array.from(shell.querySelectorAll<HTMLElement>('.runtime-layout-container'))
+    .filter(host => host.closest('.runtime-design-document') === shell);
+  return ownHosts.find(host => host.dataset.dynamicHost === 'true')
+    || ownHosts.find(host => host.dataset.workarea === 'true')
+    || target;
 }
 
 export async function renderRuntimeDesignDocument(

@@ -8,6 +8,25 @@ const {
 const rootDir = path.resolve(__dirname, '..');
 const updaterPath = path.join(rootDir, 'deploy', 'blogposter-update');
 
+test('reviewed release drift is rejected before Docker or data changes', () => {
+  const command = [
+    'source deploy/blogposter-update',
+    'fetch_manifest() { :; }',
+    'manifest_value() { case "$1" in .version) echo 0.9.5;; .minimumUpdaterVersion) echo 1.0.0;; .source.repository) echo BlogposterCMS/BlogposterCMS;; .source.commit) echo unused;; esac; }',
+    `select_image_reference() { echo ghcr.io/blogpostercms/blogpostercms@sha256:${'a'.repeat(64)}; }`,
+    'docker() { echo UNEXPECTED_DOCKER_CALL; exit 88; }',
+    'MANIFEST_FILE=unused', 'MANIFEST_BUNDLE_FILE=unused',
+    'BLOGPOSTER_UPDATE_REPOSITORY=BlogposterCMS/BlogposterCMS',
+    'EXPECTED_VERSION=0.9.6', `EXPECTED_IMAGE=ghcr.io/blogpostercms/blogpostercms@sha256:${'a'.repeat(64)}`,
+    'run_apply'
+  ].join('\n');
+  // Send code on stdin so Windows/WSL argument quoting cannot expand $1.
+  const result = spawnSync('bash', ['-s'], { input: command, cwd: rootDir, encoding: 'utf8' });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('CORE_UPDATE_TARGET_CHANGED');
+  expect(result.stdout).not.toContain('UNEXPECTED_DOCKER_CALL');
+});
+
 test('core update manifest binds release, source commit and immutable image digest', () => {
   const manifest = buildManifest({
     packageInfo: { version: '1.2.3' },

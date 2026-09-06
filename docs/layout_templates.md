@@ -1,27 +1,26 @@
-# Layout Templates
+# Reusable Designer layouts
 
-Version 0.5.0 introduced a dedicated **Layouts** page in the admin dashboard for managing layout templates.
+Design Studio is the only layout authoring surface. The former Layouts creator
+is retired. Its stored widget URL delegates to the Designer library, and its
+admin navigation page is marked deleted on startup. Existing template records
+remain readable until their public-page assignments are migrated; removing the
+creator does not delete page data.
 
-Layout templates let you reuse grid layouts across multiple pages. Each template stores widget positions and a preview image.
-They are different from Design Studio layout trees:
+Create shared headers, navigation and footers as a Designer document. Use the
+existing container content-host action to select the destination for page
+content. That destination persists as `isDynamicHost` in the LayoutTree and is
+independent of the currently selected editor Section (`workarea`).
 
-- **Layout templates** are PlainSpace page/grid templates made of widget positions.
-- **Design Studio layouts** are `DesignDocument` payloads made of a structural
-  `LayoutTree`, widget placements, scenes and design metadata.
+Attach a design through the existing page Content controls. Inherited page HTML
+and attached content use the outer document's content host. Container `designRef`
+references render complete nested Designer documents, including their own
+container placement. References may be reused in siblings; circular references
+and depth beyond 16 are stopped with `RUNTIME_DESIGN_REF_CYCLE_OR_DEPTH`.
 
-Do not model sections, rows or columns as normal widgets. Those belong to the
-Design Studio layout tree and the shared `ui/shared/layout/` contract.
+Free placement, Auto and Grid remain placement modes of the same container tree.
+They are not separate editors or separately persisted layout systems. Saving page
+metadata no longer assigns an old grid template as a side effect.
 
-## Creating Templates
-
-1. Open **Layouts** in the admin navigation for grid templates, or **Design Studio** for structural designs.
-2. Click **Create** and arrange widgets on the empty CanvasGrid layout.
-3. Save the template. A preview image is automatically generated using the shared `capturePreview` helper.
-
-Templates can be edited later by selecting them from the list. Updating a template does not affect existing pages until you apply the template again.
-
-## Applying Templates
-
-When creating or editing a page, choose a layout template from the sidebar. The page inherits the widget layout defined in the template. Individual widgets may still be customized afterwards.
-
-Layout templates speed up page creation and ensure consistent design throughout your site.
+Opening the Layout tab leaves the document's placements editable. Saved designs
+autosave their full structure through Designer; the first save of a new document
+is explicit. Autosave and manual Save are serialized to protect versioned writes.

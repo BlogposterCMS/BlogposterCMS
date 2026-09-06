@@ -81,17 +81,29 @@ export function initContentHeader(): void {
   }
 
   const widgetsBtn = document.getElementById('widgets-toggle-inline');
+  const fixed = document.getElementById('content')?.dataset.dashboardLayout === 'fixed';
+  if (widgetsBtn) widgetsBtn.hidden = fixed;
   if (widgetsBtn) {
-    widgetsBtn.addEventListener('click', () => {
+    widgetsBtn.onclick = () => {
+      if (document.getElementById('content')?.dataset.dashboardLayout === 'fixed') return;
       const open = !document.getElementById('widgets-panel')?.classList.contains('open');
       dispatchWidgetsToggle(open);
-    });
+    };
   }
 
   const deleteBtn = document.getElementById('admin-delete-page');
   if (deleteBtn) deleteBtn.addEventListener('click', handleDeleteCurrentAdminPage);
 
   const editToggle = document.getElementById('edit-toggle');
+  if (editToggle) {
+    editToggle.hidden = fixed;
+    editToggle.onclick = null;
+  }
+  if (fixed) {
+    document.body.classList.remove('dashboard-edit-mode');
+    dispatchWidgetsToggle(false);
+    return;
+  }
   if (!editToggle) return;
   const editIcon = editToggle.querySelector<HTMLImageElement>('img');
 
@@ -107,7 +119,8 @@ export function initContentHeader(): void {
       dispatchWidgetsToggle(false);
     });
   }
-  editToggle.addEventListener('click', async () => {
+  editToggle.onclick = async () => {
+    if (document.getElementById('content')?.dataset.dashboardLayout === 'fixed') return;
     const grid = window.adminGrid;
     if (!grid || typeof grid.setStatic !== 'function') return;
     editing = !editing;
@@ -122,7 +135,7 @@ export function initContentHeader(): void {
         console.error(err);
       }
     }
-  });
+  };
 }
 
 async function handleDeleteCurrentAdminPage(): Promise<void> {

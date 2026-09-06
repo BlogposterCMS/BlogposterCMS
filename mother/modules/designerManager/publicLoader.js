@@ -1,6 +1,10 @@
 // Unbundled browser loaders use the public ESM facade, not server CommonJS.
 import { emitRuntimePublic } from '/ui/shared/api-client/runtimeFacade.js';
 function preloadLink(href, rel = 'stylesheet') {
+    const existing = Array.from(document.querySelectorAll('link'))
+        .find(link => link.getAttribute('href') === href && link.rel === rel);
+    if (existing)
+        return existing;
     const link = document.createElement('link');
     link.rel = rel;
     link.href = href;
@@ -23,12 +27,13 @@ async function emitPublicRuntime(ctx, resource, action, params = {}) {
 async function loadDesign(descriptor = {}, ctx) {
     const { css = [], layoutRef } = descriptor;
     css.forEach(href => preloadLink(href, 'stylesheet'));
-    const layout = await emitPublicRuntime(ctx, 'designer', 'getLayout', {
+    // HTML-only pages still need runtime CSS, but own no Designer layout.
+    const layout = ctx?.initialLayoutResolved ? ctx.initialLayout : layoutRef ? await emitPublicRuntime(ctx, 'designer', 'getLayout', {
         layoutRef
     }).catch(error => {
         console.warn('[DesignerPublicLoader:LAYOUT_LOAD_FAILED] Falling back to an empty layout.', error);
         return null;
-    });
+    }) : null;
     const activeLayout = layout || fallbackLayout(layoutRef);
     if (ctx && typeof ctx === 'object') {
         ctx.activeLayout = activeLayout;

@@ -147,7 +147,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
       '#008000', '#7CFC00', '#BFFF00', '#FFFF00', '#FFDAB9', '#FFA500',
       '#000000', '#A9A9A9', '#808080'
     ];
-    let selectedColor = userRecord.ui_color || colorChoices[0] || '#000000';
+    let selectedColor = userRecord.ui_color || '#171717';
 
     const headerDelete = document.createElement('img');
     headerDelete.src = '/assets/icons/delete.svg';

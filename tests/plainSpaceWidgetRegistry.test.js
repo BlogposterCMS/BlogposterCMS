@@ -85,12 +85,8 @@ test('plainSpace widget registry resolves bundled and community widget browser U
     assert.deepStrictEqual(
       widgets[0].metadata.apiActions,
       [
-        { resource: 'plainSpace', action: 'layoutTemplateNames' },
-        { resource: 'pages', action: 'list' },
-        { resource: 'plainSpace', action: 'layoutTemplate' },
-        { resource: 'plainSpace', action: 'saveLayoutTemplate' },
-        { resource: 'plainSpace', action: 'setGlobalLayoutTemplate' },
-        { resource: 'plainSpace', action: 'deleteLayoutTemplate' }
+        { resource: 'designer', action: 'list' },
+        { resource: 'pages', action: 'list' }
       ]
     );
     assert.strictEqual(widgets[0].metadata.layout.supportedSlots[0].name, 'full');
@@ -271,8 +267,9 @@ test('plainSpace default admin widgets include full-page workspace contracts', (
   assert(navigationWidget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'menus'));
   assert(navigationWidget.metadata.apiActions.some(action => action.resource === 'navigation' && action.action === 'tree'));
   assert(navigationWidget.metadata.apiActions.some(action => action.resource === 'designer' && action.action === 'save'));
-  assert(layoutsWidget.metadata.apiActions.some(action => action.resource === 'plainSpace' && action.action === 'layoutTemplateNames'));
-  assert(layoutsWidget.metadata.apiActions.some(action => action.resource === 'plainSpace' && action.action === 'saveLayoutTemplate'));
+  assert(layoutsWidget.metadata.hiddenFromCatalog);
+  assert(layoutsWidget.metadata.apiActions.some(action => action.resource === 'designer' && action.action === 'list'));
+  assert(!layoutsWidget.metadata.apiActions.some(action => action.action === 'saveLayoutTemplate'));
   assert(designerWidget.metadata.apiActions.some(action => action.resource === 'designer' && action.action === 'list'));
 });
 

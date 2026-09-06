@@ -753,11 +753,23 @@ function setupMediaManagerEvents(motherEmitter) {
       const entries = fs.readdirSync(targetPath, { withFileTypes: true });
       const folders = [];
       const files   = [];
+      const details = [];
       for (const ent of entries) {
+        // Do not follow links while collecting Explorer metadata. Access remains
+        // constrained by the same library path and permission guards above.
+        if (!ent.isDirectory() && !ent.isFile()) continue;
         if (ent.isDirectory()) {
           folders.push(ent.name);
         } else {
           files.push(ent.name);
+        }
+        try {
+          const stat = fs.lstatSync(path.join(targetPath, ent.name));
+          details.push({ name: ent.name, size: ent.isFile() ? stat.size : null, modifiedAt: stat.mtime.toISOString() });
+        } catch (error) {
+          // An entry may disappear during a directory read; its next refresh
+          // removes it without making every remaining file inaccessible.
+          if (error.code !== 'ENOENT') throw error;
         }
       }
 
@@ -772,7 +784,8 @@ function setupMediaManagerEvents(motherEmitter) {
         currentPath: normalizedSubPath,
         parentPath,
         folders,
-        files
+        files,
+        details
       });
     } catch (err) {
       callback(err);
@@ -796,7 +809,8 @@ function setupMediaManagerEvents(motherEmitter) {
       const targetDir = assertInsideRoot(libraryRoot, path.join(parentDir, safeFolderName), 'path');
 
       fs.mkdirSync(targetDir, { recursive: true });
-      callback(null);
+      // The admin facade requires JSON data even when the operation has no body.
+      callback(null, { ok: true });
     } catch (err) {
       callback(err);
     }
@@ -819,7 +833,7 @@ function setupMediaManagerEvents(motherEmitter) {
       const newPath = assertInsideRoot(libraryRoot, path.join(parentDir, normalizeLibrarySegment(newName, 'item name')), 'path');
 
       fs.renameSync(oldPath, newPath);
-      callback(null);
+      callback(null, { ok: true });
     } catch (err) {
       callback(err);
     }
@@ -841,7 +855,7 @@ function setupMediaManagerEvents(motherEmitter) {
       const target = assertLibraryPathSafe(path.join(parentDir, normalizeLibrarySegment(itemName, 'item name')), 'path');
 
       fs.rmSync(target, { recursive: true, force: true });
-      callback(null);
+      callback(null, { ok: true });
     } catch (err) {
       callback(err);
     }

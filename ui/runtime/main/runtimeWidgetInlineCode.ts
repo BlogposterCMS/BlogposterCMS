@@ -1,5 +1,4 @@
-import { sanitizeHtml } from '../../shared/sanitize/sanitizer.js';
-import { executeJs } from '../../shared/scripts/executeJs.js';
+import { renderWidgetInlineCode } from './widgetRuntimeGateway.js';
 
 export type RuntimeRenderCode = {
   html?: string;
@@ -9,25 +8,12 @@ export type RuntimeRenderCode = {
   metadata?: unknown;
 } | null;
 
+/** Keep the runtime entry point while sharing HTML/CSS/script handling with Studio. */
 export function renderInlineWidgetCode(
   wrapper: HTMLElement,
   root: ShadowRoot,
   container: HTMLElement,
   code: NonNullable<RuntimeRenderCode>
 ): void {
-  if (code.css) {
-    const customStyle = document.createElement('style');
-    customStyle.textContent = code.css;
-    root.appendChild(customStyle);
-  }
-  if (code.html) {
-    container.innerHTML = sanitizeHtml(code.html);
-  }
-  if (code.js) {
-    try {
-      executeJs(code.js, wrapper, root, 'Renderer');
-    } catch (e) {
-      console.error('[Renderer] custom js error', e);
-    }
-  }
+  renderWidgetInlineCode(wrapper, root, container, code, 'Renderer');
 }

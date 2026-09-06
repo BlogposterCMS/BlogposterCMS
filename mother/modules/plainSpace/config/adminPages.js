@@ -37,11 +37,10 @@ module.exports.ADMIN_PAGES = [
       },
       icon: '/assets/icons/file-box.svg',
       // Content should open on real page management instead of a design-only summary.
-      widgets: ['pageList', 'pageStats', 'contentSummary'],
+      dashboardLayout: 'fixed',
+      widgets: ['pageList'],
       widgetSlots: {
-        pageList: 'twoThird',
-        pageStats: 'third',
-        contentSummary: 'full'
+        pageList: 'page'
       },
       actionButton: {
         icon: '/assets/icons/plus.svg',
@@ -67,10 +66,10 @@ module.exports.ADMIN_PAGES = [
         icon: '/assets/icons/plus.svg',
         action: 'createNewPage'
       },
-      widgets: ['pageList', 'pageStats'],
+      dashboardLayout: 'fixed',
+      widgets: ['pageList'],
       widgetSlots: {
-        pageList: 'twoThird',
-        pageStats: 'third'
+        pageList: 'page'
       }
     }
   },
@@ -87,6 +86,7 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/image.svg',
+      dashboardLayout: 'fixed',
       widgets: ['mediaExplorer'],
       widgetSlots: {
         mediaExplorer: 'page'
@@ -96,6 +96,8 @@ module.exports.ADMIN_PAGES = [
   {
     title: 'Collections',
     slug: 'collections',
+    // Collections are a filtered hierarchy in Page Manager, not another editor.
+    retired: true,
     parentSlug: 'content',
     lane: 'admin',
     weight: 25,
@@ -125,9 +127,10 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/puzzle.svg',
+      dashboardLayout: 'fixed',
       widgets: ['widgetList'],
       widgetSlots: {
-        widgetList: 'full'
+        widgetList: 'page'
       }
     }
   },
@@ -145,6 +148,7 @@ module.exports.ADMIN_PAGES = [
       },
       icon: '/assets/icons/menu.svg',
       widgets: ['navigationStudio'],
+      dashboardLayout: 'fixed',
       widgetSlots: {
         navigationStudio: 'page'
       }
@@ -153,6 +157,8 @@ module.exports.ADMIN_PAGES = [
   {
     title: 'Layouts',
     slug: 'layouts',
+    // Retire the old core entry on upgrades without touching saved templates.
+    retired: true,
     parentSlug: 'content',
     lane: 'admin',
     weight: 50,
@@ -182,6 +188,7 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/layers.svg',
+      dashboardLayout: 'fixed',
       widgets: ['designerLayouts'],
       widgetSlots: {
         designerLayouts: 'page'
@@ -201,10 +208,10 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/file-pen-line.svg',
-      widgets: ['pageEditorWidget', 'pageContent'],
+      dashboardLayout: 'fixed',
+      widgets: ['pageEditorWidget'],
       widgetSlots: {
-        pageEditorWidget: 'third',
-        pageContent: 'twoThird'
+        pageEditorWidget: 'page'
       }
 
     }
@@ -356,6 +363,8 @@ module.exports.ADMIN_PAGES = [
 
   {
     title: 'Import / Export',
+    // Module-owned tools have no core operations on this placeholder page.
+    retired: true,
     slug: 'import-export',
     parentSlug: 'settings',
     lane: 'admin',

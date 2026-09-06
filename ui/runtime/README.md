@@ -2,6 +2,31 @@
 
 Target home for public page rendering.
 
+The normal public route now supplies the published envelope and initial HTML or
+canvas shell in `BP_PUBLIC_BOOTSTRAP` version 1. `publicBootstrap.ts` validates
+the response pathname/language before `publicEntry.ts` hands it to the existing
+loaders. HTML and canvas loaders adopt server nodes; widget data stays on the
+client. `ui/shared/layout/publicCanvasPresentation.ts` owns identical server and
+browser canvas geometry/CSS. Shells without a valid handoff retain CSR discovery.
+Signed Designer Live Preview uses only the existing parent bridge.
+
+Public startup loads page data, colors and font packages concurrently and waits
+for presentation data before rendering. The shared Meltdown client permits four
+concurrent `cmsPublicRuntimeRequest` reads; other events retain ordered delivery.
+Core loaders use `/mother/modules/<name>/publicLoader.js` directly; community
+loaders retain `/modules/<name>/publicLoader.js`. HTML-only pages carry no invented
+layout reference: the design loader installs CSS without fetching a layout.
+
+Unversioned static URLs must continue revalidating: changing their cache lifetime
+without versioning the entire import graph could retain stale release code.
+Site-owned hero images, CSS and fonts are optimized in the site's repository.
+
+The public widget loader must return for complete HTML-only pages before importing
+canvas dependencies. For widget pages it imports the existing concrete grid and
+widget-options helpers on demand; the admin-capable runtime gateway must not be
+an eager public dependency. See `docs/public-startup-performance.md` for the
+remaining browser startup constraints and measurement method.
+
 This zone must remain small: page data in, theme and widgets activated, no
 shell or designer dependencies. Shared helpers, including partial loading and
 script execution, belong in `ui/shared`; reusable widget behavior belongs in

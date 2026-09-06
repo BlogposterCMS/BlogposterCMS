@@ -4,6 +4,7 @@
 
 import {
   fetchRuntimeChildPages,
+  fetchRuntimeDesign,
   fetchRuntimePageById
 } from '../ui/runtime/main/runtimePageData';
 import { renderAttachedRuntimeContent } from '../ui/runtime/main/runtimeAttachedContent';
@@ -14,8 +15,21 @@ jest.mock('../ui/runtime/main/runtimePageData', () => ({
   fetchRuntimePageById: jest.fn(),
   loadRuntimeLayoutTemplate: jest.fn()
 }));
+jest.mock('../ui/runtime/main/runtimeStaticGrid', () => ({ renderStaticRuntimeGrid: jest.fn() }));
 
 describe('runtimeAttachedContent', () => {
+  it('preserves the container tree for an attached page using a top-level design id', async () => {
+    const container = document.createElement('main');
+    (fetchRuntimeChildPages as jest.Mock).mockResolvedValue([{ id: 'child', is_content: true }]);
+    (fetchRuntimePageById as jest.Mock).mockResolvedValue({ id: 'child', design_id: 'body-design' });
+    (fetchRuntimeDesign as jest.Mock).mockResolvedValue({ design: { layout: {
+      type: 'split', nodeId: 'body', orientation: 'vertical', children: [
+        { type: 'leaf', nodeId: 'cards', settings: { mode: 'grid', columns: 3 } }
+      ]
+    } }, widgets: [] });
+    await renderAttachedRuntimeContent({ page: { id: 'parent' }, lane: 'public', allWidgets: [], container, emit: jest.fn() });
+    expect(container.querySelector('.attached-content .runtime-design-document [data-node-id="cards"]')?.getAttribute('data-layout-mode')).toBe('grid');
+  });
   beforeEach(() => {
     document.body.innerHTML = '';
     jest.clearAllMocks();

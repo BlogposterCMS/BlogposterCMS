@@ -28,9 +28,9 @@
   margin: 0 16px 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #f2b4ba;
-  background: #fff4f5;
-  color: #9d1c29;
+  border: 1px solid color-mix(in srgb, var(--color-error) 35%, transparent);
+  background: color-mix(in srgb, var(--color-error) 10%, var(--studio-surface-solid));
+  color: var(--color-error);
   font-size: 0.92rem;
 }
 
@@ -45,7 +45,7 @@
 
 .page-list-table {
   width: 100%;
-  min-width: 820px;
+  min-width: 960px;
   border-collapse: separate;
   border-spacing: 0 10px;
   color: var(--studio-text);
@@ -60,11 +60,12 @@
     text-align: left;
   }
 
-  th:nth-child(1) { width: 22%; }
-  th:nth-child(2) { width: 20%; }
-  th:nth-child(3) { width: 11%; }
-  th:nth-child(4) { width: 25%; }
-  th:nth-child(5) { width: 22%; }
+  th:nth-child(1) { width: 26%; }
+  th:nth-child(2) { width: 22%; }
+  th:nth-child(3) { width: 90px; }
+  th:nth-child(4) { width: 210px; }
+  // Five 32px actions plus gaps and cell padding must never overlap Parent.
+  th:nth-child(5) { width: 220px; }
 
   td {
     box-sizing: border-box;
@@ -73,9 +74,7 @@
     background: var(--studio-surface-muted);
     border-top: 1px solid transparent;
     border-bottom: 1px solid transparent;
-    transition:
-      background-color var(--motion-duration-fast) var(--motion-ease-standard),
-      border-color var(--motion-duration-fast) var(--motion-ease-standard);
+    transition: border-color var(--motion-duration-fast) var(--motion-ease-standard);
   }
 
   td:first-child {
@@ -91,8 +90,35 @@
 
 .page-list-row:hover > td,
 .page-list-row-expanded > td {
-  background: var(--studio-surface-solid);
+  // Keep the row surface stable; only its outline signals hover or expansion.
   border-color: var(--studio-border-strong);
+}
+
+// Keep nested pages visibly attached to their parent without another tree owner.
+.page-list-row[data-parent-row-id] .page-list-title-inner {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: calc((var(--page-depth) - 1) * 24px + 15px);
+    top: -18px;
+    width: 14px;
+    height: calc(50% + 18px);
+    border-left: 2px solid var(--studio-border-strong);
+    border-bottom: 2px solid var(--studio-border-strong);
+    border-bottom-left-radius: 5px;
+    pointer-events: none;
+  }
+}
+
+.page-list-row[data-parent-row-id] > td:first-child {
+  border-left-color: var(--studio-border-strong);
+}
+
+.page-list-actions-cell {
+  // Only the inner action group is flex; the cell must stretch with the row.
+  display: table-cell;
 }
 
 .page-list-title-inner,
@@ -215,7 +241,7 @@
 
 .collections-list-table > tbody > tr.collections-list-row > td {
   padding: 14px 12px;
-  background: #fafbfc;
+  background: var(--studio-surface-muted);
   border-top: 1px solid transparent;
   border-bottom: 1px solid transparent;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
@@ -288,14 +314,14 @@
 .collections-list-child-table {
   width: calc(100% - 8px);
   border-collapse: collapse;
-  border-left: 2px solid #e8e8e8;
-  background: #fff;
+  border-left: 2px solid var(--studio-border-strong);
+  background: var(--studio-surface-solid);
 
   th,
   td {
     padding: 9px 12px;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--studio-border);
   }
 
   th {
@@ -354,7 +380,7 @@
 .page-slug {
   font-family: var(--font-body);
   font-size: 0.98rem;
-  color: #555;
+  color: var(--studio-text-muted);
   padding: 2px 7px 2px 0;
   border-radius: 6px;
   min-width: 40px;
@@ -363,9 +389,9 @@
   border: 1px solid transparent;
   transition: border 0.18s;
   &[contenteditable="true"]:focus {
-    border: 1px solid #ddd;
-    background: #fff0ff;
-    color: #181818;
+    border: 1px solid var(--studio-border-strong);
+    background: var(--studio-surface-solid);
+    color: var(--studio-text);
   }
 }
 
@@ -408,6 +434,16 @@
 .page-parent-label .custom-select .display {
   min-height: 36px;
   padding-inline: 12px;
+}
+
+// The column already says Parent; do not reserve a label and empty status per row.
+.page-list-parent-cell .page-parent-row {
+  margin-top: 0;
+}
+
+.page-list-parent-cell .page-parent-label-text,
+.page-list-parent-cell .page-parent-feedback:empty {
+  display: none;
 }
 
 .page-parent-feedback {
@@ -556,4 +592,305 @@
 
 #pagePickerGrid {
   width: 100%;
+}
+
+// Page Manager is one composed CMS tool; these surfaces use the existing Studio tokens.
+.page-manager {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  width: 100%;
+  color: var(--studio-text);
+  font-family: var(--font-body);
+  container: page-manager / inline-size;
+}
+.page-manager [hidden],
+#content[data-dashboard-layout='fixed'] :is(#widgets-toggle-inline, #edit-toggle) {
+  display: none !important;
+}
+
+// Structural labels and tree controls must not produce the legacy sidebar
+// tooltip: its absolute position otherwise lands over the details editor.
+:is(.page-manager, .navigation-studio)[aria-label]::after,
+:is(.page-manager, .navigation-studio) [aria-label]::after {
+  content: none;
+  display: none;
+}
+.page-manager__header,
+.page-manager__actions,
+.page-manager__save {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-manager__header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+.page-manager__header p {
+  margin: 6px 0 0;
+  color: var(--studio-text-muted);
+  font-size: 0.82rem;
+}
+.page-manager__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
+  gap: 28px;
+  align-items: start;
+}
+.page-manager__structure {
+  min-width: 0;
+}
+.page-manager__search input,
+.page-manager__form input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--studio-control-size);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  padding: 8px 12px;
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+.page-manager__search input {
+  background: var(--studio-surface-muted);
+}
+.page-manager__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--studio-border);
+}
+.page-manager__filters .filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--studio-field-radius);
+  background: transparent;
+  color: var(--studio-text-muted);
+  box-shadow: none;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.page-manager__filters .filter[aria-pressed='true'] {
+  color: var(--studio-text);
+  background: var(--studio-surface-muted);
+}
+.page-manager__filters .filter span {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--studio-text-muted);
+}
+.page-manager__tree {
+  padding-top: 12px;
+}
+.page-manager__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  // Cap indentation for deeply nested sites so controls remain reachable on phones.
+  margin-left: min(calc(var(--page-depth) * 20px), 100px);
+  position: relative;
+  border-radius: var(--studio-field-radius);
+}
+.page-manager__toggle-space { display: none; }
+.page-manager__toggle {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 32px;
+  order: 2;
+}
+.page-manager__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--studio-field-radius);
+  background: transparent;
+  color: var(--studio-text-muted);
+  cursor: pointer;
+}
+.page-manager__toggle:disabled {
+  cursor: default;
+}
+.page-manager__select {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--studio-field-radius);
+  color: var(--studio-text);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.page-manager__row:has(.page-manager__select:hover),
+.page-manager__toggle:hover:not(:disabled) {
+  background: var(--studio-surface-muted);
+}
+.page-manager__row:has(.page-manager__select[aria-pressed='true']) {
+  background: color-mix(in srgb, var(--brand) 7%, var(--studio-surface-solid));
+}
+.page-manager__identity {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.page-manager__identity strong {
+  font-size: 0.87rem;
+  font-weight: 600;
+}
+.page-manager__identity > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-manager__identity > span,
+.page-manager__home,
+.page-manager__status {
+  color: var(--studio-text-muted);
+  font-size: 0.76rem;
+}
+.page-manager__status {
+  flex-shrink: 0;
+}
+.page-manager__status[data-status='published']::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  vertical-align: middle;
+}
+.page-manager__page-icon {
+  display: flex;
+  flex: 0 0 16px;
+  color: var(--studio-text-muted);
+}
+.page-manager .icon {
+  width: 16px;
+  height: 16px;
+}
+.page-manager__details {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-muted);
+}
+.page-manager__back {
+  display: none !important;
+}
+.page-manager__details-heading > span {
+  color: var(--studio-text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+}
+.page-manager__details-heading h3 {
+  margin: 6px 0 18px;
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+.page-manager__actions {
+  justify-content: flex-start;
+  margin-bottom: 20px;
+}
+.page-manager__form {
+  display: grid;
+  gap: 16px;
+}
+.page-manager__form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--studio-text-muted);
+}
+.page-manager__form small {
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+.page-manager__form .custom-select > .display {
+  background: var(--studio-surface-solid);
+}
+.page-manager__save,
+.page-manager__secondary {
+  padding-top: 16px;
+  border-top: 1px solid var(--studio-border);
+}
+.page-manager__save-state,
+.page-manager__hint,
+.page-manager__feedback,
+.page-manager__empty {
+  color: var(--studio-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.page-manager__feedback:empty {
+  display: none;
+}
+.page-manager__feedback[data-error='true'] {
+  color: var(--color-error);
+}
+.page-manager__empty {
+  padding: 24px 12px;
+}
+.page-manager__empty strong {
+  color: var(--studio-text);
+}
+.page-manager__secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 20px;
+}
+.app-scope .page-manager__secondary .button {
+  min-width: 0;
+  font-weight: 400;
+  color: var(--studio-text-muted);
+}
+.app-scope .page-manager__secondary .page-manager__delete {
+  color: var(--color-error);
+}
+.page-manager :is(input, button, select):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 60%, transparent);
+  outline-offset: 2px;
+}
+@container page-manager (max-width: 800px) {
+  .page-manager__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .page-manager__back {
+    display: inline-flex !important;
+    margin-bottom: 16px;
+  }
+}
+@container page-manager (max-width: 480px) {
+  .page-manager__row {
+    margin-left: min(calc(var(--page-depth) * 12px), 48px);
+  }
+  .page-manager__select {
+    gap: 8px;
+    padding: 10px 8px;
+  }
+  .page-manager__home,
+  .page-manager__page-icon {
+    display: none;
+  }
 }

@@ -1,6 +1,7 @@
 /** @jest-environment jsdom */
 
 import {
+  editElement,
   enableEditableRegistrationBridge,
   getRegisteredEditable,
   registerElement,
@@ -11,6 +12,18 @@ describe('Design Studio Rich Text edit target', () => {
   beforeEach(() => {
     document.body.className = 'builder-mode';
     document.body.innerHTML = '';
+  });
+
+  it('restores imported visual stacking after leaving text edit mode', () => {
+    document.body.innerHTML = '<div class="canvas-item" data-layer="1" style="z-index:37"><h1 class="editable">Heading</h1></div>';
+    const widget = document.querySelector<HTMLElement>('.canvas-item')!;
+    const heading = document.querySelector<HTMLElement>('h1')!;
+    editElement(heading, jest.fn());
+    expect(heading.contentEditable || heading.getAttribute('contenteditable')).toBe('true');
+    expect(widget.style.zIndex).toBe('9999');
+    heading.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(widget.style.zIndex).toBe('37');
+    expect(widget.dataset.layer).toBe('1');
   });
 
   it('uses the registered Rich Text root when the widget hit layer is double-clicked', () => {

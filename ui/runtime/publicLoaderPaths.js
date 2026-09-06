@@ -10,9 +10,9 @@ export function isPublicLoaderSource(source) {
 export function getPublicLoaderPaths(source) {
     if (!isPublicLoaderSource(source))
         return [];
-    const paths = [`/modules/${source}/publicLoader.js`];
+    // Core loaders have an explicit mount; probing community paths causes 404s.
     if (CORE_PUBLIC_LOADER_MODULES.has(source)) {
-        paths.push(`/mother/modules/${source}/publicLoader.js`);
+        return [`/mother/modules/${source}/publicLoader.js`];
     }
-    return paths;
+    return [`/modules/${source}/publicLoader.js`];
 }

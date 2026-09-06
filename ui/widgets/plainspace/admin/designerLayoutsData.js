@@ -30,6 +30,7 @@ export function sortDesignsByRecent(designs) {
 }
 export async function fetchDesignerLayouts(emit, jwt) {
     const meltdownEmit = requireEmitter(emit);
-    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list');
+    // This is the authenticated authoring library; imported drafts must remain discoverable after leaving Studio.
+    const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'designer', 'list', { includeDrafts: true });
     return toDesigns(res);
 }

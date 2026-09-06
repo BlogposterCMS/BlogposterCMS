@@ -1,6 +1,9 @@
 import { emitRuntimeAdmin } from '../../shared/api-client/runtimeFacade.js';
 
 export interface NotificationSummary {
+  id?: string;
+  actionLabel?: string;
+  actionPath?: string;
   priority?: string;
   moduleName?: string;
   timestamp?: string | number | Date;

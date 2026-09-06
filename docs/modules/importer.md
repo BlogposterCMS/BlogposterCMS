@@ -271,6 +271,65 @@ for WordPress' extension uploader.
 
 ## Visual Mapper
 
+### Measured HTML page import
+
+`htmlPage` supplements the WordPress mapper for already rendered HTML. It uses
+the same Importer permission checks and `designer.saveDesign` transaction. It
+creates a draft only and does not create or publish a public page.
+
+1. Render the source through its existing HTTP server, with CSS and images available.
+2. Run `node tools/html-import/export.js http://localhost:PORT/path .local-worknotes/page.capture.json`.
+   The local CLI uses `agent-browser` in a separate session to capture 390, 768
+   and 1440px widths. Node.js with npm and the browser CLI's Chromium runtime
+   are required. The CMS backend never navigates to an imported URL.
+3. Open **Content → Design Studio → Import HTML capture**, choose the JSON,
+   review counts and warning codes, then choose **Create editable draft**.
+4. Compare the measured widths, edit an object, save, and reopen.
+
+Imported drafts remain visible in the Design Studio library. The normal
+element controls and Edit Code action remain available for correcting captured
+markup. Visual stack order survives loading and leaving text edit mode.
+
+The version 1 `blogposter-html-capture` format contains `snapshots[]` with a
+viewport, document height, stable element IDs, measured rectangles, computed
+declarations and neutral HTML. `htmlVisualMapper.js` maps these to a canonical
+LayoutTree Sections and nested source Containers, inline text/image/link widgets, background objects and the
+existing responsive placement metadata. Repeated content is preserved. More
+than 1500 elements or 8 MB fails with `HTML_IMPORT_LIMIT_EXCEEDED`; content is
+never silently truncated to the WordPress mapper's legacy 24-object limit.
+
+This is a measured, editable draft, not a lossless HTML/CSS reverse compiler.
+Semantic sections and source container ownership survive as an editable tree.
+Computed flex/grid layouts become free placement inside those containers;
+responsive rules use the nearest measured width. The importer reports unmeasured
+widths, differing content, unsupported SVG/form/embed fragments, pseudo-elements
+and button behavior. Scripts are excluded. Image/background URLs remain source
+references; reuse Media Manager assets before retiring the source. Fonts must
+already be available in the destination. Imported typography stays local and
+does not change central Color Schemes or Font Packages.
+
+The capture includes `structure.sections` and `structure.containers`; each
+element carries a stable `parentId` and `sectionId`. Missing parents, cycles,
+cross-section ownership and container reparenting between widths fail with
+`HTML_IMPORT_STRUCTURE_INVALID`. Earlier flat captures remain compatible.
+The import report includes Section and Container counts, so a flat fallback
+cannot be mistaken for a structured conversion.
+Page-spanning background surfaces are clipped into their covered Sections.
+The Designer hydrates saved Section ids before navigation reconciliation and
+keeps nested pointer events within their owning grid, preserving the tree on
+load and allowing direct text editing inside Containers.
+
+The ordinary shared widget renderer derives each imported Section's measured
+height from its capture metadata. Explicit Section resizing takes precedence.
+The existing Designer `agentSurface` exposes per-widget `htmlImport` provenance,
+captured widths and review warnings; no importer-specific agent API is added.
+
+For automation, call the existing Runtime Manager `importers.run` action with
+`{ importerName: 'htmlPage', options: { capture, dryRun: true } }`. It returns
+`plan.summary` and `plan.draft`. Passing `dryRun: false` saves the same validated
+draft and returns its Designer ID under `result`. No source or test fixtures
+from private sites belong in the public repository.
+
 `mother/modules/importer/importers/wordpressVisualMapper.js` owns the first
 neutral-HTML-to-Designer conversion pass. It is intentionally versioned and
 heuristic because WordPress themes and builders do not share one structural

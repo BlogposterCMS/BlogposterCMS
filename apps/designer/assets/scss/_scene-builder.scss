@@ -1804,6 +1804,13 @@ body.builder-mode .builder-row {
   font-weight: 600;
 }
 
+// Mode-specific controls must stay hidden even when their field uses grid.
+.scene-field-grid label[hidden],
+.scene-select-field[hidden],
+.scene-color-field[hidden] {
+  display: none;
+}
+
 .scene-toggle-field input {
   width: 14px;
   height: 14px;

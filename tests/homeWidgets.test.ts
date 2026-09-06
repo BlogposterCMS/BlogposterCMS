@@ -17,7 +17,7 @@ describe('home onboarding widgets', () => {
     await renderRoadmapIntro(el);
 
     expect(el.querySelector('.home-getting-started-widget h2')?.textContent)
-      .toBe('Build your first page');
+      .toBe('Manage your site');
     expect(Array.from(el.querySelectorAll<HTMLAnchorElement>('[data-home-onboarding-action]')).map(link => ({
       action: link.dataset.homeOnboardingAction,
       href: link.getAttribute('href')

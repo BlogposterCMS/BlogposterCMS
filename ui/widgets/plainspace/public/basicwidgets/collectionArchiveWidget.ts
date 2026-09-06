@@ -158,7 +158,7 @@ function normalizePageItem(page: PageRecord): ArchiveItem | null {
     id: String(page.id ?? page._id ?? slug ?? title),
     title,
     description,
-    href: href || (slug ? `/${slug}` : '#'),
+    href,
     image,
     imageAlt: firstString(page.alt, page.altText, meta.alt, meta.altText, title)
   };
@@ -239,12 +239,15 @@ function renderArchiveCard(item: ArchiveItem, index: number, buttonLabel: string
   description.textContent = item.description;
   body.append(title, description);
 
-  const action = document.createElement('a');
-  action.className = 'bp-collection-archive__action';
-  action.href = item.href;
-  action.textContent = buttonLabel || 'Read more';
-
-  card.append(media, body, action);
+  card.append(media, body);
+  // Rejected or absent URLs must not turn into links back to the current page.
+  if (item.href) {
+    const action = document.createElement('a');
+    action.className = 'bp-collection-archive__action';
+    action.href = item.href;
+    action.textContent = buttonLabel || 'Read more';
+    card.appendChild(action);
+  }
   return card;
 }
 

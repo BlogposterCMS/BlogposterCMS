@@ -70,7 +70,7 @@ describe('Designer Live Preview origin token', () => {
     const motherEmitter = {
       emit(eventName, payload, callback) {
         if (eventName === 'ensurePublicToken') callback(null, 'public-token');
-        else callback(null, { id: 'page-1', slug: 'home' });
+        else callback(null, { resource: payload.resource, action: payload.action, eventName: 'test', data: { id: 'page-1', slug: 'home' } });
       }
     };
     app.use(createPublicPageRoutes({
@@ -115,7 +115,7 @@ describe('Designer Live Preview origin token', () => {
         } else if (eventName === 'ensurePublicToken') {
           callback(null, 'public-token');
         } else {
-          callback(null, { id: 'page-1', slug: 'home' });
+          callback(null, { resource: payload.resource, action: payload.action, eventName: 'test', data: { id: 'page-1', slug: 'home' } });
         }
       }
     };

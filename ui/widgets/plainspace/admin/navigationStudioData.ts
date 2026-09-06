@@ -262,16 +262,23 @@ export function navigationItemPayload(
 ): Record<string, unknown> {
   const merged = { ...item, ...patch };
   const id = itemId(merged);
+  // Explicit null clears a relationship. Falling back to a snake_case value
+  // here would silently undo outdenting or conversion to a custom link.
+  const nullableField = (key: keyof NavigationMenuItem, legacy: keyof NavigationMenuItem): unknown => (
+    patch[key] !== undefined ? patch[key]
+      : patch[legacy] !== undefined ? patch[legacy]
+        : item[key] ?? item[legacy] ?? null
+  );
   return {
     ...(id ? { itemId: id } : {}),
     ...(itemMenuId(merged) ? { menuId: itemMenuId(merged) } : {}),
-    parentId: itemParentId(merged),
+    parentId: nullableField('parentId', 'parent_id'),
     type: merged.type || 'custom',
     title: merged.title || merged.url || '',
     url: merged.url || '',
-    entryId: merged.entryId ?? merged.entry_id ?? null,
-    sourceModule: merged.sourceModule ?? merged.source_module ?? null,
-    sourceId: merged.sourceId ?? merged.source_id ?? null,
+    entryId: nullableField('entryId', 'entry_id'),
+    sourceModule: nullableField('sourceModule', 'source_module'),
+    sourceId: nullableField('sourceId', 'source_id'),
     target: merged.target || '',
     rel: merged.rel || '',
     cssClass: merged.cssClass ?? merged.css_class ?? '',
@@ -481,7 +488,8 @@ export async function fetchPublicPages(
 ): Promise<PageRecord[]> {
   const meltdownEmit = requireEmitter(emit);
   const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'pages', 'byLane', { lane: 'public' });
-  return toPages(res);
+  // Deleted pages remain recoverable in Pages, but are not new menu targets.
+  return toPages(res).filter(page => String(page.status).toLowerCase() !== 'deleted');
 }
 
 export async function fetchNavigationDesigns(

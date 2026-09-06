@@ -33,6 +33,25 @@ jest.mock('../ui/runtime/main/runtimePageData', () => ({
 }));
 
 describe('runtimePageComposition', () => {
+  it('keeps direct page HTML and attached content between a shared header and footer', async () => {
+    const contentEl = document.createElement('main');
+    const emit = jest.fn();
+    (fetchRuntimeDesign as jest.Mock).mockResolvedValue({ design: { layout: {
+      type: 'split', nodeId: 'shell', orientation: 'vertical', children: [
+        { type: 'leaf', nodeId: 'header', workarea: true },
+        { type: 'leaf', nodeId: 'content', isDynamicHost: true },
+        { type: 'leaf', nodeId: 'footer' }
+      ]
+    } }, widgets: [] });
+    await renderPublicRuntimePageContent({
+      page: { id: 'page', html: '<p>Page content</p>', meta: { designId: 'shared' } },
+      contentEl, allWidgets: [], lane: 'public', emit
+    });
+    const host = contentEl.querySelector('[data-node-id="content"]');
+    expect(host?.textContent).toContain('Page content');
+    expect(contentEl.querySelector('[data-node-id="header"]')?.textContent).not.toContain('Page content');
+    expect(renderAttachedRuntimeContent).toHaveBeenCalledWith(expect.objectContaining({ container: host }));
+  });
   function createGrid() {
     return {
       options: {},

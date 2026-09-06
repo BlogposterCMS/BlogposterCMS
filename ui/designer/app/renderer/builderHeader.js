@@ -220,7 +220,7 @@ async function loadHeaderPartial(existing) {
         return existing ?? ensureHeaderMount();
     }
 }
-export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, livePreviewController, openDesignSettings, undo, redo }) {
+export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, livePreviewController, openDesignSettings, onPublishController, undo, redo }) {
     let topBar = null;
     let layoutName = initialLayoutName;
     let headerResizeObserver = null;
@@ -292,6 +292,7 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                 catch { }
                 nameInput.addEventListener('input', () => {
                     layoutName = nameInput.value;
+                    document.dispatchEvent(new CustomEvent('designerContentChanged'));
                 });
             }
             const headerActions = topBar.querySelector('.header-actions') || topBar;
@@ -369,7 +370,7 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                             isLayout: getActiveLayer() === 0,
                             isGlobal: getActiveLayer() === 0
                         });
-                        alert(getActiveLayer() === 0 ? 'Layout template saved' : 'Design saved');
+                        alert('Design saved');
                     }
                     catch (err) {
                         alert('Save failed: ' + err.message);
@@ -400,7 +401,7 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                 });
             }
             if (publishBtn) {
-                initPublishPanel({
+                const publishController = initPublishPanel({
                     publishBtn,
                     nameInput,
                     gridEl,
@@ -415,6 +416,7 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                     saveDesign,
                     getDesignId: () => state.designId || document.body.dataset.designId || null
                 });
+                onPublishController?.(publishController);
             }
         }
         catch (err) {

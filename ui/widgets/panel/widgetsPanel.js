@@ -8,9 +8,10 @@ function createPanel() {
     panel = document.createElement('div');
     panel.id = 'widgets-panel';
     panel.className = 'widgets-panel';
+    panel.inert = true;
     panel.innerHTML = `
     <div class="widgets-panel-inner">
-      <input type="text" class="widgets-search" placeholder="Search Widgets..." />
+      <input type="search" class="widgets-search" aria-label="Search widgets" placeholder="Search Widgets..." />
       <div class="widgets-categories"></div>
     </div>`;
     document.body.appendChild(panel);
@@ -49,6 +50,11 @@ function toggle(open) {
         return;
     const isOpen = typeof open === 'boolean' ? open : !panel.classList.contains('open');
     panel.classList.toggle('open', isOpen);
+    panel.inert = !isOpen;
+    toggleBtn?.setAttribute('aria-expanded', String(isOpen));
+    toggleBtn?.setAttribute('aria-controls', panel.id);
+    if (isOpen)
+        panel.querySelector('.widgets-search')?.focus();
 }
 export function openWidgetsPanel(forceOpen = true) {
     toggle(forceOpen);
@@ -63,6 +69,12 @@ document.addEventListener('click', ev => {
     const clickedToggle = Boolean(toggleBtn && target && (toggleBtn === target || toggleBtn.contains(target)));
     if (target && !panel.contains(target) && !clickedToggle)
         toggle(false);
+});
+document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape' || !panel?.classList.contains('open'))
+        return;
+    toggle(false);
+    toggleBtn?.focus();
 });
 document.addEventListener('DOMContentLoaded', () => {
     if (document.body.classList.contains('dashboard-edit-mode')) {

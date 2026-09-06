@@ -5,21 +5,15 @@ export async function checkFirstInstall() {
         const client = resolveShellPublicClient(window);
         const { publicToken, firstInstallDone } = await fetchFirstInstallState(client);
         if (!firstInstallDone) {
-            let userCount = 0;
-            try {
-                userCount = await fetchPublicUserCount(client, publicToken);
-            }
-            catch (err) {
-                console.warn('[firstInstallCheck] Failed to fetch user count', err);
-            }
+            const userCount = await fetchPublicUserCount(client, publicToken);
             if (userCount === 0) {
                 window.location.href = '/install';
             }
         }
     }
     catch (err) {
-        console.error('[firstInstallCheck] Error checking setting', err);
-        window.location.href = '/install';
+        // An unavailable check is not evidence that installation is required.
+        console.error('[firstInstallCheck] SHELL_INSTALL_CHECK_FAILED: installation state unavailable', err);
     }
 }
 void checkFirstInstall();

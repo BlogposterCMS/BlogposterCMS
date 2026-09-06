@@ -31,6 +31,18 @@ describe('shared layout DOM adapter', () => {
     };
   }
 
+  it('round-trips a container visual stack separately from editing layers', () => {
+    const root = document.createElement('div');
+    deserializeLayout({ type: 'split', nodeId: 'root', children: [
+      { type: 'leaf', nodeId: 'imported-container', workarea: true, placement: { zIndex: 37 } }
+    ] }, root, options());
+    const container = root.querySelector<HTMLElement>('[data-node-id="imported-container"]')!;
+    container.classList.add('layout-grid-container'); // Registered by the Studio's recursive grid registry.
+    expect(container.dataset.layerOrder).toBe('37');
+    expect(container.style.zIndex).toBe('37');
+    expect(serializeLayout(root).children?.[0].placement?.zIndex).toBe(37);
+  });
+
   it('round-trips split trees through DOM serialization', () => {
     const root = document.createElement('div');
     const layout = {

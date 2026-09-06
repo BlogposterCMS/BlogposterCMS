@@ -11,6 +11,14 @@ jest.mock('/ui/runtime/main/canvasGrid.js', () => ({
 }));
 
 describe('designer scene metadata', () => {
+  it('hydrates saved Section ids before the first navigation reconciliation', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../ui/designer/app/builderRenderer.ts'), 'utf8');
+    const deserialize = source.indexOf('deserializeLayout(obj, layoutRoot)');
+    const hydrate = source.indexOf('hydrateSceneSectionsFromLayoutTree(obj)', deserialize);
+    const firstNavigation = source.indexOf('renderSceneNavigation();', deserialize);
+    expect(hydrate).toBeGreaterThan(deserialize);
+    expect(hydrate).toBeLessThan(firstNavigation);
+  });
   it('keeps the scene inspector grouped into compact modes', () => {
     const rendererSource = fs.readFileSync(
       path.join(__dirname, '../ui/designer/app/builderRenderer.ts'),

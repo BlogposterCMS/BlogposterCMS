@@ -5,10 +5,27 @@
 import {
   applyThemeMode,
   bindThemeModeToggle,
-  cycleThemeMode
+  cycleThemeMode,
+  setAccentVariables,
+  applyUserColor
 } from '../ui/shell/theme/userColor';
 
 describe('theme mode controls', () => {
+  it('keeps black neutral and defines a readable inverse for both dark mode variants', async () => {
+    setAccentVariables('#171717');
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue('--accent-s')).toBe('0%');
+    expect(style.getPropertyValue('--accent-l')).toBe('9%');
+    expect(style.getPropertyValue('--accent-dark-l')).toBe('92%');
+    expect(style.getPropertyValue('--accent-contrast')).toBe('#ffffff');
+    expect(style.getPropertyValue('--accent-dark-contrast')).toBe('#171717');
+    expect(style.getPropertyValue('--color-primary-contrast')).toBe('');
+    window.ADMIN_TOKEN = 'test';
+    window.meltdownEmit = jest.fn().mockResolvedValue({ ui_color: null });
+    await applyUserColor(true);
+    expect(style.getPropertyValue('--accent-s')).toBe('0%');
+    delete window.meltdownEmit;
+  });
   beforeEach(() => {
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.removeAttribute('data-theme-mode');

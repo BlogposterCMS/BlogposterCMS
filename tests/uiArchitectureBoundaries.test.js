@@ -274,11 +274,15 @@ describe('UI architecture boundaries', () => {
     const allowedImports = new Map([
       ['ui/runtime/main/widgetRuntimeGateway.ts', new Set([
         '../../widgets/options/widgetOptions.js',
-        '../../widgets/rendering/widgetModuleLoader.js'
+        '../../widgets/rendering/widgetModuleLoader.js',
+        '../../widgets/rendering/widgetModuleMount.js',
+        '../../widgets/rendering/widgetInlineCode.js'
       ])],
       ['ui/runtime/main/widgetRuntimeGateway.js', new Set([
         '../../widgets/options/widgetOptions.js',
-        '../../widgets/rendering/widgetModuleLoader.js'
+        '../../widgets/rendering/widgetModuleLoader.js',
+        '../../widgets/rendering/widgetModuleMount.js',
+        '../../widgets/rendering/widgetInlineCode.js'
       ])],
       ['ui/runtime/main/runtimeWidgetEvents.ts', new Set([
         '../../widgets/rendering/widgetEvents.js'
@@ -345,10 +349,10 @@ describe('UI architecture boundaries', () => {
     expect(pageRendererSource).not.toContain('/ui/widgets/panel/widgetControls.js');
     expect(pageRendererSource).toContain('renderAdminSettingsSurface(contentEl, page)');
     expect(adminGridSource).not.toContain("from './widgetRuntimeGateway.js'");
-    expect(adminGridSource).not.toContain('afterRender: attachAdminDashboardControls');
+    expect(adminGridSource).not.toContain('afterRender: editable ? attachAdminDashboardControls : undefined');
     expect(adminGridSource).not.toContain("from './adminWidgetSurfaces.js'");
     expect(adminMountingSource).toContain("from './widgetRuntimeGateway.js'");
-    expect(adminMountingSource).toContain('afterRender: attachAdminDashboardControls');
+    expect(adminMountingSource).toContain('afterRender: editable ? attachAdminDashboardControls : undefined');
     expect(widgetGatewaySource).toContain("from '../../widgets/options/widgetOptions.js'");
     expect(widgetGatewaySource).toContain("from '../../widgets/rendering/widgetModuleLoader.js'");
     expect(widgetGatewaySource).toContain("from './adminWidgetSurfaces.js'");
@@ -407,7 +411,7 @@ describe('UI architecture boundaries', () => {
     });
   });
 
-  test('widgets renderer delegates API event registration to a rendering helper', () => {
+  test('widget rendering never registers browser metadata as runtime permissions', () => {
     const rendererSource = fs.readFileSync(
       path.join(rootDir, 'ui', 'widgets', 'rendering', 'widgetRenderer.ts'),
       'utf8'
@@ -417,13 +421,13 @@ describe('UI architecture boundaries', () => {
       'utf8'
     );
 
-    expect(rendererSource).toContain("from './widgetEvents.js'");
+    expect(rendererSource).not.toContain("from './widgetEvents.js'");
     expect(rendererSource).not.toContain('async function registerWidgetEvents');
     expect(rendererSource).not.toContain('registerWidgetUsage failed for');
     expect(rendererSource).not.toContain('window.meltdownEmit');
-    expect(eventsSource).toContain('export async function registerWidgetEvents');
-    expect(eventsSource).toContain('window.meltdownEmit');
-    expect(eventsSource).toContain('registerWidgetUsage');
+    expect(eventsSource).toContain('export function normalizeWidgetApiActions');
+    expect(eventsSource).not.toContain('window.meltdownEmit');
+    expect(eventsSource).not.toContain('registerWidgetUsage');
   });
 
   test('widgets renderer delegates inline code rendering to a rendering helper', () => {
@@ -491,8 +495,11 @@ describe('UI architecture boundaries', () => {
     expect(moduleRendererSource).toContain("from './widgetModuleLoader.js'");
     expect(moduleRendererSource).toContain('loadWidgetModule');
     expect(moduleRendererSource).toContain('window.ADMIN_TOKEN');
-    expect(moduleRendererSource).toContain('blocked widget import path');
-    expect(moduleRendererSource).toContain('widget import error');
+    expect(moduleRendererSource).toContain('mountWidgetModule(');
+    const mountSource = fs.readFileSync(path.join(rootDir, 'ui/widgets/rendering/widgetModuleMount.ts'), 'utf8');
+    expect(mountSource).toContain('await mod.render(');
+    expect(mountSource).toContain('WIDGET_RUNTIME_BLOCKED_CODE_URL');
+    expect(mountSource).toContain('WIDGET_RUNTIME_RENDER_FAILED');
   });
 
   test('plainspace public widgets use editable bridge instead of build bundle imports', () => {
@@ -1076,16 +1083,16 @@ describe('UI architecture boundaries', () => {
     expect(widgetSource).not.toContain('moduleName');
     expect(widgetSource).not.toContain('moduleType');
     expect(dataSource).toContain('export function toPage');
-    expect(dataSource).toContain('export function toTemplates');
-    expect(dataSource).toContain('export function visibleTemplates');
+    expect(dataSource).not.toContain('export function toTemplates');
+    expect(dataSource).not.toContain('export function visibleTemplates');
     expect(dataSource).toContain('export function errorMessage');
     expect(dataSource).toContain('export function asString');
     expect(dataSource).toContain('export function buildPageUpdatePayload');
     expect(dataSource).toContain('export function clearPageEditorCache');
-    expect(dataSource).toContain('export async function fetchPageEditorTemplates');
+    expect(dataSource).not.toContain('export async function fetchPageEditorTemplates');
     expect(dataSource).toContain('export async function savePageEditorPage');
     expect(dataSource).toContain('PLAINSPACE_PAGE_EDITOR_EMITTER_UNAVAILABLE');
-    expect(dataSource).toContain("'plainSpace', 'layoutTemplateNames'");
+    expect(dataSource).not.toContain("'plainSpace', 'layoutTemplateNames'");
     expect(dataSource).toContain("'pages', 'update'");
     expect(dataSource).toContain('cmsAdminApiRequest');
     expect(dataSource).not.toContain('pagesManager');
@@ -1232,42 +1239,11 @@ describe('UI architecture boundaries', () => {
     expect(dataSource).toContain('FIRST_INSTALL_DONE');
   });
 
-  test('plainspace layout templates delegates template data and actions to a data helper', () => {
-    const widgetSource = fs.readFileSync(
-      path.join(rootDir, 'ui', 'widgets', 'plainspace', 'admin', 'layoutTemplatesWidget.ts'),
-      'utf8'
-    );
-    const dataSource = fs.readFileSync(
-      path.join(rootDir, 'ui', 'widgets', 'plainspace', 'admin', 'layoutTemplatesData.ts'),
-      'utf8'
-    );
-
-    expect(widgetSource).toContain("from './layoutTemplatesData.js'");
-    expect(widgetSource).not.toContain('function toTemplateNames');
-    expect(widgetSource).not.toContain('function toPages');
-    expect(widgetSource).not.toContain('function errorMessage');
-    expect(widgetSource).not.toContain('getLayoutTemplateNames');
-    expect(widgetSource).not.toContain('getPagesByLane');
-    expect(widgetSource).not.toContain('saveLayoutTemplate');
-    expect(widgetSource).not.toContain('moduleName');
-    expect(widgetSource).not.toContain('moduleType');
-    expect(widgetSource).not.toContain('usedMap');
-    expect(dataSource).toContain('export function toTemplateNames');
-    expect(dataSource).toContain('export function toPages');
-    expect(dataSource).toContain('export function errorMessage');
-    expect(dataSource).toContain('export function buildTemplateViews');
-    expect(dataSource).toContain('export async function fetchLayoutTemplateNames');
-    expect(dataSource).toContain('export async function fetchPublicPages');
-    expect(dataSource).toContain('export async function createBlankLayoutTemplate');
-    expect(dataSource).toContain("'plainSpace', 'layoutTemplateNames'");
-    expect(dataSource).toContain("'pages', 'byLane'");
-    expect(dataSource).toContain("'plainSpace', 'saveLayoutTemplate'");
-    expect(dataSource).not.toContain('getPagesByLane');
-    expect(dataSource).not.toContain('moduleName');
-    expect(dataSource).not.toContain('moduleType');
-    expect(dataSource).toContain('usedMap');
+  test('retired layout widget delegates to the canonical Designer library', () => {
+    const source = fs.readFileSync(path.join(rootDir, 'ui/widgets/plainspace/admin/layoutTemplatesWidget.ts'), 'utf8');
+    expect(source).toContain("export { render } from './designerLayoutsWidget.js'");
+    expect(source).not.toContain('createBlankLayoutTemplate');
   });
-
   test('widget sources do not import build bundles outside explicit bridges', () => {
     const allowedBridgeFiles = new Set([
       'ui/widgets/rendering/editableRegistration.ts',
@@ -2548,7 +2524,7 @@ describe('UI architecture boundaries', () => {
     expect(mountSource).toContain("markRuntimeWidgetHydrationState(wrapper, 'ready'");
     expect(mountSource).not.toContain('wrapper.classList.remove');
     expect(widgetRendererSource).toContain('export async function renderWidget');
-    expect(widgetRendererSource).toContain("from './runtimeWidgetEvents.js'");
+    expect(widgetRendererSource).not.toContain("from './runtimeWidgetEvents.js'");
     expect(widgetRendererSource).toContain("from './runtimeWidgetInlineCode.js'");
     expect(widgetRendererSource).toContain("from './runtimeWidgetModuleRenderer.js'");
     expect(widgetRendererSource).toContain("from './runtimeWidgetShell.js'");
@@ -2574,18 +2550,17 @@ describe('UI architecture boundaries', () => {
     expect(widgetContextSource).toContain('normalizeEffects(');
     expect(widgetContextSource).toContain('window.ADMIN_TOKEN');
     expect(widgetInlineCodeSource).toContain('export function renderInlineWidgetCode');
-    expect(widgetInlineCodeSource).toContain("from '../../shared/sanitize/sanitizer.js'");
-    expect(widgetInlineCodeSource).toContain("from '../../shared/scripts/executeJs.js'");
-    expect(widgetInlineCodeSource).toContain('executeJs(');
-    expect(widgetInlineCodeSource).toContain('sanitizeHtml(');
+    expect(widgetInlineCodeSource).toContain("from './widgetRuntimeGateway.js'");
+    expect(widgetInlineCodeSource).toContain('renderWidgetInlineCode(');
+    expect(widgetInlineCodeSource).not.toContain('sanitizeHtml(');
     expect(widgetModuleRendererSource).toContain('export async function renderRuntimeWidgetModule');
     expect(widgetModuleRendererSource).toContain("from './widgetRuntimeGateway.js'");
     expect(widgetModuleRendererSource).toContain("from './runtimeWidgetContext.js'");
     expect(widgetModuleRendererSource).toContain("from './runtimeWidgetTypes.js'");
     expect(widgetModuleRendererSource).toContain('loadWidgetModule');
     expect(widgetModuleRendererSource).toContain('createRuntimeWidgetContext(');
-    expect(widgetModuleRendererSource).toContain('blocked widget import path');
-    expect(widgetModuleRendererSource).toContain('import error:');
+    expect(widgetModuleRendererSource).toContain('mountWidgetModule(');
+    expect(widgetModuleRendererSource).not.toContain('import(/*');
     expect(widgetShellSource).toContain('export function createRuntimeWidgetShell');
     expect(widgetShellSource).toContain("from './runtimePageShell.js'");
     expect(widgetShellSource).toContain('function createWidgetContainer');
@@ -2594,9 +2569,9 @@ describe('UI architecture boundaries', () => {
     expect(widgetShellSource).toContain('CSSStyleSheet');
     expect(widgetShellSource).toContain('resize-handle');
     expect(widgetEventsSource).toContain('export function createDebouncedEmitter');
-    expect(widgetEventsSource).toContain('export async function registerRuntimeWidgetEvents');
+    expect(widgetEventsSource).not.toContain('registerRuntimeWidgetEvents');
     expect(widgetEventsSource).toContain('window.meltdownEmitBatch');
-    expect(widgetEventsSource).toContain('registerWidgetUsage');
+    expect(widgetEventsSource).not.toContain('registerWidgetUsage');
   });
 
   test('page renderer delegates widget instance option loading to a runtime helper', () => {
@@ -2642,7 +2617,7 @@ describe('UI architecture boundaries', () => {
     expect(runtimeSource).toContain("from './publicLoaderImporter.js'");
     expect(runtimeSource).toContain('loadPublicRuntimeLoaders');
     expect(runtimeSource).toContain('importDesignerLivePreviewRuntime');
-    expect(runtimeSource).toContain('await loadPublicRuntimeLoaders(envelope)');
+    expect(runtimeSource).toContain('await Promise.all([loadPublicRuntimeLoaders(envelope), presentationReady])');
     expect(runtimeSource).not.toContain('import(/* webpackIgnore: true */ path)');
     expect(runtimeSource).not.toContain('getPublicLoaderPaths');
     expect(importerSource).toContain("from './publicLoaderPaths.js'");

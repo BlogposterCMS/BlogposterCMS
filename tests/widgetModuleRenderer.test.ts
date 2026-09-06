@@ -78,8 +78,7 @@ describe('widgetModuleRenderer', () => {
     }, 'instance-1');
 
     expect(warn).toHaveBeenCalledWith(
-      '[Widgets] blocked widget import path',
-      'blocked',
+      '[Widget blocked] WIDGET_RUNTIME_BLOCKED_CODE_URL blocked widget import path:',
       blockedWidgetUrl
     );
   });
@@ -95,6 +94,7 @@ describe('widgetModuleRenderer', () => {
       codeUrl: '/ui/widgets/plainspace/admin/broken.js'
     }, 'instance-1')).resolves.toBeUndefined();
 
-    expect(consoleError).toHaveBeenCalledWith('[Widgets] widget import error', error);
+    expect(consoleError).toHaveBeenCalledWith('[Widget broken] WIDGET_RUNTIME_IMPORT_FAILED import error:', error);
+    expect(container.querySelector('[data-error-code="WIDGET_RUNTIME_IMPORT_FAILED"]')).not.toBeNull();
   });
 });

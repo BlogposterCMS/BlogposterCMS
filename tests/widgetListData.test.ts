@@ -91,18 +91,34 @@ describe('widgetListData', () => {
     });
   });
 
-  it('skips global layout lookup when the page list is too large', async () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('scans sites above twenty pages with at most four requests in flight', async () => {
+    let inFlight = 0;
+    let maximumInFlight = 0;
     const emit = jest.fn(async (_eventName, payload) => (
       `${payload.resource}.${payload.action}` === 'pages.byLane'
         ? { pages: Array.from({ length: 21 }, (_, idx) => ({ id: idx })) }
-        : { layout: [{ widgetId: 'hero', global: true }] }
+        : await (async () => {
+          inFlight++;
+          maximumInFlight = Math.max(maximumInFlight, inFlight);
+          await Promise.resolve();
+          inFlight--;
+          return { layout: payload.params.pageId === 20 ? [{ widgetId: 'hero', global: true }] : [] };
+        })()
     ));
 
     const ids = await fetchGlobalWidgetIds(emit, 'admin-token');
 
-    expect(Array.from(ids)).toEqual([]);
-    expect(emit).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith('[widgetList] Too many pages, skipping global widget lookup');
+    expect(Array.from(ids)).toEqual(['hero']);
+    expect(emit).toHaveBeenCalledTimes(22);
+    expect(maximumInFlight).toBeLessThanOrEqual(4);
+    expect(maximumInFlight).toBeGreaterThan(1);
+  });
+
+  it('does not report an empty usage result when a page lookup fails', async () => {
+    const emit = jest.fn(async (_event, payload) => {
+      if (payload.action === 'byLane') return [{ id: 'home' }];
+      throw new Error('layout unavailable');
+    });
+    await expect(fetchGlobalWidgetIds(emit, 'admin-token')).rejects.toThrow('layout unavailable');
   });
 });

@@ -64,6 +64,7 @@ describe('designer applyLayout hydration', () => {
       yPercent: 12,
       wPercent: 100,
       hPercent: 30,
+      zIndex: 17,
       code: { html: '<h1>Coming Soon</h1>' }
     }], {
       gridEl,
@@ -77,6 +78,8 @@ describe('designer applyLayout hydration', () => {
     expect(makeWidget).toHaveBeenCalledTimes(1);
     expect(widget?.dataset.xPercent).toBe('4');
     expect(widget?.dataset.wPercent).toBe('100');
+    expect(widget?.dataset.layer).toBe('1');
+    expect(widget?.style.zIndex).toBe('17');
     expect(widget?.getAttribute('gs-w')).toBe('1280');
     expect(widget?.getAttribute('gs-h')).toBe('270');
     expect(JSON.parse(widget?.dataset.responsivePlacement || '{}')).toMatchObject({

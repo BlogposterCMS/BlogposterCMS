@@ -205,8 +205,10 @@ params, and uses the Runtime Manager core token for the underlying module call.
 Allowed public resources include `pages`, `widgets`, `plainSpace`, `designer`,
 `fonts`, `settings`, `users` and `auth`. Public pages are forced to the public
 lane and returned only when published. Widget listing is limited to public
-widgets, while widget usage registration is exposed as the dedicated
-`widgets.registerUsage` action. Designer reads require an id or layout ref,
+widgets. The unused `widgets.registerUsage` action is retired: no owning backend
+handler existed and renderer responses were ignored. Widget API metadata is
+descriptive; every real request still passes the existing facade principal,
+scope and permission checks. Designer reads require an id or layout ref,
 return only non-draft designs and strip private owner/user audit fields. For
 PlainSpace public reads, the facade forces `lane: "public"` for
 registry/layout/template calls, only allows `default.*` widget instances,

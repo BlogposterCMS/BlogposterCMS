@@ -311,7 +311,9 @@ export class CanvasGrid {
         const cellHeight = safePositiveMetric(this.options.cellHeight);
         const widthPx = Math.max(1, geometry.widthPx);
         const heightPx = Math.max(1, geometry.heightPx);
-        const xPx = projectResponsiveHorizontalPosition(geometry, canvasWidth);
+        // Breakpoint selection uses the page viewport; nested placement uses its owning container's width.
+        const placementWidth = this.el.classList.contains('layout-grid-container') ? this._getCanvasMetrics().width : canvasWidth;
+        const xPx = projectResponsiveHorizontalPosition(geometry, placementWidth);
         const yPx = Math.max(0, geometry.yPx);
         const x = Math.round(xPx / columnWidth);
         const y = Math.round(yPx / cellHeight);
@@ -429,7 +431,9 @@ export class CanvasGrid {
         // scroll container's current client height so an empty grid still
         // has a visible size.
         const cssMin = parseFloat(getComputedStyle(this.el).minHeight) || 0;
-        const containerMin = (this.scrollContainer && this.scrollContainer.clientHeight) || 0;
+        // Nested authored surfaces use their own minimum, not the editor window height.
+        const containerMin = this.el.matches('.layout-section, .layout-grid-container')
+            ? 0 : (this.scrollContainer && this.scrollContainer.clientHeight) || 0;
         const min = Math.max(cssMin, containerMin);
         const height = Math.max(rows * cellHeight, min);
         this.el.style.height = `${height}px`;
@@ -477,7 +481,9 @@ export class CanvasGrid {
         el.setAttribute('gs-w', w);
         el.setAttribute('gs-h', h);
         const layer = +el.dataset.layer || 0;
-        el.style.zIndex = layer.toString();
+        // Geometry recalculation must not replace a persisted visual stack with the editing layer.
+        const stackOrder = el.classList.contains('editing') ? layer : Number(el.dataset.layerOrder ?? layer);
+        el.style.zIndex = String(Number.isFinite(stackOrder) ? stackOrder : layer);
         el.style.position = 'absolute';
         const rotationAttr = el.dataset.rotationDeg ?? el.dataset.rotation ?? el.dataset.rotate;
         const rotationVal = rotationAttr != null
@@ -968,6 +974,9 @@ export class CanvasGrid {
             el?.setPointerCapture?.(e.pointerId);
         };
         const start = (e) => {
+            // A pointer in a child widget belongs to its grid, not every ancestor grid.
+            if (e.target.closest('.canvas-item') !== el)
+                return;
             if (e.target.closest('.bbox-handle') || e.target.closest('.bounding-box'))
                 return;
             startDrag(e);

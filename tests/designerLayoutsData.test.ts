@@ -35,7 +35,7 @@ describe('designerLayoutsData', () => {
       moduleType: 'core',
       resource: 'designer',
       action: 'list',
-      params: {}
+      params: { includeDrafts: true }
     });
   });
 

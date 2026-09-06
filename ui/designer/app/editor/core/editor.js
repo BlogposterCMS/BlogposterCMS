@@ -202,6 +202,7 @@ export function editElement(el, onSave, clickEvent = null) {
   const hitLayer = getHitLayer(widget);
 
   const prevLayer = +widget.dataset.layer || 0;
+  const prevStackOrder = widget.dataset.layerOrder || widget.style.zIndex;
   widget.dataset.layer = 9999;
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
@@ -236,9 +237,11 @@ export function editElement(el, onSave, clickEvent = null) {
     el.removeAttribute('contenteditable');
 
     widget.dataset.layer = prevLayer;
-    widget.style.zIndex = String(prevLayer);
+    // Temporary text-edit elevation must not discard the saved visual stack.
+    widget.style.zIndex = prevStackOrder || String(prevLayer);
     widget.setAttribute('gs-locked', 'false');
     grid?.update(widget, { locked: false, noMove: false, noResize: false });
+    widget.style.zIndex = prevStackOrder || String(prevLayer);
     if (el.__inputHandler) {
       el.removeEventListener('input', el.__inputHandler);
       delete el.__inputHandler;

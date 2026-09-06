@@ -67,6 +67,65 @@ Permissions are checked for each sensitive operation to avoid unauthorized modif
   Auto-suffixing (`-1`, `-2`, ...) is only applied when `autoSuffixSlug: true` is
   explicitly provided by the caller.
 
+## Page Management workspace
+
+- Content and Page Management render one fixed `pageList` workspace, using the
+  existing runtime widget loader and Pages facade. Search, status counts,
+  hierarchy and selected-page details are composed together. The UI does not
+  expose widget insertion, removal, resizing or personal layout persistence on
+  these routes. Navigation Studio follows the same composition rule.
+- `meta.dashboardLayout: "fixed"`, `meta.widgets` and `meta.widgetSlots` are
+  synchronized from PlainSpace's built-in page configuration on startup. Fixed
+  tools ignore personal/global dashboard layouts and attached extras. Existing
+  saved layouts remain stored; Home keeps its customizable dashboard behavior.
+- Search and status filters retain ancestor rows, so nested matches keep their
+  context. Normal branch expansion is retained when clearing the filter.
+  In narrow workspaces details stack below the tree; selection moves focus to
+  the details heading, and Back to pages returns to search without losing input.
+- Title, full page address, parent and status save together through the existing
+  `pages.update` action. Self/descendant parents and duplicate addresses are
+  rejected. Changing the parent does not make the UI invent a new address;
+  refresh from the page owner supplies authoritative paths after writes.
+- Add page and Add subpage use the same details form and start as drafts. The
+  shell's create shortcut enters that form. Subpage creation supplies an explicit
+  parent and suggests a full address. Edit content opens the canonical editor.
+- Switching pages or starting another page asks before discarding edited fields.
+  Search/filter changes preserve the current form. Drafts are local to this
+  mounted tool. CMS links/history ask before leaving; a native unload warning
+  protects reload/full navigation. Disconnected tools no longer contribute guards.
+- Failed writes retain input with `PAGE_MANAGER_*` messages. If a write succeeds
+  but its refresh fails, `PAGE_MANAGER_SAVED_REFRESH_FAILED` locks further actions
+  until Refresh pages succeeds; it must never resubmit an acknowledged create.
+- Open, copy-link and home-page actions require a published page in the UI.
+  Permission checks and persistence remain owned by the existing backend.
+
+Regression coverage: `pageManagerWorkspace`, `pageListParentReassignment`,
+`plainSpaceAdminPageSeeding`, `runtimeAdminGrid` and `contentHeaderActions`.
+
+### Collections and the fixed page editor
+
+Collections are a Pages view, not a separate content store. The existing
+`deriveCollections` contract includes public parents with children and explicit
+`meta.isCollection` pages. The filter retains nested child context. Add collection
+creates a draft with that marker; ordinary parents qualify automatically. The
+old Collections sidebar entry is retired; saved `collectionsList` instances
+mount the same Page Manager with this filter selected.
+
+Page Editor has a single page-sized `pageEditorWidget`. The existing
+`pageContentWidget` is an internal section, with a shared in-memory draft and one
+Pages update containing metadata, SEO and the selected attachment. Nothing is
+written merely by selecting/detaching a design. Save failure retains the draft;
+successful saves update the loaded record and clear its cache. Discard restores
+the last saved state. Uploading HTML still stores a reusable media file immediately;
+attaching that file to the page requires Save page. Stored standalone content
+widgets retain their existing write behavior and are hidden from new insertion.
+
+Attachment discovery is independently retryable and preserves successfully loaded
+options. HTML content is fetched/sanitized on selection; HTTP errors are rejected.
+Builder shortcuts use the installed app registry and the canonical Studio route.
+Regression coverage: `pageEditorWorkspace`, `pageContentData`, `pageEditorData`
+and `runtimeAdminNavigation`.
+
 ## Returned Data
 - Page retrieval events (`getPageBySlug`, `getPageById`, `getPagesByLane`) include a `parentSlug` field with the slug of the parent page when available.
 - Each page also exposes a `weight` integer (default `0`). Admin interfaces sort header and sidebar menus using this field.
@@ -99,3 +158,20 @@ new code should use the `/ui/runtime/envelope/*` URLs directly.
   projections for content that was already imported through Content Engine. This
   avoids duplicate canonical entries while still exposing parent/child
   collection structure to the current Pages UI.
+# Initial public presentation
+
+`publicPresentation.js` resolves the existing published envelope and optional
+linked layout through the public runtime facade. It emits sanitized HTML for an
+HTML page, or a canvas shell using the same geometry/CSS as the browser. It does
+not load widget registries, execute authored JavaScript or create another page
+store. The HTTP route owns CSP, escaped bootstrap injection and no-store headers.
+The existing public loaders adopt the initial nodes and load later widget data.
+See [public startup performance](../public-startup-performance.md).
+
+## Admin editing routes and deleted records
+
+The canonical content editor remains `/admin/pages/edit/:id`; Content's Page
+Manager links to that existing route. The editor stages metadata, SEO and content
+for one explicit save. Deleted pages live in the Deleted filter and are excluded
+from new parent/menu targets; an existing parent relationship is preserved until
+explicitly changed.

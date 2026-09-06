@@ -60,12 +60,24 @@ export function createMeltdownClient(options = {}) {
         getCsrfToken: () => null
     };
     const requestQueue = [];
+    const publicQueue = [];
+    let publicActive = 0;
     let busy = false;
-    async function send(eventName, payload = {}, timeout = DEFAULT_TIMEOUT) {
-        const customResult = options.customEventHandler?.(eventName, payload);
-        if (typeof customResult !== 'undefined') {
-            return customResult;
+    // Only the read-only public facade bypasses ordered command delivery.
+    // Bound concurrency so background fonts cannot serialize page discovery.
+    function processPublicQueue() {
+        while (publicActive < 4 && publicQueue.length > 0) {
+            const item = publicQueue.shift();
+            publicActive += 1;
+            send(item.eventName, item.payload, item.timeout)
+                .then(item.resolve, item.reject)
+                .finally(() => {
+                publicActive -= 1;
+                processPublicQueue();
+            });
         }
+    }
+    async function send(eventName, payload = {}, timeout = DEFAULT_TIMEOUT) {
         const { jwt, bodyPayload } = withoutJwt(payload);
         const headers = {
             'Content-Type': 'application/json'
@@ -115,6 +127,24 @@ export function createMeltdownClient(options = {}) {
     return {
         emit(eventName, payload = {}, timeout = DEFAULT_TIMEOUT) {
             return new Promise((resolve, reject) => {
+                // Local dialogs can issue their own backend requests while awaiting a
+                // selection. Holding the transport queue for the dialog would deadlock.
+                try {
+                    const localResult = options.customEventHandler?.(eventName, payload);
+                    if (typeof localResult !== 'undefined') {
+                        resolve(localResult);
+                        return;
+                    }
+                }
+                catch (error) {
+                    reject(error);
+                    return;
+                }
+                if (eventName === 'cmsPublicRuntimeRequest') {
+                    publicQueue.push({ eventName, payload, timeout, resolve, reject });
+                    processPublicQueue();
+                    return;
+                }
                 requestQueue.push({ eventName, payload, timeout, resolve, reject });
                 processQueue();
             });

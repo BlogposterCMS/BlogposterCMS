@@ -49,7 +49,7 @@ describe('runtimeWidgetRenderer', () => {
     return wrapper;
   }
 
-  it('renders inline widget code in an isolated shadow root and registers widget events', async () => {
+  it('renders isolated widget code without waiting for an unimplemented registration request', async () => {
     const wrapper = makeWrapper();
     window.PUBLIC_TOKEN = 'public-token';
     window.meltdownEmit = jest.fn().mockResolvedValue(undefined);
@@ -82,14 +82,7 @@ describe('runtimeWidgetRenderer', () => {
     expect(container.innerHTML).toContain('<p>Hello</p>');
     expect(container.innerHTML).not.toContain('onerror');
     expect(root.querySelector('slot[name="resize-handle"]')).not.toBeNull();
-    expect(window.meltdownEmit).toHaveBeenCalledWith('cmsPublicRuntimeRequest', {
-      jwt: 'public-token',
-      moduleName: 'runtimeManager',
-      moduleType: 'core',
-      resource: 'widgets',
-      action: 'registerUsage',
-      params: { actions: [{ resource: 'content', action: 'list' }] }
-    });
+    expect(window.meltdownEmit).not.toHaveBeenCalled();
   });
 
   it('blocks disallowed dynamic widget module paths through the runtime gateway', async () => {

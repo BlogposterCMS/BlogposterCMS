@@ -348,6 +348,13 @@ class MotherEmitter extends EventEmitter {
     try {
       firstArg.decodedJWT = jwt.verify(providedJwt, finalSecret);
     } catch (verifyErr) {
+      if (verifyErr instanceof jwt.TokenExpiredError) {
+        // Expiry rejects this request; it says nothing about the module's health.
+        verifyErr.code = 'AUTH_TOKEN_EXPIRED';
+        const callback = args.find(arg => typeof arg === 'function');
+        if (callback) callback(verifyErr);
+        return false;
+      }
       meltdownForModule(`Invalid JWT => ${verifyErr.message}`, moduleName, this);
       return false;
     }

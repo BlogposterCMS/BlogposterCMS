@@ -512,6 +512,18 @@ export interface AssignRoleToUserPayload {
 }
 export type AssignRoleToUserResult = JsonValue | undefined;
 
+export interface CheckCoreUpdatePayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type CheckCoreUpdateResult = JsonValue | undefined;
+
 export interface CheckModuleUpdatesPayload {
   "authModuleSecret"?: string;
   "decodedJWT"?: null | JsonObject;
@@ -1746,6 +1758,18 @@ export interface GetContentTypePayload {
 }
 export type GetContentTypeResult = JsonValue | undefined;
 
+export interface GetCoreUpdateStatusPayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type GetCoreUpdateStatusResult = JsonValue | undefined;
+
 export interface GetEnvelopePayload {
   "authModuleSecret"?: string;
   "decodedJWT"?: null | JsonObject;
@@ -2020,6 +2044,7 @@ export type GetPublishedDesignMetaResult = JsonValue | undefined;
 export interface GetRecentNotificationsPayload {
   "authModuleSecret"?: string;
   "decodedJWT"?: null | JsonObject;
+  "includeCoreUpdates"?: JsonValue;
   "isExternalRequest"?: boolean;
   "jwt"?: null | string;
   "limit"?: JsonValue;
@@ -2324,6 +2349,20 @@ export interface InstallAppFromDirectoryPayload {
   readonly [key: string]: BackendPayloadValue;
 }
 export type InstallAppFromDirectoryResult = JsonValue | undefined;
+
+export interface InstallCoreUpdatePayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "image"?: JsonValue;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  "version"?: JsonValue;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type InstallCoreUpdateResult = JsonValue | undefined;
 
 export interface InstallModuleFromZipPayload {
   "approvedAccess"?: JsonValue;
@@ -3178,18 +3217,6 @@ export interface RegisterSettingsSectionPayload {
 }
 export type RegisterSettingsSectionResult = JsonValue | undefined;
 
-export interface RegisterWidgetUsagePayload {
-  "authModuleSecret"?: string;
-  "decodedJWT"?: null | JsonObject;
-  "isExternalRequest"?: boolean;
-  "jwt"?: null | string;
-  "moduleName": string;
-  "moduleType"?: null | string;
-  "skipJWT"?: boolean;
-  readonly [key: string]: BackendPayloadValue;
-}
-export type RegisterWidgetUsageResult = JsonValue | undefined;
-
 export interface ReindexContentEntriesPayload {
   "authModuleSecret"?: string;
   "contentType"?: JsonValue;
@@ -3367,12 +3394,16 @@ export type ResolveRedirectResult = JsonValue | undefined;
 
 export interface ResolveSeoMetaPayload {
   "authModuleSecret"?: string;
+  "contentFallback"?: JsonValue;
   "decodedJWT"?: null | JsonObject;
   "isExternalRequest"?: boolean;
   "jwt"?: null | string;
+  "language"?: JsonValue;
   "moduleName": string;
   "moduleType"?: null | string;
   "skipJWT"?: boolean;
+  "sourceId"?: JsonValue;
+  "sourceModule"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
 }
 export type ResolveSeoMetaResult = JsonValue | undefined;
@@ -4319,6 +4350,7 @@ export interface BackendEventContractMap {
   "applySchemaFile": { payload: ApplySchemaFilePayload; result: ApplySchemaFileResult };
   "approveContentReview": { payload: ApproveContentReviewPayload; result: ApproveContentReviewResult };
   "assignRoleToUser": { payload: AssignRoleToUserPayload; result: AssignRoleToUserResult };
+  "checkCoreUpdate": { payload: CheckCoreUpdatePayload; result: CheckCoreUpdateResult };
   "checkModuleUpdates": { payload: CheckModuleUpdatesPayload; result: CheckModuleUpdatesResult };
   "cmsAdminApiRequest": { payload: CmsAdminApiRequestPayload; result: CmsAdminApiRequestResult };
   "cmsPublicRuntimeRequest": { payload: CmsPublicRuntimeRequestPayload; result: CmsPublicRuntimeRequestResult };
@@ -4409,6 +4441,7 @@ export interface BackendEventContractMap {
   "getContentRevision": { payload: GetContentRevisionPayload; result: GetContentRevisionResult };
   "getContentRevisions": { payload: GetContentRevisionsPayload; result: GetContentRevisionsResult };
   "getContentType": { payload: GetContentTypePayload; result: GetContentTypeResult };
+  "getCoreUpdateStatus": { payload: GetCoreUpdateStatusPayload; result: GetCoreUpdateStatusResult };
   "getEnvelope": { payload: GetEnvelopePayload; result: GetEnvelopeResult };
   "getGlobalLayoutTemplate": { payload: GetGlobalLayoutTemplatePayload; result: GetGlobalLayoutTemplateResult };
   "getLayoutForViewport": { payload: GetLayoutForViewportPayload; result: GetLayoutForViewportResult };
@@ -4454,6 +4487,7 @@ export interface BackendEventContractMap {
   "inspectModuleUpdate": { payload: InspectModuleUpdatePayload; result: InspectModuleUpdateResult };
   "inspectModuleZipAccess": { payload: InspectModuleZipAccessPayload; result: InspectModuleZipAccessResult };
   "installAppFromDirectory": { payload: InstallAppFromDirectoryPayload; result: InstallAppFromDirectoryResult };
+  "installCoreUpdate": { payload: InstallCoreUpdatePayload; result: InstallCoreUpdateResult };
   "installModuleFromZip": { payload: InstallModuleFromZipPayload; result: InstallModuleFromZipResult };
   "installModuleUpdate": { payload: InstallModuleUpdatePayload; result: InstallModuleUpdateResult };
   "issueModuleToken": { payload: IssueModuleTokenPayload; result: IssueModuleTokenResult };
@@ -4514,7 +4548,6 @@ export interface BackendEventContractMap {
   "registerModuleSettingsSchema": { payload: RegisterModuleSettingsSchemaPayload; result: RegisterModuleSettingsSchemaResult };
   "registerNavigationLocation": { payload: RegisterNavigationLocationPayload; result: RegisterNavigationLocationResult };
   "registerSettingsSection": { payload: RegisterSettingsSectionPayload; result: RegisterSettingsSectionResult };
-  "registerWidgetUsage": { payload: RegisterWidgetUsagePayload; result: RegisterWidgetUsageResult };
   "reindexContentEntries": { payload: ReindexContentEntriesPayload; result: ReindexContentEntriesResult };
   "rejectContentReview": { payload: RejectContentReviewPayload; result: RejectContentReviewResult };
   "releaseContentLock": { payload: ReleaseContentLockPayload; result: ReleaseContentLockResult };

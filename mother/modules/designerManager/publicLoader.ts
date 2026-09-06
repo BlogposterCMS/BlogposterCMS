@@ -8,6 +8,8 @@ type DesignerLoaderContext = {
   publicToken?: string | null;
   activeLayout?: unknown;
   activeLayoutRef?: unknown;
+  initialLayoutResolved?: boolean;
+  initialLayout?: unknown;
 };
 
 type DesignDescriptor = {
@@ -24,6 +26,9 @@ type PublicLayout = {
 type DesignerRegister = (loaderName: 'design', loader: typeof loadDesign) => void;
 
 function preloadLink(href: string, rel = 'stylesheet'): HTMLLinkElement {
+  const existing = Array.from(document.querySelectorAll<HTMLLinkElement>('link'))
+    .find(link => link.getAttribute('href') === href && link.rel === rel);
+  if (existing) return existing;
   const link = document.createElement('link');
   link.rel = rel;
   link.href = href;
@@ -58,12 +63,13 @@ async function loadDesign(
   const { css = [], layoutRef } = descriptor;
   css.forEach(href => preloadLink(href, 'stylesheet'));
 
-  const layout = await emitPublicRuntime<PublicLayout | null>(ctx, 'designer', 'getLayout', {
+  // HTML-only pages still need runtime CSS, but own no Designer layout.
+  const layout = ctx?.initialLayoutResolved ? ctx.initialLayout as PublicLayout | null : layoutRef ? await emitPublicRuntime<PublicLayout | null>(ctx, 'designer', 'getLayout', {
     layoutRef
   }).catch(error => {
     console.warn('[DesignerPublicLoader:LAYOUT_LOAD_FAILED] Falling back to an empty layout.', error);
     return null;
-  });
+  }) : null;
 
   const activeLayout = layout || fallbackLayout(layoutRef);
   if (ctx && typeof ctx === 'object') {

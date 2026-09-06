@@ -1,54 +1,138 @@
-/* =============================================================================
-   components/_notification-hub.scss — Slide-down notification list
-   =============================================================================
- */
-
+/* A compact history panel using the same surfaces as the CMS workspaces. */
 .notification-hub {
-  position: absolute;
-  top: calc(56px + var(--maintenance-banner-height, 0px)); // below top-header + banner
+  position: fixed;
+  top: calc(64px + var(--maintenance-banner-height, 0px));
   right: 16px;
-  width: 300px;
-  max-height: 50vh;
-  overflow-y: auto;
-  background: var(--color-white);
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-10px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 99;
+  z-index: 5300;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(520px, calc(100dvh - 88px - var(--maintenance-banner-height, 0px)));
+  overflow: hidden;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-lift);
+  font-family: var(--font-body);
 
-  &.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
+  &[hidden] { display: none; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--studio-border);
+
+    h2 { margin: 0; font-size: 0.95rem; line-height: 1.4; }
+    p { margin: 3px 0 0; color: var(--studio-text-muted); font-size: 0.75rem; }
   }
 
-  ul {
-    list-style: none;
-    margin: 0;
+  &__actions { display: flex; gap: 4px; }
+
+  &__control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
     padding: 0;
+    border: 0;
+    border-radius: var(--studio-radius-control);
+    background: transparent;
+    color: var(--studio-text);
+    cursor: pointer;
 
-    li {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 8px;
-      border-bottom: 1px solid #eee;
-      font-size: 0.875rem;
-
-      &.priority-critical { background: #fddede; }
-      &.priority-warning { background: #fff4ce; }
-      &.priority-info { background: #f0f0f0; }
-    }
-
-    .title {
-      font-weight: bold;
-    }
-    .msg {
-      flex-grow: 1;
-    }
+    img { width: 16px; height: 16px; }
+    &:hover { background: var(--studio-surface-muted); }
+    &:focus-visible { outline: none; box-shadow: var(--studio-focus-ring); }
+    &:disabled { opacity: 0.4; cursor: wait; }
   }
+
+  &__body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  ul { margin: 0; padding: 0 16px; list-style: none; }
+
+  &__item {
+    --notification-tone: var(--color-info);
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px 0;
+    font-size: 0.8rem;
+
+    & + & { border-top: 1px solid var(--studio-border); }
+    &.priority-critical, &.priority-error { --notification-tone: var(--color-error); }
+    &.priority-warning { --notification-tone: var(--color-warning); }
+    &.priority-success { --notification-tone: var(--color-success); }
+  }
+
+  &__symbol {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--notification-tone) 12%, transparent);
+    img { width: 16px; height: 16px; }
+  }
+
+  &__content { min-width: 0; }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 3px 8px;
+    line-height: 1.5;
+    strong { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+    time { color: var(--studio-text-muted); font-size: 0.7rem; white-space: nowrap; }
+  }
+
+  &__message {
+    margin: 4px 0 0;
+    color: var(--studio-text-muted);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  &__link {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--studio-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-underline-offset: 3px;
+    &:focus-visible { outline: none; border-radius: 3px; box-shadow: var(--studio-focus-ring); }
+  }
+
+  &__status {
+    margin: 0;
+    padding: 24px 20px;
+    color: var(--studio-text-muted);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    text-align: center;
+    overflow-wrap: anywhere;
+    &.is-error { color: var(--studio-text); }
+    &[hidden] { display: none; }
+  }
+}
+
+// These labels name controls and regions; the global tooltip must not duplicate them.
+.notification-hub [aria-label]::after,
+.top-header .logo[aria-label]::after { content: none; display: none; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .notification-hub img { filter: invert(1); }
+}
+
+:root[data-theme="dark"] .notification-hub img { filter: invert(1); }
+
+@media (max-width: 560px) {
+  .notification-hub { right: 12px; width: calc(100vw - 24px); }
 }

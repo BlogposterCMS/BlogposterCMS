@@ -224,11 +224,22 @@ function createSectionToolbar(section) {
   });
 
   const deleteButton = toolbarButton('section-delete', 'Delete section', 'trash-2');
+  // Keep existing structure actions reachable after replacing the old container bar.
+  const addContainerButton = toolbarButton('section-add-container', 'Add container', 'plus');
+  const contentHostButton = toolbarButton('section-content-host', 'Use as page content area', 'star');
+  for (const [button, action] of [[addContainerButton, 'addContainer'], [contentHostButton, 'contentHost']]) {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      section.dispatchEvent(new CustomEvent('designerSectionStructureRequested', {
+        bubbles: true, detail: { action }
+      }));
+    });
+  }
 
   toolbar.addEventListener('pointerdown', event => {
     event.stopPropagation();
   }, true);
-  toolbar.append(modeButton, colorButton, imageButton, clearButton, deleteButton);
+  toolbar.append(addContainerButton, modeButton, contentHostButton, colorButton, imageButton, clearButton, deleteButton);
   section.prepend(toolbar);
   return toolbar;
 }
@@ -242,6 +253,7 @@ export function refreshBackgroundToolbars(layoutRoot = document.getElementById('
     const toolbar = section.querySelector(':scope > .layout-section-toolbar') ||
       createSectionToolbar(section);
     syncModeButton(section, toolbar.querySelector('.section-mode-cycle'));
+    toolbar.querySelector('.section-content-host')?.setAttribute('aria-pressed', String(section.dataset.dynamicHost === 'true'));
     const deleteButton = toolbar.querySelector('.section-delete');
     if (deleteButton) {
       const canDelete = sections.length > 1;

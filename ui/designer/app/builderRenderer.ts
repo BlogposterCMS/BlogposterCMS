@@ -191,10 +191,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   const layoutLayers = HAS_LAYOUT_STRUCTURE
     ? [{ name: 'Layout', layout: [] }, { name: 'Design', layout: [] }]
     : [{ name: 'Design', layout: [] }];
-  const startLayerNum = Number(startLayer);
-  let activeLayer = HAS_LAYOUT_STRUCTURE && Number.isFinite(startLayerNum)
-    ? Math.max(0, Math.min(layoutLayers.length - 1, startLayerNum))
-    : 0;
+  // Layout is a view of this document's hierarchy, never a second editable layer.
+  let activeLayer = HAS_LAYOUT_STRUCTURE ? 1 : 0;
   document.body.dataset.activeLayer = String(activeLayer);
   const footer = document.getElementById('builderFooter');
   let layoutBar;
@@ -519,11 +517,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       return activePanel;
     }
     if (activePanel === 'layout' && HAS_LAYOUT_STRUCTURE) {
-      if (activeLayer === 0) {
-        await startLayoutMode(layoutCtx);
-      } else {
-        await switchLayer(0);
-      }
+      await startLayoutMode(layoutCtx);
       setSidebarPanel('layout');
       return activePanel;
     }
@@ -833,7 +827,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     syncInspectorRange(nextRange);
     updateSceneInspector(el, allWidgets.find(w => w.id === el.dataset.widgetId));
     if (persist) gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
-    if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
+    if (persist && state.designId && state.autosaveEnabled) scheduleAutosave();
     return nextRange;
   }
 
@@ -981,7 +975,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (persist) {
       gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
       syncWidgetStyleFollowers(el);
-      if (pageId && state.autosaveEnabled) scheduleAutosave();
+      if (state.designId && state.autosaveEnabled) scheduleAutosave();
     }
   }
 
@@ -1059,7 +1053,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (!el.dataset.elementName) el.dataset.elementName = 'Button';
     if (persist) {
       gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
-      if (pageId && state.autosaveEnabled) scheduleAutosave();
+      if (state.designId && state.autosaveEnabled) scheduleAutosave();
     }
   }
 
@@ -1148,7 +1142,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     };
     void renderWidget(el, widgetDef, ensureCodeMap());
     gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
-    if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
+    if (persist && state.designId && state.autosaveEnabled) scheduleAutosave();
   }
 
   function collectionArchiveFieldValue(target) {
@@ -1268,7 +1262,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     };
     void renderWidget(el, widgetDef, ensureCodeMap());
     gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
-    if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
+    if (persist && state.designId && state.autosaveEnabled) scheduleAutosave();
   }
 
   function galleryFieldValue(target) {
@@ -1494,6 +1488,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (minHeight) minHeight.value = String(numberValue(sectionEl?.dataset?.layoutMinHeight, 320));
     if (columns) columns.value = String(numberValue(sectionEl?.dataset?.layoutColumns, 3));
     if (align) align.value = sectionEl?.dataset?.layoutAlign || 'stretch';
+    // Free placement has no automatic tracks or distribution rules.
+    if (columns) columns.closest('label').hidden = visibleMode !== 'grid';
+    if (gap) gap.closest('label').hidden = visibleMode === 'free';
+    if (align) align.closest('label').hidden = visibleMode === 'free';
     if (transparent) transparent.checked = background === 'transparent';
     if (color) {
       color.disabled = background === 'transparent';
@@ -1739,7 +1737,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         gridEl?.__grid?.emitChange?.(state.activeWidgetEl, { contentOnly: true });
         syncWidgetStyleFollowers(state.activeWidgetEl);
       }
-      if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
+      if (persist && state.designId && state.autosaveEnabled) scheduleAutosave();
     }
   }
 
@@ -2040,7 +2038,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
           getElementEffects(state.activeWidgetEl)
         );
         renderSceneLayers();
-        if (pageId && state.autosaveEnabled) scheduleAutosave();
+        if (state.designId && state.autosaveEnabled) scheduleAutosave();
       }
     });
     inspector.addEventListener('input', event => {
@@ -2313,7 +2311,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
 
   function requestSceneChangePersist() {
     document.dispatchEvent(new CustomEvent('designerContentChanged'));
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.designId && state.autosaveEnabled) scheduleAutosave();
   }
 
   function createSceneFromUi({ edit = true, insertionSource = 'storyboard' } = {}) {
@@ -3303,6 +3301,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       persistedLayoutData = obj;
       deserializeLayout(obj, layoutRoot);
       ensureLayoutRootContainer(layoutRoot);
+      // Navigation reconciles Sections before the grids initialize. Seed its
+      // canonical ids now, or it removes saved Sections and their Containers.
+      hydrateSceneSectionsFromLayoutTree(obj);
     }
   } catch (e) {
     console.warn('[Designer] failed to deserialize layout', e);
@@ -3344,6 +3345,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
   const { updateAllWidgetContents } = registerBuilderEvents(layoutRoot, ensureCodeMap(), { getRegisteredEditable });
   const saveLayoutCtx = {
+    getDesignSaveOptions: () => ({
+      name: document.querySelector<HTMLInputElement>('#layoutNameInput')?.value?.trim() || layoutName,
+      description: initialDesign?.description || '',
+      gridEl, layoutRoot, getCurrentLayoutForLayer,
+      getActiveLayer: () => activeLayer, ensureCodeMap, capturePreview: options => captureGridPreview(gridEl, options),
+      updateAllWidgetContents, ownerId: getAdminUserId(), pageId,
+      isLayout: activeLayer === 0, isGlobal: activeLayer === 0
+    }),
     updateAllWidgetContents,
     getCurrentLayout: () => getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap()),
     pushState: pushLayoutState,
@@ -3353,13 +3362,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     getSceneSections: getSceneSectionsSnapshot,
     getLayer: () => activeLayer
   };
-  const { scheduleAutosave, startAutosave, saveDesign } = createSaveManager(state, saveLayoutCtx);
+  const { scheduleAutosave, startAutosave, saveDesign, getSaveState } = createSaveManager(state, saveLayoutCtx);
+  let publishController = null;
   function pushAndSave() {
     const rootContainer = ensureLayoutRootContainer(layoutRoot);
     if (!rootContainer) return;
     const layout = serializeLayout(rootContainer);
     pushLayoutState(layout);
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.autosaveEnabled) scheduleAutosave();
   }
 
   function getActiveWorkareaContainer() {
@@ -3602,7 +3612,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         }
       }
       handleContainerMutation();
-      if (pageId && state.autosaveEnabled) scheduleAutosave();
+      if (state.designId && state.autosaveEnabled) scheduleAutosave();
       return clone;
     } catch (err) {
       warnDesignerContainerError('DESIGNER_CONTAINER_DUPLICATE_FAILED', err, containerDebugInfo(el, { linked }));
@@ -3836,7 +3846,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     // as Free placement.
     onSelect: widget => selectWidget(widget)
   });
-  const shouldAutosaveNow = () => Boolean(pageId && state.autosaveEnabled);
+  const shouldAutosaveNow = () => Boolean(state.designId && state.autosaveEnabled);
 
   initTextPanel({
     grid,
@@ -3888,7 +3898,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     updateSceneInspector(state.activeWidgetEl, allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId));
     refreshActionBarPosition(state.activeWidgetEl);
     renderSceneLayers();
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.designId && state.autosaveEnabled) scheduleAutosave();
   };
   layoutRoot.addEventListener('click', handleStageBehaviorClick);
   actionBar.addEventListener('click', handleStageBehaviorClick);
@@ -4148,7 +4158,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       selectWidget(duplicate);
     }
     renderSceneLayers();
-    if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
+    if (persist && state.designId && state.autosaveEnabled) scheduleAutosave();
     return duplicate;
   }
 
@@ -4241,7 +4251,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     markInactiveWidgets();
     renderSceneLayers();
     targetGrid.emitChange?.(wrapper);
-    if (persist && pageId && state.autosaveEnabled) scheduleAutosave();
+    if (persist && state.designId && state.autosaveEnabled) scheduleAutosave();
     return wrapper;
   }
 
@@ -4494,7 +4504,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     setSidebarToolActive(nextBehavior === 'scroll' ? 'scroll' : 'action');
     updateSceneInspector(state.activeWidgetEl, allWidgets.find(w => w.id === state.activeWidgetEl.dataset.widgetId));
     renderSceneLayers();
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.designId && state.autosaveEnabled) scheduleAutosave();
   }
 
   function commandValue(command = {}, key, fallback = '') {
@@ -4618,7 +4628,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     updateSceneInspector(el, allWidgets.find(w => w.id === el.dataset.widgetId));
     renderSceneLayers();
     gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.designId && state.autosaveEnabled) scheduleAutosave();
     return { handled: true, selection: selectedElementSummary(el), effects: compactEffects(getElementEffects(el)) };
   }
 
@@ -4694,7 +4704,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     grid.update(el, geometry);
     selectWidget(el);
     renderSceneLayers();
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.designId && state.autosaveEnabled) scheduleAutosave();
     return { handled: true, geometry, selection: selectedElementSummary(el) };
   }
 
@@ -4709,7 +4719,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       maxWidth: commandValue(command, 'maxWidth', viewport.width)
     }, viewport.width);
     grid.setResponsiveRange?.(range, { element: el, rewriteActive: true });
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.designId && state.autosaveEnabled) scheduleAutosave();
     return {
       handled: true,
       range,
@@ -4749,7 +4759,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       updateSceneInspector(null);
     }
     renderSceneLayers();
-    if (pageId && state.autosaveEnabled) scheduleAutosave();
+    if (state.designId && state.autosaveEnabled) scheduleAutosave();
     return { handled: true, deletedId: id };
   }
 
@@ -4820,6 +4830,17 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     } else if (action === 'container.settings.set') {
       const settings = commandValue(command, 'settings', {});
       setContainerSettings(target, settings && typeof settings === 'object' ? settings : {});
+    } else if (action === 'container.contentHost.set') {
+      // Use the same mutation helpers as the visible Section/Container controls.
+      setDynamicHostContainer(layoutRoot, target);
+      handleContainerMutation();
+    } else if (action === 'container.designRef.set') {
+      const designId = commandValue(command, 'designId', null);
+      if (designId !== null && (typeof designId !== 'number' || !Number.isInteger(designId) || designId <= 0)) {
+        throw new Error('DESIGNER_AGENT_DESIGN_REF_INVALID: designId must be a positive integer or null.');
+      }
+      setContainerDesignRef(target, designId);
+      handleContainerMutation();
     } else if (action === 'container.move') {
       const source = findLayoutContainerByCommand(command, 'sourceId');
       const destination = findLayoutContainerByCommand(command, 'targetId');
@@ -4883,60 +4904,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   async function startPublishFromCommand(command = {}) {
-    document.getElementById('publishLayoutBtn')?.click();
-    const deadline = Date.now() + 4000;
-    let slugInput = null;
-    let confirmButton = null;
-    while (Date.now() < deadline && (!slugInput || !confirmButton)) {
-      slugInput = document.querySelector('.publish-slug-input');
-      confirmButton = document.querySelector('.publish-confirm');
-      if (!slugInput || !confirmButton) await new Promise(resolve => window.setTimeout(resolve, 25));
-    }
-    if (!slugInput || !confirmButton) {
-      return { handled: false, reason: 'publish-panel-unavailable', code: 'DESIGNER_AGENT_PUBLISH_PANEL_UNAVAILABLE' };
-    }
-    const slug = String(commandValue(command, 'slug', slugInput.value || '') || '').trim();
-    if (!slug) return { handled: false, reason: 'missing-publish-slug' };
-    slugInput.value = slug;
-    slugInput.dispatchEvent(new Event('input', { bubbles: true }));
-    const draft = commandValue(command, 'draft', undefined);
-    const draftInput = document.querySelector('.publish-draft-checkbox');
-    if (draftInput && draft !== undefined) {
-      draftInput.checked = Boolean(draft);
-      draftInput.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-    confirmButton.click();
-    const publishDeadline = Date.now() + 30000;
-    while (Date.now() < publishDeadline) {
-      const success = document.querySelector('.publish-info[data-variant="success"]:not(.hidden)');
-      if (success) {
-        return {
-          handled: true,
-          published: true,
-          slug,
-          draft: draftInput?.checked ?? null,
-          message: success.textContent?.trim() || 'Design published successfully.'
-        };
-      }
-      const warning = document.querySelector('.publish-warning:not(.hidden)');
-      if (warning?.textContent?.trim()) {
-        return {
-          handled: false,
-          reason: 'publish-failed',
-          code: 'DESIGNER_AGENT_PUBLISH_FAILED',
-          message: warning.textContent.trim()
-        };
-      }
-      await new Promise(resolve => window.setTimeout(resolve, 50));
-    }
-    return {
-      handled: false,
-      reason: 'publish-timeout',
-      code: 'DESIGNER_AGENT_PUBLISH_TIMEOUT',
-      slug
-    };
+    if (!publishController) throw new Error('DESIGNER_AGENT_PUBLISH_PANEL_UNAVAILABLE: Wait until Publishing finishes loading.');
+    // Await the same publication promise as the human-facing Publish control.
+    return publishController.publish({
+      slug: commandValue(command, 'slug', undefined),
+      draft: commandValue(command, 'draft', undefined)
+    });
   }
-
   async function executeDesignerAgentCommand(command = {}) {
     const action = commandAction(command);
     if (action === 'scene.next') return stepSceneBy(1);
@@ -5001,7 +4975,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     if (action === 'design.save') return saveDesignFromCommand(command);
     if (action === 'design.publish') return startPublishFromCommand(command);
     if (action === 'publishing.open') {
-      document.getElementById('publishLayoutBtn')?.click();
+      if (!publishController) throw new Error('DESIGNER_AGENT_PUBLISH_PANEL_UNAVAILABLE');
+      await publishController.open();
       return { handled: true };
     }
     return { handled: false, reason: 'unsupported-command', action };
@@ -5013,7 +4988,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       activeScene: sceneSummary(),
       sections: getSceneSectionsSnapshot(),
       selection: selectedElementSummary(),
-      viewport: getBuilderViewportState()
+      viewport: getBuilderViewportState(),
+      save: getSaveState(),
+      publishing: publishController?.snapshot() || null,
+      // Read the same LayoutTree and placements as Save, including text content.
+      document: {
+        layout: serializeLayout(layoutRoot),
+        widgets: getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap())
+      }
     })
   };
 
@@ -5087,7 +5069,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       if (contentOnly) return;
       const layout = getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap());
       pushLayoutState(layout);
-      if (pageId && state.autosaveEnabled) scheduleAutosave();
+      if (state.designId && state.autosaveEnabled) scheduleAutosave();
     });
     sectionGrid.on('dragstart', () => {
       sectionGrid.bboxManager?.hide?.();
@@ -5105,6 +5087,14 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   }
   syncSectionWorkspaces();
+
+  layoutRoot.addEventListener('designerSectionStructureRequested', event => {
+    const section = event.target?.closest?.('.layout-section[data-section-id]');
+    if (!section || section.parentElement !== layoutRoot) return;
+    if (event.detail?.action === 'addContainer') placeContainer(section, 'inside');
+    else if (event.detail?.action === 'contentHost') setDynamicHost(section);
+    refreshBackgroundToolbars(layoutRoot);
+  });
 
   layoutRoot.addEventListener('designerSectionModeRequested', event => {
     const section = event.target?.closest?.('.layout-section[data-section-id]');
@@ -5337,6 +5327,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             yPercent: w.y_percent ?? w.yPercent,
             wPercent: w.w_percent ?? w.wPercent,
             hPercent: w.h_percent ?? w.hPercent,
+            zIndex: Number(w.z_index ?? w.zIndex ?? 0),
             behavior: meta.behavior || w.behavior,
             sceneId: meta.sceneId || w.sceneId,
             workareaId: meta.workareaId || w.workareaId || w.workarea_id || meta.sceneId || w.sceneId,
@@ -5368,15 +5359,6 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         layoutNameParam = String(tplRes?.name || layoutNameParam).replace(/[\n\r]/g, '');
       } catch (err) {
         console.warn('[Designer] failed to load layout template', err);
-      }
-    }
-    if (HAS_LAYOUT_STRUCTURE) {
-      try {
-        const globalRes = await emitAdminFacade(meltdownEmit, 'plainSpace', 'globalLayoutTemplate');
-        layoutLayers[0].layout = Array.isArray(globalRes?.layout) ? globalRes.layout : [];
-        globalLayoutName = globalRes?.name || null;
-      } catch (err) {
-        console.warn('[Designer] failed to load global layout', err);
       }
     }
   }
@@ -5595,7 +5577,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   });
 
   const undoCurrentDesign = () => {
-    const shouldAutosave = Boolean(pageId && state.autosaveEnabled);
+    const shouldAutosave = Boolean(state.designId && state.autosaveEnabled);
     undoDesign(currentDesignId, {
       applySnapshot,
       undoTextCommand,
@@ -5605,7 +5587,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   };
 
   const redoCurrentDesign = () => {
-    const shouldAutosave = Boolean(pageId && state.autosaveEnabled);
+    const shouldAutosave = Boolean(state.designId && state.autosaveEnabled);
     redoDesign(currentDesignId, {
       applySnapshot,
       redoTextCommand,
@@ -5656,6 +5638,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       })
     }),
     openDesignSettings: () => setSidebarPanel('design'),
+    onPublishController: controller => { publishController = controller; },
     undo: undoCurrentDesign,
     redo: redoCurrentDesign
   });
@@ -5703,6 +5686,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   }
 
   async function switchLayer(idx) {
+    if (HAS_LAYOUT_STRUCTURE && idx === 0) {
+      await startLayoutMode(layoutCtx);
+      return;
+    }
     if (idx === activeLayer) return;
     saveActiveLayer();
     activeLayer = idx;

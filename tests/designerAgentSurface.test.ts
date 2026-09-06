@@ -156,7 +156,10 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain('fontPackagesAgentState');
   expect(agentSurfaceSource).toContain('activeFontPackage');
   expect(agentSurfaceSource).toContain("action: 'sitePresets.create'");
-  expect(agentSurfaceSource).toContain('actions: DESIGNER_AGENT_ACTIONS');
+  expect(agentSurfaceSource).toContain('actions: workspaceActionCatalog(designerActions())');
+  expect(agentSurfaceSource).toContain('collaboration: designerHandoffState()');
+  expect(agentSurfaceSource).toContain("action: 'container.contentHost.set'");
+  expect(agentSurfaceSource).toContain("action: 'container.designRef.set'");
   expect(agentSurfaceSource).toContain('behaviorElementCount: behaviorMap.behaviorElementCount');
   expect(agentSurfaceSource).toContain('effectElementCount: behaviorMap.effectElementCount');
   expect(agentSurfaceSource).toContain('behaviorMap');

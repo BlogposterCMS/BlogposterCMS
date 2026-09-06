@@ -1,7 +1,7 @@
 import { extractDesignDocument, normalizeLayoutTree, renderLayoutTree } from '/ui/shared/layout/index.js';
 import { fetchRuntimeDesign } from './runtimePageData.js';
 import { renderStaticRuntimeGrid } from './runtimeStaticGrid.js';
-import { getRuntimeDesignLayout } from './runtimeDesignLayouts.js';
+import { getRuntimeDesignLayout, applyRuntimeDesignStyles } from './runtimeDesignLayouts.js';
 function collectLeaves(node, leaves = []) {
     if (!node)
         return leaves;
@@ -78,10 +78,19 @@ function placementsForWorkarea(placements, workareaId, fallbackWorkareaId) {
 async function renderDesignRefLeaf({ leaf, container, allWidgets, lane, options }) {
     if (leaf.type !== 'leaf' || !leaf.designRef || typeof options.emit !== 'function')
         return;
+    const designPath = options.designPath || [];
+    if (designPath.includes(String(leaf.designRef)) || designPath.length >= 16) {
+        console.warn('[RuntimeDesignDocument] RUNTIME_DESIGN_REF_CYCLE_OR_DEPTH', leaf.designRef);
+        return;
+    }
     try {
         const response = await fetchRuntimeDesign(options.emit, leaf.designRef, lane);
         const layout = getRuntimeDesignLayout(response);
-        if (layout.length) {
+        // Embedded designs use the same structural renderer as the outer page.
+        // Do not flatten their containers or repeat the page's global widgets.
+        applyRuntimeDesignStyles(container, response?.design);
+        const rendered = await renderRuntimeDesignDocument(container, getRuntimeDesignDocument({ ...response, placements: layout }), allWidgets, lane, { emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, String(leaf.designRef)] });
+        if (!rendered && layout.length) {
             await renderStaticRuntimeGrid(container, layout, allWidgets, lane, {
                 widgetEmit: options.widgetEmit
             });
@@ -93,6 +102,17 @@ async function renderDesignRefLeaf({ leaf, container, allWidgets, lane, options 
 }
 export function getRuntimeDesignDocument(response) {
     return extractDesignDocument(response);
+}
+/** Resolve only the outer document's slot; nested designs own their own hosts. */
+export function getRuntimeDesignContentMount(target) {
+    const shell = target.querySelector('.runtime-design-document');
+    if (!shell)
+        return target;
+    const ownHosts = Array.from(shell.querySelectorAll('.runtime-layout-container'))
+        .filter(host => host.closest('.runtime-design-document') === shell);
+    return ownHosts.find(host => host.dataset.dynamicHost === 'true')
+        || ownHosts.find(host => host.dataset.workarea === 'true')
+        || target;
 }
 export async function renderRuntimeDesignDocument(target, document, allWidgets, lane, options = {}) {
     const tree = normalizeLayoutTree(document.layoutTree);

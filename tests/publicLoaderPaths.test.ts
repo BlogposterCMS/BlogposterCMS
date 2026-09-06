@@ -3,18 +3,15 @@ import { getPublicLoaderPaths, isPublicLoaderSource } from '../ui/runtime/public
 describe('public loader paths', () => {
   it('loads Designer through the core public loader mount', () => {
     expect(getPublicLoaderPaths('designerManager')).toEqual([
-      '/modules/designerManager/publicLoader.js',
       '/mother/modules/designerManager/publicLoader.js'
     ]);
   });
 
   it('loads only explicit core public loaders from the mother module mount', () => {
     expect(getPublicLoaderPaths('pagesManager')).toEqual([
-      '/modules/pagesManager/publicLoader.js',
       '/mother/modules/pagesManager/publicLoader.js'
     ]);
     expect(getPublicLoaderPaths('widgetManager')).toEqual([
-      '/modules/widgetManager/publicLoader.js',
       '/mother/modules/widgetManager/publicLoader.js'
     ]);
   });

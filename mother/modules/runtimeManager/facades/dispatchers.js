@@ -82,7 +82,7 @@ function createFacadeDispatchers(runtime) {
     runtime.assertRuntimePayload(payload, BACKEND_EVENTS.CMS_ADMIN_API_REQUEST);
     runtime.requireAdminPrincipal(payload);
 
-    const { resource, action, definition } = resolveAdminDomain(payload.resource, payload.action);
+    const { resource, action, definition, domain } = resolveAdminDomain(payload.resource, payload.action);
     if (!definition) {
       throw new Error(`Unknown CMS admin API action: ${payload.resource || ''}.${payload.action || ''}`);
     }
@@ -90,9 +90,10 @@ function createFacadeDispatchers(runtime) {
     requireAppContextReadOnly(payload, resource, action);
     runtime.requirePayloadPermission(payload, definition.permission);
 
-    const params = payload.params && typeof payload.params === 'object' && !Array.isArray(payload.params)
+    const genericParams = payload.params && typeof payload.params === 'object' && !Array.isArray(payload.params)
       ? payload.params
       : {};
+    const params = domain.prepareAdminParams ? domain.prepareAdminParams({ resource, action, params: genericParams, actor: payload.decodedJWT }) : genericParams;
     const eventPayload = {
       ...params,
       jwt,

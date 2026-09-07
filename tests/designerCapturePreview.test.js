@@ -3,6 +3,15 @@
  */
 
 describe('designer preview capture', () => {
+  test('section capture does not abort on unrelated unreadable stylesheets', async () => {
+    const toPng = jest.fn().mockResolvedValue('data:image/png;base64,section');
+    jest.doMock('html-to-image', () => ({ toPng }));
+    Object.defineProperty(document, 'styleSheets', { configurable: true, value: [{ get cssRules() { throw new Error('cross origin'); } }] });
+    const grid = document.createElement('div');
+    const { capturePreview } = await import('../ui/designer/app/renderer/capturePreview.js');
+    await expect(capturePreview(grid, { firstSection: true })).resolves.toContain('base64,section');
+    expect(toPng).toHaveBeenCalledWith(grid, expect.objectContaining({ fontEmbedCSS: '', style: expect.objectContaining({ transform: 'none' }) }));
+  });
   afterEach(() => {
     jest.resetModules();
     jest.restoreAllMocks();

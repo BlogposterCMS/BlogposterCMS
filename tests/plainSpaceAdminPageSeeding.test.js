@@ -44,6 +44,47 @@ function createSeedingEmitter(existingPage = null, existingLayout = []) {
 }
 
 describe('PlainSpace admin page seeding', () => {
+  it('seeds Analytics with editable standard subpages and the shared sidebar', () => {
+    const pages = ADMIN_PAGES.filter(page => page.slug === 'analytics' || page.parentSlug === 'analytics');
+    expect(pages.map(page => page.slug)).toEqual(['analytics', 'website', 'devices', 'system']);
+    for (const page of pages) {
+      expect(page.config.seedOnce).toBe(true);
+      expect(page.config.dashboardLayout).toBeUndefined();
+      expect(page.config.layout.sidebar).toBe('default-sidebar');
+      expect(Object.values(page.config.widgetSlots)).toEqual(['full']);
+    }
+  });
+
+  it.each(['published', 'deleted'])('preserves customized Analytics pages, including %s pages', async status => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'analytics');
+    const emitter = createSeedingEmitter({ id: 'analytics-user', slug: 'analytics', status, weight: 99,
+      meta: { widgets: [], icon: '/assets/icons/house.svg', layout: { sidebar: 'user-sidebar' } } }, []);
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    expect(emitter.calls.filter(call => ['updatePage', 'createPage', 'saveLayoutForViewport'].includes(call.eventName))).toEqual([]);
+  });
+
+  it('unlocks the former fixed Analytics page without replacing custom instances', async () => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'analytics');
+    const plugin = { id: 'user-added', widgetId: 'pluginChart', slot: 'half', order: 17 };
+    const emitter = createSeedingEmitter({ id: 'analytics-user', slug: 'analytics', weight: 99,
+      meta: { dashboardLayout: 'fixed', widgets: ['analyticsDashboard', 'pluginChart'], widgetSlots: { analyticsDashboard: 'page', pluginChart: 'half' } }
+    }, [{ id: 'original', widgetId: 'analyticsDashboard', slot: 'page', order: 0 }, plugin]);
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    const update = emitter.calls.find(call => call.eventName === 'updatePage').payload;
+    expect(update.meta.dashboardLayout).toBeUndefined();
+    expect(update.meta.widgets).toEqual(['analyticsDashboard', 'pluginChart']);
+    expect(update.weight).toBeUndefined();
+    expect(update.meta.layout.sidebar).toBe('default-sidebar');
+    const layout = emitter.calls.find(call => call.eventName === 'saveLayoutForViewport').payload.layout;
+    expect(layout).toEqual([{ id: 'original', widgetId: 'analyticsDashboard', slot: 'full', order: 0 }, plugin]);
+  });
+
+  it('does not re-add removed standard widgets on an Analytics subpage', async () => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'devices' && page.parentSlug === 'analytics');
+    const emitter = createSeedingEmitter({ id: 'custom', slug: 'analytics/devices', meta: { widgets: ['thirdPartyReport'] } }, [{ id: 'mine', widgetId: 'thirdPartyReport' }]);
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    expect(emitter.calls.filter(call => ['updatePage', 'createPage', 'saveLayoutForViewport'].includes(call.eventName))).toEqual([]);
+  });
   it('uses fixed single-tool compositions and retires the duplicate Collections page', () => {
     for (const [slug, widgetId] of [['media', 'mediaExplorer'], ['widgets', 'widgetList'], ['designer-layouts', 'designerLayouts']]) {
       const page = ADMIN_PAGES.find(entry => entry.slug === slug && entry.parentSlug === 'content');
@@ -124,12 +165,11 @@ describe('PlainSpace admin page seeding', () => {
     const homePage = ADMIN_PAGES.find(page => page.slug === 'home' && page.lane === 'admin');
 
     expect(homePage).toBeTruthy();
-    expect(homePage.config.widgets).toEqual(['roadmapIntro', 'pageStats', 'contentSummary']);
-    expect(homePage.config.retiredWidgets).toEqual(['roadmapUpcoming', 'dragbarDemo']);
+    expect(homePage.config.widgets).toEqual(['homeWebsite', 'homeOperations']);
+    expect(homePage.config.retiredWidgets).toEqual(['roadmapUpcoming', 'dragbarDemo', 'roadmapIntro', 'pageStats', 'contentSummary']);
     expect(homePage.config.widgetSlots).toMatchObject({
-      roadmapIntro: 'half',
-      pageStats: 'half',
-      contentSummary: 'full'
+      homeWebsite: 'twoThird',
+      homeOperations: 'third'
     });
     expect(homePage.config.layout.sidebar).toBe('empty-sidebar');
   });
@@ -155,21 +195,19 @@ describe('PlainSpace admin page seeding', () => {
 
     const updateCall = emitter.calls.find(call => call.eventName === 'updatePage');
     expect(updateCall.payload.meta.widgets).toEqual([
-      'roadmapIntro',
       'customWidget',
-      'pageStats',
-      'contentSummary'
+      'homeWebsite',
+      'homeOperations'
     ]);
 
     const saveLayoutCall = emitter.calls.find(call => call.eventName === 'saveLayoutForViewport');
     expect(saveLayoutCall.payload.layout.map(entry => entry.widgetId)).toEqual([
-      'roadmapIntro',
       'customWidget',
-      'pageStats',
-      'contentSummary'
+      'homeWebsite',
+      'homeOperations'
     ]);
-    expect(saveLayoutCall.payload.layout.find(entry => entry.widgetId === 'pageStats').slot).toBe('half');
-    expect(saveLayoutCall.payload.layout.find(entry => entry.widgetId === 'contentSummary').slot).toBe('full');
+    expect(saveLayoutCall.payload.layout.find(entry => entry.widgetId === 'homeWebsite').slot).toBe('twoThird');
+    expect(saveLayoutCall.payload.layout.find(entry => entry.widgetId === 'homeOperations').slot).toBe('third');
   });
 
   it('uses page management as the Content workspace entry point', () => {

@@ -1,4 +1,7 @@
 @use '../../../../public/assets/scss/variables' as *;
+@use 'sass:meta';
+@use '../../../../public/assets/scss/components/button-tokens';
+@use '../../../../public/assets/scss/components/choice-controls';
 @use '../../../../public/assets/scss/fonts';
 @use '../../../../public/assets/scss/components/grid-mode';
 @use '../../../../public/assets/scss/components/sidebar-bubble';
@@ -21,6 +24,23 @@
 @use 'place-picker';
 @use 'layout-tree';
 @use 'scene-builder';
+
+// Shared UI components are scoped to chrome, never the authored canvas.
+.designer-ui-controls {
+  @include button-tokens.defaults;
+  @include meta.load-css('../../../../public/assets/scss/components/custom-select');
+  @include meta.load-css('../../../../public/assets/scss/components/buttons');
+  @include meta.load-css('../../../../public/assets/scss/components/data-display');
+
+  input[type='checkbox'] { @include choice-controls.checkbox; }
+  .custom-select { width: 100%; min-width: 0; --custom-select-control-h: 34px; }
+  .scene-field-grid .custom-select { min-width: 0; }
+  .bp-tabs { gap: 4px; overflow: visible; }
+  .bp-tabs .button { flex: 1; padding-inline: 6px; }
+  .scene-inspector-modebar { display: flex; height: auto; padding: 0; background: transparent; }
+  .bp-tab-panel { padding: 0; margin: 0; border: 0; }
+  [data-inspector-panel][hidden], .bp-tab-panel[hidden], label[hidden] { display: none; }
+}
 
 html, body {
   height: 100%;

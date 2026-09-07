@@ -5,6 +5,20 @@
 import { createActionBar } from '../ui/designer/app/renderer/actionBar';
 
 describe('designer widget action bar', () => {
+  it('duplicates the current selection through its existing menu command', () => {
+    const widget = document.createElement('div');
+    widget.__optionsMenu = document.createElement('div');
+    widget.__optionsMenu.innerHTML = '<button class="menu-copy">Duplicate</button>';
+    const duplicate = jest.fn();
+    widget.__optionsMenu.firstElementChild.addEventListener('click', duplicate);
+    const state = { activeWidgetEl: widget };
+    const { actionBar } = createActionBar(null, {}, state, jest.fn());
+    actionBar.querySelector('.action-duplicate').click();
+    expect(duplicate).toHaveBeenCalledTimes(1);
+    state.activeWidgetEl = null;
+    actionBar.querySelector('.action-duplicate').click();
+    expect(duplicate).toHaveBeenCalledTimes(1);
+  });
   beforeEach(() => {
     document.body.innerHTML = '';
     Object.defineProperty(document.documentElement, 'clientWidth', {

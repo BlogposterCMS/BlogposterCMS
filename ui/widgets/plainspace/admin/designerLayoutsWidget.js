@@ -1,5 +1,5 @@
 import { registerWorkspaceAgent } from '../../../shared/agent/workspaceAgent.js';
-import { designUpdatedAt, designUrl, fetchDesignerLayouts, sortDesignsByRecent } from './designerLayoutsData.js';
+import { designUpdatedAt, designThumbnailUrl, designUrl, fetchDesignerLayouts, sortDesignsByRecent } from './designerLayoutsData.js';
 import { createHtmlImportControl } from './htmlImportControl.js';
 export async function render(el) {
     const meltdownEmit = window.meltdownEmit;
@@ -73,13 +73,23 @@ export async function render(el) {
             const img = document.createElement('img');
             img.className = 'layout-gallery-preview';
             img.alt = `${design.title || 'Untitled'} preview`;
-            img.src = design.thumbnail || '/assets/icons/file.svg';
+            img.src = designThumbnailUrl(design.thumbnail) || '/assets/icons/file.svg';
+            const showPlaceholder = () => {
+                img.classList.add('layout-gallery-preview--placeholder');
+                img.alt = 'No preview available';
+                img.src = '/assets/icons/file.svg';
+            };
+            // Missing/stale preview URLs must not leave a broken image in the card.
+            img.addEventListener('error', showPlaceholder, { once: true });
+            if (!design.thumbnail)
+                showPlaceholder();
             item.appendChild(img);
             const textWrap = document.createElement('div');
             textWrap.className = 'layout-gallery-details';
             const name = document.createElement('span');
             name.className = 'layout-gallery-name';
             name.textContent = design.title || 'Untitled layout';
+            name.title = name.textContent;
             textWrap.appendChild(name);
             const meta = document.createElement('span');
             meta.className = 'layout-gallery-meta';
@@ -94,7 +104,7 @@ export async function render(el) {
             // A real destination works with keyboard navigation and popup-restricted hosts.
             const openBtn = document.createElement('a');
             openBtn.href = designUrl(design);
-            openBtn.className = 'button small';
+            openBtn.className = 'button secondary sm';
             openBtn.textContent = 'Open';
             openBtn.addEventListener('click', ev => {
                 ev.stopPropagation();

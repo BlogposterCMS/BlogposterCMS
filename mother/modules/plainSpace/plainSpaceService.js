@@ -272,6 +272,33 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
     const pageObj = Array.isArray(existingPage) ? existingPage[0] : existingPage;
     const exists = !!pageObj;
 
+    if (exists && page.config?.seedOnce === true) {
+      // User-owned dashboards are initialized once, including intentional empty
+      // layouts and deleted pages. Never resurrect their default widgets.
+      if (pageObj.status !== 'deleted' && page.config.migrateFixedDashboard === true && pageObj.meta?.dashboardLayout === 'fixed') {
+        const meta = { ...pageObj.meta, layout: pageLayout };
+        delete meta.dashboardLayout;
+        if (meta.widgetSlots?.analyticsDashboard === 'page') {
+          meta.widgetSlots = { ...meta.widgetSlots, analyticsDashboard: 'full' };
+        }
+        const saved = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_LAYOUT_FOR_VIEWPORT, {
+          jwt, moduleName: MODULE, moduleType: MODULE_TYPE, pageId: pageObj.id, lane: page.lane, viewport: 'desktop'
+        });
+        const current = Array.isArray(saved?.layout) ? saved.layout : [];
+        const layout = current.map(entry => entry?.widgetId === 'analyticsDashboard' && entry.slot === 'page'
+          ? { ...entry, slot: 'full' } : entry);
+        if (!sameMetadataValue(current, layout)) {
+          await meltdownEmit(motherEmitter, BACKEND_EVENTS.SAVE_LAYOUT_FOR_VIEWPORT, {
+            jwt, moduleName: MODULE, moduleType: MODULE_TYPE, pageId: pageObj.id, lane: page.lane, viewport: 'desktop', layout
+          });
+        }
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.UPDATE_PAGE, {
+          jwt, moduleName: 'pagesManager', moduleType: 'core', pageId: pageObj.id, meta
+        });
+      }
+      continue;
+    }
+
     if (exists) {
       traceRuntimeEvent(`[plainSpace] Admin page "${finalSlugForCheck}" already exists.`);
 

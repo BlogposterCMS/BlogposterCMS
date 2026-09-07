@@ -1,0 +1,44 @@
+// Analytics composes the existing Studio surfaces, typography and controls.
+.analytics-workspace {
+  box-sizing: border-box;
+  width: 100%; min-width: 0; padding: 24px;
+  color: var(--studio-text); font-family: var(--font-body);
+  h2 { margin: 0; font-size: 24px; }
+  > p { margin: 8px 0 20px; color: var(--studio-text-muted); }
+  .analytics-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+  // Navigation anchors use button chrome, including in the widget shadow root.
+  .analytics-toolbar a.button,
+  .analytics-toolbar a.button:hover,
+  .analytics-toolbar a.button:focus-visible { text-decoration: none; }
+  .analytics-toolbar label { display: flex; align-items: center; gap: 12px; min-width: 240px; }
+  .analytics-toolbar .custom-select { width: 160px; min-width: 160px; flex-shrink: 0; }
+  .analytics-content { display: grid; gap: 24px; min-width: 0; }
+  .analytics-content > p { margin: 0; color: var(--studio-text-muted); font-size: 13px; }
+  .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; min-width: 0; }
+  .analytics-panel {
+    min-width: 0; padding: 20px; border: 1px solid var(--studio-border);
+    border-radius: 8px; background: var(--studio-surface-solid);
+    h3 { margin: 0 0 16px; font-size: 16px; }
+    > p { color: var(--studio-text-muted); font-size: 14px; }
+  }
+  .analytics-table-scroll { max-height: 320px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--studio-border); text-align: left; overflow-wrap: anywhere; vertical-align: top; }
+  th { position: sticky; top: 0; background: var(--studio-surface-solid); color: var(--studio-text-muted); font-weight: 500; }
+  td:last-child { font-variant-numeric: tabular-nums; }
+}
+.analytics-summary {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px;
+  .analytics-metric { display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid var(--studio-border); border-radius: 8px; background: var(--studio-surface-solid); }
+  span, small { color: var(--studio-text-muted); font-size: 13px; }
+  strong { color: var(--studio-text); font-size: 32px; line-height: 1.1; font-weight: 600; font-variant-numeric: tabular-nums; }
+}
+@media (max-width: 600px) { .analytics-workspace { padding: 12px; } }
+// Named by the shared dashboard host, also available across widget shadow roots.
+@container dashboard-widget (max-width: 600px) {
+  .analytics-workspace {
+    padding: 12px;
+    .analytics-toolbar label { min-width: 0; flex-wrap: wrap; }
+    .analytics-panel { padding: 12px; }
+  }
+}

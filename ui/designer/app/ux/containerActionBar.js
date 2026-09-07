@@ -179,6 +179,9 @@ export function attachContainerBar(el, ctx) {
       actions.setContainerSettings?.(el, { background: bgInput.value });
     });
   });
+  const clearBgButton = makeBtn('bar-background-clear', 'eraser', 'Transparent background', () => {
+    actions.setContainerSettings?.(el, { background: 'transparent' });
+  });
   const isStyleFollower = Boolean(el.dataset.styleSourceId) && el.dataset.styleSourceEnabled !== 'false';
   const styleSourceBtn = isStyleFollower
     ? makeBtn('bar-style-source', 'unlink', 'Style linked · unlink', () => actions.unlinkContainerStyleSource?.(el))
@@ -211,6 +214,7 @@ export function attachContainerBar(el, ctx) {
     paddingInput,
     minHeightInput,
     bgInput,
+    clearBgButton,
     ...(styleSourceBtn ? [styleSourceBtn] : []),
     hostBtn,
     designBtn,

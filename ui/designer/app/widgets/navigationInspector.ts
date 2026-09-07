@@ -14,7 +14,7 @@ export function createNavigationInspector(inspector: HTMLElement, options: Optio
   group.className = 'scene-inspector-group scene-navigation-settings';
   group.dataset.inspectorPanel = 'content';
   group.hidden = true;
-  inspector.appendChild(group);
+  (inspector.querySelector('[data-inspector-tab-panel="content"]') || inspector).appendChild(group);
   let selectedId = '';
 
   function field(label: string, key: string, value: unknown, choices?: Array<[string, string]>, type = 'text') {

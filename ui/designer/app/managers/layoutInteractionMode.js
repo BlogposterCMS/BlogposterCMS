@@ -20,7 +20,7 @@ export function syncLayoutSurfaceInteractions(records = [], activeLayer = 0) {
 
       if (inactive) {
         el.classList.add('inactive-layer');
-        el.title = 'Change layer to edit this widget';
+        el.title = 'Double-click to switch to this layer and edit';
       } else {
         el.classList.remove('inactive-layer');
         el.removeAttribute('title');
@@ -71,16 +71,51 @@ export function bindLayoutWidgetSelection({
   layoutRoot,
   getActiveLayer = () => 0,
   isDisabled = () => false,
-  onSelect
+  onSelect,
+  onActivateLayer
 } = {}) {
   if (!layoutRoot?.addEventListener || typeof onSelect !== 'function') {
     console.warn('[Designer] DESIGNER_LAYOUT_WIDGET_SELECTION_BIND_INVALID');
     return () => {};
   }
   const handlePointerDown = event => {
+    if (event.target?.closest?.('[data-designer-edit-overlay]')) return;
     if (isDisabled()) return;
-    const widget = layoutWidgetSelectionTarget(event, getActiveLayer());
-    if (widget) onSelect(widget, event);
+    const widget = layoutWidgetSelectionTarget(event, getActiveLayer()) || (
+      !event.target?.closest?.('.canvas-item') ? event.target?.closest?.('.layout-container') : null
+    );
+    if (widget && widget !== layoutRoot) onSelect(widget, event);
+  };
+  const handleDoubleClick = async event => {
+    if (isDisabled() || event.target?.closest?.('[data-designer-edit-overlay]')) return;
+    const widget = event.target?.closest?.('.canvas-item.inactive-layer');
+    if (!widget?.closest('.layout-grid-surface') || typeof onActivateLayer !== 'function') return;
+    const layer = Number(widget.dataset.layer);
+    if (!Number.isInteger(layer) || layer < 0) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    try {
+      // Layer switching can rebuild the DOM; the caller reselects by stable id.
+      await onActivateLayer(layer, widget);
+    } catch (error) {
+      console.warn('[Designer] DESIGNER_LAYER_ACTIVATION_FAILED', { layer }, error);
+    }
+  };
+  let hoveredContainer = null;
+  const clearHover = () => {
+    hoveredContainer?.classList.remove('layout-container--hovered');
+    hoveredContainer = null;
+  };
+  const handlePointerMove = event => {
+    // Mark only the nearest structural box, including when its menu/widget
+    // fills the hit area. Never light up every ancestor via CSS :hover.
+    const target = !isDisabled() && !event.target?.closest?.('[data-designer-edit-overlay], .container-actionbar')
+      ? event.target?.closest?.('.layout-container') : null;
+    const next = target !== layoutRoot ? target : null;
+    if (next === hoveredContainer) return;
+    clearHover();
+    hoveredContainer = next;
+    hoveredContainer?.classList.add('layout-container--hovered');
   };
   const handleLinkClick = event => {
     if (isDisabled() || !layoutWidgetSelectionTarget(event, getActiveLayer())) return;
@@ -91,9 +126,16 @@ export function bindLayoutWidgetSelection({
     }
   };
   layoutRoot.addEventListener('pointerdown', handlePointerDown, true);
+  layoutRoot.addEventListener('dblclick', handleDoubleClick, true);
+  layoutRoot.addEventListener('pointermove', handlePointerMove, true);
+  layoutRoot.addEventListener('pointerleave', clearHover);
   layoutRoot.addEventListener('click', handleLinkClick, true);
   return () => {
     layoutRoot.removeEventListener('pointerdown', handlePointerDown, true);
+    layoutRoot.removeEventListener('dblclick', handleDoubleClick, true);
+    layoutRoot.removeEventListener('pointermove', handlePointerMove, true);
+    layoutRoot.removeEventListener('pointerleave', clearHover);
+    clearHover();
     layoutRoot.removeEventListener('click', handleLinkClick, true);
   };
 }

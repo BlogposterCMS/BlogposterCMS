@@ -7,6 +7,7 @@ import {
   registerElement,
   resolveEditableTarget
 } from '../ui/designer/app/editor/core/editor';
+import { syncLayoutSurfaceInteractions } from '../ui/designer/app/managers/layoutInteractionMode';
 
 describe('Design Studio Rich Text edit target', () => {
   beforeEach(() => {
@@ -21,6 +22,10 @@ describe('Design Studio Rich Text edit target', () => {
     editElement(heading, jest.fn());
     expect(heading.contentEditable || heading.getAttribute('contenteditable')).toBe('true');
     expect(widget.style.zIndex).toBe('9999');
+    expect(widget.dataset.layer).toBe('1');
+    // Reproduce the synchronization that used to cover an edited header/footer.
+    syncLayoutSurfaceInteractions([{ surface: document.body }], 1);
+    expect(widget.classList.contains('inactive-layer')).toBe(false);
     heading.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(widget.style.zIndex).toBe('37');
     expect(widget.dataset.layer).toBe('1');

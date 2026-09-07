@@ -1,6 +1,6 @@
 {
   "name": "blogposter_cms",
-  "version": "0.10.0-rc.2",
+  "version": "0.10.0-rc.3",
   "main": "app.js",
   "engines": {
     "node": ">=24.0.0"
@@ -21,7 +21,8 @@
     "migrate:backend-events": "node tools/migrate-backend-event-contracts.js --write",
     "package:wordpress-exporter": "node tools/wordpress-visual-exporter/package-plugin.js",
     "placeholder-parity": "node tests/placeholderParityCheck.js",
-    "build": "npm run build:styles && npm run build:browser && webpack --mode production",
+    "check:vendors": "node tools/check-vendor-integrity.js",
+    "build": "npm run check:vendors && npm run build:styles && npm run build:browser && webpack --mode production",
     "build:styles": "sass --style=expanded --source-map public/assets/scss/site.scss:public/assets/css/site.css apps/designer/assets/scss/designer.scss:apps/designer/assets/css/designer.css",
     "build:browser": "tsc --project tsconfig.browser.json"
   },
@@ -30,6 +31,7 @@
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
     "cookie": "^1.0.2",
     "cookie-parser": "^1.4.7",
     "crypto": "^1.0.1",
@@ -51,8 +53,12 @@
     "xml2js": "^0.6.2"
   },
   "overrides": {
-    "express": { "qs": "6.16.0" },
-    "body-parser": { "qs": "6.16.0" }
+    "express": {
+      "qs": "6.16.0"
+    },
+    "body-parser": {
+      "qs": "6.16.0"
+    }
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

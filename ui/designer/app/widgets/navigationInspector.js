@@ -6,7 +6,7 @@ export function createNavigationInspector(inspector, options) {
     group.className = 'scene-inspector-group scene-navigation-settings';
     group.dataset.inspectorPanel = 'content';
     group.hidden = true;
-    inspector.appendChild(group);
+    (inspector.querySelector('[data-inspector-tab-panel="content"]') || inspector).appendChild(group);
     let selectedId = '';
     function field(label, key, value, choices, type = 'text') {
         const wrapper = document.createElement('label');

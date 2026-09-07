@@ -220,6 +220,41 @@
   white-space: nowrap;
 }
 
+// The design library includes metadata/actions, unlike compact gallery tiles.
+.designer-layouts-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+.page-manager__design-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 14px 0;
+  color: inherit;
+  text-decoration: none;
+  img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; background: var(--studio-surface-muted); }
+  img.is-placeholder { object-fit: contain; padding: 48px; box-sizing: border-box; }
+  strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  small { color: var(--studio-text-muted); }
+  span { text-decoration: underline; font-size: 0.85rem; }
+}
+.designer-layout-item {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  .layout-gallery-preview { height: 180px; }
+  .layout-gallery-preview--placeholder { object-fit: contain; padding: 40px; box-sizing: border-box; }
+  .layout-gallery-details { min-width: 0; }
+  .layout-gallery-name, .layout-gallery-meta { display: block; }
+  .layout-gallery-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .layout-gallery-meta { color: var(--studio-text-muted); font-size: 0.8rem; margin-top: 4px; }
+  .layout-gallery-actions { margin-top: auto; }
+}
+
 .uploaded-gallery {
   @extend .layout-gallery;
 }

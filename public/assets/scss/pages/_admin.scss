@@ -23,6 +23,12 @@ body:has(> .admin-panel) {
   overflow: visible;
 }
 
+// Editable dashboards expose the same subtle canvas as the surrounding shell.
+#content[data-dashboard-layout='custom'],
+#content[data-dashboard-layout='custom'] #adminGrid {
+  background: transparent;
+}
+
 #adminGrid {
   --dashboard-columns: 12;
   --dashboard-grid-gap: clamp(14px, 2vw, 24px);
@@ -34,6 +40,7 @@ body:has(> .admin-panel) {
   grid-auto-flow: row dense;
   gap: var(--dashboard-grid-gap);
   align-items: start;
+  align-content: start;
   padding: 0 0 clamp(56px, 6vw, 96px);
   scroll-margin-top: clamp(72px, 12vh, 128px);
   position: relative;
@@ -211,7 +218,8 @@ body.has-content-footer .admin-panel #content[data-dashboard-layout='fixed'] {
 }
 
 #adminGrid .dashboard-widget.is-dragging {
-  opacity: 0.52;
+  // The placeholder alone owns the destination space while the preview moves.
+  display: none;
 }
 
 @keyframes dashboard-snap-pulse {
@@ -304,6 +312,24 @@ body.has-content-footer .admin-panel #content[data-dashboard-layout='fixed'] {
 
   #adminGrid .dashboard-widget,
   #adminGrid .dashboard-drop-placeholder {
+    grid-column: 1 / -1;
+  }
+}
+
+// Every editable workspace adapts to usable width, including a visible sidebar.
+// Keep saved desktop slots/columns intact; this is only the current presentation.
+#content:has(#adminGrid[data-dashboard-layout='custom']) {
+  container: dashboard-workspace / inline-size;
+}
+
+#adminGrid[data-dashboard-layout='custom'] > .dashboard-widget {
+  container: dashboard-widget / inline-size;
+  min-width: 0;
+}
+
+@container dashboard-workspace (max-width: 1080px) {
+  #adminGrid[data-dashboard-layout='custom'] > .dashboard-widget,
+  #adminGrid[data-dashboard-layout='custom'] > .dashboard-drop-placeholder {
     grid-column: 1 / -1;
   }
 }

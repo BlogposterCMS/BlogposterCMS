@@ -96,8 +96,19 @@ function readContainerSettings(el: HTMLElement | null | undefined): LayoutContai
     columns: el.dataset.layoutColumns,
     align: el.dataset.layoutAlign,
     background: el.dataset.layoutBackground,
+    borderWidth: el.dataset.layoutBorderWidth,
+    borderTopWidth: el.dataset.layoutBorderTopWidth,
+    borderRightWidth: el.dataset.layoutBorderRightWidth,
+    borderBottomWidth: el.dataset.layoutBorderBottomWidth,
+    borderLeftWidth: el.dataset.layoutBorderLeftWidth,
+
+    borderStyle: el.dataset.layoutBorderStyle,
+    borderColor: el.dataset.layoutBorderColor,
+    borderRadius: el.dataset.layoutBorderRadius,
     maxWidth: el.dataset.layoutMaxWidth,
     minHeight: el.dataset.layoutMinHeight,
+    height: el.dataset.layoutHeight,
+    position: el.dataset.layoutPosition,
     overflow: el.dataset.layoutOverflow
   });
 }
@@ -119,10 +130,19 @@ function writeContainerSettings(el: HTMLElement, settings: LayoutContainerSettin
   else delete el.dataset.layoutAlign;
   if (normalized.background) el.dataset.layoutBackground = normalized.background;
   else delete el.dataset.layoutBackground;
+  for (const key of ['borderWidth', 'borderStyle', 'borderColor', 'borderRadius', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'] as const) {
+    const dataKey = `layout${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+    if (normalized[key] !== undefined) el.dataset[dataKey] = normalized[key];
+    else delete el.dataset[dataKey];
+  }
   if (normalized.maxWidth) el.dataset.layoutMaxWidth = normalized.maxWidth;
   else delete el.dataset.layoutMaxWidth;
   if (normalized.minHeight) el.dataset.layoutMinHeight = normalized.minHeight;
   else delete el.dataset.layoutMinHeight;
+  if (normalized.height) el.dataset.layoutHeight = normalized.height;
+  else delete el.dataset.layoutHeight;
+  if (normalized.position) el.dataset.layoutPosition = normalized.position;
+  else delete el.dataset.layoutPosition;
   if (normalized.overflow) el.dataset.layoutOverflow = normalized.overflow;
   else delete el.dataset.layoutOverflow;
 
@@ -187,10 +207,19 @@ function applyContainerSettingsToElement(el: HTMLElement): void {
   else el.style.removeProperty('--layout-align');
   if (settings.background) el.style.background = settings.background;
   else el.style.removeProperty('background');
+  // Apply on the actual Container, not its widget content or editor outline.
+  // Explicit values override editor decoration and round-trip via settings.
+  for (const key of ['borderWidth', 'borderStyle', 'borderColor', 'borderRadius', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'] as const) {
+    el.style[key] = settings[key] || (key.endsWith('Width') ? settings.borderWidth || '' : '');
+  }
   if (settings.maxWidth) el.style.maxWidth = settings.maxWidth;
   else el.style.removeProperty('max-width');
   if (settings.minHeight) el.style.minHeight = settings.minHeight;
   else el.style.removeProperty('min-height');
+  // CanvasGrid can write inline dimensions later; presentation rules consume
+  // this property to retain the document's explicit height across rebuilds.
+  if (settings.height) el.style.setProperty('--layout-height', settings.height);
+  else el.style.removeProperty('--layout-height');
   if (settings.overflow) el.style.overflow = settings.overflow;
   else el.style.removeProperty('overflow');
 }

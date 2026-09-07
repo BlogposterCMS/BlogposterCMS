@@ -15,6 +15,26 @@ function createEmitter() {
   return new Cls();
 }
 
+test('analytics observes verified actors once and omits payloads and storage recursion', () => {
+  const collector = require('../mother/modules/analyticsManager/collector');
+  collector.take(); collector.setEnabled(true);
+  const em = createEmitter();
+  const secret = em.combineSecretWithSalt(process.env.JWT_SECRET, 'low');
+  const token = jwt.sign({ trustLevel: 'low', userId: 42 }, secret, { expiresIn: 60 });
+  em.on('analyticsTestAction', (_payload, callback) => { callback(null, true); callback(null, true); });
+  const callback = jest.fn();
+  em.emit('analyticsTestAction', { moduleName: 'pagesManager', jwt: token, decodedJWT: { userId: 999 }, password: 'secret' }, callback);
+  const rows = collector.take();
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ actor: 'user:42', outcome: 'success' });
+  expect(JSON.stringify(rows)).not.toMatch(/secret|999/);
+  expect(callback).toHaveBeenCalledTimes(2); // Observation preserves existing callback semantics.
+  em.on('analyticsStorageTest', (_payload, cb) => cb(null, true));
+  em.emit('analyticsStorageTest', { moduleName: 'databaseManager', jwt: token }, () => {});
+  expect(collector.take()).toHaveLength(0);
+  collector.setEnabled(false);
+});
+
 test('expired JWT rejects once without locking Auth or dispatching the protected event', () => {
   const em = createEmitter();
   const secret = em.combineSecretWithSalt(process.env.JWT_SECRET, 'low');

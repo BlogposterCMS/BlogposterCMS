@@ -20,10 +20,15 @@
 
 .canvas-item .widget-edit { display: none; }
 
-body.builder-mode .canvas-item .widget-remove,
+body.builder-mode .canvas-item .widget-remove {
+  display: block;
+}
+
+// The selection action bar owns the menu; sizing belongs in the inspector.
+// Keep legacy triggers available to existing commands without duplicate chrome.
 body.builder-mode .canvas-item .widget-resize,
 body.builder-mode .canvas-item .widget-menu {
-  display: block;
+  display: none !important;
 }
 
 body.builder-mode .canvas-item.dragging .widget-remove,

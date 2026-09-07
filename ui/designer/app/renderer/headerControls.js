@@ -11,7 +11,7 @@ import {
   normalizeResponsiveWidthRange
 } from '/ui/shared/layout/responsivePlacement.js';
 
-export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo, redo }) {
+export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo, redo, getGrid = () => grid, setViewport }) {
   const viewportBtn = topBar.querySelector('#viewportControlBtn');
   const viewportPanel = topBar.querySelector('.viewport-slider');
   const viewportRange = viewportPanel?.querySelector('.viewport-range');
@@ -27,7 +27,7 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
   }
 
   function selectedWidget() {
-    return grid?.activeEl || gridEl?.querySelector?.('.canvas-item.selected') || null;
+    return getGrid()?.activeEl || gridEl?.querySelector?.('.canvas-item.selected') || null;
   }
 
   function rangePercent(value) {
@@ -36,12 +36,12 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
 
   function syncResponsiveRangeUi(rangeValue = null) {
     const selected = selectedWidget();
-    const placementState = grid?.getResponsivePlacementState?.(selected);
+    const placementState = getGrid()?.getResponsivePlacementState?.(selected);
     const nextRange = normalizeResponsiveWidthRange(
       rangeValue || placementState?.activeRule || defaultResponsiveWidthRange(getBuilderViewportState().width),
       getBuilderViewportState().width
     );
-    grid?.setResponsiveRange?.(nextRange, { element: selected, rewriteActive: false });
+    getGrid()?.setResponsiveRange?.(nextRange, { element: selected, rewriteActive: false });
     if (responsiveSection) {
       responsiveSection.classList.toggle('is-disabled', !selected);
       responsiveSection.dataset.hasSelection = selected ? 'true' : 'false';
@@ -80,13 +80,19 @@ export function initHeaderControls(topBar, gridEl, viewportSizeEl, grid, { undo,
     const selected = selectedWidget();
     if (!selected) return;
     const normalized = normalizeResponsiveWidthRange(range, getBuilderViewportState().width);
-    grid?.setResponsiveRange?.(normalized, { element: selected, rewriteActive: true });
+    getGrid()?.setResponsiveRange?.(normalized, { element: selected, rewriteActive: true });
     syncResponsiveRangeUi(normalized);
   }
 
+  let appliedWidth = null;
   function applyViewportState(next) {
     const val = next.width;
-    if (grid?.setResponsiveViewport) {
+    // Zoom updates share this subscription but must not reflow placements.
+    if (val === appliedWidth) return;
+    appliedWidth = val;
+    if (setViewport) {
+      setViewport(val);
+    } else if (grid?.setResponsiveViewport) {
       grid.setResponsiveViewport(val);
     } else {
       const viewportEl = grid?.zoomTarget || gridEl.parentElement || gridEl;

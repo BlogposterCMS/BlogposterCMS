@@ -102,6 +102,38 @@ describe('Designer Live Preview origin token', () => {
     }
   });
 
+  it.each(['client', 'server'])('boots a signed draft preview without a published page in %s mode', async renderMode => {
+    const app = express();
+    const publicRead = jest.fn();
+    const motherEmitter = {
+      emit(eventName, payload, callback) {
+        if (eventName === 'ensurePublicToken') callback(null, 'public-token');
+        else {
+          publicRead(payload);
+          callback(null, { resource: payload.resource, action: payload.action, eventName: 'test', data: null });
+        }
+      }
+    };
+    app.use(createPublicPageRoutes({
+      motherEmitter, plainSpaceVersion: 'test', renderMode,
+      rootDir: require('path').join(__dirname, '..'),
+      sanitizeSlug: value => String(value || ''), securityConfig
+    }));
+    const server = app.listen(0);
+    try {
+      const token = createOriginToken(['http://localhost:3000'], securityConfig);
+      const response = await request(server, `/draft-only?designer-live-preview=1&originToken=${encodeURIComponent(token)}`);
+      expect(response.status).toBe(200);
+      expect(response.body).toContain('/build/publicEntry.js');
+      expect(response.body).toContain('__designer_live_preview__');
+      expect(publicRead).not.toHaveBeenCalled();
+      expect((await request(server, '/draft-only?designer-live-preview=1')).status).toBe(403);
+      expect((await request(server, '/draft-only')).status).toBe(404);
+    } finally {
+      await new Promise(resolve => server.close(resolve));
+    }
+  });
+
   it('lets a live preview reach token verification while maintenance mode is active', async () => {
     const app = express();
     app.use((req, res, next) => {

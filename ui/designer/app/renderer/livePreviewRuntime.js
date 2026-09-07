@@ -101,14 +101,17 @@ function previewDesignResponseFromPayload(payload) {
         metadata: payload.document.metadata
     };
 }
-function previewRuntimeDataEmit(payload) {
+export function previewRuntimeDataEmit(payload) {
     return async function emit(eventName, requestPayload = {}) {
         if (eventName !== 'cmsPublicRuntimeRequest') {
             return previewRuntimeEmit(eventName, requestPayload);
         }
         const resource = String(requestPayload.resource || '');
         const action = String(requestPayload.action || '');
-        if (resource === 'designer' && action === 'get') {
+        // Only the edited document is overridden. Nested design references must
+        // resolve their own public records instead of recursively rendering this draft.
+        if (resource === 'designer' && action === 'get'
+            && String(requestPayload.params?.id || '') === previewDesignId(payload)) {
             return previewDesignResponseFromPayload(payload);
         }
         if (resource === 'pages' && action === 'children') {

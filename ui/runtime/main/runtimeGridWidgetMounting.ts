@@ -12,6 +12,7 @@ import {
 } from './runtimeWidgetMounting.js';
 import { waitForRuntimeWidgetShellPaint } from './runtimeWidgetHydration.js';
 import type { RuntimeEmitter as RuntimeWidgetEmitter } from './runtimeWidgetInstances.js';
+import type { PublicWidgetJob } from './publicWidgetScheduling.js';
 
 export type RuntimeGridLayoutItem = RuntimeCanvasItemMeta;
 
@@ -29,6 +30,7 @@ export type RuntimeGridWidgetMountOptions = {
   deferHydration?: boolean;
   debug?: boolean;
   afterRender?: RuntimeWidgetMountHook;
+  publicHydrationJobs?: PublicWidgetJob[];
 };
 
 type RuntimeGridPendingItem = {
@@ -105,7 +107,8 @@ export async function mountRuntimeGridWidgets({
   includeLayoutMetadata = false,
   deferHydration = true,
   debug = false,
-  afterRender
+  afterRender,
+  publicHydrationJobs
 }: RuntimeGridWidgetMountOptions): Promise<void> {
   const pending: RuntimeGridPendingItem[] = [];
 
@@ -130,6 +133,18 @@ export async function mountRuntimeGridWidgets({
     gridEl.appendChild(wrapper);
     grid?.makeWidget?.(wrapper);
     pending.push({ wrapper, item, def, placeholder });
+  }
+
+  if (lane === 'public' && publicHydrationJobs) {
+    // The outer public document collects all shells before choosing viewport work.
+    for (const entry of pending) {
+      publicHydrationJobs.push({
+        element: entry.wrapper,
+        eager: Boolean(entry.item.code?.js),
+        render: () => renderRuntimeCanvasWidget({ ...entry, grid, lane, emit: widgetEmit, afterRender })
+      });
+    }
+    return;
   }
 
   if (pending.length && deferHydration) {

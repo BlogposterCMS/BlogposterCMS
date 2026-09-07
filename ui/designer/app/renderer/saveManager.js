@@ -89,9 +89,8 @@ export function createSaveManager(state, ctx) {
     const layoutPayload = layoutTree || (sceneSections.length ? { type: 'leaf', workarea: true } : null);
     // Canonical Section metadata is serialized on the LayoutTree nodes. Do not
     // write a second mutable scene list that could drift from the page order.
-    // Page cards need an at-a-glance thumbnail, so save the visible viewport
-    // instead of shrinking a full-height canvas into an unreadable image.
-    const thumbnailCaptureOptions = { viewport: true };
+    // Home cards capture the first Section, independent of editor pan/zoom.
+    const thumbnailCaptureOptions = { firstSection: true };
     const previewDataUrl = typeof capturePreview === 'function'
       ? await capturePreview(thumbnailCaptureOptions)
       : gridEl ? await defaultCapturePreview(gridEl, thumbnailCaptureOptions) : '';
@@ -110,7 +109,9 @@ export function createSaveManager(state, ctx) {
           filePath: `${subPath}/${thumbFile}`,
           userId: ownerId
         });
-        thumbnailUrl = typeof pubRes?.shareLink === 'string' ? pubRes.shareLink : '';
+        // The file has been moved into library/public, served by /media. The
+        // historical /s share URL has no image-serving route in this runtime.
+        thumbnailUrl = pubRes?.success ? `/media/${subPath}/${thumbFile}` : '';
       } catch (err) {
         console.warn('[Designer] DESIGNER_THUMBNAIL_UPLOAD_FAILED', err);
       }

@@ -11,6 +11,12 @@ export interface DesignRecord {
 
 type DesignerLayoutsEmitter = Window['meltdownEmit'];
 
+/** Resolve only the legacy generated-thumbnail format, never arbitrary shares. */
+export function designThumbnailUrl(value = ''): string {
+  const match = value.match(/^(?:https?:\/\/[^/]+)?\/s\/[A-Za-z0-9_-]+\/(thumb-\d+\.png)$/);
+  return match ? `/media/builder/designer-thumbnails/${match[1]}` : value;
+}
+
 function requireEmitter(emit: DesignerLayoutsEmitter): NonNullable<DesignerLayoutsEmitter> {
   if (typeof emit !== 'function') {
     throw new Error('PLAINSPACE_DESIGNER_LAYOUTS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');

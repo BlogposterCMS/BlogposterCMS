@@ -42,29 +42,34 @@
 .widgets-panel {
   position: fixed;
   top: 0;
-  right: -320px;
-  width: 320px;
-  height: 100%;
+  right: 0;
+  width: min(320px, 100vw);
+  height: 100dvh;
+  box-sizing: border-box;
+  transform: translateX(100%);
   background: var(--studio-surface);
   border-left: 1px solid var(--studio-border);
   box-shadow: var(--studio-shadow-lift);
   backdrop-filter: blur(18px);
-  transition: right var(--motion-duration-slow) var(--motion-ease-standard);
+  transition: transform var(--motion-duration-slow) var(--motion-ease-standard);
   z-index: 1000;
   flex-direction: column;
 }
 
 .widgets-panel.open {
-  right: 0;
+  transform: translateX(0);
 }
 
 .widgets-panel-inner {
+  min-height: 0;
+  min-width: 0;
   padding: 16px;
   overflow-y: auto;
   flex: 1;
 }
 
 .widgets-search {
+  box-sizing: border-box;
   width: 100%;
   margin-bottom: 12px;
   padding: 6px 8px;
@@ -89,6 +94,8 @@
 }
 
 .widget-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   align-items: center;
   gap: 8px;

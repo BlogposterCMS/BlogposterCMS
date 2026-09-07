@@ -15,6 +15,16 @@ function click(element: Element): void {
 describe('global custom select control', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    delete document.body.dataset.customSelectScope;
+  });
+
+  it('enhances only explicit editor chrome roots during automatic startup', async () => {
+    document.body.dataset.customSelectScope = 'explicit';
+    document.body.innerHTML = '<aside data-ui-controls><select><option>UI</option></select></aside><main><select><option>Authored</option></select></main>';
+    await loadEnhancer();
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    expect(document.querySelector('aside .custom-select')).not.toBeNull();
+    expect(document.querySelector('main .custom-select')).toBeNull();
   });
 
   it('enhances regular single selects without data attributes', async () => {

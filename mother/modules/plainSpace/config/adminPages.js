@@ -14,16 +14,44 @@ module.exports.ADMIN_PAGES = [
         inheritsLayout: true
       },
       icon: '/assets/icons/house.svg',
-      widgets: ['roadmapIntro', 'pageStats', 'contentSummary'],
-      retiredWidgets: ['roadmapUpcoming', 'dragbarDemo'],
+      widgets: ['homeWebsite', 'homeOperations'],
+      retiredWidgets: ['roadmapUpcoming', 'dragbarDemo', 'roadmapIntro', 'pageStats', 'contentSummary'],
       widgetSlots: {
-        roadmapIntro: 'half',
-        pageStats: 'half',
-        contentSummary: 'full'
+        homeWebsite: 'twoThird',
+        homeOperations: 'third'
       },
       workspace: 'home'
     }
   },
+  {
+    title: 'Analytics',
+    slug: 'analytics',
+    lane: 'admin',
+    weight: 15,
+    config: {
+      layout: { header: 'top-header', sidebar: 'default-sidebar', inheritsLayout: true },
+      icon: '/assets/icons/layout-dashboard.svg',
+      seedOnce: true,
+      migrateFixedDashboard: true,
+      widgets: ['analyticsDashboard'],
+      widgetSlots: { analyticsDashboard: 'full' },
+      workspace: 'analytics'
+    }
+  },
+  ...[
+    ['Website', 'website', 'analyticsWebsite'],
+    ['Devices & Software', 'devices', 'analyticsDevices'],
+    ['System Activity', 'system', 'analyticsSystem']
+  ].map(([title, slug, widget]) => ({
+    title, slug, parentSlug: 'analytics', lane: 'admin',
+    weight: { website: 10, devices: 20, system: 30 }[slug],
+    config: {
+      seedOnce: true,
+      layout: { header: 'top-header', sidebar: 'default-sidebar', inheritsLayout: true },
+      icon: '/assets/icons/layout-dashboard.svg',
+      widgets: [widget], widgetSlots: { [widget]: 'full' }
+    }
+  })),
   {
     title: 'Content',
     slug: 'content',

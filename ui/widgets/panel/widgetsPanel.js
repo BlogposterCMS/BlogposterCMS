@@ -48,6 +48,8 @@ function toggle(open) {
         createPanel();
     if (!panel)
         return;
+    // Navigation replaces the footer controls while the shared drawer survives.
+    toggleBtn = document.getElementById('widgets-toggle-inline') || toggleBtn;
     const isOpen = typeof open === 'boolean' ? open : !panel.classList.contains('open');
     panel.classList.toggle('open', isOpen);
     panel.inert = !isOpen;

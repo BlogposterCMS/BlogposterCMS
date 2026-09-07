@@ -121,13 +121,29 @@ async function loadPublicPresentation(requestPublic, slug, language) {
   } else if (hasLayout) {
     head += `<style id="${PUBLIC_CANVAS_STYLE_ID}">${PUBLIC_CANVAS_CSS}</style>`;
     const items = layout.items.map((item, index) =>
-      `<div class="canvas-item" data-bp-initial-item="${index}" style="${styleAttribute(publicItemStyle(item))}"></div>`
+      `<div class="canvas-item" data-bp-initial-item="${index}" aria-busy="true" style="${styleAttribute(publicItemStyle(item))}"><div class="widget-placeholder" role="status">Loading</div></div>`
     ).join('');
     body = `<div id="bp-grid" class="bp-public-canvas" data-bp-initial-layout="true" style="${styleAttribute(publicCanvasStyle(layout))}">${items}</div>`;
   }
+  // Version 2 references the sanitized DOM already present in this response.
+  // Canonical envelopes stay intact for CSR, previews and older clients.
+  const bootstrapEnvelope = renderHtml ? {
+    ...envelope,
+    attachments: envelope.attachments.map(attachment => {
+      if (attachment !== htmlAttachment) return attachment;
+      const { html: _html, ...remainingInline } = attachment.descriptor.inline;
+      return {
+        ...attachment,
+        descriptor: { ...attachment.descriptor, htmlFromInitialResponse: true, inline: remainingInline }
+      };
+    })
+  } : envelope;
   return {
     head, body,
-    bootstrap: { version: 1, slug, language, envelope, layout, layoutResolved: true, htmlRendered: renderHtml }
+    bootstrap: {
+      version: renderHtml ? 2 : 1, slug, language, envelope: bootstrapEnvelope,
+      layout, layoutResolved: true, htmlRendered: renderHtml
+    }
   };
 }
 

@@ -3,6 +3,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const compression = require('compression');
 const {
   VALID_RUNTIME_MODULE,
   makeFixedTsHandler,
@@ -163,6 +164,21 @@ function mountStaticAssetRoutes(app, {
   const guardAppStaticRoot = makeStaticRealpathGuard(appStaticPath, 'apps');
   const guardMediaStaticRoot = makeStaticRealpathGuard(mediaPublicPath, 'media');
   const guardWidgetStaticRoot = makeStaticRealpathGuard(widgetsPath, 'widgets');
+
+  // Compress only successful public text assets, never HTML carrying tokens,
+  // JSON APIs, errors or byte ranges. The established static guards still run.
+  // Standard middleware negotiates encodings/Vary and avoids double compression.
+  app.use(compression({
+    threshold: 1024,
+    filter(req, res) {
+      return (req.method === 'GET' || req.method === 'HEAD')
+        && res.statusCode === 200
+        && !req.headers.range
+        && /^(?:text\/css|(?:text|application)\/javascript|image\/svg\+xml)(?:;|$)/i.test(String(res.getHeader('Content-Type') || ''))
+        && /^\/(?:assets|build|ui|media|fonts|widgets|plainspace|apps|mother\/modules|modules)\//.test(req.originalUrl || '')
+        && compression.filter(req, res);
+    }
+  }));
 
   app.get('/apps/designer/main/:moduleName.js', makeParamTsHandler(designerMainTs, 'moduleName'));
   app.head('/apps/designer/main/:moduleName.js', makeParamTsHandler(designerMainTs, 'moduleName'));

@@ -116,6 +116,41 @@ const PAGE_CONTENT_ACTIONS = [
 
 module.exports.DEFAULT_WIDGETS = [
   {
+    widgetId: 'analyticsDashboard', widgetType: ADMIN_LANE, label: 'Analytics overview & trend',
+    content: '/ui/widgets/plainspace/admin/analyticsWidget.js', category: 'core',
+    metadata: { layout: dashboardLayout('full', ['half', 'full'], BREAKPOINTS.halfFull), apiActions: [apiAction('analytics', 'summary')] }
+  },
+  ...[
+    ['analyticsWebsite', 'Website analytics', 'analyticsWebsiteWidget'],
+    ['analyticsDevices', 'Devices & Software', 'analyticsDevicesWidget'],
+    ['analyticsSystem', 'System activity', 'analyticsSystemWidget']
+  ].map(([widgetId, label, file]) => ({
+    widgetId, label, widgetType: ADMIN_LANE,
+    content: `/ui/widgets/plainspace/admin/${file}.js`, category: 'core',
+    metadata: { layout: dashboardLayout('full', ['half', 'full'], BREAKPOINTS.halfFull), apiActions: [apiAction('analytics', 'summary')] }
+  })),
+  {
+    widgetId: 'analyticsOverview', widgetType: ADMIN_LANE, label: 'Analytics overview',
+    content: '/ui/widgets/plainspace/admin/analyticsOverviewWidget.js', category: 'core',
+    metadata: { layout: dashboardLayout('half', ['half', 'full'], BREAKPOINTS.halfFull), apiActions: [apiAction('analytics', 'summary')] }
+  },
+  {
+    widgetId: 'homeWebsite', widgetType: ADMIN_LANE, label: 'Your website',
+    content: '/ui/widgets/plainspace/admin/homeWebsiteWidget.js', category: 'core',
+    metadata: {
+      layout: dashboardLayout('twoThird', ['twoThird', 'full'], BREAKPOINTS.twoThirdFull),
+      apiActions: [apiAction('designer', 'list'), apiAction('pages', 'byLane')]
+    }
+  },
+  {
+    widgetId: 'homeOperations', widgetType: ADMIN_LANE, label: 'Your operations',
+    content: '/ui/widgets/plainspace/admin/homeOperationsWidget.js', category: 'core',
+    metadata: {
+      layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
+      apiActions: [apiAction('analytics', 'summary')]
+    }
+  },
+  {
     widgetId: 'contentSummary',
     widgetType: ADMIN_LANE,
     label: 'Content Summary',

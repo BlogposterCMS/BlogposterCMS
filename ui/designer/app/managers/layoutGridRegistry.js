@@ -190,6 +190,16 @@ export function createLayoutGridRegistry({
     return orderedRecords().filter(record => record.isSection);
   }
 
+  // Viewport changes reach parents before children; each child retains its
+  // container dimensions while selecting rules against the shared page width.
+  function setResponsiveViewport(width) {
+    sync().forEach(record => record.grid.setResponsiveViewport?.(width));
+  }
+
+  function zoomGrid() {
+    return orderedRecords().find(record => record.grid.enableZoom)?.grid || null;
+  }
+
   function activate(surfaceId) {
     sync();
     const requested = String(surfaceId || '').trim();
@@ -261,6 +271,8 @@ export function createLayoutGridRegistry({
     forSection,
     orderedRecords,
     sectionRecords,
+    setResponsiveViewport,
+    zoomGrid,
     partition,
     serializeLayer,
     clearAll: clearWidgets

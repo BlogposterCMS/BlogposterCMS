@@ -12,6 +12,7 @@ import {
   type RuntimeGridLayoutItem
 } from './runtimeGridWidgetMounting.js';
 import type { RuntimeEmitter as RuntimeWidgetEmitter } from './runtimeWidgetInstances.js';
+import type { PublicWidgetJob } from './publicWidgetScheduling.js';
 
 type LayoutItem = RuntimeGridLayoutItem;
 
@@ -100,6 +101,7 @@ export type RuntimeStaticGridOptions = {
     item: RuntimeGridLayoutItem;
   }>;
   widgetEmit?: RuntimeWidgetEmitter;
+  publicHydrationJobs?: PublicWidgetJob[];
 };
 
 export async function renderStaticRuntimeGrid(
@@ -164,7 +166,8 @@ export async function renderStaticRuntimeGrid(
     scaleX: metrics.scaleX,
     scaleY: metrics.scaleY,
     percentDivisor: 1,
-    includeLayoutMetadata: true
+    includeLayoutMetadata: true,
+    publicHydrationJobs: opts.publicHydrationJobs
   });
   installStaticGridResponsiveReflow(
     gridEl as ResponsiveRuntimeGridElement,

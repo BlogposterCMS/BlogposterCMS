@@ -11,6 +11,8 @@ const path = require('path');
 const { verifyOriginToken } = require('../security/originToken');
 const { loadPublicPresentation, escapeHtml, scriptJson } = require('../../modules/pagesManager/publicPresentation');
 const { renderPublicSeoHead } = require('../../modules/seoManager/publicHead');
+const analyticsCollector = require('../../modules/analyticsManager/collector');
+const { clientDimensions } = require('../../modules/analyticsManager/domain');
 
 function createPublicPageRoutes({
   injectDevReload = html => html,
@@ -112,7 +114,11 @@ function createPublicPageRoutes({
       };
       // Reuse the public facade's publication/lane filtering even for server HTML.
       // Never turn an admin session or a raw page record into public bootstrap data.
-      const page = await requestPublic('pages', slug ? 'getBySlug' : 'start', { slug, language: 'en' });
+      // A signed preview renders the parent-owned draft. Its shell must also
+      // boot on a fresh site without a published start page or matching slug.
+      const page = livePreviewRequested
+        ? { id: '__designer_live_preview__', slug, language: 'en' }
+        : await requestPublic('pages', slug ? 'getBySlug' : 'start', { slug, language: 'en' });
 
       if (!page?.id) return next();
 
@@ -162,6 +168,14 @@ function createPublicPageRoutes({
       res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
       // The HTML contains a short-lived public token and a fresh CSP nonce.
       res.setHeader('Cache-Control', 'no-store');
+      // Count completed public HTML deliveries, not internal renderer reads or
+      // signed previews. DNT/GPC opt-outs do not enter visitor analytics.
+      if (!livePreviewRequested && req.method === 'GET' && req.get('DNT') !== '1' && req.get('Sec-GPC') !== '1') {
+        res.once('finish', () => {
+          if (res.statusCode === 200) analyticsCollector.record({ kind: 'page', event: 'pageDelivered', page: String(pageId), outcome: 'success',
+            ...clientDimensions(req.get('user-agent'), req.get('referer')) });
+        });
+      }
       res.send(html);
     } catch (err) {
       console.error('[SERVER] /* render error ->', err);

@@ -7,6 +7,20 @@ import {
 } from '../ui/shared/layout/layoutDocument';
 
 describe('shared layout document contract', () => {
+  it('accepts bounded explicit height and supported container positioning only', () => {
+    expect(normalizeLayoutContainerSettings({ height: 240, position: 'sticky' })).toEqual({ height: '240px', position: 'sticky' });
+    expect(normalizeLayoutContainerSettings({ height: 'auto', position: 'normal' })).toEqual({ height: 'auto', position: 'normal' });
+    expect(normalizeLayoutContainerSettings({ height: '10001px', position: 'fixed' })).toEqual({});
+  });
+  it('validates each border edge independently', () => {
+    expect(normalizeLayoutContainerSettings({ borderRightWidth: 1, borderLeftWidth: '0px', borderTopWidth: '65px', borderBottomWidth: '1px; color:red' })).toEqual({ borderRightWidth: '1px', borderLeftWidth: '0px' });
+  });
+  it('normalizes bounded container borders and rejects injected CSS', () => {
+    expect(normalizeLayoutContainerSettings({ borderWidth: 2, borderStyle: 'dashed', borderColor: '#123456', borderRadius: '12px' })).toEqual({ borderWidth: '2px', borderStyle: 'dashed', borderColor: '#123456', borderRadius: '12px' });
+    expect(normalizeLayoutContainerSettings({ borderWidth: '65px', borderRadius: '-2px', borderStyle: 'solid;display:none', borderColor: 'url(https://example.com)' })).toEqual({});
+    expect(normalizeLayoutContainerSettings({ borderWidth: 0, borderRadius: 512, borderStyle: 'none' })).toEqual({ borderWidth: '0px', borderRadius: '512px', borderStyle: 'none' });
+  });
+
   it('normalizes imported layout trees into explicit nodes', () => {
     expect(normalizeLayoutTree({
       orientation: 'horizontal',

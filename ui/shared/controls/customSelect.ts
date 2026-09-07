@@ -391,7 +391,11 @@ export default function enhanceSelects(root: ParentNode = document): void {
 }
 
 function startCustomSelects(): void {
-  enhanceSelects(document);
+  // Embedded editors enhance their chrome only, leaving authored controls
+  // inside the canvas untouched. Ordinary Admin pages retain auto discovery.
+  if (document.body?.dataset.customSelectScope === 'explicit') {
+    document.querySelectorAll<HTMLElement>('[data-ui-controls]').forEach(root => enhanceSelects(root));
+  } else enhanceSelects(document);
 }
 
 if (document.readyState === 'loading') {

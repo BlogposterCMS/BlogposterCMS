@@ -18,6 +18,33 @@
   align-items: stretch;
   justify-content: flex-start;
   height: auto;
+  // The zoom sizer follows this page's height. A percentage minimum would
+  // feed its scaled height back into the page and grow forever above 100%.
+  min-height: 0;
+}
+
+// Removable editor chrome keeps authored opacity and serialized styles intact.
+.designer-edit-scope-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+  outline: 1px dashed rgba(100, 116, 139, 0.35);
+  outline-offset: -1px;
+
+  > span {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 7px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #64748b;
+    border-radius: 4px;
+    font: 11px/1.4 system-ui, sans-serif;
+  }
+
+  &:focus-visible { outline: 2px solid var(--user-color, #2563eb); }
 }
 
 .layout-page-root > .layout-section {
@@ -59,6 +86,25 @@
 .layout-page-root > .layout-section.layout-section--active::before {
   opacity: 1;
   transform: scale(1);
+}
+
+// A selected nested Container is the editing boundary. Do not simultaneously
+// advertise the whole parent Section, or all hovered ancestors, as selected.
+body.builder-mode #layoutRoot .layout-container--hovered:not(.layout-container--active) {
+  outline: 1px dashed var(--designer-accent, #22c7cc);
+  outline-offset: -1px;
+}
+#layoutRoot .layout-section:has(.layout-container--active)::before {
+  opacity: 0;
+}
+
+body.builder-mode #layoutRoot .layout-grid-container {
+  border: 0;
+}
+
+body.builder-mode #layoutRoot .layout-grid-container.layout-container--active {
+  outline: 2px solid var(--designer-accent, #22c7cc);
+  outline-offset: -2px;
 }
 
 .layout-page-root > .layout-section.layout-section--inserting {
@@ -257,10 +303,38 @@ body.builder-mode .layout-page-root > .layout-section {
   box-shadow: none;
 }
 
-body.builder-mode .layout-grid-surface {
+body.builder-mode .layout-container.layout-grid-surface {
   position: relative;
   min-width: 0;
   overflow: visible;
+  // Legacy centered workspaces must not center or shrink nested Containers.
+  // Auto/Grid flow follows the public renderer; only the page itself is centered.
+  margin: 0;
+  justify-content: flex-start;
+}
+
+body.builder-mode #layoutRoot.layout-page-root > .layout-section {
+  // Inline flex weights belong to sibling Containers, not page Sections.
+  flex: 0 0 auto !important;
+}
+
+// Explicit document height takes priority over canvas metrics and row stretch.
+body.builder-mode #layoutRoot .layout-container[data-layout-height] {
+  height: var(--layout-height) !important;
+}
+
+body.builder-mode #layoutRoot .layout-container[data-layout-position='sticky'] {
+  position: sticky !important;
+  top: 0 !important;
+  align-self: start;
+}
+
+body.builder-mode .layout-grid-surface:not([data-layout-mode='free']):has([data-dynamic-host='true']),
+body.builder-mode .layout-grid-surface[data-dynamic-host='true'] {
+  // Match the public page-content flow: a nested article outlet grows its
+  // Auto/Grid ancestors instead of overflowing CanvasGrid's default height.
+  height: auto !important;
+  flex: 1 0 auto !important;
 }
 
 body.builder-mode .layout-grid-surface[data-layout-mode='free'] {
@@ -287,6 +361,12 @@ body.builder-mode .layout-grid-surface[data-layout-mode='row'] {
   align-items: var(--layout-align, stretch);
 }
 
+// Auto rows own their cross-axis size. CanvasGrid's inline height must not
+// prevent an Aside from stretching to the neighboring content column.
+body.builder-mode .layout-grid-surface[data-layout-mode='row']:is([data-layout-align='stretch'], :not([data-layout-align])) > .layout-container {
+  height: auto !important;
+}
+
 body.builder-mode .layout-grid-surface[data-layout-mode='grid'] {
   display: grid;
   grid-template-columns: repeat(var(--layout-columns, 3), minmax(0, 1fr));
@@ -299,6 +379,16 @@ body.builder-mode .layout-grid-surface:not([data-layout-mode='free']) > .canvas-
   width: auto !important;
   max-width: 100%;
   transform: none !important;
+}
+
+body.builder-mode .layout-grid-surface:not([data-layout-mode='free']) > .canvas-item:is([data-widget-id='navigationMenu'], [data-widget-id='breadcrumb']) {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto;
+}
+
+body.builder-mode .layout-grid-surface:not([data-layout-mode='free']) > .canvas-item:is([data-widget-id='navigationMenu'], [data-widget-id='breadcrumb']) > .canvas-item-content {
+  height: auto !important;
 }
 
 body.builder-mode #builderViewport > .builder-grid {

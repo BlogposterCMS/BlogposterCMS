@@ -4,6 +4,7 @@
 
 import {
   designUpdatedAt,
+  designThumbnailUrl,
   designUrl,
   fetchDesignerLayouts,
   sortDesignsByRecent,
@@ -11,6 +12,11 @@ import {
 } from '../ui/widgets/plainspace/admin/designerLayoutsData';
 
 describe('designerLayoutsData', () => {
+  it('resolves generated thumbnail shares without rewriting ordinary images', () => {
+    expect(designThumbnailUrl('http://localhost:3000/s/AbCd/thumb-123.png')).toBe('/media/builder/designer-thumbnails/thumb-123.png');
+    expect(designThumbnailUrl('/s/AbCd/private.png')).toBe('/s/AbCd/private.png');
+    expect(designThumbnailUrl('/media/photo.png')).toBe('/media/photo.png');
+  });
   it('normalizes and sorts design records', () => {
     const older = { id: 'old', updated_at: '2024-01-01T00:00:00.000Z' };
     const newer = { id: 'new', created_at: '2025-01-01T00:00:00.000Z' };

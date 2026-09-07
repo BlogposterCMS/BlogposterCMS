@@ -18,4 +18,12 @@ it('focuses search on open and returns focus on Escape without keeping hidden co
   expect(panel.classList.contains('open')).toBe(false);
   expect(toggle.getAttribute('aria-expanded')).toBe('false');
   expect(document.activeElement).toBe(toggle);
+  const replacement = toggle.cloneNode() as HTMLButtonElement;
+  toggle.replaceWith(replacement);
+  replacement.onclick = () => openWidgetsPanel();
+  replacement.click();
+  expect(panel.inert).toBe(false);
+  expect(replacement.getAttribute('aria-expanded')).toBe('true');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  expect(document.activeElement).toBe(replacement);
 });

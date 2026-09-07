@@ -276,7 +276,7 @@ export class CanvasGrid {
         const heightPx = Math.max(1, (Number(el.getAttribute('gs-h')) || 1) * cellHeight);
         const xPx = (Number(el.dataset.x) || 0) * columnWidth;
         const yPx = (Number(el.dataset.y) || 0) * cellHeight;
-        const safeCanvasWidth = safePositiveMetric(canvasWidth);
+        const safeCanvasWidth = safePositiveMetric(this.el.classList.contains('layout-grid-container') ? this._getCanvasMetrics().width : canvasWidth);
         return {
             // Center anchoring keeps an object visually in place while both sides of
             // the authored viewport grow or shrink around it.
@@ -330,9 +330,9 @@ export class CanvasGrid {
         // bounds instead of stale values from the previous viewport.
         const metrics = this._getCanvasMetrics();
         const safeHeight = safePositiveMetric(metrics.height);
-        el.dataset.xPercent = String((xPx / safePositiveMetric(canvasWidth)) * 100);
+        el.dataset.xPercent = String((xPx / safePositiveMetric(placementWidth)) * 100);
         el.dataset.yPercent = String((yPx / safeHeight) * 100);
-        el.dataset.wPercent = String((widthPx / safePositiveMetric(canvasWidth)) * 100);
+        el.dataset.wPercent = String((widthPx / safePositiveMetric(placementWidth)) * 100);
         el.dataset.hPercent = String((heightPx / safeHeight) * 100);
         this._applyPosition(el, { x: false, y: false, w: false, h: false });
     }
@@ -372,7 +372,7 @@ export class CanvasGrid {
         if (!this.options.responsivePlacement)
             return;
         const nextWidth = safePositiveMetric(width);
-        this.responsiveRange = normalizeResponsiveWidthRange(options.range || this.responsiveRange || defaultResponsiveWidthRange(nextWidth), nextWidth);
+        this.responsiveRange = normalizeResponsiveWidthRange(options.range || defaultResponsiveWidthRange(nextWidth), nextWidth);
         if (this.zoomTarget && this.zoomTarget !== this.el) {
             this.zoomTarget.style.width = `${Math.round(nextWidth)}px`;
             this.zoomTarget.style.marginLeft = 'auto';
@@ -381,12 +381,16 @@ export class CanvasGrid {
         // Inline width changes participate in layout synchronously in browsers,
         // but the follow-up frame also covers nested layout containers.
         const sync = () => {
+            // A newer slider value supersedes this queued frame.
+            if (this.responsiveViewportWidth !== nextWidth)
+                return;
             this._refreshCanvasMetrics();
-            this._syncColumnWidthFromWidth(nextWidth);
+            this._syncColumnWidthFromWidth(this.el.classList.contains('layout-grid-container') ? this._getCanvasMetrics().width : nextWidth);
             this._reflowResponsiveWidgets(nextWidth);
             this._syncSizer();
             this._centerViewport();
         };
+        this.responsiveViewportWidth = nextWidth;
         sync();
         requestAnimationFrame(sync);
     }
@@ -999,7 +1003,8 @@ export class CanvasGrid {
             this._lastColumnWidth = 1;
             if (changed) {
                 if (this.options.responsivePlacement) {
-                    this._reflowResponsiveWidgets(nextColumns);
+                    // Container resize is geometry, not a page breakpoint change.
+                    this._reflowResponsiveWidgets(this.el.classList.contains('layout-grid-surface') ? this.responsiveViewportWidth : nextColumns);
                     return true;
                 }
                 this.widgets.forEach((wi) => this._applyPosition(wi, {

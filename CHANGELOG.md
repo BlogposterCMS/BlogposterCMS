@@ -1,5 +1,168 @@
 # Changelog
 
+## [Unreleased]
+
+## [0.10.0-rc.3] - 2026-09-07
+
+- Reduced public HTML attachment transfer by referencing already rendered HTML
+  in a versioned bootstrap instead of serializing it twice. Older clients retain
+  canonical CSR fallback. Public CSS, JavaScript and SVG now negotiate standard
+  response compression while dynamic HTML/API responses and byte ranges remain
+  outside the compression filter.
+
+- Public widget layouts now paint their loading placeholders before hydration,
+  prioritize widgets in the viewport, and hydrate lower content during idle
+  time. Structural designs collect shells across containers before scheduling;
+  existing public permissions and all-widgets-ready behavior are retained.
+
+- Promoted Edit design in page details, renamed the existing editor entry to
+  Site settings, and added an attachment menu for designs and HTML. Menu links
+  target the existing page draft workflow and retain its save/replace guards.
+
+- Added the resolved page design's preview and direct Design Studio link at the
+  top of page details, identifying page, inherited and website main designs.
+
+- Fixed overflowing design-library titles and metadata with responsive cards,
+  shared action buttons and a bounded fallback for missing preview images.
+  Larger previews use truncated titles with the full name available on hover.
+  Generated thumbnails now use the existing public media route; legacy generated
+  thumbnail share URLs are resolved to their public image files.
+
+- Moved container background editing out of the inspector into its existing
+  canvas toolbar, including a transparent reset. Selected container controls
+  remain accessible on the design layer.
+
+- Kept Designer available after optimistic save conflicts. Stale writes remain
+  rejected, but no longer deactivate the module and break all design reads.
+
+- Fixed the Designer Layers list omitting structural containers and their nested
+  objects. Empty containers are visible and selectable as well.
+
+- Fixed text editing changing a widget's logical layer to 9999, which incorrectly
+  dimmed and blocked headers/footers as inactive. Editing now elevates only z-index.
+
+- Connected inactive Designer widget overlays to the existing layer switch on
+  double-click and reselected the target by stable instance id afterwards.
+
+- Fixed the Designer selection toolbar's inactive Duplicate button by routing it
+  through the existing widget duplication command.
+
+- Fixed Studio header mounting inside inspector tabs after shared control styling
+  was enabled. The Designer document now owns the header explicitly.
+
+- Fixed missing shared button scope on Designer inspector tabs and removed
+  duplicate resize/menu icons from widget corners. Selection actions remain
+  available through the existing action bar and inspector.
+
+- Reused shared Blogposter dropdowns, checkboxes and accessible tabs in Designer
+  controls without applying admin styles to authored canvas content. Container
+  settings are grouped into Layout, Appearance and Behavior; section toolbars
+  identify their owning Section.
+
+- Added Container Auto/Fixed pixel height and capability-aware Sticky controls.
+  Unsupported positions are disabled with mouse/keyboard explanations; viewport
+  Fixed remains unavailable until a matching scaled-canvas adapter exists.
+  Height, position and availability use existing layout and agent contracts.
+
+- Added independent top/right/bottom/left Container border widths, including
+  right-only Aside separators, through the shared saved/public layout contract.
+  Fixed Auto-row Stretch being blocked by CanvasGrid child heights, so an Aside
+  can fill the neighboring content column while retaining its minimum height.
+
+- Removed the floating Scenes strip from the Designer canvas. Existing sidebar
+  Section navigation, canvas Section-edge controls and saved structure remain.
+
+- Fixed the Studio toolbar inheriting a centered page-header width limit. The
+  application header now spans the window independently of canvas sizing.
+
+- Added Container border width, color, line style and corner radius in the
+  existing Designer inspector and shared saved/public layout contract. Added
+  parent selection and a nearest-Container hover outline so an Aside can be
+  distinguished from its menu and owning Section. Agent feedback includes
+  border values and the hovered Container id.
+
+- Removed the shared request client's default 100 ms idle gap between ordered
+  commands, improving Admin startup and navigation while preserving request
+  order, authentication and explicit caller throttling. Fixed Admin pages also
+  skip the global layout read whose result their grid does not use. See
+  [Admin startup](docs/admin-startup.md) for validation and measurement limits.
+
+- Fixed Designer zoom targeting when another Section is active. Viewport changes
+  now reach every nested grid; responsive edits retain container-relative
+  coordinates and the selected page breakpoint through resize and save. Removed
+  a page/sizer height feedback loop that produced empty space above 100% zoom.
+
+- Highlighted HTML-to-Design-Studio import near the top of the README, with the
+  existing capture/import/review workflow and its documented fidelity limits.
+
+- Expanded the README's Design Studio positioning with composition and Style
+  Source semantics, backed by an official-documentation comparison of visual
+  builders. Distinguished implemented behavior from ongoing usability work
+  and avoided unsupported exclusivity claims.
+
+- Designer canvas now preserves authored Section heights and nested content
+  flow instead of centering, stretching or shrinking the layout. Layout and
+  page-content focus use a removable pale overlay; double-click or Enter switches
+  focus without changing saved opacity, structure or the published output.
+
+- Generalized responsive stacking from Home to all editable dashboard workspaces.
+  Every dashboard widget exposes a named size container for internal reflow,
+  including third-party widgets. Desktop placement remains saved unchanged.
+
+- Designer starts independent user-color, viewport, color-library, font-package
+  and preset reads together while still awaiting them before the first canvas render.
+
+- Fixed signed Designer preview boot without a published page, verified in
+  client and server render modes. Nested design references retain their public lookup
+  instead of receiving the currently edited draft.
+
+- Home's website and operations widgets now both fill the row when available
+  content width is at most 1080px. Internal spacing adapts to widget width.
+
+- Removed link underlines from Analytics subpage buttons, including hover and keyboard focus.
+
+- Clarified the README's intended audience and modular visual CMS architecture,
+  including extension boundaries, design composition, WordPress import limits
+  and the current scope of process isolation. Recorded a proposal for extending
+  fault isolation without changing the existing module/event authority.
+
+- Home now starts with a two-thirds website widget and one-third operations
+  widget, using existing saved designs and Analytics data. Shared interactive
+  charts are available to other widgets through a data-only browser API.
+  ECharts 6.1.0 is pinned locally with build-time hashes and browser SRI.
+- Saved Designer thumbnails capture the top of the first Section independently
+  of editor zoom. DOM capture is now shared with other module/widget consumers.
+
+- Fixed dashboard dragging to replace the original card with its drop placeholder
+  and preserve shadow-root content in the preview. Editable dashboards now use
+  the surrounding subtle canvas, with rows aligned to the top. The widget drawer
+  fits narrow viewports and refreshes its toggle after workspace navigation.
+
+- Clarified the README's AI-first direction with a human/agent collaboration
+  example, existing workspace capabilities and current connection limits.
+  Linked the workflow and agent-access guides and removed an outdated version
+  reference while retaining the development-status warning. Clarified current
+  development experience with agent reliability, remaining Designer UI polish
+  and human preview/review before agent-assisted publication.
+
+- Analytics is now an editable workspace with Website, Devices & Software and
+  System Activity subpages, plus reusable catalog widgets. Existing sidebar Add
+  and dashboard controls support custom pages and module widgets. Standard
+  Analytics pages are seeded once so removed widgets and user layouts survive
+  restarts; the former fixed overview is unlocked without replacing instances.
+
+- Added a separate Analytics admin workspace and reusable overview widget,
+  backed by structured authenticated event activity and public HTML delivery
+  measurements. Includes periods/comparisons, device/software/referrer groups,
+  verified actor/module breakdowns and explicit collection-health reporting.
+  Analytics uses the existing event facade and DatabaseManager, with bounded
+  queues, 60-day retention and a Node-independent JSON aggregation domain.
+  Visitor/session and conversion metrics are not inferred from event counts.
+
+- Added a short English server-installation entry near the top of the README,
+  linking to the combined CMS/updater guide and clarifying the local development
+  quickstart.
+
 ## [0.10.0-rc.2] - 2026-09-07
 
 - Core updates now belong to the protected Updater module, including background

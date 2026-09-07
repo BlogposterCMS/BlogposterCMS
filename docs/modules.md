@@ -1,5 +1,8 @@
 # Module Architecture
 
+The core [Analytics Manager](modules/analyticsManager.md) owns bounded activity
+and public delivery reports through the existing authenticated admin facade.
+
 BlogposterCMS follows a modular design. Core features and optional backend capabilities are implemented as individual modules. Each module registers event listeners on the `motherEmitter` and performs its work in response to these events.
 
 - **Core modules** live under `mother/modules`. They are loaded during server startup and have access to the main event system with a high-trust JWT.

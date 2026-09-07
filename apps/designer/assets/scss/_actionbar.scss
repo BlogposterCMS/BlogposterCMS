@@ -118,6 +118,8 @@ body.builder-mode .container-actionbar:focus-within {
   transform: translate(-50%, 0);
 }
 
-body[data-active-layer='1'] .container-actionbar {
+// Scope overlays block inactive areas. The selected structural container keeps
+// its own controls even when widgets are being edited on the design layer.
+body[data-active-layer='1'] .layout-container:not(.layout-container--active) > .container-actionbar {
   display: none;
 }

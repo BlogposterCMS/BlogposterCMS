@@ -1428,35 +1428,63 @@ body.builder-mode .builder-row {
   font-weight: 650;
 }
 
-.scene-inspector-modebar {
-  height: 38px;
-  margin-top: 18px;
-  padding: 4px;
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  border-radius: 8px;
-  background: var(--scene-surface-soft);
-}
+// Shared bp-tabs own the control styling; this is only inspector spacing.
+.scene-inspector-modebar { margin-top: 18px; }
 
-.scene-inspector-modebar button {
-  min-width: 0;
-  border: 0;
+// Keep structural navigation readable even when stable container ids are long.
+.scene-inspector-parent {
+  width: 100%;
+  margin: 12px 0;
+  padding: 8px;
+  border: 1px solid var(--scene-border);
   border-radius: 7px;
-  background: transparent;
-  color: var(--scene-muted);
-  font-size: 11px;
-  line-height: 1;
-  font-weight: 650;
-  letter-spacing: 0;
-  cursor: pointer;
-}
-
-.scene-inspector-modebar button.active {
   background: var(--scene-surface);
   color: var(--scene-accent);
-  box-shadow: var(--designer-shadow-control);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  &:disabled { opacity: .45; cursor: default; }
+  &:focus-visible { outline: 2px solid var(--scene-accent); outline-offset: 2px; }
+}
+
+.scene-container-position {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+
+  button {
+    position: relative;
+    flex: 1;
+    padding: 8px 4px;
+    border: 1px solid var(--scene-border);
+    border-radius: 7px;
+    background: var(--scene-surface);
+    color: var(--scene-accent);
+    font: inherit;
+    font-size: 11px;
+
+    &[aria-disabled='true'] { color: var(--scene-muted); background: var(--scene-surface-soft); cursor: not-allowed; }
+    &[aria-pressed='true'] { border-color: var(--scene-accent); }
+    [role='tooltip'] {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 0;
+      width: 180px;
+      padding: 8px;
+      border-radius: 6px;
+      background: var(--scene-ink);
+      color: var(--scene-surface);
+      z-index: 10;
+      text-align: left;
+      pointer-events: none;
+    }
+    &:last-child [role='tooltip'] { left: auto; right: 0; }
+    &:hover [role='tooltip']:not(:empty), &:focus-visible [role='tooltip']:not(:empty) { display: block; }
+  }
 }
 
 .scene-inspector[data-active-mode='content'] [data-inspector-panel]:not([data-inspector-panel='content']),
@@ -3360,3 +3388,4 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
     display: none;
   }
 }
+

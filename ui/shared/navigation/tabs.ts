@@ -6,7 +6,7 @@ export interface BpTabSystem {
 let tabSystemId = 0;
 
 /** Creates an accessible tablist while allowing panels to be populated later. */
-export function createTabSystem(container: HTMLElement, tabsHost: HTMLElement): BpTabSystem {
+export function createTabSystem(container: HTMLElement, tabsHost: HTMLElement, options: { onSelect?: (index: number) => void } = {}): BpTabSystem {
   tabSystemId += 1;
   const systemId = `bp-tabs-${tabSystemId}`;
   const tabs: Array<{ button: HTMLButtonElement; panel: HTMLElement }> = [];
@@ -22,6 +22,7 @@ export function createTabSystem(container: HTMLElement, tabsHost: HTMLElement): 
       tab.button.tabIndex = active ? 0 : -1;
       tab.panel.hidden = !active;
     });
+    options.onSelect?.(safeIndex);
   };
 
   const focusTab = (index: number) => {

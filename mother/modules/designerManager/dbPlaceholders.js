@@ -2,6 +2,11 @@
 
 const { ObjectId } = require("mongodb");
 
+// Optimistic concurrency rejection is an expected save result, not module failure.
+function versionConflict() {
+  return Object.assign(new Error('Version conflict'), { code: 'DESIGNER_VERSION_CONFLICT' });
+}
+
 function parseStoredLayout(value) {
   if (!value) return null;
   if (typeof value === "object") return value;
@@ -59,7 +64,7 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
             version,
           ],
         );
-        if (res.rowCount === 0) throw new Error("Version conflict");
+        if (res.rowCount === 0) throw versionConflict();
         await client.query(`DELETE FROM ${tblWidgets} WHERE design_id=$1`, [designId]);
         await client.query(`DELETE FROM ${tblMeta} WHERE design_id=$1`, [designId]);
         designId = res.rows[0].id;
@@ -186,7 +191,7 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
             version,
           ],
         );
-        if (!res.changes) throw new Error("Version conflict");
+        if (!res.changes) throw versionConflict();
         await db.run(`DELETE FROM designer_design_widgets WHERE design_id = ?;`, [designId]);
         await db.run(`DELETE FROM designer_widget_meta WHERE design_id = ?;`, [designId]);
         design.version = version + 1;
@@ -313,7 +318,7 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
           },
           { session: sess }
         );
-        if (!res.matchedCount) throw new Error("Version conflict");
+        if (!res.matchedCount) throw versionConflict();
         await widgetsCol.deleteMany({ design_id: objId }, { session: sess });
         await metaCol.deleteMany({ design_id: objId }, { session: sess });
         design.version = version + 1;

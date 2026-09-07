@@ -446,6 +446,18 @@ export interface AgentAccessRevokeCodePayload {
 }
 export type AgentAccessRevokeCodeResult = JsonValue | undefined;
 
+export interface AnalyticsSummaryPayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type AnalyticsSummaryResult = JsonValue | undefined;
+
 export interface AppLoaderAppEventPayload {
   "appName"?: JsonValue;
   "authModuleSecret"?: string;
@@ -4347,6 +4359,7 @@ export interface BackendEventContractMap {
   "agentAccess.exchangeCode": { payload: AgentAccessExchangeCodePayload; result: AgentAccessExchangeCodeResult };
   "agentAccess.listCodes": { payload: AgentAccessListCodesPayload; result: AgentAccessListCodesResult };
   "agentAccess.revokeCode": { payload: AgentAccessRevokeCodePayload; result: AgentAccessRevokeCodeResult };
+  "analyticsSummary": { payload: AnalyticsSummaryPayload; result: AnalyticsSummaryResult };
   "appLoader:appEvent": { payload: AppLoaderAppEventPayload; result: AppLoaderAppEventResult };
   "applySchemaDefinition": { payload: ApplySchemaDefinitionPayload; result: ApplySchemaDefinitionResult };
   "applySchemaFile": { payload: ApplySchemaFilePayload; result: ApplySchemaFileResult };

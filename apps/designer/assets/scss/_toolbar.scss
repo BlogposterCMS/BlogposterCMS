@@ -442,3 +442,12 @@
     opacity: .35;
   }
 }
+.section-toolbar-owner {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--designer-text-muted);
+  padding-inline: 6px;
+}

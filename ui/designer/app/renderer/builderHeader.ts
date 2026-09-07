@@ -14,9 +14,10 @@ const VIEWPORT_PRESETS = [
   { id: 'mobile', label: 'Mobile', icon: 'smartphone' }
 ] as const;
 
-function getAppScope(): HTMLElement {
-  const scope = document.querySelector<HTMLElement>('.app-scope');
-  return scope ?? document.body;
+function getHeaderHost(): HTMLElement {
+  // The iframe document owns Studio chrome; app-scope only identifies styling.
+  // Nested controls must never become a mount target for the application header.
+  return document.body;
 }
 
 function setHeaderHeightVariable(height?: number) {
@@ -216,14 +217,14 @@ function ensureHeaderMount(): HTMLElement {
   if (existing instanceof HTMLElement) {
     return existing;
   }
-  const appScope = getAppScope();
+  const appScope = getHeaderHost();
   const fallback = buildFallbackHeader();
   appScope.prepend(fallback);
   return fallback;
 }
 
 async function loadHeaderPartial(existing?: HTMLElement) {
-  const appScope = getAppScope();
+  const appScope = getHeaderHost();
   try {
     const markup = await fetchPartial('builder-header');
     const sanitized = sanitizeHtml(markup.trim());
@@ -254,6 +255,8 @@ export function createBuilderHeader({
   gridEl,
   viewportSizeEl,
   grid,
+  getGrid = () => grid,
+  setViewport = undefined,
   saveDesign,
   getCurrentLayoutForLayer,
   getActiveLayer,
@@ -379,7 +382,9 @@ export function createBuilderHeader({
 
       disposeHeaderControls = initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
         undo,
-        redo
+        redo,
+        getGrid,
+        setViewport
       });
 
       saveMenuBtn.addEventListener('click', e => {

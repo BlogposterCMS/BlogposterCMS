@@ -109,6 +109,8 @@ describe('designer scene metadata', () => {
     expect(rendererSource).toContain('hideActionBar();');
     expect(rendererSource).toContain('function clearActiveWidgetSelection()');
     expect(rendererSource).toContain('const clearActiveWidgetFromExternalPointer = event =>');
+    expect(rendererSource).toContain("event.target.closest('.builder-header, .layout-bar')");
+    expect(rendererSource).toContain("e.target.closest('.builder-header, .layout-bar')");
     expect(rendererSource).toContain("event.target.closest('.canvas-item') ||");
     expect(rendererSource).toContain(
       "document.addEventListener('pointerdown', clearActiveWidgetFromExternalPointer, true)"
@@ -584,36 +586,14 @@ describe('designer scene metadata', () => {
     expect(sceneBuilderCss).not.toContain('body.builder-mode .canvas-item:not(.selected) > .scene-stage-hud');
   });
 
-  it('keeps scenes directly navigable from the stage', () => {
-    const rendererSource = fs.readFileSync(
-      path.join(__dirname, '../ui/designer/app/builderRenderer.ts'),
-      'utf8'
-    );
-    const sceneBuilderCss = fs.readFileSync(
-      path.join(__dirname, '../apps/designer/assets/css/designer.css'),
-      'utf8'
-    );
-
-    expect(rendererSource).toContain('function renderStageSceneControls');
-    expect(rendererSource).toContain('class="scene-stage-nav"');
-    expect(rendererSource).toContain('class="scene-stage-nav__label"');
-    expect(rendererSource).toContain('class="scene-storyboard__track scene-section-list"');
-    expect(rendererSource).toContain('data-scene-storyboard-item');
-    expect(rendererSource).toContain('data-stage-scene-action="prev"');
-    expect(rendererSource).toContain('data-stage-scene-action="next"');
-    expect(rendererSource).toContain('data-stage-scene-action="add"');
-    expect(rendererSource).toContain('aria-label="Previous scene"');
-    expect(rendererSource).toContain('aria-label="Next scene"');
-    expect(rendererSource).toContain('aria-label="Add scene"');
-    expect(rendererSource).toContain('aria-label="Scene name"');
-    expect(rendererSource).toContain('aria-label="Move scene left"');
-    expect(rendererSource).toContain('aria-label="Move scene right"');
-    expect(rendererSource).toContain('function createSceneFromUi');
-    expect(rendererSource).toContain('handleSceneNavigationClick(event)');
-    expect(sceneBuilderCss).toContain('.scene-stage-nav');
-    expect(sceneBuilderCss).toContain('.scene-stage-nav__label');
-    expect(sceneBuilderCss).toContain('.scene-stage-nav .scene-section-list');
-    expect(sceneBuilderCss).toContain('.scene-stage-nav__button--add');
+  it('keeps Section controls without a floating Scenes strip', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../ui/designer/app/builderRenderer.ts'), 'utf8');
+    expect(source).not.toContain('class="scene-stage-nav"');
+    expect(source).not.toContain('function renderStageSceneControls');
+    expect(source).not.toContain('data-stage-scene-action');
+    expect(source).toContain('[data-add-section-after]');
+    expect(source).toContain("sidebarEl.querySelectorAll('.scene-section-list')");
+    expect(source).toContain('handleSceneNavigationClick(event)');
   });
 
   it('serializes scene and behavior data with widget layout entries', () => {

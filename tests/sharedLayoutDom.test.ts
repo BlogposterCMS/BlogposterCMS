@@ -13,6 +13,7 @@ import {
   moveContainer,
   placeContainer,
   serializeLayout,
+  renderLayoutTree,
   setContainerLayoutMode,
   setContainerSettings,
   setDefaultWorkarea,
@@ -20,6 +21,55 @@ import {
 } from '../ui/shared/layout/layoutDom';
 
 describe('shared layout DOM adapter', () => {
+  it('round-trips explicit height and sticky settings through the public renderer', () => {
+    const root = document.createElement('div');
+    deserializeLayout({ type: 'leaf', nodeId: 'aside', settings: { height: '240px', position: 'sticky' } }, root);
+    const target = document.createElement('div');
+    const aside = renderLayoutTree(serializeLayout(root), target).get('aside')!;
+    expect(aside.style.getPropertyValue('--layout-height')).toBe('240px');
+    expect(aside.dataset.layoutPosition).toBe('sticky');
+    setContainerSettings(root, { height: 'auto', position: 'normal' });
+    expect(root.style.getPropertyValue('--layout-height')).toBe('auto');
+    expect(root.dataset.layoutPosition).toBe('normal');
+  });
+  it('keeps a right-only separator through Studio serialization and public rendering', () => {
+    const root = document.createElement('div');
+    deserializeLayout({ type: 'leaf', nodeId: 'aside' }, root);
+    setContainerSettings(root, { borderWidth: '0px', borderRightWidth: '1px', borderStyle: 'solid', borderColor: '#123456' });
+    expect(root.style.borderRightWidth).toBe('1px');
+    expect(root.style.borderLeftWidth).toBe('0px');
+    const target = document.createElement('div');
+    const publicAside = renderLayoutTree(serializeLayout(root), target).get('aside')!;
+    expect(publicAside.style.borderRightWidth).toBe('1px');
+    expect(publicAside.style.borderTopWidth).toBe('0px');
+    expect(publicAside.style.borderBottomWidth).toBe('0px');
+    setContainerSettings(root, { borderRightWidth: '0px' });
+    expect(root.style.borderRightWidth).toBe('0px');
+  });
+
+  it('preserves borders on the outer container through save, render and linked copies', () => {
+    const root = document.createElement('div');
+    deserializeLayout({ type: 'split', nodeId: 'root', children: [
+      { type: 'leaf', nodeId: 'aside' },
+      { type: 'leaf', nodeId: 'content', isDynamicHost: true }
+    ] }, root);
+    const aside = root.querySelector<HTMLElement>('[data-node-id="aside"]')!;
+    setContainerSettings(aside, { borderWidth: '2px', borderStyle: 'solid', borderColor: '#123456', borderRadius: '8px' });
+    expect(aside.style.borderWidth).toBe('2px');
+    expect(root.querySelector<HTMLElement>('[data-node-id="content"]')!.style.borderWidth).toBe('');
+    const saved = serializeLayout(root);
+    const publicRoot = document.createElement('div');
+    deserializeLayout(saved, publicRoot);
+    const rendered = publicRoot.querySelector<HTMLElement>('[data-node-id="aside"]')!;
+    expect(rendered.style.border).toBe(aside.style.border);
+    expect(rendered.style.borderRadius).toBe('8px');
+    const copy = duplicateContainer(aside, { linked: true });
+    expect(copy?.style.borderWidth).toBe('2px');
+    setContainerSettings(aside, { borderWidth: '0px', borderStyle: 'none' });
+    expect(aside.style.borderStyle).toBe('none');
+    expect(serializeLayout(root).children?.[0].settings?.borderWidth).toBe('0px');
+  });
+
   function options() {
     let idx = 0;
     return {

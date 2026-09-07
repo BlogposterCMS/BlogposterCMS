@@ -1,4 +1,9 @@
 import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
+/** Resolve only the legacy generated-thumbnail format, never arbitrary shares. */
+export function designThumbnailUrl(value = '') {
+    const match = value.match(/^(?:https?:\/\/[^/]+)?\/s\/[A-Za-z0-9_-]+\/(thumb-\d+\.png)$/);
+    return match ? `/media/builder/designer-thumbnails/${match[1]}` : value;
+}
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
         throw new Error('PLAINSPACE_DESIGNER_LAYOUTS_EMITTER_UNAVAILABLE: meltdownEmit unavailable');

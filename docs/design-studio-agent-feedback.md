@@ -1,5 +1,64 @@
 # Design Studio Agent Feedback
 
+Container `settings.height` accepts `auto` or 1–10000px and is independent of
+`minHeight`, which still sets the lower bound. The inspector exposes Auto/Fixed
+height; shared presentation CSS retains the explicit value after CanvasGrid
+updates. `settings.position` accepts normal/sticky. Sticky uses top:0 inside its
+parent; the inspector/agent setter rejects Sections, content hosts, Free parents,
+clipping/scrolling structural ancestors and containers without vertical travel
+room. Availability is rechecked on command, and exposed as `positionAvailability`
+with reasons. Existing saved Sticky can cease moving if its parent becomes too
+short; inspect current availability after layout changes.
+
+Viewport Fixed is deliberately disabled: the scaled canvas currently has no
+matching viewport-bound Container adapter. It is not silently converted to Pin
+or a widget effect. Disabled position buttons remain focusable (`aria-disabled`)
+and show their reason on hover/focus, with accessible descriptions. There is no
+global tooltip service; these controls follow the existing local Designer CSS
+tooltip pattern. This change does not replace widget motion or add a parallel
+scroll-position engine.
+
+The canvas no longer renders the floating Scenes/storyboard strip. Section
+selection and ordering remain in the existing sidebar, and Section-edge add
+controls remain on the canvas. Saved Section ids, composition, and existing
+`scene.*` agent commands retain their contract; this removes duplicate editor
+chrome rather than deleting page sections or introducing a new hierarchy.
+
+The Studio toolbar (`#builder-header`) explicitly resets page-header maximum
+width and margins. Its window width is independent of the saved canvas viewport;
+this is editor chrome only and does not change authored header geometry or the
+existing agent viewport contract.
+
+Container borders use the existing `layoutTree.settings` contract:
+`borderWidth` (0–64px), `borderStyle` (none/solid/dashed/dotted/double),
+`borderColor` and `borderRadius` (0–512px). The Content inspector edits these
+through `container.settings.set`; the shared normalizer and DOM adapter retain
+them through save/load, linked copies and public rendering. A positive width
+automatically enables a solid border if the line style was unset or none.
+`borderTopWidth`, `borderRightWidth`, `borderBottomWidth` and `borderLeftWidth`
+override the shared width independently (0–64px). Unset sides inherit
+`borderWidth`; explicit zero removes that edge. The overall Width control resets
+all four sides. Color and line style are shared. A right-only Aside separator
+uses overall Width 0 and Right 1 (or more), with Solid selected.
+
+Auto-row containers with Stretch alignment release CanvasGrid's fixed child
+height in both Studio and public rendering. The saved min-height remains a
+minimum; the Aside stretches to the neighboring content column above the Footer.
+Clicking menu content selects the widget; `Select parent · docs-demo-sidebar`
+selects its structural Aside and exposes the border controls.
+
+`Select parent` moves from a widget to its containing box, then outward to the
+owning Section, stopping before the page root. It changes selection only; it
+does not move the Aside or alter the saved layout hierarchy. Hover marks only
+the nearest Container and clears over inactive scope overlays or on exit.
+`hoveredContainerId` and the four border values are available in the existing
+agent feedback snapshot. Selection and hover outlines are editor decoration,
+separate from the authored border and excluded from document serialization.
+
+Saved thumbnails now use a first-Section top crop independent of editor zoom.
+The snapshot exposes `layoutTree.pageFlow.savedThumbnail` capture metadata;
+the separate agent stage-preview continues to describe the current stage.
+
 Public first-response articles remain visible and styled while layout widgets
 load. The shared document renderer adopts the existing sanitized article into
 the saved content host before mounting asynchronous widgets; nested page designs
@@ -363,6 +422,38 @@ Normal published pages now mark `data-bp-public-layout-ready="true"` when their
 initial HTML/layout structure is present in the response. This is not a paint
 or widget-data completion signal. Continue using `bp:public-widgets-ready` and
 the established surface feedback for hydrated widget inspection. Signed Designer
+Canvas `editingScope` reports `layout`, `content`, or `design` (no content outlet).
+`contentHostNodeId` identifies the saved `isDynamicHost`, independently of the
+active Section. Inactive branches have removable editor overlays; double-click
+or Enter selects that editing scope through existing selection handlers. This
+does not load or claim to edit another page's content: an empty reusable outlet
+remains a placeholder. The surrounding Body Section can own both a navigation
+Container and the content-column Container. Selection bounds describe that
+parent structure, not a separate content document.
+The inspector resolves a selected nested Container before its owning Section;
+layout settings and subsequent insertions target that Container. Its stable node
+ID is shown read-only instead of exposing the parent Section's rename field.
+Nested selection shows only that Container boundary; the parent Section outline
+is suppressed while it contains the selected Container.
+Canvas CSS preserves Section height and Auto/Grid article flow in parity with
+the public renderer. Structural containers no longer inherit legacy centering.
+
+Designer startup runs independent presentation reads concurrently through the
+existing bridge and waits for them before rendering the canvas. Agent surface
+registration and `designer-ready` remain after builder initialization.
+
+Signed Live Preview boots the existing public shell independently of published
+pages, including server render mode. Only the edited design ID is overridden
+by the draft payload; nested references keep the public lookup contract.
+The navigation widget currently uses a direct public HTTP read outside Studio;
+in the nested opaque-origin preview this can fail with
+`BP_WIDGET_NAVIGATION_LOAD_FAILED` while the outer render reports ready.
+A public navigation adapter through the existing Runtime/AppLoader contracts
+is still missing; do not substitute admin navigation data or weaken the sandbox.
+The browser also reports AppLoader rejecting `cmsPublicRuntimeRequest` from
+Designer, so referenced public reads/breadcrumb hydration are not yet end-to-end
+verified even when the outer preview reports ready.
+
 Live Preview does not consume `BP_PUBLIC_BOOTSTRAP`; its parent-bridge payload
 and existing agentSurface remain authoritative. Server and browser share public
 canvas geometry, so this startup change does not add a Designer-only API.
@@ -379,3 +470,43 @@ the shared agent-surface client rather than private Designer transport.
 Collection archive cards retain their stable item and Style Source identifiers.
 Cards with rejected/missing URLs have no action link; this does not change widget
 placements or the agent snapshot contract.
+## Viewport editing and zoom
+
+Designer inspector controls use the shared `customSelect` and `createTabSystem`
+components and shared checkbox styles. Enhancement is explicitly scoped to
+`data-ui-controls` roots; authored canvas forms are excluded. Container controls
+are organized as Layout (geometry/content host), Appearance (background/borders)
+and Behavior (scroll position). Widget content controls retain the Content tab.
+Existing field selectors, selected container ids and agentSurface settings/actions
+remain authoritative; moving a field between panels does not change its owner.
+The canvas Section toolbar labels its owner and remains a Section action surface.
+Inspector tab buttons require an `app-scope` inside the isolated control root
+for styling only; the Studio header mounts directly in the iframe document body,
+independent of nested control or authored page scopes. Its existing banner and
+viewport feedback remain unchanged. Tab buttons use that nested scope
+for shared button styles. Legacy widget-corner resize/menu triggers are hidden;
+the existing selected-element action bar, inspector and agent actions remain
+the interaction surfaces. This does not change selection or placement contracts.
+The selection toolbar Duplicate action invokes the same command as the widget
+options menu; it does not introduce a second clone or persistence implementation.
+Double-clicking an inactive-layer widget calls the existing layer switch, then
+resolves its instance id again before selection. The existing active-layer and
+selected-object feedback remains authoritative; failures use
+`DESIGNER_LAYER_ACTIVATION_FAILED`. Preview and content-scope overlays retain
+their own interaction rules.
+Text editing may temporarily elevate visual z-index but must never change
+`data-layer`: interaction locks and agent feedback use that logical layer.
+The Layers sidebar includes structural containers and their nested widget rows,
+including empty containers. Container background/transparent controls live on the
+owning canvas toolbar; the background setting and node id remain the agent contract.
+Rows retain node/instance ids matching the existing
+layout tree feedback. Internal HTML inside a widget is not a separate layout node.
+
+The existing `viewport.set` and `viewport.preset` commands update every Section
+and nested Container grid. `viewport.zoom.set` scales the shared page owner and
+does not change the authored viewport or reflow saved placements. Placement rule
+selection uses page width; child coordinates use the owning Container width.
+Dragging at Mobile (320–600px), Tablet (601–1024px), or Desktop (1025–3840px)
+records the existing responsive range, with the selected widget's explicit
+range controls available for narrower or broader corrections. Saved rules remain
+in `code.meta.responsivePlacement`; switching widths alone does not author a rule.

@@ -6,6 +6,9 @@ const { hasPermission } = require('../../../userManagement/permissionUtils');
 // Platform administration resources remain facade declarations; this split
 // does not change their module owners, permissions or emitted event names.
 const adminActions = Object.freeze({
+  analytics: Object.freeze({
+    summary: { eventName: BACKEND_EVENTS.ANALYTICS_SUMMARY, moduleName: 'analyticsManager', permission: 'analytics.read' }
+  }),
   coreUpdates: Object.freeze({
     status: { eventName: BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, moduleName: 'updater', permission: 'settings.core.edit' },
     check: { eventName: BACKEND_EVENTS.CHECK_CORE_UPDATE, moduleName: 'updater', permission: 'settings.core.edit' },

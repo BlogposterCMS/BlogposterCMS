@@ -4,6 +4,10 @@
  * The single list of all built-in placeholder strings, shared by Postgres and Mongo.
  */
 module.exports = [
+  'INIT_ANALYTICS',
+  'APPEND_ANALYTICS',
+  'READ_ANALYTICS',
+  'PRUNE_ANALYTICS',
   // UserManagement
   'INIT_USER_MANAGEMENT',
   'INIT_B2B_FIELDS',

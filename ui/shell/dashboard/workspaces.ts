@@ -239,7 +239,9 @@ function buildSidebar(nav: HTMLElement, pages: AdminPage[], adminBase: string, w
       fragment.append(anchor);
     });
 
-  const add = document.createElement('div');
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.setAttribute('aria-label', 'Add page');
   add.className = 'sidebar-item sidebar-add-subpage';
 
   const addIcon = document.createElement('img');
@@ -440,7 +442,7 @@ async function showWorkspaceField(): Promise<void> {
 }
 
 async function showSubpageField(workspace: string): Promise<void> {
-  const addBtn = document.querySelector<HTMLDivElement>('.sidebar-add-subpage');
+  const addBtn = document.querySelector<HTMLButtonElement>('.sidebar-add-subpage');
   if (!addBtn) {
     return;
   }

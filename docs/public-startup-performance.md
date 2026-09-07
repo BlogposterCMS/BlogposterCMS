@@ -1,5 +1,93 @@
 # Public startup performance
 
+## HTML attachment delivery, 2026-09-07
+
+HTML pages now use bootstrap version 2: only the first HTML attachment already
+rendered in the initial response omits its duplicate `inline.html` and carries
+`htmlFromInitialResponse: true`. The reader reconstructs the existing loader
+descriptor in memory from that sanitized DOM. CSS/JS and other attachments stay
+intact; canonical envelopes are never mutated. Missing DOM triggers existing CSR
+discovery. Version 1 remains supported, including layout-only responses; old
+clients reject version 2 and use their existing canonical CSR fallback. Deploy
+the server change and rebuilt publicEntry bundle together for the improvement.
+
+The existing static route stack now uses Express compression for successful
+public CSS, JavaScript and SVG responses of at least 1 KB. Encodings are negotiated,
+Vary is retained, and existing encodings/no-transform are respected. HTML with
+tokens, JSON APIs, binary images, byte ranges and errors are excluded. No generated
+variants, new cache or alternate media authority are introduced. See the
+[middleware contract](https://expressjs.com/en/resources/middleware/compression/).
+
+### Delivery measurement on actual local HTML
+
+Three fresh Chromium contexts per variant, 1365 x 768 viewport, disabled cache,
+150 ms requested CDP latency and 750,000 bytes/s download/upload (6 Mbit/s).
+The delivery harness used the actual local landing HTML/assets, the real static
+route factory, and public API forwarding to the running local CMS. For the after
+variant, the existing presentation helper generated the compact bootstrap from
+the same in-memory public envelope. HTML was held in memory, so these numbers
+measure delivery/rendering and exclude page database lookup/SSR latency. No live
+deployment or running CMS restart was performed. Both PNG hero files were identical.
+
+| Metric | Before (three runs) | After (three runs) | Median |
+| --- | --- | --- | --- |
+| First contentful paint, ms | 2912 / 2872 / 2912 | 928 / 1400 / 952 | 2912 to 952, 67% lower |
+| Largest contentful paint, ms | 4540 / 4500 / 4816 | 3976 / 3824 / 3832 | 4540 to 3832, 16% lower |
+| Both hero files received, ms | 4719 / 4685 / 4691 | 3974 / 4010 / 3995 | 4691 to 3995, 15% lower |
+| HTML response bytes | 65,331 | 31,372 | 52% smaller |
+| Website CSS encoded bytes | 518,892 | 60,819 | 88% smaller |
+| HTML + resource encoded bytes, median | 3,184,733 | 2,614,955 | 18% smaller |
+
+All runs retain the same heading and one initial HTML wrapper. These results
+apply to an origin previously serving uncompressed static text. An upstream
+proxy may already compress assets, so the same gain cannot be assumed live.
+Large authored raster images remain an independent site-owned optimization.
+
+## Viewport-first widget hydration, 2026-09-07
+
+The public widget loader now prepares all widget shells before hydration. Saved
+canvas responses include the existing `widget-placeholder` presentation and
+`aria-busy` state in their initial HTML. The structural document renderer collects
+jobs across its containers and nested designs on the same public loader call.
+Admin and Designer callers do not opt into this scheduling mode.
+
+`publicWidgetScheduling` checks actual bounds before every widget: visible work
+first, then widgets within 300 px, then remaining content. Offscreen work yields
+to `requestIdleCallback` with a 500 ms timeout (a timer fallback when unavailable).
+This is progressive loading with eventual completion, not scroll-only loading:
+all widgets still finish for page scripts, browser search and later printing.
+Inline-script widgets remain eager. Rendering and facade requests remain on their
+existing paths; there is no new cache, transport or concurrency lane. One failure
+logs `PUBLIC_WIDGET_HYDRATION_FAILED` without starving other widgets. Removed
+shells are skipped. `bp:public-widgets-ready` still follows the complete queue.
+
+HTML-only pages return before importing this scheduler. Image loading attributes
+and authored page code are unchanged. Auto-height mobile layouts remain
+content-driven; arbitrary widget content can still change their final height.
+
+### Local before/after experiment
+
+Chromium, fresh contexts, disabled browser cache, 1365 x 768 viewport, requested
+150 ms CDP network latency without bandwidth throttling, three runs per case.
+The local server/database were warm. The controlled fixture document and its
+test module were supplied by browser interception (their TTFB is not a server
+benchmark); ordinary runtime dependencies came from the local CMS. The fixture
+uses the real public presentation and widget loader, eight lower widgets before
+one visible widget in saved order, with 120 ms simulated async work per widget.
+
+| Metric (ms), three runs | Before | After | Median change |
+| --- | --- | --- | --- |
+| Visible fixture widget ready | 2587 / 2720 / 2583 | 1120 / 1225 / 1261 | 2587 to 1225, 53% lower |
+| All nine fixture widgets ready | 2588 / 2722 / 2584 | 2150 / 2296 / 2332 | 2588 to 2296, 11% lower |
+| Fixture first contentful paint | 1568 / 1692 / 1556 | 56 / 64 / 60 | After value measures the placeholder, not finished content |
+| Actual local HTML landing FCP | 620 / 636 / 980 | 660 / 632 / 660 | 636 to 660; no demonstrated improvement |
+
+The fixture loads 18 resources instead of 16 because of the scheduling helpers.
+All nine widgets complete. Desktop and 390 px mobile checks verify completion,
+placeholder removal and no horizontal overflow. This is local evidence only;
+no deployment or live-site speed improvement is claimed. The actual landing
+page contains no CMS widgets and therefore does not benefit from this change.
+
 ## Measured architecture problem
 
 Previously the public HTML shell contained no page content. `publicEntry` obtained a public
@@ -13,7 +101,7 @@ discovered at that point. A quick HTML response is not a quick visible page.
 `publicPageRoutes` now uses the existing public facade to resolve the published
 page and envelope. Pages Manager's `publicPresentation.js` sanitizes initial
 HTML, or reserves linked widget layout geometry. Assets appear in that initial
-response. `BP_PUBLIC_BOOTSTRAP` version 1 carries pathname, normalized slug,
+response. `BP_PUBLIC_BOOTSTRAP` carries pathname, normalized slug,
 language, envelope, resolved layout and adoption flags. The client validates
 pathname/language and hands that snapshot to the existing loaders. It adopts
 HTML/grid elements without duplicate page/layout reads or DOM replacement.

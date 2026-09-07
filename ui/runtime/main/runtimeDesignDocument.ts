@@ -14,6 +14,7 @@ import {
   type RuntimeDesignLayoutItem
 } from './runtimeDesignLayouts.js';
 import type { RuntimeEmitter as RuntimeWidgetEmitter } from './runtimeWidgetInstances.js';
+import type { PublicWidgetJob } from './publicWidgetScheduling.js';
 
 type RuntimeDesignDocumentOptions = {
   emit?: RuntimeDataEmitter;
@@ -25,6 +26,7 @@ type RuntimeDesignDocumentOptions = {
   contentDesignId?: string;
   /** Already sanitized server DOM; only the actual page-content branch adopts it. */
   initialPageHtml?: HTMLElement | null;
+  publicHydrationJobs?: PublicWidgetJob[];
 };
 
 const composedContentHosts = new WeakMap<HTMLElement, HTMLElement>();
@@ -145,11 +147,12 @@ async function renderDesignRefLeaf({
       getRuntimeDesignDocument({ ...response, placements: layout }),
       allWidgets,
       lane,
-      { emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, String(leaf.designRef)] }
+      { emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, String(leaf.designRef)], publicHydrationJobs: options.publicHydrationJobs }
     );
     if (!rendered && layout.length) {
       await renderStaticRuntimeGrid(container, layout, allWidgets, lane, {
-        widgetEmit: options.widgetEmit
+        widgetEmit: options.widgetEmit,
+        publicHydrationJobs: options.publicHydrationJobs
       });
     }
   } catch (err) {
@@ -235,7 +238,8 @@ export async function renderRuntimeDesignDocument(
     await renderStaticRuntimeGrid(container, combined, allWidgets, lane, {
       widgetEmit: options.widgetEmit,
       useTargetAsGrid: true,
-      structuralItems
+      structuralItems,
+      publicHydrationJobs: options.publicHydrationJobs
     });
   }
 
@@ -255,7 +259,8 @@ export async function renderRuntimeDesignDocument(
     applyRuntimeDesignStyles(pageDesign, response.design);
     const rendered = await renderRuntimeDesignDocument(pageDesign, getRuntimeDesignDocument({ ...response, placements: getRuntimeDesignLayout(response) }), allWidgets, lane, {
       emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, options.contentDesignId],
-      initialPageHtml: options.initialPageHtml
+      initialPageHtml: options.initialPageHtml,
+      publicHydrationJobs: options.publicHydrationJobs
     });
     if (!rendered) throw new Error('RUNTIME_PAGE_DESIGN_DOCUMENT_MISSING: The page design has no container structure.');
     // Remember the dynamic composition explicitly. A reusable footer's own slot

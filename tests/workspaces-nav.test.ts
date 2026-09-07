@@ -57,6 +57,12 @@ describe('workspace navigation', () => {
     const sidebarLink = document.querySelector('#subpage-nav a');
     expect(sidebarLink).not.toBeNull();
     expect(sidebarLink?.getAttribute('href')).toBe('/admin/workspace-alpha/settings');
+    const add = document.querySelector<HTMLButtonElement>('.sidebar-add-subpage');
+    expect(add?.tagName).toBe('BUTTON');
+    expect(add?.getAttribute('aria-label')).toBe('Add page');
+    add?.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('#subpage-floating-field input')).not.toBeNull();
   });
 
   it('refreshes active sidebar state when the path changes inside the same workspace', async () => {

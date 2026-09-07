@@ -19,6 +19,7 @@ const jwt = require('jsonwebtoken');
 
 const notificationEmitter = require('./notificationEmitter');
 const { traceRuntimeEvent } = require('../utils/runtimeLogging');
+const analyticsCollector = require('../modules/analyticsManager/collector');
 
 // Secrets must be provided via environment variables
 const JWT_SECRET         = process.env.JWT_SECRET;
@@ -369,6 +370,28 @@ class MotherEmitter extends EventEmitter {
     // (9) meltdown checks pass => do normal event
     const safeArgs = maskJwtInArgs(args);
     traceRuntimeEvent('[MotherEmitter] Emitting event="%s" with %d arg(s)', eventName, safeArgs.length);
+    // Observe authenticated dispatches only. Never copy payloads, tokens, error
+    // messages or DB activity, and never make analytics a request dependency.
+    if (!analyticsCollector.isExcluded({ kind: 'system', event: eventName }) && !['analyticsManager', 'databaseManager'].includes(moduleName) && firstArg.resource !== 'analytics') {
+      const started = Date.now();
+      const principal = firstArg.decodedJWT || {};
+      const actionName = typeof firstArg.resource === 'string' && typeof firstArg.action === 'string'
+        ? `${eventName}:${firstArg.resource}.${firstArg.action}` : eventName;
+      const record = { kind: 'system', event: actionName, module: moduleName,
+        actor: principal.isPublic ? 'public' : principal.userId ? `user:${principal.userId}` : `module:${principal.moduleName || moduleName}` };
+      const callbackIndex = args.findIndex(value => typeof value === 'function');
+      if (callbackIndex >= 0) {
+        const originalCallback = args[callbackIndex];
+        let reported = false;
+        args[callbackIndex] = (...result) => {
+          if (!reported) {
+            reported = true;
+            analyticsCollector.record({ ...record, outcome: result[0] ? 'error' : 'success', durationMs: Date.now() - started });
+          }
+          return originalCallback(...result);
+        };
+      } else analyticsCollector.record({ ...record, outcome: 'dispatched' });
+    }
     return super.emit(eventName, ...args);
   }
 }

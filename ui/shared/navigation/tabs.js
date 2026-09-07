@@ -1,6 +1,6 @@
 let tabSystemId = 0;
 /** Creates an accessible tablist while allowing panels to be populated later. */
-export function createTabSystem(container, tabsHost) {
+export function createTabSystem(container, tabsHost, options = {}) {
     tabSystemId += 1;
     const systemId = `bp-tabs-${tabSystemId}`;
     const tabs = [];
@@ -15,6 +15,7 @@ export function createTabSystem(container, tabsHost) {
             tab.button.tabIndex = active ? 0 : -1;
             tab.panel.hidden = !active;
         });
+        options.onSelect?.(safeIndex);
     };
     const focusTab = (index) => {
         if (!tabs.length)

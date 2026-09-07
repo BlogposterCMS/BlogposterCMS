@@ -18,7 +18,7 @@ async function renderPendingGridWidgets(pending, grid, lane, widgetEmit, afterRe
         });
     }
 }
-export async function mountRuntimeGridWidgets({ gridEl, grid, layout, allWidgets, lane, widgetEmit, scaleX, scaleY, percentDivisor, includeLayoutMetadata = false, deferHydration = true, debug = false, afterRender }) {
+export async function mountRuntimeGridWidgets({ gridEl, grid, layout, allWidgets, lane, widgetEmit, scaleX, scaleY, percentDivisor, includeLayoutMetadata = false, deferHydration = true, debug = false, afterRender, publicHydrationJobs }) {
     const pending = [];
     for (const item of layout) {
         const def = findWidgetDefinition(allWidgets, item.widgetId);
@@ -42,6 +42,17 @@ export async function mountRuntimeGridWidgets({ gridEl, grid, layout, allWidgets
         gridEl.appendChild(wrapper);
         grid?.makeWidget?.(wrapper);
         pending.push({ wrapper, item, def, placeholder });
+    }
+    if (lane === 'public' && publicHydrationJobs) {
+        // The outer public document collects all shells before choosing viewport work.
+        for (const entry of pending) {
+            publicHydrationJobs.push({
+                element: entry.wrapper,
+                eager: Boolean(entry.item.code?.js),
+                render: () => renderRuntimeCanvasWidget({ ...entry, grid, lane, emit: widgetEmit, afterRender })
+            });
+        }
+        return;
     }
     if (pending.length && deferHydration) {
         await waitForRuntimeWidgetShellPaint();

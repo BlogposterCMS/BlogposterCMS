@@ -165,7 +165,7 @@ describe('designer save manager sections', () => {
       emitted.push({ eventName, payload });
       const route = `${payload?.resource}.${payload?.action}`;
       if (route === 'media.makeFilePublic') {
-        return Promise.resolve({ shareLink: '/media/builder/designer-thumbnails/thumb.png' });
+        return Promise.resolve({ success: true, shareLink: '/s/unused/thumb.png' });
       }
       if (route === 'designer.save') {
         return Promise.resolve({ id: 'design-2', version: 4 });
@@ -196,11 +196,12 @@ describe('designer save manager sections', () => {
     } as any)).resolves.toEqual(expect.objectContaining({
       id: 'design-2',
       version: 4,
-      thumbnailUrl: '/media/builder/designer-thumbnails/thumb.png'
+      thumbnailUrl: expect.stringMatching(/^\/media\/builder\/designer-thumbnails\/thumb-\d+\.png$/)
     }));
 
-    expect(capturePreview).toHaveBeenCalledWith({ viewport: true });
+    expect(capturePreview).toHaveBeenCalledWith({ firstSection: true });
     const saveEvent = emitted.find(entry => `${entry.payload?.resource}.${entry.payload?.action}` === 'designer.save');
-    expect(saveEvent?.payload.params.design.thumbnail).toBe('/media/builder/designer-thumbnails/thumb.png');
+    expect(saveEvent?.payload.params.design.thumbnail).toMatch(/^\/media\/builder\/designer-thumbnails\/thumb-\d+\.png$/);
   });
 });
+

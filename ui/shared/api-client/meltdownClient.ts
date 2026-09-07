@@ -34,7 +34,9 @@ interface QueueItem {
 }
 
 const DEFAULT_TIMEOUT = 10000;
-const DEFAULT_THROTTLE_DELAY = 100;
+// Awaiting each response already serializes commands. A fixed idle gap adds
+// latency to every admin page without providing an ordering guarantee.
+const DEFAULT_THROTTLE_DELAY = 0;
 
 function withoutJwt(payload: MeltdownPayload = {}) {
   const { jwt, ...bodyPayload } = payload;
@@ -177,10 +179,14 @@ export function createMeltdownClient(options: MeltdownClientOptions = {}): Meltd
       .then(item.resolve)
       .catch(item.reject)
       .finally(() => {
-        setTimeout(() => {
+        const continueQueue = () => {
           busy = false;
           processQueue();
-        }, throttleDelay);
+        };
+        // Preserve explicit pacing for callers that request it; normal startup
+        // proceeds immediately after success or failure, still one at a time.
+        if (throttleDelay > 0) setTimeout(continueQueue, throttleDelay);
+        else continueQueue();
       });
   }
 

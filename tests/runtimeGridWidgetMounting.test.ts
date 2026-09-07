@@ -13,6 +13,27 @@ jest.mock('../ui/runtime/main/runtimeWidgetMounting', () => ({
 }));
 
 describe('runtimeGridWidgetMounting', () => {
+  it('collects public shells for the outer scheduler while admin still hydrates directly', async () => {
+    for (const lane of ['public', 'admin']) {
+      jest.clearAllMocks();
+      const gridEl = document.createElement('section');
+      document.body.append(gridEl);
+      const publicHydrationJobs: any[] = [];
+      await mountRuntimeGridWidgets({
+        gridEl, grid: { makeWidget: jest.fn() },
+        layout: [{ id: 'one', widgetId: 'hero', x: 0, y: 0, w: 100, h: 100 }],
+        allWidgets: [{ id: 'hero' }], lane, widgetEmit: jest.fn(),
+        scaleX: 1, scaleY: 1, deferHydration: false, publicHydrationJobs
+      });
+      expect(publicHydrationJobs).toHaveLength(lane === 'public' ? 1 : 0);
+      expect(renderRuntimeCanvasWidget).toHaveBeenCalledTimes(lane === 'public' ? 0 : 1);
+      if (lane === 'public') {
+        expect(gridEl.querySelector('[aria-busy="true"]')).not.toBeNull();
+        await publicHydrationJobs[0].render();
+        expect(renderRuntimeCanvasWidget).toHaveBeenCalledTimes(1);
+      }
+    }
+  });
   beforeEach(() => {
     document.body.innerHTML = '';
     jest.clearAllMocks();

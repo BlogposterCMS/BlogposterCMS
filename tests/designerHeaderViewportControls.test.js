@@ -5,6 +5,7 @@
 const { initHeaderControls } = require('../ui/designer/app/renderer/headerControls.js');
 const {
   resetBuilderViewportStateForTests,
+  setBuilderZoom,
   setBuilderViewportWidth
 } = require('../ui/designer/app/renderer/viewportState.ts');
 
@@ -53,6 +54,28 @@ describe('Designer header viewport controls', () => {
     expect(document.getElementById('viewport').style.width).toBe('390px');
     expect(document.querySelector('[data-builder-viewport-preset="mobile"]').getAttribute('aria-pressed'))
       .toBe('true');
+    dispose();
+  });
+
+  it('routes selection to the current grid and does not reflow on zoom', () => {
+    const first = { activeEl: document.createElement('article'), setResponsiveRange: jest.fn() };
+    const nested = { activeEl: document.createElement('article'), setResponsiveRange: jest.fn() };
+    let current = first;
+    const setViewport = jest.fn();
+    const dispose = initHeaderControls(
+      document.getElementById('topBar'), document.getElementById('grid'),
+      document.getElementById('viewportSize'), first,
+      { undo: jest.fn(), redo: jest.fn(), getGrid: () => current, setViewport }
+    );
+    current = nested;
+    setBuilderViewportWidth(390);
+    document.dispatchEvent(new Event('designerSelectionChanged'));
+    expect(nested.setResponsiveRange).toHaveBeenCalledWith(
+      { minWidth: 320, maxWidth: 600 }, { element: nested.activeEl, rewriteActive: false }
+    );
+    expect(setViewport.mock.calls).toEqual([[1280], [390]]);
+    setBuilderZoom(150);
+    expect(setViewport).toHaveBeenCalledTimes(2);
     dispose();
   });
 });

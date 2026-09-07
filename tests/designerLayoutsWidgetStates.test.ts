@@ -9,12 +9,23 @@ jest.mock('../ui/widgets/plainspace/admin/designerLayoutsData', () => ({
 }));
 
 describe('design library states', () => {
+  it('replaces a failed preview with a bounded placeholder', async () => {
+    jest.mocked(fetchDesignerLayouts).mockResolvedValue([{ id: 'preview', title: 'Design', thumbnail: '/missing.png' }]);
+    const host = document.createElement('div');
+    await render(host);
+    const image = host.querySelector<HTMLImageElement>('.layout-gallery-preview')!;
+    image.dispatchEvent(new Event('error'));
+    expect(image.getAttribute('src')).toBe('/assets/icons/file.svg');
+    expect(image.classList.contains('layout-gallery-preview--placeholder')).toBe(true);
+    expect(image.alt).toBe('No preview available');
+  });
   it('exposes a real design destination without requiring a popup', async () => {
     jest.mocked(fetchDesignerLayouts).mockResolvedValue([{ id: 'saved-design', title: 'Reusable shell' }]);
     const host = document.createElement('div');
     await render(host);
     expect(host.querySelector('a')?.getAttribute('href')).toBe('/admin/studio/design/saved-design');
     expect(host.querySelector('[data-design-id="saved-design"]')).not.toBeNull();
+    expect(host.querySelector('.layout-gallery-name')?.getAttribute('title')).toBe('Reusable shell');
   });
   beforeEach(() => {
     jest.clearAllMocks();

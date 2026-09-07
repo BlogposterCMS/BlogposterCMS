@@ -235,11 +235,23 @@ function removePreviewOnlyAttributes(root: HTMLElement): void {
 }
 
 function addPreviewFallbackLabel(preview: HTMLElement, label: string): void {
-  if (preview.textContent?.replace(/\s+/g, ' ').trim()) return;
+  if (preview.textContent?.replace(/\s+/g, ' ').trim()
+    || Array.from(preview.querySelectorAll('*')).some(el => el.shadowRoot?.textContent?.trim())) return;
   const title = document.createElement('span');
   title.className = 'dashboard-drag-preview__label';
   title.textContent = label;
   preview.appendChild(title);
+}
+
+// Widget content lives in open shadow roots; cloneNode alone produces empty cards.
+function clonePreviewNode(source: Node): Node {
+  const copy = source.cloneNode(false);
+  source.childNodes.forEach(child => copy.appendChild(clonePreviewNode(child)));
+  if (source instanceof HTMLElement && copy instanceof HTMLElement && source.shadowRoot) {
+    const shadow = copy.shadowRoot || copy.attachShadow({ mode: 'open' });
+    source.shadowRoot.childNodes.forEach(child => shadow.appendChild(clonePreviewNode(child)));
+  }
+  return copy;
 }
 
 function createDashboardDragPreview(
@@ -255,7 +267,7 @@ function createDashboardDragPreview(
 
   if (source) {
     source.childNodes.forEach(node => {
-      preview.appendChild(node.cloneNode(true));
+      preview.appendChild(clonePreviewNode(node));
     });
     removePreviewOnlyAttributes(preview);
   }
@@ -306,7 +318,7 @@ function readWidgetHeightVars(source: HTMLElement, target: HTMLElement): void {
   const rect = source.getBoundingClientRect();
   if (Number.isFinite(rect.height) && rect.height > 0) {
     target.style.setProperty('--dashboard-placeholder-height', `${Math.round(rect.height)}px`);
-  } else {
+  } else if (!source.classList.contains('is-dragging')) {
     target.style.removeProperty('--dashboard-placeholder-height');
   }
   if (source.dataset.dashboardHeightMode) {
@@ -670,6 +682,7 @@ export function bindAdminDropTarget(
       snapPulseTimer: null
     };
     widget.setPointerCapture?.(event.pointerId);
+    updatePlaceholderFromWidget(dragState.placeholder, widget);
     widget.classList.add('is-dragging');
     gridEl.classList.add('is-dashboard-dragging');
     grid.select(widget);
@@ -717,6 +730,7 @@ export function bindAdminDropTarget(
       dragState.previewAnchorX,
       dragState.previewAnchorY
     );
+    updatePlaceholderFromWidget(dragState.placeholder, widget);
     widget.classList.add('is-dragging');
     gridEl.classList.add('is-dashboard-dragging');
     grid.select(widget);

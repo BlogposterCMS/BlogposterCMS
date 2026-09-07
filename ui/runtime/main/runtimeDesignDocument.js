@@ -90,10 +90,11 @@ async function renderDesignRefLeaf({ leaf, container, allWidgets, lane, options 
         // Embedded designs use the same structural renderer as the outer page.
         // Do not flatten their containers or repeat the page's global widgets.
         applyRuntimeDesignStyles(container, response?.design);
-        const rendered = await renderRuntimeDesignDocument(container, getRuntimeDesignDocument({ ...response, placements: layout }), allWidgets, lane, { emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, String(leaf.designRef)] });
+        const rendered = await renderRuntimeDesignDocument(container, getRuntimeDesignDocument({ ...response, placements: layout }), allWidgets, lane, { emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, String(leaf.designRef)], publicHydrationJobs: options.publicHydrationJobs });
         if (!rendered && layout.length) {
             await renderStaticRuntimeGrid(container, layout, allWidgets, lane, {
-                widgetEmit: options.widgetEmit
+                widgetEmit: options.widgetEmit,
+                publicHydrationJobs: options.publicHydrationJobs
             });
         }
     }
@@ -171,7 +172,8 @@ export async function renderRuntimeDesignDocument(target, document, allWidgets, 
         await renderStaticRuntimeGrid(container, combined, allWidgets, lane, {
             widgetEmit: options.widgetEmit,
             useTargetAsGrid: true,
-            structuralItems
+            structuralItems,
+            publicHydrationJobs: options.publicHydrationJobs
         });
     }
     if (options.contentDesignId) {
@@ -193,7 +195,8 @@ export async function renderRuntimeDesignDocument(target, document, allWidgets, 
         applyRuntimeDesignStyles(pageDesign, response.design);
         const rendered = await renderRuntimeDesignDocument(pageDesign, getRuntimeDesignDocument({ ...response, placements: getRuntimeDesignLayout(response) }), allWidgets, lane, {
             emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, options.contentDesignId],
-            initialPageHtml: options.initialPageHtml
+            initialPageHtml: options.initialPageHtml,
+            publicHydrationJobs: options.publicHydrationJobs
         });
         if (!rendered)
             throw new Error('RUNTIME_PAGE_DESIGN_DOCUMENT_MISSING: The page design has no container structure.');

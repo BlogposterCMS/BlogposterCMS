@@ -6,15 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="agent-surface" content="manual">
   <link rel="stylesheet" href="/apps/designer/assets/css/designer.css">
-<body>
+<body data-custom-select-scope="explicit">
   <div id="builderRow" class="builder-row">
-    <aside id="sidebar" class="sidebar builder-sidebar" aria-label="Builder sidebar"></aside>
+    <aside id="sidebar" class="sidebar builder-sidebar designer-ui-controls" data-ui-controls aria-label="Builder sidebar"></aside>
     <div id="content">
       <main id="builderMain"></main>
       <footer id="builderFooter" class="builder-footer"></footer>
     </div>
-    <aside id="sceneInspector" class="scene-inspector" aria-label="Scene inspector"></aside>
-    <aside id="publishPanel" class="publish-panel hidden" aria-label="Publish panel"></aside>
+    <aside id="sceneInspector" class="scene-inspector designer-ui-controls" data-ui-controls aria-label="Scene inspector"></aside>
+    <aside id="publishPanel" class="publish-panel hidden designer-ui-controls" data-ui-controls aria-label="Publish panel"></aside>
   </div>
   <script src="/build/meltdownEmitter.js"></script>
   <script src="/build/appBridge.js"></script>

@@ -11,6 +11,7 @@ import {
 import { renderAttachedRuntimeContent } from '../ui/runtime/main/runtimeAttachedContent';
 import { renderPublicRuntimePageContent } from '../ui/runtime/main/runtimePageComposition';
 import { renderRuntimeCanvasWidget } from '../ui/runtime/main/runtimeWidgetMounting';
+import { renderRuntimeDesignDocument } from '../ui/runtime/main/runtimeDesignDocument';
 
 jest.mock('../ui/runtime/main/canvasGrid', () => ({
   init: jest.fn()
@@ -34,6 +35,26 @@ jest.mock('../ui/runtime/main/runtimePageData', () => ({
 }));
 
 describe('runtimePageComposition', () => {
+  it('collects widgets across structural containers before public hydration begins', async () => {
+    const target = document.createElement('main');
+    document.body.append(target);
+    const publicHydrationJobs: any[] = [];
+    await renderRuntimeDesignDocument(target, {
+      layoutTree: { type: 'split', nodeId: 'root', direction: 'column', children: [
+        { type: 'leaf', nodeId: 'header', section: true },
+        { type: 'leaf', nodeId: 'footer', section: true }
+      ] },
+      placements: [
+        { id: 'header-widget', widgetId: 'text', workareaId: 'header', x: 0, y: 0, w: 200, h: 100 },
+        { id: 'footer-widget', widgetId: 'text', workareaId: 'footer', x: 0, y: 0, w: 200, h: 100 }
+      ]
+    } as any, [{ id: 'text' }], 'public', { publicHydrationJobs });
+    expect(publicHydrationJobs).toHaveLength(2);
+    expect(target.querySelectorAll('[data-widget-hydration-state="shell"]')).toHaveLength(4);
+    expect(renderRuntimeCanvasWidget).not.toHaveBeenCalled();
+    await publicHydrationJobs[0].render();
+    expect(renderRuntimeCanvasWidget).toHaveBeenCalledTimes(1);
+  });
   it('keeps direct page HTML and attached content between a shared header and footer', async () => {
     const contentEl = document.createElement('main');
     const emit = jest.fn();

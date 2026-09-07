@@ -12,9 +12,10 @@ const VIEWPORT_PRESETS = [
     { id: 'tablet', label: 'Tablet', icon: 'tablet' },
     { id: 'mobile', label: 'Mobile', icon: 'smartphone' }
 ];
-function getAppScope() {
-    const scope = document.querySelector('.app-scope');
-    return scope ?? document.body;
+function getHeaderHost() {
+    // The iframe document owns Studio chrome; app-scope only identifies styling.
+    // Nested controls must never become a mount target for the application header.
+    return document.body;
 }
 function setHeaderHeightVariable(height) {
     const numericHeight = Number.isFinite(height) && height ? Number(height) : DEFAULT_HEADER_HEIGHT;
@@ -187,13 +188,13 @@ function ensureHeaderMount() {
     if (existing instanceof HTMLElement) {
         return existing;
     }
-    const appScope = getAppScope();
+    const appScope = getHeaderHost();
     const fallback = buildFallbackHeader();
     appScope.prepend(fallback);
     return fallback;
 }
 async function loadHeaderPartial(existing) {
-    const appScope = getAppScope();
+    const appScope = getHeaderHost();
     try {
         const markup = await fetchPartial('builder-header');
         const sanitized = sanitizeHtml(markup.trim());
@@ -220,7 +221,7 @@ async function loadHeaderPartial(existing) {
         return existing ?? ensureHeaderMount();
     }
 }
-export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, livePreviewController, openDesignSettings, onPublishController, undo, redo }) {
+export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageData, gridEl, viewportSizeEl, grid, getGrid = () => grid, setViewport = undefined, saveDesign, getCurrentLayoutForLayer, getActiveLayer, ensureCodeMap, capturePreview, updateAllWidgetContents, getAdminUserId, pageId, layoutRoot, state, startAutosave, showPreviewHeader, hidePreviewHeader, livePreviewController, openDesignSettings, onPublishController, undo, redo }) {
     let topBar = null;
     let layoutName = initialLayoutName;
     let headerResizeObserver = null;
@@ -327,7 +328,9 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
             saveWrapper.appendChild(saveDropdown);
             disposeHeaderControls = initHeaderControls(topBar, gridEl, viewportSizeEl, grid, {
                 undo,
-                redo
+                redo,
+                getGrid,
+                setViewport
             });
             saveMenuBtn.addEventListener('click', e => {
                 e.stopPropagation();

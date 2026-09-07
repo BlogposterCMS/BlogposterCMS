@@ -90,8 +90,11 @@ function registerPerformDbOperationEvent(motherEmitter) {
       if (timeout) clearTimeout(timeout); // Ensure timeout is cleared on error too
       console.error(`[DB MANAGER] Error performing db operation for module "${payload?.moduleName || 'unknown'}":`, sanitize(err.message));
       
-      // Attempt to deactivate the module that caused the error
-      if (payload?.moduleName) {
+      // A stale Designer save must still fail, without disabling all design reads.
+      const expectedConflict = payload?.moduleName === 'designerManager'
+        && payload?.operation === 'DESIGNER_SAVE_DESIGN'
+        && err.code === 'DESIGNER_VERSION_CONFLICT';
+      if (payload?.moduleName && !expectedConflict) {
         deactivateModuleRuntime(motherEmitter, payload.moduleName, err.message);
       }
 

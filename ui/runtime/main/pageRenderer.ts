@@ -91,10 +91,14 @@ export async function renderRuntimePage(
     exposeRuntimeWidgetRegistry(allWidgets);
 
     let globalLayout: LayoutItem[] = [];
-    try {
-      globalLayout = await loadRuntimeGlobalLayout(meltdownEmit, lane);
-    } catch (err) {
-      console.warn('[Renderer] failed to load global layout', err);
+    // Fixed admin pages compose their own widgets and the grid ignores global
+    // slots. Keep inherited layout reads for editable dashboards and websites.
+    if (!(lane === 'admin' && page.meta?.dashboardLayout === 'fixed')) {
+      try {
+        globalLayout = await loadRuntimeGlobalLayout(meltdownEmit, lane);
+      } catch (err) {
+        console.warn('[Renderer] failed to load global layout', err);
+      }
     }
 
     if (lane !== 'admin') {

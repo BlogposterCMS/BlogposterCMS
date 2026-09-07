@@ -4,6 +4,7 @@ import { registerWorkspaceChanges } from '/ui/shared/navigation/workspaceChanges
 import enhanceSelects from '/ui/shared/controls/customSelect.js';
 import { debounce } from '/ui/shared/utils/debounce.js';
 import { pageService, sanitizeSlug } from './pageService.js';
+import { renderPageDesignPreview } from './pageDesignPreview.js';
 import { pagePresentationFromList } from '/ui/shared/layout/pagePresentation.js';
 import { loadSiteMainDesign, saveSiteMainDesign } from '/ui/shared/layout/siteMainDesign.js';
 import { fetchPublishedDesigns } from '../../pageEditorWidgets/pageContentData.js';
@@ -334,6 +335,10 @@ export function renderPageList(el, pages, options = {}) {
     const feedback = requireElement(root, '.page-manager__feedback');
     const retry = requireElement(root, '[data-action="retry"]');
     function renderLayoutContext() {
+        const previewHost = details.querySelector('[data-page-design-preview]');
+        const selectedPage = pages.find(page => normalizePageId(page.id) === selectedId);
+        if (previewHost && selectedPage)
+            renderPageDesignPreview(previewHost, pagePresentationFromList(selectedPage, pages, mainDesign), designLibrary, `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, selectedPage.id);
         const context = requireElement(root, '.page-manager__layout-context');
         const active = pages.filter(page => page.status !== 'deleted');
         const assignments = active.map(page => pagePresentationFromList(page, active, mainDesign));
@@ -580,7 +585,7 @@ export function renderPageList(el, pages, options = {}) {
         details.innerHTML = `
       <button type="button" class="button text sm page-manager__back" data-action="back">${icon('arrow-left')} Back to pages</button>
       <div class="page-manager__details-heading"><span>${creating ? 'NEW PAGE' : 'PAGE DETAILS'}</span><h3 tabindex="-1">${creating ? (creatingCollection ? 'Add a collection' : 'Add a page') : escapeHtml(page.title || 'Untitled')}</h3></div>
-      ${creating ? `<p class="page-manager__hint">${creatingCollection ? 'A collection is a page that groups child pages. Start with a draft, then add subpages.' : 'Start with a draft, then add content in the editor.'}</p>` : `<div class="page-manager__actions"><a class="button secondary sm" data-action="edit" href="${escapeHtml(editorUrl)}">${icon('pencil')} Edit content</a><button type="button" class="button text sm" data-action="view" ${page.status !== 'published' ? 'disabled' : ''}>${icon('external-link')} Open page</button></div>`}
+      ${creating ? `<p class="page-manager__hint">${creatingCollection ? 'A collection is a page that groups child pages. Start with a draft, then add subpages.' : 'Start with a draft, then add content in the editor.'}</p>` : `<div class="page-manager__actions"><a class="button secondary sm" data-action="edit" href="${escapeHtml(editorUrl)}">${icon('pencil')} Site settings</a><button type="button" class="button text sm" data-action="view" ${page.status !== 'published' ? 'disabled' : ''}>${icon('external-link')} Open page</button></div>`}
       <form class="page-manager__form">
         <label><span>Title</span><input name="title" required value="${escapeHtml(page.title || '')}" autocomplete="off"></label>
         <label><span>Page address</span><input name="slug" required value="${escapeHtml(page.slug || '')}" placeholder="docs/getting-started" autocomplete="off"><small>Full path after your domain, including any parent path.</small></label>
@@ -589,6 +594,12 @@ export function renderPageList(el, pages, options = {}) {
         <div class="page-manager__save"><span class="page-manager__save-state">${creating ? 'Not created yet' : 'Saved'}</span><button class="button primary sm" type="submit" ${creating ? '' : 'disabled'}>${creating ? 'Create page' : 'Save changes'}</button></div>
       </form>
       ${creating ? '<button type="button" class="button text sm" data-action="cancel">Cancel</button>' : `<div class="page-manager__secondary"><button type="button" class="button text sm" data-action="child">${icon('plus')} Add subpage</button><button type="button" class="button text sm" data-action="share" ${page.status !== 'published' ? 'disabled' : ''}>${icon('link')} Copy link</button><button type="button" class="button text sm" data-action="home" ${page.is_start || page.status !== 'published' ? 'disabled' : ''}>${icon('house')} ${page.is_start ? 'Current home page' : 'Set as home page'}</button><button type="button" class="button text sm page-manager__delete" data-action="delete">${icon('trash-2')} Delete page</button></div>`}`;
+        if (!creating) {
+            const previewHost = document.createElement('div');
+            previewHost.dataset.pageDesignPreview = '';
+            details.querySelector('.page-manager__details-heading')?.after(previewHost);
+            renderPageDesignPreview(previewHost, pagePresentationFromList(page, pages, mainDesign), designLibrary, adminBase, page.id);
+        }
         enhanceSelects(details);
         const form = requireElement(details, 'form');
         let slugEdited = false;

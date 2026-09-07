@@ -1,4 +1,12 @@
 /* Canva-inspired Header Design */
+// The application toolbar must not inherit authored page-header constraints.
+// Keep this scoped to Studio chrome; canvas headers retain their saved width.
+body.builder-mode #builder-header {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
 .builder-header {
   --accent: var(--user-color);
   --accent-dark: color-mix(in srgb, var(--user-color), black 15%);

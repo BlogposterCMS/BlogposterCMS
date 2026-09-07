@@ -191,7 +191,9 @@ function buildSidebar(nav, pages, adminBase, workspaceSlug) {
         anchor.append(label);
         fragment.append(anchor);
     });
-    const add = document.createElement('div');
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.setAttribute('aria-label', 'Add page');
     add.className = 'sidebar-item sidebar-add-subpage';
     const addIcon = document.createElement('img');
     addIcon.src = resolveAssetPath('assets/icons/plus.svg');

@@ -12,6 +12,15 @@ const {
   resolveRegistryWidgetFilePath
 } = plainSpace._internals;
 
+test('Analytics catalog widgets use non-exclusive shared dashboard slots', () => {
+  for (const widgetId of ['analyticsDashboard', 'analyticsOverview', 'analyticsWebsite', 'analyticsDevices', 'analyticsSystem']) {
+    const widget = DEFAULT_WIDGETS.find(entry => entry.widgetId === widgetId);
+    assert(widget);
+    assert(widget.metadata.layout.supportedSlots.every(slot => !slot.exclusive && slot.name !== 'page'));
+    assert.deepStrictEqual(widget.metadata.apiActions, [{ resource: 'analytics', action: 'summary' }]);
+  }
+});
+
 function writeFixture(root, relativePath) {
   const filePath = path.join(root, relativePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

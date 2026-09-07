@@ -108,6 +108,34 @@ describe('designer iframe origin handling', () => {
     window.history.replaceState(null, '', `?originToken=${token}`);
   });
 
+  test('starts independent presentation reads together and waits before canvas boot', async () => {
+    await loadDesignerApp();
+    const colors = await import('../ui/shared/colors/colorLibrary');
+    const fonts = await import('../ui/shared/fonts/fontPackages');
+    const presets = await import('../ui/shared/presets/sitePresets');
+    let releaseColors!: (value: any) => void;
+    const colorRead = jest.spyOn(colors, 'refreshColorLibrary').mockImplementation(() => new Promise(resolve => { releaseColors = resolve; }));
+    const fontRead = jest.spyOn(fonts, 'refreshFontPackages').mockResolvedValue({} as any);
+    const presetRead = jest.spyOn(presets, 'refreshSitePresets').mockResolvedValue({} as any);
+    (window as any).meltdownEmit = jest.fn();
+    try {
+      const app = await import('../ui/designer/app/index');
+      let ready = false;
+      const pending = app.prepareDesignerPresentation().then(() => { ready = true; });
+      expect(colorRead).toHaveBeenCalledTimes(1);
+      expect(fontRead).toHaveBeenCalledTimes(1);
+      expect(presetRead).toHaveBeenCalledTimes(1);
+      await Promise.resolve();
+      expect(ready).toBe(false);
+      releaseColors({});
+      await pending;
+      expect(ready).toBe(true);
+    } finally {
+      delete (window as any).meltdownEmit;
+      jest.restoreAllMocks();
+    }
+  });
+
   test('designer-ready reply targets the origin that delivered init tokens', async () => {
     document.body.innerHTML = `
       <div id="builderRow">

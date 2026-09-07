@@ -469,7 +469,7 @@ body.builder-mode .canvas-item.inactive-layer {
   filter: grayscale(0.5);
 
   &::after {
-    content: 'Switch to this layer to edit';
+    content: 'Double-click to switch to this layer';
     position: absolute;
     inset: 0;
     background: color-mix(in srgb, var(--designer-surface) 90%, transparent);

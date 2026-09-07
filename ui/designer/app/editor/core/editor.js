@@ -203,7 +203,8 @@ export function editElement(el, onSave, clickEvent = null) {
 
   const prevLayer = +widget.dataset.layer || 0;
   const prevStackOrder = widget.dataset.layerOrder || widget.style.zIndex;
-  widget.dataset.layer = 9999;
+  // Elevation is visual only: changing the logical layer makes interaction
+  // synchronization mark this actively edited widget as an inactive layer.
   widget.style.zIndex = '9999';
   widget.classList.add('editing');
   widget.dispatchEvent(new Event('editStart'));
@@ -236,7 +237,6 @@ export function editElement(el, onSave, clickEvent = null) {
 
     el.removeAttribute('contenteditable');
 
-    widget.dataset.layer = prevLayer;
     // Temporary text-edit elevation must not discard the saved visual stack.
     widget.style.zIndex = prevStackOrder || String(prevLayer);
     widget.setAttribute('gs-locked', 'false');

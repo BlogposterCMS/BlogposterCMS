@@ -11,6 +11,7 @@ import { capturePreview } from './renderer/capturePreview.js';
 import { createWorkspaceCommandGuard, workspaceActionCatalog } from '/ui/shared/agent/workspaceAgent.js';
 import { registerWorkspaceChanges } from '/ui/shared/navigation/workspaceChanges.js';
 import { livePreviewFeedbackState } from './renderer/livePreviewFrame.js';
+import { containerPositionAvailability } from './managers/containerCapabilities.js';
 import {
   activateColorScheme,
   colorLibraryAgentState,
@@ -124,7 +125,7 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     action: 'scene.move',
     label: 'Move section',
     category: 'scene',
-    description: 'Moves the same Section node used by the page LayoutTree and storyboard.',
+    description: 'Moves the Section node in the existing page LayoutTree and sidebar order.',
     params: [
       { name: 'sceneId', type: 'string', required: true },
       { name: 'delta', type: 'number', required: false },
@@ -370,7 +371,7 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     action: 'container.settings.set',
     label: 'Set container settings',
     category: 'layout',
-    description: 'Updates existing typed container settings such as gap and padding.',
+    description: 'Updates typed container settings including gap, padding, borderWidth and per-edge borderTopWidth/borderRightWidth/borderBottomWidth/borderLeftWidth (0–64px), borderStyle, borderColor and borderRadius (0–512px).',
     params: [
       { name: 'id', type: 'string', required: true },
       { name: 'settings', type: 'object', required: true }
@@ -764,13 +765,25 @@ function layoutNodeFeedback(el: HTMLElement, index: number): Record<string, unkn
       freePlacementInteractive: mode !== 'free' || unexpectedInteractionLocks === 0,
       unexpectedTemporaryLockCount: unexpectedInteractionLocks
     },
+    positionAvailability: containerPositionAvailability(el, el.closest('.layout-root')),
     settings: {
       gap: el.dataset.layoutGap || null,
       padding: el.dataset.layoutPadding || null,
       columns: Number.parseInt(el.dataset.layoutColumns || '0', 10) || null,
       align: el.dataset.layoutAlign || null,
       minHeight: el.dataset.layoutMinHeight || null,
+      height: el.dataset.layoutHeight || 'auto',
+      position: el.dataset.layoutPosition || 'normal',
       background: el.dataset.layoutBackground || el.dataset.sceneBackground || null,
+      borderWidth: el.dataset.layoutBorderWidth || null,
+      borderTopWidth: el.dataset.layoutBorderTopWidth ?? el.dataset.layoutBorderWidth ?? null,
+      borderRightWidth: el.dataset.layoutBorderRightWidth ?? el.dataset.layoutBorderWidth ?? null,
+      borderBottomWidth: el.dataset.layoutBorderBottomWidth ?? el.dataset.layoutBorderWidth ?? null,
+      borderLeftWidth: el.dataset.layoutBorderLeftWidth ?? el.dataset.layoutBorderWidth ?? null,
+
+      borderStyle: el.dataset.layoutBorderStyle || null,
+      borderColor: el.dataset.layoutBorderColor || null,
+      borderRadius: el.dataset.layoutBorderRadius || null,
       designRef: el.dataset.designRef || null
     },
     section: el.dataset.sectionId ? {
@@ -1247,6 +1260,7 @@ function buildDesignerAgentFeedback(
         assignmentSurface: 'cms.pages: pages.setMainDesign; cms.page-editor: page.setLayout'
       },
       pageFlow: {
+        savedThumbnail: { mode: 'first-section', maxWidth: 960, maxAspectHeight: '9/16', editorZoomIndependent: true },
         axis: 'vertical',
         dynamicHeight: document.getElementById('layoutRoot')?.dataset.dynamicCanvasHeight === 'true',
         sectionCount: document.querySelectorAll('#layoutRoot > .layout-section[data-section-id]').length
@@ -1259,6 +1273,9 @@ function buildDesignerAgentFeedback(
     snapGuides: snapGuideFeedback(),
     motionTimeline: motionTimelineFeedbackState(),
     widgetLibrary: widgetLibraryFeedbackState(),
+    editingScope: document.getElementById('layoutRoot')?.dataset.editingScope || 'design',
+    hoveredContainerId: document.querySelector<HTMLElement>('#layoutRoot .layout-container--hovered')?.dataset.nodeId || null,
+    contentHostNodeId: document.querySelector<HTMLElement>('#layoutRoot [data-dynamic-host="true"]')?.dataset.nodeId || null,
     livePreview: livePreviewFeedbackState(),
     publishing: publishingFeedbackState(),
     visual: visualFeedbackState(visual),

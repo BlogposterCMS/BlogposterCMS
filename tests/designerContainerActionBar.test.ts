@@ -23,6 +23,12 @@ describe('designer container action bar', () => {
     };
 
     attachContainerBar(el, ctx);
+    const background = el.querySelector<HTMLInputElement>('.bar-color')!;
+    background.value = '#123456';
+    background.dispatchEvent(new Event('change'));
+    expect(ctx.setContainerSettings).toHaveBeenCalledWith(el, { background: '#123456' });
+    el.querySelector<HTMLButtonElement>('.bar-background-clear')!.click();
+    expect(ctx.setContainerSettings).toHaveBeenCalledWith(el, { background: 'transparent' });
 
     const toolbar = el.querySelector('.container-actionbar') as HTMLElement;
     expect(toolbar?.getAttribute('role')).toBe('toolbar');

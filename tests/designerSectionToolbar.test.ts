@@ -57,6 +57,7 @@ describe('Design Studio Section toolbar', () => {
     expect(features.querySelector('.section-background-color')).not.toBeNull();
     expect(features.querySelector('.section-background-image')).not.toBeNull();
     expect(features.querySelector('.section-delete')).not.toBeNull();
+    expect(features.querySelector('.section-toolbar-owner')?.textContent).toBe('Section · features');
   });
 
   it('keeps Section controls inset from the shared Add Section edge', () => {

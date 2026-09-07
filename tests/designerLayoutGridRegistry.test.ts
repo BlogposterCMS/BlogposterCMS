@@ -19,6 +19,27 @@ function container(id: string) {
 }
 
 describe('Design Studio recursive layout grid registry', () => {
+  it('keeps page zoom independent of selection and updates every nested viewport', () => {
+    const root = document.createElement('main');
+    const hero = section('hero');
+    hero.append(container('nested'));
+    root.append(hero, section('footer'));
+    const registry = createLayoutGridRegistry({
+      layoutRoot: root,
+      createGrid: surface => ({
+        el: surface, enableZoom: surface === hero,
+        makeWidget: jest.fn(), setResponsiveViewport: jest.fn()
+      })
+    });
+    registry.activate('footer');
+    expect(registry.zoomGrid().el).toBe(hero);
+    registry.setResponsiveViewport(390);
+    expect(registry.orderedRecords()).toHaveLength(3);
+    registry.orderedRecords().forEach(record => {
+      expect(record.grid.setResponsiveViewport).toHaveBeenCalledWith(390);
+    });
+  });
+
   it('uses each Section and nested Container as one persistent CanvasGrid surface', () => {
     const root = document.createElement('main');
     const hero = section('hero', 'Hero');

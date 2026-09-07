@@ -53,6 +53,37 @@ individual cards into Issues or Projects when work becomes active.
 
 ## Current Lanes
 
+### Core Module Fault Isolation
+
+- Status: Inbox — architecture proposal; not implemented or approved for rollout.
+- Type: architecture
+- Area: core bootstrap, ModuleLoader runner, event contracts, lifecycle
+- Context: Community modules already run in separate processes. Core modules
+  share the host, so logical Meltdown deactivation cannot contain a blocked event
+  loop or process-wide memory failure. Extend the existing runner/host contracts
+  where feasible instead of introducing a second module API.
+- Proposed scope: Inventory core dependencies and select a non-critical module
+  for an isolated pilot. Keep auth, database ownership and permission checks at
+  their existing authorities. Specify bounded IPC requests, startup readiness,
+  exit cleanup and explicit unavailable responses for dependent features.
+- Benefit: A worker crash or blocked worker should leave unrelated host routes
+  responsive. Isolation adds per-process memory, IPC serialization and lifecycle
+  work; it is not itself a reduction in Node overhead.
+- Migration impact: Core modules currently receiving host objects or in-process
+  callbacks need compatible serializable contracts before they can move. Decide
+  OS-level CPU/memory limits and recovery policy before broadening deployment.
+- Acceptance: Review module placement and migration cost before implementation.
+  A pilot must preserve event payloads, permissions, persistence ownership and
+  existing UI behavior while making failure state explicit.
+- Tests: Inject worker exit, blocked execution, malformed replies and request
+  timeout; verify public pages, login and unrelated admin actions still work.
+  Verify pending requests settle and worker listeners/resources are cleaned up.
+  Exercise resource exhaustion under explicit OS/container limits separately.
+- Docs: Architecture, module runtime, deployment and the applicable security
+  guidance must distinguish tested containment from remaining shared failures.
+- Risks: Extra processes consume memory; shared database/host failures remain
+  possible. Do not describe the system as crash-proof.
+
 ### Site Presets And Central Design Defaults
 
 Site Presets configure central Builder systems without becoming executable

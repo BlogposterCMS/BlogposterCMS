@@ -58,6 +58,11 @@ html[data-designer-live-preview='true'] body::-webkit-scrollbar {
   align-items: var(--layout-align, stretch);
 }
 
+.runtime-layout-container[data-layout-mode='row']:is([data-layout-align='stretch'], :not([data-layout-align])) > .layout-container {
+  /* Match Studio: stretch the box; the saved min-height remains a lower bound. */
+  height: auto !important;
+}
+
 .runtime-layout-container.canvas-grid[data-layout-mode='row'] {
   flex-flow: row wrap;
   align-items: var(--layout-align, stretch);
@@ -99,4 +104,16 @@ html[data-designer-live-preview='true'] body::-webkit-scrollbar {
 }
 .runtime-layout-container.canvas-grid:not([data-layout-mode='free']) > .canvas-item:is([data-widget-id='navigationMenu'], [data-widget-id='breadcrumb']) > .canvas-item-content {
   height: auto !important;
+}
+
+.runtime-design-document .runtime-layout-container.canvas-grid[data-layout-height],
+.runtime-design-document .runtime-layout-container[data-layout-height] {
+  height: var(--layout-height) !important;
+}
+
+.runtime-design-document .runtime-layout-container.canvas-grid[data-layout-position='sticky'],
+.runtime-design-document .runtime-layout-container[data-layout-position='sticky'] {
+  position: sticky !important;
+  top: 0 !important;
+  align-self: start;
 }

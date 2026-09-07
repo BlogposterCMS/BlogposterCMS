@@ -2,6 +2,7 @@
  * mother/modules/databaseManager/placeholders/handlePlaceholder.js
  */
 const builtinPlaceholders = require('./builtinPlaceholders');
+const { isAnalyticsPlaceholder, handleAnalyticsSql, handleAnalyticsMongo } = require('./analyticsPlaceholders');
 const { getCustomPlaceholder } = require('./placeholderRegistry');
 const { handleBuiltInPlaceholderPostgres } = require('./postgresPlaceholders');
 const { handleBuiltInPlaceholderMongo } = require('./mongoPlaceholders');
@@ -17,6 +18,11 @@ const notificationEmitter = require('../../../emitters/notificationEmitter');
  *   3) If nothing matches => we log "No placeholder found."
  */
 async function handlePlaceholder(dbClient, dbType, operation, params = []) {
+  if (isAnalyticsPlaceholder(operation)) {
+    if (dbType === 'mongodb') return handleAnalyticsMongo(dbClient, operation, params);
+    if (dbType === 'sqlite' || dbType === 'postgres') return handleAnalyticsSql(dbClient, operation, params, dbType === 'postgres');
+    throw new Error('ANALYTICS_STORAGE_ENGINE_UNSUPPORTED');
+  }
   // 1) Check for a custom placeholder
   const customRef = getCustomPlaceholder(operation);
   if (customRef) {

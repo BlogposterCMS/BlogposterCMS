@@ -5,14 +5,14 @@ const express = require('express');
 const { createPublicPageRoutes } = require('../mother/server/http/publicPageRoutes');
 const { sanitizeSlug } = require('../mother/server/utils/text');
 
-function request(server, requestPath) {
+function request(server, requestPath, headers = {}) {
   return new Promise((resolve, reject) => {
     const address = server.address();
     const req = http.request({
       host: '127.0.0.1',
       port: address.port,
       path: requestPath,
-      method: 'GET'
+      method: 'GET', headers
     }, res => {
       let body = '';
       res.setEncoding('utf8');
@@ -60,6 +60,21 @@ function createServer(expectedSlug, seenSlugs) {
 }
 
 describe('nested public page routes', () => {
+  it('records one delivery and excludes DNT/GPC and missing pages', async () => {
+    const collector = require('../mother/modules/analyticsManager/collector');
+    collector.take(); collector.setEnabled(true);
+    const server = createServer('guides/known', []);
+    try {
+      await request(server, '/guides/known', { 'user-agent': 'Windows Chrome/120', referer: 'https://example.com/private?q=secret' });
+      const rows = collector.take();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ kind: 'page', page: 'page-1', browser: 'Chrome', source: 'example.com' });
+      await request(server, '/guides/known', { DNT: '1' });
+      await request(server, '/guides/known', { 'Sec-GPC': '1' });
+      await request(server, '/missing');
+      expect(collector.take()).toHaveLength(0);
+    } finally { collector.setEnabled(false); await new Promise(resolve => server.close(resolve)); }
+  });
   it('renders a published page whose slug contains multiple path segments', async () => {
     const seenSlugs = [];
     const expectedSlug = 'guides/getting-started/install';

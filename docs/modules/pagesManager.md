@@ -175,3 +175,11 @@ Manager links to that existing route. The editor stages metadata, SEO and conten
 for one explicit save. Deleted pages live in the Deleted filter and are excluded
 from new parent/menu targets; an existing parent relationship is preserved until
 explicitly changed.
+
+Page details show the resolved attached design preview above the edit actions. The existing pagePresentationFromList resolver determines page, ancestor and site design ownership; composed pages prioritize their content design. Preview and title link directly to Design Studio. Missing assignments and missing thumbnails are explicit and do not create a new design mapping.
+
+Edit design is the primary action; Site settings opens the existing page editor.
+The shared popover menu links to #page-design, #page-html and #page-html-upload
+in that editor. Attachments remain staged in its existing draft and saved through
+Pages. Import HTML focuses the upload action rather than opening a file chooser
+without a user gesture.

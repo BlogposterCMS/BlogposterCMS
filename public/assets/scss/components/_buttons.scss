@@ -1,11 +1,7 @@
+@use 'button-tokens';
 /* ===== Global Buttons ===== */
 :root{
-  --btn-radius: var(--studio-radius-control);
-  --btn-h: var(--studio-control-size);
-  --btn-gap: 8px;
-  --btn-shadow: var(--studio-shadow-soft);
-  --btn-hover-shadow: var(--studio-shadow-control);
-  --btn-hover-delay: 80ms;
+  @include button-tokens.defaults;
 }
 
 /* Base */
@@ -196,4 +192,3 @@
   .app-scope .button{ transition:none; }
   .app-scope .button.is-loading::after{ animation:none; }
 }
-

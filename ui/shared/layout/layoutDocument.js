@@ -160,8 +160,30 @@ export function normalizeLayoutContainerSettings(value) {
         settings.maxWidth = maxWidth;
     if (minHeight)
         settings.minHeight = minHeight;
+    const height = normalizeCssLength(source.height);
+    if (height === 'auto' || (height && /^\d+(?:\.\d+)?px$/.test(height) && parseFloat(height) >= 1 && parseFloat(height) <= 10000))
+        settings.height = height;
+    if (source.position === 'normal' || source.position === 'sticky')
+        settings.position = source.position;
     if (overflow)
         settings.overflow = overflow;
+    // Borders are document data, never arbitrary CSS. Keep dimensions bounded
+    // and reject expressions/URLs before both Studio and public DOM rendering.
+    for (const key of ['borderWidth', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRadius']) {
+        const raw = source[key];
+        const text = typeof raw === 'number' ? String(raw) : typeof raw === 'string' ? raw.trim() : '';
+        if (/^\d+(?:\.\d+)?(?:px)?$/.test(text)) {
+            const number = Number.parseFloat(text);
+            if (number <= (key === 'borderRadius' ? 512 : 64))
+                settings[key] = `${number}px`;
+        }
+    }
+    if (['none', 'solid', 'dashed', 'dotted', 'double'].includes(String(source.borderStyle))) {
+        settings.borderStyle = source.borderStyle;
+    }
+    const borderColor = normalizeColor(source.borderColor);
+    if (borderColor)
+        settings.borderColor = borderColor;
     return settings;
 }
 export function normalizeSceneSections(value) {

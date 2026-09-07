@@ -47,6 +47,9 @@ Runtime code should keep concrete dynamic edges behind small gateways:
   `bp:public-widgets-ready` with the `layoutRef` and rendered widget count.
   Agent/browser checks should wait for this signal before comparing screenshots
   or bounds.
+  The public loader prepares all shells first and prioritizes hydration by actual
+  viewport bounds. Lower widgets run during idle time with eventual completion;
+  this ready event still means the whole queue finished, not only the viewport.
 - `publicLoaderImporter.ts` owns module public-loader discovery/import.
 - `envelope/orchestrator.ts` passes one mutable page runtime context through
   ordered public loaders so a blocking design loader can hand the current page

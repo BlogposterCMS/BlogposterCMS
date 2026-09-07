@@ -22,3 +22,23 @@ test('a stale route or language discards initial DOM before falling back to CSR'
   expect(readPublicBootstrap()).toBeNull();
   expect(document.getElementById('bp-initial-html')).toBeNull();
 });
+
+test('compact HTML handoff restores the existing descriptor from initial DOM without changing the wire snapshot', () => {
+  window.history.replaceState({}, '', '/page');
+  document.body.innerHTML = '<div id="bp-initial-html"><h1>Published</h1></div>';
+  const bootstrap = { version: 2, pathname: '/page', slug: 'page', language: 'en', htmlRendered: true,
+    envelope: { attachments: [{ type: 'html', descriptor: { htmlFromInitialResponse: true, inline: { js: 'init()' } } }] } };
+  (window as any).BP_PUBLIC_BOOTSTRAP = bootstrap;
+  expect(readPublicBootstrap()?.envelope.attachments?.[0]?.descriptor).toMatchObject({
+    inline: { html: '<h1>Published</h1>', js: 'init()' }
+  });
+  expect(bootstrap.envelope.attachments[0]?.descriptor.inline).not.toHaveProperty('html');
+});
+
+test('compact handoffs without their DOM fall back to canonical CSR discovery', () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  window.history.replaceState({}, '', '/page');
+  document.body.innerHTML = '';
+  (window as any).BP_PUBLIC_BOOTSTRAP = { version: 2, pathname: '/page', slug: 'page', language: 'en', htmlRendered: true, envelope: { attachments: [] } };
+  expect(readPublicBootstrap()).toBeNull();
+});

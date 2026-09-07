@@ -3,6 +3,42 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 
+test('row stretch releases fixed container heights in Studio and public rendering', () => {
+  for (const file of ['apps/designer/assets/css/designer.css', 'public/assets/css/runtime.css']) {
+    const css = readProjectFile(file);
+    expect(css).toMatch(/data-layout-mode=['"]?row['"]?\][^{}]*data-layout-align=['"]?stretch['"]?\][^{}]*> \.layout-container\s*\{[^}]*height: auto !important/);
+  }
+});
+
+test('Studio header resets page width constraints without targeting canvas headers', () => {
+  const css = readProjectFile('apps/designer/assets/css/designer.css');
+  const rule = readCssRule(css, 'body.builder-mode #builder-header {');
+  expect(rule).toContain('width: 100%');
+  expect(rule).toContain('max-width: none');
+  expect(rule).toContain('margin: 0');
+});
+
+test('all editable dashboards stack using available width and retain a per-widget container', () => {
+  const css = readProjectFile('public/assets/css/site.css');
+  expect(css).toContain('@container dashboard-workspace (max-width: 1080px)');
+  expect(/container: dashboard-widget\s*\/\s*inline-size/.test(css)).toBe(true);
+  expect(css).not.toContain('container: home-dashboard');
+  expect(css).toMatch(/@container dashboard-workspace[^}]+dashboard-widget[^}]+grid-column: 1\s*\/\s*-1/);
+});
+
+test('Analytics navigation buttons suppress link underlines without changing ordinary links', () => {
+  const css = readProjectFile('public/assets/css/site.css');
+  expect(readCssRule(css, '.analytics-workspace .analytics-toolbar a.button,')).toContain('text-decoration: none');
+});
+
+test('editable dashboards and drawer keep one compact layout surface', () => {
+  const css = readProjectFile('public/assets/css/site.css');
+  expect(readCssRule(css, '#adminGrid .dashboard-widget.is-dragging {')).toContain('display: none');
+  expect(readCssRule(css, '#adminGrid {')).toContain('align-content: start');
+  expect(css).toMatch(/#content\[data-dashboard-layout=custom\][\s\S]*?background: transparent/);
+  expect(readCssRule(css, '.widgets-panel {')).toContain('width: min(320px, 100vw)');
+});
+
 function readProjectFile(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
@@ -397,9 +433,12 @@ describe('dashboard studio styles', () => {
     expect(mainNavActiveCss).toContain('box-shadow: none');
     expect(mainNavActiveCss).not.toContain('var(--studio-focus-ring)');
     expect(mainNavActiveCss).not.toContain('var(--user-color)');
-    expect(buttonScss).toContain('--btn-radius: var(--studio-radius-control)');
+    expect(buttonScss).toContain('@include button-tokens.defaults');
+    expect(readProjectFile('public/assets/scss/components/_button-tokens.scss'))
+      .toContain('--btn-radius: var(--studio-radius-control)');
     expect(buttonScss).toContain('border:0');
-    expect(buttonScss).toContain('--btn-hover-delay: 80ms');
+    expect(readProjectFile('public/assets/scss/components/_button-tokens.scss'))
+      .toContain('--btn-hover-delay: 80ms');
     expect(buttonScss).toContain('box-shadow var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay)');
     expect(buttonScss).toContain('box-shadow: var(--btn-hover-shadow)');
     expect(buttonScss).not.toContain('transform: scale');

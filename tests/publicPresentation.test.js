@@ -14,7 +14,8 @@ function envelope(layoutRef) {
 }
 
 test('first response contains static HTML and assets, without running page scripts', async () => {
-  const request = jest.fn().mockResolvedValue(envelope());
+  const original = envelope();
+  const request = jest.fn().mockResolvedValue(original);
   const result = await loadPublicPresentation(request, 'home', 'en');
   expect(request.mock.calls).toEqual([['pages', 'envelope', { slug: 'home', language: 'en' }]]);
   expect(result.body).toContain('<h1>Published</h1>');
@@ -22,6 +23,12 @@ test('first response contains static HTML and assets, without running page scrip
   expect(result.body).toContain('/site.css');
   expect(result.body).not.toContain('window.interactive');
   expect(result.bootstrap.htmlRendered).toBe(true);
+  expect(result.bootstrap.version).toBe(2);
+  const transportedHtml = result.bootstrap.envelope.attachments.find(item => item.type === 'html');
+  expect(transportedHtml.descriptor.htmlFromInitialResponse).toBe(true);
+  expect(transportedHtml.descriptor.inline).not.toHaveProperty('html');
+  expect(transportedHtml.descriptor.inline.js).toBe('window.interactive = true;');
+  expect(original.attachments[1].descriptor.inline.html).toContain('<h1>Published</h1>');
 });
 
 test('linked layouts reserve geometry while widget data remains client-owned', async () => {
@@ -29,6 +36,9 @@ test('linked layouts reserve geometry while widget data remains client-owned', a
   const request = jest.fn().mockResolvedValueOnce(envelope('layout:one@v1')).mockResolvedValueOnce(layout);
   const result = await loadPublicPresentation(request, 'home', 'en');
   expect(result.body).toContain('data-bp-initial-item="0"');
+  expect(result.body).toContain('aria-busy="true"');
+  expect(result.body).toContain('class="widget-placeholder" role="status"');
+  expect(result.head).toContain('.widget-placeholder');
   expect(result.body).toContain('left:20%');
   expect(result.body).toContain('width:50%');
   expect(result.body).not.toContain('<h1>Published');

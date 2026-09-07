@@ -1,0 +1,9 @@
+// Shared defaults can be mounted at the document root or isolated UI chrome.
+@mixin defaults {
+  --btn-radius: var(--studio-radius-control);
+  --btn-h: var(--studio-control-size);
+  --btn-gap: 8px;
+  --btn-shadow: var(--studio-shadow-soft);
+  --btn-hover-shadow: var(--studio-shadow-control);
+  --btn-hover-delay: 80ms;
+}

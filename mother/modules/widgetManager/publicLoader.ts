@@ -6,6 +6,7 @@ import { emitRuntimePublic, RUNTIME_PUBLIC_REQUEST_EVENT } from '/ui/shared/api-
 
 import { executeJs } from '/ui/runtime/main/script-utils.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
+import type { PublicWidgetJob } from '/ui/runtime/main/publicWidgetScheduling.js';
 
 type PublicWidgetLayoutItem = {
   widgetId?: string;
@@ -232,9 +233,10 @@ async function loadWidgets(
     // Reuse the Designer/preview structural renderer. This is the same document
     // and public facade, not a second public composition implementation.
     const [{ renderRuntimeDesignDocument, getRuntimeDesignDocument, getRuntimeDesignContentMount },
-      { normalizeRuntimeDesignWidget }, registry] = await Promise.all([
+      { normalizeRuntimeDesignWidget }, { hydratePublicWidgets }, registry] = await Promise.all([
       import(/* webpackIgnore: true */ '/ui/runtime/main/runtimeDesignDocument.js'),
       import(/* webpackIgnore: true */ '/ui/runtime/main/runtimeDesignLayouts.js'),
+      import(/* webpackIgnore: true */ '/ui/runtime/main/publicWidgetScheduling.js'),
       emitPublicRuntime<PublicWidgetDefinition[]>(ctx, 'widgets', 'list')
     ]);
     root.querySelector('#bp-grid[data-bp-initial-layout="true"]')?.remove();
@@ -253,9 +255,11 @@ async function loadWidgets(
       if (event !== RUNTIME_PUBLIC_REQUEST_EVENT) throw new Error('WIDGET_PUBLIC_EVENT_DENIED: Only the public facade is available.');
       return ctx.meltdownEmit!<T>(event, { ...payload, jwt: ctx.publicToken });
     };
+    const publicHydrationJobs: PublicWidgetJob[] = [];
     try {
       await renderRuntimeDesignDocument(shell, getRuntimeDesignDocument({ ...layout.document, placements }), definitions, 'public', {
       emit: publicEmit, widgetEmit: publicEmit,
+      publicHydrationJobs,
       contentDesignId: ctx.contentDesignId,
       initialPageHtml: ctx.expectsPageContent && ctx.initialHtml?.id === 'bp-initial-html' ? ctx.initialHtml : null,
       designPath: layout.layoutRef ? [layout.layoutRef.replace(/^layout:/, '').replace(/@.*$/, '')] : []
@@ -270,6 +274,7 @@ async function loadWidgets(
       console.warn('RUNTIME_PAGE_CONTENT_SLOT_MISSING: Keeping the page body outside the incomplete design.');
       ctx.layoutCompositionFailed = true;
     }
+    await hydratePublicWidgets(publicHydrationJobs);
     markPublicWidgetsReady(layout, placements.length);
     return;
   }
@@ -288,14 +293,15 @@ async function loadWidgets(
   // barrel, whose re-exports also pull admin surfaces into public page startup.
   const runtimeReady = Promise.all([
     import(/* webpackIgnore: true */ '/ui/shared/grid/canvasGrid.js'),
-    import(/* webpackIgnore: true */ '/ui/widgets/options/widgetOptions.js')
+    import(/* webpackIgnore: true */ '/ui/widgets/options/widgetOptions.js'),
+    import(/* webpackIgnore: true */ '/ui/runtime/main/publicWidgetScheduling.js')
   ]).catch(error => {
     throw new Error('WIDGET_PUBLIC_RUNTIME_IMPORT_FAILED: Unable to load canvas dependencies.', { cause: error });
   });
   const registryReady = typeof ctx.meltdownEmit === 'function'
     ? emitPublicRuntime<PublicWidgetDefinition[]>(ctx, 'widgets', 'list').catch(() => [])
     : [];
-  const [[{ init: initCanvasGrid }, { applyWidgetOptions }], registry] = await Promise.all([
+  const [[{ init: initCanvasGrid }, { applyWidgetOptions }, { hydratePublicWidgets }], registry] = await Promise.all([
     runtimeReady,
     registryReady
   ]);
@@ -327,6 +333,7 @@ async function loadWidgets(
   }
 
   let renderedCount = 0;
+  const publicHydrationJobs: PublicWidgetJob[] = [];
   for (const [itemIndex, item] of (layout.items || []).entries()) {
     const def = registry.find(widget => widget.widgetId === item.widgetId);
     if (!def) continue;
@@ -351,38 +358,57 @@ async function loadWidgets(
     const container = document.createElement('div');
     container.className = 'widget';
     itemEl.appendChild(container);
+    itemEl.setAttribute('aria-busy', 'true');
+    itemEl.dataset.widgetHydrationState = 'shell';
+    const placeholder = itemEl.querySelector<HTMLElement>(':scope > .widget-placeholder') || document.createElement('div');
+    placeholder.className = 'widget-placeholder';
+    placeholder.setAttribute('role', 'status');
+    placeholder.textContent = 'Loading';
+    itemEl.appendChild(placeholder);
 
-    const renderedByModule = await renderWidgetModule(container, item, def, ctx);
-    if (!renderedByModule) {
-      const code = {
-        ...parseWidgetCode(def.content),
-        ...(item.html ? { html: item.html } : {}),
-        ...(item.css ? { css: item.css } : {}),
-        ...(item.js ? { js: item.js } : {})
-      };
-      if (code?.css) {
-        const style = document.createElement('style');
-        style.textContent = code.css;
-        itemEl.appendChild(style);
-      }
-      if (code?.html) container.innerHTML = sanitizeHtml(code.html);
-      if (code?.js) {
-        try {
-          executeJs(code.js, itemEl, itemEl, 'Widget');
-        } catch (error) {
-          console.error(error);
+    publicHydrationJobs.push({
+      element: itemEl,
+      eager: Boolean(item.js || parseWidgetCode(def.content).js),
+      render: async () => {
+        itemEl.dataset.widgetHydrationState = 'hydrating';
+
+        const renderedByModule = await renderWidgetModule(container, item, def, ctx);
+        if (!renderedByModule) {
+          const code = {
+            ...parseWidgetCode(def.content),
+            ...(item.html ? { html: item.html } : {}),
+            ...(item.css ? { css: item.css } : {}),
+            ...(item.js ? { js: item.js } : {})
+          };
+          if (code?.css) {
+            const style = document.createElement('style');
+            style.textContent = code.css;
+            itemEl.appendChild(style);
+          }
+          if (code?.html) container.innerHTML = sanitizeHtml(code.html);
+          if (code?.js) {
+            try {
+              executeJs(code.js, itemEl, itemEl, 'Widget');
+            } catch (error) {
+              console.error(error);
+            }
+          }
         }
-      }
-    }
 
-    applyWidgetOptions(itemEl, def.metadata || {});
-    applyPublicPercentPosition(itemEl, item);
-    renderedCount += 1;
+        applyWidgetOptions(itemEl, def.metadata || {});
+        applyPublicPercentPosition(itemEl, item);
+        placeholder.remove();
+        itemEl.setAttribute('aria-busy', 'false');
+        itemEl.dataset.widgetHydrationState = 'ready';
+        renderedCount += 1;
+      }
+    });
   }
   // Missing widget definitions must not leave an unhydrated server placeholder.
   gridEl.querySelectorAll('[data-bp-initial-item]').forEach(element => element.remove());
   delete gridEl.dataset.bpInitialLayout;
   preparePublicCanvas(gridEl, layout);
+  await hydratePublicWidgets(publicHydrationJobs);
   markPublicWidgetsReady(layout, renderedCount);
 }
 

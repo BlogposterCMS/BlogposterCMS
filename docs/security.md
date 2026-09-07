@@ -1,5 +1,41 @@
 # Security Notes
 
+## Public static compression and HTML handoff
+
+Only successful public CSS, JavaScript and SVG responses are eligible for the
+standard compression middleware. Dynamic HTML with nonce/token data, JSON APIs,
+errors, binary downloads and Range requests are excluded. Existing media realpath
+and source-file guards remain authoritative; no new file route/cache is added.
+The middleware retains Accept-Encoding negotiation and no-transform handling.
+
+Bootstrap version 2 references only the sanitized initial HTML node for that
+response. The client validates route/language and requires that node before
+restoring the existing HTML descriptor in memory. Missing nodes and old clients
+fall back to the canonical public envelope. Canonical content, preview handling,
+script nonce checks and the response's no-store policy remain unchanged.
+
+## Shared charts and previews
+
+Charts accept bounded data, use canvas-rendered tooltips and expose no HTML,
+remote symbols or raw engine options. The pinned local ECharts artifact is
+checked at build time and with browser SRI. This detects changed bytes, not all
+malware; review limits and update procedure are in [shared visuals](shared-widget-visuals.md).
+The shared DOM capture preserves the Designer's existing media/permission flow;
+it does not add a server-side URL fetch or a Chromium service.
+
+## Analytics
+
+`analytics.summary` requires `analytics.read` at the existing admin facade and
+module boundary. There is no public analytics-read or arbitrary collection API.
+The authenticated emitter observer copies only allowlisted labels and verified
+principal IDs; it never persists payloads or secrets. Public delivery analytics
+omit raw IP/UA, cookies and URL queries, respect DNT/GPC, and exclude previews.
+UA/referrer metadata is untrusted and never used for authorization. UI labels
+are rendered as text. Fixed DatabaseManager placeholders bind all values, use
+idempotent writes, prune after 60 days and bound reads/queues. Analytics is
+operational telemetry, not a complete or tamper-proof audit trail. See
+[measurement limits](analytics.md).
+
 ## Bundled documentation example
 
 `exampleSite` runs through the existing Importer facade and domain events. It

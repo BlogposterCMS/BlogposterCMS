@@ -37,6 +37,7 @@ const BACKEND_EVENTS = Object.freeze({
   AGENT_ACCESS_EXCHANGE_CODE: "agentAccess.exchangeCode",
   AGENT_ACCESS_LIST_CODES: "agentAccess.listCodes",
   AGENT_ACCESS_REVOKE_CODE: "agentAccess.revokeCode",
+  ANALYTICS_SUMMARY: "analyticsSummary",
   APP_LOADER_APP_EVENT: "appLoader:appEvent",
   APPLY_SCHEMA_DEFINITION: "applySchemaDefinition",
   APPLY_SCHEMA_FILE: "applySchemaFile",

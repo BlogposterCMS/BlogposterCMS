@@ -9,6 +9,27 @@ import {
 } from '../ui/designer/app/managers/layoutInteractionMode';
 import { CanvasGrid } from '../ui/shared/grid/canvasGrid';
 
+test('inactive widget double-click switches layer while single-click and preview do not', () => {
+  const root = document.createElement('div');
+  root.innerHTML = '<section class="layout-grid-surface"><div class="canvas-item inactive-layer" data-layer="2"><span>Footer</span></div></section>';
+  const activate = jest.fn();
+  let preview = false;
+  const dispose = bindLayoutWidgetSelection({ layoutRoot: root, onSelect: jest.fn(),
+    isDisabled: () => preview, onActivateLayer: activate });
+  const target = root.querySelector('span')!;
+  target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  expect(activate).not.toHaveBeenCalled();
+  target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  expect(activate).toHaveBeenCalledWith(2, root.querySelector('.canvas-item'));
+  preview = true;
+  target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  expect(activate).toHaveBeenCalledTimes(1);
+  preview = false;
+  dispose();
+  target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  expect(activate).toHaveBeenCalledTimes(1);
+});
+
 class ResizeObserverMock {
   observe(): void {}
   unobserve(): void {}
@@ -38,6 +59,21 @@ function surfaceWithWidget(mode = 'free', layer = '1') {
 }
 
 describe('Designer layout surface interaction modes', () => {
+  it('hovers only the nearest container and clears the mark over an inactive scope', () => {
+    const root = document.createElement('div');
+    root.className = 'layout-container';
+    root.innerHTML = '<section class="layout-container"><aside class="layout-container"><span>Menu</span><div data-designer-edit-overlay="layout"></div></aside></section>';
+    const cleanup = bindLayoutWidgetSelection({ layoutRoot: root, onSelect: jest.fn() });
+    root.querySelector('span')!.dispatchEvent(pointerEvent('pointermove', 10, 10));
+    expect(root.querySelectorAll('.layout-container--hovered')).toHaveLength(1);
+    expect(root.querySelector('.layout-container--hovered')?.tagName).toBe('ASIDE');
+    root.querySelector('[data-designer-edit-overlay]')!.dispatchEvent(pointerEvent('pointermove', 10, 10));
+    expect(root.querySelector('.layout-container--hovered')).toBeNull();
+    root.querySelector('aside')!.dispatchEvent(pointerEvent('pointermove', 10, 10));
+    cleanup();
+    expect(root.querySelector('.layout-container--hovered')).toBeNull();
+  });
+
   beforeEach(() => {
     document.body.innerHTML = '';
     (globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverMock;

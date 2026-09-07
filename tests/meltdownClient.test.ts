@@ -9,6 +9,51 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 describe('meltdown client', () => {
+  it('drains ordered admin requests without idle timers, including after a failure', async () => {
+    jest.useFakeTimers();
+    try {
+      let release!: (response: Response) => void;
+      const response = { ok: true, clone: () => ({ text: async () => '{"data":"ok"}' }) } as Response;
+      const fetchMock = jest.fn()
+        .mockImplementationOnce(() => new Promise<Response>(resolve => { release = resolve; }))
+        .mockRejectedValueOnce(new Error('request failed'))
+        .mockResolvedValue(response);
+      const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+      const completed = Promise.allSettled([
+        client.emit('cmsAdminApiRequest', { action: 'save' }),
+        client.emit('dispatchAppEvent'),
+        client.emit('cmsAdminApiRequest', { action: 'get' })
+      ]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      release(response);
+      // No clock advance: a settled response must release the next command.
+      await jest.advanceTimersByTimeAsync(0);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect((await completed).map(result => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('honors explicitly configured pacing between ordered requests', async () => {
+    jest.useFakeTimers();
+    try {
+      const response = { ok: true, clone: () => ({ text: async () => '{"data":"ok"}' }) } as Response;
+      const fetchMock = jest.fn().mockResolvedValue(response);
+      const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch, throttleDelay: 100 });
+      const completed = Promise.all([client.emit('first'), client.emit('second')]);
+      await jest.advanceTimersByTimeAsync(99);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      await completed;
+      await jest.runOnlyPendingTimersAsync();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('lets a local picker load files through the same client before the user confirms it', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ data: { files: ['hero.png'] } }));
     let close!: (value: unknown) => void;

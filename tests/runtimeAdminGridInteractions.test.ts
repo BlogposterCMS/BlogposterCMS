@@ -154,6 +154,9 @@ describe('runtimeAdminGridInteractions', () => {
     const second = createDashboardWidget('second');
     mockRect(first, { left: 0, top: 0, width: 100, height: 120 });
     mockRect(second, { left: 0, top: 140, width: 100, height: 120 });
+    const content = document.createElement('div');
+    content.attachShadow({ mode: 'open' }).innerHTML = '<h3>Page Statistics</h3>';
+    second.appendChild(content);
     second.setPointerCapture = jest.fn();
     second.releasePointerCapture = jest.fn();
     gridEl.append(first, second);
@@ -182,7 +185,9 @@ describe('runtimeAdminGridInteractions', () => {
     expect(placeholder).not.toBeNull();
     expect(preview).not.toBeNull();
     expect(preview?.style.transform).toContain('10px, 10px');
-    expect(preview?.textContent).toContain('second');
+    expect(preview?.querySelector('.dashboard-drag-preview__label')).toBeNull();
+    expect(preview?.querySelector('div')?.shadowRoot?.textContent).toBe('Page Statistics');
+    expect(placeholder?.style.getPropertyValue('--dashboard-placeholder-height')).toBe('120px');
     expect(gridEl.classList.contains('is-dashboard-snap-active')).toBe(true);
     expect(gridEl.style.getPropertyValue('--dashboard-snap-column')).toBe('3');
     expect(gridEl.style.getPropertyValue('--dashboard-snap-span')).toBe('6');

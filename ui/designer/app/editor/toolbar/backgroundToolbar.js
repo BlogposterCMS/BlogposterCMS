@@ -127,6 +127,11 @@ function createSectionToolbar(section) {
   toolbar.dataset.sectionToolbar = section.dataset.sectionId || '';
   toolbar.setAttribute('role', 'toolbar');
   toolbar.setAttribute('aria-label', `${section.dataset.sectionTitle || 'Section'} controls`);
+  const owner = document.createElement('span');
+  owner.className = 'section-toolbar-owner';
+  owner.textContent = `Section · ${section.dataset.sectionTitle || section.dataset.sectionId || ''}`;
+  owner.title = owner.textContent;
+  toolbar.appendChild(owner);
   toolbar.style.display = 'none';
 
   const modeButton = toolbarButton('section-mode-cycle', 'Free placement · click to change', 'mouse-pointer-2');

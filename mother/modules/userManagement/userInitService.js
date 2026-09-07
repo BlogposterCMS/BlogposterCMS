@@ -59,6 +59,7 @@ const DEFAULT_PERMISSION_DEFINITIONS = Object.freeze([
   { permission_key: 'fonts.manage', description: 'Manage fonts and font providers' },
   { permission_key: 'metadata.manage', description: 'Manage custom metadata fields and values' },
   { permission_key: 'notifications.read', description: 'Read recent system notifications' },
+  { permission_key: 'analytics.read', description: 'Read website and system analytics' },
 
   { permission_key: 'pages.create', description: 'Create pages' },
   { permission_key: 'pages.read', description: 'Read pages' },

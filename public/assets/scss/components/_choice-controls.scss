@@ -1,0 +1,33 @@
+// One checkbox presentation for Admin and embedded Studio controls.
+@mixin checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 4px;
+  background: var(--studio-surface-solid);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  position: relative;
+  flex: 0 0 16px;
+
+  &:checked {
+    background: var(--user-color, #007bff);
+    border-color: var(--user-color, #007bff);
+
+    &::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+    }
+  }
+
+  &:hover {
+    border-color: var(--user-color, #007bff);
+  }
+}

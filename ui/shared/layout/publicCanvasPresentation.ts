@@ -35,6 +35,19 @@ export const PUBLIC_CANVAS_CSS = `.bp-public-canvas {
   height: 100%;
   min-height: 100%;
 }
+.bp-public-canvas .widget-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: var(--studio-text-muted, #666);
+  background: var(--studio-surface-muted, #f6f7f8);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+.bp-public-canvas [data-widget-hydration-state="failed"] .widget-placeholder {
+  display: none;
+}
 @media (max-width: 760px) {
   .bp-public-canvas {
     display: grid;
@@ -55,6 +68,10 @@ export const PUBLIC_CANVAS_CSS = `.bp-public-canvas {
   .bp-public-canvas .widget {
     height: auto;
     min-height: 0;
+  }
+  .bp-public-canvas .widget-placeholder {
+    position: relative;
+    font: inherit;
   }
 }`;
 

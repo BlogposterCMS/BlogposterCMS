@@ -109,7 +109,8 @@ export async function renderStaticRuntimeGrid(target, layout, allWidgets, lane, 
         scaleX: metrics.scaleX,
         scaleY: metrics.scaleY,
         percentDivisor: 1,
-        includeLayoutMetadata: true
+        includeLayoutMetadata: true,
+        publicHydrationJobs: opts.publicHydrationJobs
     });
     installStaticGridResponsiveReflow(gridEl, grid, projectionLayout, !opts.useTargetAsGrid);
     return { gridEl, grid };

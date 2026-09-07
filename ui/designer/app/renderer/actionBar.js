@@ -144,6 +144,18 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     menu.show(menuBtn);
   });
 
+  dupBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!state.activeWidgetEl) return;
+    // Reuse the menu command so cloning, style sources and save handling agree.
+    const command = state.activeWidgetEl.__optionsMenu?.querySelector('.menu-copy');
+    if (!command) {
+      console.warn('[Designer] DESIGNER_WIDGET_DUPLICATE_UNAVAILABLE');
+      return;
+    }
+    command.click();
+  });
+
   delBtn.addEventListener('click', e => {
     e.stopPropagation();
     if (!state.activeWidgetEl) return;

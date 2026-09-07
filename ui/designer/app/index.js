@@ -304,15 +304,10 @@ const ensureOriginPolicy = async () => {
 };
 const readyOriginPolicyPromise = ensureOriginPolicy();
 export const readyOriginPolicy = readyOriginPolicyPromise;
-async function bootstrap() {
-    if (bootState.bootstrapped)
-        return;
-    bootState.bootstrapped = true;
-    // Designer chunks can load after DOMContentLoaded, so sync the document
-    // theme directly instead of relying only on shell header events.
-    applyThemeMode(bootstrapWindow.__BLOGPOSTER_APP_INIT_TOKENS__?.themeMode);
-    await applyUserColor(true);
-    await hydrateBuilderViewportState();
+export async function prepareDesignerPresentation() {
+    // Independent reads share the existing authenticated bridge. Keep the
+    // first canvas render behind this barrier so authored styles never race it.
+    const pending = [applyUserColor(true), hydrateBuilderViewportState()];
     if (typeof window.meltdownEmit === 'function') {
         configureColorLibraryClient({
             emit: window.meltdownEmit,
@@ -328,16 +323,26 @@ async function bootstrap() {
             emit: window.meltdownEmit,
             token: bootstrapWindow.ADMIN_TOKEN
         });
-        await refreshColorLibrary().catch(err => {
+        pending.push(refreshColorLibrary().catch(err => {
             appLogger.warn('COLOR_LIBRARY_LOAD_FAILED: Designer will keep literal color controls.', err);
-        });
-        await refreshFontPackages().catch(err => {
+        }));
+        pending.push(refreshFontPackages().catch(err => {
             appLogger.warn('FONT_PACKAGES_LOAD_FAILED: Designer will keep browser typography defaults.', err);
-        });
-        await refreshSitePresets().catch(err => {
+        }));
+        pending.push(refreshSitePresets().catch(err => {
             appLogger.warn('SITE_PRESETS_LOAD_FAILED: Builder presets are unavailable.', err);
-        });
+        }));
     }
+    await Promise.all(pending);
+}
+async function bootstrap() {
+    if (bootState.bootstrapped)
+        return;
+    bootState.bootstrapped = true;
+    // Designer chunks can load after DOMContentLoaded, so sync the document
+    // theme directly instead of relying only on shell header events.
+    applyThemeMode(bootstrapWindow.__BLOGPOSTER_APP_INIT_TOKENS__?.themeMode);
+    await prepareDesignerPresentation();
     const sidebarEl = document.getElementById('sidebar');
     const contentEl = document.getElementById('builderMain');
     const rowEl = document.getElementById('builderRow');

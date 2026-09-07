@@ -1,7 +1,7 @@
 # Server installation
 
 The supported integrated setup is Linux with systemd, Docker Compose, Node.js
-24+ at `/usr/bin/node`, GitHub CLI (`gh`), `jq`, `curl` and `flock`. Run behind an
+24+ at `/usr/bin/node`, GitHub CLI (`gh`), `jq`, `curl`, `flock` and GNU `timeout`. Run behind an
 HTTPS reverse proxy. The installer checks prerequisites before changing the host;
 it does not replace the server's package manager or proxy configuration.
 
@@ -9,8 +9,8 @@ The official container package is public. Starting with release 0.10.1, signed
 image provenance is also included as `blogposter-image.bundle.json`, so normal
 installation/update verification needs no stored GitHub login. Verify the
 downloaded control bundle before running it; do not disable signature checks.
-Existing installations need the signed host bundle 1.2.1 installed once;
-it includes the socket-lifecycle correction from release 0.10.2.
+Existing installations need the signed host bundle 1.2.2 installed once;
+it includes socket-lifecycle and bounded network-retry corrections.
 
 Download one reviewed release into an empty directory, verify its installer,
 then run the combined installation. Use the same exact tag for all assets:
@@ -18,7 +18,7 @@ then run the combined installation. Use the same exact tag for all assets:
 ```sh
 mkdir blogposter-release
 cd blogposter-release
-release_url=https://github.com/BlogposterCMS/BlogposterCMS/releases/download/v0.10.2
+release_url=https://github.com/BlogposterCMS/BlogposterCMS/releases/download/v0.10.3
 # Public HTTPS downloads avoid the login required by gh release download.
 for asset in install-blogposter install-update-agent create-install-config.js \
   update-agent.js blogposter-update blogposter-update-agent.service \
@@ -31,7 +31,7 @@ done
 gh attestation verify install-blogposter --bundle update-control.bundle.json \
   --repo BlogposterCMS/BlogposterCMS \
   --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.10.2 --deny-self-hosted-runners
+  --source-ref refs/tags/v0.10.3 --deny-self-hosted-runners
 sudo bash install-blogposter --origin https://cms.example.com
 ```
 

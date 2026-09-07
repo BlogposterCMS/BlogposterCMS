@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly UPDATER_VERSION='1.2.1'
+readonly UPDATER_VERSION='1.2.2'
 readonly DEFAULT_MANIFEST_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json'
 readonly DEFAULT_MANIFEST_BUNDLE_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json'
 readonly TRUSTED_SIGNER_WORKFLOW='BlogposterCMS/BlogposterCMS/.github/workflows/release.yml'
@@ -88,13 +88,45 @@ write_release_image() {
   mv -f "$temp" "$target"
 }
 
+download_release_asset() {
+  # Retry transport failures without trusting downloaded bytes. Signature and
+  # exact identity checks still run afterwards; these small metadata assets
+  # have bounded connection, attempt, retry-window and declared-size limits.
+  curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+    --connect-timeout 15 --max-time 45 --retry 3 --retry-delay 2 \
+    --retry-max-time 120 --retry-all-errors --max-filesize 2097152 \
+    --output "$2" "$1"
+}
+
+verify_release_attestation() {
+  local errors result attempt
+  require_command timeout
+  errors="$(mktemp)"
+  for attempt in 1 2 3; do
+    if timeout --kill-after=5s 60s gh attestation verify "$@" >/dev/null 2>"$errors"; then
+      rm -f "$errors"
+      return 0
+    else
+      result=$?
+    fi
+    # Never log raw verifier output (it can contain provider URLs). Only known
+    # transport failures are retryable; invalid identity/signatures fail now.
+    if [[ "$result" != 124 && "$result" != 137 ]] && ! grep -Eiq \
+      'dial tcp|i/o timeout|timed out|context deadline exceeded|TLS handshake timeout|unexpected EOF|connection reset|no such host|temporary failure|network is unreachable|connection refused|502 Bad Gateway|503 Service Unavailable' "$errors"; then
+      rm -f "$errors"
+      return 1
+    fi
+    [[ "$attempt" == 3 ]] || sleep 2
+  done
+  rm -f "$errors"
+  return 75
+}
+
 fetch_manifest() {
   local output="$1" bundle="$2" candidate_version candidate_commit
-  curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-    --output "$output" "${BLOGPOSTER_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}" || \
+  download_release_asset "${BLOGPOSTER_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}" "$output" || \
     fail 'CORE_UPDATE_MANIFEST_DOWNLOAD_FAILED' 'Could not download the update manifest over HTTPS.'
-  curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-    --output "$bundle" "${BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL:-$DEFAULT_MANIFEST_BUNDLE_URL}" || \
+  download_release_asset "${BLOGPOSTER_UPDATE_MANIFEST_BUNDLE_URL:-$DEFAULT_MANIFEST_BUNDLE_URL}" "$bundle" || \
     fail 'CORE_UPDATE_MANIFEST_BUNDLE_DOWNLOAD_FAILED' 'Could not download the update manifest attestation bundle over HTTPS.'
   # The candidate version is used only to constrain the signature identity. No
   # manifest field is trusted until this detached attestation succeeds.
@@ -102,14 +134,18 @@ fetch_manifest() {
   [[ -n "$candidate_version" ]] || fail 'CORE_UPDATE_MANIFEST_INVALID' 'Update manifest has no safe release version.'
   candidate_commit="$(jq -er '.source.commit | select(test("^[a-f0-9]{40}$"))' "$output" 2>/dev/null || true)"
   [[ -n "$candidate_commit" ]] || fail 'CORE_UPDATE_MANIFEST_INVALID' 'Update manifest has no safe source commit.'
-  gh attestation verify "$output" \
+  if verify_release_attestation "$output" \
     --repo "$BLOGPOSTER_UPDATE_REPOSITORY" \
     --bundle "$bundle" \
     --signer-workflow "$TRUSTED_SIGNER_WORKFLOW" \
     --source-ref "refs/tags/v${candidate_version}" \
     --source-digest "$candidate_commit" \
-    --deny-self-hosted-runners >/dev/null || \
+    --deny-self-hosted-runners; then
+    :
+  else
+    [[ "$?" != 75 ]] || fail 'CORE_UPDATE_MANIFEST_ATTESTATION_NETWORK_FAILED' 'Manifest verification could not reach its trusted services; retry when connectivity recovers.'
     fail 'CORE_UPDATE_MANIFEST_ATTESTATION_INVALID' 'GitHub/Sigstore verification of the update manifest failed.'
+  fi
   jq -e '
     .schemaVersion == 1 and
     .product == "blogpostercms" and
@@ -154,19 +190,21 @@ verify_image_trust() {
       # GitHub CLI requires a login for API discovery, even for public images.
       # Use the release's detached proof instead; gh still checks its signature,
       # exact image digest, source commit/tag, workflow and hosted-runner identity.
-      if ! curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-        --connect-timeout 15 --max-time 90 --max-filesize 2097152 \
-        --output "$image_bundle" \
-        "https://github.com/$expected_repo/releases/download/v$expected_version/blogposter-image.bundle.json"; then
+      if ! download_release_asset \
+        "https://github.com/$expected_repo/releases/download/v$expected_version/blogposter-image.bundle.json" "$image_bundle"; then
         rm -f "$image_bundle"
         fail 'CORE_UPDATE_IMAGE_BUNDLE_DOWNLOAD_FAILED' 'Could not download the release image attestation bundle.'
       fi
-      if ! gh attestation verify "oci://$image_ref" --repo "$expected_repo" --bundle "$image_bundle" \
+      if verify_release_attestation "oci://$image_ref" --repo "$expected_repo" --bundle "$image_bundle" \
         --signer-workflow "$TRUSTED_SIGNER_WORKFLOW" \
         --source-ref "refs/tags/v${expected_version}" \
         --source-digest "$expected_commit" \
-        --deny-self-hosted-runners >/dev/null; then
+        --deny-self-hosted-runners; then
+        :
+      else
+        local verification_result=$?
         rm -f "$image_bundle"
+        [[ "$verification_result" != 75 ]] || fail 'CORE_UPDATE_ATTESTATION_NETWORK_FAILED' 'Image verification could not reach its trusted services; retry when connectivity recovers.'
         fail 'CORE_UPDATE_ATTESTATION_INVALID' 'GitHub build provenance verification failed.'
       fi
       rm -f "$image_bundle"

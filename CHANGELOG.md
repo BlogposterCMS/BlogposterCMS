@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.10.3] - 2026-09-07
+
+- Host updater 1.2.2 adds bounded connection/attempt/retry limits for signed
+  release metadata downloads. Transient verifier network failures retry with
+  a hard process deadline and a separate safe network error code; invalid
+  signatures and source identities still fail immediately. No raw provider
+  URLs or verification diagnostics are exposed. Existing hosts need the signed
+  updated host bundle once.
+
 ## [0.10.2] - 2026-09-07
 
 - Fixed repeated host-updater installation losing the CMS socket connection.

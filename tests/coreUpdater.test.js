@@ -20,8 +20,10 @@ test.each([
     'source deploy/blogposter-update',
     'unset GH_TOKEN GITHUB_TOKEN',
     `scenario='${scenario}'`,
+    'timeout() { shift 2; "$@"; }',
     'curl() {',
-    '  [[ "$*" == *"--max-time 90"* && "$*" == *"--max-filesize 2097152"* ]] || return 90',
+    '  [[ "$*" == *"--connect-timeout 15"* && "$*" == *"--max-time 45"* && "$*" == *"--max-filesize 2097152"* ]] || return 90',
+    '  [[ "$*" == *"--retry 3"* && "$*" == *"--retry-max-time 120"* && "$*" == *"--retry-all-errors"* ]] || return 90',
     '  [[ "${!#}" == "https://github.com/BlogposterCMS/BlogposterCMS/releases/download/v0.10.1/blogposter-image.bundle.json" ]] || return 91',
     '  [[ "$scenario" != download-failure ]] || return 22',
     '}',
@@ -39,6 +41,33 @@ test.each([
   expect(result.status).toBe(status);
   expect(result.stderr).toContain(errorCode);
   expect(result.stderr).not.toContain('UNEXPECTED_VERIFIER');
+});
+
+test.each([
+  ['transient', 0, 2],
+  ['network', 75, 3],
+  ['timeout', 75, 3],
+  ['invalid', 1, 1]
+])('bounded verifier retries classify %s without weakening proof checks', (scenario, status, calls) => {
+  const result = spawnSync('bash', ['-s'], { cwd: rootDir, encoding: 'utf8', input: [
+    'source deploy/blogposter-update',
+    'calls=0',
+    'sleep() { :; }',
+    'timeout() { [[ "$1" == --kill-after=5s && "$2" == 60s ]] || return 99; shift 2; "$@"; }',
+    'gh() {',
+    '  calls=$((calls+1))',
+    `  if [[ '${scenario}' == transient && "$calls" == 2 ]]; then return 0; fi`,
+    `  if [[ '${scenario}' == invalid ]]; then echo 'signature identity mismatch' >&2; return 1; fi`,
+    `  if [[ '${scenario}' == timeout ]]; then return 124; fi`,
+    "  echo 'dial tcp: i/o timeout https://provider.invalid/private-url' >&2; return 1",
+    '}',
+    'if verify_release_attestation fixture --repo BlogposterCMS/BlogposterCMS; then result=0; else result=$?; fi',
+    'echo "calls=$calls"',
+    'exit "$result"'
+  ].join('\n') });
+  expect(result.status).toBe(status);
+  expect(result.stdout).toContain(`calls=${calls}`);
+  expect(result.stderr).not.toContain('provider.invalid');
 });
 
 test('stable promotion is newer than the same-version preview without allowing downgrades', () => {
@@ -139,7 +168,8 @@ test('host updater is valid Bash and keeps update safety gates explicit', () => 
   expect(source).toContain('--signer-workflow "$TRUSTED_SIGNER_WORKFLOW"');
   expect(source).toContain('--source-ref "refs/tags/v${candidate_version}"');
   expect(source).toContain('--source-digest "$candidate_commit"');
-  expect(source).toContain("gh attestation verify \"oci://$image_ref\"");
+  expect(source).toContain('verify_release_attestation "oci://$image_ref"');
+  expect(source).toContain('timeout --kill-after=5s 60s gh attestation verify "$@"');
   expect(source).toContain('CORE_UPDATE_CURRENT_IMAGE_MUTABLE');
   expect(source).toContain('create_volume_backups');
   expect(source).toContain('migrate_notification_state');

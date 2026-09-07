@@ -155,6 +155,18 @@ could resolve to an unexpectedly broad host path and is therefore rejected with
 
 ## Host-agent restarts
 
+Host bundle 1.2.2 bounds release metadata downloads to a 15-second connection
+timeout, 45 seconds per attempt, at most three retries and a 120-second retry
+window (the final attempt can finish after that window). The declared-size
+limit is 2 MiB. Signed bytes are still untrusted until provenance verification.
+The verifier gets at most three 60-second attempts with a five-second forced
+termination grace. Only recognizable transport failures retry; invalid
+signatures or identities fail immediately. Persistent network errors use
+`CORE_UPDATE_ATTESTATION_NETWORK_FAILED` or
+`CORE_UPDATE_MANIFEST_ATTESTATION_NETWORK_FAILED`, without exposing raw output.
+This improves intermittent connectivity; it cannot make blocked registries or
+permanently unavailable GitHub endpoints reachable.
+
 Host-agent lifecycle note: installer assets from 0.10.2 preserve
 `/run/blogposter-updater` across systemd stop/start and reconnect the CMS mount
 even when Compose configuration is unchanged. This prevents

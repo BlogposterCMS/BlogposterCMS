@@ -59,8 +59,10 @@ for attempt in {1..20}; do
   sleep 1
 done
 [[ -S /run/blogposter-updater/control.sock ]] || { echo 'CORE_UPDATE_SETUP_SOCKET_MISSING'; exit 1; }
-# Apply the socket mount once. Future versions preserve the overlay automatically.
-compose_run up -d --no-deps "$BLOGPOSTER_SERVICE"
+# Rebind even when Compose configuration is unchanged: older service units
+# removed the runtime directory on restart, leaving existing mounts orphaned.
+# This affects only the CMS service and preserves its named data/media volumes.
+compose_run up -d --no-deps --force-recreate "$BLOGPOSTER_SERVICE"
 wait_healthy || { echo 'CORE_UPDATE_SETUP_READINESS_FAILED'; exit 1; }
 # Readiness alone does not prove the non-root CMS can reach the privileged socket.
 docker exec "$(container_id)" node -e '

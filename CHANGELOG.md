@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-09-07
+
+- Fixed repeated host-updater installation losing the CMS socket connection.
+  The systemd unit now preserves its runtime directory across stop/start, and
+  the installer explicitly recreates only the CMS service to reconnect mounts
+  left behind by older units. Named volumes, secrets and image selection remain
+  unchanged. The existing non-root socket-access check remains mandatory.
+  The release requires host bundle 1.2.1 to carry this lifecycle correction.
+
 ## [0.10.1] - 2026-09-07
 
 - Fixed public-image updates failing with `CORE_UPDATE_ATTESTATION_INVALID`

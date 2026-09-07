@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly UPDATER_VERSION='1.2.0'
+readonly UPDATER_VERSION='1.2.1'
 readonly DEFAULT_MANIFEST_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json'
 readonly DEFAULT_MANIFEST_BUNDLE_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json'
 readonly TRUSTED_SIGNER_WORKFLOW='BlogposterCMS/BlogposterCMS/.github/workflows/release.yml'

@@ -153,6 +153,17 @@ The updater intentionally supports named volumes only. A bind-mounted database
 could resolve to an unexpectedly broad host path and is therefore rejected with
 `CORE_UPDATE_VOLUME_TYPE_UNSUPPORTED` instead of being modified.
 
+## Host-agent restarts
+
+Host-agent lifecycle note: installer assets from 0.10.2 preserve
+`/run/blogposter-updater` across systemd stop/start and reconnect the CMS mount
+even when Compose configuration is unchanged. This prevents
+`CORE_UPDATE_SETUP_CONTAINER_ACCESS_FAILED` on repeated installation. The
+socket remains restricted to the dedicated group; the CMS still has no Docker
+socket or writable host directory. Reboot clears `/run` normally.
+The release requires host executor 1.2.1 so older installations are prompted
+to install the corrected host bundle instead of silently retaining the old unit.
+
 ## Manual rollback
 
 Manual rollback restores the pre-update backup and can discard content written

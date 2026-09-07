@@ -9,7 +9,8 @@ The official container package is public. Starting with release 0.10.1, signed
 image provenance is also included as `blogposter-image.bundle.json`, so normal
 installation/update verification needs no stored GitHub login. Verify the
 downloaded control bundle before running it; do not disable signature checks.
-Existing installations need the signed host executor 1.2.0 installed once.
+Existing installations need the signed host bundle 1.2.1 installed once;
+it includes the socket-lifecycle correction from release 0.10.2.
 
 Download one reviewed release into an empty directory, verify its installer,
 then run the combined installation. Use the same exact tag for all assets:
@@ -17,7 +18,7 @@ then run the combined installation. Use the same exact tag for all assets:
 ```sh
 mkdir blogposter-release
 cd blogposter-release
-release_url=https://github.com/BlogposterCMS/BlogposterCMS/releases/download/v0.10.1
+release_url=https://github.com/BlogposterCMS/BlogposterCMS/releases/download/v0.10.2
 # Public HTTPS downloads avoid the login required by gh release download.
 for asset in install-blogposter install-update-agent create-install-config.js \
   update-agent.js blogposter-update blogposter-update-agent.service \
@@ -30,7 +31,7 @@ done
 gh attestation verify install-blogposter --bundle update-control.bundle.json \
   --repo BlogposterCMS/BlogposterCMS \
   --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.10.1 --deny-self-hosted-runners
+  --source-ref refs/tags/v0.10.2 --deny-self-hosted-runners
 sudo bash install-blogposter --origin https://cms.example.com
 ```
 
@@ -58,6 +59,12 @@ data. It installs/restarts the host executor and recreates the existing CMS
 service once to connect the socket. A currently running update blocks this step
 with `CORE_UPDATE_SETUP_BUSY`. Custom deployment paths stay in the existing
 updater config; the entry point remains `/opt/blogposter/updater.conf`.
+
+Use installer assets from 0.10.2 or newer when reconnecting an existing host.
+Older service units removed their runtime directory on restart, leaving the
+running CMS bound to an orphaned directory. The current unit preserves that
+directory across stop/start, and the installer forces one CMS-only recreation
+to repair an existing stale mount. This does not replace or clear named volumes.
 
 The CMS must contain the Updater module to own background discovery. Update older
 images through the existing verified updater after connecting the host. An

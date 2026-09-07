@@ -12,6 +12,9 @@ User=root
 Group=blogposter-updater
 RuntimeDirectory=blogposter-updater
 RuntimeDirectoryMode=0750
+# Keep the directory inode mounted into CMS across host-agent stop/start.
+# The agent replaces only its socket; /run is still cleared on host reboot.
+RuntimeDirectoryPreserve=yes
 StateDirectory=blogposter-update-agent
 StateDirectoryMode=0700
 UMask=0027

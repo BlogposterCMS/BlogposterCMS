@@ -33,6 +33,8 @@ test.each([
     '  [[ "$*" == *"--bundle "* && "$*" == *"--repo BlogposterCMS/BlogposterCMS"* ]] || return 94',
     '  [[ "$*" == *"--signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml"* ]] || return 95',
     '  [[ "$*" == *"--source-ref refs/tags/v0.10.1"* && "$*" == *"--source-digest trusted-commit"* && "$*" == *"--deny-self-hosted-runners"* ]] || return 96',
+    // GitHub CLI selects the bundle parser by extension, even for valid bytes.
+    '  while (($#)); do if [[ "$1" == --bundle ]]; then [[ "$2" == *.json && -f "$2" ]] || return 97; break; fi; shift; done',
     '  [[ "$scenario" != invalid-proof ]] || return 1',
     '}',
     `verify_image_trust 'ghcr.io/blogpostercms/blogpostercms@sha256:${'a'.repeat(64)}' BlogposterCMS/BlogposterCMS 0.10.1 trusted-commit`
@@ -212,6 +214,9 @@ test('release workflow publishes and attests the full server image and updater a
   expect(workflow).toContain('Verify public image provenance without saved credentials');
   expect(workflow).toContain('unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN');
   expect(workflow).toContain('export DOCKER_CONFIG="$(mktemp -d)"');
+  expect(workflow).toContain('source deploy/blogposter-update');
+  expect(workflow).toContain('verify_image_trust "$RELEASE_IMAGE" "$GITHUB_REPOSITORY" "${GITHUB_REF_NAME#v}" "$GITHUB_SHA"');
+  expect(workflow).toContain('CORE_UPDATE_WRONG_SOURCE_ACCEPTED');
   expect(workflow).toContain('runtime-integrity-manifest.json');
   expect(workflow).toContain('runtime-integrity-manifest.bundle.json');
   expect(workflow).toContain('Download signed runtime integrity assets');

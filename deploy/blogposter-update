@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly UPDATER_VERSION='1.2.2'
+readonly UPDATER_VERSION='1.2.3'
 readonly DEFAULT_MANIFEST_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json'
 readonly DEFAULT_MANIFEST_BUNDLE_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json'
 readonly TRUSTED_SIGNER_WORKFLOW='BlogposterCMS/BlogposterCMS/.github/workflows/release.yml'
@@ -186,7 +186,9 @@ verify_image_trust() {
     github)
       require_command gh
       local image_bundle
-      image_bundle="$(mktemp)"
+      # GitHub CLI requires .json/.jsonl to select its bundle parser. The bytes
+      # alone are not sufficient; an extensionless mktemp file is rejected.
+      image_bundle="$(mktemp --suffix=.json)"
       # GitHub CLI requires a login for API discovery, even for public images.
       # Use the release's detached proof instead; gh still checks its signature,
       # exact image digest, source commit/tag, workflow and hosted-runner identity.

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.10.4] - 2026-09-07
+
+- Fixed host updater 1.2.0-1.2.2 storing valid image proof bundles in temporary
+  files without a JSON extension, which GitHub CLI rejects before verification.
+  Host bundle 1.2.3 preserves the required extension. Release CI now exercises
+  the updater's actual image-proof helper with the real anonymous verifier,
+  including rejection of a wrong source commit. Signature policy is unchanged;
+  existing hosts must install the signed corrected host bundle once.
+
 ## [0.10.3] - 2026-09-07
 
 - Host updater 1.2.2 adds bounded connection/attempt/retry limits for signed

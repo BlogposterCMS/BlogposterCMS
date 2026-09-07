@@ -155,6 +155,15 @@ could resolve to an unexpectedly broad host path and is therefore rejected with
 
 ## Host-agent restarts
 
+Host bundle 1.2.3 corrects a separate image-verification failure in 1.2.0-1.2.2:
+GitHub CLI requires `.json` or `.jsonl` on the downloaded bundle's local path.
+An extensionless temporary file produces `CORE_UPDATE_ATTESTATION_INVALID`
+even when its bytes are valid. The updater now retains `.json`; exact digest,
+source, workflow and signature restrictions are unchanged. Release CI runs
+the real image-proof helper with isolated credentials and checks both a valid
+release and a wrong source commit. Install the signed 0.10.4 host bundle before
+retrying an affected host. Ordinary CMS image updates do not replace that tool.
+
 Host bundle 1.2.2 bounds release metadata downloads to a 15-second connection
 timeout, 45 seconds per attempt, at most three retries and a 120-second retry
 window (the final attempt can finish after that window). The declared-size

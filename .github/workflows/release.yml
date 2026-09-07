@@ -133,18 +133,24 @@ jobs:
       - name: Verify public image provenance without saved credentials
         env:
           RELEASE_IMAGE: ${{ steps.image.outputs.repository }}@${{ steps.build.outputs.digest }}
+          IMAGE_ATTESTATION_BUNDLE: ${{ steps.image_attestation.outputs.bundle-path }}
         run: |
           # Isolate both credential stores and unset workflow tokens. This gate
           # reproduces a fresh end-user host, not the authenticated release runner.
           export GH_CONFIG_DIR="$(mktemp -d)"
           export DOCKER_CONFIG="$(mktemp -d)"
           unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN
-          gh attestation verify "oci://$RELEASE_IMAGE" \
-            --bundle "${{ steps.image_attestation.outputs.bundle-path }}" \
-            --repo BlogposterCMS/BlogposterCMS \
-            --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml \
-            --source-ref "$GITHUB_REF" --source-digest "$GITHUB_SHA" \
-            --deny-self-hosted-runners
+          source deploy/blogposter-update
+          # The release URL is not published yet. Stage only its download;
+          # exercise the actual temp-file and verifier path with the real CLI.
+          download_release_asset() {
+            test "$1" = "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/blogposter-image.bundle.json" || return 1
+            cp "$IMAGE_ATTESTATION_BUNDLE" "$2"
+          }
+          verify_image_trust "$RELEASE_IMAGE" "$GITHUB_REPOSITORY" "${GITHUB_REF_NAME#v}" "$GITHUB_SHA"
+          if (verify_image_trust "$RELEASE_IMAGE" "$GITHUB_REPOSITORY" "${GITHUB_REF_NAME#v}" "0000000000000000000000000000000000000000"); then
+            echo 'CORE_UPDATE_WRONG_SOURCE_ACCEPTED'; exit 1
+          fi
       - name: Create updater release manifest
         env:
           BLOGPOSTER_IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}

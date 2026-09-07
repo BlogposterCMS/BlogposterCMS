@@ -136,8 +136,9 @@ describe('Design Studio public widgets', () => {
     expect(work?.classList.contains('bp-navigation-widget__item--has-mega')).toBe(true);
     expect(work?.classList.contains('bp-navigation-widget__item--mobile-hidden')).toBe(true);
     expect(work?.dataset.megaLayoutId).toBe('mega-work');
-    expect(host.querySelector('[data-layout-id="mega-work"]')?.textContent).toContain('Work panel');
-    expect(host.querySelector('a[target="_blank"]')?.getAttribute('rel')).toBe('noopener');
+    expect(host.querySelector('[data-layout-id="mega-work"]')?.textContent).toContain('Demo');
+    expect(host.textContent).not.toContain('Mega panel:');
+    expect(host.querySelector('a[target="_blank"]')?.getAttribute('rel')).toContain('noopener');
   });
 
   it('renders breadcrumb fallback items from the current path', () => {

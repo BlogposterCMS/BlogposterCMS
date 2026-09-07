@@ -33,6 +33,7 @@ export interface PageEditorFormValues {
 
 interface PageDataLoaderLike {
   clear?: (eventName?: string, payload?: Record<string, unknown>) => void;
+  load?: (eventName: string, payload?: Record<string, unknown>) => Promise<unknown>;
 }
 
 type PageEditorEmitter = Window['meltdownEmit'];
@@ -95,6 +96,28 @@ export function buildPageUpdatePayload(
       publish_at: publishAt
     }
   });
+}
+
+/** SPA navigation leaves the shell's initial pageDataPromise behind. Resolve
+ * the editor's explicit route id and reject an unrelated cached record. */
+export async function loadPageEditorPage(
+  emit: PageEditorEmitter, jwt: string | null | undefined,
+  pathname: string, adminBase: string, initial: Promise<unknown> | undefined,
+  loader?: PageDataLoaderLike
+): Promise<PageRecord | null> {
+  const prefix = `/${adminBase.replace(/^\/+|\/+$/g, '')}/pages/edit/`;
+  if (!pathname.startsWith(prefix)) return toPage(await initial);
+  let pageId: string;
+  try { pageId = decodeURIComponent(pathname.slice(prefix.length).replace(/\/$/, '')); }
+  catch { throw new Error('PAGE_EDITOR_ID_INVALID: The editor page id is invalid.'); }
+  if (!/^[A-Za-z0-9_.:-]+$/.test(pageId)) throw new Error('PAGE_EDITOR_ID_INVALID: The editor page id is invalid.');
+  const request = { moduleName: 'runtimeManager', moduleType: 'core', resource: 'pages', action: 'get', params: { pageId } };
+  const result = loader?.load
+    ? await loader.load('cmsAdminApiRequest', request)
+    : await emitRuntimeAdmin(requireEmitter(emit), jwt, 'pages', 'get', { pageId });
+  const page = toPage(result);
+  if (!page || String(page.id) !== pageId) throw new Error('PAGE_EDITOR_PAGE_MISMATCH: The selected page could not be loaded. Reopen it from Pages.');
+  return page;
 }
 
 export function clearPageEditorCache(

@@ -53,7 +53,14 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain('meta:');
   expect(agentSurfaceSource).toContain('agentFeedback');
   expect(agentSurfaceSource).toContain('layoutTree');
+  expect(agentSurfaceSource).toContain('site-main-design-by-default');
+  expect(agentSurfaceSource).toContain('pages.setMainDesign');
+  expect(agentSurfaceSource).toContain("accepts: ['page-content', 'page-design']");
   expect(agentSurfaceSource).toContain('widgetPlacements');
+  expect(agentSurfaceSource).toContain("action: 'navigation.configure'");
+  expect(agentSurfaceSource).toContain('navigation:');
+  expect(builderRendererSource).toContain('applyNavigationPatch');
+  expect(builderRendererSource).toContain('createNavigationInspector');
   expect(agentSurfaceSource).toContain('responsivePlacementFeedback');
   expect(agentSurfaceSource).toContain('responsivePlacementRanges');
   expect(agentSurfaceSource).toContain('snapGuides');
@@ -156,6 +163,10 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain('fontPackagesAgentState');
   expect(agentSurfaceSource).toContain('activeFontPackage');
   expect(agentSurfaceSource).toContain("action: 'sitePresets.create'");
+  expect(agentSurfaceSource).toContain("action: 'sitePresets.export'");
+  expect(agentSurfaceSource).toContain("action: 'sitePresets.import'");
+  expect(agentSurfaceSource).toContain('DESIGNER_AGENT_FEEDBACK_CONTENT_HOST_AMBIGUOUS');
+  expect(agentSurfaceSource).toContain('DESIGNER_AGENT_FEEDBACK_CONTENT_HOST_FREE_ANCESTOR');
   expect(agentSurfaceSource).toContain('actions: workspaceActionCatalog(designerActions())');
   expect(agentSurfaceSource).toContain('collaboration: designerHandoffState()');
   expect(agentSurfaceSource).toContain("action: 'container.contentHost.set'");

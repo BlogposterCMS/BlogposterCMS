@@ -38,6 +38,9 @@ async function loadDesign(descriptor = {}, ctx) {
     if (ctx && typeof ctx === 'object') {
         ctx.activeLayout = activeLayout;
         ctx.activeLayoutRef = layoutRef;
+        ctx.expectsPageContent = Boolean(descriptor.hasPageContent);
+        ctx.contentDesignId = /^layout:([A-Za-z0-9_.:-]+)(?:@[^/\s]+)?$/.exec(descriptor.contentLayoutRef || '')?.[1];
+        ctx.requiresContentSlot = descriptor.requiresContentSlot === true;
     }
     return activeLayout;
 }

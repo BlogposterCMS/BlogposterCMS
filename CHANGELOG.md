@@ -1,6 +1,54 @@
 # Changelog
 
-## [Unreleased]
+## [0.10.0-rc.2] - 2026-09-07
+
+- Core updates now belong to the protected Updater module, including background
+  discovery and authenticated update actions. The ModuleLoader handles optional
+  packages; the host executor only carries out fixed requests and retains jobs
+  through CMS restarts.
+- A combined server installer generates fresh configuration and keys, provisions
+  the update connection, and verifies container readiness and socket access.
+  Existing installations retain their secrets, deployment paths and data.
+  Real Linux installation/cutover acceptance remains pending for this preview.
+
+- Pages can optionally import an English documentation example: three draft
+  chapters, a shared draft design, native menu and breadcrumb. Installation does
+  not seed it automatically; existing pages and the website main design remain
+  unchanged. The existing Pages agent surface offers the same preflight/import.
+- Initial public articles have readable first-response defaults and move into
+  their saved content area before asynchronous layout widgets mount. The Docs
+  example supplies its article stylesheet in the first HTML response, removing
+  the unstyled-text flash and retaining light/dark presentation during loading.
+
+- Designer Menu and Breadcrumb elements now have visible source and appearance
+  controls. Menus support a sidebar preset, current-page styling, separate
+  keyboard-accessible submenu toggles and a collapsible mobile view. Breadcrumbs
+  resolve published page titles and parent relationships through the public
+  facade, with a configurable start link and path fallback. AgentManager exposes
+  the same instance settings through `navigation.configure`; Navigation Studio
+  remains the owner of managed menu links. Canvas links stay in the editor during
+  editing and navigate normally in Preview. Inspector controls no longer clear
+  the selection when the scaled canvas extends behind the panel.
+- Pages now use a website-wide main design by default. Each page can load only
+  its content into that design, insert an own design into its content area, or
+  use an independent design. The centered Pages header selects/opens the main
+  design and reports how many pages use it. Settings validates publication and
+  a single content area before assignment; explicit legacy page modes remain readable.
+  Page content stays independent of its design. SPA editor navigation loads the exact
+  selected page instead of reusing the initial shell record.
+- Public layouts retain the Designer container tree and render article content
+  inside its saved page-content area. Long articles expand Auto/Grid ancestors,
+  and article HTML remains present in the first server response. Draft/private
+  ancestors and draft designs cannot supply a public shared layout.
+- The Designer Layout panel exposes existing Site Presets as UI kits, with
+  shared colors, typography, starting blocks and validated JSON import/export.
+  Import creates a kit without activating it. Existing agent surfaces expose
+  the same layout/content and UI-kit actions, content-host readiness and warnings.
+  Widget imports also resolve correctly inside the embedded Designer document.
+- Designer content-area controls explain the page-content/page-design outlet;
+  Free, horizontal/vertical Auto and Grid remain modes of the same containers.
+  Public composition and agent feedback expose main → own design → content,
+  with separate content-slot ownership and existing public permission checks.
 
 - Added measured HTML capture import through the existing Importer and Design
   Studio draft flow. Text, images, links and backgrounds retain measured

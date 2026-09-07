@@ -5,7 +5,7 @@ const http = require('http');
 const EventEmitter = require('events');
 const { PassThrough } = require('stream');
 const { createUpdateAgent, createControlServer } = require('../deploy/update-agent');
-const { requestHost } = require('../mother/modules/moduleLoader/coreUpdateService');
+const { requestHost } = require('../mother/modules/updater/coreUpdateService');
 
 const image = `ghcr.io/blogpostercms/blogpostercms@sha256:${'a'.repeat(64)}`;
 let dir, agent, spawnImpl, children;
@@ -29,6 +29,13 @@ test('check accepts only a successful verified snapshot and preserves candidate 
   expect(agent.status().candidate.available).toBe(true);
   agent.check(); children[1].stderr.write('[CORE_UPDATE_ATTESTATION_FAILED] rejected\n'); children[1].emit('close', 1);
   expect(agent.status()).toMatchObject({ phase: 'failed', errorCode: 'CORE_UPDATE_ATTESTATION_FAILED', candidate: { latestVersion: '0.9.5' } });
+});
+
+test('a preview installation can inspect the stable release channel', () => {
+  agent.check();
+  children[0].stdout.write(`[CORE_UPDATE_SNAPSHOT] ${JSON.stringify({ currentVersion: '0.10.0-rc.2', latestVersion: '0.9.5', image, available: false })}\n`);
+  children[0].emit('close', 0);
+  expect(agent.status()).toMatchObject({ phase: 'current', candidate: { currentVersion: '0.10.0-rc.2', available: false } });
 });
 
 test('install binds reviewed version and digest; double click does not spawn twice', () => {

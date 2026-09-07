@@ -111,10 +111,6 @@ export function detachHtmlMeta(page) {
 }
 export function attachHtmlMeta(page, htmlFileName) {
     const newMeta = { ...(page.meta || {}), htmlFileName };
-    delete newMeta.layoutTemplate;
-    delete newMeta.designId;
-    delete newMeta.designTitle;
-    delete newMeta.designThumbnail;
     return newMeta;
 }
 export async function fetchBuilderApps(emit, jwt) {

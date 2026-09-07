@@ -142,6 +142,8 @@ jobs:
           cp deploy/blogposter-update-agent.service release-assets/blogposter-update-agent.service
           cp deploy/blogposter-updates.compose.yml release-assets/blogposter-updates.compose.yml
           cp deploy/install-update-agent release-assets/install-update-agent
+          cp deploy/install-blogposter release-assets/install-blogposter
+          cp deploy/create-install-config.js release-assets/create-install-config.js
           cp deploy/blogposter.compose.yml release-assets/blogposter.compose.yml
           cp deploy/deployment.env.example release-assets/deployment.env.example
           chmod 0755 release-assets/blogposter-update
@@ -155,6 +157,10 @@ jobs:
             release-assets/blogposter-update-agent.service
             release-assets/blogposter-updates.compose.yml
             release-assets/install-update-agent
+            release-assets/install-blogposter
+            release-assets/create-install-config.js
+            release-assets/blogposter.compose.yml
+            release-assets/blogposter-updater.conf.example
       - name: Stage host update control attestation
         run: cp "${{ steps.update_control_attestation.outputs.bundle-path }}" release-assets/update-control.bundle.json
       - name: Attest updater release manifest

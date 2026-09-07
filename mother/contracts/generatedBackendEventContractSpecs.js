@@ -7811,6 +7811,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
             }
           ]
         },
+        "layoutRef": {
+          "type": "json"
+        },
         "moduleName": {
           "type": "string",
           "minLength": 1
@@ -12046,6 +12049,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
               "minLength": 1
             }
           ]
+        },
+        "language": {
+          "type": "json"
         },
         "moduleName": {
           "type": "string",

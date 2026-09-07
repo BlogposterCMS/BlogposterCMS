@@ -28,16 +28,33 @@ not proof of a completed command.
 
 ## Implemented adapters
 
+Pages also offers `pages.previewExample` and `pages.importExample` for the
+[optional English documentation example](docs-example.md). Both accept a root
+address; import uses the usual revision, draft and confirmation guards and
+reports the created records in `lastExampleImport`.
+
 | Workspace | Shared actions and state |
 | --- | --- |
 | Pages | Search, select, start a page/subpage draft, edit details, save, refresh; hierarchy, status, parent and draft fields |
-| Page editor | Edit details; attach/detach an existing design or HTML source; save the same page form |
+| Page editor | Edit details; stage layout inheritance/override and page HTML independently; attach/detach HTML; save the same page form |
 | Navigation | Select menu/item, edit/save link details, add page links and move branches through existing validation |
 | Media | Browse/search/select, reload, create folder, rename/delete; picker acceptance uses its actual type filter and mutation setting |
 | Libraries | Widget search/selection/view; saved design inventory and editor destinations |
 | Settings | General title/description, favicon, SEO defaults, registration and maintenance; only explicit non-secret fields |
 | CMS shell | Open known workspaces or a page editor; hand off to the separate Designer document after acknowledging navigation |
-| Designer | Existing scene, element, text, geometry, styles and preset commands; content destination, reusable design reference, direct save/publish |
+| Designer | Existing scene, element, text, geometry, styles and preset commands; content destination, reusable design reference, UI-kit JSON import/export, direct save/publish |
+
+Use `pages.setMainDesign` with `designId` (empty clears the default), the current
+revision and `confirm: true` to save the website frame through Settings. Its
+Pages snapshot exposes the assignment, loading/error state and available designs.
+For page composition, use `page.setLayout` with `mode: main`, `composed` or
+`design` (the latter two require `designId`); legacy `inherit`/`none` remain
+readable. `page.setContent` stages sanitized `html`. These page-editing
+actions do not save: use the existing `page.save` command after reviewing the
+shared draft. The content snapshot reports the resolved layout/source and a
+pending selection or lookup error. Pages exposes the selected presentation and
+the website main design in its header. Follow
+[the layout workflow](layout_templates.md) for publication/composition rules.
 
 `cms.openDesign` acknowledges a **scheduled** document handoff. Re-discover
 `studio.designer` and wait for its command-port readiness before editing. The

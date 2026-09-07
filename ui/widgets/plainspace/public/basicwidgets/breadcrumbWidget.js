@@ -1,4 +1,7 @@
-import { currentPathSegments, normalizeNavigationItems, readArray, readString, renderWidgetMessage, sharedStyle, widgetSettings } from './publicWidgetHelpers.js';
+import { normalizeNavigationItems, normalizeLinkUrl, readArray, readString, renderWidgetMessage, sharedStyle, widgetSettings } from './publicWidgetHelpers.js';
+import { applyNavigationStyle, navigationSettings } from './navigationSettings.js';
+import { loadBreadcrumbPages } from './breadcrumbData.js';
+const renderRequests = new WeakMap();
 function breadcrumbStyle() {
     const style = document.createElement('style');
     style.textContent = `
@@ -6,11 +9,12 @@ function breadcrumbStyle() {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--bp-nav-gap, 8px);
+  justify-content:var(--bp-nav-align, flex-start);
   margin: 0;
   padding: 0;
   color: var(--studio-text-muted);
-  font-size: 0.875rem;
+  font-size: inherit;
   list-style: none;
 }
 .bp-breadcrumb-widget li {
@@ -38,56 +42,94 @@ function titleFromSegment(segment) {
         .replace(/[-_]+/gu, ' ')
         .replace(/\b\w/gu, char => char.toUpperCase());
 }
-function fallbackItems(homeLabel) {
-    const segments = currentPathSegments();
+function fallbackItems(homeLabel, pathname) {
+    const segments = pathname.split('/').filter(Boolean);
     const items = [{ label: homeLabel, href: '/', children: [] }];
     let path = '';
     segments.forEach(segment => {
         path += `/${segment}`;
-        items.push({ label: titleFromSegment(segment), href: path, children: [] });
+        let label = segment;
+        try {
+            label = decodeURIComponent(segment);
+        }
+        catch { /* Keep malformed URLs readable. */ }
+        items.push({ label: titleFromSegment(label), href: path, children: [] });
     });
     return items;
 }
-export function render(el, ctx = {}) {
+export async function render(el, ctx = {}) {
     if (!el)
         return;
-    const settings = widgetSettings(ctx, {
-        homeLabel: 'Home',
-        separator: '/'
-    });
+    const request = {};
+    renderRequests.set(el, request);
+    delete el.dataset.warningCode;
+    const raw = widgetSettings(ctx);
+    const settings = { ...raw, ...navigationSettings('breadcrumb', raw) };
     const items = normalizeNavigationItems(readArray(settings, ['items', 'trail']));
-    const trail = items.length ? items : fallbackItems(readString(settings, ['homeLabel'], 'Home'));
-    if (!trail.length) {
-        renderWidgetMessage(el, 'BP_WIDGET_BREADCRUMB_EMPTY', 'Breadcrumb empty', 'Add breadcrumb items or render on a public path.');
+    // Preview URLs are authoring hints only. Public pages always use their actual URL.
+    const inStudio = document.body.classList.contains('builder-mode');
+    const path = inStudio ? String(settings.previewPath || '/') : window.location.pathname;
+    const homeLabel = String(settings.homeLabel);
+    const homeHref = normalizeLinkUrl(settings.homeHref) || '/';
+    const prepare = (source) => {
+        const rootIndex = source.findIndex(item => item.href === homeHref);
+        const trail = rootIndex >= 0 ? source.slice(rootIndex + 1) : source.filter(item => item.href !== '/');
+        return settings.showHome ? [{ label: homeLabel, href: homeHref, children: [] }, ...trail] : trail;
+    };
+    const paint = (source) => {
+        const trail = items.length ? source : prepare(source);
+        if (!trail.length) {
+            if (!settings.showHome) {
+                el.replaceChildren();
+                return;
+            }
+            renderWidgetMessage(el, 'BP_WIDGET_BREADCRUMB_EMPTY', 'Breadcrumb empty', 'Add breadcrumb items or render on a public path.');
+            return;
+        }
+        const nav = document.createElement('nav');
+        nav.className = 'bp-public-widget bp-breadcrumb-widget';
+        applyNavigationStyle(nav, settings);
+        nav.setAttribute('aria-label', readString(settings, ['ariaLabel', 'label'], 'Breadcrumb'));
+        const list = document.createElement('ol');
+        const separator = readString(settings, ['separator'], '/');
+        trail.forEach((item, index) => {
+            const row = document.createElement('li');
+            if (index > 0) {
+                const sep = document.createElement('span');
+                sep.setAttribute('aria-hidden', 'true');
+                sep.textContent = separator;
+                row.appendChild(sep);
+            }
+            if (index === trail.length - 1) {
+                const current = document.createElement('span');
+                current.setAttribute('aria-current', 'page');
+                current.textContent = item.label;
+                row.appendChild(current);
+            }
+            else {
+                const link = document.createElement('a');
+                link.href = item.href;
+                link.textContent = item.label;
+                row.appendChild(link);
+            }
+            list.appendChild(row);
+        });
+        nav.appendChild(list);
+        el.replaceChildren(sharedStyle(), breadcrumbStyle(), nav);
+    };
+    paint(items.length ? items : fallbackItems(homeLabel, path));
+    if (items.length || settings.source === 'path')
         return;
+    try {
+        const trail = await loadBreadcrumbPages(path, ctx);
+        if (renderRequests.get(el) === request && trail?.length)
+            paint(trail);
     }
-    const nav = document.createElement('nav');
-    nav.className = 'bp-public-widget bp-breadcrumb-widget';
-    nav.setAttribute('aria-label', readString(settings, ['ariaLabel', 'label'], 'Breadcrumb'));
-    const list = document.createElement('ol');
-    const separator = readString(settings, ['separator'], '/');
-    trail.forEach((item, index) => {
-        const row = document.createElement('li');
-        if (index > 0) {
-            const sep = document.createElement('span');
-            sep.setAttribute('aria-hidden', 'true');
-            sep.textContent = separator;
-            row.appendChild(sep);
-        }
-        if (index === trail.length - 1) {
-            const current = document.createElement('span');
-            current.setAttribute('aria-current', 'page');
-            current.textContent = item.label;
-            row.appendChild(current);
-        }
-        else {
-            const link = document.createElement('a');
-            link.href = item.href;
-            link.textContent = item.label;
-            row.appendChild(link);
-        }
-        list.appendChild(row);
-    });
-    nav.appendChild(list);
-    el.replaceChildren(sharedStyle(), breadcrumbStyle(), nav);
+    catch (error) {
+        // The path remains usable if a page disappears or its public ancestry fails.
+        if (renderRequests.get(el) !== request)
+            return;
+        el.dataset.warningCode = 'BP_WIDGET_BREADCRUMB_PAGES_UNAVAILABLE';
+        console.warn('BP_WIDGET_BREADCRUMB_PAGES_UNAVAILABLE', error);
+    }
 }

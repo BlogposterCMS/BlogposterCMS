@@ -52,6 +52,17 @@
     }
   }
 
+  .bar-host {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    padding: 0 6px;
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
   .bar-field {
     height: 26px;
     display: inline-grid;

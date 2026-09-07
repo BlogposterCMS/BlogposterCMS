@@ -93,7 +93,7 @@ function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, now =
             if (code === 'CORE_UPDATE_SNAPSHOT' && operation === 'check') {
               try {
                 const value = JSON.parse(message);
-                if (validTarget({ version: value.latestVersion, image: value.image }) && typeof value.available === 'boolean' && /^\d+\.\d+\.\d+$/.test(value.currentVersion)) {
+                if (validTarget({ version: value.latestVersion, image: value.image }) && typeof value.available === 'boolean' && /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(value.currentVersion)) {
                   snapshot = { currentVersion: value.currentVersion, latestVersion: value.latestVersion, image: value.image,
                     available: value.available, releaseNotes: String(value.releaseNotes || '').slice(0, 16000),
                     releaseUrl: `https://github.com/BlogposterCMS/BlogposterCMS/releases/tag/v${value.latestVersion}` };
@@ -113,14 +113,7 @@ function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, now =
   return {
     status: () => state,
     check: () => start('check'),
-    install: target => start('install', target),
-    // A prior interrupted operation must be repaired by the host operator.
-    startPeriodicChecks(interval = 6 * 60 * 60 * 1000) {
-      const tick = () => { if (!busy && state.phase !== 'recovery_failed') start('check'); };
-      const initial = setTimeout(tick, 10000); initial.unref();
-      const timer = setInterval(tick, interval); timer.unref();
-      return () => { clearTimeout(initial); clearInterval(timer); };
-    }
+    install: target => start('install', target)
   };
 }
 
@@ -150,6 +143,6 @@ if (require.main === module) {
   const agent = createUpdateAgent({ stateDir: '/var/lib/blogposter-update-agent', updater: '/opt/blogposter/bin/blogposter-update', config: '/opt/blogposter/updater.conf' });
   if (fs.existsSync(socket)) fs.unlinkSync(socket);
   const server = createControlServer(agent);
-  server.listen(socket, () => { fs.chmodSync(socket, 0o660); agent.startPeriodicChecks(); });
+  server.listen(socket, () => { fs.chmodSync(socket, 0o660); });
 }
 module.exports = { createUpdateAgent, createControlServer, validTarget };

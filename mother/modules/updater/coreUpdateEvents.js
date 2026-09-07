@@ -6,7 +6,7 @@ const { getCoreUpdateStatus, requestHost } = require('./coreUpdateService');
 const { hasPermission } = require('../userManagement/permissionUtils');
 
 function assertCoreUpdateActor(payload) {
-  if (payload?.moduleName !== 'moduleLoader' || payload?.moduleType !== 'core' || !payload.jwt ||
+  if (payload?.moduleName !== 'updater' || payload?.moduleType !== 'core' || !payload.jwt ||
       !payload.decodedJWT || payload.decodedJWT.isPublic === true || !hasPermission(payload.decodedJWT, 'settings.core.edit')) {
     throw new Error('CORE_UPDATE_FORBIDDEN: missing settings.core.edit');
   }

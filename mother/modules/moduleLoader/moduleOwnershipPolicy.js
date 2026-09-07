@@ -3,7 +3,8 @@
 const { sanitizeModuleName } = require('../../utils/moduleUtils');
 
 const CORE_OWNED_MODULE_NAMES = new Set([
-  'designer'
+  'designer',
+  'updater'
 ]);
 
 function isCoreOwnedModule(moduleName = '') {

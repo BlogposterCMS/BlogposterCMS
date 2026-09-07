@@ -7,6 +7,37 @@ Installed packages and user-created packages use the same versioned contract.
 Installed packages live under `presets/<id>/preset.json`; user packages are
 stored through `settingsManager` under `SITE_PRESETS_V1`.
 
+## UI kit workflow
+
+In Design Studio, open **Layout → UI kit**. **Edit colors & typography** opens
+the existing central style controls. Give the current setup a name and choose
+**Save current as UI kit** to reuse it later. **Use UI kit** applies its central
+Color Scheme and Font Package, affecting content linked to those defaults;
+the confirmation explains that shared scope. **Use demo** separately replaces
+the current scene after confirmation.
+
+**JSON for agents & reuse** exports the selected kit's portable schema, without
+installation identity/source fields. Paste JSON with a unique name and choose
+**Import as new UI kit**. Import goes through the same permission-checked
+`sitePresets.create` domain validation and never auto-applies styles or content.
+Client errors distinguish invalid JSON, unsupported `schemaVersion` and input
+over 512 KB (`SITE_PRESETS_JSON_INVALID`, `SITE_PRESETS_JSON_VERSION`,
+`SITE_PRESETS_JSON_SIZE`). Domain limits and trusted-preset validation also apply.
+Pasted JSON and kit names participate in the Designer's shared draft revision.
+
+Agents use `sitePresets.export` (`id`) and `sitePresets.import` on the existing
+Designer agent surface; the UI and agent adapters share the same client functions.
+Exports return `encoding: base64-utf8` and `jsonParts`. Join the parts, decode
+base64 as UTF-8, then parse JSON. For import, encode the edited JSON and split it
+into parts of at most 3000 characters; pass `{jsonParts: [...]}`. This preserves
+Unicode/whitespace within AgentManager's existing string/depth/array limits.
+There are at most 80 parts (180 KB before encoding); larger kits use the UI
+importer. Small JSON under 4000 characters may instead use `{json: "..."}`.
+Malformed or excessive parts fail with `SITE_PRESETS_AGENT_JSON_INVALID` or
+`SITE_PRESETS_AGENT_JSON_SIZE`. Import returns the created kit's id/name.
+There is no parallel storage or new public runtime. Kits hold declarative
+starting blocks; authored reusable components remain linked designs.
+
 ## Contract
 
 A Site Preset contains only:

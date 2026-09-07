@@ -10,6 +10,15 @@ const { executeJs } = require('/ui/runtime/main/script-utils.js');
 const { loadHtml, __setLoaderTestDeps } = require('../mother/modules/pagesManager/publicLoader.js');
 
 describe('pagesManager public html loader security', () => {
+  test('adopts server-rendered body into the explicit shared layout host once', async () => {
+    document.body.innerHTML = '<div id="app"><div id="bp-initial-html"><h1>Child article</h1></div><div id="slot"></div></div>';
+    const initialHtml = document.getElementById('bp-initial-html');
+    const pageContentHost = document.getElementById('slot');
+    const ctx = { initialHtml, pageContentHost, activeLayout: { items: [{ widgetId: 'header' }] } };
+    await loadHtml({ contentSlot: true, fallbackOnly: true, inline: { html: '<h1>Child article</h1>' } }, ctx);
+    expect(initialHtml?.parentElement).toBe(pageContentHost);
+    expect(document.querySelectorAll('h1')).toHaveLength(1);
+  });
   test('adopts initial server HTML without duplication, sanitizer fetch or replacement', async () => {
     document.body.innerHTML = '<div id="bp-initial-html" class="bp-page-html"><h1>Published</h1></div>';
     const initialHtml = document.getElementById('bp-initial-html');

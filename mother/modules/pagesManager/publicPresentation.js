@@ -1,6 +1,7 @@
 'use strict';
 
 const sanitizeHtml = require('sanitize-html');
+const { normalizeLayoutTree } = require('../../../ui/shared/layout/layoutDocument.js');
 // Node 24 consumes the same DOM-free presentation helpers as browser ESM.
 const { sanitizeCss } = require('../../../ui/shared/sanitize/sanitizer.js');
 const {
@@ -61,6 +62,28 @@ function styleAttribute(style) {
   return escapeHtml(Object.entries(style).map(([key, value]) => `${key}:${value}`).join(';'));
 }
 
+// Only a saved content host makes the body part of a shared layout. Workarea
+// selection is transient editor state and must not change public composition.
+function hasPageContentHost(tree) {
+  if (!tree) return false;
+  return tree.isDynamicHost === true || (tree.children || []).some(hasPageContentHost);
+}
+
+// First-response articles sit outside the app scope until the saved layout is
+// ready. Give that temporary position readable defaults without hiding content
+// on slow/failed JavaScript or overriding the authored design after adoption.
+const INITIAL_ARTICLE_CSS = `
+:where(body > #bp-initial-html) {
+  box-sizing:border-box;max-width:76rem;margin:0 auto;padding:32px 24px;
+  font:16px/1.7 var(--font-body,ui-sans-serif,system-ui,sans-serif);
+  overflow-wrap:anywhere;
+}
+:where(body > #bp-initial-html) :where(h1,h2,h3) {line-height:1.25}
+:where(body > #bp-initial-html) :where(img,video) {max-width:100%;height:auto}
+:where(body > #bp-initial-html) :where(pre) {overflow:auto}
+:where(body > #bp-initial-html) :where(aside a) {display:block}
+`;
+
 /** Resolve only published public facade data; widgets still fetch their own data. */
 async function loadPublicPresentation(requestPublic, slug, language) {
   const envelope = await requestPublic('pages', 'envelope', { slug, language });
@@ -84,11 +107,16 @@ async function loadPublicPresentation(requestPublic, slug, language) {
   ).map(href => `<link rel="stylesheet" href="${escapeHtml(href)}">`).join('');
   const hasLayout = Boolean(layout?.items?.length);
   const inline = htmlAttachment?.descriptor?.inline || {};
-  const renderHtml = Boolean(inline.html) && !(htmlAttachment?.descriptor?.fallbackOnly && hasLayout);
+  const contentSlot = htmlAttachment?.descriptor?.contentSlot
+    && hasPageContentHost(normalizeLayoutTree(layout?.document?.layoutTree));
+  // Keep article content in the first HTML response for readers and crawlers.
+  // The client adopts this node into the same document's saved content host.
+  const renderHtml = Boolean(inline.html) && (contentSlot || design?.descriptor?.requiresContentSlot
+    || !(htmlAttachment?.descriptor?.fallbackOnly && hasLayout));
   let head = styles;
   let body = '';
   if (renderHtml) {
-    head += `<style id="bp-initial-page-css">${safeCss(inline.css)}</style>`;
+    head += `<style id="bp-initial-page-css">${INITIAL_ARTICLE_CSS}${safeCss(inline.css)}</style>`;
     body = `<div id="bp-initial-html" class="bp-page-html">${sanitizePublicHtml(inline.html)}</div>`;
   } else if (hasLayout) {
     head += `<style id="${PUBLIC_CANVAS_STYLE_ID}">${PUBLIC_CANVAS_CSS}</style>`;

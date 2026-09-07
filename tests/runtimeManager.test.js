@@ -8,9 +8,21 @@ const {
     registerPublicRuntimeRoutes,
     runScheduledPublisherOnce,
     setupRuntimeEvents,
-    shouldCheckRedirect
+    shouldCheckRedirect,
+    toPublicDesignerLayout
   }
 } = require('../mother/modules/runtimeManager');
+
+test('public shared layouts retain normalized content hosts but reject draft designs', () => {
+  const layout = { layoutRef: 'layout:docs@v1', ownerId: 'private', document: { secret: 'private', layoutTree: {
+    type: 'leaf', nodeId: 'article', isDynamicHost: true, secret: 'private', settings: { padding: 24 }
+  } }, styles: { background: '#ffffff' }, items: [] };
+  const projected = toPublicDesignerLayout(layout);
+  assert.strictEqual(projected.document.layoutTree.isDynamicHost, true);
+  assert.strictEqual(projected.document.layoutTree.nodeId, 'article');
+  assert.strictEqual(JSON.stringify(projected).includes('private'), false);
+  assert.strictEqual(toPublicDesignerLayout({ ...layout, published: false }), null);
+});
 
 function startApp(app) {
   return new Promise(resolve => {

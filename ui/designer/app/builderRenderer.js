@@ -20,6 +20,9 @@ import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { emitAdminFacade } from './runtime/runtimeFacade.js';
+import { createNavigationInspector } from './widgets/navigationInspector.js';
+import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
+import { widgetSettings } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
 import { initTextPanel } from './managers/textPanelManager';
 import { getWidgetIcon } from './renderer/renderUtils.js';
 import { capturePreview as captureGridPreview } from './renderer/capturePreview.js';
@@ -199,6 +202,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         { id: 'instant', title: 'Instant' }
     ];
     const sceneInspector = ensureSceneInspector();
+    const navigationInspector = createNavigationInspector(sceneInspector, {
+        read: () => {
+            const el = state.activeWidgetEl;
+            if (!el || !['navigationMenu', 'breadcrumb'].includes(el.dataset.widgetId))
+                return null;
+            const definition = allWidgets.find(widget => widget.id === el.dataset.widgetId);
+            return { widgetId: el.dataset.widgetId, instanceId: el.dataset.instanceId || el.id,
+                metadata: getWidgetInstanceCode(el, false)?.meta || {}, defaults: definition?.metadata?.defaults || {} };
+        },
+        apply: patch => applyNavigationPatch(state.activeWidgetEl, patch),
+        loadLocations: async () => {
+            const result = await emitAdminFacade(meltdownEmit, 'navigation', 'locations', {});
+            return Array.isArray(result) ? result : result?.locations || [];
+        }
+    });
     const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'layers', 'design']);
     const SIDEBAR_TOOL_NAMES = new Set(['scroll', 'action']);
     const SIDEBAR_PANEL_BY_SELECTOR = [
@@ -1002,6 +1020,31 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             buttonLabel: String(defaults.buttonLabel || 'Read more')
         };
     }
+    function applyNavigationPatch(el, patch = {}) {
+        if (!el || !['navigationMenu', 'breadcrumb'].includes(el.dataset.widgetId)) {
+            throw new Error('DESIGNER_NAVIGATION_SELECTION_REQUIRED: Select a Menu or Breadcrumb.');
+        }
+        const widgetDef = allWidgets.find(widget => widget.id === el.dataset.widgetId);
+        const code = getWidgetInstanceCode(el, true);
+        const current = widgetSettings({ metadata: widgetDef?.metadata, instanceMetadata: code.meta || {} });
+        const supported = navigationSettings(el.dataset.widgetId, current);
+        if (!patch || typeof patch !== 'object' || Array.isArray(patch) || Object.keys(patch).some(key => !(key in supported))) {
+            throw new Error('DESIGNER_NAVIGATION_SETTINGS_INVALID: Use the selected widget settings.');
+        }
+        const next = navigationSettings(el.dataset.widgetId, { ...current, ...patch });
+        code.meta = { ...(code.meta || {}), ...next };
+        // Choosing a managed source explicitly replaces legacy inline overrides.
+        if ('locationKey' in patch)
+            Object.assign(code.meta, { items: [], links: [] });
+        if ('source' in patch)
+            Object.assign(code.meta, { items: [], trail: [] });
+        void renderWidget(el, widgetDef, ensureCodeMap());
+        gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
+        if (state.designId && state.autosaveEnabled)
+            scheduleAutosave();
+        navigationInspector.sync();
+        return next;
+    }
     function collectionArchiveSettings(el, widgetDef = null) {
         const defaults = collectionArchiveDefaults(widgetDef);
         const meta = getCollectionArchiveMeta(el);
@@ -1393,6 +1436,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const align = sceneInspector.querySelector('.scene-section-align');
         const color = sceneInspector.querySelector('.scene-section-background');
         const transparent = sceneInspector.querySelector('.scene-section-transparent');
+        const contentHost = sceneInspector.querySelector('.scene-section-content-host');
+        if (contentHost)
+            contentHost.checked = sectionEl?.dataset.dynamicHost === 'true';
         if (name)
             name.value = scene.title;
         const currentLayoutMode = sectionEl?.dataset?.layoutMode || 'free';
@@ -1432,7 +1478,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const sectionEl = getPageSectionElement(layoutRoot, scene?.id);
         if (!scene || !sectionEl || !target)
             return;
-        if (target.matches('.scene-section-direction')) {
+        if (target.matches('.scene-section-content-host')) {
+            // This persistent outlet is separate from the Section currently being edited.
+            setDynamicHost(target.checked ? sectionEl : null);
+        }
+        else if (target.matches('.scene-section-direction')) {
             sectionEl.dataset.layoutAutoDirection = target.value;
             setContainerLayoutMode(sectionEl, target.value === 'horizontal' ? 'row' : 'stack');
         }
@@ -1719,6 +1769,8 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       <section class="scene-inspector-group scene-section-settings" data-inspector-panel="content">
         <h3>Section</h3>
         <label class="scene-select-field"><span>Name</span><input class="scene-section-name" value="" /></label>
+        <label class="scene-toggle-field"><input class="scene-section-content-host" type="checkbox" /><span>Page content area</span></label>
+        <p class="scene-inspector-hint">Loads the page’s content or its own design here. One content area per design.</p>
         <label class="scene-select-field">
           <span>Direction</span>
           <select class="scene-section-direction">
@@ -2074,7 +2126,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
                 }
                 return;
             }
-            const sectionField = event.target.closest?.('.scene-section-direction, .scene-section-gap, .scene-section-padding, .scene-section-height, .scene-section-columns, .scene-section-align, .scene-section-background, .scene-section-transparent');
+            const sectionField = event.target.closest?.('.scene-section-content-host, .scene-section-direction, .scene-section-gap, .scene-section-padding, .scene-section-height, .scene-section-columns, .scene-section-align, .scene-section-background, .scene-section-transparent');
             if (sectionField) {
                 updateSectionFromInspector(sectionField, true);
                 return;
@@ -2149,6 +2201,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         syncInspectorButton(el);
         syncInspectorCollectionArchive(el, widgetDef);
         syncInspectorGallery(el, widgetDef);
+        navigationInspector.sync();
         if (el) {
             const label = el.dataset.elementName || widgetDef?.metadata?.label || el.dataset.widgetId || 'Element';
             applyBehaviorRange(el, range.start, range.end);
@@ -4436,7 +4489,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         return activateSceneById(next.id, false);
     }
     function findCanvasItemByCommand(command = {}) {
-        if (!gridEl)
+        // Stable widget ids belong to the whole document, including nested sections.
+        const documentRoot = layoutRoot || gridEl;
+        if (!documentRoot)
             return null;
         const raw = String(commandValue(command, 'id') ||
             commandValue(command, 'instanceId') ||
@@ -4446,9 +4501,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (!raw)
             return state.activeWidgetEl || null;
         const escaped = cssEscape(raw);
-        return gridEl.querySelector(`.canvas-item[data-instance-id="${escaped}"]`) ||
-            gridEl.querySelector(`.canvas-item#${escaped}`) ||
-            gridEl.querySelector(`.canvas-item[data-widget-id="${escaped}"]`);
+        return documentRoot.querySelector(`.canvas-item[data-instance-id="${escaped}"]`) ||
+            documentRoot.querySelector(`.canvas-item#${escaped}`) ||
+            documentRoot.querySelector(`.canvas-item[data-widget-id="${escaped}"]`);
     }
     function selectElementByCommand(command = {}) {
         const el = findCanvasItemByCommand(command);
@@ -4882,6 +4937,13 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             return updateActiveElementEffects(command);
         if (action === 'element.update' || action === 'element.appearance.set')
             return updateActiveElementAppearance(command);
+        if (action === 'navigation.configure') {
+            const el = findCanvasItemByCommand(command);
+            if (!el)
+                throw new Error('DESIGNER_NAVIGATION_SELECTION_REQUIRED');
+            const settings = applyNavigationPatch(el, commandValue(command, 'settings', {}));
+            return { handled: true, id: el.dataset.instanceId || el.id, settings };
+        }
         if (action.startsWith('container.'))
             return updateContainerFromCommand(action, command);
         if (action === 'viewport.set') {
@@ -5170,6 +5232,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             backgroundLogger.debug('skip: preview-mode capture');
             return;
         }
+        // The scaled canvas can extend behind the inspector. Its controls must never
+        // be interpreted as background hits or clear the widget being configured.
+        if (e.target.closest('.scene-inspector'))
+            return;
         let inContent = e.target.closest('#content');
         // If an overlay outside #content captures the event, fall back to hit-testing
         // any canonical Section workspace.

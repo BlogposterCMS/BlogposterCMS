@@ -55,7 +55,12 @@ describe('fixed Page Editor', () => {
     expect(find('[data-save]').disabled).toBe(true);
     expect(window.fetch).not.toHaveBeenCalled();
     edit('title', 'New docs');
-    find('[aria-label="Attach Landing"]').click();
+    const mode = find<HTMLSelectElement>('select[aria-label="Page layout"]');
+    mode.value = 'design';
+    mode.dispatchEvent(new Event('change', { bubbles: true }));
+    const layoutSelect = find<HTMLSelectElement>('[aria-label="Layout design"]');
+    layoutSelect.value = 'design:one';
+    layoutSelect.dispatchEvent(new Event('change', { bubbles: true }));
     await settle();
     expect(writes()).toHaveLength(0);
     expect(page).toMatchObject({ title: 'Docs', meta: { keep: true } });
@@ -109,11 +114,16 @@ describe('fixed Page Editor', () => {
     const search = find<HTMLInputElement>('input[type=search]');
     search.value = 'missing';
     search.dispatchEvent(new Event('input'));
-    expect(host.textContent).toContain('No matching content');
+    expect(host.textContent).toContain('No matching HTML files');
     expect(find('[data-save]').disabled).toBe(true);
     search.value = '';
     search.dispatchEvent(new Event('input'));
-    find('[aria-label="Attach Landing"]').click();
+    const mode = find<HTMLSelectElement>('select[aria-label="Page layout"]');
+    mode.value = 'design';
+    mode.dispatchEvent(new Event('change', { bubbles: true }));
+    const layoutSelect = find<HTMLSelectElement>('[aria-label="Layout design"]');
+    layoutSelect.value = 'design:one';
+    layoutSelect.dispatchEvent(new Event('change', { bubbles: true }));
     await settle();
     edit('title', 'Discard me');
     find('[data-discard]').click();
@@ -123,7 +133,7 @@ describe('fixed Page Editor', () => {
     find('[data-discard]').click();
     await settle();
     expect(find<HTMLInputElement>('[name="title"]').value).toBe('Docs');
-    expect(find('.selected-content').textContent).toBe('No content attached');
+    expect(find('.selected-content').textContent).toBe('No page content yet');
     expect(writes()).toHaveLength(0);
   });
 
@@ -137,7 +147,7 @@ describe('fixed Page Editor', () => {
     fail = '';
     find('.page-content-library-status button').click();
     await settle();
-    expect(find('[aria-label="Attach Landing"]')).not.toBeNull();
+    expect(find<HTMLSelectElement>('[aria-label="Layout design"]').textContent).toContain('Landing');
   });
 
   it('warns on reload only while a connected editor has unsaved changes', () => {

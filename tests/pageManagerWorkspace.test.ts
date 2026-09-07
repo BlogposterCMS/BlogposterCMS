@@ -43,6 +43,15 @@ describe('Page Manager workspace', () => {
     emit = jest.fn(async (_event, payload) => {
       if (payload.action === fail) throw new Error('offline');
       const { action, params } = payload;
+      if (payload.resource === 'importers' && action === 'run') {
+        const rootSlug = params.options.rootSlug;
+        const imported = { id: 8, title: 'Introduction', slug: rootSlug, status: 'draft', parent_id: null };
+        if (!params.options.dryRun) pages.push(imported);
+        return { dryRun: params.options.dryRun, plan: { rootSlug, pages: [imported], summary: 'Draft example' },
+          result: { rootPageId: 8, designId: 9, pageIds: [8], menuKey: `example-${rootSlug}` } };
+      }
+      if (payload.resource === 'settings' && action === 'public') return { SITE_MAIN_DESIGN_ID: 'main' };
+      if (payload.resource === 'designer' && action === 'list') return { designs: [{ id: 'main', title: 'Website frame' }] };
       if (action === 'byLane') return { resource: 'pages', action, data: JSON.parse(JSON.stringify(pages)) };
       if (action === 'update') Object.assign(pages.find(page => page.id === params.pageId), params);
       if (action === 'create') { pages.push({ ...params, id: 5 }); return { pageId: 5 }; }
@@ -53,6 +62,7 @@ describe('Page Manager workspace', () => {
     host.id = 'content';
     document.body.replaceChildren(host);
     await render(host);
+    await settle();
   });
 
   it('composes page counts, the hierarchy and one saved details form', () => {
@@ -63,6 +73,55 @@ describe('Page Manager workspace', () => {
     expect(control<HTMLInputElement>('[name="title"]').value).toBe('Docs');
     expect(control('[type="submit"]').disabled).toBe(true);
     expect(host.querySelector('[contenteditable]')).toBeNull();
+  });
+
+  it('imports the optional example, selects its draft and opens its shared design from the result', async () => {
+    jest.mocked(bpDialog.prompt).mockResolvedValueOnce('learn');
+    await click('[data-action="import-example"]');
+    expect(calls('run')[0][1]).toMatchObject({ resource: 'importers', params: {
+      importerName: 'exampleSite', options: { exampleId: 'docs', rootSlug: 'learn', dryRun: false }
+    } });
+    expect(control<HTMLInputElement>('[name="title"]').value).toBe('Introduction');
+    expect(host.textContent).toContain('Open example design');
+    expect(host.querySelector('a[href="/admin/studio/design/9"]')).not.toBeNull();
+  });
+
+  it('lets agents preview without writes and requires the shared confirmation for importing', async () => {
+    const registration = jest.mocked(registerWorkspaceAgent).mock;
+    const guard = registration.results[registration.results.length - 1].value;
+    const actions = registration.calls[registration.calls.length - 1][0].actions;
+    await guard.execute({ action: 'pages.previewExample', params: { rootSlug: 'learn' } }, actions);
+    expect(calls('run')[0][1].params.options.dryRun).toBe(true);
+    expect(pages).toHaveLength(4);
+    await expect(guard.execute({ action: 'pages.importExample', params: {
+      rootSlug: 'learn', expectedRevision: guard.snapshot().stateRevision
+    } }, actions)).rejects.toThrow(/CONFIRM/);
+    expect(pages).toHaveLength(4);
+    guard.stop();
+  });
+
+  it('shows the website main design and counts pages using it independently of their hierarchy', async () => {
+    pages[0].meta = { designId: 'docs', designTitle: 'Documentation layout' };
+    pages[3].parent_id = 1;
+    renderPageList(host, pages);
+    await settle();
+    expect(control('.page-manager__layout-context').textContent).toContain('Main design · 3 of 4 pages');
+    expect(control('.page-manager__layout-context a').getAttribute('href')).toContain('/studio/design/main');
+    pages[3].meta = { inheritParentDesign: false };
+    renderPageList(host, pages);
+    await settle();
+    expect(control('.page-manager__layout-context').textContent).toContain('Main design · 2 of 4 pages');
+  });
+
+  it('sets the main design through the existing settings action and shared agent guard', async () => {
+    const registration = jest.mocked(registerWorkspaceAgent).mock;
+    const guard = registration.results[registration.results.length - 1].value;
+    const actions = registration.calls[registration.calls.length - 1][0].actions;
+    await guard.execute({ action: 'pages.setMainDesign', params: {
+      expectedRevision: guard.snapshot().stateRevision, confirm: true, designId: 'new-main'
+    } }, actions);
+    expect(calls('set')[0][1]).toMatchObject({ resource: 'settings', params: { key: 'SITE_MAIN_DESIGN_ID', value: 'new-main' } });
+    expect(control('.page-manager__layout-context a').getAttribute('href')).toContain('/studio/design/new-main');
   });
 
   it('shares agent edits and saves with the visible form, rejecting stale commands and retaining failed drafts', async () => {

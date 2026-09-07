@@ -1,0 +1,16 @@
+/* Match the article column before its shared layout mounts. These rules stop
+   matching as soon as the same server DOM moves into the saved content host. */
+body:has(> #bp-initial-html) { margin: 0; }
+body > #bp-initial-html {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 148px 32px 80px 304px;
+}
+@media (max-width: 1080px) {
+  body > #bp-initial-html { padding-left: 254px; }
+}
+@media (max-width: 700px) {
+  body > #bp-initial-html { padding: 116px 22px 48px; }
+}

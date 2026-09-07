@@ -7,9 +7,9 @@ const { hasPermission } = require('../../../userManagement/permissionUtils');
 // does not change their module owners, permissions or emitted event names.
 const adminActions = Object.freeze({
   coreUpdates: Object.freeze({
-    status: { eventName: BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, moduleName: 'moduleLoader', permission: 'settings.core.edit' },
-    check: { eventName: BACKEND_EVENTS.CHECK_CORE_UPDATE, moduleName: 'moduleLoader', permission: 'settings.core.edit' },
-    install: { eventName: BACKEND_EVENTS.INSTALL_CORE_UPDATE, moduleName: 'moduleLoader', permission: 'settings.core.edit' }
+    status: { eventName: BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, moduleName: 'updater', permission: 'settings.core.edit' },
+    check: { eventName: BACKEND_EVENTS.CHECK_CORE_UPDATE, moduleName: 'updater', permission: 'settings.core.edit' },
+    install: { eventName: BACKEND_EVENTS.INSTALL_CORE_UPDATE, moduleName: 'updater', permission: 'settings.core.edit' }
   }),
   // AgentManager owns the existing any-of surfaceWrite permission check.
   // Only the host adapter operations are exposed, never command control.

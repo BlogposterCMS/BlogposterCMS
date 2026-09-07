@@ -4,6 +4,7 @@ import {
 import { fetchRuntimePageById } from '../ui/runtime/main/runtimePageData';
 
 jest.mock('../ui/runtime/main/runtimePageData', () => ({
+  fetchRuntimePublicSettings: jest.fn().mockResolvedValue({}),
   fetchRuntimePageById: jest.fn()
 }));
 
@@ -37,7 +38,7 @@ describe('runtimePresentationCascade', () => {
       .mockResolvedValueOnce({ id: 'collection', parentId: null, meta: { layoutTemplate: 'product-template' } });
 
     const result = await resolveRuntimePresentationCascade(
-      { id: 'product', parentId: 'parent', meta: {} },
+      { id: 'product', parentId: 'parent', meta: { inheritParentDesign: true } },
       emit,
       'public'
     );

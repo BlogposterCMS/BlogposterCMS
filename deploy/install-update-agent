@@ -6,7 +6,7 @@ set -Eeuo pipefail
 [[ -x /usr/bin/node ]] && /usr/bin/node -e 'if(+process.versions.node.split(".")[0]<24)process.exit(1)' || {
   echo 'CORE_UPDATE_SETUP_NODE_REQUIRED: install Node.js 24 or newer at /usr/bin/node'; exit 1;
 }
-for command in systemctl getent groupadd install gh; do
+for command in systemctl getent groupadd install gh flock docker; do
   command -v "$command" >/dev/null || { echo "CORE_UPDATE_SETUP_TOOL_MISSING: $command"; exit 1; }
 done
 asset_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,6 +21,10 @@ done
 # Reuse the updater's strict KEY=VALUE parser; never source runtime environment files.
 source "$asset_dir/blogposter-update"
 load_config /opt/blogposter/updater.conf
+prepare_environment
+# Never replace the executor while its existing updater owns an installation.
+exec 8>"$BLOGPOSTER_STATE_DIR/update.lock"
+flock -n 8 || { echo 'CORE_UPDATE_SETUP_BUSY: an update is running; retry after completion'; exit 1; }
 [[ -n "${BLOGPOSTER_COMPOSE_ENV_FILE:-}" && -f "$BLOGPOSTER_COMPOSE_ENV_FILE" && ! -L "$BLOGPOSTER_COMPOSE_ENV_FILE" ]] || {
   echo 'CORE_UPDATE_SETUP_COMPOSE_ENV_REQUIRED'; exit 1;
 }
@@ -48,7 +52,24 @@ load_config /opt/blogposter/updater.conf
 prepare_environment
 compose_run config --quiet
 systemctl daemon-reload
-systemctl enable --now blogposter-update-agent.service
+systemctl enable blogposter-update-agent.service
+systemctl restart blogposter-update-agent.service
+for attempt in {1..20}; do
+  [[ -S /run/blogposter-updater/control.sock ]] && break
+  sleep 1
+done
+[[ -S /run/blogposter-updater/control.sock ]] || { echo 'CORE_UPDATE_SETUP_SOCKET_MISSING'; exit 1; }
 # Apply the socket mount once. Future versions preserve the overlay automatically.
 compose_run up -d --no-deps "$BLOGPOSTER_SERVICE"
+wait_healthy || { echo 'CORE_UPDATE_SETUP_READINESS_FAILED'; exit 1; }
+# Readiness alone does not prove the non-root CMS can reach the privileged socket.
+docker exec "$(container_id)" node -e '
+const http = require("http");
+const req = http.get({socketPath:"/run/blogposter-updater/control.sock",path:"/status"}, res => {
+  let body=""; res.on("data", chunk => body+=chunk);
+  res.on("end", () => { try { if(res.statusCode!==200 || JSON.parse(body).configured!==true) process.exit(1); } catch { process.exit(1); } });
+});
+req.setTimeout(8000,()=>req.destroy(new Error("timeout")));
+req.on("error",()=>process.exit(1));
+' || { echo 'CORE_UPDATE_SETUP_CONTAINER_ACCESS_FAILED'; exit 1; }
 echo 'CORE_UPDATE_SETUP_COMPLETE: update controls are connected.'

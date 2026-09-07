@@ -1,8 +1,14 @@
-import { resolveWidgetModuleUrl } from '../ui/widgets/rendering/widgetModulePaths';
+import { resolveWidgetModuleUrl, resolveWidgetModuleImportUrl } from '../ui/widgets/rendering/widgetModulePaths';
 
 const BASE = 'https://example.test/admin/home';
 
 describe('resolveWidgetModuleUrl', () => {
+  it('gives srcdoc/Blob bundles an absolute import target without broadening allowed origins', () => {
+    expect(resolveWidgetModuleImportUrl('/ui/widgets/plainspace/public/basicwidgets/textBoxWidget.js', BASE))
+      .toBe('https://example.test/ui/widgets/plainspace/public/basicwidgets/textBoxWidget.js');
+    expect(resolveWidgetModuleImportUrl('https://evil.test/ui/widgets/plainspace/public/basicwidgets/textBoxWidget.js', BASE)).toBeNull();
+    expect(resolveWidgetModuleImportUrl('/assets/other.js', BASE)).toBeNull();
+  });
   it('allows canonical bundled PlainSpace widgets', () => {
     expect(resolveWidgetModuleUrl('/ui/widgets/plainspace/admin/widgetListWidget.js', BASE))
       .toBe('/ui/widgets/plainspace/admin/widgetListWidget.js');

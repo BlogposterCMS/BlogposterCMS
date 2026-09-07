@@ -1,5 +1,14 @@
 import { hasStyleSourceSettings, normalizeStyleSourceSettings } from './styleSource.js';
 export const DESIGN_DOCUMENT_VERSION = 1;
+/** Slots belong to this document only; linked designs have independent content ownership. */
+export function pageContentHostIds(tree) {
+    if (!tree)
+        return [];
+    return [
+        ...(tree.isDynamicHost ? [tree.nodeId || 'root'] : []),
+        ...(tree.type === 'split' ? tree.children.flatMap(pageContentHostIds) : [])
+    ];
+}
 function isRecord(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

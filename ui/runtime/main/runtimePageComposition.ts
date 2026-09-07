@@ -112,6 +112,7 @@ export async function renderPublicRuntimePageContent({
         emit,
         widgetEmit,
         globalLayout,
+        contentDesignId: presentation.contentDesignId,
         designPath: [String(presentation.designId)]
       });
       if (!renderedDocument) {

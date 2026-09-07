@@ -38,10 +38,15 @@ import {
   applySitePreset,
   deleteSitePreset,
   refreshSitePresets,
-  sitePresetsAgentState
+  sitePresetsAgentState,
+  exportSitePresetJson,
+  importSitePresetJson,
+  sitePresetJsonParts,
+  sitePresetJsonFromParts
 } from '/ui/shared/presets/sitePresets.js';
 import { getBuilderViewportState } from './renderer/viewportState.js';
 import { readDesignerDraftInputs } from './renderer/draftInputs.js';
+import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
 import {
   normalizeResponsivePlacementContract,
   resolveResponsivePlacementGeometry,
@@ -58,6 +63,12 @@ const EFFECT_LABELS: Record<string, string> = {
   moveY: 'Move Y'
 };
 const DESIGNER_AGENT_ACTIONS = Object.freeze([
+  {
+    action: 'navigation.configure', label: 'Configure menu or breadcrumb', category: 'element',
+    description: 'Updates the selected Menu or Breadcrumb through its existing widget settings and save flow.',
+    requiresSelection: true,
+    params: [{ name: 'id', type: 'string', required: false }, { name: 'settings', type: 'object', required: true }]
+  },
   {
     action: 'container.contentHost.set', label: 'Use container for page content', category: 'container',
     params: [{ name: 'id', type: 'string', required: true }]
@@ -543,6 +554,16 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
     description: 'Refreshes installed and user Site Presets.'
   },
   {
+    action: 'sitePresets.export', label: 'Export UI kit JSON', category: 'preset',
+    description: 'Returns complete UI kit JSON as jsonParts (base64 UTF-8). Join and decode the parts before parsing; this avoids AgentManager string truncation.',
+    params: [{ name: 'id', type: 'string', required: true }]
+  },
+  {
+    action: 'sitePresets.import', label: 'Import UI kit JSON', category: 'preset',
+    description: 'Creates a validated UI kit without applying it. Provide jsonParts (base64 UTF-8, each <=3000 characters, <=80 parts), or json for small payloads below 4000 characters.',
+    params: [{ name: 'json', type: 'string' }, { name: 'jsonParts', type: 'array' }]
+  },
+  {
     action: 'sitePresets.apply',
     label: 'Apply Site Preset',
     category: 'preset',
@@ -820,8 +841,11 @@ function responsivePlacementFeedback(el: HTMLElement): Record<string, unknown> {
 }
 
 function widgetPlacementFeedback(): Record<string, unknown>[] {
+  const ownerSnapshot = window.blogposterDesignerCommands?.snapshot?.() as Record<string, any> | undefined;
+  const savedWidgets = ownerSnapshot?.document?.widgets || [];
   return Array.from(document.querySelectorAll<HTMLElement>('.canvas-item')).map((el, index) => {
     const workarea = el.closest<HTMLElement>('.layout-container, .layout-root');
+    const saved = savedWidgets.find((item: Record<string, any>) => String(item.id) === String(el.dataset.instanceId || el.id));
     return {
       id: feedbackNodeId(el, `widget-placement-${index + 1}`),
       role: 'widget-placement',
@@ -845,6 +869,12 @@ function widgetPlacementFeedback(): Record<string, unknown>[] {
       effects: effectsOf(el),
       responsivePlacement: responsivePlacementFeedback(el),
       htmlImport: htmlImportFeedback(el),
+      navigation: ['navigationMenu', 'breadcrumb'].includes(el.dataset.widgetId || '') ? {
+        // Keep settings flat so AgentManager's bounded feedback depth retains values.
+        ...navigationSettings(el.dataset.widgetId || '', { ...(saved?.code?.meta?.settings || {}), ...(saved?.code?.meta || {}) }),
+        sourceOwner: el.dataset.widgetId === 'navigationMenu' ? 'navigationManager' : 'pagesManager',
+        customItems: Array.isArray(saved?.code?.meta?.items) && saved.code.meta.items.length > 0
+      } : null,
       styleSource: styleSourceState(el),
       bounds: elementBounds(el)
     };
@@ -967,6 +997,28 @@ function designerFeedbackWarnings(
   widgets: Record<string, unknown>[]
 ): Record<string, unknown>[] {
   const warnings: Record<string, unknown>[] = [];
+  const contentHosts = layoutNodes.filter(node => node.isDynamicHost === true);
+  if (contentHosts.length > 1) warnings.push({
+    code: 'DESIGNER_AGENT_FEEDBACK_CONTENT_HOST_AMBIGUOUS', severity: 'warning',
+    message: 'Mark exactly one container as the page content area before using this design as a shared page layout.',
+    containerIds: contentHosts.map(node => node.id)
+  });
+  const nodesById = new Map(layoutNodes.map(node => [node.id, node]));
+  const freeAncestors = new Set<unknown>();
+  for (const host of contentHosts) {
+    let parent = nodesById.get(host.parentId);
+    const visited = new Set<unknown>();
+    while (parent && !visited.has(parent.id)) {
+      visited.add(parent.id);
+      if (parent.mode === 'free' && parent.role !== 'layout-root') freeAncestors.add(parent.id);
+      parent = nodesById.get(parent.parentId);
+    }
+  }
+  if (freeAncestors.size) warnings.push({
+    code: 'DESIGNER_AGENT_FEEDBACK_CONTENT_HOST_FREE_ANCESTOR', severity: 'warning',
+    message: 'Use Auto or Grid around the page content area so long articles move the footer down.',
+    containerIds: [...freeAncestors]
+  });
   const handoff = designerHandoffState();
   if (handoff.dirty) warnings.push({ code: 'DESIGNER_AGENT_FEEDBACK_UNSAVED_DRAFT', severity: 'info', message: 'Read the shared draft and explicitly accept it before editing or saving.' });
   if (handoff.busy) warnings.push({ code: 'DESIGNER_AGENT_FEEDBACK_OPERATION_PENDING', severity: 'info', message: 'Wait for the current save, publication or agent command to finish.' });
@@ -1156,6 +1208,8 @@ function buildDesignerAgentFeedback(
       placementModeIndependentWidgetSelection: true,
       singleDocumentLayoutEditing: true,
       persistentContentHost: true,
+      flowingPageContent: true,
+      uiKitJsonImportExport: true,
       sectionBackgroundDeselectsWidget: true,
       widgetActionBarHidesOnCanvasScroll: true,
       flowingSectionCanvas: true,
@@ -1182,6 +1236,16 @@ function buildDesignerAgentFeedback(
       rootId: layoutNodes[0]?.id || null,
       nodeCount: layoutNodes.length,
       workareaCount: layoutNodes.filter(node => node.workarea === true).length,
+      pageContent: {
+        hostIds: layoutNodes.filter(node => node.isDynamicHost === true).map(node => node.id),
+        ready: layoutNodes.filter(node => node.isDynamicHost === true).length === 1,
+        assignmentOwner: 'settings.SITE_MAIN_DESIGN_ID + pages.meta.pageDesignMode/designId',
+        inheritance: 'site-main-design-by-default',
+        modes: ['main', 'composed', 'design'],
+        accepts: ['page-content', 'page-design'],
+        composition: 'main-design → page-design (optional) → page-content',
+        assignmentSurface: 'cms.pages: pages.setMainDesign; cms.page-editor: page.setLayout'
+      },
       pageFlow: {
         axis: 'vertical',
         dynamicHeight: document.getElementById('layoutRoot')?.dataset.dynamicCanvasHeight === 'true',
@@ -1806,8 +1870,15 @@ async function handleSitePresetsCommand(
   if (action === 'sitePresets.refresh') {
     return { handled: true, library: await refreshSitePresets() };
   }
+  if (action === 'sitePresets.import') {
+    const parts = commandParam(command, 'jsonParts');
+    const json = parts ? sitePresetJsonFromParts(parts) : String(commandParam(command, 'json') || '');
+    const preset = await importSitePresetJson(json);
+    return { handled: true, preset: preset ? { id: preset.id, name: preset.name } : null };
+  }
   const id = String(commandParam(command, 'id') || command.target || '').trim();
   if (!id) return { handled: false, reason: 'missing-site-preset-id' };
+  if (action === 'sitePresets.export') return { handled: true, encoding: 'base64-utf8', jsonParts: sitePresetJsonParts(exportSitePresetJson(id)) };
   if (action === 'sitePresets.apply') {
     const result = await applySitePreset(id);
     await Promise.all([refreshColorLibrary(), refreshFontPackages()]);
@@ -1838,7 +1909,7 @@ function designerActions() {
   return DESIGNER_AGENT_ACTIONS.map(action => ({
     ...action,
     action: String(action.action),
-    readOnly: action.action === 'surface.refresh' || String(action.action).endsWith('.refresh'),
+    readOnly: action.action === 'surface.refresh' || String(action.action).endsWith('.refresh') || action.action === 'sitePresets.export',
     acceptsDraft: true,
     confirm: action.action === 'design.publish' || String(action.action).endsWith('.delete'),
     run: (params: Record<string, unknown>) => dispatchDesignerAgentCommand({ action: action.action, params })

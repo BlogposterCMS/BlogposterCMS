@@ -1,6 +1,7 @@
 'use strict';
 
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+const { normalizeLayoutTree } = require('../../../ui/shared/layout/layoutDocument.js');
 
 
 
@@ -438,6 +439,7 @@ function publicWidgetLayoutItem(item = {}) {
 
 function toPublicDesignerLayout(layout = {}) {
   const source = layout && typeof layout === 'object' && !Array.isArray(layout) ? layout : {};
+  if (source.published === false) return null;
   const grid = source.grid && typeof source.grid === 'object' && !Array.isArray(source.grid)
     ? source.grid
     : {};
@@ -452,7 +454,12 @@ function toPublicDesignerLayout(layout = {}) {
           .map(publicWidgetLayoutItem)
           .filter(item => item.instanceId && item.widgetId)
       : [],
-    layoutRef: typeof source.layoutRef === 'string' ? source.layoutRef : undefined
+    layoutRef: typeof source.layoutRef === 'string' ? source.layoutRef : undefined,
+    ...(source.document?.layoutTree ? {
+      // Normalize structural keys instead of publishing the raw saved document.
+      document: { layoutTree: normalizeLayoutTree(source.document.layoutTree) },
+      styles: { background: typeof source.styles?.background === 'string' ? source.styles.background : '' }
+    } : {})
   };
 }
 
@@ -1321,7 +1328,8 @@ module.exports = {
     runScheduledPublisherOnce,
     shouldCheckRedirect,
     startScheduledPublisher,
-    verifyPreviewToken
+    verifyPreviewToken,
+    toPublicDesignerLayout
   },
 
   MODULE_NAME,

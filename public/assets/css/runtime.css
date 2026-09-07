@@ -76,3 +76,27 @@ html[data-designer-live-preview='true'] body::-webkit-scrollbar {
   max-width: 100%;
   transform: none !important;
 }
+
+/* A shared article grows through its Auto/Grid ancestry. CanvasGrid writes
+   pixel heights for placement, which must not constrain this content path. */
+.runtime-layout-container[data-page-content-flow='true'] {
+  height: auto !important;
+  flex: 1 0 auto !important;
+}
+
+/* A page design occupies the explicit outlet without inheriting a fixed canvas width. */
+.runtime-page-design {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Navigation disclosures participate in Auto/Grid flow. Fixed Free placement
+   still honors the author's canvas dimensions. */
+.runtime-layout-container.canvas-grid:not([data-layout-mode='free']) > .canvas-item:is([data-widget-id='navigationMenu'], [data-widget-id='breadcrumb']) {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto;
+}
+.runtime-layout-container.canvas-grid:not([data-layout-mode='free']) > .canvas-item:is([data-widget-id='navigationMenu'], [data-widget-id='breadcrumb']) > .canvas-item-content {
+  height: auto !important;
+}

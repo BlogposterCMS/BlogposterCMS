@@ -1,4 +1,5 @@
 export type MeltdownEmitter = Window['meltdownEmit'];
+export const RUNTIME_PUBLIC_REQUEST_EVENT = 'cmsPublicRuntimeRequest';
 
 const RUNTIME_MANAGER_MODULE = {
   moduleName: 'runtimeManager',
@@ -77,7 +78,7 @@ export async function emitRuntimePublic<T = unknown>(
 ): Promise<T> {
   const payload = runtimePublicPayload(jwt, resource, action, params);
   const result = timeoutMs === undefined
-    ? await emit('cmsPublicRuntimeRequest', payload)
-    : await emit('cmsPublicRuntimeRequest', payload, timeoutMs);
+    ? await emit(RUNTIME_PUBLIC_REQUEST_EVENT, payload)
+    : await emit(RUNTIME_PUBLIC_REQUEST_EVENT, payload, timeoutMs);
   return unwrapRuntimeFacadeData<T>(result);
 }

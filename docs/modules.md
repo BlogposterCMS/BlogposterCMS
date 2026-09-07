@@ -8,6 +8,10 @@ BlogposterCMS follows a modular design. Core features and optional backend capab
 - **Apps** are isolated admin or tool surfaces. They should call stable CMS facades instead of importing backend internals.
 - **Events** are used instead of direct function calls. Modules emit events to perform actions such as database operations, authentication or preset management. Tokens in the payload ensure that only authorised modules can request sensitive operations.
 
+The protected [Updater](modules/updater.md) core module owns core release
+discovery and orchestration. Its restricted host executor survives CMS restarts;
+the combined server installer connects both parts during normal setup.
+
 When creating your own modules, start by exporting an `initialize` function that receives `{ motherEmitter, eventBus, moduleHost, moduleInfo, app, isCore }`. Community modules do not receive raw loader tokens; the process runner keeps the JWT and nonce on the host side and injects them when IPC-backed event calls are accepted. Core modules still receive high-trust host integration through the core bootstrap path.
 
 `eventBus` is a scoped IPC facade; it injects the module identity and token into emitted payloads, prevents token/nonce overrides, tags listeners for cleanup, allows only read/query CMS event names plus module-owned lifecycle signals, allows listeners only on module-owned event names, blocks listener-count introspection for system/foreign events, and refuses raw SQL placeholders. The `databaseManager` repeats this rule at the database boundary: community modules cannot write directly through `dbInsert`, `dbUpdate`, `dbDelete`, cannot call `performDbOperation` directly, cannot receive the host `dbClient` through custom placeholders, and cannot spoof `moduleType: "core"`. `moduleHost` exposes stable capabilities such as `registerStaticAssets({ dir, mountPath })` and `storage` for module-owned data.

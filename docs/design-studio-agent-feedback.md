@@ -1,5 +1,40 @@
 # Design Studio Agent Feedback
 
+Public first-response articles remain visible and styled while layout widgets
+load. The shared document renderer adopts the existing sanitized article into
+the saved content host before mounting asynchronous widgets; nested page designs
+retain their own content-slot ownership. This does not change Studio selections,
+saved geometry or its agent contract. The optional Docs example uses the same
+document tree, native navigation settings and content-host feedback as any design;
+its import commands belong to the Pages surface (see [example workflow](docs-example.md)).
+
+Canvas links select their widget while editing and navigate in Preview. Inspector
+controls retain that selection even when the scaled canvas extends behind them;
+the same selected instance remains the target of agent configuration actions.
+
+Shared page layouts use `feedback.layoutTree.pageContent`: stable `hostIds`,
+single-host readiness, Settings/Pages assignment ownership and site-main defaults.
+`modes`, `accepts`, `composition` and `assignmentSurface` describe the content
+outlet. `pages.setMainDesign` on the Pages surface chooses the website frame;
+`page.setLayout` on the page editor chooses `main`, `composed` or `design`.
+The persistent `isDynamicHost` flag is separate from active `workarea` selection.
+Auto/Grid ancestry lets article content grow through the same public/preview
+renderer; Free ancestors produce
+`DESIGNER_AGENT_FEEDBACK_CONTENT_HOST_FREE_ANCESTOR`. Multiple saved hosts produce
+`DESIGNER_AGENT_FEEDBACK_CONTENT_HOST_AMBIGUOUS`. A full-page design need not have
+a content host; readiness is descriptive, not a blanket publication blocker.
+
+The UI kit uses existing Site Presets. `sitePresets.export` reads portable JSON
+as bounded base64 `jsonParts`, preserving it through existing transport limits;
+`sitePresets.import` creates a validated kit and does not apply it. Existing
+revision/draft guards cover kit-name and JSON inputs. Shared color/font apply
+and demo replacement retain their existing commands and confirmation contracts.
+See [UI kits](site-presets.md) and [page composition](layout_templates.md).
+
+Widget module loading resolves an allowlisted same-origin URL against the
+document base before importing from an embedded/blob-loaded Studio bundle.
+Import failures retain the existing `WIDGET_RUNTIME_IMPORT_FAILED` diagnostics.
+
 Imported Section/Container trees hydrate before navigation reconciliation. Their
 stable node ids remain present after save/reload; nested widget pointer events
 do not select or drag ancestor Containers. Imported page bounds can shrink again
@@ -40,6 +75,12 @@ adapter is `ui/designer/app/agentSurface.ts`; do not create a parallel
 Designer-only agent API for the same state.
 
 ## Snapshot Contract
+
+Menu/Breadcrumb placements expose flat `navigation` settings, `sourceOwner` and
+`customItems` from the same serialized widget metadata as Save. The guarded
+`navigation.configure` action calls the same instance-settings writer as the
+Content inspector. Menu-link authoring remains in Navigation Studio; no second
+Designer menu store is introduced. See [navigation authoring](designer-navigation.md).
 
 The shared handoff state is `state.collaboration`: actual draft dirty state,
 save/publication busy and error state, current document, selection and

@@ -41,3 +41,9 @@ export function resolveWidgetModuleUrl(input, base = currentDocumentBase()) {
 export function isAllowedWidgetModuleUrl(input, base) {
     return resolveWidgetModuleUrl(input, base) !== null;
 }
+/** Blob/srcdoc-loaded Studio bundles have no usable import base. Resolve the
+ * already allowlisted path against the document, never against that bundle. */
+export function resolveWidgetModuleImportUrl(input, base = currentDocumentBase()) {
+    const allowed = resolveWidgetModuleUrl(input, base);
+    return allowed ? new URL(allowed, base).href : null;
+}

@@ -110,7 +110,7 @@ describe('runtimeWidgetRenderer', () => {
     window.ADMIN_TOKEN = 'admin-token';
     const moduleUrl = '/widgets/community_test/widget.js';
 
-    jest.doMock(moduleUrl, () => ({ render }), { virtual: true });
+    jest.doMock(new URL(moduleUrl, document.baseURI).href, () => ({ render }), { virtual: true });
 
     await renderWidget(
       wrapper,
@@ -139,7 +139,7 @@ describe('runtimeWidgetRenderer', () => {
     const render = jest.fn();
     const moduleUrl = '/widgets/community_meta/widget.js';
 
-    jest.doMock(moduleUrl, () => ({ render }), { virtual: true });
+    jest.doMock(new URL(moduleUrl, document.baseURI).href, () => ({ render }), { virtual: true });
 
     await renderWidget(
       wrapper,

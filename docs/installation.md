@@ -1,5 +1,9 @@
 # Installation
 
+For a server, use the [combined server installation](server-installation.md).
+It installs Blogposter and its update connection together, generates secrets,
+and checks readiness. The steps below are for source development.
+
 This guide describes how to set up BlogposterCMS for local development. Production deployments should always review the [Security Notes](security.md) before going live.
 
 1. **Clone the repository**

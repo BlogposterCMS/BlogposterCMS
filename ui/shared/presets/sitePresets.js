@@ -115,7 +115,7 @@ async function mutate(action, params) {
     try {
         const result = await emitRuntimeAdmin(current.emit, current.token, 'sitePresets', action, params);
         if (result.library)
-            publish(result.library);
+            publish({ ...result.library, lastAppliedId: result.library.lastAppliedId ?? snapshot.lastAppliedId });
         return result;
     }
     catch (error) {
@@ -127,6 +127,59 @@ async function mutate(action, params) {
 export async function createSitePreset(preset) {
     const result = await mutate('create', { preset });
     return result.preset || null;
+}
+/** Portable UI kits use the existing declarative Site Preset schema. */
+export function exportSitePresetJson(id) {
+    const preset = snapshot.presets.find(entry => entry.id === id);
+    if (!preset)
+        throw new Error('SITE_PRESETS_NOT_FOUND: Select a UI kit to export.');
+    const { schemaVersion, name, version, developer, builderSettings, colorScheme, fontPackage, pageDemos } = preset;
+    // Installation ids and timestamps do not travel; import always creates a kit.
+    return JSON.stringify({ schemaVersion, name, version, developer, builderSettings, colorScheme, fontPackage, pageDemos }, null, 2);
+}
+export function parseSitePresetJson(json) {
+    if (typeof json !== 'string' || new TextEncoder().encode(json).length > 524288) {
+        throw new Error('SITE_PRESETS_JSON_SIZE: UI kit JSON must be smaller than 512 KB.');
+    }
+    let value;
+    try {
+        value = JSON.parse(json);
+    }
+    catch {
+        throw new Error('SITE_PRESETS_JSON_INVALID: Enter valid UI kit JSON.');
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value) || value.schemaVersion !== 1) {
+        throw new Error('SITE_PRESETS_JSON_VERSION: UI kit schemaVersion must be 1.');
+    }
+    return value;
+}
+export async function importSitePresetJson(json) {
+    // The domain validates all properties, trusted component ids and permissions.
+    // Importing a kit does not activate its colors/fonts or replace the document.
+    return createSitePreset(parseSitePresetJson(json));
+}
+/** AgentManager bounds each string to 4000 characters and arrays to 80 items.
+ * Transport JSON as small base64 parts so trimming/control-character cleanup
+ * cannot corrupt the document. This stays on the existing command contract. */
+export function sitePresetJsonParts(json) {
+    const bytes = new TextEncoder().encode(json);
+    if (bytes.length > 180000)
+        throw new Error('SITE_PRESETS_AGENT_JSON_SIZE: Use the UI JSON importer for kits larger than 180 KB.');
+    const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+    return btoa(binary).match(/.{1,3000}/g) || [];
+}
+export function sitePresetJsonFromParts(parts) {
+    if (!Array.isArray(parts) || !parts.length || parts.length > 80
+        || parts.some(part => typeof part !== 'string' || !part.length || part.length > 3000 || !/^[A-Za-z0-9+/=]+$/.test(part))) {
+        throw new Error('SITE_PRESETS_AGENT_JSON_INVALID: Provide at most 80 base64 parts of 3000 characters each.');
+    }
+    try {
+        const bytes = Uint8Array.from(atob(parts.join('')), char => char.charCodeAt(0));
+        return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    }
+    catch {
+        throw new Error('SITE_PRESETS_AGENT_JSON_INVALID: UI kit parts must encode UTF-8 JSON.');
+    }
 }
 export async function deleteSitePreset(id) {
     const result = await mutate('delete', { id });

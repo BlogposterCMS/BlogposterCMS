@@ -8,6 +8,17 @@ const {
 const rootDir = path.resolve(__dirname, '..');
 const updaterPath = path.join(rootDir, 'deploy', 'blogposter-update');
 
+test('stable promotion is newer than the same-version preview without allowing downgrades', () => {
+  const result = spawnSync('bash', ['-s'], { cwd: rootDir, encoding: 'utf8', input: [
+    'source deploy/blogposter-update',
+    'semver_greater 0.10.0 0.10.0-rc.2 || exit 21',
+    'if semver_greater 0.9.5 0.10.0-rc.2; then exit 22; fi',
+    'if semver_greater 0.10.0 0.10.0; then exit 23; fi',
+    'if semver_greater 0.10.0-rc.2 0.10.0; then exit 24; fi'
+  ].join('\n') });
+  expect(result.status).toBe(0);
+});
+
 test('reviewed release drift is rejected before Docker or data changes', () => {
   const command = [
     'source deploy/blogposter-update',

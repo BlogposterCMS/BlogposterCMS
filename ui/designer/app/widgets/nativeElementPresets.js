@@ -95,8 +95,9 @@ export const INSERT_TOOL_ITEMS = [
     icon: 'menu',
     description: 'Menus and breadcrumbs',
     presets: [
-      { id: 'navigation.menu', title: 'Menu', icon: 'menu', widgetId: 'navigationMenu', description: 'Public menu renderer', size: { w: 760, h: 64 }, minSize: { w: 320, h: 48 }, settings: { locationKey: 'primary', orientation: 'horizontal', maxDepth: 2 } },
-      { id: 'navigation.breadcrumb', title: 'Breadcrumb', icon: 'chevrons-right', widgetId: 'breadcrumb', description: 'Page path trail', size: { w: 640, h: 48 }, minSize: { w: 260, h: 40 }, settings: { homeLabel: 'Home', separator: '/' } }
+      { id: 'navigation.menu', title: 'Menu', icon: 'menu', widgetId: 'navigationMenu', description: 'Configurable header navigation', size: { w: 760, h: 64 }, minSize: { w: 320, h: 48 }, settings: { locationKey: 'primary', orientation: 'horizontal', maxDepth: 3, mobileCollapse: true } },
+      { id: 'navigation.sidebar', title: 'Sidebar menu', icon: 'panel-left', widgetId: 'navigationMenu', description: 'Chapter navigation with expandable subpages', size: { w: 260, h: 420 }, minSize: { w: 180, h: 64 }, settings: { locationKey: 'primary', orientation: 'vertical', maxDepth: 3, mobileCollapse: true, appearance: 'soft' } },
+      { id: 'navigation.breadcrumb', title: 'Breadcrumb', icon: 'chevrons-right', widgetId: 'breadcrumb', description: 'Current page hierarchy and titles', size: { w: 640, h: 48 }, minSize: { w: 260, h: 40 }, settings: { source: 'pages', homeLabel: 'Home', separator: '/' } }
     ]
   },
   {

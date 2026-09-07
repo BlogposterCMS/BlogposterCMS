@@ -1,4 +1,4 @@
-import { resolveWidgetModuleUrl } from './widgetModulePaths.js';
+import { resolveWidgetModuleUrl, resolveWidgetModuleImportUrl } from './widgetModulePaths.js';
 
 export type WidgetRenderModule = {
   render?: (container: HTMLElement, context: Record<string, any>) => void | Promise<void>;
@@ -9,7 +9,7 @@ export function resolveAllowedWidgetModuleUrl(input: unknown, base?: string): st
 }
 
 export async function loadWidgetModule(input: unknown, base?: string): Promise<WidgetRenderModule | null> {
-  const codeUrl = resolveWidgetModuleUrl(input, base);
+  const codeUrl = resolveWidgetModuleImportUrl(input, base);
   if (!codeUrl) return null;
 
   return import(/* webpackIgnore: true */ codeUrl) as Promise<WidgetRenderModule>;

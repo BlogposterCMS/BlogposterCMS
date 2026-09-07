@@ -81,7 +81,7 @@ describe('pageContentData', () => {
       designThumbnail: '/old.png'
     });
     expect(attachHtmlMeta(page, 'content.html')).toEqual({
-      keep: true,
+      ...page.meta,
       htmlFileName: 'content.html'
     });
   });

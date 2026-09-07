@@ -28,6 +28,12 @@ supported Linux systemd host layout are in `docs/core-updates.md`.
 
 ## Existing owners
 
+- The mandatory `updater` core module owns release discovery, permissions and
+  orchestration. It is initialized through core bootstrap, independently of
+  optional ModuleLoader packages. The executor has no background schedule.
+- `install-blogposter` is the combined server setup for the CMS and executor;
+  see [server installation](server-installation.md).
+
 - `settingsPanels.ts` and `updateCenterData.ts` own the Settings surface and data
   adapter. Reuse existing controls and styles; no separate update dashboard.
 - Runtime Manager remains the authenticated browser/agent entry point. Typed

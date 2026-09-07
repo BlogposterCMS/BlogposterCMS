@@ -3,6 +3,7 @@
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+const { extractDesignDocument } = require('../../../ui/shared/layout/layoutDocument.js');
 
 const path = require("path");
 const sanitizeHtmlLib = require("sanitize-html");
@@ -350,7 +351,14 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
       cellHeight: 8
     },
     items,
-    layoutRef
+    layoutRef,
+    // Keep the structural document on the existing public layout response.
+    // Runtime Manager strips private fields and rejects draft designs.
+    published: !['1', 'true', 'yes', 'y', 'on'].includes(String(
+      res.design?.is_draft ?? res.design?.isDraft ?? res.is_draft ?? res.isDraft ?? false
+    ).trim().toLowerCase()),
+    document: { layoutTree: extractDesignDocument(res).layoutTree },
+    styles: { background: res.design?.bg_color || '' }
   });
 }, err => {
   return cb(err);

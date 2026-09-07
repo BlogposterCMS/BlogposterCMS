@@ -397,7 +397,11 @@ module.exports.DEFAULT_WIDGETS = [
     category: 'navigation',
     metadata: {
       layout: dashboardLayout('full', ['full'], BREAKPOINTS.fullOnly),
-      apiActions: [],
+      apiActions: [
+        { resource: 'pages', action: 'getBySlug' },
+        { resource: 'pages', action: 'get' },
+        { resource: 'pages', action: 'start' }
+      ],
       icon: 'chevrons-right',
       defaults: {
         homeLabel: 'Home',

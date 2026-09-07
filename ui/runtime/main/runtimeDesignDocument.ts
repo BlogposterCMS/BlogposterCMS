@@ -21,7 +21,13 @@ type RuntimeDesignDocumentOptions = {
   globalLayout?: RuntimeDesignLayoutItem[];
   /** Branch-local ancestry permits reuse in siblings while stopping recursive designs. */
   designPath?: string[];
+  /** A per-page design is mounted in the outer design's explicit content area. */
+  contentDesignId?: string;
+  /** Already sanitized server DOM; only the actual page-content branch adopts it. */
+  initialPageHtml?: HTMLElement | null;
 };
+
+const composedContentHosts = new WeakMap<HTMLElement, HTMLElement>();
 
 function collectLeaves(node: LayoutNode | null, leaves: LayoutNode[] = []): LayoutNode[] {
   if (!node) return leaves;
@@ -157,12 +163,13 @@ export function getRuntimeDesignDocument(response: unknown): DesignDocument {
 
 /** Resolve only the outer document's slot; nested designs own their own hosts. */
 export function getRuntimeDesignContentMount(target: HTMLElement): HTMLElement {
+  const composed = composedContentHosts.get(target);
+  if (composed && target.contains(composed)) return composed;
   const shell = target.querySelector<HTMLElement>('.runtime-design-document');
   if (!shell) return target;
   const ownHosts = Array.from(shell.querySelectorAll<HTMLElement>('.runtime-layout-container'))
     .filter(host => host.closest('.runtime-design-document') === shell);
   return ownHosts.find(host => host.dataset.dynamicHost === 'true')
-    || ownHosts.find(host => host.dataset.workarea === 'true')
     || target;
 }
 
@@ -175,6 +182,7 @@ export async function renderRuntimeDesignDocument(
 ): Promise<boolean> {
   const tree = normalizeLayoutTree(document.layoutTree);
   if (!target || !tree) return false;
+  composedContentHosts.delete(target);
 
   const shell = window.document.createElement('div');
   shell.className = 'runtime-design-document';
@@ -185,6 +193,28 @@ export async function renderRuntimeDesignDocument(
   const leaves = collectLeaves(tree);
   const placementHosts = collectPlacementHosts(tree);
   const placements = document.placements as RuntimeDesignLayoutItem[];
+
+  // Article height is content-driven. CanvasGrid still owns widget geometry,
+  // but its fixed canvas height must not collapse a body or overlap the footer.
+  for (const host of placementHosts.filter(node => node.isDynamicHost)) {
+    let container = idMap.get(String(host.nodeId || '')) || null;
+    while (container && container !== shell) {
+      if (container !== idMap.get(String(host.nodeId || '')) && container.dataset.layoutMode === 'free') {
+        console.warn('RUNTIME_PAGE_CONTENT_FREE_ANCESTOR: Use Auto or Grid for containers around flowing page content.', container.dataset.nodeId);
+        break;
+      }
+      container.dataset.pageContentFlow = 'true';
+      container = container.parentElement;
+    }
+  }
+
+  // Move the existing article before async widgets start mounting. Otherwise it
+  // remains below the growing layout, then jumps back to the content area. An
+  // inner page design receives it later; reusable footer slots must not adopt it.
+  if (!options.contentDesignId && options.initialPageHtml?.isConnected) {
+    const contentHost = getRuntimeDesignContentMount(target);
+    if (contentHost.dataset.dynamicHost === 'true') contentHost.append(options.initialPageHtml);
+  }
 
   for (const leaf of leaves) {
     const leafId = leaf.nodeId || '';
@@ -207,6 +237,30 @@ export async function renderRuntimeDesignDocument(
       useTargetAsGrid: true,
       structuralItems
     });
+  }
+
+  if (options.contentDesignId) {
+    const host = getRuntimeDesignContentMount(target);
+    if (host.dataset.dynamicHost !== 'true') throw new Error('RUNTIME_MAIN_DESIGN_SLOT_MISSING: The main design needs a page content area.');
+    const designPath = options.designPath || [];
+    if (designPath.includes(options.contentDesignId) || designPath.length >= 16) {
+      throw new Error('RUNTIME_DESIGN_REF_CYCLE_OR_DEPTH: The page design cannot include its own outer design.');
+    }
+    if (!options.emit) throw new Error('RUNTIME_PAGE_DESIGN_EMITTER_MISSING: Cannot load the page design.');
+    const response = await fetchRuntimeDesign(options.emit, options.contentDesignId, lane);
+    if (!response) throw new Error('RUNTIME_PAGE_DESIGN_UNAVAILABLE: The page design is unavailable.');
+    const pageDesign = window.document.createElement('div');
+    pageDesign.className = 'runtime-page-design';
+    host.append(pageDesign);
+    applyRuntimeDesignStyles(pageDesign, response.design);
+    const rendered = await renderRuntimeDesignDocument(pageDesign, getRuntimeDesignDocument({ ...response, placements: getRuntimeDesignLayout(response) }), allWidgets, lane, {
+      emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, options.contentDesignId],
+      initialPageHtml: options.initialPageHtml
+    });
+    if (!rendered) throw new Error('RUNTIME_PAGE_DESIGN_DOCUMENT_MISSING: The page design has no container structure.');
+    // Remember the dynamic composition explicitly. A reusable footer's own slot
+    // must never capture article content through a descendant DOM query.
+    composedContentHosts.set(target, getRuntimeDesignContentMount(pageDesign));
   }
 
   return true;

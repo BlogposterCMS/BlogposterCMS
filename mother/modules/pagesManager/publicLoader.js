@@ -66,7 +66,9 @@ export async function loadHtml(descriptor = {}, ctx) {
     if (runtimeContext) {
         runtimeContext.hasPageHtmlContent = Boolean(html);
     }
-    if (descriptor.fallbackOnly && hasActiveDesignLayout(ctx)) {
+    const contentHost = descriptor.contentSlot ? runtimeContext?.pageContentHost : null;
+    if (descriptor.fallbackOnly && hasActiveDesignLayout(ctx) && !contentHost
+        && !runtimeContext?.layoutCompositionFailed && !runtimeContext?.requiresContentSlot) {
         if (runtimeContext) {
             runtimeContext.hasPageHtmlContent = false;
         }
@@ -85,7 +87,9 @@ export async function loadHtml(descriptor = {}, ctx) {
         style.textContent = css;
         document.head.appendChild(style);
     }
-    const root = document.getElementById('app') || document.body;
+    const root = contentHost || document.getElementById('app') || document.body;
+    if (adopted && contentHost)
+        contentHost.append(initialHtml);
     if (html && !adopted) {
         if (!sanitizeHtml || sanitizerUnavailable) {
             logStructuredError('UNTRUSTED_HTML_BLOCKED', new Error('Sanitizer unavailable'));

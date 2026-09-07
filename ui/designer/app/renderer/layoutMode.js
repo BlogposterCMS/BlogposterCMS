@@ -8,7 +8,9 @@ import {
   createSitePreset,
   deleteSitePreset,
   getSitePresetsSnapshot,
-  subscribeSitePresets
+  subscribeSitePresets,
+  exportSitePresetJson,
+  importSitePresetJson
 } from '/ui/shared/presets/sitePresets.js';
 import {
   getActiveColorScheme,
@@ -188,6 +190,9 @@ function mountSitePresetsPanel(ctx) {
     || getSitePresetsSnapshot().presets[0]?.id
     || '';
   let selectedDemoId = '';
+  let jsonDraft = null;
+  let jsonOpen = false;
+  let nameDraft = '';
 
   const render = () => {
     const library = getSitePresetsSnapshot();
@@ -197,8 +202,16 @@ function mountSitePresetsPanel(ctx) {
     host.replaceChildren();
 
     const heading = document.createElement('h4');
-    heading.textContent = 'Site preset';
+    heading.textContent = 'UI kit';
     host.appendChild(heading);
+    const intro = document.createElement('p');
+    intro.className = 'style-library-intro';
+    intro.textContent = 'Save your colors, typography and reusable starting blocks. Shared page structure stays in your linked designs.';
+    const editStyles = document.createElement('button');
+    editStyles.type = 'button'; editStyles.className = 'font-package-action';
+    editStyles.textContent = 'Edit colors & typography';
+    editStyles.addEventListener('click', () => ctx.setSidebarPanel?.('design'));
+    host.append(intro, editStyles);
     if (!preset) {
       const empty = document.createElement('p');
       empty.className = 'style-library-intro';
@@ -213,7 +226,7 @@ function mountSitePresetsPanel(ctx) {
     selectedDemoId = selectedDemo?.id || '';
 
     const presetSelect = document.createElement('select');
-    presetSelect.setAttribute('aria-label', 'Site preset');
+    presetSelect.setAttribute('aria-label', 'UI kit');
     library.presets.forEach(entry => {
       const option = document.createElement('option');
       option.value = entry.id;
@@ -225,7 +238,7 @@ function mountSitePresetsPanel(ctx) {
     const applyButton = document.createElement('button');
     applyButton.type = 'button';
     applyButton.className = 'font-package-action font-package-action--primary';
-    applyButton.textContent = 'Apply';
+    applyButton.textContent = 'Use UI kit';
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'font-package-action font-package-action--danger';
@@ -259,11 +272,14 @@ function mountSitePresetsPanel(ctx) {
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.maxLength = 80;
-    nameInput.placeholder = 'Preset name';
-    nameInput.setAttribute('aria-label', 'New Site Preset name');
+    nameInput.placeholder = 'UI kit name';
+    nameInput.setAttribute('aria-label', 'New UI kit name');
+    nameInput.dataset.uiKitDraft = 'true';
+    nameInput.value = nameDraft;
+    nameInput.addEventListener('input', () => { nameDraft = nameInput.value; });
     const saveButton = document.createElement('button');
     saveButton.type = 'submit';
-    saveButton.textContent = 'Save current';
+    saveButton.textContent = 'Save current as UI kit';
     createForm.append(nameInput, saveButton);
 
     const errorNode = document.createElement('p');
@@ -273,6 +289,34 @@ function mountSitePresetsPanel(ctx) {
     errorNode.hidden = true;
 
     host.append(presetSelect, presetActions, demoRow, createForm, errorNode);
+    const jsonSection = document.createElement('details');
+    jsonSection.className = 'site-preset-json'; jsonSection.open = jsonOpen;
+    const summary = document.createElement('summary'); summary.textContent = 'JSON for agents & reuse';
+    const jsonInput = document.createElement('textarea');
+    jsonInput.rows = 9; jsonInput.setAttribute('aria-label', 'UI kit JSON'); jsonInput.dataset.uiKitDraft = 'true';
+    jsonInput.spellcheck = false;
+    jsonInput.value = jsonDraft ?? exportSitePresetJson(preset.id);
+    jsonInput.addEventListener('input', () => { jsonDraft = jsonInput.value; });
+    jsonSection.addEventListener('toggle', () => { jsonOpen = jsonSection.open; });
+    const copy = document.createElement('button');
+    copy.type = 'button'; copy.className = 'font-package-action'; copy.textContent = 'Copy selected kit JSON';
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(exportSitePresetJson(preset.id)); copy.textContent = 'Copied'; }
+      catch (error) { sitePresetError(host, new Error(`SITE_PRESETS_COPY_FAILED: ${error.message || error}`)); }
+    });
+    const importButton = document.createElement('button');
+    importButton.type = 'button'; importButton.className = 'font-package-action'; importButton.textContent = 'Import as new UI kit';
+    importButton.addEventListener('click', async () => {
+      importButton.disabled = true;
+      try {
+        const created = await importSitePresetJson(jsonInput.value);
+        if (created) { selectedPresetId = created.id; jsonDraft = null; render(); }
+      } catch (error) { sitePresetError(host, error); importButton.disabled = false; }
+    });
+    const jsonHint = document.createElement('p'); jsonHint.className = 'style-library-intro';
+    jsonHint.textContent = 'Use a unique name. Import creates a kit; Use UI kit applies its shared colors and typography.';
+    const jsonActions = document.createElement('div'); jsonActions.className = 'font-package-actions'; jsonActions.append(copy, importButton);
+    jsonSection.append(summary, jsonInput, jsonHint, jsonActions); host.append(jsonSection);
 
     const applySelectedPreset = async () => {
       const result = await applySitePreset(preset.id);
@@ -284,12 +328,14 @@ function mountSitePresetsPanel(ctx) {
     presetSelect.addEventListener('change', () => {
       selectedPresetId = presetSelect.value;
       selectedDemoId = '';
+      // Preserve pasted JSON while inspecting another kit.
       render();
     });
     demoSelect.addEventListener('change', () => {
       selectedDemoId = demoSelect.value;
     });
     applyButton.addEventListener('click', async () => {
+      if (!(await bpDialog.confirm(`Use “${preset.name}” colors and typography on all linked content?`, { confirmLabel: 'Use UI kit' }))) return;
       applyButton.disabled = true;
       try {
         await applySelectedPreset();
@@ -311,7 +357,7 @@ function mountSitePresetsPanel(ctx) {
       }
     });
     deleteButton.addEventListener('click', async () => {
-      if (!(await bpDialog.confirm(`Delete Site Preset "${preset.name}"?`))) return;
+      if (!(await bpDialog.confirm(`Delete UI kit "${preset.name}"?`))) return;
       try {
         await deleteSitePreset(preset.id);
         selectedPresetId = getSitePresetsSnapshot().lastAppliedId
@@ -340,7 +386,7 @@ function mountSitePresetsPanel(ctx) {
           fontPackage,
           pageDemos: [ctx.captureSitePresetDemo?.()].filter(Boolean)
         });
-        if (created) selectedPresetId = created.id;
+        if (created) { selectedPresetId = created.id; nameDraft = ''; render(); }
       } catch (error) {
         saveButton.disabled = false;
         sitePresetError(host, error);

@@ -5,7 +5,7 @@ import { registerWorkspaceChanges } from '../../../../shared/navigation/workspac
 import { render as renderContent, type PageContentController } from './pageContentWidget.js';
 import { registerWorkspaceAgent, patchAgentForm, agentString } from '../../../../shared/agent/workspaceAgent.js';
 import {
-  asString, clearPageEditorCache, errorMessage, savePageEditorPage, toPage,
+  asString, clearPageEditorCache, errorMessage, savePageEditorPage, loadPageEditorPage,
   type PageEditorFormValues
 } from './pageEditorData.js';
 
@@ -19,7 +19,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
   const jwt = window.ADMIN_TOKEN;
   el.innerHTML = '<p role="status">Loading page…</p>';
   let source;
-  try { source = toPage(await window.pageDataPromise); }
+  try { source = await loadPageEditorPage(emit, jwt, window.location.pathname, window.ADMIN_BASE || 'admin', window.pageDataPromise, window.pageDataLoader); }
   catch (error) {
     el.textContent = `PAGE_EDITOR_LOAD_FAILED: ${errorMessage(error)}`;
     el.setAttribute('role', 'alert');
@@ -172,6 +172,15 @@ export async function render(el: HTMLElement | null): Promise<void> {
       attachment: { html: draft.html, meta: draft.meta }
     }),
     actions: [
+      { action: 'page.setLayout', label: 'Stage page layout', acceptsDraft: true,
+        params: [{ name: 'mode', type: 'string', required: true }, { name: 'designId', type: 'string' }],
+        run: async p => {
+          if (!contentController || !['main', 'composed', 'inherit', 'design', 'none'].includes(String(p.mode))) throw new Error('PAGE_LAYOUT_MODE_INVALID');
+          await contentController.setLayout(p.mode as 'main' | 'composed' | 'inherit' | 'design' | 'none', typeof p.designId === 'string' ? p.designId : undefined);
+        } },
+      { action: 'page.setContent', label: 'Stage page body HTML', acceptsDraft: true,
+        params: [{ name: 'html', type: 'string', required: true }],
+        run: async p => { if (!contentController || typeof p.html !== 'string') throw new Error('PAGE_CONTENT_HTML_REQUIRED'); await contentController.setHtml(p.html); } },
       { action: 'page.updateDraft', label: 'Update page fields', acceptsDraft: true,
         params: [{ name: 'fields', type: 'object', required: true }],
         run: p => patchAgentForm(root, p.fields, Array.from(fields.keys())) },

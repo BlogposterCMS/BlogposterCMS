@@ -1,7 +1,9 @@
 import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
 import { sanitizeHtml } from '../../../../shared/sanitize/sanitizer.js';
+import { mountPageLayoutControl } from './pageLayoutControl.js';
+import type { PageLayoutMode } from '../../../../shared/layout/pagePresentation.js';
 import {
-  attachDesignMeta, attachHtmlMeta, clearPageContentCache, detachDesignMeta,
+  attachHtmlMeta, clearPageContentCache,
   detachHtmlMeta, errorMessage, fetchBuilderApps, fetchHtmlFile, fetchPublishedDesigns,
   listHtmlFiles, savePageContent, toPage, uploadHtmlFile,
   type DesignRecord, type PageContentUpdateValues, type PageRecord
@@ -20,6 +22,8 @@ export interface PageContentController {
   read: () => Record<string, unknown>;
   attach: (kind: 'design' | 'html', id: string) => Promise<void>;
   detach: () => Promise<void>;
+  setLayout: (mode: PageLayoutMode, designId?: string) => Promise<void>;
+  setHtml: (html: string) => Promise<void>;
 }
 
 export async function render(el: HTMLElement | null, options: PageContentOptions = {}): Promise<void> {
@@ -36,12 +40,14 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
   root.className = 'page-content-widget';
   root.setAttribute('aria-label', 'Page content');
   root.innerHTML = `
-    <header class="content-title-bar"><div><h3>Content</h3><p>Attach a published design or an HTML file.</p></div></header>
+    <section class="page-layout-control" aria-label="Page layout"></section>
+    <header class="content-title-bar"><div><h3>Page content</h3><p>Write the content for this page or attach an HTML file. Your layout stays linked.</p></div></header>
+    <label class="page-content-body"><span>Page content (HTML)</span><textarea rows="10" aria-label="Page content HTML" placeholder="<h1>Getting started</h1><p>Your content…</p>"></textarea></label>
     <div class="page-content-actions"><button type="button" class="button secondary sm" data-upload>Upload HTML</button></div>
     <input type="file" accept=".html,.htm,text/html" hidden>
     <p class="page-content-feedback" role="status" aria-live="polite"></p>
     <div class="selected-content" aria-label="Attached content"></div>
-    <label class="page-content-search"><span class="bp-sr-only">Search available content</span><input type="search" placeholder="Search designs and HTML files…" aria-label="Search available content"></label>
+    <label class="page-content-search"><span class="bp-sr-only">Search available content</span><input type="search" placeholder="Search HTML files…" aria-label="Search available content"></label>
     <div class="page-content-library-status" aria-live="polite"></div>
     <div class="design-gallery" aria-label="Available content"></div>`;
   el.replaceChildren(root);
@@ -52,11 +58,21 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
   const search = root.querySelector<HTMLInputElement>('input[type=search]')!;
   const fileInput = root.querySelector<HTMLInputElement>('input[type=file]')!;
   const actions = root.querySelector<HTMLElement>('.page-content-actions')!;
+  const htmlInput = root.querySelector<HTMLTextAreaElement>('.page-content-body textarea')!;
+  htmlInput.value = page.html || '';
   let busy = false;
   let designs: DesignRecord[] = [];
   let files: string[] = [];
   let libraryFailed = false;
   let loading = false;
+  const layout = mountPageLayoutControl(root.querySelector<HTMLElement>('.page-layout-control')!, {
+    page, designs: () => designs,
+    changed: async () => {
+      if (options.onChange) options.onChange();
+      else await apply({ html: page.html || '', meta: page.meta || {} });
+      renderSelected();
+    }
+  });
 
   function message(text: string, code = ''): void {
     feedback.textContent = code ? `${code}: ${text}` : text;
@@ -87,6 +103,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
     }
     page.html = values.html;
     page.meta = values.meta;
+    htmlInput.value = page.html;
     options.onChange?.();
     message(options.onChange ? 'Content changed. Save the page to apply it.' : 'Content saved.');
     renderSelected();
@@ -94,7 +111,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
   }
 
   async function canReplace(): Promise<boolean> {
-    return !(page.html || page.meta?.designId) || bpDialog.confirm('Replace the attached content?', {
+    return !page.html || bpDialog.confirm('Replace the attached content?', {
       title: 'Replace content', confirmLabel: 'Replace'
     });
   }
@@ -104,7 +121,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
     if (kind === 'design') {
       const design = designs.find(item => String(item.id) === id);
       if (!design) throw new Error('PAGE_CONTENT_DESIGN_NOT_FOUND: Choose an available published design.');
-      await apply({ html: '', meta: attachDesignMeta(page, design) });
+      await layout.set('design', id);
     } else {
       if (!files.includes(id)) throw new Error('PAGE_CONTENT_FILE_NOT_FOUND: Choose an available HTML file.');
       const html = sanitizeHtml(await fetchHtmlFile(fetch, id));
@@ -117,18 +134,16 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
     const designerLink = actions.querySelector<HTMLAnchorElement>('[data-builder="designer"]');
     if (designerLink) designerLink.href = builderUrl('designer');
     const title = document.createElement('strong');
-    const hasDesign = page.meta?.designId != null;
-    title.textContent = hasDesign ? page.meta?.designTitle || 'Attached design'
-      : page.html ? page.meta?.htmlFileName || 'Attached HTML' : 'No content attached';
+    title.textContent = page.html ? page.meta?.htmlFileName || 'Page content' : 'No page content yet';
     selected.append(title);
-    if (!hasDesign && !page.html) return;
+    if (!page.html) return;
     const detach = document.createElement('button');
     detach.type = 'button';
     detach.className = 'button ghost sm';
     detach.textContent = 'Detach';
     detach.addEventListener('click', () => void run(async () => {
       if (!(await bpDialog.confirm('Detach the content from this page?', { confirmLabel: 'Detach' }))) return;
-      await apply({ html: '', meta: hasDesign ? detachDesignMeta(page) : detachHtmlMeta(page) });
+      await apply({ html: '', meta: detachHtmlMeta(page) });
     }));
     selected.append(detach);
   }
@@ -161,11 +176,6 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
   function renderGallery(): void {
     gallery.replaceChildren();
     const query = search.value.trim().toLowerCase();
-    designs.filter(design => design.id != null && String(design.id) !== String(page.meta?.designId))
-      .filter(design => (design.title || 'Untitled design').toLowerCase().includes(query))
-      .forEach(design => contentButton(design.title || 'Untitled design', 'Published design', async () => {
-        await attach('design', String(design.id));
-      }, design.thumbnail));
     files.filter(name => name !== page.meta?.htmlFileName && name.toLowerCase().includes(query))
       .forEach(name => contentButton(name, 'HTML file', async () => {
         // Fetch file contents only when selected, not every HTML file on mount.
@@ -174,7 +184,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
     if (!gallery.children.length && !loading && !libraryFailed) {
       const empty = document.createElement('p');
       empty.className = 'empty-state';
-      empty.textContent = query ? 'No matching content.' : 'No other published designs or HTML files available.';
+      empty.textContent = query ? 'No matching HTML files.' : 'No HTML files available. Write content above or upload a file.';
       gallery.append(empty);
     }
   }
@@ -189,6 +199,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
     files = results[1].status === 'fulfilled' ? results[1].value : [];
     libraryFailed = results.some(result => result.status === 'rejected');
     loading = false;
+    layout.refresh();
     libraryStatus.replaceChildren();
     if (libraryFailed) {
       libraryStatus.setAttribute('role', 'alert');
@@ -218,16 +229,30 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
     });
   });
   search.addEventListener('input', renderGallery);
+  htmlInput.addEventListener('input', () => {
+    page.html = htmlInput.value;
+    page.meta = detachHtmlMeta(page);
+    options.onChange?.();
+    renderSelected();
+  });
+  if (!options.onChange) {
+    const saveBody = document.createElement('button');
+    saveBody.type = 'button'; saveBody.className = 'button primary sm'; saveBody.textContent = 'Save content';
+    saveBody.addEventListener('click', () => void run(() => apply({ html: sanitizeHtml(htmlInput.value), meta: page.meta || {} })));
+    htmlInput.parentElement?.append(saveBody);
+  }
   el.addEventListener('page-content-saved', () => { if (root.isConnected) message(''); });
   renderSelected();
   void loadLibrary();
   options.onController?.({
     read: () => ({ loading, busy, libraryFailed, error: feedback.dataset.errorCode ? feedback.textContent : null,
-      selected: { designId: page.meta?.designId || null, htmlFileName: page.meta?.htmlFileName || null },
+      selected: { designId: page.meta?.designId || null, htmlFileName: page.meta?.htmlFileName || null }, layout: layout.read(),
       designs: designs.map(({ id, title }) => ({ id, title })), files }),
     // The caller supplies the common revision/draft/confirmation guard.
     attach: (kind, id) => attach(kind, id),
-    detach: () => apply({ html: '', meta: page.meta?.designId ? detachDesignMeta(page) : detachHtmlMeta(page) })
+    detach: () => apply({ html: '', meta: detachHtmlMeta(page) }),
+    setLayout: layout.set,
+    setHtml: html => apply({ html: sanitizeHtml(html), meta: detachHtmlMeta(page) })
   });
 
   // Preserve installed builder discovery and the canonical Design Studio route.

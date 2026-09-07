@@ -10,11 +10,17 @@ type DesignerLoaderContext = {
   activeLayoutRef?: unknown;
   initialLayoutResolved?: boolean;
   initialLayout?: unknown;
+  expectsPageContent?: boolean;
+  contentDesignId?: string;
+  requiresContentSlot?: boolean;
 };
 
 type DesignDescriptor = {
   css?: string[];
   layoutRef?: string;
+  hasPageContent?: boolean;
+  contentLayoutRef?: string;
+  requiresContentSlot?: boolean;
 };
 
 type PublicLayout = {
@@ -75,6 +81,9 @@ async function loadDesign(
   if (ctx && typeof ctx === 'object') {
     ctx.activeLayout = activeLayout;
     ctx.activeLayoutRef = layoutRef;
+    ctx.expectsPageContent = Boolean(descriptor.hasPageContent);
+    ctx.contentDesignId = /^layout:([A-Za-z0-9_.:-]+)(?:@[^/\s]+)?$/.exec(descriptor.contentLayoutRef || '')?.[1];
+    ctx.requiresContentSlot = descriptor.requiresContentSlot === true;
   }
   return activeLayout;
 }

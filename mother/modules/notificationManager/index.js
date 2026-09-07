@@ -1,6 +1,7 @@
 
 
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 
 /**
  * mother/modules/notificationManager/index.js
@@ -9,7 +10,7 @@ const notificationEmitter = require('../../emitters/notificationEmitter');
 const { loadIntegrations, getRecentNotifications } = require('./notificationManagerService');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
-const { getCoreUpdateStatus, coreUpdateNotification } = require('../moduleLoader/coreUpdateService');
+const { coreUpdateNotification } = require('../updater/coreUpdateService');
 
 const MODULE_NAME = 'notificationManager';
 const MODULE_TYPE = 'core';
@@ -82,8 +83,16 @@ module.exports = {
         // A single stable, current notification; host state owns release discovery.
         // Editors without update permission never see host update information.
         if (payload.includeCoreUpdates === true && payload?.decodedJWT && hasPermission(payload.decodedJWT, 'settings.core.edit')) {
-          const notice = coreUpdateNotification(await getCoreUpdateStatus());
-          if (notice) list.unshift(notice);
+          try {
+            const state = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, {
+              jwt, moduleName: 'updater', moduleType: 'core'
+            });
+            const notice = coreUpdateNotification(state);
+            if (notice) list.unshift(notice);
+          } catch {
+            // Update transport failure must not hide ordinary notifications.
+            console.warn('CORE_UPDATE_NOTIFICATION_UNAVAILABLE');
+          }
         }
         callback(null, list);
       } catch (err) {

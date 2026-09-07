@@ -60,7 +60,10 @@ semver_greater() {
   (( 10#$left_major < 10#$right_major )) && return 1
   (( 10#$left_minor > 10#$right_minor )) && return 0
   (( 10#$left_minor < 10#$right_minor )) && return 1
-  (( 10#$left_patch > 10#$right_patch ))
+  (( 10#$left_patch > 10#$right_patch )) && return 0
+  (( 10#$left_patch < 10#$right_patch )) && return 1
+  # Stable promotion must remain installable from a preview of the same version.
+  [[ "$1" != *-* && "$2" == *-* ]]
 }
 
 compose_args() {

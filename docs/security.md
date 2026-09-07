@@ -1,5 +1,33 @@
 # Security Notes
 
+## Bundled documentation example
+
+`exampleSite` runs through the existing Importer facade and domain events. It
+accepts only the bundled `docs` ID, a bounded lowercase root slug and a boolean
+dry-run option. It reads only repository-owned template files, never caller
+paths, packages or scripts. `importers.run`, Pages read/create, Designer save
+and Navigation manage permissions remain authoritative. Existing addresses and
+menu sources are checked before writes; pages and design start as drafts. A
+partial cross-domain failure reports created IDs without automatic deletion.
+
+## Public breadcrumbs
+
+Breadcrumb title/ancestor reads use `cmsPublicRuntimeRequest` with the public
+principal; Studio admin credentials are never substituted. The public Pages
+filter remains authoritative. Rendering stops at unpublished/non-public parents,
+with a visited-ID set and depth limit of 16. Failed reads retain a URL-only trail.
+Menu and breadcrumb links still pass the shared URL normalizer.
+
+## Website main design
+
+`SITE_MAIN_DESIGN_ID` is a public non-secret Settings value. Writes retain
+`settings.core.edit` and validate a published Designer layout with exactly one
+page-content area. Pages stores only its composition mode and own design id.
+The existing public facade filters both outer and inner designs; composition
+never substitutes admin credentials. Fixed design references and dynamic page
+composition share the renderer's branch-local recursion guard. Failed nested
+composition preserves the independently sanitized page body.
+
 ## Measured HTML imports
 
 `htmlPage` accepts bounded capture JSON through existing `importers.run`
@@ -228,6 +256,14 @@ made writable in production.
 
 ## Developing Secure Modules
 
+The Updater is a protected core module, not a community-installable package.
+Its periodic checks and UI actions use the same fixed Unix-socket executor.
+The combined installer stages release files in a private root-owned directory
+and verifies attestations before executing them. Fresh-install secrets are
+generated locally with exclusive file creation; existing credentials are never
+rotated. Executor replacement acquires the existing updater lock. Readiness and
+container-user socket access must pass before setup reports success.
+
 When writing your own modules keep these best practices in mind:
 
 1. Validate and sanitize all user-supplied data before emitting events.
@@ -252,3 +288,12 @@ Only explicit non-secret form fields appear in workspace snapshots and patches.
 Draft revisions and confirmation flags prevent unintended concurrent edits;
 they are workflow checks, not authorization credentials. See
 [agent CMS workflows](agent-cms-workflows.md) for the shared draft protocol.
+
+Shared public layouts resolve only published public ancestors, stopping at
+deleted pages, lane changes, cycles and the depth limit. The public layout
+projection rejects draft designs and allowlists normalized LayoutTree fields;
+nested designs continue through the existing public facade. Article HTML keeps
+the established server/client sanitizer and script-nonce boundaries. Widget
+imports use an absolute URL only after the existing same-origin/path allowlist.
+UI-kit JSON import calls the existing Site Presets domain, which rejects code
+and unknown component presets. Import does not activate site-wide styles.

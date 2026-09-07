@@ -4,6 +4,10 @@ import { registerWorkspaceChanges } from '/ui/shared/navigation/workspaceChanges
 import enhanceSelects from '/ui/shared/controls/customSelect.js';
 import { debounce } from '/ui/shared/utils/debounce.js';
 import { pageService, sanitizeSlug } from './pageService.js';
+import { pagePresentationFromList } from '/ui/shared/layout/pagePresentation.js';
+import { loadSiteMainDesign, saveSiteMainDesign } from '/ui/shared/layout/siteMainDesign.js';
+import { fetchPublishedDesigns } from '../../pageEditorWidgets/pageContentData.js';
+import { promptDocsExampleImport, runDocsExampleImport } from '../../exampleImportControl.js';
 import { deriveCollections } from '../collectionsList/collectionsListData.js';
 const escapeHtml = (str) => {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
@@ -283,6 +287,10 @@ export function matchingHierarchyRows(pages, filter, query) {
     return rows.filter(row => included.has(row.rowId));
 }
 export function renderPageList(el, pages, options = {}) {
+    let mainDesign = '';
+    let designLibrary = [];
+    let mainDesignLoading = true;
+    let mainDesignError = '';
     let currentFilter = options.initialFilter === 'Collections' ? 'Collections' : 'All';
     const initialPages = filterPages(pages, currentFilter);
     let selectedId = normalizePageId(initialPages.find(page => page.is_start)?.id ?? initialPages[0]?.id);
@@ -293,6 +301,7 @@ export function renderPageList(el, pages, options = {}) {
     let dirty = false;
     let busy = false;
     let refreshPending = false;
+    let lastExampleImport = null;
     let focusAfterAction = null;
     let saveDraft = async () => { throw new Error('PAGE_MANAGER_NO_DRAFT: Select or create a page first.'); };
     const expanded = new Set();
@@ -300,7 +309,11 @@ export function renderPageList(el, pages, options = {}) {
     <section class="page-manager" aria-label="Page management">
       <header class="page-manager__header">
         <div><h2>Pages</h2><p>Organize your site, manage page details and open the content editor.</p></div>
-        <button type="button" class="button primary sm" data-action="add">${icon('plus')} Add page</button>
+        <div class="page-manager__layout-context" aria-label="Applied page layouts"></div>
+        <div class="page-manager__header-actions">
+          <button type="button" class="button secondary sm" data-action="import-example">Import example</button>
+          <button type="button" class="button primary sm" data-action="add">${icon('plus')} Add page</button>
+        </div>
       </header>
       <div class="page-manager__feedback" role="status" aria-live="polite"></div>
       <button type="button" class="button secondary sm" data-action="retry" hidden>Refresh pages</button>
@@ -320,6 +333,78 @@ export function renderPageList(el, pages, options = {}) {
     const filters = requireElement(root, '.page-manager__filters');
     const feedback = requireElement(root, '.page-manager__feedback');
     const retry = requireElement(root, '[data-action="retry"]');
+    function renderLayoutContext() {
+        const context = requireElement(root, '.page-manager__layout-context');
+        const active = pages.filter(page => page.status !== 'deleted');
+        const assignments = active.map(page => pagePresentationFromList(page, active, mainDesign));
+        const inherited = assignments.filter(source => source?.source === 'site').length;
+        context.replaceChildren();
+        const caption = document.createElement('span');
+        caption.textContent = mainDesignLoading ? 'Loading main design…' : mainDesignError ? 'Main design unavailable'
+            : mainDesign ? `Main design · ${inherited} of ${active.length} pages` : 'No main design selected';
+        context.append(caption);
+        if (mainDesign && !mainDesignError) {
+            const link = document.createElement('a');
+            link.textContent = designLibrary.find(design => String(design.id) === mainDesign)?.title || `Design ${mainDesign}`;
+            link.href = `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}/studio/design/${encodeURIComponent(mainDesign)}`;
+            link.title = 'Edit the website main design';
+            context.append(link);
+        }
+        const change = document.createElement('button');
+        change.type = 'button';
+        change.className = 'button text sm';
+        change.textContent = mainDesignError ? 'Retry' : mainDesign ? 'Change main design' : 'Choose main design';
+        change.disabled = mainDesignLoading;
+        change.addEventListener('click', () => void run('PAGE_MAIN_DESIGN_FAILED', mainDesignError ? reloadMainDesign : chooseMainDesign));
+        context.append(change);
+    }
+    async function reloadMainDesign() {
+        mainDesignLoading = true;
+        renderLayoutContext();
+        try {
+            [mainDesign, designLibrary] = await Promise.all([
+                loadSiteMainDesign(), fetchPublishedDesigns(window.meltdownEmit, window.ADMIN_TOKEN)
+            ]);
+            mainDesignError = '';
+        }
+        catch (error) {
+            mainDesignError = `PAGE_MAIN_DESIGN_LOAD_FAILED: ${errorMessage(error)}`;
+            message(mainDesignError, true);
+        }
+        finally {
+            mainDesignLoading = false;
+            renderLayoutContext();
+        }
+    }
+    async function applyMainDesign(id) {
+        await saveSiteMainDesign(id);
+        mainDesign = id;
+        mainDesignError = '';
+        renderLayoutContext();
+        message('Main design saved. Content pages use it automatically; individual page designs keep their selected mode.');
+    }
+    async function chooseMainDesign() {
+        const body = document.createElement('div');
+        body.className = 'page-manager__form';
+        const label = document.createElement('label');
+        label.textContent = 'Website main design';
+        const select = document.createElement('select');
+        select.setAttribute('aria-label', 'Website main design');
+        select.add(new Option('No main design', ''));
+        designLibrary.forEach(design => select.add(new Option(design.title || `Design ${design.id}`, String(design.id))));
+        if (mainDesign && !designLibrary.some(design => String(design.id) === mainDesign))
+            select.add(new Option(`Design ${mainDesign} (unavailable)`, mainDesign));
+        select.value = mainDesign;
+        label.append(select);
+        const hint = document.createElement('p');
+        hint.textContent = 'The default frame for content pages. Mark one container as Page content area; each page loads its content or its own design there.';
+        body.append(label, hint);
+        const result = await bpDialog.open({ title: 'Main design', body, actions: [
+                { id: 'cancel', label: 'Cancel', variant: 'ghost' }, { id: 'save', label: 'Save main design', variant: 'primary' }
+            ] });
+        if (result.action === 'save')
+            await applyMainDesign(select.value);
+    }
     function message(text, error = false) {
         feedback.textContent = text;
         feedback.dataset.error = String(error);
@@ -366,6 +451,7 @@ export function renderPageList(el, pages, options = {}) {
         // Keep the workspace inert until an explicit refresh recovers the owner's state.
         refreshPending = true;
         const updated = await fetchPages();
+        await reloadMainDesign();
         pages.splice(0, pages.length, ...updated);
         if (!pages.some(page => normalizePageId(page.id) === selectedId)) {
             selectedId = normalizePageId(pages[0]?.id);
@@ -386,6 +472,21 @@ export function renderPageList(el, pages, options = {}) {
         catch (err) {
             throw new Error(`PAGE_MANAGER_SAVED_REFRESH_FAILED: Change saved. Refresh pages before continuing. ${errorMessage(err)}`);
         }
+    }
+    async function importExample(rootSlug) {
+        const imported = await runDocsExampleImport(rootSlug, false);
+        lastExampleImport = imported.result;
+        selectedId = normalizePageId(lastExampleImport.rootPageId);
+        query = rootSlug;
+        currentFilter = 'All';
+        expanded.add(selectedId);
+        root.querySelector('[type="search"]').value = query;
+        await afterWrite('Documentation example imported as drafts. Review and publish the shared design, then publish the pages when ready.');
+        const link = document.createElement('a');
+        link.className = 'button secondary sm';
+        link.textContent = 'Open example design';
+        link.href = `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}/studio/design/${encodeURIComponent(String(lastExampleImport.designId))}`;
+        feedback.append(' ', link);
     }
     async function select(id) {
         if (!creating && selectedId === id)
@@ -464,6 +565,7 @@ export function renderPageList(el, pages, options = {}) {
         });
     }
     function renderDetails() {
+        renderLayoutContext();
         const page = creating
             ? { title: '', slug: '', status: 'draft', lane: 'public', parent_id: createParent }
             : pages.find(candidate => normalizePageId(candidate.id) === selectedId);
@@ -567,6 +669,13 @@ export function renderPageList(el, pages, options = {}) {
         });
     }
     root.querySelector('[data-action="add"]')?.addEventListener('click', () => void run('PAGE_MANAGER_CREATE_FAILED', () => add(null)));
+    root.querySelector('[data-action="import-example"]')?.addEventListener('click', () => void run('EXAMPLE_IMPORT_FAILED', async () => {
+        if (!(await canDiscard()))
+            return;
+        const rootSlug = await promptDocsExampleImport();
+        if (rootSlug !== null)
+            await importExample(rootSlug.trim());
+    }));
     root.querySelector('[type="search"]')?.addEventListener('input', event => {
         query = event.target.value;
         renderTree();
@@ -577,15 +686,31 @@ export function renderPageList(el, pages, options = {}) {
     }, true));
     renderTree();
     renderDetails();
+    void reloadMainDesign();
     const editableFields = ['title', 'slug', 'parent_id', 'status'];
     registerWorkspaceAgent({ root, id: 'pages', title: 'Pages',
         read: () => ({ dirty, busy, error: feedback.dataset.error === 'true' ? feedback.textContent : null,
-            selection: selectedId, creating, refreshPending, filter: currentFilter, query,
+            selection: selectedId, creating, refreshPending, filter: currentFilter, query, lastExampleImport,
+            mainDesign: { id: mainDesign || null, loading: mainDesignLoading, error: mainDesignError || null,
+                designs: designLibrary.map(({ id, title }) => ({ id, title })) },
+            presentation: pages.find(page => normalizePageId(page.id) === selectedId)
+                ? pagePresentationFromList(pages.find(page => normalizePageId(page.id) === selectedId), pages, mainDesign) : null,
             draft: readAgentForm(details, editableFields),
             pageCount: pages.length,
-            pages: matchingHierarchyRows(pages, currentFilter, query).map(({ page: { id, title, slug, status, parent_id, is_start } }) => ({ id, title, slug, status, parent_id, is_start }))
-        }),
+            pages: matchingHierarchyRows(pages, currentFilter, query).map(({ page: { id, title, slug, status, parent_id, is_start } }) => ({ id, title, slug, status, parent_id, is_start })) }),
         actions: [
+            { action: 'pages.previewExample', label: 'Check documentation example import', readOnly: true,
+                params: [{ name: 'rootSlug', type: 'string', required: true }],
+                run: p => runDocsExampleImport(agentString(p, 'rootSlug'), true) },
+            { action: 'pages.importExample', label: 'Import documentation example as drafts', confirm: true,
+                params: [{ name: 'rootSlug', type: 'string', required: true }],
+                run: p => run('EXAMPLE_IMPORT_FAILED', () => importExample(agentString(p, 'rootSlug')), false, true) },
+            { action: 'pages.setMainDesign', label: 'Set website main design', confirm: true,
+                params: [{ name: 'designId', type: 'string', required: true }], run: p => {
+                    if (typeof p.designId !== 'string')
+                        throw new Error('PAGE_MAIN_DESIGN_INVALID');
+                    return run('PAGE_MAIN_DESIGN_SAVE_FAILED', () => applyMainDesign(p.designId), false, true);
+                } },
             { action: 'pages.select', label: 'Select page', params: [{ name: 'id', type: 'string', required: true }], run: async (p) => {
                     const id = agentString(p, 'id');
                     if (!pages.some(page => normalizePageId(page.id) === id))

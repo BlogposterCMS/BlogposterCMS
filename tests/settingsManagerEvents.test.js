@@ -97,3 +97,24 @@ test('settings manager public events reject private keys', async () => {
   assert(result.err);
   assert.match(result.err.message, /key not allowed/);
 });
+
+test('main design assignment requires settings permission, publication and exactly one content area', async () => {
+  const emitter = new EventEmitter();
+  setupSettingsListeners(emitter);
+  const writes = [];
+  let layout = { published: true, document: { layoutTree: { type: 'leaf', nodeId: 'body', isDynamicHost: true } } };
+  emitter.on('designer.getLayout', (_payload, cb) => cb(null, layout));
+  emitter.on('dbUpdate', (payload, cb) => { writes.push(payload); cb(null, { done: true }); });
+  const base = { jwt: 'fixture', moduleName: 'settingsManager', moduleType: 'core', key: 'SITE_MAIN_DESIGN_ID', value: 'site',
+    decodedJWT: { permissions: { settings: { core: { edit: true } } } } };
+  const denied = await emitAsync(emitter, 'setSetting', { ...base, decodedJWT: { permissions: {} } });
+  assert(denied.err);
+  assert.ifError((await emitAsync(emitter, 'setSetting', base)).err);
+  layout.published = false;
+  assert.match((await emitAsync(emitter, 'setSetting', base)).err.message, /PAGE_MAIN_DESIGN_UNPUBLISHED/);
+  layout = { published: true, document: { layoutTree: { type: 'leaf', nodeId: 'body' } } };
+  assert.match((await emitAsync(emitter, 'setSetting', base)).err.message, /PAGE_MAIN_DESIGN_SLOT_REQUIRED/);
+  assert.equal(writes.length, 1);
+  assert.ifError((await emitAsync(emitter, 'setSetting', { ...base, value: '' })).err);
+  assert.equal(writes.length, 2);
+});

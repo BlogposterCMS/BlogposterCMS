@@ -46,9 +46,52 @@ test('missing design preserves the HTML fallback without a second client lookup'
   } finally { warn.mockRestore(); }
 });
 
+test('shared layouts keep article text in server HTML and bootstrap the structural content host', async () => {
+  const page = envelope('layout:docs@v1');
+  page.attachments[1].descriptor.contentSlot = true;
+  const layout = { items: [{ instanceId: 'header', widgetId: 'text' }], document: { layoutTree: {
+    type: 'split', nodeId: 'root', direction: 'column', children: [
+      { type: 'leaf', nodeId: 'article', isDynamicHost: true }
+    ]
+  } } };
+  const request = jest.fn().mockResolvedValueOnce(page).mockResolvedValueOnce(layout);
+  const result = await loadPublicPresentation(request, 'docs/intro', 'en');
+  expect(result.body).toContain('<h1>Published</h1>');
+  expect(result.bootstrap.htmlRendered).toBe(true);
+  expect(result.bootstrap.layout.document).toEqual(layout.document);
+  expect(result.head).toContain(':where(body > #bp-initial-html)');
+  expect(result.head).not.toMatch(/visibility\s*:\s*hidden|opacity\s*:\s*0/);
+});
+
+test('the Docs example ships its article typography before any layout widget script', async () => {
+  const example = require('../examples/docs-site').buildDocsExample('learn');
+  const page = envelope('layout:docs@v1');
+  page.attachments[1].descriptor.contentSlot = true;
+  page.attachments[1].descriptor.inline = example.pages[1];
+  const request = jest.fn().mockResolvedValueOnce(page).mockResolvedValueOnce({
+    items: example.design.widgets, document: { layoutTree: example.design.layout }
+  });
+  const result = await loadPublicPresentation(request, 'learn/layouts', 'en');
+  expect(result.body).toContain('Layouts &amp; pages');
+  expect(result.head).toContain(':is([data-node-id="docs-demo-root"],body > #bp-initial-html) article h1');
+  expect(result.head).toContain('prefers-color-scheme:dark');
+  expect(result.head).toContain('padding: 148px 32px 80px 304px');
+  expect(result.body).not.toContain('createElement');
+});
+
 test('public facade rejection fails closed before any initial HTML is produced', async () => {
   await expect(loadPublicPresentation(jest.fn().mockRejectedValue(new Error('Page not found')), 'draft', 'en'))
     .rejects.toThrow('Page not found');
+});
+
+test('an incomplete main design never removes article text from first HTML', async () => {
+  const page = envelope('layout:main@v1');
+  page.attachments[0].descriptor.requiresContentSlot = true;
+  const request = jest.fn().mockResolvedValueOnce(page).mockResolvedValueOnce({
+    items: [{ instanceId: 'header', widgetId: 'text' }], document: { layoutTree: { type: 'leaf', nodeId: 'header' } }
+  });
+  const result = await loadPublicPresentation(request, 'article', 'en');
+  expect(result.body).toContain('<h1>Published</h1>');
 });
 
 test('initial HTML strips active content and applies the existing CSS policy', () => {

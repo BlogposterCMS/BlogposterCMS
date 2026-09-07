@@ -12,6 +12,8 @@ const {
 } = require('./settingsService');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
+const { SITE_MAIN_DESIGN_SETTING, mainDesignId } = require('../../../ui/shared/layout/pagePresentation.js');
+const { pageContentHostIds } = require('../../../ui/shared/layout/layoutDocument.js');
 
 const MODULE_NAME = 'settingsManager';
 const MODULE_TYPE = 'core';
@@ -31,6 +33,7 @@ const PUBLIC_SETTING_KEYS = Object.freeze([
   'PERMALINK_STRUCTURE',
   'POSTS_PER_PAGE',
   'DESIGN_STUDIO_GLOBAL_BODY_BACKGROUND',
+  SITE_MAIN_DESIGN_SETTING,
   'COMMENTS_OPEN_BY_DEFAULT',
   'COMMENT_REGISTRATION_REQUIRED'
 ]);
@@ -129,6 +132,19 @@ async function listStoredSettings(motherEmitter, jwt, options = {}) {
 }
 
 async function setStoredSetting(motherEmitter, jwt, key, value) {
+  if (key === SITE_MAIN_DESIGN_SETTING) {
+    value = mainDesignId(value);
+    if (value) {
+      // Assignment stays in Settings; Designer remains the document/publication owner.
+      const layout = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DESIGNER_GET_LAYOUT, {
+        jwt, moduleName: 'designerManager', moduleType: 'core', layoutRef: `layout:${value}@v1`
+      });
+      if (!layout || layout.published !== true) throw new Error('PAGE_MAIN_DESIGN_UNPUBLISHED: Publish the design before using it as the main design.');
+      if (pageContentHostIds(layout.document?.layoutTree).length !== 1) {
+        throw new Error('PAGE_MAIN_DESIGN_SLOT_REQUIRED: Mark exactly one container as the page content area in Design Studio.');
+      }
+    }
+  }
   return updateRaw(motherEmitter, jwt, 'UPSERT_SETTING', {
     key,
     value: typeof value === 'undefined' ? null : value

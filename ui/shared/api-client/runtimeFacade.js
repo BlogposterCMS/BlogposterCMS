@@ -1,3 +1,4 @@
+export const RUNTIME_PUBLIC_REQUEST_EVENT = 'cmsPublicRuntimeRequest';
 const RUNTIME_MANAGER_MODULE = {
     moduleName: 'runtimeManager',
     moduleType: 'core'
@@ -43,7 +44,7 @@ export async function emitRuntimeAdmin(emit, jwt, resource, action, params = {},
 export async function emitRuntimePublic(emit, jwt, resource, action, params = {}, timeoutMs) {
     const payload = runtimePublicPayload(jwt, resource, action, params);
     const result = timeoutMs === undefined
-        ? await emit('cmsPublicRuntimeRequest', payload)
-        : await emit('cmsPublicRuntimeRequest', payload, timeoutMs);
+        ? await emit(RUNTIME_PUBLIC_REQUEST_EVENT, payload)
+        : await emit(RUNTIME_PUBLIC_REQUEST_EVENT, payload, timeoutMs);
     return unwrapRuntimeFacadeData(result);
 }

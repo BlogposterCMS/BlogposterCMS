@@ -138,7 +138,6 @@ async function loadAllModules({ emitter, app, jwt }) {
   initListActiveStaticFrontendsEvent(motherEmitter);
   initListSystemModulesEvent(motherEmitter);
   initModuleRegistryAdminEvents(motherEmitter, app);
-  require('./coreUpdateEvents').initializeCoreUpdateEvents(motherEmitter);
 
   // Without a meltdown JWT we cannot load optional modules, so abort early.
   if (!jwt) {

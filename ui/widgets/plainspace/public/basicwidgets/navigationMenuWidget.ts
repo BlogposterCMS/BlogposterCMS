@@ -9,6 +9,11 @@ import {
   type NavigationItem,
   type PublicWidgetContext
 } from './publicWidgetHelpers.js';
+import { applyNavigationStyle, isCurrentNavigationLink, navigationSettings } from './navigationSettings.js';
+import { emitRuntimeAdmin } from '../../../../shared/api-client/runtimeFacade.js';
+
+const renderRequests = new WeakMap<HTMLElement, object>();
+let disclosureSequence = 0;
 
 function navigationStyle(): HTMLStyleElement {
   const style = document.createElement('style');
@@ -81,6 +86,29 @@ function navigationStyle(): HTMLStyleElement {
     display: none;
   }
 }
+.bp-navigation-widget { min-height:0; }
+.bp-navigation-widget > ul { justify-content:var(--bp-nav-align); gap:var(--bp-nav-gap); }
+.bp-navigation-widget a { font-size:inherit; font-weight:500; padding:7px 10px; border-radius:var(--bp-nav-radius); }
+.bp-navigation-widget a[aria-current='page'] { font-weight:650; }
+.bp-navigation-widget[data-appearance='soft'] a:hover,
+.bp-navigation-widget[data-appearance='soft'] a[aria-current='page'] { background:var(--studio-surface-muted,#f4f4f5); }
+.bp-navigation-widget[data-appearance='underline'] a[aria-current='page'] { text-decoration:underline; text-underline-offset:7px; }
+.bp-navigation-widget a:focus-visible,.bp-navigation-widget button:focus-visible { outline:2px solid var(--color-primary,currentColor); outline-offset:3px; }
+.bp-navigation-widget__row { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+.bp-navigation-widget button { cursor:pointer; font:inherit; color:inherit; background:transparent; border:1px solid var(--studio-border,#ddd); border-radius:var(--bp-nav-radius); min-height:32px; padding:4px 9px; box-shadow:none; }
+.bp-navigation-widget__toggle[aria-expanded='true'] { transform:rotate(180deg); }
+.bp-navigation-widget ul ul { display:grid; padding:6px 0 6px 14px; gap:4px; }
+.bp-navigation-widget [hidden] { display:none!important; }
+.bp-navigation-widget--horizontal ul ul[data-disclosure] { position:absolute; z-index:20; left:0; top:100%; min-width:210px; max-width:min(340px,90vw); padding:8px; border:1px solid var(--studio-border,#ddd); border-radius:var(--bp-nav-radius); background:var(--studio-surface-solid,#fff); box-shadow:var(--studio-shadow-soft); }
+.bp-navigation-widget--vertical > ul { gap:var(--bp-nav-gap); }
+.bp-navigation-widget--vertical .bp-navigation-widget__row>a { flex:1; }
+.bp-navigation-widget__mobile-toggle { display:none; }
+@media(max-width:767px) {
+  .bp-navigation-widget[data-mobile-collapse='true'] > .bp-navigation-widget__mobile-toggle { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; }
+  .bp-navigation-widget[data-mobile-collapse='true'][data-mobile-open='false'] > ul { display:none; }
+  .bp-navigation-widget[data-mobile-collapse='true'] > ul { display:grid; margin-top:12px; }
+  .bp-navigation-widget--horizontal ul ul[data-disclosure] { position:static; min-width:0; box-shadow:none; }
+}
   `.trim();
   return style;
 }
@@ -108,7 +136,7 @@ function itemMeta(item: NavigationItem): Record<string, any> {
     : {};
 }
 
-function renderList(items: NavigationItem[], maxDepth: number, depth = 1): HTMLUListElement {
+function renderList(items: NavigationItem[], maxDepth: number, expanded: boolean, depth = 1): HTMLUListElement {
   const list = document.createElement('ul');
   items.forEach(item => {
     const row = document.createElement('li');
@@ -135,23 +163,40 @@ function renderList(items: NavigationItem[], maxDepth: number, depth = 1): HTMLU
     const icon = iconMarkup(typeof meta.icon === 'string' ? meta.icon : '');
     if (icon) link.appendChild(icon);
     link.append(document.createTextNode(item.label));
-    row.appendChild(link);
-    if (mega.enabled) {
-      const megaPanel = document.createElement('div');
-      megaPanel.className = 'bp-navigation-widget__mega';
-      if (mega.layoutId) megaPanel.dataset.layoutId = String(mega.layoutId);
-      const note = document.createElement('span');
-      note.className = 'bp-navigation-widget__mega-note';
-      note.textContent = mega.layoutId
-        ? `Mega panel: ${mega.layoutTitle || mega.layoutId}`
-        : 'Mega panel uses theme fallback links.';
-      megaPanel.appendChild(note);
-      if (item.children.length && depth < maxDepth) {
-        megaPanel.appendChild(renderList(item.children, maxDepth, depth + 1));
+    if (link.target === '_blank') link.rel = [...new Set(`${link.rel} noopener noreferrer`.split(/\s+/u).filter(Boolean))].join(' ');
+    if (isCurrentNavigationLink(item.href)) link.setAttribute('aria-current', 'page');
+    const rowContent = document.createElement('div');
+    rowContent.className = 'bp-navigation-widget__row';
+    rowContent.appendChild(link);
+    row.appendChild(rowContent);
+    if (item.children.length && depth < maxDepth) {
+      const childList = renderList(item.children, maxDepth, expanded, depth + 1);
+      if (mega.layoutId) childList.dataset.layoutId = String(mega.layoutId);
+      if (!expanded) {
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'bp-navigation-widget__toggle';
+        toggle.textContent = '⌄';
+        toggle.setAttribute('aria-label', `${item.label}: submenu`);
+        childList.id = `bp-navigation-submenu-${++disclosureSequence}`;
+        childList.dataset.disclosure = 'true';
+        const open = (value: boolean) => {
+          childList.hidden = !value;
+          toggle.setAttribute('aria-expanded', String(value));
+        };
+        toggle.setAttribute('aria-controls', childList.id);
+        // Keep the current chapter visible in a vertical disclosure tree.
+        open(Boolean(childList.querySelector('[aria-current="page"]')));
+        toggle.addEventListener('click', () => open(childList.hidden));
+        row.addEventListener('keydown', event => {
+          if (event.key === 'Escape' && !childList.hidden) { open(false); toggle.focus(); event.stopPropagation(); }
+        });
+        row.addEventListener('focusout', event => {
+          if (!expanded && event.relatedTarget instanceof Node && !row.contains(event.relatedTarget)) open(false);
+        });
+        rowContent.appendChild(toggle);
       }
-      row.appendChild(megaPanel);
-    } else if (item.children.length && depth < maxDepth) {
-      row.appendChild(renderList(item.children, maxDepth, depth + 1));
+      row.appendChild(childList);
     }
     list.appendChild(row);
   });
@@ -159,6 +204,12 @@ function renderList(items: NavigationItem[], maxDepth: number, depth = 1): HTMLU
 }
 
 async function loadNavigationItems(locationKey: string): Promise<NavigationItem[]> {
+  if (document.body.classList.contains('builder-mode') && typeof window.meltdownEmit === 'function') {
+    // The sandboxed Studio already owns an authenticated AppLoader bridge.
+    // Preview active managed links through that bridge, not a blocked iframe fetch.
+    const payload = await emitRuntimeAdmin<any>(window.meltdownEmit, window.ADMIN_TOKEN, 'navigation', 'tree', { locationKey, status: 'active' });
+    return normalizeNavigationItems(Array.isArray(payload?.tree) ? payload.tree : []);
+  }
   if (typeof fetch !== 'function') {
     throw new Error('BP_WIDGET_NAVIGATION_FETCH_UNAVAILABLE');
   }
@@ -179,10 +230,10 @@ async function loadNavigationItems(locationKey: string): Promise<NavigationItem[
 
 export async function render(el: HTMLElement | null, ctx: PublicWidgetContext = {}): Promise<void> {
   if (!el) return;
-  const settings = widgetSettings(ctx, {
-    locationKey: 'primary',
-    orientation: 'horizontal'
-  });
+  const request = {};
+  renderRequests.set(el, request);
+  const raw = widgetSettings(ctx);
+  const settings = { ...raw, ...navigationSettings('navigationMenu', raw) };
   const fallbackItems = normalizeNavigationItems(readArray(settings, ['items', 'links']));
   let items = fallbackItems;
 
@@ -190,6 +241,7 @@ export async function render(el: HTMLElement | null, ctx: PublicWidgetContext = 
     try {
       items = await loadNavigationItems(readString(settings, ['locationKey', 'location'], 'primary'));
     } catch (err) {
+      if (renderRequests.get(el) !== request) return;
       renderWidgetMessage(
         el,
         'BP_WIDGET_NAVIGATION_LOAD_FAILED',
@@ -200,6 +252,8 @@ export async function render(el: HTMLElement | null, ctx: PublicWidgetContext = 
     }
   }
 
+  if (renderRequests.get(el) !== request) return;
+
   if (!items.length) {
     renderWidgetMessage(el, 'BP_WIDGET_NAVIGATION_EMPTY', 'Navigation empty', 'Add active navigation items.');
     return;
@@ -209,6 +263,28 @@ export async function render(el: HTMLElement | null, ctx: PublicWidgetContext = 
   const orientation = readString(settings, ['orientation', 'direction'], 'horizontal');
   nav.className = `bp-public-widget bp-navigation-widget bp-navigation-widget--${orientation === 'vertical' ? 'vertical' : 'horizontal'}`;
   nav.setAttribute('aria-label', readString(settings, ['ariaLabel', 'label'], 'Navigation'));
-  nav.appendChild(renderList(items, Math.max(1, Math.min(4, readNumber(settings, ['maxDepth'], 2)))));
+  nav.dataset.appearance = String(settings.appearance);
+  nav.dataset.mobileCollapse = String(settings.mobileCollapse);
+  nav.dataset.mobileOpen = 'false';
+  applyNavigationStyle(nav, settings);
+  const mobileToggle = document.createElement('button');
+  mobileToggle.type = 'button';
+  mobileToggle.className = 'bp-navigation-widget__mobile-toggle';
+  mobileToggle.textContent = String(settings.mobileLabel);
+  mobileToggle.setAttribute('aria-expanded', 'false');
+  const list = renderList(items, readNumber(settings, ['maxDepth'], 3), settings.submenu === 'expanded');
+  list.id = `bp-navigation-list-${++disclosureSequence}`;
+  mobileToggle.setAttribute('aria-controls', list.id);
+  mobileToggle.addEventListener('click', () => {
+    const open = nav.dataset.mobileOpen !== 'true';
+    nav.dataset.mobileOpen = String(open);
+    mobileToggle.setAttribute('aria-expanded', String(open));
+  });
+  nav.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && nav.dataset.mobileOpen === 'true') {
+      nav.dataset.mobileOpen = 'false'; mobileToggle.setAttribute('aria-expanded', 'false'); mobileToggle.focus();
+    }
+  });
+  nav.append(mobileToggle, list);
   el.replaceChildren(sharedStyle(), navigationStyle(), nav);
 }

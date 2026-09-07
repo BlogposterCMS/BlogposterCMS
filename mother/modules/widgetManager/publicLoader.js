@@ -1,6 +1,6 @@
 import { PUBLIC_CANVAS_STYLE_ID, PUBLIC_CANVAS_CSS, publicCanvasStyle, publicItemStyle, publicPlacement } from '/ui/shared/layout/publicCanvasPresentation.js';
 // The loader is fetched as browser ESM rather than bundled server code.
-import { emitRuntimePublic } from '/ui/shared/api-client/runtimeFacade.js';
+import { emitRuntimePublic, RUNTIME_PUBLIC_REQUEST_EVENT } from '/ui/shared/api-client/runtimeFacade.js';
 import { executeJs } from '/ui/runtime/main/script-utils.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
 const PUBLIC_WIDGETS_READY_EVENT = 'bp:public-widgets-ready';
@@ -52,6 +52,8 @@ function normalizePublicWidgetLayout(value) {
             rows: toNumber(grid.rows, 0)
         },
         items: items.filter(isRecord),
+        ...(isRecord(value.document) ? { document: { layoutTree: value.document.layoutTree } } : {}),
+        ...(isRecord(value.styles) ? { styles: value.styles } : {}),
         layoutRef: typeof value.layoutRef === 'string' ? value.layoutRef : undefined
     };
 }
@@ -126,11 +128,58 @@ function createInstanceId(item) {
 async function loadWidgets(descriptor = {}, ctx = {}) {
     const layout = resolveWidgetLayout(descriptor, ctx);
     const root = document.getElementById('app') || document.body;
+    if (layout.document?.layoutTree) {
+        // Reuse the Designer/preview structural renderer. This is the same document
+        // and public facade, not a second public composition implementation.
+        const [{ renderRuntimeDesignDocument, getRuntimeDesignDocument, getRuntimeDesignContentMount }, { normalizeRuntimeDesignWidget }, registry] = await Promise.all([
+            import(/* webpackIgnore: true */ '/ui/runtime/main/runtimeDesignDocument.js'),
+            import(/* webpackIgnore: true */ '/ui/runtime/main/runtimeDesignLayouts.js'),
+            emitPublicRuntime(ctx, 'widgets', 'list')
+        ]);
+        root.querySelector('#bp-grid[data-bp-initial-layout="true"]')?.remove();
+        const shell = document.createElement('div');
+        shell.id = 'bp-grid';
+        if (layout.styles?.background)
+            shell.style.background = layout.styles.background;
+        root.append(shell);
+        const byId = new Map(registry.map(def => [String(def.widgetId), def]));
+        const placements = (layout.items || []).map(item => {
+            const fallback = parseWidgetCode(byId.get(String(item.widgetId))?.content);
+            return normalizeRuntimeDesignWidget({ ...fallback, ...item });
+        }).filter(Boolean);
+        const definitions = registry.map(def => ({ ...def, id: String(def.widgetId || ''),
+            codeUrl: isSafeWidgetModulePath(def.content) ? def.content : undefined }));
+        const publicEmit = async (event, payload = {}) => {
+            if (event !== RUNTIME_PUBLIC_REQUEST_EVENT)
+                throw new Error('WIDGET_PUBLIC_EVENT_DENIED: Only the public facade is available.');
+            return ctx.meltdownEmit(event, { ...payload, jwt: ctx.publicToken });
+        };
+        try {
+            await renderRuntimeDesignDocument(shell, getRuntimeDesignDocument({ ...layout.document, placements }), definitions, 'public', {
+                emit: publicEmit, widgetEmit: publicEmit,
+                contentDesignId: ctx.contentDesignId,
+                initialPageHtml: ctx.expectsPageContent && ctx.initialHtml?.id === 'bp-initial-html' ? ctx.initialHtml : null,
+                designPath: layout.layoutRef ? [layout.layoutRef.replace(/^layout:/, '').replace(/@.*$/, '')] : []
+            });
+        }
+        catch (error) {
+            console.warn('RUNTIME_PAGE_COMPOSITION_FAILED: Keeping page content available.', error);
+            ctx.layoutCompositionFailed = true;
+        }
+        const host = getRuntimeDesignContentMount(shell);
+        ctx.pageContentHost = host.dataset.dynamicHost === 'true' ? host : null;
+        if (ctx.requiresContentSlot && !ctx.pageContentHost) {
+            console.warn('RUNTIME_PAGE_CONTENT_SLOT_MISSING: Keeping the page body outside the incomplete design.');
+            ctx.layoutCompositionFailed = true;
+        }
+        markPublicWidgetsReady(layout, placements.length);
+        return;
+    }
     // Raw HTML is the complete fallback presentation when no widget placements
     // exist. Appending the default 100vh canvas here would add a blank page after
     // otherwise complete imported or hand-authored content.
     const hasHtmlPage = ctx.hasPageHtmlContent === true || Boolean(root.querySelector('.bp-page-html'));
-    if ((layout.items || []).length === 0 && hasHtmlPage) {
+    if ((layout.items || []).length === 0 && (hasHtmlPage || ctx.expectsPageContent)) {
         markPublicWidgetsReady(layout, 0);
         return;
     }

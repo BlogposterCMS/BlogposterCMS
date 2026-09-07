@@ -3284,6 +3284,30 @@ body.builder-mode .canvas-item:hover {
   display: none;
 }
 
+.site-preset-json {
+  min-width: 0;
+  border-top: 1px solid var(--scene-border);
+  padding-top: 12px;
+}
+.site-preset-json summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--scene-text);
+  margin-bottom: 10px;
+}
+.site-preset-json textarea {
+  width: 100%;
+  min-height: 160px;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid var(--scene-border);
+  border-radius: 10px;
+  background: var(--scene-surface-soft);
+  color: var(--scene-text);
+  font: 11px/1.6 ui-monospace, monospace;
+}
+
 @media (max-width: 720px) {
   .scene-panel-shell[data-active-sidebar-panel=design],
   .scene-panel-shell[data-active-sidebar-panel=layout] {
@@ -4441,6 +4465,16 @@ body[data-active-layer="0"] .layout-container[data-workarea=true]::after {
 .container-actionbar button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
+}
+.container-actionbar .bar-host {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
 }
 .container-actionbar .bar-field {
   height: 26px;

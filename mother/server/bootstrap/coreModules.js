@@ -3,6 +3,7 @@
 function coreModulesForApp({ app, authModuleSecret }) {
   return [
     { name: 'databaseManager', path: 'mother/modules/databaseManager', extra: { app } },
+    { name: 'updater', path: 'mother/modules/updater', extra: {} },
     { name: 'notificationManager', path: 'mother/modules/notificationManager', extra: { app } },
     { name: 'settingsManager', path: 'mother/modules/settingsManager', extra: {} },
     { name: 'colorLibrary', path: 'mother/modules/colorLibrary', extra: {} },

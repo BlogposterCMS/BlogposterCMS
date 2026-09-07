@@ -25,6 +25,7 @@ jest.mock('../ui/runtime/main/runtimeAttachedContent', () => ({
 }));
 
 jest.mock('../ui/runtime/main/runtimePageData', () => ({
+  fetchRuntimePublicSettings: jest.fn().mockResolvedValue({}),
   fetchRuntimeChildPages: jest.fn(),
   fetchRuntimeDesign: jest.fn(),
   fetchRuntimePageById: jest.fn(),
@@ -294,7 +295,8 @@ describe('runtimePageComposition', () => {
         layout: {
           type: 'leaf',
           nodeId: 'collection-workarea',
-          workarea: true
+          workarea: true,
+          isDynamicHost: true
         }
       },
       widgets: []
@@ -305,7 +307,7 @@ describe('runtimePageComposition', () => {
         id: 'child-page',
         parentId: 'collection',
         html: '<article><h1>Nivea</h1><script>bad()</script></article>',
-        meta: {}
+        meta: { inheritParentDesign: true }
       },
       contentEl,
       globalLayout: [],

@@ -200,10 +200,6 @@ export function detachHtmlMeta(page: PageRecord): PageMeta {
 
 export function attachHtmlMeta(page: PageRecord, htmlFileName: string): PageMeta {
   const newMeta: PageMeta = { ...(page.meta || {}), htmlFileName };
-  delete newMeta.layoutTemplate;
-  delete newMeta.designId;
-  delete newMeta.designTitle;
-  delete newMeta.designThumbnail;
   return newMeta;
 }
 

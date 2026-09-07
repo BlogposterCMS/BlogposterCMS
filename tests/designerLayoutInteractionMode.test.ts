@@ -168,4 +168,50 @@ describe('Designer layout surface interaction modes', () => {
 
     expect(layoutWidgetSelectionTarget({ target: content }, 1)).toBeNull();
   });
+
+  it.each([false, true])('selects authored links without navigating while editing (shadow: %s)', shadow => {
+    const { surface, widget } = surfaceWithWidget('stack', '1');
+    const content = shadow ? widget.attachShadow({ mode: 'open' }) : widget;
+    const link = document.createElement('a');
+    link.href = '/docs-demo';
+    content.appendChild(link);
+    document.body.appendChild(surface);
+    const onSelect = jest.fn();
+    let preview = false;
+    const unbind = bindLayoutWidgetSelection({
+      layoutRoot: surface,
+      getActiveLayer: () => 1,
+      isDisabled: () => preview,
+      onSelect
+    });
+    link.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, composed: true }));
+    const click = () => {
+      const event = new MouseEvent('click', { bubbles: true, composed: true, cancelable: true });
+      link.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(onSelect).toHaveBeenCalledWith(widget, expect.any(MouseEvent));
+    expect(click()).toBe(true);
+    // Preview and teardown restore ordinary navigation through the same links.
+    preview = true;
+    expect(click()).toBe(false);
+    preview = false;
+    unbind();
+    expect(click()).toBe(false);
+  });
+
+  it('preserves submenu button actions while editing', () => {
+    const { surface, widget } = surfaceWithWidget('stack', '1');
+    const button = document.createElement('button');
+    widget.appendChild(button);
+    document.body.appendChild(surface);
+    const onClick = jest.fn();
+    button.addEventListener('click', onClick);
+    const unbind = bindLayoutWidgetSelection({ layoutRoot: surface, getActiveLayer: () => 1, onSelect: jest.fn() });
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+    button.dispatchEvent(event);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(false);
+    unbind();
+  });
 });

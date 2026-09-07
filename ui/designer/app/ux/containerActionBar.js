@@ -158,7 +158,8 @@ export function attachContainerBar(el, ctx) {
   });
   modeBtn.dataset.containerMode = visibleMode(el);
   modeBtn.classList.add('active');
-  const directionBtn = makeBtn('bar-auto-direction', 'arrow-right', 'Auto layout direction', () => {
+  const directionBtn = makeBtn('bar-auto-direction', currentMode(el) === 'row' ? 'arrow-right' : 'arrow-down',
+    `Auto layout: ${currentMode(el) === 'row' ? 'horizontal' : 'vertical'} · change direction`, () => {
     const horizontal = currentMode(el) !== 'row';
     el.dataset.layoutAutoDirection = horizontal ? 'horizontal' : 'vertical';
     actions.setContainerLayoutMode?.(el, horizontal ? 'row' : 'stack');
@@ -182,7 +183,9 @@ export function attachContainerBar(el, ctx) {
   const styleSourceBtn = isStyleFollower
     ? makeBtn('bar-style-source', 'unlink', 'Style linked · unlink', () => actions.unlinkContainerStyleSource?.(el))
     : null;
-  const hostBtn = makeBtn('bar-host', 'star', STRINGS.containerHost, () => actions.setDynamicHost?.(el));
+  const hostBtn = makeBtn('bar-host', 'panel-top', STRINGS.containerHost, () => actions.setDynamicHost?.(el.dataset.dynamicHost === 'true' ? null : el));
+  hostBtn.append(document.createTextNode(' Content area'));
+  hostBtn.setAttribute('aria-pressed', String(el.dataset.dynamicHost === 'true'));
   const designBtn = makeBtn('bar-design', 'file', STRINGS.containerDesign, () => {
     const id = typeof window !== 'undefined' && typeof window.prompt === 'function'
       ? window.prompt(STRINGS.containerDesignPrompt)

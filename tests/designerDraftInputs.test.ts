@@ -13,3 +13,14 @@ test('uncommitted inspector typing invalidates a Designer command before its cha
   expect(readDesignerDraftInputs()).toHaveLength(2);
   expect(JSON.stringify(readDesignerDraftInputs())).not.toContain('private');
 });
+
+test('pasted UI kit JSON and kit names participate in the same agent draft revision', async () => {
+  document.body.innerHTML = '<input data-ui-kit-draft value="Docs"><textarea data-ui-kit-draft>{}</textarea>';
+  const guard = createWorkspaceCommandGuard(() => ({ dirty: false, busy: false, draftInputs: readDesignerDraftInputs() }));
+  const revision = guard.snapshot().stateRevision;
+  document.querySelector('textarea')!.value = '{"name":"Human draft"}';
+  const run = jest.fn();
+  await expect(guard.execute({ action: 'sitePresets.import', params: { expectedRevision: revision } }, [{ action: 'sitePresets.import', run }]))
+    .rejects.toThrow('CMS_AGENT_STATE_CHANGED');
+  expect(run).not.toHaveBeenCalled();
+});

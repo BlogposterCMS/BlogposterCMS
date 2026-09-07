@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# One supported server setup: existing deployments keep their secrets and data.
+origin='' network='blogposter-proxy'
+while (($#)); do
+  case "$1" in
+    --origin) origin="${2:-}"; shift ;;
+    --proxy-network) network="${2:-}"; shift ;;
+    *) echo 'CORE_INSTALL_ARGUMENT_INVALID: use --origin https://cms.example.com [--proxy-network NAME]'; exit 1 ;;
+  esac
+  shift
+done
+[[ "$(id -u)" == 0 ]] || { echo 'CORE_INSTALL_ROOT_REQUIRED'; exit 1; }
+for command in docker gh jq curl flock systemctl node install; do
+  command -v "$command" >/dev/null || { echo "CORE_INSTALL_PREREQUISITE_MISSING: $command"; exit 1; }
+done
+[[ -x /usr/bin/node ]] && /usr/bin/node -e 'if(+process.versions.node.split(".")[0]<24)process.exit(1)' || {
+  echo 'CORE_INSTALL_NODE_REQUIRED: Node.js 24+ at /usr/bin/node'; exit 1;
+}
+docker compose version >/dev/null
+docker info >/dev/null
+[[ ! -L /opt/blogposter ]] || { echo 'CORE_INSTALL_DIRECTORY_INVALID'; exit 1; }
+asset_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+stage="$(mktemp -d)"
+trap 'rm -rf -- "$stage"' EXIT
+chmod 0700 "$stage"
+# Copy to private root-owned staging before verifying, preventing source mutation
+# between signature verification and privileged execution.
+assets=(install-update-agent create-install-config.js update-agent.js blogposter-update
+  blogposter-update-agent.service blogposter-updates.compose.yml blogposter.compose.yml blogposter-updater.conf.example)
+for asset in "${assets[@]}" blogposter-update.json blogposter-update.bundle.json update-control.bundle.json; do
+  install -m 0600 "$asset_dir/$asset" "$stage/$asset"
+done
+for asset in "${assets[@]}"; do
+  gh attestation verify "$stage/$asset" --bundle "$stage/update-control.bundle.json" \
+    --repo BlogposterCMS/BlogposterCMS \
+    --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml \
+    --deny-self-hosted-runners >/dev/null || { echo "CORE_INSTALL_ASSET_ATTESTATION_INVALID: $asset"; exit 1; }
+done
+if [[ -f /opt/blogposter/updater.conf ]]; then
+  [[ -z "$origin" ]] || { echo 'CORE_INSTALL_EXISTING: omit --origin to connect the existing deployment'; exit 1; }
+  bash "$stage/install-update-agent"
+else
+  [[ -n "$origin" ]] || { echo 'CORE_INSTALL_ORIGIN_REQUIRED: --origin https://cms.example.com'; exit 1; }
+  # Trust the image manifest before creating any installation configuration.
+  version="$(jq -er '.version | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"))' "$stage/blogposter-update.json")"
+  commit="$(jq -er '.source.commit | select(test("^[a-f0-9]{40}$"))' "$stage/blogposter-update.json")"
+  gh attestation verify "$stage/blogposter-update.json" --bundle "$stage/blogposter-update.bundle.json" \
+    --repo BlogposterCMS/BlogposterCMS --source-ref "refs/tags/v${version}" --source-digest "$commit" \
+    --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml --deny-self-hosted-runners >/dev/null || {
+    echo 'CORE_INSTALL_MANIFEST_ATTESTATION_INVALID'; exit 1;
+  }
+  source "$stage/blogposter-update"
+  MANIFEST_FILE="$stage/blogposter-update.json"
+  image="$(manifest_value '.image.reference')"
+  verify_image_trust "$image" BlogposterCMS/BlogposterCMS "$version" "$commit"
+  node "$stage/create-install-config.js" "$origin" "$network"
+  load_config /opt/blogposter/updater.conf
+  write_release_image "$image"
+  docker network inspect "$network" >/dev/null 2>&1 || docker network create "$network" >/dev/null
+  bash "$stage/install-update-agent"
+  prepare_environment
+  verify_running_version "$version" || fail 'CORE_INSTALL_VERSION_MISMATCH' 'Running image does not match the verified release.'
+  echo "CORE_INSTALL_COMPLETE: connect your HTTPS proxy to blogposter:3000 on $network and open $origin/install"
+fi

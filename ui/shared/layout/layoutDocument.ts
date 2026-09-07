@@ -69,6 +69,15 @@ export interface LayoutSplitNode extends LayoutNodeBase {
 
 export type LayoutNode = LayoutLeafNode | LayoutSplitNode;
 
+/** Slots belong to this document only; linked designs have independent content ownership. */
+export function pageContentHostIds(tree: LayoutNode | null): string[] {
+  if (!tree) return [];
+  return [
+    ...(tree.isDynamicHost ? [tree.nodeId || 'root'] : []),
+    ...(tree.type === 'split' ? tree.children.flatMap(pageContentHostIds) : [])
+  ];
+}
+
 export interface WidgetPlacement {
   id?: string;
   widgetId?: string;

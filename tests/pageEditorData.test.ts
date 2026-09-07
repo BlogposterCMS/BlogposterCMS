@@ -7,6 +7,7 @@ import {
   buildPageUpdatePayload,
   clearPageEditorCache,
   errorMessage,
+  loadPageEditorPage,
 
   savePageEditorPage,
   toPage,
@@ -46,6 +47,25 @@ const values = {
 };
 
 describe('pageEditorData', () => {
+  it('loads the explicit SPA editor id instead of the initial shell page', async () => {
+    const load = jest.fn().mockResolvedValue(page);
+    const initial = Promise.resolve({ id: 'wrong-shell-page' });
+    await expect(loadPageEditorPage(undefined, null, '/admin/pages/edit/page-1', 'admin', initial, { load }))
+      .resolves.toEqual(page);
+    expect(load).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({ params: { pageId: 'page-1' } }));
+    load.mockResolvedValue({ id: 'wrong-shell-page' });
+    await expect(loadPageEditorPage(undefined, null, '/admin/pages/edit/page-1', 'admin', initial, { load }))
+      .rejects.toThrow('PAGE_EDITOR_PAGE_MISMATCH');
+  });
+
+  it('rejects invalid route ids before requesting or displaying another record', async () => {
+    const load = jest.fn();
+    for (const id of ['%ZZ', 'one/two', '%2F']) {
+      await expect(loadPageEditorPage(undefined, null, `/admin/pages/edit/${id}`, 'admin', undefined, { load }))
+        .rejects.toThrow('PAGE_EDITOR_ID_INVALID');
+    }
+    expect(load).not.toHaveBeenCalled();
+  });
   it('normalizes pages, templates, and primitive values', () => {
     expect(toPage({ id: '1' })).toEqual({ id: '1' });
     expect(toPage(null)).toBeNull();

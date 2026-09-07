@@ -2,7 +2,7 @@
  * Read those existing fields as part of the revision, without owning or writing them.
  */
 export function readDesignerDraftInputs(root: ParentNode = document) {
-  const selector = '#layoutNameInput, #sceneInspector input, #sceneInspector textarea, #sceneInspector select, .scene-section-title-input';
+  const selector = '#layoutNameInput, #sceneInspector input, #sceneInspector textarea, #sceneInspector select, .scene-section-title-input, [data-ui-kit-draft]';
   return Array.from(root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector))
     .filter(input => !['password', 'file', 'hidden'].includes(input.type))
     .map((input, index) => ({

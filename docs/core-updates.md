@@ -37,14 +37,14 @@ must not be relabelled as compatible merely to pass the workflow.
 ### In-app control (Linux systemd hosts)
 
 The existing `/admin/settings/updates` now contains Blogposter core updates
-alongside module updates. The host agent checks at startup and every six hours;
+alongside module updates. The core Updater module checks at startup and every six hours;
 the Notification Center displays one current release notice to administrators
 with `settings.core.edit`. Checks do not install or restart automatically.
 The UI submits the exact reviewed version/digest, follows host progress across
 the CMS restart, and reports success, rollback or required operator recovery.
 
-Provision once as part of a managed installation (or migrate existing hosts
-once). End users need no shell commands for subsequent CMS updates. The host
+Use the [combined server installation](server-installation.md) for a new server
+or to connect an existing host. End users need no shell commands for subsequent CMS updates. The host
 needs Node.js 24+ at `/usr/bin/node`, systemd and the existing updater prerequisites.
 Download a single release's `install-update-agent`, `update-agent.js`,
 `blogposter-update`, `blogposter-update-agent.service`,

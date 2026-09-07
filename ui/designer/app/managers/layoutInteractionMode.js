@@ -82,6 +82,18 @@ export function bindLayoutWidgetSelection({
     const widget = layoutWidgetSelectionTarget(event, getActiveLayer());
     if (widget) onSelect(widget, event);
   };
+  const handleLinkClick = event => {
+    if (isDisabled() || !layoutWidgetSelectionTarget(event, getActiveLayer())) return;
+    // Authored links remain selectable in Studio; Preview owns actual navigation.
+    // composedPath also covers links inside a widget's ShadowRoot.
+    if (event.composedPath().some(node => node instanceof Element && node.matches('a[href]'))) {
+      event.preventDefault();
+    }
+  };
   layoutRoot.addEventListener('pointerdown', handlePointerDown, true);
-  return () => layoutRoot.removeEventListener('pointerdown', handlePointerDown, true);
+  layoutRoot.addEventListener('click', handleLinkClick, true);
+  return () => {
+    layoutRoot.removeEventListener('pointerdown', handlePointerDown, true);
+    layoutRoot.removeEventListener('click', handleLinkClick, true);
+  };
 }

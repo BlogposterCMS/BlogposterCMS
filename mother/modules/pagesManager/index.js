@@ -3,6 +3,7 @@
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+const { ownPagePresentation, resolvePagePresentation, validatePageDesignMode, pageLayoutMode, SITE_MAIN_DESIGN_SETTING } = require('../../../ui/shared/layout/pagePresentation.js');
 
 /**
  * mother/modules/pagesManager/index.js
@@ -90,17 +91,10 @@ function normalizeLayoutRef(value) {
 }
 
 function designLayoutForPage(page = {}) {
-  const meta = parsePageMeta(page.meta);
-  const explicitLayoutRef = normalizeLayoutRef(meta.design_layout || meta.designLayout);
-  if (explicitLayoutRef) return { layoutRef: explicitLayoutRef, hasLinkedDesign: true };
-
-  const designId = normalizeDesignId(meta.designId || meta.design_id);
-  if (designId) return { layoutRef: `layout:${designId}@v1`, hasLinkedDesign: true };
-
+  const own = ownPagePresentation(page);
   return {
-    // A page slug is not a Designer id. Unlinked HTML needs no layout lookup.
-    layoutRef: undefined,
-    hasLinkedDesign: false
+    layoutRef: own?.layoutRef,
+    hasLinkedDesign: Boolean(own?.layoutRef)
   };
 }
 
@@ -151,6 +145,7 @@ async function mirrorPageTrashToContentEngine(motherEmitter, action, pageData) {
 
 module.exports = {
   _internals: {
+    setupPagesManagerEvents,
     designLayoutForPage,
     normalizeDesignId,
     normalizeLayoutRef,
@@ -303,6 +298,7 @@ function setupPagesManagerEvents(motherEmitter) {
     if (decodedJWT && !hasPermission(decodedJWT, 'pages.create')) {
       return callback(new Error('Forbidden – missing permission: pages.create'));
     }
+    try { validatePageDesignMode({ meta }); } catch (error) { return callback(error); }
   
     const mainTitle = rawTitle.trim() || (translations[0]?.title ?? '').trim();
     if (!mainTitle) {
@@ -494,7 +490,7 @@ function setupPagesManagerEvents(motherEmitter) {
   motherEmitter.on(BACKEND_EVENTS.GET_PAGE_BY_ID, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
-      const { jwt, moduleName, moduleType, pageId } = payload || {};
+      const { jwt, moduleName, moduleType, pageId, language = 'en' } = payload || {};
       if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {
         return callback(new Error('[pagesManager] getPageById => invalid meltdown payload.'));
       }
@@ -515,7 +511,7 @@ function setupPagesManagerEvents(motherEmitter) {
             rawSQL: 'GET_PAGE_BY_ID',
             // pass the pageId and optional language param
             0: pageId,
-            1: 'en'
+            1: language
           }
         }).then(async result => {
   clearTimeout(to);
@@ -690,10 +686,23 @@ function setupPagesManagerEvents(motherEmitter) {
     return null;
   });
   const seo = resolvedSeo?.seo || pageSeo;
-  const {
-    layoutRef,
-    hasLinkedDesign
-  } = designLayoutForPage(page);
+  const usesMain = ['main', 'composed', 'inherit'].includes(pageLayoutMode(page));
+  const settings = usesMain ? await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PUBLIC_SETTINGS, {
+    jwt, moduleName: 'settingsManager', moduleType: 'core', keys: [SITE_MAIN_DESIGN_SETTING]
+  }) : {};
+  // The site default is independent of URL hierarchy. Explicit legacy parent
+  // assignments remain readable, without copying a design onto descendants.
+  const presentation = await resolvePagePresentation(page, async pageId => {
+    const parent = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_ID, {
+      jwt, moduleName: 'pagesManager', moduleType: 'core', pageId, language
+    });
+    return Array.isArray(parent) ? parent[0] || null : Array.isArray(parent?.rows) ? parent.rows[0] || null : parent || null;
+  }, { publicOnly: true, mainDesignId: settings?.[SITE_MAIN_DESIGN_SETTING] }).catch(error => {
+    console.warn('PAGE_LAYOUT_RESOLVE_FAILED: Rendering the page content fallback.', error.message);
+    return null;
+  });
+  const layoutRef = presentation?.layoutRef;
+  const hasLinkedDesign = Boolean(layoutRef);
   const envelope = {
     id: page.id,
     slug: page.slug,
@@ -705,7 +714,12 @@ function setupPagesManagerEvents(motherEmitter) {
       seoKeywords: seo.keywords || '',
       seoImage: seo.ogImage || '',
       canonicalUrl: seo.canonicalUrl || '',
-      robots: seo.robots || 'index,follow'
+      robots: seo.robots || 'index,follow',
+      presentation: presentation ? {
+        designId: presentation.designId, sourcePageId: presentation.sourcePage.id,
+        sourcePageTitle: presentation.sourcePage.title, inherited: presentation.inherited,
+        source: presentation.source, contentDesignId: presentation.contentDesignId
+      } : null
     },
     attachments: [{
       type: 'design',
@@ -713,6 +727,9 @@ function setupPagesManagerEvents(motherEmitter) {
       descriptor: {
         engine: 'grid-v2',
         css: ['/assets/css/runtime.css'],
+        hasPageContent: Boolean(page.html),
+        contentLayoutRef: presentation?.contentLayoutRef,
+        requiresContentSlot: presentation?.source === 'site',
         layoutRef
       },
       priority: 10,
@@ -724,14 +741,15 @@ function setupPagesManagerEvents(motherEmitter) {
       descriptor: {
         htmlRef: `pageHtml:${page.id}@v1`,
         fallbackOnly: hasLinkedDesign,
+        contentSlot: hasLinkedDesign,
         inline: {
           html: page.html || '',
           css: page.css || '',
           js: page.js || ''
         }
       },
-      priority: 20,
-      blocking: false
+      priority: 30,
+      blocking: true
     }, {
       type: 'widgets',
       source: 'widgetManager',
@@ -739,14 +757,12 @@ function setupPagesManagerEvents(motherEmitter) {
         registry: 'public',
         layoutRef
       },
-      priority: 30,
-      blocking: false
+      priority: 20,
+      blocking: true
     }]
   };
   cb(null, envelope);
-}, err => {
-  return cb(err);
-});
+}).catch(cb);
     } catch (e) {
       cb(e);
     }
@@ -807,6 +823,7 @@ function setupPagesManagerEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'pages.update')) {
         return callback(new Error('Forbidden – missing permission: pages.update'));
       }
+      if (hasMeta) validatePageDesignMode({ meta });
 
       const to = setTimeout(() => {
         callback(new Error('Timeout while updating page.'));

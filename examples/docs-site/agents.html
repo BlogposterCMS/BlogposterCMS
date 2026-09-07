@@ -1,0 +1,35 @@
+<article>
+  <div>
+    <header><h1>Working with agents</h1><p>People and agents work on the same pages and drafts. Clear responsibilities keep changes understandable.</p><small>Blogposter CMS · 3 min read</small></header>
+    <section>
+      <h2 id="shared-draft">One shared working state</h2>
+      <p>An agent should edit the same content and Designer objects that you see in the CMS. The existing AgentManager exposes current state, stable object IDs and supported actions.</p>
+      <blockquote><strong>Read first, then edit.</strong><p>The agent checks the current state and any unsaved changes before modifying a draft.</p></blockquote>
+    </section>
+    <section>
+      <h2 id="clear-request">Write a clear request</h2>
+      <p>Describe the goal, scope and checks you expect. A request for this example could be:</p>
+      <pre><code>Open the Introduction page in the Docs example.
+After the three steps, add a short explanation of the shared layout.
+
+Keep the header, chapter menu and page design unchanged.
+Show me the changes before saving.</code></pre>
+    </section>
+    <section>
+      <h2 id="review-save">Review and save deliberately</h2>
+      <ol>
+        <li><strong>Read the state:</strong> check the page, assigned design and open draft.</li>
+        <li><strong>Make a focused edit:</strong> update the article or the selected Designer object.</li>
+        <li><strong>Review the result:</strong> check content, navigation and appearance.</li>
+        <li><strong>Save:</strong> use the existing save action and verify its confirmation.</li>
+      </ol>
+    </section>
+    <section>
+      <h2 id="continue-together">Continue working together</h2>
+      <p>You can continue in the same page editor afterwards. These articles are ordinary CMS pages, and their shared frame is an editable Designer document.</p>
+      <p>For another copy, use <strong>Content → Pages → Import example</strong> and choose an unused root address. Agents can use the same importer through the Pages surface; importing does not publish content or replace existing pages.</p>
+    </section>
+    <footer><a href="/{{rootSlug}}/layouts">← Layouts &amp; pages</a><a href="/{{rootSlug}}">Back to introduction →</a></footer>
+  </div>
+  <aside><strong>On this page</strong><a href="#shared-draft">One shared working state</a><a href="#clear-request">Write a clear request</a><a href="#review-save">Review and save</a><a href="#continue-together">Continue together</a></aside>
+</article>

@@ -1289,6 +1289,7 @@ export interface DesignerGetLayoutPayload {
   "decodedJWT"?: null | JsonObject;
   "isExternalRequest"?: boolean;
   "jwt"?: null | string;
+  "layoutRef"?: JsonValue;
   "moduleName": string;
   "moduleType"?: null | string;
   "skipJWT"?: boolean;
@@ -1966,6 +1967,7 @@ export interface GetPageByIdPayload {
   "decodedJWT"?: null | JsonObject;
   "isExternalRequest"?: boolean;
   "jwt"?: null | string;
+  "language"?: JsonValue;
   "moduleName": string;
   "moduleType"?: null | string;
   "pageId"?: JsonValue;

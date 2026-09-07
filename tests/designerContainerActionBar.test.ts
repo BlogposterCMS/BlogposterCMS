@@ -26,6 +26,14 @@ describe('designer container action bar', () => {
 
     const toolbar = el.querySelector('.container-actionbar') as HTMLElement;
     expect(toolbar?.getAttribute('role')).toBe('toolbar');
+    const contentArea = toolbar.querySelector<HTMLButtonElement>('.bar-host')!;
+    expect(contentArea.textContent).toContain('Content area');
+    expect(contentArea.getAttribute('aria-pressed')).toBe('false');
+    contentArea.click();
+    expect(ctx.setDynamicHost).toHaveBeenLastCalledWith(el);
+    el.dataset.dynamicHost = 'true';
+    contentArea.click();
+    expect(ctx.setDynamicHost).toHaveBeenLastCalledWith(null);
 
     toolbar.querySelector<HTMLButtonElement>('.bar-add')?.click();
     expect(ctx.placeContainer).toHaveBeenCalledWith(el, 'auto');

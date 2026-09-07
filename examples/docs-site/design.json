@@ -1,0 +1,238 @@
+{
+  "title": "Docs Example · Shared Layout",
+  "description": "Shared header, chapter navigation, breadcrumb and footer with one page-content area.",
+  "layout": {
+    "type": "split",
+    "nodeId": "docs-demo-root",
+    "orientation": "horizontal",
+    "settings": {
+      "mode": "stack",
+      "gap": "0px"
+    },
+    "children": [
+      {
+        "type": "leaf",
+        "nodeId": "docs-demo-header",
+        "settings": {
+          "mode": "stack",
+          "overflow": "visible",
+          "minHeight": "76px"
+        },
+        "section": {
+          "id": "docs-demo-header",
+          "title": "Header"
+        }
+      },
+      {
+        "type": "split",
+        "nodeId": "docs-demo-body",
+        "orientation": "vertical",
+        "settings": {
+          "mode": "row",
+          "gap": "32px",
+          "padding": "32px",
+          "overflow": "visible"
+        },
+        "section": {
+          "id": "docs-demo-body",
+          "title": "Documentation"
+        },
+        "sizes": [
+          1,
+          4
+        ],
+        "children": [
+          {
+            "type": "leaf",
+            "nodeId": "docs-demo-sidebar",
+            "settings": {
+              "mode": "stack",
+              "overflow": "visible",
+              "maxWidth": "220px",
+              "minHeight": "450px"
+            }
+          },
+          {
+            "type": "split",
+            "nodeId": "docs-demo-content-column",
+            "orientation": "horizontal",
+            "settings": {
+              "mode": "stack",
+              "gap": "0px",
+              "overflow": "visible"
+            },
+            "children": [
+              {
+                "type": "leaf",
+                "nodeId": "docs-demo-breadcrumb",
+                "settings": {
+                  "mode": "stack",
+                  "overflow": "visible",
+                  "minHeight": "24px"
+                }
+              },
+              {
+                "type": "leaf",
+                "nodeId": "docs-demo-content",
+                "settings": {
+                  "mode": "stack",
+                  "overflow": "visible",
+                  "minHeight": "680px"
+                },
+                "isDynamicHost": true,
+                "workarea": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "leaf",
+        "nodeId": "docs-demo-footer",
+        "settings": {
+          "mode": "stack",
+          "overflow": "visible",
+          "minHeight": "80px"
+        },
+        "section": {
+          "id": "docs-demo-footer",
+          "title": "Footer"
+        }
+      }
+    ]
+  },
+  "widgets": [
+    {
+      "id": "docs-demo-header-widget",
+      "widgetId": "textBox",
+      "xPercent": 0,
+      "yPercent": 0,
+      "wPercent": 100,
+      "hPercent": 100,
+      "code": {
+        "html": "<header><a href=\"/{{rootSlug}}\"><b>◈</b><strong>Blogposter</strong><span>docs</span></a><nav><a href=\"/{{rootSlug}}\">Documentation</a><a href=\"/{{rootSlug}}/agents\">Agent guide</a></nav><a href=\"/{{rootSlug}}/layouts\">Build your docs <span>→</span></a></header>",
+        "css": ":host{display:block;color:var(--docs-fg,#18181b);font:14px/1.6 Inter,ui-sans-serif,system-ui,sans-serif}*{box-sizing:border-box}a{color:inherit;text-decoration:none}a:hover{color:var(--docs-accent,#5266d5)}a:focus-visible,button:focus-visible{outline:2px solid var(--docs-accent);outline-offset:4px}header{max-width:1216px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px;height:76px}header>a:first-child{display:flex;align-items:center;gap:10px;font-size:16px}b{font-size:28px;font-weight:400}strong{font-weight:650;letter-spacing:-.4px}span{color:var(--docs-muted)}nav{display:flex;gap:26px;font-size:13px}header>a:last-child{border:1px solid var(--docs-line);border-radius:8px;padding:7px 12px;font-size:12px}@media(max-width:700px){header{height:68px;gap:10px}nav{display:none}header>a:first-child{font-size:14px;gap:7px}header>a:last-child{font-size:11px}}",
+        "js": "",
+        "meta": {
+          "workareaId": "docs-demo-header",
+          "sceneId": "docs-demo-header",
+          "elementName": "Docs header",
+          "behavior": "scroll",
+          "responsivePlacement": {
+            "version": 1,
+            "base": {
+              "centerXPercent": 50,
+              "yPx": 0,
+              "widthPx": 1216,
+              "heightPx": 76,
+              "minWidthPx": 1,
+              "minHeightPx": 1
+            },
+            "rules": []
+          }
+        }
+      }
+    },
+    {
+      "id": "docs-demo-sidebar-widget",
+      "widgetId": "navigationMenu",
+      "xPercent": 0,
+      "yPercent": 0,
+      "wPercent": 100,
+      "hPercent": 100,
+      "code": {
+        "meta": {
+          "workareaId": "docs-demo-sidebar",
+          "sceneId": "docs-demo-body",
+          "elementName": "Docs sidebar",
+          "behavior": "scroll",
+          "responsivePlacement": {
+            "version": 1,
+            "base": {
+              "centerXPercent": 50,
+              "yPx": 0,
+              "widthPx": 220,
+              "heightPx": 220,
+              "minWidthPx": 1,
+              "minHeightPx": 1
+            },
+            "rules": []
+          },
+          "locationKey": "example-{{rootSlug}}",
+          "orientation": "vertical",
+          "mobileCollapse": true,
+          "mobileLabel": "Chapters",
+          "appearance": "soft",
+          "fontSize": 14,
+          "gap": 8,
+          "maxDepth": 3
+        }
+      }
+    },
+    {
+      "id": "docs-demo-breadcrumb-widget",
+      "widgetId": "breadcrumb",
+      "xPercent": 0,
+      "yPercent": 0,
+      "wPercent": 100,
+      "hPercent": 100,
+      "code": {
+        "meta": {
+          "workareaId": "docs-demo-breadcrumb",
+          "sceneId": "docs-demo-body",
+          "elementName": "Docs breadcrumb",
+          "behavior": "scroll",
+          "responsivePlacement": {
+            "version": 1,
+            "base": {
+              "centerXPercent": 50,
+              "yPx": 0,
+              "widthPx": 1216,
+              "heightPx": 28,
+              "minWidthPx": 1,
+              "minHeightPx": 1
+            },
+            "rules": []
+          },
+          "source": "pages",
+          "homeLabel": "Documentation",
+          "homeHref": "/{{rootSlug}}",
+          "separator": "›",
+          "previewPath": "/{{rootSlug}}/layouts",
+          "fontSize": 12,
+          "gap": 8
+        }
+      }
+    },
+    {
+      "id": "docs-demo-footer-widget",
+      "widgetId": "textBox",
+      "xPercent": 0,
+      "yPercent": 0,
+      "wPercent": 100,
+      "hPercent": 100,
+      "code": {
+        "html": "<footer><span>◈ <strong>Blogposter Docs</strong></span><span>Design together. Document clearly.</span><a href=\"/{{rootSlug}}\">Back to introduction ↑</a></footer>",
+        "css": ":host{display:block;color:var(--docs-fg,#18181b);font:14px/1.6 Inter,ui-sans-serif,system-ui,sans-serif}*{box-sizing:border-box}a{color:inherit;text-decoration:none}a:hover{color:var(--docs-accent,#5266d5)}a:focus-visible,button:focus-visible{outline:2px solid var(--docs-accent);outline-offset:4px}footer{max-width:1216px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:26px 0;font-size:11px;color:var(--docs-muted)}strong{font-weight:550}a{white-space:nowrap}@media(max-width:700px){footer{flex-wrap:wrap;gap:12px}footer>span:nth-child(2){display:none}}",
+        "meta": {
+          "workareaId": "docs-demo-footer",
+          "sceneId": "docs-demo-footer",
+          "elementName": "Docs footer",
+          "behavior": "scroll",
+          "responsivePlacement": {
+            "version": 1,
+            "base": {
+              "centerXPercent": 50,
+              "yPx": 0,
+              "widthPx": 1216,
+              "heightPx": 80,
+              "minWidthPx": 1,
+              "minHeightPx": 1
+            },
+            "rules": []
+          }
+        }
+      }
+    }
+  ]
+}

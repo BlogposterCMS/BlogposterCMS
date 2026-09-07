@@ -11,6 +11,13 @@ jest.mock('/ui/runtime/main/canvasGrid.js', () => ({
 }));
 
 describe('designer scene metadata', () => {
+  it('excludes inspector controls before canvas background hit testing', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../ui/designer/app/builderRenderer.ts'), 'utf8');
+    const capture = source.slice(source.indexOf('const captureBackgroundIntent = e =>'));
+    const inspectorGuard = capture.indexOf("if (e.target.closest('.scene-inspector')) return;");
+    expect(inspectorGuard).toBeGreaterThan(0);
+    expect(inspectorGuard).toBeLessThan(capture.indexOf('const hitWorkspace ='));
+  });
   it('hydrates saved Section ids before the first navigation reconciliation', () => {
     const source = fs.readFileSync(path.join(__dirname, '../ui/designer/app/builderRenderer.ts'), 'utf8');
     const deserialize = source.indexOf('deserializeLayout(obj, layoutRoot)');

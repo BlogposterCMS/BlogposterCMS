@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-07
+
+BlogposterCMS remains in early development. "Stable" identifies the regular
+update channel; it does not claim production maturity or freedom from defects.
+
+- Promoted the complete 0.10.0 release-candidate series to the stable update
+  channel. Application code is unchanged from 0.10.0-rc.3.
+- Includes the Designer and shared UI improvements, container/layout controls,
+  page design previews, Analytics and dashboard workflows documented below.
+- Includes public HTML attachment compression/compact handoff, viewport-first
+  widget hydration and Admin startup improvements, with local measurements and
+  their production limits documented in the startup guides.
+- Includes the core Update Center and combined server/updater setup from the
+  earlier candidates. Configured installations discover this stable release;
+  installation remains an explicit administrator action.
+- Release artifacts include the signed container image, runtime integrity
+  baseline, updater manifest, installer assets and transport checksums.
+
 ## [0.10.0-rc.3] - 2026-09-07
 
 - Reduced public HTML attachment transfer by referencing already rendered HTML

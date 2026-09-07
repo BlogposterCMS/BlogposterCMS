@@ -8,6 +8,39 @@ const {
 const rootDir = path.resolve(__dirname, '..');
 const updaterPath = path.join(rootDir, 'deploy', 'blogposter-update');
 
+test.each([
+  ['success', 0, ''],
+  ['download-failure', 1, 'CORE_UPDATE_IMAGE_BUNDLE_DOWNLOAD_FAILED'],
+  ['invalid-proof', 1, 'CORE_UPDATE_ATTESTATION_INVALID']
+])('anonymous image proof verification fails closed: %s', (scenario, status, errorCode) => {
+  // Exercise the real shell boundary with no credential environment. Only the
+  // external transport/verifier are substituted; their policy arguments remain
+  // mandatory and a failed download must never reach the verifier.
+  const script = [
+    'source deploy/blogposter-update',
+    'unset GH_TOKEN GITHUB_TOKEN',
+    `scenario='${scenario}'`,
+    'curl() {',
+    '  [[ "$*" == *"--max-time 90"* && "$*" == *"--max-filesize 2097152"* ]] || return 90',
+    '  [[ "${!#}" == "https://github.com/BlogposterCMS/BlogposterCMS/releases/download/v0.10.1/blogposter-image.bundle.json" ]] || return 91',
+    '  [[ "$scenario" != download-failure ]] || return 22',
+    '}',
+    'gh() {',
+    '  [[ "$scenario" != download-failure ]] || { echo UNEXPECTED_VERIFIER >&2; return 92; }',
+    '  [[ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]] || return 93',
+    '  [[ "$*" == *"--bundle "* && "$*" == *"--repo BlogposterCMS/BlogposterCMS"* ]] || return 94',
+    '  [[ "$*" == *"--signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml"* ]] || return 95',
+    '  [[ "$*" == *"--source-ref refs/tags/v0.10.1"* && "$*" == *"--source-digest trusted-commit"* && "$*" == *"--deny-self-hosted-runners"* ]] || return 96',
+    '  [[ "$scenario" != invalid-proof ]] || return 1',
+    '}',
+    `verify_image_trust 'ghcr.io/blogpostercms/blogpostercms@sha256:${'a'.repeat(64)}' BlogposterCMS/BlogposterCMS 0.10.1 trusted-commit`
+  ].join('\n');
+  const result = spawnSync('bash', ['-s'], { cwd: rootDir, encoding: 'utf8', input: script });
+  expect(result.status).toBe(status);
+  expect(result.stderr).toContain(errorCode);
+  expect(result.stderr).not.toContain('UNEXPECTED_VERIFIER');
+});
+
 test('stable promotion is newer than the same-version preview without allowing downgrades', () => {
   const result = spawnSync('bash', ['-s'], { cwd: rootDir, encoding: 'utf8', input: [
     'source deploy/blogposter-update',
@@ -144,6 +177,11 @@ test('release workflow publishes and attests the full server image and updater a
   expect(workflow).toContain('artifact-metadata: write');
   expect(workflow).toContain('blogposter-update.json');
   expect(workflow).toContain('blogposter-update.bundle.json');
+  expect(workflow).toContain('id: image_attestation');
+  expect(workflow).toContain('cp "${{ steps.image_attestation.outputs.bundle-path }}" release-assets/blogposter-image.bundle.json');
+  expect(workflow).toContain('Verify public image provenance without saved credentials');
+  expect(workflow).toContain('unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN');
+  expect(workflow).toContain('export DOCKER_CONFIG="$(mktemp -d)"');
   expect(workflow).toContain('runtime-integrity-manifest.json');
   expect(workflow).toContain('runtime-integrity-manifest.bundle.json');
   expect(workflow).toContain('Download signed runtime integrity assets');

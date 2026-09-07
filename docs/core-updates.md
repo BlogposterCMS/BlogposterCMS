@@ -16,6 +16,8 @@ a GitHub build-provenance attestation and attaches these assets to the release:
   policy consumed by the updater;
 - `blogposter-update.bundle.json`: GitHub/Sigstore attestation bundle for the
   update manifest;
+- `blogposter-image.bundle.json`: the signed OCI image provenance, verified
+  with `gh attestation verify --bundle` without GitHub API credentials;
 - `runtime-integrity-manifest.json` and its `.bundle.json`: the externally
   signed SHA-256 baseline for application code, modules and production
   dependencies;
@@ -99,6 +101,18 @@ The updater targets Linux Docker Compose hosts and requires `bash`, `curl`,
 the public release attestation bundle, so no private signing key belongs on the
 host. Production remains pull-only: do not install dependencies, build source,
 sign files or create images on the host.
+
+Host updater 1.2.0 (CMS release 0.10.1) fixes a verified first-install/update
+failure: CLI 2.96.0 requires authentication for its default image-attestation
+API lookup, including with `--bundle-from-oci`. The detached `--bundle` path
+does not require that login. The updater downloads the exact release's image
+proof with a 90-second/2-MiB bound and keeps all signature/source restrictions.
+It never falls back to digest-only trust when the proof is missing or invalid.
+Public GHCR images need no persistent registry credential; private packages
+still require an independently provisioned read-only registry credential.
+Rerun the verified combined installer to upgrade an existing host executor
+before applying a release requiring updater 1.2.0. Older releases without the
+image-bundle asset are not installable with this new anonymous verification path.
 
 Create the deployment, release and updater files under a protected host
 directory, then validate the Compose configuration before the first update:

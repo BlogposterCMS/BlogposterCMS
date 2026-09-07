@@ -5,16 +5,32 @@ The supported integrated setup is Linux with systemd, Docker Compose, Node.js
 HTTPS reverse proxy. The installer checks prerequisites before changing the host;
 it does not replace the server's package manager or proxy configuration.
 
+The official container package is public. Starting with release 0.10.1, signed
+image provenance is also included as `blogposter-image.bundle.json`, so normal
+installation/update verification needs no stored GitHub login. Verify the
+downloaded control bundle before running it; do not disable signature checks.
+Existing installations need the signed host executor 1.2.0 installed once.
+
 Download one reviewed release into an empty directory, verify its installer,
 then run the combined installation. Use the same exact tag for all assets:
 
 ```sh
-gh release download v0.10.0-rc.2 --repo BlogposterCMS/BlogposterCMS --dir blogposter-release
+mkdir blogposter-release
 cd blogposter-release
+release_url=https://github.com/BlogposterCMS/BlogposterCMS/releases/download/v0.10.1
+# Public HTTPS downloads avoid the login required by gh release download.
+for asset in install-blogposter install-update-agent create-install-config.js \
+  update-agent.js blogposter-update blogposter-update-agent.service \
+  blogposter-updates.compose.yml blogposter.compose.yml \
+  blogposter-updater.conf.example blogposter-update.json \
+  blogposter-update.bundle.json update-control.bundle.json; do
+  curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+    --max-time 90 --output "$asset" "$release_url/$asset" || exit 1
+done
 gh attestation verify install-blogposter --bundle update-control.bundle.json \
   --repo BlogposterCMS/BlogposterCMS \
   --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.10.0-rc.2 --deny-self-hosted-runners
+  --source-ref refs/tags/v0.10.1 --deny-self-hosted-runners
 sudo bash install-blogposter --origin https://cms.example.com
 ```
 

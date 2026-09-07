@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "minimumUpdaterVersion": "1.0.0",
+  "minimumUpdaterVersion": "1.2.0",
   "database": {
     "migrationMode": "none",
     "rollbackCompatible": true

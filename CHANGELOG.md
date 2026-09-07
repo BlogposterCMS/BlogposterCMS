@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-09-07
+
+- Fixed public-image updates failing with `CORE_UPDATE_ATTESTATION_INVALID`
+  on hosts without GitHub login. Releases now include their signed image
+  provenance bundle; host updater 1.2.0 verifies it without API authentication,
+  retaining exact digest, repository, workflow, tag and commit restrictions.
+  Missing or invalid proofs fail closed. Existing hosts must install the signed
+  updated executor once; ordinary CMS image updates do not replace host tools.
+
 ## [0.10.0] - 2026-09-07
 
 BlogposterCMS remains in early development. "Stable" identifies the regular

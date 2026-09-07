@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly UPDATER_VERSION='1.1.0'
+readonly UPDATER_VERSION='1.2.0'
 readonly DEFAULT_MANIFEST_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.json'
 readonly DEFAULT_MANIFEST_BUNDLE_URL='https://github.com/BlogposterCMS/BlogposterCMS/releases/latest/download/blogposter-update.bundle.json'
 readonly TRUSTED_SIGNER_WORKFLOW='BlogposterCMS/BlogposterCMS/.github/workflows/release.yml'
@@ -149,12 +149,27 @@ verify_image_trust() {
   case "$mode" in
     github)
       require_command gh
-      gh attestation verify "oci://$image_ref" --repo "$expected_repo" \
+      local image_bundle
+      image_bundle="$(mktemp)"
+      # GitHub CLI requires a login for API discovery, even for public images.
+      # Use the release's detached proof instead; gh still checks its signature,
+      # exact image digest, source commit/tag, workflow and hosted-runner identity.
+      if ! curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+        --connect-timeout 15 --max-time 90 --max-filesize 2097152 \
+        --output "$image_bundle" \
+        "https://github.com/$expected_repo/releases/download/v$expected_version/blogposter-image.bundle.json"; then
+        rm -f "$image_bundle"
+        fail 'CORE_UPDATE_IMAGE_BUNDLE_DOWNLOAD_FAILED' 'Could not download the release image attestation bundle.'
+      fi
+      if ! gh attestation verify "oci://$image_ref" --repo "$expected_repo" --bundle "$image_bundle" \
         --signer-workflow "$TRUSTED_SIGNER_WORKFLOW" \
         --source-ref "refs/tags/v${expected_version}" \
         --source-digest "$expected_commit" \
-        --deny-self-hosted-runners >/dev/null || \
+        --deny-self-hosted-runners >/dev/null; then
+        rm -f "$image_bundle"
         fail 'CORE_UPDATE_ATTESTATION_INVALID' 'GitHub build provenance verification failed.'
+      fi
+      rm -f "$image_bundle"
       ;;
     registry-digest)
       [[ -n "${BLOGPOSTER_TRUSTED_REGISTRY_PREFIX:-}" && "$image_ref" == "$BLOGPOSTER_TRUSTED_REGISTRY_PREFIX"* ]] || \

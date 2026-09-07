@@ -113,6 +113,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.image.outputs.version }}
       - name: Attest server image build provenance
+        id: image_attestation
         uses: actions/attest@v4
         with:
           subject-name: ${{ steps.image.outputs.repository }}
@@ -129,12 +130,30 @@ jobs:
             .then(()=>{require('sqlite3').verbose();require('bcrypt');require('express');
             console.log('CONTAINER_OFFLINE_INTEGRITY_OK')})
             .catch(e=>{console.error(e.code||'CONTAINER_INTEGRITY_FAILED');process.exit(1)})"
+      - name: Verify public image provenance without saved credentials
+        env:
+          RELEASE_IMAGE: ${{ steps.image.outputs.repository }}@${{ steps.build.outputs.digest }}
+        run: |
+          # Isolate both credential stores and unset workflow tokens. This gate
+          # reproduces a fresh end-user host, not the authenticated release runner.
+          export GH_CONFIG_DIR="$(mktemp -d)"
+          export DOCKER_CONFIG="$(mktemp -d)"
+          unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN
+          gh attestation verify "oci://$RELEASE_IMAGE" \
+            --bundle "${{ steps.image_attestation.outputs.bundle-path }}" \
+            --repo BlogposterCMS/BlogposterCMS \
+            --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml \
+            --source-ref "$GITHUB_REF" --source-digest "$GITHUB_SHA" \
+            --deny-self-hosted-runners
       - name: Create updater release manifest
         env:
           BLOGPOSTER_IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}
           BLOGPOSTER_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p release-assets
+          # Retain the signed OCI proof as a public release asset so update
+          # hosts verify provenance without storing a GitHub API credential.
+          cp "${{ steps.image_attestation.outputs.bundle-path }}" release-assets/blogposter-image.bundle.json
           node tools/create-core-update-manifest.js release-assets/blogposter-update.json
           cp deploy/blogposter-update release-assets/blogposter-update
           cp deploy/blogposter-updater.conf.example release-assets/blogposter-updater.conf.example

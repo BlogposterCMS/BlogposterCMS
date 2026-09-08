@@ -176,7 +176,7 @@ function buildSidebar(nav, pages, adminBase, workspaceSlug) {
         ['general', 'Website', 'General'], ['design', 'Website', 'Branding & fonts'],
         ['seo', 'Website', 'Search & SEO'], ['security', 'Website', 'Site availability'],
         ['users-access', 'Administration', 'Users & access'], ['modules', 'Administration', 'Modules'],
-        ['updates', 'Administration', 'Updates'], ['ui-kit', 'Reference', 'UI Kit']
+        ['widgets', 'Administration', 'Widgets'], ['updates', 'Administration', 'Updates'], ['ui-kit', 'Reference', 'UI Kit']
     ];
     const settingIndex = (page) => {
         const index = settingsSections.findIndex(([slug]) => page.slug === `settings/${slug}`);

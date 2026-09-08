@@ -269,7 +269,23 @@ async function seedAdminPages(motherEmitter, jwt, adminPages = [], prefixCommuni
       slug: finalSlugForCheck,
       lane: page.lane
     }).catch(() => null);
-    const pageObj = Array.isArray(existingPage) ? existingPage[0] : existingPage;
+    let pageObj = Array.isArray(existingPage) ? existingPage[0] : existingPage;
+    // Move registered core tools through pagesManager so page IDs, layouts and
+    // metadata survive upgrades. Never migrate community pages or replace a target.
+    if (!pageObj && !prefixCommunity && page.lane === ADMIN_LANE && page.migrateFromSlug) {
+      const previous = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
+        jwt, moduleName: 'pagesManager', moduleType: 'core', slug: page.migrateFromSlug, lane: page.lane
+      });
+      const previousPage = Array.isArray(previous) ? previous[0] : previous;
+      if (previousPage) {
+        if (parentSlugRaw && !parentId) throw new Error('ADMIN_PAGE_MOVE_PARENT_MISSING');
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.UPDATE_PAGE, {
+          jwt, moduleName: 'pagesManager', moduleType: 'core', pageId: previousPage.id,
+          slug: finalSlugForCheck, parent_id: parentId
+        });
+        pageObj = { ...previousPage, slug: finalSlugForCheck, parent_id: parentId };
+      }
+    }
     const exists = !!pageObj;
 
     if (exists && page.config?.seedOnce === true) {

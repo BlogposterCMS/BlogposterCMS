@@ -5,6 +5,11 @@ They follow the [Widget Design Contract](widget_design_contract.md) in
 advisory mode: design drift is reported as warnings, while security and
 capability-boundary violations still block registration.
 
+Manage the widget catalog, ZIP installation and installed access under
+**Settings > Widgets** (`/admin/settings/widgets`). Place and edit public widgets
+in Design Studio. Admin-page seeding moves the former `content/widgets` page
+to Settings while retaining its page ID and saved state.
+
 ## Folder Structure
 
 Community widgets live under `widgets/{folderName}`. Folder names may contain

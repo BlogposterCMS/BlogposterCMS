@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Move widget management from Content to Settings > Widgets, preserving existing
+  page identity and saved state during the admin-page upgrade.
+
 - Add shared drag-and-drop/file-picker ZIP installation in Modules and Widgets,
   with an explicit manifest access review bound to the inspected package hash.
   Modules expose granular access management; reviewed modules deny undeclared or

@@ -149,7 +149,7 @@ export function bindAdminContentNavigation({
 
   const destinations: Record<string, string> = {
     home: '/home', pages: '/content/pages', media: '/content/media', navigation: '/content/menu',
-    widgets: '/content/widgets', designs: '/content/designer-layouts', settings: '/settings',
+    widgets: '/settings/widgets', designs: '/content/designer-layouts', settings: '/settings',
     branding: '/settings/design', seo: '/settings/seo', security: '/settings/security'
   };
   const shell = document.querySelector<HTMLElement>('.admin-panel');

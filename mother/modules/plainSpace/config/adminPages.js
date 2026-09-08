@@ -143,26 +143,6 @@ module.exports.ADMIN_PAGES = [
     }
   },
   {
-    title: 'Widgets',
-    slug: 'widgets',
-    parentSlug: 'content',
-    lane: 'admin',
-    weight: 30,
-    config: {
-      layout: {
-        header: 'top-header',
-        sidebar: 'default-sidebar',
-        inheritsLayout: true
-      },
-      icon: '/assets/icons/puzzle.svg',
-      dashboardLayout: 'fixed',
-      widgets: ['widgetList'],
-      widgetSlots: {
-        widgetList: 'page'
-      }
-    }
-  },
-  {
     title: 'Navigation Studio',
     slug: 'menu',
     parentSlug: 'content',
@@ -354,6 +334,28 @@ module.exports.ADMIN_PAGES = [
       },
       icon: '/assets/icons/package.svg',
       widgets: []
+    }
+  },
+  {
+    title: 'Widgets',
+    slug: 'widgets',
+    // Preserve the existing page and its saved state when moving the core tool.
+    migrateFromSlug: 'content/widgets',
+    parentSlug: 'settings',
+    lane: 'admin',
+    weight: 52,
+    config: {
+      layout: {
+        header: 'top-header',
+        sidebar: 'settings-sidebar',
+        inheritsLayout: true
+      },
+      icon: '/assets/icons/puzzle.svg',
+      dashboardLayout: 'fixed',
+      widgets: ['widgetList'],
+      widgetSlots: {
+        widgetList: 'page'
+      }
     }
   },
   {

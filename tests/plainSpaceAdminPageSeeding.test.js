@@ -44,6 +44,58 @@ function createSeedingEmitter(existingPage = null, existingLayout = []) {
 }
 
 describe('PlainSpace admin page seeding', () => {
+  it('registers widget management only under Settings with its existing widget surface', () => {
+    const widgets = ADMIN_PAGES.filter(page => page.slug === 'widgets');
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0]).toMatchObject({ parentSlug: 'settings', migrateFromSlug: 'content/widgets',
+      config: { layout: { sidebar: 'settings-sidebar' }, widgets: ['widgetList'],
+        dashboardLayout: 'fixed', widgetSlots: { widgetList: 'page' } } });
+    expect(ADMIN_PAGES.indexOf(ADMIN_PAGES.find(page => page.slug === 'settings')))
+      .toBeLessThan(ADMIN_PAGES.indexOf(widgets[0]));
+  });
+
+  it('moves existing Widgets in place and does not repeat the migration on reseeding', async () => {
+    const seed = ADMIN_PAGES.find(page => page.slug === 'widgets');
+    const pages = new Map([
+      ['settings', { id: 'settings-1', slug: 'settings' }],
+      ['content/widgets', { id: 'widgets-1', slug: 'content/widgets', parent_id: 'content-1',
+        meta: { customSetting: true, widgets: ['widgetList'] } }]
+    ]);
+    const calls = [];
+    const emitter = {
+      listenerCount: () => 1,
+      emit(eventName, payload, callback) {
+        calls.push({ eventName, payload });
+        if (eventName === 'getPageBySlug') return callback(null, pages.get(payload.slug) || null);
+        if (eventName === 'updatePage') {
+          const page = [...pages.values()].find(item => item.id === payload.pageId);
+          pages.delete(page.slug);
+          Object.assign(page, payload);
+          pages.set(page.slug, page);
+          return callback(null, { updated: true });
+        }
+        throw new Error(`Unexpected seeding event: ${eventName}`);
+      }
+    };
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    expect(pages.has('content/widgets')).toBe(false);
+    expect(pages.get('settings/widgets')).toMatchObject({ id: 'widgets-1', parent_id: 'settings-1',
+      meta: { customSetting: true, layout: { sidebar: 'settings-sidebar' }, widgets: ['widgetList'] } });
+    expect(calls.filter(call => call.eventName === 'updatePage' && call.payload.slug)).toHaveLength(1);
+    calls.length = 0;
+    await seedAdminPages(emitter, 'admin-jwt', [seed]);
+    expect(calls.every(call => call.eventName === 'getPageBySlug')).toBe(true);
+    expect(calls.some(call => call.payload.slug === 'content/widgets')).toBe(false);
+  });
+
+  it('creates Widgets under Settings on a fresh installation', async () => {
+    const emitter = createSeedingEmitter();
+    await seedAdminPages(emitter, 'admin-jwt', [ADMIN_PAGES.find(page => page.slug === 'widgets')]);
+    const created = emitter.calls.find(call => call.eventName === 'createPage' && call.payload.slug === 'settings/widgets');
+    expect(created.payload).toMatchObject({ parent_id: 'seed-page-1',
+      meta: { layout: { sidebar: 'settings-sidebar' }, widgets: ['widgetList'] } });
+  });
+
   it('seeds Analytics with editable standard subpages and the shared sidebar', () => {
     const pages = ADMIN_PAGES.filter(page => page.slug === 'analytics' || page.parentSlug === 'analytics');
     expect(pages.map(page => page.slug)).toEqual(['analytics', 'website', 'devices', 'system']);
@@ -87,7 +139,7 @@ describe('PlainSpace admin page seeding', () => {
   });
   it('uses fixed single-tool compositions and retires the duplicate Collections page', () => {
     for (const [slug, widgetId] of [['media', 'mediaExplorer'], ['widgets', 'widgetList'], ['designer-layouts', 'designerLayouts']]) {
-      const page = ADMIN_PAGES.find(entry => entry.slug === slug && entry.parentSlug === 'content');
+      const page = ADMIN_PAGES.find(entry => entry.slug === slug && entry.parentSlug === (slug === 'widgets' ? 'settings' : 'content'));
       expect(page.config).toMatchObject({ dashboardLayout: 'fixed', widgets: [widgetId], widgetSlots: { [widgetId]: 'page' } });
     }
     expect(ADMIN_PAGES.find(entry => entry.slug === 'collections' && entry.parentSlug === 'content').retired).toBe(true);

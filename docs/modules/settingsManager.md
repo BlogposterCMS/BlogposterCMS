@@ -41,8 +41,13 @@ delete, bulk and public-read events.
 Permission checks ensure only authorised callers can view or modify core
 settings. Public settings are limited to non-secret site/runtime keys such as
 `SITE_TITLE`, `SITE_DESCRIPTION`, `SITE_URL`, `FAVICON_URL`,
+`SITE_LOGO_URL`, `SITE_LOGO_DARK_URL`,
 `PERMALINK_STRUCTURE`, `POSTS_PER_PAGE` and comment defaults.
 Browser callers should read public settings through
 `runtimeManager.cmsPublicRuntimeRequest` resource `settings`, action `public`;
 direct `getPublicSetting`/`getPublicSettings` events are internal module
 contracts.
+
+Settings → Design edits the existing website color/font/preset libraries through
+their own authorized actions and stores only logo URLs in Settings Manager.
+See [Website branding](../website-branding.md) for the shared UI and preview flow.

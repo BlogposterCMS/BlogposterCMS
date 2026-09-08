@@ -510,3 +510,69 @@ Dragging at Mobile (320–600px), Tablet (601–1024px), or Desktop (1025–3840
 records the existing responsive range, with the selected widget's explicit
 range controls available for narrower or broader corrections. Saved rules remain
 in `code.meta.responsivePlacement`; switching widths alone does not author a rule.
+
+
+Unavailable catalog widgets remain on the canvas with `DESIGNER_WIDGET_UNAVAILABLE`
+status and retain their saved instance code and placement during subsequent saves.
+Their code is not executed while the catalog definition is absent. Restore the
+extension registration before previewing its behavior; this status is not a successful render.
+
+
+Community modules now use the same registration/module mount in the Designer and
+public loader. Preview supplies only uncredentialed public reads; mutation/stream
+attempts return `WIDGET_SERVICE_DENIED` instead of creating application state.
+Saved SQL/Mongo widget reads follow y/x placement order rather than instance-id
+alphabetical order, preserving native flow reading order after reload.
+
+Native text edits persist in metadata (including the active translation), so save
+and reload keep the module stylesheet. Container padding accepts bounded CSS box
+shorthand. Stacked sections retain intrinsic size rather than legacy split flex
+weights; explicit split alignment and single-edge borders render consistently.
+These are existing layout settings exposed through the same agent snapshot.
+## Website branding, theme and logo feedback
+
+The existing widget catalog and placement snapshots identify the Media logo as
+`siteLogo`. It uses the regular widget insertion and sizing actions. Logo URLs
+belong to Settings → Design → Branding, not instance metadata or Style Source.
+The rendered element exposes `data-logo-variant` and `BP_WIDGET_LOGO_*` errors;
+changing branding uses the existing Settings actions, with no Designer-only API.
+
+The canonical Color Library feedback `defaultSlots` includes optional `darkValue`
+(null means inherit light). The existing scheme/slot ids and update action remain
+authoritative. Shared Settings/Designer visual rows expose stable
+`data-design-token-id` values; selected-kit previews do not activate the kit.
+See [Website branding and UI kits](website-branding.md) for JSON/CSS ownership,
+font/button defaults and the current preview/editor boundary.
+
+## UI kit components: compact agent authoring
+
+`state.sitePresets.components` is the active kit's shallow catalog of
+`id/name/type/supported`; `componentKitId` identifies its kit. Full definitions
+are deliberately omitted from automatic snapshots. `sitePresets.refresh` returns
+compact summaries too; pass `kitId` to inspect another kit's component catalog.
+This structure stays within AgentManager's existing depth and array limits.
+
+Use the existing command port through AgentManager:
+
+```json
+{"action":"insert.element","params":{"componentId":"primary","props":{"label":"Buy now","href":"/shop"}}}
+```
+
+`kitId` is optional and defaults to the applied kit, then `site-preset-default`.
+Props merge over the chosen definition. The existing insertion/placement/save path
+stores the resolved component in `code.meta.settings.component` and its origin in
+`sourcePresetId`; responses report the inserted selection and searchable
+`UI_KIT_COMPONENT_*` errors. A missing component/widget or unsupported type fails
+explicitly. Native `type` insertion continues to work.
+
+Only when needed, call `sitePresets.component` with `componentId` and optional
+`kitId` to get that definition as `jsonParts` (base64 UTF-8). The existing
+`sitePresets.import/export` commands handle whole packages. UI list rows and the
+generic public `uiKitComponent` widget use the same renderer. No DOM search is
+needed to find or insert kit components.
+
+Controls emit `bp:ui-kit-change` with `{componentId,value}` locally. They do not
+submit forms or invoke backend actions. A business-form binding adapter and
+editing an existing instance's component props are not yet exposed as agent
+command families; preserve the existing Forms/service permission boundaries when
+adding those adapters. Structural layout remains the Designer container model.

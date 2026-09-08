@@ -22,9 +22,11 @@ test('Builder reuses the existing Layout panel for Site Presets and keeps color 
   expect(sidebar).not.toContain('data-sidebar-panel-target="fonts"');
   expect(sidebar).not.toContain('data-sidebar-panel-target="site-presets"');
   expect(layoutPanel).toContain('data-site-presets-host');
-  expect(layoutMode).toContain('applySitePreset');
-  expect(layoutMode).toContain('captureSitePresetDemo');
-  expect(layoutMode).toContain('applySitePresetDemo');
+  expect(layoutMode).toContain('mountSitePresetsPanel');
+  const sharedPanel = source('ui/shared/presets/sitePresetsPanel.js');
+  expect(sharedPanel).toContain('applySitePreset');
+  expect(sharedPanel).toContain('captureSitePresetDemo');
+  expect(sharedPanel).toContain('applySitePresetDemo');
 });
 
 test('public runtime uses central CSS and has no active Theme package dependency', () => {

@@ -111,8 +111,9 @@ import {
 } from './renderer/viewportState.js';
 import { normalizeResponsiveWidthRange } from '/ui/shared/layout/responsivePlacement.js';
 import {
-  createSitePreset
+  createSitePreset, getSitePresetsSnapshot
 } from '/ui/shared/presets/sitePresets.js';
+import { componentWidgetPreset, resolveKitComponent } from '/ui/shared/design-system/componentDefinitions.js';
 import {
   getActiveColorScheme
 } from '/ui/shared/colors/colorLibrary.js';
@@ -5012,6 +5013,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       builderSettings: layoutCtx.getSitePresetSettings?.() || {},
       colorScheme,
       fontPackage,
+      components: getSitePresetsSnapshot().presets.find(kit => kit.id === (getSitePresetsSnapshot().lastAppliedId || 'site-preset-default'))?.components,
       pageDemos: demo ? [demo] : []
     });
     return { handled: Boolean(preset), preset };
@@ -5076,6 +5078,16 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       return removeScene(sceneId);
     }
     if (action === 'insert' || action === 'insert.element') {
+      const componentId = commandValue(command, 'componentId');
+      if (componentId) {
+        const library = getSitePresetsSnapshot();
+        const kitId = commandValue(command, 'kitId', library.lastAppliedId || 'site-preset-default');
+        try {
+          const component = resolveKitComponent(library.presets, kitId, componentId, commandValue(command, 'props', {}));
+          const inserted = await insertWidgetPreset(componentWidgetPreset(component, kitId));
+          return { handled: Boolean(inserted), kitId, componentId, selection: selectedElementSummary(inserted instanceof HTMLElement ? inserted : state.activeWidgetEl), ...(!inserted ? { errorCode: 'UI_KIT_COMPONENT_WIDGET_UNAVAILABLE' } : {}) };
+        } catch (error) { return { handled: false, errorCode: String(error.message).split(':')[0], message: error.message }; }
+      }
       const type = commandValue(command, 'type', command.value || command.target);
       const inserted = await insertByTypeOrPreset(type);
       const insertedEl = inserted instanceof HTMLElement ? inserted : state.activeWidgetEl;
@@ -5651,6 +5663,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
   };
 
   Object.assign(layoutCtx, {
+    insertUiKitComponent: (component, kitId) => insertWidgetPreset(componentWidgetPreset(component, kitId)),
     getSitePresetSettings: () => {
       const container = getActiveWorkareaContainer();
       const numberFromCss = (value, fallback = 0) => {

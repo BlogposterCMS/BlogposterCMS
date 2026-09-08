@@ -1,5 +1,5 @@
 import { registerEditableElement } from '../../../rendering/editableRegistration.js';
-import { readString, sanitizeRichHtml, sharedStyle, widgetSettings } from './publicWidgetHelpers.js';
+import { readString, sanitizeRichHtml, sharedStyle, widgetSettings, widgetLocale } from './publicWidgetHelpers.js';
 function richTextStyle() {
     const style = document.createElement('style');
     style.textContent = `
@@ -74,6 +74,23 @@ function richTextStyle() {
   white-space: pre-wrap;
 }
   `.trim();
+    // Consume the shared role variables inside both normal DOM and widget Shadow DOM.
+    const roles = { h1: '2.25rem', h2: '1.75rem', h3: '1.35rem', h4: '1.15rem', h5: '1rem', h6: '0.875rem', paragraph: '1rem', link: 'inherit', blockquote: '1rem', code: '1rem' };
+    for (const [role, size] of Object.entries(roles)) {
+        const selector = role === 'paragraph' ? 'p, .widget-rich-text span, .widget-rich-text li'
+            : role === 'link' ? 'a' : role === 'code' ? 'pre, .widget-rich-text code' : role;
+        style.textContent += `\n.widget-rich-text ${selector} {
+      font-family: var(--bp-type-${role}-font-family, inherit);
+      font-size: var(--bp-type-${role}-font-size, ${size});
+      font-weight: var(--bp-type-${role}-font-weight, inherit);
+      line-height: var(--bp-type-${role}-line-height, inherit);
+      letter-spacing: var(--bp-type-${role}-letter-spacing, normal);
+      color: var(--bp-type-${role}-color, var(--bp-color-default-2, inherit));
+      font-style: var(--bp-type-${role}-font-style, normal);
+      text-transform: var(--bp-type-${role}-text-transform, none);
+      text-decoration: var(--bp-type-${role}-text-decoration, none);
+    }`;
+    }
     return style;
 }
 function renderDefaultRichText(editable, heading, body) {
@@ -115,6 +132,7 @@ export async function render(el, ctx = {}) {
     const editable = document.createElement('div');
     editable.className = 'editable widget-rich-text';
     editable.dataset.textEditable = '';
+    editable.dataset.contentLocale = widgetLocale();
     if (ctx.id) {
         editable.id = `text-widget-${ctx.id}-editable`;
     }

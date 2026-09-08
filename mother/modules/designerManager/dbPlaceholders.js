@@ -441,7 +441,7 @@ async function handleGetDesignPlaceholder({ dbClient, params }) {
     const layout = parseStoredLayout(meta.layout_json);
     delete meta.layout_json;
     const widgetsRes = await dbClient.query(
-      `SELECT w.instance_id, w.widget_id, w.x_percent, w.y_percent, w.w_percent, w.h_percent, w.z_index, w.rotation_deg, w.opacity, m.html, m.css, m.js, m.metadata FROM designer.designer_design_widgets w LEFT JOIN designer.designer_widget_meta m ON w.design_id = m.design_id AND w.instance_id = m.instance_id WHERE w.design_id=$1 ORDER BY w.instance_id`,
+      `SELECT w.instance_id, w.widget_id, w.x_percent, w.y_percent, w.w_percent, w.h_percent, w.z_index, w.rotation_deg, w.opacity, m.html, m.css, m.js, m.metadata FROM designer.designer_design_widgets w LEFT JOIN designer.designer_widget_meta m ON w.design_id = m.design_id AND w.instance_id = m.instance_id WHERE w.design_id=$1 ORDER BY w.y_percent, w.x_percent, w.instance_id`,
       [designId]
     );
     return {
@@ -458,7 +458,7 @@ async function handleGetDesignPlaceholder({ dbClient, params }) {
     const layout = parseStoredLayout(meta.layout_json);
     delete meta.layout_json;
     const rows = await dbClient.all(
-      `SELECT w.instance_id, w.widget_id, w.x_percent, w.y_percent, w.w_percent, w.h_percent, w.z_index, w.rotation_deg, w.opacity, m.html, m.css, m.js, m.metadata FROM designer_design_widgets w LEFT JOIN designer_widget_meta m ON w.design_id = m.design_id AND w.instance_id = m.instance_id WHERE w.design_id=? ORDER BY w.instance_id`,
+      `SELECT w.instance_id, w.widget_id, w.x_percent, w.y_percent, w.w_percent, w.h_percent, w.z_index, w.rotation_deg, w.opacity, m.html, m.css, m.js, m.metadata FROM designer_design_widgets w LEFT JOIN designer_widget_meta m ON w.design_id = m.design_id AND w.instance_id = m.instance_id WHERE w.design_id=? ORDER BY w.y_percent, w.x_percent, w.instance_id`,
       [designId]
     );
     return { design: { ...meta, layout, layout_json: layout }, widgets: rows, layout };
@@ -487,6 +487,8 @@ async function handleGetDesignPlaceholder({ dbClient, params }) {
     const widgets = await widgetsCol
       .aggregate([
         { $match: { design_id: objId } },
+        // Flow layouts retain visual reading order instead of alphabetic instance ids.
+        { $sort: { y_percent: 1, x_percent: 1, instance_id: 1 } },
         {
           $lookup: {
             from: "designer_widget_meta",

@@ -15,6 +15,8 @@ export interface GeneralSettingsState {
 
 export interface DesignSettingsState {
   faviconUrl: string;
+  logoUrl: string;
+  logoDarkUrl: string;
   googleFontsApiKey: string;
 }
 
@@ -38,6 +40,8 @@ type SettingKey =
   | 'SITE_TITLE'
   | 'SITE_DESC'
   | 'FAVICON_URL'
+  | 'SITE_LOGO_URL'
+  | 'SITE_LOGO_DARK_URL'
   | 'GOOGLE_FONTS_API_KEY'
   | 'SEO_META_DESCRIPTION'
   | 'SEO_TITLE_TEMPLATE'
@@ -151,9 +155,11 @@ export async function fetchDesignSettings(
   emit: SettingsPanelsEmitter,
   jwt: string | null | undefined
 ): Promise<DesignSettingsState> {
-  const values = await fetchSettingValues(emit, jwt, ['FAVICON_URL', 'GOOGLE_FONTS_API_KEY']);
+  const values = await fetchSettingValues(emit, jwt, ['FAVICON_URL', 'SITE_LOGO_URL', 'SITE_LOGO_DARK_URL', 'GOOGLE_FONTS_API_KEY']);
   return {
     faviconUrl: values.FAVICON_URL,
+    logoUrl: values.SITE_LOGO_URL,
+    logoDarkUrl: values.SITE_LOGO_DARK_URL,
     googleFontsApiKey: values.GOOGLE_FONTS_API_KEY
   };
 }

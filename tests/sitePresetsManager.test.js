@@ -67,6 +67,7 @@ test('users save the same Site Preset package shape and apply it through central
   const { emitter, settings } = createSettingsEmitter();
   await sitePresets.initialize({ motherEmitter: emitter, isCore: true, jwt: 'internal' });
   const installed = service.listInstalledPresets()[0];
+  installed.colorScheme.colors[0].darkValue = '#EEEEEE';
 
   const created = await emitAsync(emitter, 'sitePresets.create', {
     jwt: 'caller',
@@ -97,6 +98,8 @@ test('users save the same Site Preset package shape and apply it through central
   });
   assert.strictEqual(applied.applied, true);
   assert.strictEqual(applied.colorScheme.colors[0].id, 'default-1');
+  assert.strictEqual(applied.colorScheme.colors[0].darkValue, '#EEEEEE');
+  assert.strictEqual((await colorService.readColorLibrary(emitter, 'internal')).colors[0].darkValue, '#EEEEEE');
   assert.strictEqual(applied.fontPackage.id, 'font-package-default');
   assert.strictEqual(
     settings.get(service.SITE_PRESETS_LAST_APPLIED_KEY),

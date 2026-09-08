@@ -7,6 +7,7 @@ const { requestBackendEvent } = require('../../contracts/backendEventContracts')
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { normalizeKitComponents } = require('../../../ui/shared/design-system/componentDefinitions.js');
 const {
   normalizeColorValue,
   normalizeSchemeId,
@@ -37,6 +38,7 @@ const ALLOWED_PRESET_IDS = new Set([
   'text.list',
   'text.caption',
   'media.image',
+  'media.logo',
   'media.gallery',
   'media.masonry',
   'media.carousel',
@@ -60,6 +62,7 @@ const PACKAGE_KEYS = new Set([
   'colorScheme',
   'fontPackage',
   'pageDemos',
+  'components',
   'source',
   'createdAt',
   'updatedAt'
@@ -184,7 +187,8 @@ function normalizeColorScheme(value) {
       return {
         id: `default-${index + 1}`,
         name: normalizeText(color.name || `Color ${index + 1}`, `Default ${index + 1} name`, 80, true),
-        value: normalizeColorValue(color.value)
+        value: normalizeColorValue(color.value),
+        ...(color.darkValue ? { darkValue: normalizeColorValue(color.darkValue) } : {})
       };
     })
   };
@@ -297,6 +301,7 @@ function normalizePresetPackage(value, options = {}) {
     colorScheme: normalizeColorScheme(source.colorScheme),
     fontPackage: normalizeFontPackage(source.fontPackage),
     pageDemos: pageDemos.map(normalizePageDemo),
+    ...(source.components === undefined ? {} : { components: normalizeKitComponents(source.components) }),
     createdAt: typeof source.createdAt === 'string' && source.createdAt ? source.createdAt : now,
     updatedAt: typeof source.updatedAt === 'string' && source.updatedAt ? source.updatedAt : now
   };

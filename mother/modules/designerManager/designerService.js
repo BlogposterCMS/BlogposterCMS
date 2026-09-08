@@ -164,26 +164,33 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
             .replace(/expression\([^)]*\)/gi, '')
             .replace(urlPattern, (match, url) => (isUnsafeUrl(url) ? '' : match));
         };
-        const sanitizeHtml = html =>
+        const sanitizeHtml = (html, imported = false) =>
           sanitizeHtmlLib(html || '', {
-            // Images and safe button markup are content, while event handlers and scripts remain excluded.
-            allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img', 'button']),
+            // Preserve authored controls and selector hooks; scripts, handlers and form destinations remain excluded.
+            allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img', 'button', 'form', 'select', 'option', 'label']),
             allowedAttributes: {
               ...sanitizeHtmlLib.defaults.allowedAttributes,
+              button: ['type', 'disabled', 'value'],
+              select: ['disabled', 'multiple'],
+              option: ['value', 'selected', 'disabled'],
+              label: ['for'],
               '*': [
                 ...(sanitizeHtmlLib.defaults.allowedAttributes['*'] || []),
                 'style',
                 'class',
-                'data-text-editable',
+                'id', 'data-*', 'aria-*', 'role', 'hidden', 'tabindex', 'dir', 'lang',
+                'contenteditable',
               ],
             },
-            // Keep only editor hooks and generated import selectors, never arbitrary source classes.
-            allowedClasses: { '*': ['editable', /^bp-import-node-\d+$/] },
+            // Imported source classes stay restricted; authored widgets need their scoped CSS selectors.
+            ...(imported ? { allowedClasses: { '*': ['editable', /^bp-import-node-\d+$/] } } : {}),
+            allowedEmptyAttributes: [...sanitizeHtmlLib.defaults.allowedEmptyAttributes, 'hidden'],
             allowedSchemes: ['http', 'https', 'data'],
             allowProtocolRelative: false,
             transformTags: {
               '*': (tagName, attribs) => {
                 if (attribs.style) attribs.style = sanitizeCss(attribs.style, true);
+                if (attribs.contenteditable && !['true', 'false', 'plaintext-only'].includes(attribs.contenteditable)) delete attribs.contenteditable;
                 return { tagName, attribs };
               },
               style: (tagName, attribs, { text }) => ({ tagName: 'style', text: sanitizeCss(text) }),
@@ -224,7 +231,7 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
             : null;
           const code = w.code && typeof w.code === "object" ? w.code : {};
           const html =
-            typeof code.html === "string" ? sanitizeHtml(code.html) : null;
+            typeof code.html === "string" ? sanitizeHtml(code.html, code.meta?.htmlImport?.version === 1) : null;
           const css =
             typeof code.css === "string" ? sanitizeCss(code.css) : null;
           const js = typeof code.js === "string" ? code.js : null;

@@ -6,7 +6,7 @@ import { livePreviewFeedbackState } from './renderer/livePreviewFrame.js';
 import { containerPositionAvailability } from './managers/containerCapabilities.js';
 import { activateColorScheme, colorLibraryAgentState, createColorScheme, createLibraryColor, deleteColorScheme, deleteLibraryColor, refreshColorLibrary, renameColorScheme, updateLibraryColor } from '/ui/shared/colors/colorLibrary.js';
 import { activateFontPackage, createFontPackage, deleteFontPackage, fontPackagesAgentState, refreshFontPackages, renameFontPackage, resetFontPackageRole, updateFontPackageRole } from '/ui/shared/fonts/fontPackages.js';
-import { applySitePreset, deleteSitePreset, refreshSitePresets, sitePresetsAgentState, exportSitePresetJson, importSitePresetJson, sitePresetJsonParts, sitePresetJsonFromParts } from '/ui/shared/presets/sitePresets.js';
+import { applySitePreset, deleteSitePreset, refreshSitePresets, sitePresetsAgentState, sitePresetComponentJson, exportSitePresetJson, importSitePresetJson, sitePresetJsonParts, sitePresetJsonFromParts } from '/ui/shared/presets/sitePresets.js';
 import { getBuilderViewportState } from './renderer/viewportState.js';
 import { readDesignerDraftInputs } from './renderer/draftInputs.js';
 import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
@@ -100,8 +100,13 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
         action: 'insert.element',
         label: 'Insert element',
         category: 'content',
-        description: 'Inserts a native text, media, shape, button or background element.',
-        params: [{ name: 'type', type: 'text|media|shape|button|background', required: true }]
+        description: 'Insert by componentId from the active UI kit (optional kitId and props overrides), or by native type. Kit styles are inherited automatically.',
+        params: [
+            { name: 'type', type: 'string', required: false },
+            { name: 'componentId', type: 'string', required: false },
+            { name: 'kitId', type: 'string', required: false },
+            { name: 'props', type: 'object', required: false }
+        ]
     },
     {
         action: 'element.select',
@@ -509,7 +514,13 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
         action: 'sitePresets.refresh',
         label: 'Refresh Site Presets',
         category: 'preset',
-        description: 'Refreshes installed and user Site Presets.'
+        description: 'Refreshes kit summaries and the active kit component catalog. Optional kitId selects another catalog; full definitions are loaded only on demand.',
+        params: [{ name: 'kitId', type: 'string', required: false }]
+    },
+    {
+        action: 'sitePresets.component', label: 'Read one UI kit component', category: 'preset',
+        description: 'Read one definition on demand as base64 UTF-8 jsonParts. Inserting by componentId does not require reading its definition.',
+        params: [{ name: 'componentId', type: 'string', required: true }, { name: 'kitId', type: 'string', required: false }]
     },
     {
         action: 'sitePresets.export', label: 'Export UI kit JSON', category: 'preset',
@@ -1794,8 +1805,11 @@ async function handleFontPackagesCommand(action, command) {
 }
 async function handleSitePresetsCommand(action, command) {
     if (action === 'sitePresets.refresh') {
-        return { handled: true, library: await refreshSitePresets() };
+        await refreshSitePresets();
+        return { handled: true, library: sitePresetsAgentState(commandParam(command, 'kitId')) };
     }
+    if (action === 'sitePresets.component')
+        return { handled: true, encoding: 'base64-utf8', jsonParts: sitePresetJsonParts(sitePresetComponentJson(String(commandParam(command, 'componentId') || ''), commandParam(command, 'kitId'))) };
     if (action === 'sitePresets.import') {
         const parts = commandParam(command, 'jsonParts');
         const json = parts ? sitePresetJsonFromParts(parts) : String(commandParam(command, 'json') || '');
@@ -1834,7 +1848,7 @@ function designerActions() {
     return DESIGNER_AGENT_ACTIONS.map(action => ({
         ...action,
         action: String(action.action),
-        readOnly: action.action === 'surface.refresh' || String(action.action).endsWith('.refresh') || action.action === 'sitePresets.export',
+        readOnly: action.action === 'surface.refresh' || String(action.action).endsWith('.refresh') || action.action === 'sitePresets.export' || action.action === 'sitePresets.component',
         acceptsDraft: true,
         confirm: action.action === 'design.publish' || String(action.action).endsWith('.delete'),
         run: (params) => dispatchDesignerAgentCommand({ action: action.action, params })

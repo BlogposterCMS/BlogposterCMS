@@ -64,6 +64,14 @@ function normalizeCssLength(value) {
         return trimmed;
     return undefined;
 }
+function normalizeBoxSpacing(value) {
+    if (typeof value !== 'string')
+        return normalizeCssLength(value);
+    const parts = value.trim().split(/\s+/);
+    if (parts.length < 1 || parts.length > 4 || parts.some(part => !/^\d+(?:\.\d+)?(?:px|rem|em|vh|vw|%)$/i.test(part)))
+        return undefined;
+    return parts.join(' ');
+}
 function normalizeColor(value) {
     if (typeof value !== 'string')
         return undefined;
@@ -137,7 +145,7 @@ export function normalizeLayoutContainerSettings(value) {
     const settings = {};
     const mode = normalizeContainerMode(source.mode ?? source.layoutMode ?? source.layout_mode);
     const gap = normalizeCssLength(source.gap ?? source.layoutGap ?? source.layout_gap);
-    const padding = normalizeCssLength(source.padding ?? source.layoutPadding ?? source.layout_padding);
+    const padding = normalizeBoxSpacing(source.padding ?? source.layoutPadding ?? source.layout_padding);
     const columns = normalizeColumns(source.columns ?? source.layoutColumns ?? source.layout_columns);
     const align = normalizeAlignment(source.align ?? source.alignment ?? source.layoutAlign ?? source.layout_align);
     const background = normalizeColor(source.background ?? source.bg ?? source.backgroundColor ?? source.background_color);

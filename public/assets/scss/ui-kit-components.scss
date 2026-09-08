@@ -1,0 +1,57 @@
+@use 'sass:meta';
+@use 'components/button-tokens';
+
+// Reuse canonical controls inside widgets and body portals without styling the surrounding page.
+.bp-ui-kit-surface {
+  @include button-tokens.defaults;
+  @include meta.load-css('components/buttons');
+  @include meta.load-css('components/forms');
+  @include meta.load-css('components/custom-select');
+  @include meta.load-css('components/popover');
+  --studio-text: var(--bp-color-default-2, #171717);
+  --studio-text-muted: var(--bp-color-default-4, #737373);
+  --studio-surface-solid: var(--bp-color-default-3, #ffffff);
+  --studio-border: var(--bp-color-default-4, #bcbcbc);
+  --studio-border-strong: var(--bp-color-default-2, #171717);
+  --studio-surface-muted: var(--bp-color-default-3, white);
+  --studio-field-min-height: 40px;
+  --studio-field-padding-x: 12px;
+  --studio-field-radius: 6px;
+  --studio-field-gap: 6px;
+  --studio-focus-ring: 0 0 0 3px var(--bp-color-default-5, #2563eb);
+  --color-primary: var(--bp-color-default-1, #171717);
+  --color-primary-contrast: var(--bp-color-default-3, white);
+  --color-card: var(--bp-color-default-3, white);
+  --color-text: var(--bp-color-default-2, #171717);
+  --user-color: var(--bp-color-default-1, #171717);
+  --brand: var(--bp-color-default-1, #171717);
+  --studio-control-size: 40px;
+  --studio-shadow-control: 0 0 2px var(--studio-text);
+  --studio-radius-control: 6px;
+  --studio-radius-panel: 8px;
+  color: var(--studio-text);
+  --font-body: var(--bp-type-body-font-family, sans-serif);
+  font-family: var(--font-body);
+  font-size: var(--bp-type-body-font-size, 16px);
+  line-height: var(--bp-type-body-line-height, 1.5);
+  min-width: 0;
+  *, *::before, *::after { box-sizing: border-box; }
+  input, textarea, select { max-width: 100%; }
+  img { max-width: 100%; height: auto; }
+  .button { background: var(--bp-color-default-1, #171717); color: var(--bp-color-default-3, white); }
+  .button.secondary { background: var(--bp-color-default-3, white); color: var(--bp-color-default-1, #171717); }
+  .app-scope .button {
+    font-family: var(--bp-type-button-font-family, var(--font-body));
+    font-size: var(--bp-type-button-font-size, 14px);
+    font-weight: var(--bp-type-button-font-weight, 600);
+    font-style: var(--bp-type-button-font-style, normal);
+    line-height: var(--bp-type-button-line-height, 1.4);
+    letter-spacing: var(--bp-type-button-letter-spacing, 0);
+    text-transform: var(--bp-type-button-text-transform, none);
+    text-decoration: var(--bp-type-button-text-decoration, none);
+  }
+  .form-choice { margin-right: 12px; }
+  .bp-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .bp-tabs [aria-selected='true'] { outline: 2px solid var(--bp-color-default-5, currentColor); outline-offset: -2px; }
+  &.bp-popover-layer { position: fixed; inset: 0; z-index: 5300; pointer-events: none; }
+}

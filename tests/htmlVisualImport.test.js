@@ -145,3 +145,27 @@ test('Designer save sanitization retains imported images and editor hooks across
   expect(stored).not.toContain('evil');
   delete global.loadedModules.designerManager;
 });
+
+
+test('Designer save preserves authored interactive markup while excluding executable HTML', async () => {
+  jest.resetModules();
+  const manager = require('../mother/modules/designerManager');
+  const emitter = new EventEmitter();
+  emitter.registerModuleType = () => {};
+  let saved;
+  for (const name of ['createDatabase', 'applySchemaDefinition', 'performDbOperation']) {
+    emitter.on(name, (payload, callback) => {
+      if (payload.operation === 'DESIGNER_SAVE_DESIGN') saved = payload;
+      callback(null, { id: 9, version: 1 });
+    });
+  }
+  await manager.initialize({ motherEmitter: emitter, isCore: true, jwt: 'test-token' });
+  const html = '<div id="widget-root" class="widget-composer" data-state="search" hidden aria-live="polite"><form action="https://example.test"><div data-editor contenteditable="plaintext-only" role="combobox"></div><select data-locale><option value="zh" selected>Chinese</option></select><button type="submit" disabled onclick="bad()">Go</button></form><script>bad()</script><iframe src="https://example.test"></iframe><a href="javascript:bad()">Link</a></div>';
+  await new Promise((resolve, reject) => emitter.emit('designer.saveDesign', {
+    design: { title: 'Interactive' }, widgets: [{ id: 'one', widgetId: 'custom', code: { html } }]
+  }, (error, result) => error ? reject(error) : resolve(result)));
+  const stored = saved.params[0].widgets[0].html;
+  for (const hook of ['id="widget-root"', 'class="widget-composer"', 'data-editor', 'contenteditable="plaintext-only"', 'aria-live="polite"', '<form>', '<select', 'value="zh"', 'disabled', 'hidden']) expect(stored).toContain(hook);
+  for (const unsafe of ['onclick', '<script', '<iframe', 'javascript:', 'action=']) expect(stored).not.toContain(unsafe);
+  delete global.loadedModules.designerManager;
+});

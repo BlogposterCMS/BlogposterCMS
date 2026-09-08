@@ -29,6 +29,8 @@
 @use 'pages/pages';
 @use 'pages/media';
 @use 'pages/settings';
+// Settings reuses the Designer's existing color/font editors and their controls.
+@use '../../../apps/designer/assets/scss/style-libraries';
 @use 'pages/ui-kit';
 @use 'pages/access-settings';
 @use 'pages/system-settings';

@@ -39,6 +39,16 @@ beforeEach(() => {
   service.resetMutationQueue();
 });
 
+test('dark slot values persist, validate and can return to the light fallback', async () => {
+  const emitter = createEmitter();
+  await service.updateSavedColor(emitter, 'token', { id: 'default-1', darkValue: '#ABC' });
+  assert.strictEqual((await service.readColorLibrary(emitter, 'token')).colors[0].darkValue, '#AABBCC');
+  await assert.rejects(() => service.updateSavedColor(emitter, 'token', { id: 'default-1', darkValue: 'url(javascript:bad)' }), /COLOR_LIBRARY_INVALID_VALUE/);
+  assert.strictEqual((await service.readColorLibrary(emitter, 'token')).colors[0].darkValue, '#AABBCC');
+  await service.updateSavedColor(emitter, 'token', { id: 'default-1', darkValue: '' });
+  assert.strictEqual((await service.readColorLibrary(emitter, 'token')).colors[0].darkValue, undefined);
+});
+
 test('color schemes keep stable numbered Default slots while the active scheme changes', async () => {
   const emitter = createEmitter();
   await colorLibrary.initialize({ motherEmitter: emitter, isCore: true, jwt: 'internal-token' });

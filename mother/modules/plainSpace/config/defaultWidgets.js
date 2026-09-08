@@ -391,6 +391,32 @@ module.exports.DEFAULT_WIDGETS = [
     }
   },
   {
+    widgetId: 'uiKitComponent',
+    widgetType: PUBLIC_LANE,
+    label: 'UI kit component',
+    content: '/ui/widgets/plainspace/public/basicwidgets/uiKitComponentWidget.js',
+    category: 'authoring',
+    metadata: {
+      layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
+      apiActions: [],
+      icon: 'component',
+      defaults: { component: { id: 'button', name: 'Button', type: 'button', props: { label: 'Button' } } }
+    }
+  },
+  {
+    widgetId: 'siteLogo',
+    widgetType: PUBLIC_LANE,
+    label: 'Logo',
+    content: '/ui/widgets/plainspace/public/basicwidgets/logoWidget.js',
+    category: 'media',
+    metadata: {
+      layout: dashboardLayout('third', ['third', 'half', 'full'], BREAKPOINTS.thirdHalfFull),
+      apiActions: [],
+      icon: 'image',
+      defaults: {}
+    }
+  },
+  {
     widgetId: 'buttonLink',
     widgetType: PUBLIC_LANE,
     label: 'Button / Link',

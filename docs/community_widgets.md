@@ -69,3 +69,12 @@ existing security scanner also finds a hard violation.
 Bundled, admin, core, and generated widgets are stricter: those must satisfy
 the v1 design contract before registration so first-party surfaces stay aligned
 with the Designer and shell tokens.
+
+
+## Operator-approved integration
+
+Widgets may use `context.services` for named operations, bounded SSE subscriptions,
+unsent drafts and locale/theme preferences configured by the site operator through
+Settings Manager. This does not permit direct credential, storage or event-stream
+access in widget scripts. See [Public widget services](widget-services.md) for the
+contract, preview restrictions and server-side authorization requirements.

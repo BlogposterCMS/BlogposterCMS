@@ -105,6 +105,7 @@ function normalizeStoredColor(value, index) {
       id: `default-${index + 1}`,
       name: normalizeColorName(value.name || `Color ${index + 1}`),
       value: normalizeColorValue(value.value),
+      ...(value.darkValue ? { darkValue: normalizeColorValue(value.darkValue) } : {}),
       createdAt,
       updatedAt: timestampOrEpoch(value.updatedAt || createdAt)
     };
@@ -417,6 +418,11 @@ async function updateSavedColor(motherEmitter, jwt, input = {}) {
         : current.value,
       updatedAt: new Date().toISOString()
     };
+    // Optional per-slot dark values extend the existing scheme; empty restores inheritance.
+    if (Object.prototype.hasOwnProperty.call(input, 'darkValue')) {
+      if (input.darkValue === '' || input.darkValue === null) delete color.darkValue;
+      else color.darkValue = normalizeColorValue(input.darkValue);
+    }
     const colors = [...existing.colors];
     colors[index] = color;
     const scheme = { ...existing, colors, updatedAt: color.updatedAt };

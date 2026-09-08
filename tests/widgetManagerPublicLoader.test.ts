@@ -29,6 +29,12 @@ jest.mock('/ui/widgets/plainspace/public/basicwidgets/textBoxWidget.js', () => (
   render: mockRenderTextWidget,
 }), { virtual: true });
 
+jest.mock('/ui/widgets/rendering/widgetModuleLoader.js', () => ({
+  loadWidgetModule: jest.fn(async () => ({ render: mockRenderTextWidget }))
+}));
+
+jest.mock('../ui/widgets/rendering/widgetServices', () => ({ loadWidgetServices: jest.fn(async () => ({ request: jest.fn(), dispose: jest.fn() })) }));
+
 const { loadWidgets, registerLoaders } = require('../mother/modules/widgetManager/publicLoader.js');
 
 describe('widgetManager public loader', () => {
@@ -277,4 +283,20 @@ describe('widgetManager public loader', () => {
     );
     expect(document.querySelector('.widget')?.textContent).toBe('Design metadata text');
   });
+});
+
+
+test('ordinary community modules mount publicly with services and without CMS credentials', async () => {
+  document.body.innerHTML = '<div id="app"></div>';
+  mockRenderTextWidget.mockClear();
+  const activeLayout = { grid: { columns: 12, cellHeight: 10 }, items: [{ widgetId: 'example', instanceId: 'example-one', wPercent: 100, hPercent: 20 }] };
+  const meltdownEmit = jest.fn().mockResolvedValue({ resource: 'widgets', action: 'list', data: [{ widgetId: 'example', content: '/widgets/example/widget.js' }] });
+  await loadWidgets({}, { meltdownEmit, publicToken: 'must-not-leak', activeLayout });
+  const context = mockRenderTextWidget.mock.calls[0][1];
+  expect(context.widgetId).toBe('example');
+  expect(typeof context.services.request).toBe('function');
+  expect(context.jwt).toBeUndefined();
+  expect(context.publicToken).toBeUndefined();
+  expect(context.meltdownEmit).toBeUndefined();
+  window.dispatchEvent(new Event('pagehide'));
 });

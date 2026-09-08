@@ -51,6 +51,9 @@ describe('designer native element presets', () => {
       id: 'media.gallery',
       widgetId: 'gallery'
     }));
+    expect(getInsertPreset('media.logo')).toEqual(expect.objectContaining({
+      widgetId: 'siteLogo', groupId: 'media', settings: {}
+    }));
     expect(getInsertPreset('navigation.menu')).toEqual(expect.objectContaining({
       widgetId: 'navigationMenu'
     }));

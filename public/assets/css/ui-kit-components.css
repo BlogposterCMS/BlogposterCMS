@@ -1,0 +1,836 @@
+@charset "UTF-8";
+.bp-ui-kit-surface {
+  --btn-radius: var(--studio-radius-control);
+  --btn-h: var(--studio-control-size);
+  --btn-gap: 8px;
+  --btn-shadow: var(--studio-shadow-soft);
+  --btn-hover-shadow: var(--studio-shadow-control);
+  --btn-hover-delay: 80ms;
+  /* ===== Global Buttons ===== */
+}
+.bp-ui-kit-surface :root {
+  --btn-radius: var(--studio-radius-control);
+  --btn-h: var(--studio-control-size);
+  --btn-gap: 8px;
+  --btn-shadow: var(--studio-shadow-soft);
+  --btn-hover-shadow: var(--studio-shadow-control);
+  --btn-hover-delay: 80ms;
+}
+.bp-ui-kit-surface {
+  /* Base */
+}
+.bp-ui-kit-surface .app-scope .button {
+  --bg: var(--color-card);
+  --fg: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btn-gap);
+  height: var(--btn-h);
+  padding: 0 16px;
+  border-radius: var(--btn-radius);
+  border: 0;
+  min-width: 120px;
+  background: var(--bg);
+  color: var(--fg);
+  font-weight: 600;
+  line-height: var(--btn-h);
+  cursor: pointer;
+  user-select: none;
+  transition: filter var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay), background var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay), color var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay);
+}
+.bp-ui-kit-surface .app-scope .button:disabled,
+.bp-ui-kit-surface .app-scope .button[aria-disabled=true] {
+  opacity: 0.6;
+  filter: saturate(0.8) brightness(0.96);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+.bp-ui-kit-surface {
+  /* Focus */
+}
+.bp-ui-kit-surface .app-scope .button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset: 2px;
+}
+.bp-ui-kit-surface .app-scope .button.ghost:focus-visible,
+.bp-ui-kit-surface .app-scope .button.outline:focus-visible {
+  outline-color: color-mix(in srgb, var(--brand) 60%, transparent);
+}
+.bp-ui-kit-surface {
+  /* Variants */
+}
+.bp-ui-kit-surface .app-scope .button.primary {
+  --bg: var(--color-primary);
+  --fg: var(--color-primary-contrast);
+  box-shadow: var(--btn-shadow);
+}
+.bp-ui-kit-surface .app-scope .button.primary:disabled {
+  filter: saturate(0.85) brightness(0.95);
+  opacity: 0.75;
+  box-shadow: none;
+}
+.bp-ui-kit-surface .app-scope .button.ghost {
+  --bg: var(--studio-surface-solid);
+  --fg: var(--studio-text);
+  box-shadow: var(--studio-shadow-soft);
+}
+.bp-ui-kit-surface .app-scope .button.secondary {
+  --bg: var(--studio-surface-muted);
+  --fg: var(--studio-text);
+  box-shadow: inset 0 0 0 1px var(--studio-border);
+}
+.bp-ui-kit-surface .app-scope .button.outline {
+  --bg: transparent;
+  --fg: var(--brand);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 45%, var(--studio-border));
+}
+.bp-ui-kit-surface .app-scope .button.text {
+  --bg: transparent;
+  --fg: var(--brand);
+  height: auto;
+  line-height: normal;
+  padding: 4px 6px;
+}
+.bp-ui-kit-surface {
+  /* Danger */
+}
+.bp-ui-kit-surface .app-scope .button.danger {
+  --bg: linear-gradient(180deg,#ff5a5a,#e33a3a);
+  --fg:#fff;
+  box-shadow: var(--btn-shadow);
+}
+.bp-ui-kit-surface .app-scope .button.danger:not(:disabled):hover {
+  filter: brightness(0.97) saturate(1.05);
+}
+.bp-ui-kit-surface {
+  /* Hover micro-interaction: barely-there motion, no layout shift. */
+}
+.bp-ui-kit-surface .app-scope .button:not(:disabled):hover {
+  filter: brightness(0.99) saturate(1.02);
+  box-shadow: var(--btn-hover-shadow);
+}
+.bp-ui-kit-surface .app-scope .button:not(:disabled):active {
+  filter: brightness(0.97) saturate(1.01);
+}
+.bp-ui-kit-surface {
+  /* Sizes */
+}
+.bp-ui-kit-surface .app-scope .button.sm {
+  --btn-h: 34px;
+  padding: 0 12px;
+  font-weight: 600;
+}
+.bp-ui-kit-surface .app-scope .button.lg {
+  --btn-h: 48px;
+  padding: 0 20px;
+}
+.bp-ui-kit-surface .app-scope .button.block {
+  width: 100%;
+  min-width: 0;
+}
+.bp-ui-kit-surface {
+  /* Icon support */
+}
+.bp-ui-kit-surface .app-scope .button .icon {
+  display: inline-flex;
+  width: 1.1em;
+  height: 1.1em;
+  line-height: 0;
+}
+.bp-ui-kit-surface .app-scope .button .icon + span,
+.bp-ui-kit-surface .app-scope .button span + .icon {
+  margin-left: 6px;
+}
+.bp-ui-kit-surface {
+  /* Compact icon actions reuse the floating language of the dashboard chrome. */
+}
+.bp-ui-kit-surface .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--studio-radius-control);
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-control);
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle):hover:not(:disabled) {
+  background: var(--studio-surface-muted);
+  box-shadow: var(--studio-shadow-lift);
+}
+.bp-ui-kit-surface .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle):focus-visible {
+  outline: none;
+  box-shadow: var(--studio-focus-ring), var(--studio-shadow-control);
+}
+.bp-ui-kit-surface .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle):disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.bp-ui-kit-surface .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle) img {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+.bp-ui-kit-surface .app-scope .icon-button.lg {
+  flex-basis: var(--studio-control-size);
+  width: var(--studio-control-size);
+  height: var(--studio-control-size);
+}
+.bp-ui-kit-surface .app-scope .page-action-button.delete-page:hover:not(:disabled) {
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 8%, var(--studio-surface-solid));
+}
+.bp-ui-kit-surface {
+  /* Loading state */
+}
+.bp-ui-kit-surface .app-scope .button.is-loading {
+  pointer-events: none;
+  position: relative;
+  color: transparent;
+}
+.bp-ui-kit-surface .app-scope .button.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--fg) 30%, transparent);
+  border-top-color: var(--fg);
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.bp-ui-kit-surface {
+  /* Button group */
+}
+.bp-ui-kit-surface .app-scope .button-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.bp-ui-kit-surface {
+  /* Reduced motion */
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-ui-kit-surface .app-scope .button {
+    transition: none;
+  }
+  .bp-ui-kit-surface .app-scope .button.is-loading::after {
+    animation: none;
+  }
+}
+.bp-ui-kit-surface .app-scope form:not(.step) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+.bp-ui-kit-surface .app-scope :where(input:not([type]),
+input[type=text],
+input[type=email],
+input[type=password],
+input[type=search],
+input[type=url],
+input[type=tel],
+input[type=number],
+textarea) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--studio-field-min-height);
+  padding: 10px var(--studio-field-padding-x);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-surface-muted);
+  color: var(--studio-text);
+  box-shadow: none;
+  font: inherit;
+  line-height: 1.4;
+  transition: background-color var(--motion-duration-base) var(--motion-ease-standard), border-color var(--motion-duration-base) var(--motion-ease-standard), box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .app-scope textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+.bp-ui-kit-surface .app-scope :where(input:not([type]),
+input[type=text],
+input[type=email],
+input[type=password],
+input[type=search],
+input[type=url],
+input[type=tel],
+input[type=number],
+textarea):hover:not(:disabled):not([readonly]) {
+  border-color: var(--studio-border-strong);
+}
+.bp-ui-kit-surface .app-scope :where(input:not([type]),
+input[type=text],
+input[type=email],
+input[type=password],
+input[type=search],
+input[type=url],
+input[type=tel],
+input[type=number],
+textarea):focus {
+  outline: none;
+  border-color: transparent;
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-focus-ring);
+}
+.bp-ui-kit-surface .app-scope :where(input, textarea)::placeholder {
+  color: var(--studio-text-muted);
+  opacity: 0.8;
+}
+.bp-ui-kit-surface .app-scope :where(input, textarea):disabled,
+.bp-ui-kit-surface .app-scope :where(input, textarea)[readonly] {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+.bp-ui-kit-surface .app-scope :where(input, textarea)[aria-invalid=true] {
+  border-color: color-mix(in srgb, var(--color-error) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 14%, transparent);
+}
+.bp-ui-kit-surface .app-scope .form-field {
+  display: grid;
+  gap: var(--studio-field-gap);
+  min-width: 0;
+}
+.bp-ui-kit-surface .app-scope .form-field > label,
+.bp-ui-kit-surface .app-scope .form-field__label {
+  color: var(--studio-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.bp-ui-kit-surface .app-scope .form-field__hint,
+.bp-ui-kit-surface .app-scope .form-field__error,
+.bp-ui-kit-surface .app-scope .form-status {
+  min-height: 18px;
+  color: var(--studio-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.bp-ui-kit-surface .app-scope .form-field__error,
+.bp-ui-kit-surface .app-scope .form-status.is-error {
+  color: var(--color-error);
+}
+.bp-ui-kit-surface .app-scope .form-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  color: var(--studio-text);
+  font-size: 0.94rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.bp-ui-kit-surface .app-scope .form-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.bp-ui-kit-surface .app-scope .form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.bp-ui-kit-surface .app-scope .field {
+  position: relative;
+  width: 100%;
+}
+.bp-ui-kit-surface .app-scope .field input,
+.bp-ui-kit-surface .app-scope .field textarea {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--studio-field-radius);
+  border: 1px solid var(--studio-border);
+  background-color: var(--studio-surface-muted);
+  font-size: 15px;
+  color: var(--studio-text);
+  transition: border-color var(--motion-duration-base) var(--motion-ease-standard), box-shadow 0.2s ease, --user-color 5s;
+  box-shadow: none;
+}
+.bp-ui-kit-surface .app-scope .field input:focus,
+.bp-ui-kit-surface .app-scope .field textarea:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: var(--studio-focus-ring);
+  background-color: var(--studio-surface-solid);
+}
+.bp-ui-kit-surface .app-scope .field label {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--studio-text-muted);
+  pointer-events: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+.bp-ui-kit-surface .app-scope .field input:not(:placeholder-shown) + label,
+.bp-ui-kit-surface .app-scope .field input:focus + label,
+.bp-ui-kit-surface .app-scope .field textarea:not(:placeholder-shown) + label,
+.bp-ui-kit-surface .app-scope .field textarea:focus + label {
+  top: -7px;
+  left: 14px;
+  font-size: 12px;
+  color: var(--user-color);
+  background: var(--studio-surface-solid);
+  padding: 0 4px;
+  font-weight: 500;
+  transition: color 0.2s ease, --user-color 5s;
+}
+.bp-ui-kit-surface .app-scope form .button {
+  margin-top: 4px;
+}
+.bp-ui-kit-surface .app-scope .form-actions .button {
+  margin-top: 0;
+}
+.bp-ui-kit-surface .app-scope input[type=checkbox] {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 4px;
+  background: var(--studio-surface-solid);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  position: relative;
+  flex: 0 0 16px;
+}
+.bp-ui-kit-surface .app-scope input[type=checkbox]:checked {
+  background: var(--user-color, #007bff);
+  border-color: var(--user-color, #007bff);
+}
+.bp-ui-kit-surface .app-scope input[type=checkbox]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+}
+.bp-ui-kit-surface .app-scope input[type=checkbox]:hover {
+  border-color: var(--user-color, #007bff);
+}
+.bp-ui-kit-surface .app-scope input[type=radio] {
+  appearance: none;
+  position: relative;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 50%;
+  background: var(--studio-surface-solid);
+  cursor: pointer;
+}
+.bp-ui-kit-surface .app-scope input[type=radio]:checked {
+  border-color: var(--user-color);
+  box-shadow: inset 0 0 0 4px var(--user-color);
+}
+.bp-ui-kit-surface .app-scope input[type=radio]:focus-visible {
+  box-shadow: var(--studio-focus-ring);
+}
+.bp-ui-kit-surface .app-scope .form-switch {
+  display: inline-grid;
+  grid-template-columns: 38px minmax(0, auto);
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  color: var(--studio-text);
+  font-size: 0.94rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.bp-ui-kit-surface .app-scope .form-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.bp-ui-kit-surface .app-scope .form-switch__track {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 999px;
+  background: var(--studio-surface-muted);
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard), border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .app-scope .form-switch__track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-shadow-control);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .app-scope .form-switch input:checked + .form-switch__track {
+  border-color: var(--user-color);
+  background: var(--user-color);
+}
+.bp-ui-kit-surface .app-scope .form-switch input:checked + .form-switch__track::after {
+  transform: translateX(16px);
+}
+.bp-ui-kit-surface .app-scope .form-switch input:focus-visible + .form-switch__track {
+  box-shadow: var(--studio-focus-ring);
+}
+.bp-ui-kit-surface .app-scope .form-switch input:disabled ~ * {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+@media (max-width: 680px) {
+  .bp-ui-kit-surface .app-scope .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.bp-ui-kit-surface .custom-select__native {
+  display: none !important;
+}
+.bp-ui-kit-surface .custom-select {
+  --custom-select-control-h: var(--studio-control-size, 40px);
+  --custom-select-radius: var(--studio-radius-control, 999px);
+  --custom-select-source-width: auto;
+  position: relative;
+  display: inline-grid;
+  width: var(--custom-select-source-width);
+  min-width: min(220px, 100%);
+  max-width: 100%;
+  color: var(--studio-text, var(--color-text));
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+}
+.bp-ui-kit-surface .app-scope .field .custom-select,
+.bp-ui-kit-surface .app-scope .form-field .custom-select,
+.bp-ui-kit-surface .app-scope .custom-select[data-full-width=true] {
+  width: 100%;
+}
+.bp-ui-kit-surface .custom-select .display {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--custom-select-control-h);
+  padding: 0 14px 0 18px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius, var(--custom-select-radius));
+  background: var(--studio-surface-solid);
+  color: inherit;
+  box-shadow: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color var(--motion-duration-base) var(--motion-ease-standard), box-shadow var(--motion-duration-base) var(--motion-ease-standard), transform var(--motion-duration-base) var(--motion-ease-standard), background-color var(--motion-duration-base) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .custom-select .display:hover,
+.bp-ui-kit-surface .custom-select.open .display {
+  background: var(--studio-surface-solid);
+  border-color: var(--studio-border-strong);
+}
+.bp-ui-kit-surface {
+  /* The field already has a visible label. The global floating-label helper is
+     intended for icon actions and would otherwise widen every select by the
+     generated aria-label tooltip. */
+}
+.bp-ui-kit-surface .custom-select .display[aria-label]::after {
+  content: none;
+  display: none;
+}
+.bp-ui-kit-surface .custom-select .display:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: var(--studio-focus-ring);
+}
+.bp-ui-kit-surface .custom-select.is-disabled {
+  opacity: 0.6;
+}
+.bp-ui-kit-surface .custom-select.is-disabled .display {
+  cursor: not-allowed;
+  transform: none;
+}
+.bp-ui-kit-surface .custom-select__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bp-ui-kit-surface .custom-select__chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  background: currentColor;
+  opacity: 0.7;
+  mask: url("/assets/icons/chevron-down.svg") center/contain no-repeat;
+  transform-origin: center;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard), transform var(--motion-duration-base) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .custom-select.open .custom-select__chevron {
+  opacity: 0.9;
+  transform: rotate(180deg);
+}
+.bp-ui-kit-surface .custom-select .options {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 100%;
+  max-height: min(280px, 48vh);
+  padding: 6px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius, var(--studio-radius-panel));
+  background: var(--studio-surface-solid);
+  box-shadow: var(--studio-shadow-lift);
+  opacity: 0;
+  pointer-events: none;
+  overflow: auto;
+  transform: translateY(-4px);
+  transform-origin: top center;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .custom-select.open .options {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.bp-ui-kit-surface .custom-select .option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard), color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.bp-ui-kit-surface .custom-select .option:hover,
+.bp-ui-kit-surface .custom-select .option:focus-visible,
+.bp-ui-kit-surface .custom-select .option[aria-selected=true] {
+  outline: none;
+  background: var(--studio-surface-muted);
+}
+.bp-ui-kit-surface .custom-select .option:disabled,
+.bp-ui-kit-surface .custom-select .option.disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-ui-kit-surface .custom-select .display,
+  .bp-ui-kit-surface .custom-select__chevron,
+  .bp-ui-kit-surface .custom-select .options,
+  .bp-ui-kit-surface .custom-select .option {
+    transition: none;
+  }
+  .bp-ui-kit-surface .custom-select .display:hover,
+  .bp-ui-kit-surface .custom-select.open .display,
+  .bp-ui-kit-surface .custom-select .options,
+  .bp-ui-kit-surface .custom-select.open .options {
+    transform: none;
+  }
+}
+.bp-ui-kit-surface .bp-popover-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5300;
+  pointer-events: none;
+}
+.bp-ui-kit-surface .bp-popover {
+  position: fixed;
+  display: grid;
+  gap: 10px;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(360px, 100vw - 24px);
+  max-height: min(420px, 100vh - 24px);
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-lift);
+  opacity: 0;
+  pointer-events: auto;
+  transform: translateY(-5px) scale(0.98);
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-enter);
+}
+.bp-ui-kit-surface {
+  /* A popover's accessible name labels the region; it must not become a second
+     visual tooltip through the legacy global aria-label helper. */
+}
+.bp-ui-kit-surface .bp-popover[aria-label]::after {
+  content: none;
+  display: none;
+}
+.bp-ui-kit-surface .bp-popover.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.bp-ui-kit-surface .bp-popover.is-leaving {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+.bp-ui-kit-surface .bp-popover__message {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--studio-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.bp-ui-kit-surface .bp-popover__menu {
+  display: grid;
+  gap: 4px;
+}
+.bp-ui-kit-surface .bp-popover__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--studio-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.bp-ui-kit-surface .bp-popover__item:hover,
+.bp-ui-kit-surface .bp-popover__item:focus-visible {
+  background: var(--studio-surface-muted);
+  box-shadow: var(--studio-focus-ring);
+}
+.bp-ui-kit-surface .bp-popover__item img {
+  width: 17px;
+  height: 17px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-ui-kit-surface .bp-popover {
+    transition: none;
+    transform: none;
+  }
+}
+.bp-ui-kit-surface {
+  --studio-text: var(--bp-color-default-2, #171717);
+  --studio-text-muted: var(--bp-color-default-4, #737373);
+  --studio-surface-solid: var(--bp-color-default-3, #ffffff);
+  --studio-border: var(--bp-color-default-4, #bcbcbc);
+  --studio-border-strong: var(--bp-color-default-2, #171717);
+  --studio-surface-muted: var(--bp-color-default-3, white);
+  --studio-field-min-height: 40px;
+  --studio-field-padding-x: 12px;
+  --studio-field-radius: 6px;
+  --studio-field-gap: 6px;
+  --studio-focus-ring: 0 0 0 3px var(--bp-color-default-5, #2563eb);
+  --color-primary: var(--bp-color-default-1, #171717);
+  --color-primary-contrast: var(--bp-color-default-3, white);
+  --color-card: var(--bp-color-default-3, white);
+  --color-text: var(--bp-color-default-2, #171717);
+  --user-color: var(--bp-color-default-1, #171717);
+  --brand: var(--bp-color-default-1, #171717);
+  --studio-control-size: 40px;
+  --studio-shadow-control: 0 0 2px var(--studio-text);
+  --studio-radius-control: 6px;
+  --studio-radius-panel: 8px;
+  color: var(--studio-text);
+  --font-body: var(--bp-type-body-font-family, sans-serif);
+  font-family: var(--font-body);
+  font-size: var(--bp-type-body-font-size, 16px);
+  line-height: var(--bp-type-body-line-height, 1.5);
+  min-width: 0;
+}
+.bp-ui-kit-surface *, .bp-ui-kit-surface *::before, .bp-ui-kit-surface *::after {
+  box-sizing: border-box;
+}
+.bp-ui-kit-surface input, .bp-ui-kit-surface textarea, .bp-ui-kit-surface select {
+  max-width: 100%;
+}
+.bp-ui-kit-surface img {
+  max-width: 100%;
+  height: auto;
+}
+.bp-ui-kit-surface .button {
+  background: var(--bp-color-default-1, #171717);
+  color: var(--bp-color-default-3, white);
+}
+.bp-ui-kit-surface .button.secondary {
+  background: var(--bp-color-default-3, white);
+  color: var(--bp-color-default-1, #171717);
+}
+.bp-ui-kit-surface .app-scope .button {
+  font-family: var(--bp-type-button-font-family, var(--font-body));
+  font-size: var(--bp-type-button-font-size, 14px);
+  font-weight: var(--bp-type-button-font-weight, 600);
+  font-style: var(--bp-type-button-font-style, normal);
+  line-height: var(--bp-type-button-line-height, 1.4);
+  letter-spacing: var(--bp-type-button-letter-spacing, 0);
+  text-transform: var(--bp-type-button-text-transform, none);
+  text-decoration: var(--bp-type-button-text-decoration, none);
+}
+.bp-ui-kit-surface .form-choice {
+  margin-right: 12px;
+}
+.bp-ui-kit-surface .bp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.bp-ui-kit-surface .bp-tabs [aria-selected=true] {
+  outline: 2px solid var(--bp-color-default-5, currentColor);
+  outline-offset: -2px;
+}
+.bp-ui-kit-surface.bp-popover-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5300;
+  pointer-events: none;
+}
+
+/*# sourceMappingURL=ui-kit-components.css.map */

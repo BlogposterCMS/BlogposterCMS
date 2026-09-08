@@ -11,17 +11,21 @@ function buttonStyle() {
   padding: 0.75rem 1.15rem;
   border: 1px solid var(--studio-border-strong);
   border-radius: var(--studio-radius-control);
-  background: var(--studio-text);
-  color: var(--studio-surface-solid);
-  font-weight: 700;
-  line-height: 1;
+  background: var(--bp-color-default-1, var(--studio-text));
+  color: var(--bp-color-default-3, var(--studio-surface-solid));
+  font-family: var(--bp-type-button-font-family, inherit);
+  font-size: var(--bp-type-button-font-size, inherit);
+  font-weight: var(--bp-type-button-font-weight, 700);
+  line-height: var(--bp-type-button-line-height, 1);
   text-align: center;
-  text-decoration: none;
-  letter-spacing: 0;
+  text-decoration: var(--bp-type-button-text-decoration, none);
+  text-transform: var(--bp-type-button-text-transform, none);
+  font-style: var(--bp-type-button-font-style, normal);
+  letter-spacing: var(--bp-type-button-letter-spacing, 0);
 }
 .bp-public-widget.bp-button-widget--secondary {
-  background: var(--studio-surface-solid);
-  color: var(--studio-text);
+  background: var(--bp-color-default-3, var(--studio-surface-solid));
+  color: var(--bp-color-default-1, var(--studio-text));
 }
 .bp-public-widget.bp-button-widget--plain {
   min-width: 0;
@@ -30,7 +34,7 @@ function buttonStyle() {
   border-color: transparent;
   border-radius: 0;
   background: transparent;
-  color: var(--color-primary);
+  color: var(--bp-type-link-color, var(--bp-color-default-5, var(--color-primary)));
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }

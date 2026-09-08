@@ -6,6 +6,7 @@ import {
   fetchSeoSettings,
   pickMediaShareUrl,
   saveFaviconUrl,
+  saveSettingValue,
   saveGeneralSettings,
   saveGoogleFontsApiKey,
   saveMaintenanceSettings,
@@ -27,6 +28,7 @@ import type {
 } from '../modulesListData.js';
 import { renderUiKitGallery } from './uiKitGallery.js';
 import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
+import { mountWebsiteDesignSettings } from './websiteDesignSettings.js';
 import {
   createFormActions,
   createFormChoice as createChoice,
@@ -364,14 +366,50 @@ async function renderGeneral(ctx: RenderCtx) {
 }
 
 async function renderDesign(ctx: RenderCtx) {
-  const shell = createShell('Design Settings', 'Manage your browser icon and font connection. Page layouts live in Design Studio.');
+  const shell = createShell('Design Settings', 'Shared website branding, theme and component defaults for Design Studio.');
   const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
+  const overview = tabs.addTab('Overview');
   const branding = tabs.addTab('Branding');
   branding.classList.add('settings-section--form');
-  const typography = tabs.addTab('Typography');
+  const theme = tabs.addTab('Theme');
+  const typography = tabs.addTab('Typography & components');
   typography.classList.add('settings-section--form');
+  const presets = tabs.addTab('UI kits');
 
   const designSettings = await fetchDesignSettings(ctx.meltdownEmit, ctx.jwt);
+  const logoInputs: Record<string, HTMLInputElement> = {};
+
+  // Both variants use the existing settings persistence and media picker.
+  for (const variant of [
+    { key: 'SITE_LOGO_URL', field: 'logoUrl', label: 'Logo (light / default)', value: designSettings.logoUrl, hint: 'Website logo for light mode. Also used in dark mode when no dark logo is set.' },
+    { key: 'SITE_LOGO_DARK_URL', field: 'logoDarkUrl', label: 'Logo (dark)', value: designSettings.logoDarkUrl, hint: 'Optional logo for dark mode. The Logo widget switches automatically with the color scheme.' }
+  ] as const) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = variant.value;
+    logoInputs[variant.field] = input;
+    const pick = document.createElement('button');
+    pick.type = 'button';
+    pick.className = 'button ghost';
+    pick.textContent = 'Choose from media';
+    pick.addEventListener('click', async () => {
+      try {
+        const url = await pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt);
+        if (url) {
+          input.value = url;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      } catch (err) {
+        shell.status.textContent = `SETTINGS_LOGO_MEDIA_FAILED: ${errorMessage(err)}`;
+      }
+    });
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'button primary';
+    save.textContent = `Save ${variant.label}`;
+    shell.bindSave(save, [input], () => saveSettingValue(ctx.meltdownEmit, ctx.jwt, variant.key, input.value.trim()), 'Logo updated.', { id: variant.field, fields: { [variant.field]: input } });
+    branding.append(createFormField(variant.label, input, { hint: variant.hint }), createFormActions(pick, save));
+  }
 
   const favInput = document.createElement('input');
   favInput.type = 'text';
@@ -416,6 +454,21 @@ async function renderDesign(ctx: RenderCtx) {
     createFormActions(fontSave)
   );
   shell.mount(ctx.el);
+  try {
+    const dispose = await mountWebsiteDesignSettings({
+      root: shell.content, overview, theme, components: typography, presets,
+      emit: ctx.meltdownEmit, jwt: ctx.jwt,
+      branding: () => ({ logoUrl: logoInputs.logoUrl?.value || '', logoDarkUrl: logoInputs.logoDarkUrl?.value || '' }),
+      editTheme: () => { shell.tabs.querySelectorAll<HTMLButtonElement>('[role="tab"]')[2]?.click(); }
+    });
+    // Dedicated Settings pages are replaced by the existing page loader.
+    const observer = new MutationObserver(() => {
+      if (!shell.content.isConnected) { dispose(); observer.disconnect(); }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  } catch (error) {
+    overview.textContent = `WEBSITE_DESIGN_LOAD_FAILED: ${errorMessage(error)}`;
+  }
 }
 
 async function renderSeo(ctx: RenderCtx) {

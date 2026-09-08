@@ -60,6 +60,14 @@ test('settings manager exposes option, list, bulk and delete events', async () =
   assert.deepStrictEqual(publicSettings.result, { SITE_TITLE: 'value:SITE_TITLE' });
   assert.deepStrictEqual(selects[2].data.keys, ['SITE_TITLE']);
 
+  const logos = await emitAsync(emitter, 'getPublicSettings', {
+    ...base, keys: ['SITE_LOGO_URL', 'SITE_LOGO_DARK_URL']
+  });
+  assert.ifError(logos.err);
+  assert.deepStrictEqual(logos.result, {
+    SITE_LOGO_URL: 'value:SITE_LOGO_URL', SITE_LOGO_DARK_URL: 'value:SITE_LOGO_DARK_URL'
+  });
+
   const updated = await emitAsync(emitter, 'updateOption', { ...base, key: 'SITE_TITLE', value: 'Blogposter' });
   assert.ifError(updated.err);
   assert.strictEqual(updates[0].data.rawSQL, 'UPSERT_SETTING');

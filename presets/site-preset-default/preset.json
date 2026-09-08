@@ -4,6 +4,20 @@
   "name": "Default",
   "version": "1.0.0",
   "developer": "Blogposter Team",
+  "components": [
+    { "id": "primary", "name": "Primary button", "type": "button", "props": { "label": "Continue" } },
+    { "id": "secondary", "name": "Secondary button", "type": "button", "props": { "label": "Cancel", "variant": "secondary" } },
+    { "id": "input", "name": "Input", "type": "input", "props": { "label": "Name", "placeholder": "Enter your name" } },
+    { "id": "textarea", "name": "Text area", "type": "textarea", "props": { "label": "Message" } },
+    { "id": "dropdown", "name": "Dropdown", "type": "select", "props": { "label": "Choose", "options": ["First", "Second"] } },
+    { "id": "multiselect", "name": "Multiple selection", "type": "multiselect", "props": { "label": "Choose several", "options": ["First", "Second"] } },
+    { "id": "checkbox", "name": "Checkbox", "type": "checkbox", "props": { "label": "Accept" } },
+    { "id": "radio", "name": "Radio group", "type": "radio", "props": { "label": "Choose one", "options": ["First", "Second"] } },
+    { "id": "switch", "name": "Switch", "type": "switch", "props": { "label": "Enable" } },
+    { "id": "tabs", "name": "Tabs", "type": "tabs", "props": { "tabs": [{ "label": "Overview", "content": "Overview content" }, { "label": "Details", "content": "Details content" }] } },
+    { "id": "popover", "name": "Popover", "type": "popover", "props": { "label": "More", "content": "Additional information" } },
+    { "id": "tooltip", "name": "Tooltip", "type": "tooltip", "props": { "label": "Help", "content": "Helpful explanation" } }
+  ],
   "builderSettings": {
     "layoutMode": "free",
     "gap": 0,

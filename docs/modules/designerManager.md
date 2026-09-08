@@ -32,3 +32,9 @@ The manager intentionally keeps the public resource name `designer` while the
 server startup owner remains `designerManager`. Community modules cannot
 install, uninstall, activate or spoof the core-owned Designer service through
 module management APIs.
+
+
+Authored widget markup preserves scoped classes, ids, data/ARIA hooks and safe
+form/select/contenteditable controls through save. Inline event handlers, scripts,
+frames and form destinations remain excluded. Imported HTML keeps the existing
+restricted generated-class policy. Community widget capability rules are unchanged.

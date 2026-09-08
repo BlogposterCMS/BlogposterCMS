@@ -18,6 +18,19 @@ beforeEach(() => {
   document.documentElement.removeAttribute('data-bp-color-library-ready');
 });
 
+test('light and dark slots emit scoped CSS without changing stored literal overrides', () => {
+  const colors = [{ id: 'default-1', name: 'Primary', value: '#111111', darkValue: '#EEEEEE' }];
+  const style = applyColorLibraryVariables({ version: 2, activeSchemeId: 'scheme-test', schemes: [{ id: 'scheme-test', name: 'Test', colors }], colors });
+  expect(style.textContent).toContain('--bp-color-default-1: #111111');
+  expect(style.textContent).toContain(':root[data-theme="dark"]');
+  expect(style.textContent).toContain('--bp-color-default-1: #EEEEEE');
+  expect(style.textContent).toContain('prefers-color-scheme: dark');
+  const item = document.createElement('span'); item.style.color = '#123456';
+  document.body.appendChild(item);
+  applyColorLibraryVariables({ version: 2, activeSchemeId: '', schemes: [], colors });
+  expect(item.style.color).toBe('rgb(18, 52, 86)');
+});
+
 test('browser color library loads named colors and publishes stable CSS variables', async () => {
   const initial = {
     version: 2,

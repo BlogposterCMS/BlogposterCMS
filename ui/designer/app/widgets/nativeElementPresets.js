@@ -59,6 +59,7 @@ export const INSERT_TOOL_ITEMS = [
     description: 'Images and galleries',
     presets: [
       { id: 'media.image', title: 'Image', icon: 'image', nativeType: 'media', variant: 'image', description: 'Single media block' },
+      { id: 'media.logo', title: 'Logo', icon: 'image', widgetId: 'siteLogo', description: 'Website logo from Branding, with automatic light/dark variants', size: { w: 240, h: 96 }, minSize: { w: 40, h: 24 }, settings: {} },
       { id: 'media.gallery', title: 'Gallery', icon: 'images', widgetId: 'gallery', description: 'Image grid', size: { w: 720, h: 420 }, minSize: { w: 360, h: 240 }, settings: { mode: 'grid', columns: 3 } },
       { id: 'media.masonry', title: 'Masonry', icon: 'gallery-thumbnails', widgetId: 'gallery', description: 'Masonry gallery', size: { w: 720, h: 460 }, minSize: { w: 360, h: 260 }, settings: { mode: 'masonry', columns: 3, heightMode: 'natural' } },
       { id: 'media.carousel', title: 'Carousel', icon: 'gallery-horizontal', widgetId: 'gallery', description: 'Slider gallery', size: { w: 800, h: 420 }, minSize: { w: 400, h: 240 }, settings: { mode: 'carousel', showControls: true, showDots: true } },

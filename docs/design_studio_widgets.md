@@ -1,11 +1,32 @@
 # Design Studio Widget Inventory
 
+`uiKitComponent` is the shared declarative UI-kit widget for buttons, form
+controls, tabs, popovers and tooltips. Insert a named component from the existing
+UI-kit panel or use `insert.element` with `componentId` and optional props.
+Its preset definition travels in standard instance metadata; palette/font
+references stay linked to the website libraries. See the
+[component contract](website-branding.md#declarative-components). Containers and
+business form submission retain their existing domain owners.
+
 This document defines the first useful widget set for the user-facing
 **Design Studio**. The backend owner is `designerManager`; the public resource
 identity remains `designer` where the app shell and runtime loader address the
 same Design Studio surface.
 
 ## Boundary
+
+### Website logo
+
+The Media catalog's `siteLogo` widget reads `SITE_LOGO_URL`,
+`SITE_LOGO_DARK_URL` and `SITE_TITLE` from the existing public settings endpoint
+on each render. Configure the images through Settings → Design → Branding,
+using the existing media picker or a URL. The favicon remains separate.
+The optional dark logo follows the document theme and the system preference
+when no explicit theme is selected; a missing variant uses the available one.
+Logos keep their proportions and transparency inside the widget bounds.
+No logo URL is copied into the design, so subsequent page loads/renders use
+the current settings without republishing the design. Existing open pages do
+not poll for branding edits. Errors use `BP_WIDGET_LOGO_*` diagnostics.
 
 ### Shared rendering implementation
 

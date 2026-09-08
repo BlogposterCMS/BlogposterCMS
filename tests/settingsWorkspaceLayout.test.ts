@@ -72,7 +72,7 @@ describe('fixed Settings pages', () => {
 
   it('discards one form without losing a draft in another tab', async () => {
     await renderSettingsSurface(host, { slug: 'settings/design' });
-    const fields = [...host.querySelectorAll('input')];
+    const fields = [host.querySelector<HTMLInputElement>('input')!, host.querySelector<HTMLInputElement>('input[type="password"]')!];
     fields[0].value = '/new.png'; fields[1].value = 'pending key';
     fields.forEach(field => field.dispatchEvent(new Event('input', { bubbles: true })));
     const discard = [...host.querySelectorAll('button')].find(button => button.textContent === 'Discard changes')!;

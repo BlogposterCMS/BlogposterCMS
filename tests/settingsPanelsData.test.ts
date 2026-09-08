@@ -41,6 +41,8 @@ describe('settingsPanelsData', () => {
       SITE_TITLE: 'Blogposter',
       SITE_DESC: 'CMS',
       FAVICON_URL: '/favicon.ico',
+      SITE_LOGO_URL: '/logo.svg',
+      SITE_LOGO_DARK_URL: '/logo-dark.svg',
       GOOGLE_FONTS_API_KEY: 'font-key',
       SEO_META_DESCRIPTION: 'Meta',
       SEO_TITLE_TEMPLATE: '%title%',
@@ -54,6 +56,8 @@ describe('settingsPanelsData', () => {
     });
     await expect(fetchDesignSettings(emit, 'admin-token')).resolves.toEqual({
       faviconUrl: '/favicon.ico',
+      logoUrl: '/logo.svg',
+      logoDarkUrl: '/logo-dark.svg',
       googleFontsApiKey: 'font-key'
     });
     await expect(fetchSeoSettings(emit, 'admin-token')).resolves.toEqual({

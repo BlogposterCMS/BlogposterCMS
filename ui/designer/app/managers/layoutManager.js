@@ -132,8 +132,9 @@ export function applyLayout(layout, {
     }
   }
   layout.forEach(item => {
-    const widgetDef = allWidgets.find(w => w.id === item.widgetId);
-    if (!widgetDef) return;
+    const registeredWidget = allWidgets.find(w => w.id === item.widgetId);
+    // Retain persisted instances even if an extension is unavailable; saving must not erase them.
+    const widgetDef = registeredWidget || { id: item.widgetId, metadata: {} };
     const instId = item.id || `w${Math.random().toString(36).slice(2,8)}`;
     item.id = instId;
     const isGlobal = item.global === true;
@@ -269,7 +270,13 @@ export function applyLayout(layout, {
     attachLockOnClick(wrapper);
     gridEl.appendChild(wrapper);
     grid.makeWidget(wrapper);
-    renderWidget(wrapper, widgetDef, codeMap);
+    if (registeredWidget) {
+      renderWidget(wrapper, widgetDef, codeMap);
+    } else {
+      wrapper.dataset.widgetUnavailable = 'true';
+      content.textContent = 'DESIGNER_WIDGET_UNAVAILABLE: ' + item.widgetId;
+      content.setAttribute('role', 'status');
+    }
   });
 }
 

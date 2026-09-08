@@ -2,6 +2,8 @@
  * @jest-environment jsdom
  */
 
+jest.mock('../ui/widgets/rendering/widgetServices', () => ({ loadWidgetServices: jest.fn(async () => ({ dispose: jest.fn() })) }));
+
 import { createRuntimeWidgetContext } from '../ui/runtime/main/runtimeWidgetContext';
 import { renderRuntimeWidgetModule } from '../ui/runtime/main/runtimeWidgetModuleRenderer';
 import { loadWidgetModule } from '../ui/runtime/main/widgetRuntimeGateway';

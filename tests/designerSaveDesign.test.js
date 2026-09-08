@@ -125,5 +125,10 @@ test('handleSaveDesignPlaceholder updates existing design by ID', async () => {
   });
   expect(fetched.design.layout.scenes).toEqual(sceneLayout.scenes);
 
+  // Instance identifiers are not a layout ordering contract.
+  await db.run('INSERT INTO designer_design_widgets (design_id, instance_id, widget_id, x_percent, y_percent) VALUES (?, ?, ?, ?, ?)', [first.id, 'description', 'textBox', 0, 50]);
+  await db.run('INSERT INTO designer_design_widgets (design_id, instance_id, widget_id, x_percent, y_percent) VALUES (?, ?, ?, ?, ?)', [first.id, 'heading', 'textBox', 0, 0]);
+  const ordered = await handleGetDesignPlaceholder({ dbClient: db, params: [{ id: first.id }] });
+  expect(ordered.widgets.map(widget => widget.instance_id)).toEqual(['heading', 'description']);
   await db.close();
 });

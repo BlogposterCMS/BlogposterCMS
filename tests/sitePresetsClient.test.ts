@@ -12,7 +12,19 @@ import {
   sitePresetJsonParts, sitePresetJsonFromParts
 } from '../ui/shared/presets/sitePresets';
 import { TextEncoder, TextDecoder } from 'util';
+import defaultKit from '../presets/site-preset-default/preset.json';
 Object.assign(globalThis, { TextEncoder, TextDecoder });
+
+test('agent catalog survives the real AgentManager sanitizer without repeating component definitions', async () => {
+  const { sanitizeJsonish } = require('../mother/modules/agentManager')._internals;
+  configureSitePresetsClient({ token: 'test', emit: async () => ({ version: 1, lastAppliedId: defaultKit.id, presets: [defaultKit] }) });
+  await refreshSitePresets();
+  const state = sanitizeJsonish({ sitePresets: sitePresetsAgentState() }, 1);
+  expect(state.sitePresets.components.find((c: any) => c.id === 'dropdown')).toEqual({ id: 'dropdown', name: 'Dropdown', type: 'select', supported: true });
+  expect(JSON.stringify(state.sitePresets.components)).not.toContain('[depth-limit]');
+  expect(JSON.stringify(state.sitePresets.components)).not.toContain('options');
+  expect(JSON.parse(exportSitePresetJson(defaultKit.id)).components).toEqual(defaultKit.components);
+});
 
 function preset() {
   return {

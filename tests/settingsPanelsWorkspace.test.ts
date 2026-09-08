@@ -33,7 +33,8 @@ describe('Settings workspace save and recovery', () => {
 
   it('retains other-tab drafts after saving one settings section', async () => {
     await renderSettingsSurface(host, { slug: 'settings/design' });
-    const fields = host.querySelectorAll('input');
+    const faviconLabel = [...host.querySelectorAll('label')].find(label => label.textContent === 'Favicon URL')!;
+    const fields = [host.querySelector<HTMLInputElement>(`#${faviconLabel.htmlFor}`)!, host.querySelector<HTMLInputElement>('input[type="password"]')!];
     fields[0].value = '/favicon.png';
     fields[1].value = 'pending typography';
     button('Save favicon').click();

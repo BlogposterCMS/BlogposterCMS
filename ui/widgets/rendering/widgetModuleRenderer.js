@@ -4,6 +4,7 @@ export async function renderWidgetModule(container, widgetDef, instanceId, insta
     const ctx = {
         id: instanceId,
         widgetId: widgetDef.id,
+        ...(widgetDef.codeUrl?.startsWith('/widgets/') ? { preview: true } : {}),
         metadata: widgetDef.metadata,
         instanceMetadata
     };

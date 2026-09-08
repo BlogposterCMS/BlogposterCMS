@@ -54,8 +54,23 @@ export function openPopover(anchor, options) {
     document.body.appendChild(layer);
     const previousExpanded = anchor.getAttribute('aria-expanded');
     const previousControls = anchor.getAttribute('aria-controls');
-    anchor.setAttribute('aria-expanded', 'true');
-    anchor.setAttribute('aria-controls', panelId);
+    const previousDescription = anchor.getAttribute('aria-describedby');
+    // ID references cannot cross a ShadowRoot. A hidden local description keeps
+    // the tooltip accessible while its visual panel uses the shared body portal.
+    const anchorRoot = anchor.getRootNode();
+    const localDescription = options.role === 'tooltip' && anchorRoot instanceof ShadowRoot ? document.createElement('span') : null;
+    if (localDescription) {
+        localDescription.id = panelId;
+        localDescription.hidden = true;
+        localDescription.textContent = panel.textContent;
+        anchorRoot.appendChild(localDescription);
+    }
+    if (options.role === 'tooltip')
+        anchor.setAttribute('aria-describedby', [previousDescription, panelId].filter(Boolean).join(' '));
+    else {
+        anchor.setAttribute('aria-expanded', 'true');
+        anchor.setAttribute('aria-controls', panelId);
+    }
     let closed = false;
     const updatePosition = () => {
         if (closed || !anchor.isConnected)
@@ -99,6 +114,13 @@ export function openPopover(anchor, options) {
             anchor.removeAttribute('aria-controls');
         else
             anchor.setAttribute('aria-controls', previousControls);
+        if (options.role === 'tooltip') {
+            localDescription?.remove();
+            if (previousDescription === null)
+                anchor.removeAttribute('aria-describedby');
+            else
+                anchor.setAttribute('aria-describedby', previousDescription);
+        }
         panel.classList.add('is-leaving');
         window.setTimeout(() => layer.remove(), 140);
         if (activePopover?.panel === panel)
@@ -117,7 +139,8 @@ export function openPopover(anchor, options) {
             return;
         event.preventDefault();
         close();
-        anchor.focus();
+        if (options.role !== 'tooltip')
+            anchor.focus();
     }
     const handle = { panel, close, updatePosition };
     activePopover = handle;

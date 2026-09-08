@@ -17,6 +17,7 @@ export async function renderWidgetModule(
   const ctx: Record<string, any> = {
     id: instanceId,
     widgetId: widgetDef.id,
+    ...(widgetDef.codeUrl?.startsWith('/widgets/') ? { preview: true } : {}),
     metadata: widgetDef.metadata,
     instanceMetadata
   };

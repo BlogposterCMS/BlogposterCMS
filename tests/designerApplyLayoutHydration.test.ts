@@ -26,7 +26,7 @@ jest.mock('../ui/designer/app/widgets/widgetMenu.js', () => ({
   attachOptionsMenu: mockAttachOptionsMenu
 }));
 
-import { applyLayout } from '../ui/designer/app/managers/layoutManager';
+import { applyLayout, getItemData } from '../ui/designer/app/managers/layoutManager';
 import { resetBuilderViewportStateForTests } from '../ui/designer/app/renderer/viewportState';
 
 describe('designer applyLayout hydration', () => {
@@ -127,4 +127,21 @@ describe('designer applyLayout hydration', () => {
     expect(widget?.dataset.x).toBe('128');
     expect(widget?.getAttribute('gs-w')).toBe('640');
   });
+});
+
+// Catalog availability is independent from the persistence of an authored instance.
+test('an unavailable widget survives loading and serialization without executing code', () => {
+  const gridEl = document.createElement('div');
+  document.body.appendChild(gridEl);
+  const codeMap = {};
+  const code = { html: '<div data-editor>Draft</div>', css: '.example{color:red}', js: 'throw new Error("must not run")' };
+  mockRenderWidget.mockClear();
+  applyLayout([{ id: 'saved-extension', widgetId: 'extension', code }], {
+    gridEl, grid: { options: {}, makeWidget: jest.fn() }, codeMap, allWidgets: []
+  });
+  const wrapper = gridEl.querySelector<HTMLElement>('.canvas-item')!;
+  expect(wrapper.dataset.widgetUnavailable).toBe('true');
+  expect(wrapper.textContent).toContain('DESIGNER_WIDGET_UNAVAILABLE');
+  expect(mockRenderWidget).not.toHaveBeenCalled();
+  expect(getItemData(wrapper, codeMap)).toMatchObject({ widgetId: 'extension', code });
 });

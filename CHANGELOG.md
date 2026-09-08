@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+- UI kits now carry named declarative components. Agents insert by component ID
+  with optional props through the existing Designer command; compact catalogs
+  avoid repeating definitions. Shared previews and public widgets support buttons,
+  fields, custom dropdowns/multiselects, choices, tabs, popovers and tooltips.
+
+- Added a responsive Logo widget in Media, backed by Design → Branding settings
+  for light/default and optional dark logos, with automatic theme switching.
+- Settings → Design now reuses the Designer's color, typography and UI-kit editors
+  and shows a named list of actual light/dark previews. Existing JSON color slots
+  support optional dark values; public text and buttons use shared defaults while
+  explicit local styles remain overrides. UI-kit import/export preserves both modes.
+
+- Preserve native text styling and active translations on Designer save; retain shorthand padding, stacked section sizing, split alignment and single-edge borders.
+
+- Added operator-configured public widget services through Settings Manager for
+  named requests, bounded SSE subscriptions, unsent drafts and locale/theme
+  preferences. Community modules use the shared public/Designer loader; preview
+  cannot invoke authenticated operations. Backend authorization stays external.
+- Preserve native widget visual reading order after reload and provide a system
+  font fallback when a public page has no body-font token.
+
+- Preserve authored interactive widget hooks through Designer saves and retain
+  unavailable widget instances instead of silently dropping them on reload/save.
+
 - Extended Media Manager with bundled local, Alibaba OSS and AWS/S3-compatible
   storage adapters. Added provider configuration, encrypted server-side
   credentials, a saved-connection check and explicit download publication with

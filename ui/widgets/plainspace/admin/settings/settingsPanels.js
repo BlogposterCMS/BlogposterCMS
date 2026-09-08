@@ -1,7 +1,8 @@
-import { errorMessage, fetchDesignSettings, fetchGeneralSettings, fetchSecuritySettings, fetchSeoSettings, pickMediaShareUrl, saveFaviconUrl, saveGeneralSettings, saveGoogleFontsApiKey, saveMaintenanceSettings, saveSeoSettings } from './settingsPanelsData.js';
+import { errorMessage, fetchDesignSettings, fetchGeneralSettings, fetchSecuritySettings, fetchSeoSettings, pickMediaShareUrl, saveFaviconUrl, saveSettingValue, saveGeneralSettings, saveGoogleFontsApiKey, saveMaintenanceSettings, saveSeoSettings } from './settingsPanelsData.js';
 import { approvedAccessDescriptors, fetchUpdateCenterRows, inspectUpdateCenterRow, installUpdateCenterRow, updateCenterRowLabel, updateInspectionLabel, updateInstallVersion } from './updateCenterData.js';
 import { renderUiKitGallery } from './uiKitGallery.js';
 import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
+import { mountWebsiteDesignSettings } from './websiteDesignSettings.js';
 import { createFormActions, createFormChoice as createChoice, createFormField } from '/ui/shared/forms/formField.js';
 import { createTabSystem } from '/ui/shared/navigation/tabs.js';
 import { registerWorkspaceChanges } from '../../../../shared/navigation/workspaceChanges.js';
@@ -265,13 +266,49 @@ async function renderGeneral(ctx) {
     shell.mount(ctx.el);
 }
 async function renderDesign(ctx) {
-    const shell = createShell('Design Settings', 'Manage your browser icon and font connection. Page layouts live in Design Studio.');
+    const shell = createShell('Design Settings', 'Shared website branding, theme and component defaults for Design Studio.');
     const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
+    const overview = tabs.addTab('Overview');
     const branding = tabs.addTab('Branding');
     branding.classList.add('settings-section--form');
-    const typography = tabs.addTab('Typography');
+    const theme = tabs.addTab('Theme');
+    const typography = tabs.addTab('Typography & components');
     typography.classList.add('settings-section--form');
+    const presets = tabs.addTab('UI kits');
     const designSettings = await fetchDesignSettings(ctx.meltdownEmit, ctx.jwt);
+    const logoInputs = {};
+    // Both variants use the existing settings persistence and media picker.
+    for (const variant of [
+        { key: 'SITE_LOGO_URL', field: 'logoUrl', label: 'Logo (light / default)', value: designSettings.logoUrl, hint: 'Website logo for light mode. Also used in dark mode when no dark logo is set.' },
+        { key: 'SITE_LOGO_DARK_URL', field: 'logoDarkUrl', label: 'Logo (dark)', value: designSettings.logoDarkUrl, hint: 'Optional logo for dark mode. The Logo widget switches automatically with the color scheme.' }
+    ]) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = variant.value;
+        logoInputs[variant.field] = input;
+        const pick = document.createElement('button');
+        pick.type = 'button';
+        pick.className = 'button ghost';
+        pick.textContent = 'Choose from media';
+        pick.addEventListener('click', async () => {
+            try {
+                const url = await pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt);
+                if (url) {
+                    input.value = url;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+            catch (err) {
+                shell.status.textContent = `SETTINGS_LOGO_MEDIA_FAILED: ${errorMessage(err)}`;
+            }
+        });
+        const save = document.createElement('button');
+        save.type = 'button';
+        save.className = 'button primary';
+        save.textContent = `Save ${variant.label}`;
+        shell.bindSave(save, [input], () => saveSettingValue(ctx.meltdownEmit, ctx.jwt, variant.key, input.value.trim()), 'Logo updated.', { id: variant.field, fields: { [variant.field]: input } });
+        branding.append(createFormField(variant.label, input, { hint: variant.hint }), createFormActions(pick, save));
+    }
     const favInput = document.createElement('input');
     favInput.type = 'text';
     favInput.value = designSettings.faviconUrl;
@@ -308,6 +345,25 @@ async function renderDesign(ctx) {
     branding.append(createFormField('Favicon URL', favInput, { hint: 'The small icon shown in browser tabs. Choose an image from your media library or enter its URL.' }), createFormActions(pickBtn, favSave));
     typography.append(createFormField('Google Fonts API Key', fontInput, { hint: 'Optional connection for the font library. Leave empty if you do not use it.' }), createFormActions(fontSave));
     shell.mount(ctx.el);
+    try {
+        const dispose = await mountWebsiteDesignSettings({
+            root: shell.content, overview, theme, components: typography, presets,
+            emit: ctx.meltdownEmit, jwt: ctx.jwt,
+            branding: () => ({ logoUrl: logoInputs.logoUrl?.value || '', logoDarkUrl: logoInputs.logoDarkUrl?.value || '' }),
+            editTheme: () => { shell.tabs.querySelectorAll('[role="tab"]')[2]?.click(); }
+        });
+        // Dedicated Settings pages are replaced by the existing page loader.
+        const observer = new MutationObserver(() => {
+            if (!shell.content.isConnected) {
+                dispose();
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+    catch (error) {
+        overview.textContent = `WEBSITE_DESIGN_LOAD_FAILED: ${errorMessage(error)}`;
+    }
 }
 async function renderSeo(ctx) {
     const shell = createShell('SEO Settings', 'Set search defaults for your website. Individual pages can override their metadata.');

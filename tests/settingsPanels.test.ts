@@ -43,4 +43,23 @@ describe('settings panels shared UI kit', () => {
     expect(host.querySelector('[data-ui-kit-gallery="true"]')).not.toBeNull();
     expect(host.querySelector('[data-ui-kit-section="overlays"]')).not.toBeNull();
   });
+
+  it('edits both logo variants through the existing branding settings actions', async () => {
+    window.meltdownEmit = jest.fn().mockResolvedValue('');
+    const host = document.createElement('div');
+    await renderSettingsSurface(host, { slug: 'settings/design' });
+    const labels = Array.from(host.querySelectorAll('label'));
+    for (const [label, key] of [['Logo (light / default)', 'SITE_LOGO_URL'], ['Logo (dark)', 'SITE_LOGO_DARK_URL']]) {
+      const field = labels.find(item => item.textContent === label)!;
+      const input = host.querySelector<HTMLInputElement>(`#${field.htmlFor}`)!;
+      input.value = '/brand.svg';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      const save = Array.from(host.querySelectorAll('button')).find(item => item.textContent === `Save ${label}`)!;
+      save.click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(window.meltdownEmit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
+        resource: 'settings', action: 'set', params: { key, value: '/brand.svg' }
+      }));
+    }
+  });
 });

@@ -3,7 +3,7 @@ export type BpPopoverPlacement = 'bottom-start' | 'bottom-end' | 'top-start' | '
 export interface BpPopoverOptions {
   content: string | Node | (() => Node);
   placement?: BpPopoverPlacement;
-  role?: 'dialog' | 'menu';
+  role?: 'dialog' | 'menu' | 'tooltip';
   ariaLabel?: string;
   dismissible?: boolean;
   autoFocus?: boolean;
@@ -89,8 +89,20 @@ export function openPopover(anchor: HTMLElement, options: BpPopoverOptions): BpP
 
   const previousExpanded = anchor.getAttribute('aria-expanded');
   const previousControls = anchor.getAttribute('aria-controls');
-  anchor.setAttribute('aria-expanded', 'true');
-  anchor.setAttribute('aria-controls', panelId);
+  const previousDescription = anchor.getAttribute('aria-describedby');
+  // ID references cannot cross a ShadowRoot. A hidden local description keeps
+  // the tooltip accessible while its visual panel uses the shared body portal.
+  const anchorRoot = anchor.getRootNode();
+  const localDescription = options.role === 'tooltip' && anchorRoot instanceof ShadowRoot ? document.createElement('span') : null;
+  if (localDescription) {
+    localDescription.id = panelId; localDescription.hidden = true; localDescription.textContent = panel.textContent;
+    anchorRoot.appendChild(localDescription);
+  }
+  if (options.role === 'tooltip') anchor.setAttribute('aria-describedby', [previousDescription, panelId].filter(Boolean).join(' '));
+  else {
+    anchor.setAttribute('aria-expanded', 'true');
+    anchor.setAttribute('aria-controls', panelId);
+  }
 
   let closed = false;
   const updatePosition = () => {
@@ -132,6 +144,11 @@ export function openPopover(anchor: HTMLElement, options: BpPopoverOptions): BpP
     else anchor.setAttribute('aria-expanded', previousExpanded);
     if (previousControls === null) anchor.removeAttribute('aria-controls');
     else anchor.setAttribute('aria-controls', previousControls);
+    if (options.role === 'tooltip') {
+      localDescription?.remove();
+      if (previousDescription === null) anchor.removeAttribute('aria-describedby');
+      else anchor.setAttribute('aria-describedby', previousDescription);
+    }
     panel.classList.add('is-leaving');
     window.setTimeout(() => layer.remove(), 140);
     if (activePopover?.panel === panel) activePopover = null;
@@ -148,7 +165,7 @@ export function openPopover(anchor: HTMLElement, options: BpPopoverOptions): BpP
     if (event.key !== 'Escape' || options.dismissible === false) return;
     event.preventDefault();
     close();
-    anchor.focus();
+    if (options.role !== 'tooltip') anchor.focus();
   }
 
   const handle: BpPopoverHandle = { panel, close, updatePosition };

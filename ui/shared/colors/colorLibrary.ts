@@ -8,6 +8,7 @@ export interface SavedColor {
   id: string;
   name: string;
   value: string;
+  darkValue?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -88,6 +89,7 @@ function normalizeSavedColor(value: unknown): SavedColor | null {
     id,
     name,
     value: colorValue,
+    ...(typeof source.darkValue === 'string' && HEX_PATTERN.test(source.darkValue) ? { darkValue: normalizedHex(source.darkValue) } : {}),
     ...(typeof source.createdAt === 'string' ? { createdAt: source.createdAt } : {}),
     ...(typeof source.updatedAt === 'string' ? { updatedAt: source.updatedAt } : {})
   };
@@ -168,6 +170,13 @@ export function applyColorLibraryVariables(
     .map(color => `  ${colorTokenName(color.id)}: ${normalizedHex(color.value)};`)
     .join('\n');
   style.textContent = declarations ? `:root {\n${declarations}\n}` : '';
+  // Linked slots change with the website theme; literal element overrides remain untouched.
+  const darkDeclarations = library.colors
+    .map(color => `  ${colorTokenName(color.id)}: ${normalizedHex(color.darkValue || color.value)};`)
+    .join('\n');
+  if (darkDeclarations) {
+    style.textContent += `\n:root[data-theme="dark"] {\n${darkDeclarations}\n}\n@media (prefers-color-scheme: dark) {\n:root:not([data-theme="light"]):not([data-theme="dark"]) {\n${darkDeclarations}\n}\n}`;
+  }
   documentRef.documentElement.dataset.bpColorLibraryReady = 'true';
   return style;
 }
@@ -254,6 +263,7 @@ export function colorLibraryAgentState(): Record<string, unknown> {
       slot: index + 1,
       name: color.name,
       value: color.value,
+      darkValue: color.darkValue || null,
       token: colorTokenName(color.id)
     })),
     errorCode: lastErrorCode || null
@@ -328,6 +338,7 @@ export async function updateLibraryColor(input: {
   id: string;
   name?: string;
   value?: string;
+  darkValue?: string;
   schemeId?: string;
 }): Promise<SavedColor | null> {
   const result = await mutateColorLibrary('update', input);

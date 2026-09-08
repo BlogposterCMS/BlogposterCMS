@@ -61,9 +61,11 @@ export async function saveGeneralSettings(emit, jwt, values) {
     });
 }
 export async function fetchDesignSettings(emit, jwt) {
-    const values = await fetchSettingValues(emit, jwt, ['FAVICON_URL', 'GOOGLE_FONTS_API_KEY']);
+    const values = await fetchSettingValues(emit, jwt, ['FAVICON_URL', 'SITE_LOGO_URL', 'SITE_LOGO_DARK_URL', 'GOOGLE_FONTS_API_KEY']);
     return {
         faviconUrl: values.FAVICON_URL,
+        logoUrl: values.SITE_LOGO_URL,
+        logoDarkUrl: values.SITE_LOGO_DARK_URL,
         googleFontsApiKey: values.GOOGLE_FONTS_API_KEY
     };
 }

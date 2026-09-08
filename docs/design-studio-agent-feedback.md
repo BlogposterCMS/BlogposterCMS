@@ -519,7 +519,7 @@ extension registration before previewing its behavior; this status is not a succ
 
 
 Community modules now use the same registration/module mount in the Designer and
-public loader. Preview supplies only uncredentialed public reads; mutation/stream
+public loader. The isolated Studio preview supplies no network operations; mutation/stream
 attempts return `WIDGET_SERVICE_DENIED` instead of creating application state.
 Saved SQL/Mongo widget reads follow y/x placement order rather than instance-id
 alphabetical order, preserving native flow reading order after reload.

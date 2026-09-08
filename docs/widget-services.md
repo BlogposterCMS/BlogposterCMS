@@ -39,8 +39,8 @@ The projection never returns credentials, arbitrary extra fields or other widget
 - Optional `preferences.get/set` supports explicitly configured locale/theme
   cookies and enum values. Authentication cookies are not a supported preference.
 
-Designer/catalog preview filters out mutations, credentialed reads, streams and
-persistent drafts. Preview may search public content but cannot open a support case.
+Designer/catalog preview uses ephemeral drafts and denies network operations.
+Use the public preview to exercise live search and application services.
 Public modules never receive `jwt` or `emit` through the shared mount context.
 
 ## Security and limitations

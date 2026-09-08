@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const COMMENT_PLACEHOLDERS = new Set([
   'INIT_COMMENTS_SCHEMA',
   'INIT_COMMENTS_TABLES',
@@ -78,6 +76,8 @@ function postgresCommentWhere(p) {
 }
 
 function toObjectId(value) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   if (!value) return null;
   if (value instanceof ObjectId) return value;
   return ObjectId.isValid(value) ? new ObjectId(value) : null;
@@ -332,6 +332,8 @@ async function handleCommentsPostgres(client, operation, params = {}) {
 }
 
 async function handleCommentsMongo(db, operation, params = {}) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const p = paramsObject(params);
   switch (operation) {
     case 'INIT_COMMENTS_SCHEMA':

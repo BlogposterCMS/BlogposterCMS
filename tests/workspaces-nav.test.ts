@@ -3,6 +3,20 @@
  */
 
 describe('workspace navigation', () => {
+  it('groups only registered Settings pages and removes dashboard creation controls', async () => {
+    window.ADMIN_BASE = '/admin/';
+    window.history.replaceState({}, '', '/admin/settings');
+    (window.meltdownEmit as jest.Mock).mockResolvedValue([
+      { slug: 'settings', lane: 'admin', title: 'Settings', meta: { workspace: 'settings' } },
+      ...['modules', 'general', 'ui-kit', 'users-access'].map(slug => ({ slug: `settings/${slug}`, lane: 'admin', title: slug }))
+    ]);
+    const { initWorkspaceNav } = await import('../ui/shell/dashboard/workspaces');
+    await initWorkspaceNav();
+    expect([...document.querySelectorAll('#subpage-nav a')].map(a => a.textContent)).toEqual(['General', 'Users & access', 'Modules', 'UI Kit']);
+    expect([...document.querySelectorAll('.settings-nav-group')].map(group => group.textContent)).toEqual(['Website', 'Administration', 'Reference']);
+    expect(document.querySelector('#subpage-nav [aria-current="page"]')?.textContent).toBe('General');
+    expect(document.querySelector('.sidebar-add-subpage')).toBeNull();
+  });
   beforeEach(() => {
     jest.resetModules();
     document.body.innerHTML = `

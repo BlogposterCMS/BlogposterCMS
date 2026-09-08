@@ -87,7 +87,11 @@ export function bindAdminContentNavigation({ render, adminBase }) {
             }
             catch (error) {
                 console.error('[BP-ADMIN-NAV-RENDER] content navigation failed', error);
-                window.location.assign(url.href);
+                // A handled shell failure already offers an explicit retry. Keep ready
+                // chrome in place instead of silently starting another document load.
+                if (document.getElementById('content')?.dataset.adminLoading !== 'error') {
+                    window.location.assign(url.href);
+                }
             }
             finally {
                 checking = false;
@@ -120,7 +124,9 @@ export function bindAdminContentNavigation({ render, adminBase }) {
             await renderUrl(url);
         })().catch(error => {
             console.error('[BP-ADMIN-NAV-POP] popstate render failed', error);
-            window.location.reload();
+            if (document.getElementById('content')?.dataset.adminLoading !== 'error') {
+                window.location.reload();
+            }
         });
     }
     document.addEventListener('click', handleClick);

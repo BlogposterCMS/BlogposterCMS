@@ -78,6 +78,52 @@
   width: 100%;
 }
 
+// First-HTML placeholders reuse the loader and the real chrome dimensions.
+// Content keeps its viewport space while the existing widget shells mount.
+.admin-panel {
+  .admin-shell-feedback { min-width: 0; }
+  .admin-shell-error { display: none; padding: 16px; }
+  [data-admin-loading='error'] > .admin-shell-feedback {
+    display: block;
+    > .bp-loader { display: none; }
+    > .admin-shell-error { display: block; }
+  }
+  :where(#top-header, #main-header, .main-header nav) > .admin-shell-feedback .bp-loader {
+    min-height: 0;
+    height: 40px;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    .bp-loader__skeleton-line { width: clamp(32px, 10vw, 120px); }
+  }
+  :where(#sidebar, #subpage-nav) > .admin-shell-feedback .bp-loader {
+    min-height: 0;
+    width: 48px;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    .bp-loader__skeleton-line { height: 32px; }
+  }
+  #sidebar[data-admin-loading='error'] > .admin-shell-feedback {
+    width: 104px;
+    padding: 0;
+    .admin-shell-error { padding: 8px; overflow-wrap: anywhere; }
+    .button { white-space: normal; }
+  }
+  #content[data-admin-loading='loading'],
+  #content[data-admin-loading='error'] {
+    min-height: min(28rem, 65vh);
+    // Overlay the reserved content space so an existing page plus its skeleton
+    // never doubles the scroll height during content-only navigation.
+    > .admin-shell-feedback { position: absolute; inset: 64px 20px auto; }
+    // Old content stays in flow to reserve height, but cannot be interacted with.
+    > [data-admin-loading-stale] { visibility: hidden; }
+  }
+}
+
 .bp-progress__header {
   display: flex;
   justify-content: space-between;

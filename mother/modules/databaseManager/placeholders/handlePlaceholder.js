@@ -4,9 +4,6 @@
 const builtinPlaceholders = require('./builtinPlaceholders');
 const { isAnalyticsPlaceholder, handleAnalyticsSql, handleAnalyticsMongo } = require('./analyticsPlaceholders');
 const { getCustomPlaceholder } = require('./placeholderRegistry');
-const { handleBuiltInPlaceholderPostgres } = require('./postgresPlaceholders');
-const { handleBuiltInPlaceholderMongo } = require('./mongoPlaceholders');
-const { handleBuiltInPlaceholderSqlite } = require('./sqlitePlaceholders');
 
 // NEW: typed notification emitter
 const notificationEmitter = require('../../../emitters/notificationEmitter');
@@ -32,10 +29,13 @@ async function handlePlaceholder(dbClient, dbType, operation, params = []) {
   // 2) If it's a built-in placeholder
   if (builtinPlaceholders.includes(operation)) {
     if (dbType === 'postgres') {
+      const { handleBuiltInPlaceholderPostgres } = require('./postgresPlaceholders');
       return handleBuiltInPlaceholderPostgres(dbClient, operation, params);
     } else if (dbType === 'mongodb') {
+      const { handleBuiltInPlaceholderMongo } = require('./mongoPlaceholders');
       return handleBuiltInPlaceholderMongo(dbClient, operation, params);
     } else if (dbType === 'sqlite') {
+      const { handleBuiltInPlaceholderSqlite } = require('./sqlitePlaceholders');
       return handleBuiltInPlaceholderSqlite(dbClient, operation, params);
     } else {
       notificationEmitter.notify({

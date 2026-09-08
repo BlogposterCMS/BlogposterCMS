@@ -1,3 +1,4 @@
+import { createTabSystem } from '../../../shared/navigation/tabs.js';
 import {
   errorMessage,
   fetchModuleLists,
@@ -437,7 +438,7 @@ function renderModuleDetail(moduleRecord: ModuleRecord | null, pendingAccess: Mo
   return panel;
 }
 
-export async function render(el: HTMLElement | null): Promise<void> {
+export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLElement } = {}): Promise<void> {
   const jwt = window.ADMIN_TOKEN;
   const meltdownEmit = window.meltdownEmit;
   if (!el) return;
@@ -462,21 +463,10 @@ export async function render(el: HTMLElement | null): Promise<void> {
 
     titleBar.appendChild(title);
 
-    const tabs = document.createElement('div');
-    tabs.className = 'modules-tabs';
-
-    const installedBtn = document.createElement('button');
-    installedBtn.className = 'modules-tab active';
-    installedBtn.textContent = 'Installed';
-
-    const systemBtn = document.createElement('button');
-    systemBtn.className = 'modules-tab';
-    systemBtn.textContent = 'System';
-
-    tabs.appendChild(installedBtn);
-    tabs.appendChild(systemBtn);
-    titleBar.appendChild(tabs);
-    card.appendChild(titleBar);
+    const tabs = options.tabsHost || document.createElement('div');
+    tabs.classList.add('modules-tabs');
+    tabs.setAttribute('aria-label', 'Module categories');
+    if (!options.tabsHost) { card.append(titleBar, tabs); }
 
     const layout = document.createElement('div');
     layout.className = 'modules-access-layout';
@@ -504,7 +494,9 @@ export async function render(el: HTMLElement | null): Promise<void> {
         ? (selectedInstalled ? moduleNameFromRecord(selectedInstalled) : '')
         : (selectedSystem ? moduleNameFromRecord(selectedSystem) : '');
       card.querySelectorAll<HTMLElement>('[data-module-row]').forEach(row => {
-        row.classList.toggle('is-selected', row.dataset.moduleRow === selectedName && row.dataset.moduleScope === currentTab);
+        const selected = row.dataset.moduleRow === selectedName && row.dataset.moduleScope === currentTab;
+        row.classList.toggle('is-selected', selected);
+        row.querySelector('.module-select')?.setAttribute('aria-pressed', String(selected));
       });
     }
 
@@ -532,8 +524,9 @@ export async function render(el: HTMLElement | null): Promise<void> {
         const nameRow = document.createElement('div');
         nameRow.className = 'module-name-row';
 
-        const nameEl = document.createElement('span');
-        nameEl.className = 'module-name';
+        const nameEl = document.createElement('button');
+        nameEl.type = 'button';
+        nameEl.className = 'module-name module-select';
         nameEl.textContent = name;
 
         const actions = document.createElement('span');
@@ -625,7 +618,6 @@ export async function render(el: HTMLElement | null): Promise<void> {
 
     const systemList = document.createElement('ul');
     systemList.className = 'modules-list page-list';
-    systemList.style.display = 'none';
 
     if (!system.length) {
       const empty = document.createElement('div');
@@ -651,8 +643,9 @@ export async function render(el: HTMLElement | null): Promise<void> {
         const nameRow = document.createElement('div');
         nameRow.className = 'module-name-row';
 
-        const nameEl = document.createElement('span');
-        nameEl.className = 'module-name';
+        const nameEl = document.createElement('button');
+        nameEl.type = 'button';
+        nameEl.className = 'module-name module-select';
         nameEl.textContent = name;
 
         nameRow.appendChild(nameEl);
@@ -674,36 +667,32 @@ export async function render(el: HTMLElement | null): Promise<void> {
 
     const listMount = document.createElement('div');
     listMount.className = 'modules-list-mount';
-    listMount.append(installedList, systemList);
     layout.append(listMount, detailMount);
     card.appendChild(layout);
 
-    installedBtn.addEventListener('click', () => {
-      currentTab = 'installed';
-      installedBtn.classList.add('active');
-      systemBtn.classList.remove('active');
-      installedList.style.display = '';
-      systemList.style.display = 'none';
-      syncSelectedRows();
-      syncDetailPanel();
+    const tabSystem = createTabSystem(listMount, tabs, {
+      variant: 'underline', panelClassName: 'modules-tab-panel',
+      onSelect: index => {
+        currentTab = index === 0 ? 'installed' : 'system';
+        syncSelectedRows();
+        syncDetailPanel();
+      }
     });
-
-    systemBtn.addEventListener('click', () => {
-      currentTab = 'system';
-      systemBtn.classList.add('active');
-      installedBtn.classList.remove('active');
-      installedList.style.display = 'none';
-      systemList.style.display = '';
-      syncSelectedRows();
-      syncDetailPanel();
-    });
+    tabSystem.addTab('Installed').append(installedList);
+    tabSystem.addTab('System').append(systemList);
 
     syncSelectedRows();
     syncDetailPanel();
     el.innerHTML = '';
     el.appendChild(card);
   } catch (err) {
-    el.innerHTML = `<div class="error">Failed to load modules: ${errorMessage(err)}</div>`;
+    if (options.tabsHost) throw err;
+    const error = document.createElement('p'); error.setAttribute('role', 'alert');
+    error.textContent = `SETTINGS_MODULES_LOAD_FAILED: ${errorMessage(err)}`;
+    const retry = document.createElement('button'); retry.type = 'button';
+    retry.className = 'button ghost sm'; retry.textContent = 'Retry';
+    retry.addEventListener('click', () => void render(el));
+    el.replaceChildren(error, retry);
   }
 }
 

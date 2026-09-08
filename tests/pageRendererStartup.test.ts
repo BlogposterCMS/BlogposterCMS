@@ -51,4 +51,27 @@ describe('shared runtime startup layout reads', () => {
     await renderRuntimePage({ lane: 'public', slug: 'site', debug: false });
     expect(loadRuntimeGlobalLayout).toHaveBeenCalledTimes(1);
   });
+
+  it('shows content placeholders before discovery while preserving ready chrome', async () => {
+    document.body.innerHTML = '<header id="top-header">Header</header><aside id="sidebar">Navigation</aside><main id="content"><p>Old content</p></main>';
+    const header = document.getElementById('top-header');
+    let resolvePage!: (page: unknown) => void;
+    jest.mocked(fetchRuntimePageBySlug).mockReturnValue(new Promise(resolve => { resolvePage = resolve; }));
+    const pending = renderRuntimePage({ lane: 'admin', slug: 'home', debug: false }, 'content-only');
+    expect(document.querySelector('#content .bp-loader--skeleton')).not.toBeNull();
+    expect(document.getElementById('sidebar')?.textContent).toBe('Navigation');
+    await Promise.resolve();
+    resolvePage({ id: 'home', meta: { dashboardLayout: 'fixed' } });
+    await pending;
+    expect(document.getElementById('top-header')).toBe(header);
+    expect(document.querySelector('#content .admin-shell-feedback')).toBeNull();
+    expect(document.getElementById('content')?.getAttribute('aria-busy')).toBe('false');
+  });
+
+  it('replaces failed page discovery with an inline retry', async () => {
+    jest.mocked(fetchRuntimePageBySlug).mockRejectedValue(new Error('offline'));
+    await expect(renderRuntimePage({ lane: 'admin', slug: 'home', debug: false }, 'content-only')).rejects.toThrow('offline');
+    expect(document.getElementById('content')?.dataset.adminLoading).toBe('error');
+    expect(document.querySelector('#content .admin-shell-error')?.textContent).toContain('Erneut versuchen');
+  });
 });

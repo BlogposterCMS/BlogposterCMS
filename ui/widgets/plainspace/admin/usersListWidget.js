@@ -1,7 +1,7 @@
+import { createTabSystem } from '../../../shared/navigation/tabs.js';
+import { createFormField } from '../../../shared/forms/formField.js';
+import { bpDialog } from '../../../shared/dialogs/bpDialog.js';
 import { createRoleRecord, createUserRecord, deleteRoleRecord, errorMessage, fetchPermissions, fetchRoles, fetchUsers, permissionBlobFromKeys, permissionGroupForKey, permissionKey, permissionsPromptDefault, updateRoleRecord, visiblePermissionGroups } from './usersListData.js';
-function icon(name, className) {
-    return typeof window.featherIcon === 'function' ? window.featherIcon(name, className) : '';
-}
 function dialogApi() {
     return window.bpDialog || null;
 }
@@ -134,7 +134,34 @@ async function openCreateUserDialog(roles, permissions) {
         directPermissions: permissionBlobFromKeys(permissionKeys)
     };
 }
-export async function render(el) {
+async function editPermissionGroup(role) {
+    const name = document.createElement('input');
+    name.value = role?.role_name || '';
+    const description = document.createElement('input');
+    description.value = role?.description || '';
+    const permissions = document.createElement('textarea');
+    permissions.rows = 8;
+    permissions.value = permissionsPromptDefault(role?.permissions);
+    const body = document.createElement('div');
+    body.className = 'settings-section';
+    body.append(createFormField('Group name', name, { required: true }), createFormField('Description', description), createFormField('Permissions JSON', permissions, { hint: 'Existing permission keys and custom rules are preserved. The server validates access changes.' }));
+    const result = await bpDialog.open({ title: role ? 'Edit permission group' : 'Add permission group', body,
+        actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'save', label: 'Save group', variant: 'primary' }] });
+    if (result.action !== 'save')
+        return null;
+    if (!name.value.trim()) {
+        await bpDialog.alert('SETTINGS_GROUP_NAME_REQUIRED: Enter a group name.');
+        return null;
+    }
+    try {
+        return { roleName: name.value.trim(), description: description.value.trim(), permissions: JSON.parse(permissions.value) };
+    }
+    catch {
+        await bpDialog.alert('SETTINGS_GROUP_PERMISSIONS_INVALID: Enter valid permissions JSON.');
+        return null;
+    }
+}
+export async function render(el, options = {}) {
     const jwt = window.ADMIN_TOKEN;
     const meltdownEmit = window.meltdownEmit;
     if (!el)
@@ -156,21 +183,29 @@ export async function render(el) {
         const title = document.createElement('div');
         title.className = 'user-title';
         title.textContent = 'User Management';
-        const tabs = document.createElement('div');
-        tabs.className = 'users-tabs';
-        const usersBtn = document.createElement('button');
-        usersBtn.className = 'users-tab active';
-        usersBtn.textContent = 'Users';
-        const permsBtn = document.createElement('button');
-        permsBtn.className = 'users-tab';
-        permsBtn.textContent = 'Permissions';
-        tabs.appendChild(usersBtn);
-        tabs.appendChild(permsBtn);
-        const addUserBtn = document.createElement('img');
-        addUserBtn.src = '/assets/icons/plus.svg';
-        addUserBtn.alt = 'Add user';
-        addUserBtn.title = 'Add new user';
-        addUserBtn.className = 'icon add-user-btn';
+        const tabsHost = document.createElement('nav');
+        const tabs = options.tabs || createTabSystem(card, tabsHost, { variant: 'underline' });
+        if (!options.tabs)
+            card.append(titleBar, tabsHost);
+        const usersPanel = tabs.addTab('Users');
+        const rolesPanel = tabs.addTab('Permission groups');
+        const usersToolbar = document.createElement('div');
+        const rolesToolbar = document.createElement('div');
+        usersToolbar.className = rolesToolbar.className = 'settings-panel-toolbar';
+        const usersHint = document.createElement('p');
+        usersHint.className = 'settings-hint';
+        usersHint.textContent = 'Open a user to manage their account and assigned permissions.';
+        const rolesHint = document.createElement('p');
+        rolesHint.className = 'settings-hint';
+        rolesHint.textContent = 'Permission groups let you assign the same access to several people.';
+        usersToolbar.append(usersHint);
+        rolesToolbar.append(rolesHint);
+        usersPanel.append(usersToolbar);
+        rolesPanel.append(rolesToolbar);
+        const addUserBtn = document.createElement('button');
+        addUserBtn.type = 'button';
+        addUserBtn.textContent = 'Add user';
+        addUserBtn.className = 'button primary sm';
         addUserBtn.addEventListener('click', async () => {
             const values = await openCreateUserDialog(roles, permissions);
             if (!values)
@@ -188,27 +223,16 @@ export async function render(el) {
                     alert(`Error: ${errorMessage(err)}`);
             }
         });
-        const addRoleBtn = document.createElement('img');
-        addRoleBtn.src = '/assets/icons/plus.svg';
-        addRoleBtn.alt = 'Add group';
-        addRoleBtn.title = 'Add permission group';
-        addRoleBtn.className = 'icon add-group-btn';
-        addRoleBtn.style.display = 'none';
+        const addRoleBtn = document.createElement('button');
+        addRoleBtn.type = 'button';
+        addRoleBtn.textContent = 'Add permission group';
+        addRoleBtn.className = 'button primary sm';
         addRoleBtn.addEventListener('click', async () => {
-            const name = prompt('Group name:');
-            if (!name)
+            const values = await editPermissionGroup();
+            if (!values)
                 return;
-            const permStr = prompt('Permissions JSON:', '{}') || '{}';
-            let perms;
             try {
-                perms = JSON.parse(permStr);
-            }
-            catch {
-                alert('Invalid JSON');
-                return;
-            }
-            try {
-                await createRoleRecord(meltdownEmit, jwt, { roleName: name, permissions: perms });
+                await createRoleRecord(meltdownEmit, jwt, values);
                 roles = await fetchRoles(meltdownEmit, jwt);
                 renderRoles();
             }
@@ -217,33 +241,14 @@ export async function render(el) {
             }
         });
         titleBar.appendChild(title);
-        titleBar.appendChild(tabs);
-        titleBar.appendChild(addUserBtn);
-        titleBar.appendChild(addRoleBtn);
-        card.appendChild(titleBar);
+        usersToolbar.append(addUserBtn);
+        rolesToolbar.append(addRoleBtn);
         const usersListEl = document.createElement('ul');
         usersListEl.className = 'users-list';
-        card.appendChild(usersListEl);
+        usersPanel.append(usersListEl);
         const rolesListEl = document.createElement('ul');
         rolesListEl.className = 'roles-list';
-        rolesListEl.style.display = 'none';
-        card.appendChild(rolesListEl);
-        usersBtn.addEventListener('click', () => {
-            usersBtn.classList.add('active');
-            permsBtn.classList.remove('active');
-            usersListEl.style.display = '';
-            rolesListEl.style.display = 'none';
-            addUserBtn.style.display = '';
-            addRoleBtn.style.display = 'none';
-        });
-        permsBtn.addEventListener('click', () => {
-            permsBtn.classList.add('active');
-            usersBtn.classList.remove('active');
-            usersListEl.style.display = 'none';
-            rolesListEl.style.display = '';
-            addUserBtn.style.display = 'none';
-            addRoleBtn.style.display = '';
-        });
+        rolesPanel.append(rolesListEl);
         return { card, usersListEl, rolesListEl };
     }
     function renderUsers() {
@@ -266,40 +271,30 @@ export async function render(el) {
             });
         }
     }
-    function handleEditRole(role) {
-        const name = prompt('Group name:', role.role_name || '');
-        if (!name)
+    async function handleEditRole(role) {
+        const values = await editPermissionGroup(role);
+        if (!values)
             return;
-        const permStr = prompt('Permissions JSON:', permissionsPromptDefault(role.permissions)) || '{}';
-        let perms;
         try {
-            perms = JSON.parse(permStr);
+            await updateRoleRecord(meltdownEmit, jwt, role, values);
+            roles = await fetchRoles(meltdownEmit, jwt);
+            renderRoles();
         }
-        catch {
-            alert('Invalid JSON');
-            return;
+        catch (err) {
+            await bpDialog.alert('SETTINGS_GROUP_SAVE_FAILED: ' + errorMessage(err));
         }
-        const desc = prompt('Description (optional):', role.description || '') || '';
-        void updateRoleRecord(meltdownEmit, jwt, role, {
-            roleName: name,
-            description: desc,
-            permissions: perms
-        }).then(() => {
-            void fetchRoles(meltdownEmit, jwt).then(nextRoles => {
-                roles = nextRoles;
-                renderRoles();
-            });
-        }).catch(err => alert(`Error: ${errorMessage(err)}`));
     }
-    function handleDeleteRole(role) {
-        if (!confirm(`Delete group "${role.role_name || ''}"?`))
+    async function handleDeleteRole(role) {
+        if (!await bpDialog.confirm('Delete permission group "' + (role.role_name || '') + '"?', { title: 'Delete permission group' }))
             return;
-        void deleteRoleRecord(meltdownEmit, jwt, role).then(() => {
-            void fetchRoles(meltdownEmit, jwt).then(nextRoles => {
-                roles = nextRoles;
-                renderRoles();
-            });
-        }).catch(err => alert(`Error: ${errorMessage(err)}`));
+        try {
+            await deleteRoleRecord(meltdownEmit, jwt, role);
+            roles = await fetchRoles(meltdownEmit, jwt);
+            renderRoles();
+        }
+        catch (err) {
+            await bpDialog.alert('SETTINGS_GROUP_DELETE_FAILED: ' + errorMessage(err));
+        }
     }
     function renderRoles() {
         roleList.innerHTML = '';
@@ -320,16 +315,19 @@ export async function render(el) {
                 const actions = document.createElement('span');
                 actions.className = 'page-actions';
                 if (!role.is_system_role) {
-                    actions.innerHTML = icon('edit', 'edit-role') + icon('delete', 'delete-role');
+                    for (const [label, action] of [['Edit', () => handleEditRole(role)], ['Delete', () => handleDeleteRole(role)]]) {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'button ghost sm';
+                        button.textContent = label;
+                        button.addEventListener('click', () => void action());
+                        actions.append(button);
+                    }
                 }
                 row.appendChild(nameSpan);
                 row.appendChild(actions);
                 li.appendChild(row);
                 roleList.appendChild(li);
-                if (!role.is_system_role) {
-                    li.querySelector('.edit-role')?.addEventListener('click', () => handleEditRole(role));
-                    li.querySelector('.delete-role')?.addEventListener('click', () => handleDeleteRole(role));
-                }
             });
         }
     }
@@ -344,10 +342,15 @@ export async function render(el) {
         roleList = built.rolesListEl;
         renderUsers();
         renderRoles();
-        el.innerHTML = '';
-        el.appendChild(built.card);
+        if (!options.tabs)
+            el.replaceChildren(built.card);
     }
     catch (err) {
-        el.innerHTML = `<div class="error">Failed to load users: ${errorMessage(err)}</div>`;
+        if (options.tabs)
+            throw err;
+        const error = document.createElement('p');
+        error.setAttribute('role', 'alert');
+        error.textContent = 'SETTINGS_USERS_LOAD_FAILED: ' + errorMessage(err);
+        el.replaceChildren(error);
     }
 }

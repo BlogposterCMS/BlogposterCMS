@@ -2,7 +2,6 @@
 // Handles MongoDB-specific placeholders for the database manager module.
 */
 
-const { ObjectId } = require('mongodb');
 const notificationEmitter = require('../../../emitters/notificationEmitter');
 const {
   handleContentEngineMongo,
@@ -50,6 +49,8 @@ function escapeRegex(value = '') {
 }
 
 function parseObjectId(id) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   return ObjectId.isValid(id) ? new ObjectId(id) : null;
 }
 
@@ -71,6 +72,8 @@ async function createIndexWithRetry(collection, spec, options = {}, retries = 1)
 
 
 async function handleBuiltInPlaceholderMongo(db, operation, params) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   if (isContentEnginePlaceholder(operation)) {
     return handleContentEngineMongo(db, operation, params);
   }

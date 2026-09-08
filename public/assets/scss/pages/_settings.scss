@@ -1,88 +1,120 @@
-/* =============================================================================
-   Settings Page Styles
-   ============================================================================= */
-.settings-page {
-  display: flex;
-  gap: 20px;
-}
-
-.settings-content {
-  flex: 1;
-  background: var(--studio-surface-solid);
-  padding: 24px;
-  border-radius: var(--studio-radius-panel);
-  box-shadow: var(--studio-shadow-soft);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
+// Settings share the fixed CMS shell; only the active page body scrolls.
+#content:has(> .settings-surface) { overflow: hidden; padding: 0 20px 20px 0; }
+// Settings have their own named navigation and no dashboard footer actions.
+body.has-content-footer .admin-panel #content[data-dashboard-layout='fixed']:has(> .settings-surface) { padding-bottom: 20px; }
+body:has(#content > .settings-surface) .content-header { display: none; }
+body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bottom: 0; }
 .settings-surface {
-  min-width: 0;
-  color: var(--studio-text);
+  box-sizing: border-box;
+  display: flex; flex-direction: column; flex: 1 1 0; gap: 24px;
+  min-width: 0; min-height: 0; width: 100%; height: 100%; margin: 0;
+  padding: clamp(20px, 2.4vw, 36px); overflow: hidden;
+  border: 1px solid var(--studio-border); border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid); box-shadow: var(--studio-shadow-soft);
+  color: var(--studio-text); container: settings-workspace / inline-size;
+  [hidden] { display: none !important; }
+  :is(nav, [role='tablist'], [role='tabpanel'])[aria-label]::after { content: none; display: none; }
 }
-
 .settings-surface-header {
-  gap: 20px;
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  .page-title { margin: 0; font-size: 1.45rem; letter-spacing: -0.02em; color: var(--studio-text); }
 }
-
-.settings-surface-header .page-title {
-  flex: 0 0 auto;
-  margin: 0;
-}
-
-.settings-hint {
-  margin: 0;
-  color: var(--studio-text-muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
-.settings-tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 2px 2px 10px;
-}
-
-.settings-tabs .button {
-  flex: 0 0 auto;
-  min-width: 0;
-  margin: 0;
-}
-
-.settings-tabs .button.active {
-  background: var(--studio-surface-muted);
-  box-shadow: var(--studio-shadow-control);
-}
-
+.settings-hint { margin: 0; max-width: 72ch; color: var(--studio-text-muted); font-size: 0.9rem; line-height: 1.55; }
+.settings-tabs { flex: 0 0 auto; min-width: 0; &:empty { display: none; } }
 .settings-tab-panels {
-  min-width: 0;
+  flex: 1 1 0; min-width: 0; min-height: 0; overflow: auto;
+  scrollbar-width: thin; scrollbar-color: var(--studio-text-muted) transparent;
+  padding: 2px 6px 12px 2px;
 }
-
-.settings-section {
-  display: grid;
-  gap: 18px;
-  min-width: 0;
-  max-width: 760px;
-  padding: 20px;
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-panel);
-  background: var(--studio-surface-solid);
-  box-shadow: var(--studio-shadow-soft);
+.settings-section { display: grid; align-content: start; gap: 24px; min-width: 0; }
+.settings-section[hidden] { display: none; }
+.settings-section--form { max-width: 800px; }
+.settings-section .form-actions .button { min-width: 0; }
+// Reuse the administrative implementations while keeping one page surface.
+.settings-surface :is(.page-list-card, .user-list-card, .settings-section) {
+  min-width: 0; height: auto; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: transparent; box-shadow: none;
 }
-
-.settings-section[hidden] {
-  display: none;
+.settings-surface .login-strategy-title { display: none; }
+.settings-surface :is(.access-settings-title, .access-settings-subtitle) { font-size: 1.05rem; margin: 0; }
+.settings-surface .access-settings-badge { background: var(--studio-surface-muted); color: var(--studio-text-muted); }
+.settings-group { display: grid; gap: 16px; min-width: 0; max-width: 800px; }
+.settings-group + .settings-group { padding-top: 24px; border-top: 1px solid var(--studio-border); }
+.settings-group :is(.form-status, .access-settings-status):empty { display: none; }
+.settings-group .access-settings-agent-form { align-items: end; }
+.settings-surface .page-title-bar:empty { display: none; }
+.settings-save-bar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--studio-border);
 }
-
-.settings-section .form-actions .button {
-  min-width: 0;
+.settings-save-state { color: var(--studio-text-muted); font-size: 0.85rem; }
+.settings-surface > .form-status {
+  flex: 0 0 auto; margin: 0; padding: 12px 16px; border-radius: var(--studio-field-radius);
+  color: var(--studio-text); background: var(--studio-surface-muted);
+  &:empty { display: none; }
+  &[role='alert'] { color: var(--color-error); }
 }
-
-.settings-surface > .form-status:not(:empty) {
-  padding: 10px 12px;
-  border-radius: var(--studio-field-radius);
-  background: var(--studio-surface-muted);
+.settings-loading { justify-content: center; align-items: center; }
+.settings-surface.ui-kit { overflow: auto; }
+.settings-surface.ui-kit > * { flex-shrink: 0; }
+.settings-surface .ui-kit__jump-nav { top: 0; }
+.settings-panel-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.settings-surface .user-edit-widget {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 960px;
+  > :is(.permission-group-section, .permission-advanced-section, .form-actions, .form-status),
+  > .form-field:has(textarea) { grid-column: 1 / -1; }
+  > .form-status:empty { display: none; }
+}
+.settings-surface .login-strategy-edit { max-width: 800px; }
+.settings-surface :is(.users-list, .roles-list, .login-strategies-list) {
+  list-style: none; padding: 0; margin: 0; display: grid; gap: 0;
+  > li {
+    padding: 18px 4px; border: 0; border-bottom: 1px solid var(--studio-border);
+    border-radius: 0; background: transparent; box-shadow: none; color: var(--studio-text);
+  }
+}
+.settings-surface .users-list a { color: var(--studio-text); text-decoration: none; font-weight: 600; }
+.settings-surface :is(.page-name-row, .login-strategy-name-row) { flex-wrap: wrap; }
+.settings-surface :is(.login-strategy-desc, .login-strategy-scope, .access-settings-tips) { color: var(--studio-text-muted); }
+// Keep the existing page registry and routing; make setting names visible.
+.sidebar.settings-sidebar {
+  width: 224px; padding: 16px;
+  .sidebar-nav { align-items: stretch; }
+  .settings-nav-group {
+    margin: 20px 10px 8px; color: var(--studio-text-muted); font-size: 0.72rem;
+    font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .sidebar-nav .sidebar-item {
+    width: 100%; height: auto; min-height: 40px; margin: 2px 0; padding: 10px; gap: 10px;
+    justify-content: flex-start; border-radius: var(--studio-field-radius);
+    background: transparent; box-shadow: none; color: var(--studio-text-muted); text-decoration: none;
+    &::before, &::after { content: none; display: none; }
+    .icon { flex: 0 0 18px; width: 18px; height: 18px; margin: 0; }
+    .label {
+      position: static; opacity: 1; transform: none; pointer-events: auto; padding: 0;
+      border: 0; background: transparent; box-shadow: none; color: inherit;
+      white-space: normal; font-size: 0.88rem;
+    }
+    &:hover, &.active { color: var(--studio-text); background: var(--studio-surface-muted); }
+    &.active { font-weight: 600; }
+    &:focus-visible { outline: 2px solid var(--studio-text); outline-offset: -2px; }
+  }
+}
+@container settings-workspace (max-width: 680px) {
+  .settings-surface .user-edit-widget { grid-template-columns: minmax(0, 1fr); }
+  .settings-surface .modules-access-layout { grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .settings-surface .modules-access-layout > .modules-list-mount { max-height: 36vh; }
+  .settings-save-bar > .button { flex: 1 1 auto; }
+}
+@media (max-width: 760px) {
+  .main-content:has(.settings-sidebar) { flex-direction: column; }
+  .admin-panel:has(#content[data-dashboard-layout='fixed']) .sidebar.settings-sidebar {
+    width: 100%; height: auto; padding: 4px 12px 12px; overflow: visible;
+    .sidebar-nav { flex-direction: row; gap: 4px; overflow-x: auto; }
+    .settings-nav-group { display: none; }
+    .sidebar-item { flex: 0 0 auto; width: auto; padding: 10px 12px; }
+    .sidebar-item .label { white-space: nowrap; }
+  }
+  #content:has(> .settings-surface) { padding: 0 12px 12px; }
+  .settings-surface { padding: 20px 16px; gap: 20px; }
 }

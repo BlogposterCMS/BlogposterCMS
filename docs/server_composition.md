@@ -21,8 +21,13 @@ Composition order is explicit because Express route order is security-relevant:
 
 - `mother/server/http/staticAssets.js` owns asset serving, static realpath
   guards and TypeScript source blocking.
-- `mother/server/http/runtimeBrowserModules.js` owns the small runtime
-  TypeScript compiler used for allowlisted browser modules.
+- `mother/server/http/runtimeBrowserModules.js` serves allowlisted browser
+  modules from the adjacent JavaScript output of `npm run build:browser` in
+  production (`NODE_ENV=production` or `APP_ENV=production`). The image build
+  already runs this step before pruning development dependencies. Missing output
+  raises `BROWSER_MODULE_BUILD_MISSING`; there is no runtime compiler fallback.
+  Development loads TypeScript only on the first matching request and retains
+  source-mtime caching. TypeScript is a development dependency.
 - `mother/server/http/securityMiddleware.js` owns trust proxy, Helmet, HTTPS
   redirect, body parsing and cookies.
 - `mother/server/bootstrap/*` owns core module token issuance and module
@@ -31,6 +36,31 @@ Composition order is explicit because Express route order is security-relevant:
   They translate HTTP requests to existing module events and services.
 - `mother/modules/*` continues to own CMS behavior, data contracts and
   permission checks.
+
+Database engines remain selected by the existing `CONTENT_DB_TYPE` configuration.
+The engine factory loads and caches only the selected engine through Node's module
+cache. Database creation uses that same engine; PostgreSQL setup and MongoDB
+ObjectId helpers load their drivers only within the corresponding database path.
+All three drivers remain installed so supported database choices remain available.
+These loading changes do not establish a measured production memory saving.
+
+## Admin loading feedback
+
+`public/admin.html` includes the shared `bp-loader--skeleton` markup for header,
+navigation, sidebar and content before JavaScript executes. The small
+`ui/shell/entries/adminShellLoading.ts` entry starts a 30-second watchdog independently
+of the renderer/token graph. `ui/shared/feedback/adminShellLoading.ts` owns the DOM
+loading lifecycle (`data-admin-loading`, `aria-busy`) and searchable
+`ADMIN_SHELL_*` errors. A failed or timed-out region offers **Erneut versuchen**;
+the link reloads the current authenticated route and discards unfinished requests.
+
+The renderer starts content feedback before page discovery. Content navigation
+preserves header/navigation nodes, and widget grid mounting hands off to the
+existing individual widget placeholders. The independent shell partials load in
+parallel and finish individually; workspace navigation keeps its placeholder until
+the existing authorized page-list request completes. Ready navigation stays usable
+during content changes. This improves visible loading and removes the serial
+partial-fetch chain; it does not establish an end-to-end backend latency saving.
 
 ## Rules For New Work
 

@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const WORKFLOW_PLACEHOLDERS = new Set([
   'INIT_WORKFLOW_SCHEMA',
   'INIT_WORKFLOW_TABLES',
@@ -611,11 +609,15 @@ async function handleWorkflowPostgres(client, operation, params = {}) {
 }
 
 function mongoIdQuery(id) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   if (ObjectId.isValid(String(id))) return { _id: new ObjectId(String(id)) };
   return { id: String(id) };
 }
 
 async function handleWorkflowMongo(db, operation, params = {}) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const p = paramsObject(params);
   switch (operation) {
     case 'INIT_WORKFLOW_SCHEMA':

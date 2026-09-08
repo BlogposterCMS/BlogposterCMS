@@ -17,6 +17,8 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^.*shared/feedback/adminShellLoading\\.js$': '<rootDir>/ui/shared/feedback/adminShellLoading.ts',
+    '^\\./loading\\.js$': '<rootDir>/ui/shared/feedback/loading.ts',
     '^/ui/shared/overlays/popover\\.js$': '<rootDir>/ui/shared/overlays/popover.ts',
     '^\\.\\./\\.\\./designerLayoutsData\\.js$': '<rootDir>/ui/widgets/plainspace/admin/designerLayoutsData.ts',
     '^\\./pageDesignPreview\\.js$': '<rootDir>/ui/widgets/plainspace/admin/defaultwidgets/pageList/pageDesignPreview.ts',
@@ -36,7 +38,7 @@ module.exports = {
     '^.*(?:shared|\\.\\.)/agent/workspaceAgent\\.js$': '<rootDir>/ui/shared/agent/workspaceAgent.ts',
     '^\\./mediaExplorerEntries\\.js$': '<rootDir>/ui/shared/media/mediaExplorerEntries.ts',
     '^\\./updateCenterData\\.js$': '<rootDir>/ui/widgets/plainspace/admin/settings/updateCenterData.ts',
-    '^/ui/shared/navigation/tabs\\.js$': '<rootDir>/ui/shared/navigation/tabs.ts',
+    '^.*shared/navigation/tabs\\.js$': '<rootDir>/ui/shared/navigation/tabs.ts',
     '^.*shared/forms/formField\\.js$': '<rootDir>/ui/shared/forms/formField.ts',
     '^.*(?:shared|\\.\\.)/navigation/workspaceChanges\\.js$': '<rootDir>/ui/shared/navigation/workspaceChanges.ts',
     '^\\.\\./dialogs/bpDialog\\.js$': '<rootDir>/ui/shared/dialogs/bpDialog.ts',

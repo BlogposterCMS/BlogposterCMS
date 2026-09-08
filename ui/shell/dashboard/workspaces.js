@@ -1,3 +1,4 @@
+import { beginAdminRegion, failAdminRegion, finishAdminRegion } from '../../shared/feedback/adminShellLoading.js';
 import { ADMIN_LANE, createWorkspacePage, createWorkspaceSubpage, fetchAdminPageBySlug, fetchAdminPagesByLane } from './workspacesData.js';
 const ASSET_SCHEME_PATTERN = /^(?:[a-z][a-z\d+.-]*:|\/\/)/iu;
 function resolveAssetPath(assetPath) {
@@ -63,7 +64,7 @@ async function fetchAdminPages() {
     }
     if (!window.ADMIN_TOKEN || typeof window.meltdownEmit !== 'function') {
         console.warn('[workspaceNav] ADMIN_TOKEN or meltdownEmit not yet available; deferring page fetch.');
-        return [];
+        throw new Error('ADMIN_SHELL_NAV_AUTH_UNAVAILABLE');
     }
     try {
         const pages = await fetchAdminPagesByLane(window.meltdownEmit, window.ADMIN_TOKEN);
@@ -73,7 +74,7 @@ async function fetchAdminPages() {
     catch (error) {
         console.error('[workspaceNav] failed to fetch pages', error);
         cachedPages = null;
-        return [];
+        throw error;
     }
 }
 async function ensureIconList() {
@@ -168,17 +169,47 @@ function buildWorkspaceActions(nav, pages, adminBase, workspaceSlug) {
 }
 function buildSidebar(nav, pages, adminBase, workspaceSlug) {
     const fragment = document.createDocumentFragment();
+    const isSettings = workspaceSlug === 'settings';
+    // This is presentation metadata for existing registered pages, not a second
+    // route registry. Only pages returned by the authorized page list are shown.
+    const settingsSections = [
+        ['general', 'Website', 'General'], ['design', 'Website', 'Branding & fonts'],
+        ['seo', 'Website', 'Search & SEO'], ['security', 'Website', 'Site availability'],
+        ['users-access', 'Administration', 'Users & access'], ['modules', 'Administration', 'Modules'],
+        ['updates', 'Administration', 'Updates'], ['ui-kit', 'Reference', 'UI Kit']
+    ];
+    const settingIndex = (page) => {
+        const index = settingsSections.findIndex(([slug]) => page.slug === `settings/${slug}`);
+        return index < 0 ? settingsSections.length : index;
+    };
+    let previousGroup = '';
+    nav.closest('.sidebar')?.classList.toggle('settings-sidebar', isSettings);
     pages
         .filter(page => page.slug.startsWith(`${workspaceSlug}/`) && page.slug !== workspaceSlug)
-        .sort(compareWeight)
+        .sort((a, b) => isSettings ? settingIndex(a) - settingIndex(b) || compareWeight(a, b) : compareWeight(a, b))
         .forEach(page => {
-        const title = page.title || page.slug.split('/').pop() || page.slug;
+        const section = isSettings ? settingsSections[settingIndex(page)] : undefined;
+        const title = section?.[2] || page.title || page.slug.split('/').pop() || page.slug;
+        if (isSettings) {
+            const group = section?.[1] || 'Extensions';
+            if (group !== previousGroup) {
+                const heading = document.createElement('div');
+                heading.className = 'settings-nav-group';
+                heading.textContent = group;
+                fragment.append(heading);
+                previousGroup = group;
+            }
+        }
         const linkHref = `${adminBase}${page.slug}`;
         const anchor = document.createElement('a');
         anchor.href = linkHref;
         anchor.className = 'sidebar-item';
-        if (window.location.pathname.startsWith(linkHref)) {
+        if (window.location.pathname.startsWith(linkHref)
+            || (isSettings && page.slug === 'settings/users-access' &&
+                (window.location.pathname.startsWith(`${adminBase}settings/users/`) || window.location.pathname === `${adminBase}settings/login/edit`))
+            || (isSettings && page.slug === 'settings/general' && window.location.pathname.replace(/\/$/, '') === `${adminBase}settings`)) {
             anchor.classList.add('active');
+            anchor.setAttribute('aria-current', 'page');
         }
         const icon = document.createElement('img');
         icon.src = normaliseIcon(page, DEFAULT_SUBPAGE_ICON);
@@ -191,6 +222,11 @@ function buildSidebar(nav, pages, adminBase, workspaceSlug) {
         anchor.append(label);
         fragment.append(anchor);
     });
+    // Settings are fixed product pages. Dashboard page creation has no role here.
+    if (isSettings) {
+        nav.replaceChildren(fragment);
+        return;
+    }
     const add = document.createElement('button');
     add.type = 'button';
     add.setAttribute('aria-label', 'Add page');
@@ -422,6 +458,11 @@ async function renderWorkspaceNav() {
     if (!nav && !actionNav && !sidebarNav) {
         return;
     }
+    // Existing navigation remains usable during a content-only page change.
+    for (const region of [nav, actionNav, sidebarNav]) {
+        if (region && !region.childElementCount)
+            beginAdminRegion(region);
+    }
     const adminBase = getAdminBase();
     const pathname = window.location.pathname;
     const adminBasePattern = new RegExp(`^${adminBase.replace(/[-/\\^$*+?.()|[\]{}]/gu, '\\$&')}`);
@@ -445,9 +486,9 @@ async function renderWorkspaceNav() {
         ? adminPages.filter(page => page.slug.startsWith(`${activeWorkspaceSlug}/`) && page.slug !== activeWorkspaceSlug)
         : [];
     const signature = computeSignature(workspaces, sidebarPages, activeWorkspaceSlug, pathname);
-    const navNeedsRender = Boolean(nav && nav.childElementCount === 0);
-    const actionNavNeedsRender = Boolean(actionNav && actionNav.childElementCount === 0);
-    const sidebarNeedsRender = Boolean(sidebarNav && sidebarNav.childElementCount === 0);
+    const navNeedsRender = Boolean(nav && (nav.childElementCount === 0 || nav.dataset.adminLoading === 'loading'));
+    const actionNavNeedsRender = Boolean(actionNav && (actionNav.childElementCount === 0 || actionNav.dataset.adminLoading === 'loading'));
+    const sidebarNeedsRender = Boolean(sidebarNav && (sidebarNav.childElementCount === 0 || sidebarNav.dataset.adminLoading === 'loading'));
     if (signature === lastRenderSignature && !navNeedsRender && !actionNavNeedsRender && !sidebarNeedsRender) {
         return;
     }
@@ -461,6 +502,8 @@ async function renderWorkspaceNav() {
     if (sidebarNav && activeWorkspaceSlug) {
         buildSidebar(sidebarNav, sidebarPages, adminBase, activeWorkspaceSlug);
     }
+    [nav, actionNav, sidebarNav].forEach(region => { if (region)
+        finishAdminRegion(region); });
 }
 export async function initWorkspaceNav() {
     const previous = fetchPromise ?? Promise.resolve();
@@ -473,7 +516,12 @@ export async function initWorkspaceNav() {
             await renderWorkspaceNav();
         }
         catch (error) {
-            console.error('[workspaceNav] render failed', error);
+            console.error('[ADMIN_SHELL_NAV_FAILED] render failed', error);
+            document.querySelectorAll('#workspace-nav, #workspace-actions, #subpage-nav')
+                .forEach(region => {
+                if (region.dataset.adminLoading !== 'ready')
+                    failAdminRegion(region, 'ADMIN_SHELL_NAV_FAILED');
+            });
         }
     });
     const trackedPromise = renderSequence.finally(() => {

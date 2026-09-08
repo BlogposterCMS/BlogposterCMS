@@ -5,6 +5,8 @@ export function createTabSystem(container, tabsHost, options = {}) {
     const systemId = `bp-tabs-${tabSystemId}`;
     const tabs = [];
     tabsHost.classList.add('bp-tabs');
+    if (options.variant)
+        tabsHost.classList.add(`bp-tabs--${options.variant}`);
     tabsHost.setAttribute('role', 'tablist');
     const select = (index) => {
         const safeIndex = Math.max(0, Math.min(index, tabs.length - 1));
@@ -39,7 +41,7 @@ export function createTabSystem(container, tabsHost, options = {}) {
         button.tabIndex = -1;
         const panel = document.createElement('section');
         panel.id = panelId;
-        panel.className = 'settings-section bp-tab-panel';
+        panel.className = `${options.panelClassName || 'settings-section'} bp-tab-panel`;
         panel.setAttribute('role', 'tabpanel');
         panel.setAttribute('aria-labelledby', buttonId);
         panel.tabIndex = 0;

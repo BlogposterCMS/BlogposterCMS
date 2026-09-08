@@ -19,6 +19,33 @@ describe('runtimeShellPartials', () => {
     delete window.fetchWithTimeout;
   });
 
+  it('starts independent partials together and finishes each region separately', async () => {
+    document.body.innerHTML = '<div class="admin-panel"><header id="top-header"></header><header id="main-header"></header></div>';
+    const responses: Array<(response: unknown) => void> = [];
+    window.fetchWithTimeout = jest.fn(() => new Promise(resolve => { responses.push(resolve); })) as any;
+    const pending = hydrateRuntimeShellPartials();
+    expect(responses).toHaveLength(2);
+    responses[1]!({ ok: true, text: async () => '<nav>Ready navigation</nav>' });
+    // Let response text, sanitization and region completion settle.
+    for (let index = 0; index < 5; index += 1) await Promise.resolve();
+    expect(document.getElementById('main-header')?.dataset.adminLoading).toBe('ready');
+    expect(document.getElementById('top-header')?.dataset.adminLoading).toBe('loading');
+    responses[0]!({ ok: true, text: async () => '<span>Ready header</span>' });
+    await pending;
+  });
+
+  it('shows a local retry on a failed partial while other chrome succeeds', async () => {
+    document.body.innerHTML = '<div class="admin-panel"><header id="top-header"></header><header id="main-header"></header></div>';
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    window.fetchWithTimeout = jest.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ ok: true, text: async () => '<nav>Navigation</nav>' });
+    await hydrateRuntimeShellPartials();
+    expect(document.getElementById('top-header')?.dataset.adminLoading).toBe('error');
+    expect(document.querySelector('#top-header .admin-shell-error')?.textContent).toContain('Erneut versuchen');
+    expect(document.getElementById('main-header')?.textContent).toBe('Navigation');
+  });
+
   it('loads partials through the shared loader and returns an empty fallback on failure', async () => {
     const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const fetchWithTimeout = jest.fn()

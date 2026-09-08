@@ -6,11 +6,16 @@ export interface BpTabSystem {
 let tabSystemId = 0;
 
 /** Creates an accessible tablist while allowing panels to be populated later. */
-export function createTabSystem(container: HTMLElement, tabsHost: HTMLElement, options: { onSelect?: (index: number) => void } = {}): BpTabSystem {
+export function createTabSystem(container: HTMLElement, tabsHost: HTMLElement, options: {
+  onSelect?: (index: number) => void;
+  variant?: 'underline';
+  panelClassName?: string;
+} = {}): BpTabSystem {
   tabSystemId += 1;
   const systemId = `bp-tabs-${tabSystemId}`;
   const tabs: Array<{ button: HTMLButtonElement; panel: HTMLElement }> = [];
   tabsHost.classList.add('bp-tabs');
+  if (options.variant) tabsHost.classList.add(`bp-tabs--${options.variant}`);
   tabsHost.setAttribute('role', 'tablist');
 
   const select = (index: number) => {
@@ -48,7 +53,7 @@ export function createTabSystem(container: HTMLElement, tabsHost: HTMLElement, o
 
     const panel = document.createElement('section');
     panel.id = panelId;
-    panel.className = 'settings-section bp-tab-panel';
+    panel.className = `${options.panelClassName || 'settings-section'} bp-tab-panel`;
     panel.setAttribute('role', 'tabpanel');
     panel.setAttribute('aria-labelledby', buttonId);
     panel.tabIndex = 0;

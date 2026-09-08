@@ -7,7 +7,6 @@ const { requestBackendEvent } = require('../../contracts/backendEventContracts')
 /**
  * mother/modules/databaseManager/dbSetup.js
  */
-const { Pool } = require('pg');
 const { pgAdminUser, pgAdminPass, pgHost, pgPort, pgMainDb } = require('./config/databaseConfig');
 const { getDbType } = require('./helpers/dbTypeHelpers');
 
@@ -47,6 +46,8 @@ async function initializeDatabaseManagerDatabase(motherEmitter, coreToken) {
 }
 
 async function initializeDatabaseManagerSchemaInMainDb() {
+  // This setup runs only for PostgreSQL; other engines need no pg driver.
+  const { Pool } = require('pg');
   const dbClient = new Pool({
     user: pgAdminUser,
     password: pgAdminPass,

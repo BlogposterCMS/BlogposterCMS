@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+- Extended Media Manager with bundled local, Alibaba OSS and AWS/S3-compatible
+  storage adapters. Added provider configuration, encrypted server-side
+  credentials, a saved-connection check and explicit download publication with
+  direct delivery URLs, SHA-256 checksums and app-version metadata. Existing
+  local Explorer uploads remain compatible; no second file catalog is created.
+
+- Rebuilt Settings as full-height task pages with named, grouped navigation,
+  one tab row per page and consistent light/dark surfaces. Modules, users and
+  permission groups no longer sit inside nested widget cards. Sign-in methods
+  now live with user access; registration has one control with explicit save,
+  retained failure drafts and discard. Settings forms show saved/unsaved state,
+  keep independent tab drafts and mask the font integration key. Fixed broken
+  user/provider editor deep links; editors now share the full Settings page,
+  retain failed drafts and refuse to edit empty defaults after failed reads.
+
+- Render shared admin skeletons in the initial HTML, preserve ready chrome during
+  content navigation, and replace failed/timed-out loading with an explicit retry.
+  Independent shell partials now load in parallel and finish individually.
+
+- Clarified README positioning as a self-hosted Node.js CMS and visual website
+  builder, including its extensible framework and backend runtime roles.
+- Serve prebuilt browser modules in production and keep TypeScript as a development
+  dependency; development retains on-demand compilation. Missing production output
+  reports a build error instead of loading the compiler.
+- Load only the selected database engine and defer PostgreSQL/MongoDB helper imports
+  to their database paths, preserving all supported database variants.
+
 ## [0.10.4] - 2026-09-07
 
 - Fixed host updater 1.2.0-1.2.2 storing valid image proof bundles in temporary

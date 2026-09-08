@@ -29,7 +29,8 @@ Handles file and folder operations under the media library. It verifies permissi
 - Represent local and externally delivered assets through the same attachment
   contract. `storagePath` is the local path or provider object key, `url` is the
   public delivery URL, and provider/CDN details remain bounded attachment
-  metadata. Media Manager does not store object-storage credentials.
+  metadata. Object-storage credentials stay server-side in authenticated,
+  encrypted settings; they never enter attachment metadata.
 
 Uploads performed through meltdown events accept empty payloads. Supplying `fileData` as an empty string or zero-length `Buffer` writes the decoded content to disk while preserving the strict MIME/type whitelist enforced by the module.
 The whitelist includes common web presentation assets used by imported themes
@@ -110,9 +111,105 @@ Static-site migrations should use the existing `staticSiteAssets` importer.
 It registers already published local files or OSS/CDN objects here and creates
 canonical page relations without bypassing Media Manager. Downloadable
 application packages are attachments with category `download` and artifact
-metadata; immutable versions remain separate attachment records. A provider
-uploader may be added behind this boundary later, but it must not introduce a
-second media catalog or expose provider credentials to Pages or public HTML.
+metadata; immutable versions remain separate attachment records. The storage
+adapters below upload behind this boundary without a second media catalog or
+exposing provider credentials to Pages or public HTML.
+
+## Storage adapters and downloadable files
+
+Open **Media → Storage & downloads**. All three adapters ship as production
+dependencies in the normal Blogposter installation/image; users do not install
+SDK packages separately:
+
+- **Local server**: publishes to `library/public/downloads/<uuid>/...` and serves
+  through the existing `/media/` boundary.
+- **Alibaba OSS**: the official `ali-oss` Node.js SDK. Enter bucket, region
+  (for example `oss-cn-hangzhou` or `cn-hangzhou`), access key ID and secret.
+- **AWS S3 / S3-compatible storage**: official AWS SDK v3. Enter bucket, region,
+  access key ID and secret. Other S3 services can specify an HTTPS endpoint and
+  path-style addressing. Compatibility depends on that service's S3 support.
+
+An optional HTTPS download/CDN base URL points to the bucket root, without the
+object key. Native Alibaba/AWS defaults are derived if this field and endpoint
+are empty. Custom endpoints require an explicit delivery base URL. Bucket/CDN
+read policy must permit public downloads under `downloads/`; Blogposter never
+changes bucket policy or sets public object ACLs. A private bucket can be used
+behind a CDN configured to authenticate to the origin.
+
+Save, then **Test saved connection**. This calls Alibaba `getBucketInfo` or S3
+`HeadBucket` (local: directory access). It checks that operation only, not object
+write/delete permission or anonymous CDN access. Provider accounts may need
+separate permissions for the bucket check. For a full live check, publish a
+small disposable file and open its returned URL without authentication, then
+compare its SHA-256 hash. SDK unit tests are not cloud acceptance evidence.
+
+**Upload and publish** explicitly creates a public download. This route accepts
+the existing presentation MIME/extension set plus APK, ZIP and PDF. It spools the
+upload to a temporary file with backpressure, calculates SHA-256, uploads under
+a new UUID key and registers the existing attachment contract:
+
+- `url`: stable direct delivery URL, never an expiring signed link.
+- `storagePath`: local public path or provider object key.
+- `checksum`, `sizeBytes`, `visibility: public`, `category: download`.
+- `meta.storage`: `provider`, `bucket`, `objectKey`, `deliveryUrl`.
+- `meta.artifact.version`: optional app version, retaining the import contract.
+
+The recent downloads list reads the canonical `media.list` admin facade (latest
+50 active public downloads). Cloud objects are not mirrored into the local
+Explorer. Switching storage affects future download publications only; existing
+URLs and local builder/picker uploads stay unchanged. No automatic migration or
+bulk publication occurs. Removing a catalog entry through the existing metadata
+API does not delete the underlying object or revoke an already-public URL.
+
+The shared `MAX_UPLOAD_BYTES` limit defaults to 20,000,000 bytes. Configure an
+appropriate limit and reverse-proxy upload timeout/body limit for APK releases.
+Uploads pass through Blogposter temporarily; downloads go directly to OSS/CDN.
+AWS uses a single streamed PutObject, so configure limits below its single-object
+upload limit. Resumable/multipart cloud uploads are not implemented.
+
+### Server boundary and adapter contract
+
+Implementations live in `mother/modules/mediaManager/storage/` and share
+`put({ key, filePath, mimeType, sizeBytes })`, `head(key)`, `delete(key)`, `test()`
+and `downloadUrl(key, options)`. The cloud `downloadUrl` methods support signed
+URLs internally; there is no public arbitrary-key signing endpoint. New providers
+add a factory and configuration fields here, retaining Media Manager's catalog,
+authorization and publication workflow. SDKs are lazy-loaded server-side.
+
+The Media Manager HTTP upload boundary exposes:
+
+| Method | Path | Permission / purpose |
+| --- | --- | --- |
+| GET | `/admin/api/media/storage` | `media.manage`, sanitized configuration |
+| PUT | `/admin/api/media/storage` | plus `settings.unified.editSettings`, save |
+| POST | `/admin/api/media/storage/test` | both permissions, saved bucket check |
+| POST | `/admin/api/media/storage/upload` | `media.manage`, multipart `file` and optional `appVersion`, publish |
+
+All writes require the existing CSRF protection and validated cookie session.
+The configuration is stored through Unified Settings as
+`mediaManager.storageEncrypted`, using AES-256-GCM. A generated 32-byte key lives
+at `data/mediaManager/storage.key`, outside the media/public directories and
+build context. Back up this key with the database; replicas sharing the database
+must share the key. Keep the existing `data` volume persistent during upgrades.
+On Windows, restrict that directory's ACL to the service account; POSIX key files
+are created with mode 0600. Missing or corrupt keys/configuration fail closed.
+Blank credential controls retain saved values for the same provider; switching
+providers requires new credentials, and selecting local clears cloud credentials.
+SDK error details are replaced with searchable `MEDIA_STORAGE_*` codes so signed
+requests and credentials do not reach responses. If metadata creation fails,
+the newly uploaded object is deleted; `MEDIA_STORAGE_METADATA_FAILED_CLEANUP_REQUIRED`
+means that compensation also failed and the provider needs manual inspection.
+
+The existing `cms.media.*` agent surface still owns Explorer operations. Storage
+configuration and streaming publication currently use the authenticated HTTP
+boundary above; an AgentManager command adapter for those actions remains to be
+added. Never put credential values in agent snapshots.
+
+YiTaiCOS download links and the app updater must subsequently consume the stored
+`url`, version and checksum. This CMS change does not change YiTaiCOS itself.
+
+SDK references: [Alibaba upload](https://www.alibabacloud.com/help/en/oss/simple-upload),
+[AWS S3 examples](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_s3_code_examples.html).
 
 ## Explorer workspace
 

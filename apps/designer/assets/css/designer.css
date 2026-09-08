@@ -8524,6 +8524,38 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
 .designer-ui-controls .bp-tab-panel:focus {
   outline: none;
 }
+.designer-ui-controls .bp-tabs.bp-tabs--underline {
+  gap: 20px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--studio-border);
+}
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button {
+  margin: 0;
+  padding: 12px 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--studio-text-muted);
+  white-space: nowrap;
+  transform: none;
+}
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button:hover {
+  color: var(--studio-text);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button.active {
+  color: var(--studio-text);
+  border-bottom-color: currentColor;
+}
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button:focus-visible {
+  outline: 2px solid var(--studio-text);
+  outline-offset: -3px;
+  box-shadow: none;
+}
 .designer-ui-controls .bp-card {
   padding: 18px;
   border: 1px solid var(--studio-border);

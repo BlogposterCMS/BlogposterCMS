@@ -6,6 +6,7 @@ import type { RuntimeWidgetDefinition } from './runtimeWidgetRenderer.js';
 import { renderRuntimeCanvasWidget } from './runtimeWidgetMounting.js';
 import { waitForRuntimeWidgetShellPaint } from './runtimeWidgetHydration.js';
 import { markRuntimeWidgetShell } from './runtimeWidgetHydration.js';
+import { finishAdminRegion } from '../../shared/feedback/adminShellLoading.js';
 import type { RuntimeEmitter as RuntimeWidgetEmitter } from './runtimeWidgetInstances.js';
 import { attachAdminDashboardControls } from './widgetRuntimeGateway.js';
 import {
@@ -186,6 +187,11 @@ export async function mountAdminGridWidgets({
     instanceMetaMap.set(instanceId, meta);
     pendingAdmin.push({ wrapper, def, meta, placeholder });
   });
+
+  // Hand over from the page skeleton to the existing per-widget placeholders.
+  // Widgets can now hydrate progressively without hiding ready neighbours.
+  const content = gridEl.closest<HTMLElement>('#content');
+  if (content) finishAdminRegion(content);
 
   if (pendingAdmin.length && deferHydration) {
     await waitForRuntimeWidgetShellPaint();

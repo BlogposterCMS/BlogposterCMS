@@ -1,3 +1,5 @@
+import { createFormField, createFormActions } from '../../../shared/forms/formField.js';
+import { registerWorkspaceChanges } from '../../../shared/navigation/workspaceChanges.js';
 import { createColorPicker } from '/ui/shared/controls/colorPicker.js';
 import {
   deleteUserRecord,
@@ -112,10 +114,10 @@ function buildPermissionCheckboxes(container: HTMLElement, permissions: Permissi
   });
 }
 
-export async function render(el: HTMLElement | null): Promise<void> {
+export async function render(el: HTMLElement | null, options: { userId?: string } = {}): Promise<void> {
   const meltdownEmit = window.meltdownEmit;
   const jwt = window.ADMIN_TOKEN;
-  const userId = window.PAGE_ID;
+  const userId = options.userId || window.PAGE_ID;
 
   if (!el) return;
 
@@ -127,9 +129,9 @@ export async function render(el: HTMLElement | null): Promise<void> {
   try {
     const [user, roles, permissions, access] = await Promise.all([
       fetchUserDetails(meltdownEmit, jwt, userId),
-      fetchRoles(meltdownEmit, jwt).catch(() => []),
-      fetchPermissions(meltdownEmit, jwt).catch(() => []),
-      fetchUserAccess(meltdownEmit, jwt, userId).catch(() => ({ roleIds: [], directPermissions: {} }))
+      fetchRoles(meltdownEmit, jwt),
+      fetchPermissions(meltdownEmit, jwt),
+      fetchUserAccess(meltdownEmit, jwt, userId)
     ]);
     if (!user) {
       el.innerHTML = '<p>User not found.</p>';
@@ -149,51 +151,30 @@ export async function render(el: HTMLElement | null): Promise<void> {
     ];
     let selectedColor = userRecord.ui_color || '#171717';
 
-    const headerDelete = document.createElement('img');
-    headerDelete.src = '/assets/icons/delete.svg';
-    headerDelete.className = 'icon delete-user-btn';
-    headerDelete.title = 'Delete user';
-    headerDelete.style.alignSelf = 'flex-end';
+    const headerDelete = document.createElement('button');
+    headerDelete.type = 'button';
+    headerDelete.className = 'button ghost danger';
+    headerDelete.textContent = 'Delete user';
     headerDelete.addEventListener('click', async () => {
       if (!await showConfirm('Delete this user?', 'Delete user', 'Delete')) return;
       try {
         await deleteUserRecord(meltdownEmit, jwt, userRecord.id);
         await showAlert('User deleted', 'Delete user');
-        window.location.href = '/admin/settings/users';
+        window.location.href = '/admin/settings/users-access';
       } catch (err) {
         await showAlert(`Error: ${errorMessage(err)}`, 'Delete user');
       }
     });
-    container.appendChild(headerDelete);
 
     textFields.forEach(field => {
-      const row = document.createElement('div');
-      row.className = 'field user-field-row';
-
-      const input = field === 'bio'
-        ? document.createElement('textarea')
-        : document.createElement('input');
-      if (input instanceof HTMLInputElement) {
-        input.type = 'text';
-      }
-
-      const id = `ue-${field}`;
-      input.id = id;
-      input.placeholder = ' ';
-      input.value = userValue(userRecord, field);
-      inputs[field] = input;
-
-      const label = document.createElement('label');
-      label.setAttribute('for', id);
-      label.textContent = field.replace('_', ' ');
-      row.appendChild(input);
-      row.appendChild(label);
-
-      container.appendChild(row);
+      const input = field === 'bio' ? document.createElement('textarea') : document.createElement('input');
+      if (input instanceof HTMLInputElement) input.type = field === 'email' ? 'email' : 'text';
+      input.value = userValue(userRecord, field); inputs[field] = input;
+      container.append(createFormField(field.replace(/_/g, ' ').replace(/^./, char => char.toUpperCase()), input));
     });
 
     const colorRow = document.createElement('div');
-    colorRow.className = 'field user-field-row';
+    colorRow.className = 'form-field';
     const colorBtn = document.createElement('button');
     colorBtn.type = 'button';
     colorBtn.id = 'ue-ui_color';
@@ -226,23 +207,17 @@ export async function render(el: HTMLElement | null): Promise<void> {
 
     const colorLabel = document.createElement('label');
     colorLabel.setAttribute('for', 'ue-ui_color');
-    colorLabel.textContent = 'ui color';
-    colorRow.appendChild(wrapper);
-    colorRow.appendChild(colorLabel);
+    colorLabel.textContent = 'Account accent';
+    colorLabel.className = 'form-field__label';
+    colorRow.append(colorLabel, wrapper);
     container.appendChild(colorRow);
 
-    const passField = document.createElement('div');
-    passField.className = 'field';
     const passInput = document.createElement('input');
     passInput.id = 'ue-new-pass';
     passInput.type = 'password';
     passInput.placeholder = ' ';
-    const passLabel = document.createElement('label');
-    passLabel.setAttribute('for', 'ue-new-pass');
-    passLabel.textContent = 'New Password';
-    passField.appendChild(passInput);
-    passField.appendChild(passLabel);
-    container.appendChild(passField);
+    passInput.autocomplete = 'new-password';
+    container.append(createFormField('New password', passInput, { hint: 'Leave empty to keep the current password.' }));
 
     const selectedRoleIds = new Set((access.roleIds || []).map(String));
     const selectedPermissionKeys = new Set(permissionKeysFromBlob(access.directPermissions));
@@ -264,13 +239,33 @@ export async function render(el: HTMLElement | null): Promise<void> {
     container.appendChild(advanced);
 
     const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
-    container.appendChild(saveBtn);
+    saveBtn.type = 'button'; saveBtn.className = 'button primary'; saveBtn.textContent = 'Save user';
+    const status = document.createElement('p'); status.className = 'form-status'; status.setAttribute('role', 'status');
+    const discard = document.createElement('button'); discard.type = 'button';
+    discard.className = 'button ghost'; discard.textContent = 'Discard changes';
+    const actions = createFormActions(saveBtn, discard, headerDelete); actions.classList.add('settings-save-bar');
+    container.append(actions, status);
+    const controls = [...container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')];
+    const valueOf = (input: HTMLInputElement | HTMLTextAreaElement) => input instanceof HTMLInputElement && input.type === 'checkbox' ? String(input.checked) : input.value;
+    let baseline = controls.map(valueOf); let savedColor = selectedColor; let saving = false;
+    const dirty = () => savedColor !== selectedColor || controls.some((input, index) => valueOf(input) !== baseline[index]);
+    registerWorkspaceChanges(container, { isDirty: dirty, isBusy: () => saving });
+    discard.addEventListener('click', () => {
+      if (saving) return;
+      controls.forEach((input, index) => {
+        if (input instanceof HTMLInputElement && input.type === 'checkbox') input.checked = baseline[index] === 'true';
+        else input.value = baseline[index] || '';
+      });
+      selectedColor = savedColor; colorBtn.style.backgroundColor = savedColor; status.textContent = '';
+    });
 
     el.innerHTML = '';
     el.appendChild(container);
 
     async function saveUser(): Promise<void> {
+      if (saving) return;
+      saving = true; container.inert = true; saveBtn.disabled = true;
+      status.setAttribute('role', 'status'); status.textContent = 'Saving…';
       const values = {} as UserEditFieldValues;
       textFields.forEach(field => {
         values[field] = inputs[field].value;
@@ -291,17 +286,19 @@ export async function render(el: HTMLElement | null): Promise<void> {
           roleIds,
           directPermissions: permissionBlobFromKeys(permissionKeys)
         });
-        window.USER_COLOR = selectedColor;
-        document.documentElement.style.setProperty('--user-color', selectedColor);
-        await showAlert('Saved', 'User');
+        passInput.value = ''; baseline = controls.map(valueOf); savedColor = selectedColor;
+        status.textContent = 'User saved.';
       } catch (err) {
-        await showAlert(`Error: ${errorMessage(err)}`, 'User');
-      }
+        status.setAttribute('role', 'alert'); status.textContent = `SETTINGS_USER_SAVE_FAILED: ${errorMessage(err)}`;
+      } finally { saving = false; container.inert = false; saveBtn.disabled = false; }
     }
 
     (window as UserEditWindow).saveUserChanges = saveUser;
     saveBtn.addEventListener('click', saveUser);
   } catch (err) {
-    el.innerHTML = `<div class="error">Failed to load user: ${errorMessage(err)}</div>`;
+    const error = document.createElement('p'); error.setAttribute('role', 'alert');
+    error.textContent = 'SETTINGS_USER_LOAD_FAILED: ' + errorMessage(err);
+    const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'button ghost'; retry.textContent = 'Retry';
+    retry.addEventListener('click', () => void render(el, options)); el.replaceChildren(error, retry);
   }
 }

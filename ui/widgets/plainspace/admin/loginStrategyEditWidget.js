@@ -1,78 +1,101 @@
+import { createFormField, createFormActions } from '../../../shared/forms/formField.js';
+import { registerWorkspaceChanges } from '../../../shared/navigation/workspaceChanges.js';
 import { errorMessage, fetchLoginStrategySettings, loginStrategyScopes, saveLoginStrategySettings } from './loginStrategyEditData.js';
+/** Uses the existing provider contract inside the fixed account-settings page. */
 export async function render(el) {
-    const jwt = window.ADMIN_TOKEN;
-    const meltdownEmit = window.meltdownEmit;
-    const params = new URLSearchParams(window.location.search);
-    const strategy = params.get('strategy');
     if (!el)
         return;
-    if (!strategy) {
-        el.innerHTML = '<p>Missing strategy parameter.</p>';
-        return;
-    }
-    const strategyName = strategy;
-    if (typeof meltdownEmit !== 'function') {
-        el.textContent = 'Unable to load login strategy settings without an admin session.';
-        return;
-    }
-    let settings = {
-        clientId: '',
-        clientSecret: '',
-        scope: 'admin'
-    };
+    const jwt = window.ADMIN_TOKEN;
+    const emit = window.meltdownEmit;
+    const strategy = new URLSearchParams(window.location.search).get('strategy');
     try {
-        settings = await fetchLoginStrategySettings(meltdownEmit, jwt, strategyName);
-    }
-    catch (err) {
-        console.error('Failed to load settings', err);
-    }
-    const container = document.createElement('div');
-    container.className = 'login-strategy-edit';
-    const scopeLabel = document.createElement('label');
-    scopeLabel.textContent = 'Scope';
-    const scopeSelect = document.createElement('select');
-    loginStrategyScopes.forEach(value => {
-        const opt = document.createElement('option');
-        opt.value = value;
-        opt.textContent = value;
-        if (value === settings.scope)
-            opt.selected = true;
-        scopeSelect.appendChild(opt);
-    });
-    container.appendChild(scopeLabel);
-    container.appendChild(scopeSelect);
-    const idLabel = document.createElement('label');
-    idLabel.textContent = 'Client ID';
-    const idInput = document.createElement('input');
-    idInput.type = 'text';
-    idInput.value = settings.clientId;
-    container.appendChild(idLabel);
-    container.appendChild(idInput);
-    const secretLabel = document.createElement('label');
-    secretLabel.textContent = 'Client Secret';
-    const secretInput = document.createElement('input');
-    secretInput.type = 'password';
-    secretInput.value = settings.clientSecret;
-    container.appendChild(secretLabel);
-    container.appendChild(secretInput);
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
-    async function save() {
-        try {
-            await saveLoginStrategySettings(meltdownEmit, jwt, strategyName, {
-                clientId: idInput.value,
-                clientSecret: secretInput.value,
-                scope: scopeSelect.value
-            });
-            alert('Saved');
+        if (!strategy)
+            throw new Error('SETTINGS_SIGN_IN_PROVIDER_REQUIRED');
+        if (!emit)
+            throw new Error('SETTINGS_SIGN_IN_SESSION_REQUIRED');
+        // A failed read must not become an empty form capable of erasing credentials.
+        const settings = await fetchLoginStrategySettings(emit, jwt, strategy);
+        const container = document.createElement('div');
+        container.className = 'settings-section settings-section--form login-strategy-edit';
+        const scope = document.createElement('select');
+        loginStrategyScopes.forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            option.selected = value === settings.scope;
+            scope.append(option);
+        });
+        const clientId = document.createElement('input');
+        clientId.value = settings.clientId;
+        const secret = document.createElement('input');
+        secret.type = 'password';
+        secret.autocomplete = 'off';
+        secret.value = settings.clientSecret;
+        const saveButton = document.createElement('button');
+        saveButton.type = 'button';
+        saveButton.className = 'button primary';
+        saveButton.textContent = 'Save sign-in settings';
+        const discard = document.createElement('button');
+        discard.type = 'button';
+        discard.className = 'button ghost';
+        discard.textContent = 'Discard changes';
+        const status = document.createElement('p');
+        status.className = 'form-status';
+        status.setAttribute('role', 'status');
+        const read = () => ({ clientId: clientId.value, clientSecret: secret.value, scope: scope.value });
+        let saved = read();
+        let saving = false;
+        registerWorkspaceChanges(container, {
+            isDirty: () => JSON.stringify(read()) !== JSON.stringify(saved), isBusy: () => saving
+        });
+        discard.addEventListener('click', () => {
+            if (saving)
+                return;
+            clientId.value = saved.clientId;
+            secret.value = saved.clientSecret;
+            scope.value = saved.scope;
+            scope.dispatchEvent(new Event('change', { bubbles: true }));
+            status.textContent = '';
+        });
+        async function save() {
+            if (saving)
+                return;
+            saving = true;
+            container.inert = true;
+            saveButton.disabled = true;
+            status.setAttribute('role', 'status');
+            status.textContent = 'Saving…';
+            try {
+                await saveLoginStrategySettings(emit, jwt, strategy, read());
+                saved = read();
+                status.textContent = 'Sign-in settings saved.';
+            }
+            catch (error) {
+                status.setAttribute('role', 'alert');
+                status.textContent = `SETTINGS_SIGN_IN_SAVE_FAILED: ${errorMessage(error)}`;
+            }
+            finally {
+                saving = false;
+                container.inert = false;
+                saveButton.disabled = false;
+            }
         }
-        catch (err) {
-            alert(`Error: ${errorMessage(err)}`);
-        }
+        saveButton.addEventListener('click', () => void save());
+        window.saveLoginStrategy = save;
+        const actions = createFormActions(saveButton, discard);
+        actions.classList.add('settings-save-bar');
+        container.append(createFormField('Scope', scope), createFormField('Client ID', clientId), createFormField('Client secret', secret), actions, status);
+        el.replaceChildren(container);
     }
-    saveBtn.addEventListener('click', save);
-    window.saveLoginStrategy = save;
-    container.appendChild(saveBtn);
-    el.innerHTML = '';
-    el.appendChild(container);
+    catch (error) {
+        const message = document.createElement('p');
+        message.setAttribute('role', 'alert');
+        message.textContent = `SETTINGS_SIGN_IN_LOAD_FAILED: ${errorMessage(error)}`;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'button ghost';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => void render(el));
+        el.replaceChildren(message, retry);
+    }
 }

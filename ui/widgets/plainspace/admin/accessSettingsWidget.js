@@ -1,4 +1,7 @@
 import { createAgentAccessCode, errorMessage, fetchAccessSettings, listAgentAccessCodes, revokeAgentAccessCode, setAllowRegistration } from './accessSettingsData.js';
+import { createFormField, createFormActions } from '../../../shared/forms/formField.js';
+import { registerWorkspaceChanges } from '../../../shared/navigation/workspaceChanges.js';
+import { registerWorkspaceAgent, patchAgentForm, readAgentForm } from '../../../shared/agent/workspaceAgent.js';
 function formatDate(value) {
     if (!value)
         return '';
@@ -23,9 +26,9 @@ export async function render(el) {
         card.className = 'access-settings-card page-list-card';
         const titleBar = document.createElement('div');
         titleBar.className = 'access-settings-title-bar page-title-bar';
-        const title = document.createElement('div');
+        const title = document.createElement('h2');
         title.className = 'access-settings-title page-title';
-        title.textContent = 'Access Control';
+        title.textContent = 'Public registration';
         const badge = document.createElement('span');
         badge.className = 'access-settings-badge';
         badge.textContent = firstInstallDone ? 'First install complete' : 'Initial setup pending';
@@ -49,57 +52,89 @@ export async function render(el) {
         toggleWrapper.appendChild(toggleLabel);
         const toggleHint = document.createElement('div');
         toggleHint.className = 'settings-hint';
-        toggleHint.textContent = 'When disabled, only administrators can add new users from the Users page.';
+        toggleHint.textContent = 'When disabled, only administrators can add new users. Changes take effect after saving.';
         const status = document.createElement('div');
-        status.className = 'access-settings-status';
+        status.className = 'form-status';
+        status.setAttribute('role', 'status');
         status.textContent = '';
-        toggleInput.addEventListener('change', async () => {
+        toggleInput.name = 'allowRegistration';
+        let savedRegistration = allowRegistration;
+        let savingRegistration = false;
+        registerWorkspaceChanges(card, {
+            isDirty: () => toggleInput.checked !== savedRegistration,
+            isBusy: () => savingRegistration
+        });
+        const saveRegistration = document.createElement('button');
+        saveRegistration.type = 'button';
+        saveRegistration.className = 'button primary';
+        saveRegistration.textContent = 'Save registration settings';
+        const discard = document.createElement('button');
+        discard.type = 'button';
+        discard.className = 'button ghost';
+        discard.textContent = 'Discard changes';
+        discard.hidden = true;
+        toggleInput.addEventListener('change', () => { discard.hidden = toggleInput.checked === savedRegistration; });
+        discard.addEventListener('click', () => { toggleInput.checked = savedRegistration; discard.hidden = true; status.textContent = ''; });
+        async function saveRegistrationDraft(propagate = false) {
+            if (savingRegistration)
+                return;
+            savingRegistration = true;
+            saveRegistration.disabled = discard.disabled = true;
             toggleInput.disabled = true;
+            status.setAttribute('role', 'status');
             status.textContent = 'Saving...';
             try {
                 await setAllowRegistration(meltdownEmit, jwt, toggleInput.checked);
+                savedRegistration = toggleInput.checked;
+                discard.hidden = true;
                 status.textContent = toggleInput.checked ? 'Public registration enabled.' : 'Public registration disabled.';
             }
             catch (err) {
-                status.textContent = 'Failed to update registration setting.';
-                console.error('[accessSettings] setSetting failed', err);
-                toggleInput.checked = !toggleInput.checked;
+                status.setAttribute('role', 'alert');
+                status.textContent = `SETTINGS_REGISTRATION_SAVE_FAILED: ${errorMessage(err)}`;
+                if (propagate)
+                    throw err;
             }
             finally {
+                savingRegistration = false;
+                saveRegistration.disabled = discard.disabled = false;
                 toggleInput.disabled = false;
             }
-        });
+        }
+        saveRegistration.addEventListener('click', () => void saveRegistrationDraft());
+        // Preserve the existing Settings agent commands after consolidating the
+        // registration control here. Access codes and credentials never enter it.
+        registerWorkspaceAgent({ root: card, id: 'settings-registration', title: 'Registration settings',
+            read: () => ({ dirty: toggleInput.checked !== savedRegistration, busy: savingRegistration,
+                groups: [{ id: 'registration', fields: readAgentForm(card, ['allowRegistration']) }] }),
+            actions: [
+                { action: 'settings.updateDraft', label: 'Update registration', acceptsDraft: true,
+                    params: [{ name: 'group', type: 'string', required: true }, { name: 'fields', type: 'object', required: true }],
+                    run: p => { if (p.group !== 'registration')
+                        throw new Error('SETTINGS_AGENT_GROUP_UNAVAILABLE'); patchAgentForm(card, p.fields, ['allowRegistration']); } },
+                { action: 'settings.save', label: 'Save registration settings', acceptsDraft: true, confirm: true,
+                    params: [{ name: 'group', type: 'string', required: true }],
+                    run: p => { if (p.group !== 'registration')
+                        throw new Error('SETTINGS_AGENT_GROUP_UNAVAILABLE'); return saveRegistrationDraft(true); } }
+            ] });
         const installNote = document.createElement('div');
         installNote.className = 'settings-hint';
         installNote.textContent = firstInstallDone
             ? 'First-time registration is closed. Toggle the switch to temporarily reopen public sign-ups.'
             : 'The first administrator can still register even if the toggle is off. After installation, only enabled registration allows new public accounts.';
-        const tipsTitle = document.createElement('h4');
-        tipsTitle.className = 'access-settings-subtitle';
-        tipsTitle.textContent = 'Security recommendations';
-        const tipsList = document.createElement('ul');
-        tipsList.className = 'access-settings-tips';
-        [
-            'Review config/security.js to tune brute-force protection for login attempts.',
-            'Keep registration closed unless you are actively onboarding new members.',
-            'Enable external authentication strategies only when you trust the provider.'
-        ].forEach(text => {
-            const li = document.createElement('li');
-            li.textContent = text;
-            tipsList.appendChild(li);
-        });
-        const agentTitle = document.createElement('h4');
+        const agentTitle = document.createElement('h2');
         agentTitle.className = 'access-settings-subtitle';
         agentTitle.textContent = 'Agent access';
+        const agentHint = document.createElement('p');
+        agentHint.className = 'settings-hint';
+        agentHint.textContent = 'Create a temporary code to connect an agent. Codes expire after 15 minutes; you can revoke them earlier.';
         const agentForm = document.createElement('div');
         agentForm.className = 'access-settings-agent-form';
         const labelInput = document.createElement('input');
         labelInput.type = 'text';
         labelInput.value = 'codex-local-15min';
         labelInput.maxLength = 120;
-        labelInput.setAttribute('aria-label', 'Agent access label');
         const scopeSelect = document.createElement('select');
-        scopeSelect.setAttribute('aria-label', 'Agent access scope');
         const scopeOptions = [
             ['control', 'Control'],
             ['view', 'View only']
@@ -114,8 +149,8 @@ export async function render(el) {
         createButton.type = 'button';
         createButton.className = 'button primary';
         createButton.textContent = 'Create agent code';
-        agentForm.appendChild(labelInput);
-        agentForm.appendChild(scopeSelect);
+        agentForm.appendChild(createFormField('Agent access label', labelInput));
+        agentForm.appendChild(createFormField('Agent access scope', scopeSelect));
         agentForm.appendChild(createButton);
         const agentStatus = document.createElement('div');
         agentStatus.className = 'access-settings-status';
@@ -202,17 +237,16 @@ export async function render(el) {
                 createButton.disabled = false;
             }
         });
-        section.appendChild(toggleWrapper);
-        section.appendChild(toggleHint);
-        section.appendChild(status);
-        section.appendChild(installNote);
-        section.appendChild(tipsTitle);
-        section.appendChild(tipsList);
-        section.appendChild(agentTitle);
-        section.appendChild(agentForm);
-        section.appendChild(agentStatus);
-        section.appendChild(generatedCode);
-        section.appendChild(agentList);
+        const registrationGroup = document.createElement('div');
+        registrationGroup.className = 'settings-group';
+        const agentGroup = document.createElement('div');
+        agentGroup.className = 'settings-group';
+        registrationGroup.append(toggleWrapper, toggleHint, installNote);
+        const registrationActions = createFormActions(saveRegistration, discard);
+        registrationActions.classList.add('settings-save-bar');
+        registrationGroup.append(registrationActions, status);
+        agentGroup.append(agentTitle, agentHint, agentForm, agentStatus, generatedCode, agentList);
+        section.append(registrationGroup, agentGroup);
         card.appendChild(section);
         el.innerHTML = '';
         el.appendChild(card);
@@ -223,7 +257,13 @@ export async function render(el) {
         el.innerHTML = '';
         const error = document.createElement('div');
         error.className = 'error';
-        error.textContent = `Failed to load access settings: ${errorMessage(err)}`;
-        el.appendChild(error);
+        error.setAttribute('role', 'alert');
+        error.textContent = `SETTINGS_ACCESS_LOAD_FAILED: ${errorMessage(err)}`;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'button ghost sm';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => void render(el));
+        el.append(error, retry);
     }
 }

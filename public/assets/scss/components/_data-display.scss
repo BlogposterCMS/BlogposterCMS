@@ -19,6 +19,31 @@
   outline: none;
 }
 
+// The compact module tabs are also used by fixed Settings workspaces.
+// Keep their interaction contract in createTabSystem, including keyboard focus.
+.bp-tabs.bp-tabs--underline {
+  gap: 20px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--studio-border);
+
+  > .button {
+    margin: 0;
+    padding: 12px 2px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--studio-text-muted);
+    white-space: nowrap;
+    transform: none;
+
+    &:hover { color: var(--studio-text); background: transparent; box-shadow: none; transform: none; }
+    &.active { color: var(--studio-text); border-bottom-color: currentColor; }
+    &:focus-visible { outline: 2px solid var(--studio-text); outline-offset: -3px; box-shadow: none; }
+  }
+}
+
 .bp-card {
   padding: 18px;
   border: 1px solid var(--studio-border);

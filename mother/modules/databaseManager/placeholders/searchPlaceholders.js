@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const SEARCH_PLACEHOLDERS = new Set([
   'INIT_SEARCH_SCHEMA',
   'INIT_SEARCH_TABLES',
@@ -327,6 +325,8 @@ async function handleSearchPostgres(client, operation, params = {}) {
 }
 
 async function handleSearchMongo(db, operation, params = {}) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const p = paramsObject(params);
   switch (operation) {
     case 'INIT_SEARCH_SCHEMA':

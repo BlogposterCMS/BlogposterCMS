@@ -19,7 +19,7 @@ const { requestBackendEvent } = require('../../contracts/backendEventContracts')
  * Also includes hashing passwords, etc.
  */
 const bcrypt = require('bcryptjs');
-const { ObjectId } = require('mongodb');
+
 const { traceRuntimeEvent } = require('../../utils/runtimeLogging');
 
 const TIMEOUT_DURATION = 5000;
@@ -549,6 +549,8 @@ function setupUserCrudEvents(motherEmitter) {
       typeof userId === 'string' &&
       /^[0-9a-fA-F]{24}$/.test(userId)
     ) {
+      // SQL user operations do not need the MongoDB driver.
+      const { ObjectId } = require('mongodb');
       queryId = new ObjectId(userId);
     }
     requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {

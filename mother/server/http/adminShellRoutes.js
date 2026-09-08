@@ -17,6 +17,7 @@ function prepareAdminShellHtml({
   escapeHtml,
   injectDevBanner,
   pageId,
+  pageMeta = {},
   plainSpaceVersion,
   publicPath,
   renderMode,
@@ -24,6 +25,17 @@ function prepareAdminShellHtml({
 }) {
   const nonce = crypto.randomBytes(16).toString('base64');
   let html = fs.readFileSync(path.join(publicPath, 'admin.html'), 'utf8');
+  // Reuse the page metadata already read for this route. Reserving a sidebar
+  // on sidebar-free pages would shift the whole content area during hydration.
+  if (pageMeta?.layout?.sidebar === 'empty-sidebar' || pageMeta?.layout?.inheritsLayout === false) {
+    html = html.replace(
+      '<aside id="sidebar" data-admin-loading="loading" aria-busy="true">',
+      '<aside id="sidebar" style="display:none" data-admin-loading="ready" aria-busy="false">'
+    );
+  }
+  if (pageMeta?.dashboardLayout === 'fixed') {
+    html = html.replace('<section id="content"', '<section id="content" data-dashboard-layout="fixed"');
+  }
   if (renderMode === 'server') {
     html = html.replace(
       /<script type="module" src="\/build\/pageRenderer.js"><\/script>\s*/i,
@@ -167,6 +179,7 @@ function createAdminShellRoutes({
           await validateAdminToken(req.cookies.admin_jwt);
           const slug = sanitizeSlug('home');
           let pageId = null;
+          let pageMeta = {};
           try {
             const page = await fetchAdminPageBySlug({
               adminJwt: req.cookies.admin_jwt,
@@ -174,6 +187,7 @@ function createAdminShellRoutes({
               slug
             });
             if (page?.id) pageId = page.id;
+            pageMeta = page?.meta || {};
           } catch (pageErr) {
             console.warn('[GET /admin/home] Failed to load home page context =>', pageErr.message);
           }
@@ -184,6 +198,7 @@ function createAdminShellRoutes({
             escapeHtml,
             injectDevBanner,
             pageId,
+            pageMeta,
             plainSpaceVersion,
             publicPath,
             renderMode,
@@ -404,9 +419,12 @@ function createAdminShellRoutes({
     }
 
     let rawSlug = req.params[0] || '';
+    // These editors belong to the existing Users & access page. Preserve the
+    // detail URL, but load shell metadata through that page's normal boundary.
+    const settingsDetail = /^settings\/users\/edit\/\d+$/.test(rawSlug) || rawSlug === 'settings/login/edit';
     let pageId = null;
     const lastSlash = rawSlug.lastIndexOf('/');
-    if (lastSlash !== -1) {
+    if (!settingsDetail && lastSlash !== -1) {
       const maybeId = rawSlug.slice(lastSlash + 1);
       if (/^\d+$/.test(maybeId)) {
         pageId = parseInt(maybeId, 10) || null;
@@ -420,7 +438,11 @@ function createAdminShellRoutes({
     const slug = sanitizeSlug(rawSlug);
 
     try {
-      const page = await fetchAdminPageBySlug({ adminJwt, motherEmitter, slug });
+      const page = await fetchAdminPageBySlug({
+        adminJwt,
+        motherEmitter,
+        slug: settingsDetail ? 'settings/users-access' : slug
+      });
       if (!page?.id || page.lane !== 'admin') return next();
 
       const { html, nonce } = prepareAdminShellHtml({
@@ -429,6 +451,7 @@ function createAdminShellRoutes({
         escapeHtml,
         injectDevBanner,
         pageId: pageId ?? page.id,
+        pageMeta: page.meta || {},
         plainSpaceVersion,
         publicPath,
         renderMode,

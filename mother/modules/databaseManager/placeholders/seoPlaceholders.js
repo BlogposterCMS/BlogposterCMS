@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const SEO_PLACEHOLDERS = new Set([
   'INIT_SEO_SCHEMA',
   'INIT_SEO_TABLES',
@@ -241,6 +239,8 @@ async function handleSeoPostgres(client, operation, params = {}) {
 }
 
 async function handleSeoMongo(db, operation, params = {}) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const p = paramsObject(params);
   switch (operation) {
     case 'INIT_SEO_SCHEMA':

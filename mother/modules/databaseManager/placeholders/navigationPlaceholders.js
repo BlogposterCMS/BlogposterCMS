@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const NAVIGATION_PLACEHOLDERS = new Set([
   'INIT_NAVIGATION_SCHEMA',
   'INIT_NAVIGATION_TABLES',
@@ -79,6 +77,8 @@ function itemValues(p) {
 }
 
 function toObjectId(value) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   if (!value) return null;
   if (value instanceof ObjectId) return value;
   return ObjectId.isValid(value) ? new ObjectId(value) : null;

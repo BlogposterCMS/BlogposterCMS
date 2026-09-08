@@ -11,20 +11,72 @@
 
 <body>
   <div class="app-scope admin-panel">
-    <header id="top-header"></header>
-    <header id="main-header"></header>
+    <header id="top-header" data-admin-loading="loading" aria-busy="true">
+      <div class="admin-shell-feedback top-header">
+        <div class="bp-loader bp-loader--skeleton" role="status" aria-live="polite">
+          <span class="bp-sr-only">Header wird geladen</span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+        </div>
+        <div class="admin-shell-error" role="alert">
+          <p>Dieser Bereich konnte nicht geladen werden.</p>
+          <a class="button secondary" href="" target="_top">Erneut versuchen</a>
+        </div>
+      </div>
+    </header>
+    <header id="main-header" data-admin-loading="loading" aria-busy="true">
+      <div class="admin-shell-feedback main-header">
+        <div class="bp-loader bp-loader--skeleton" role="status" aria-live="polite">
+          <span class="bp-sr-only">Navigation wird geladen</span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+        </div>
+        <div class="admin-shell-error" role="alert">
+          <p>Dieser Bereich konnte nicht geladen werden.</p>
+          <a class="button secondary" href="" target="_top">Erneut versuchen</a>
+        </div>
+      </div>
+    </header>
 
     <div class="main-content">
-      <aside   id="sidebar"></aside>
+      <aside id="sidebar" data-admin-loading="loading" aria-busy="true">
+      <div class="admin-shell-feedback sidebar">
+        <div class="bp-loader bp-loader--skeleton" role="status" aria-live="polite">
+          <span class="bp-sr-only">Seitenleiste wird geladen</span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+        </div>
+        <div class="admin-shell-error" role="alert">
+          <p>Dieser Bereich konnte nicht geladen werden.</p>
+          <a class="button secondary" href="" target="_top">Erneut versuchen</a>
+        </div>
+      </div>
+    </aside>
 
-      <section id="content">
-        <!-- Admin widgets are injected into the builder grid -->
-        <div id="adminGrid" class="canvas-grid"></div>
+      <section id="content" data-admin-loading="loading" aria-busy="true">
+        <div class="admin-shell-feedback ">
+        <div class="bp-loader bp-loader--skeleton" role="status" aria-live="polite">
+          <span class="bp-sr-only">Inhalt wird geladen</span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+          <span class="bp-loader__skeleton-line" aria-hidden="true"></span>
+        </div>
+        <div class="admin-shell-error" role="alert">
+          <p>Dieser Bereich konnte nicht geladen werden.</p>
+          <a class="button secondary" href="" target="_top">Erneut versuchen</a>
+        </div>
+      </div>
       </section>
     </div>
   </div>
 
   <!-- ── JavaScript  (order matters!) ─────────────────────── -->
+  <!-- Start the small loading watchdog independently of the renderer graph. -->
+  <script type="module" src="/ui/shell/entries/adminShellLoading.js"></script>
+  <noscript>Zum Laden der Verwaltung bitte JavaScript aktivieren.</noscript>
   <!-- Meltdown-Emitter wrapper (ES-module) -->
   <script type="module" src="/build/meltdownEmitter.js"></script>
   <script type="module" src="/build/faviconLoader.js"></script>

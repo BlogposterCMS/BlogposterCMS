@@ -79,11 +79,16 @@ export async function fetchRuntimePageBySlug(
   slug: string,
   lane: string
 ): Promise<any> {
+  // Account editors are details of the registered Users & access page, not
+  // database page records per user/provider. Keep their existing deep links.
+  const settingsDetail = lane === 'admin' && (/^settings\/users\/edit\/\d+$/.test(slug) || slug === 'settings/login/edit');
+  const pageSlug = settingsDetail ? 'settings/users-access' : slug;
   const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
   const payload = lane === 'admin'
-    ? cmsAdminPayload('pages', 'getBySlug', { slug, lane })
+    ? cmsAdminPayload('pages', 'getBySlug', { slug: pageSlug, lane })
     : cmsPublicRuntimePayload('pages', 'getBySlug', { slug, lane });
-  return unwrapData(await emit(eventName, payload));
+  const page = unwrapData(await emit(eventName, payload));
+  return settingsDetail && page ? { ...page, slug, title: slug.startsWith('settings/users/') ? 'Edit user' : 'Configure sign-in' } : page;
 }
 
 export async function fetchRuntimePublicSettings(

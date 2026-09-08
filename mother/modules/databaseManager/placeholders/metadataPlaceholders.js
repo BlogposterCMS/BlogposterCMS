@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const METADATA_PLACEHOLDERS = new Set([
   'INIT_METADATA_SCHEMA',
   'INIT_METADATA_TABLES',
@@ -463,6 +461,8 @@ async function handleMetadataPostgres(client, operation, params = {}) {
 }
 
 async function handleMetadataMongo(db, operation, params = {}) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const p = paramsObject(params);
   switch (operation) {
     case 'INIT_METADATA_SCHEMA':

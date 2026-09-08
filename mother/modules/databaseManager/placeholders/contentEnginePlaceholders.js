@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const CONTENT_PLACEHOLDERS = new Set([
   'INIT_CONTENT_ENGINE_SCHEMA',
   'INIT_CONTENT_ENGINE_TABLES',
@@ -58,6 +56,8 @@ function normalizeSqlRows(rows) {
 }
 
 function toObjectId(value) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   if (!value) return null;
   if (value instanceof ObjectId) return value;
   return ObjectId.isValid(value) ? new ObjectId(value) : null;
@@ -82,6 +82,8 @@ function mongoIdValues(value) {
 }
 
 function mongoEntryQuery(entryId) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const oid = toObjectId(entryId);
   const idValues = mongoIdValues(entryId).filter(value => !(value instanceof ObjectId));
   const clauses = [];
@@ -773,6 +775,8 @@ async function handleContentEnginePostgres(client, operation, params = {}) {
 }
 
 async function handleContentEngineMongo(db, operation, params = {}) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const p = paramsObject(params);
   switch (operation) {
     case 'INIT_CONTENT_ENGINE_SCHEMA':

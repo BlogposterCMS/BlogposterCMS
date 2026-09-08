@@ -1,7 +1,4 @@
 import { errorMessage, fetchLoginStrategies, setLoginStrategyEnabled } from './loginStrategiesData.js';
-function icon(name) {
-    return typeof window.featherIcon === 'function' ? window.featherIcon(name) : '';
-}
 export async function render(el) {
     const jwt = window.ADMIN_TOKEN;
     const meltdownEmit = window.meltdownEmit;
@@ -41,38 +38,52 @@ export async function render(el) {
                 scopeEl.textContent = `(${strategy.scope || 'admin'})`;
                 const actions = document.createElement('span');
                 actions.className = 'login-strategy-actions page-actions';
-                const toggleIcon = document.createElement('span');
-                toggleIcon.className = 'icon toggle-strategy';
-                toggleIcon.innerHTML = icon(strategy.isEnabled ? 'toggle-right' : 'toggle-left');
-                toggleIcon.title = strategy.isEnabled ? 'Disable' : 'Enable';
+                const status = document.createElement('span');
+                status.className = 'module-access-badge';
+                const toggleIcon = document.createElement('button');
+                toggleIcon.type = 'button';
+                toggleIcon.className = 'button ghost sm';
+                const sync = () => {
+                    status.textContent = strategy.isEnabled ? 'Enabled' : 'Disabled';
+                    toggleIcon.textContent = strategy.isEnabled ? 'Disable' : 'Enable';
+                };
+                sync();
+                const error = document.createElement('p');
+                error.className = 'form-field__error';
+                error.setAttribute('role', 'alert');
                 toggleIcon.addEventListener('click', async () => {
+                    if (toggleIcon.disabled)
+                        return;
+                    toggleIcon.disabled = true;
+                    error.textContent = '';
                     try {
                         await setLoginStrategyEnabled(meltdownEmit, jwt, strategy.name, !strategy.isEnabled);
                         strategy.isEnabled = !strategy.isEnabled;
-                        toggleIcon.innerHTML = icon(strategy.isEnabled ? 'toggle-right' : 'toggle-left');
-                        toggleIcon.title = strategy.isEnabled ? 'Disable' : 'Enable';
+                        sync();
                     }
                     catch (err) {
-                        alert(`Error: ${errorMessage(err)}`);
+                        error.textContent = `SETTINGS_SIGN_IN_SAVE_FAILED: ${errorMessage(err)}`;
+                    }
+                    finally {
+                        toggleIcon.disabled = false;
                     }
                 });
-                const editIcon = document.createElement('span');
-                editIcon.className = 'icon edit-strategy';
-                editIcon.innerHTML = icon('edit');
-                editIcon.title = 'Edit strategy';
-                editIcon.addEventListener('click', () => {
-                    window.location.href = `/admin/settings/login/edit?strategy=${encodeURIComponent(strategy.name)}`;
-                });
+                const editIcon = document.createElement('a');
+                editIcon.className = 'button ghost sm';
+                editIcon.textContent = 'Configure';
+                editIcon.href = `/admin/settings/login/edit?strategy=${encodeURIComponent(strategy.name)}`;
                 actions.appendChild(toggleIcon);
                 actions.appendChild(editIcon);
                 nameRow.appendChild(nameEl);
                 nameRow.appendChild(scopeEl);
+                nameRow.appendChild(status);
                 nameRow.appendChild(actions);
                 const desc = document.createElement('div');
                 desc.className = 'login-strategy-desc';
                 desc.textContent = strategy.description || '';
                 li.appendChild(nameRow);
                 li.appendChild(desc);
+                li.appendChild(error);
                 list.appendChild(li);
             });
         }
@@ -81,6 +92,14 @@ export async function render(el) {
         el.appendChild(card);
     }
     catch (err) {
-        el.innerHTML = `<div class="error">Failed to load strategies: ${errorMessage(err)}</div>`;
+        const error = document.createElement('p');
+        error.setAttribute('role', 'alert');
+        error.textContent = `SETTINGS_SIGN_IN_LOAD_FAILED: ${errorMessage(err)}`;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'button ghost sm';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => void render(el));
+        el.replaceChildren(error, retry);
     }
 }

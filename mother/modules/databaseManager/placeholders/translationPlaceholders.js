@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const TRANSLATION_PLACEHOLDERS = new Set([
   'INIT_TRANSLATION_TABLES',
   'UPSERT_TRANSLATED_TEXT',
@@ -45,6 +43,8 @@ function normalizeRows(rows) {
 }
 
 function toObjectId(value) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   if (!value) return null;
   if (value instanceof ObjectId) return value;
   return ObjectId.isValid(value) ? new ObjectId(value) : null;

@@ -25,47 +25,6 @@
   @include p.page-list-item;
 }
 
-.modules-tabs {
-  margin-top: 0.5rem;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.modules-tab {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  position: relative;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: -2px;
-    width: 100%;
-    height: 3px;
-    background: var(--user-color);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.2s ease;
-  }
-
-  &:hover {
-    opacity: 1;
-  }
-
-  &.active {
-    opacity: 1;
-    font-weight: 600;
-    &::after {
-      transform: scaleX(1);
-    }
-  }
-}
-
 .module-details {
   @include p.page-details;
 }
@@ -85,12 +44,12 @@
 .module-meta {
   font-family: var(--font-body);
   font-size: 0.95rem;
-  color: #555;
+  color: var(--studio-text-muted);
 }
 
 .modules-access-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.3fr);
+  grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.4fr);
   gap: 1rem;
   align-items: start;
 }
@@ -104,7 +63,7 @@
 }
 
 .modules-list li.is-selected {
-  background: #f5f7fb;
+  background: var(--studio-surface-muted);
   background: color-mix(in srgb, var(--brand) 7%, var(--studio-surface-solid));
 }
 
@@ -113,17 +72,17 @@
 }
 
 .module-detail-panel {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 1rem;
-  background: #fff;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  padding: 20px;
+  background: var(--studio-surface-solid);
 }
 
 .module-detail-header {
   display: grid;
   gap: 0.35rem;
   padding-bottom: 0.85rem;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--studio-border);
 
   h3 {
     margin: 0;
@@ -132,7 +91,7 @@
 
   p {
     margin: 0;
-    color: #5f6673;
+    color: var(--studio-text-muted);
     font-size: 0.9rem;
   }
 }
@@ -153,7 +112,7 @@
     font-size: 0.82rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: #687080;
+    color: var(--studio-text-muted);
   }
 }
 
@@ -168,19 +127,19 @@
     display: grid;
     gap: 0.2rem;
     padding: 0.55rem 0;
-    border-bottom: 1px solid #f1f3f6;
+    border-bottom: 1px solid var(--studio-border);
     cursor: default;
   }
 
   small {
-    color: #6b7280;
+    color: var(--studio-text-muted);
     font-size: 0.8rem;
   }
 }
 
 .module-detail-empty {
   margin: 0;
-  color: #7a8290;
+  color: var(--studio-text-muted);
   font-size: 0.88rem;
 }
 
@@ -191,8 +150,8 @@
   min-height: 1.35rem;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  background: #eef2f6;
-  color: #3f4854;
+  background: var(--studio-surface-muted);
+  color: var(--studio-text);
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -224,7 +183,7 @@
   align-items: baseline;
 
   span {
-    color: #687080;
+    color: var(--studio-text-muted);
     font-size: 0.82rem;
   }
 
@@ -237,7 +196,7 @@
 
 .module-access-prompt-reason {
   margin: 0;
-  color: #3f4854;
+  color: var(--studio-text);
 }
 
 .module-access-prompt-payload {
@@ -246,8 +205,8 @@
   margin: 0;
   padding: 0.7rem;
   border-radius: 6px;
-  background: #f6f8fa;
-  color: #27313d;
+  background: var(--studio-surface-muted);
+  color: var(--studio-text);
   font-size: 0.78rem;
 }
 
@@ -262,12 +221,12 @@
 
   strong {
     font-size: 0.85rem;
-    color: #3f4854;
+    color: var(--studio-text);
   }
 
   p {
     margin: 0;
-    color: #687080;
+    color: var(--studio-text-muted);
   }
 
   ul {
@@ -282,7 +241,7 @@
   gap: 0.25rem 0.55rem;
   align-items: start;
   padding: 0.45rem 0;
-  border-bottom: 1px solid #eef1f5;
+  border-bottom: 1px solid var(--studio-border);
 
   input {
     margin-top: 0.2rem;
@@ -290,7 +249,7 @@
 
   small {
     grid-column: 2;
-    color: #687080;
+    color: var(--studio-text-muted);
     font-size: 0.8rem;
   }
 
@@ -300,7 +259,7 @@
 }
 
 .module-toggle-btn {
-  background: #f6f6f6;
+  background: var(--studio-surface-muted);
   border: none;
   border-radius: 5px;
   padding: 2px 8px;
@@ -322,7 +281,7 @@
 }
 
 .module-upload-box {
-  background: white;
+  background: var(--studio-surface-solid);
   padding: 20px;
   border-radius: 6px;
   text-align: center;
@@ -338,3 +297,35 @@
     grid-template-columns: 1fr;
   }
 }
+
+// Flat selection rows and a muted inspector match the Pages workspace.
+.settings-surface .modules-list > li {
+  margin: 0; padding: 16px; border-radius: var(--studio-field-radius);
+  border: 1px solid transparent; background: transparent; box-shadow: none;
+  &:hover { background: var(--studio-surface-muted); }
+  &.is-selected { background: var(--studio-surface-muted); border-color: var(--studio-border); }
+}
+.settings-surface .module-detail-panel { background: var(--studio-surface-muted); }
+.module-select {
+  appearance: none; background: transparent; text-align: left; cursor: pointer;
+  &:focus-visible { outline: 2px solid var(--studio-text); outline-offset: 2px; }
+}
+.module-meta { overflow-wrap: anywhere; line-height: 1.5; font-size: 0.85rem; }
+.module-toggle-btn {
+  min-height: 32px; padding: 6px 12px; border-radius: var(--studio-radius-control);
+  border: 1px solid var(--studio-border); color: var(--studio-text);
+  &:hover { background: var(--studio-surface-solid); }
+  &:focus-visible { outline: 2px solid var(--studio-text); }
+  &:disabled { opacity: 0.5; cursor: default; }
+}
+.modules-tab-panel[hidden] { display: none; }
+
+// Long core-module lists must not scroll the selected inspector out of reach.
+.settings-tab-panels > .modules-list-card { height: 100%; min-height: 0; }
+.settings-surface .modules-access-layout { flex: 1 1 0; min-height: 0; align-items: stretch; }
+.settings-surface .modules-access-layout > :is(.modules-list-mount, .module-detail-mount) {
+  min-height: 0; overflow: auto; scrollbar-width: thin;
+}
+.module-access-badge--ok { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 12%, transparent); }
+.module-access-badge--warning { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 12%, transparent); }
+.module-access-badge--danger { color: var(--color-error); background: color-mix(in srgb, var(--color-error) 12%, transparent); }

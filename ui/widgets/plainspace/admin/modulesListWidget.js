@@ -1,3 +1,4 @@
+import { createTabSystem } from '../../../shared/navigation/tabs.js';
 import { errorMessage, fetchModuleLists, fetchModuleUpdateStatuses, fetchPendingModuleAccessRequests, inspectModuleZip, inspectModuleUpdate, installModuleUpdate, installModuleZip, mergeModuleUpdateStatuses, moduleHasModification, moduleHasUpdate, moduleUpdateStatus, renderModuleMeta, toggleModuleRegistryActivation, zipDataFromDataUrl } from './modulesListData.js';
 function dialogApi() {
     return window.bpDialog || null;
@@ -348,7 +349,7 @@ function renderModuleDetail(moduleRecord, pendingAccess, isSystem = false) {
     panel.appendChild(pendingSection);
     return panel;
 }
-export async function render(el) {
+export async function render(el, options = {}) {
     const jwt = window.ADMIN_TOKEN;
     const meltdownEmit = window.meltdownEmit;
     if (!el)
@@ -368,18 +369,12 @@ export async function render(el) {
         title.className = 'modules-title page-title';
         title.textContent = 'Modules';
         titleBar.appendChild(title);
-        const tabs = document.createElement('div');
-        tabs.className = 'modules-tabs';
-        const installedBtn = document.createElement('button');
-        installedBtn.className = 'modules-tab active';
-        installedBtn.textContent = 'Installed';
-        const systemBtn = document.createElement('button');
-        systemBtn.className = 'modules-tab';
-        systemBtn.textContent = 'System';
-        tabs.appendChild(installedBtn);
-        tabs.appendChild(systemBtn);
-        titleBar.appendChild(tabs);
-        card.appendChild(titleBar);
+        const tabs = options.tabsHost || document.createElement('div');
+        tabs.classList.add('modules-tabs');
+        tabs.setAttribute('aria-label', 'Module categories');
+        if (!options.tabsHost) {
+            card.append(titleBar, tabs);
+        }
         const layout = document.createElement('div');
         layout.className = 'modules-access-layout';
         const installedList = document.createElement('ul');
@@ -398,7 +393,9 @@ export async function render(el) {
                 ? (selectedInstalled ? moduleNameFromRecord(selectedInstalled) : '')
                 : (selectedSystem ? moduleNameFromRecord(selectedSystem) : '');
             card.querySelectorAll('[data-module-row]').forEach(row => {
-                row.classList.toggle('is-selected', row.dataset.moduleRow === selectedName && row.dataset.moduleScope === currentTab);
+                const selected = row.dataset.moduleRow === selectedName && row.dataset.moduleScope === currentTab;
+                row.classList.toggle('is-selected', selected);
+                row.querySelector('.module-select')?.setAttribute('aria-pressed', String(selected));
             });
         }
         if (!installed.length) {
@@ -423,8 +420,9 @@ export async function render(el) {
                 details.className = 'module-details';
                 const nameRow = document.createElement('div');
                 nameRow.className = 'module-name-row';
-                const nameEl = document.createElement('span');
-                nameEl.className = 'module-name';
+                const nameEl = document.createElement('button');
+                nameEl.type = 'button';
+                nameEl.className = 'module-name module-select';
                 nameEl.textContent = name;
                 const actions = document.createElement('span');
                 actions.className = 'module-actions';
@@ -500,7 +498,6 @@ export async function render(el) {
         }
         const systemList = document.createElement('ul');
         systemList.className = 'modules-list page-list';
-        systemList.style.display = 'none';
         if (!system.length) {
             const empty = document.createElement('div');
             empty.className = 'empty-state';
@@ -523,8 +520,9 @@ export async function render(el) {
                 details.className = 'module-details';
                 const nameRow = document.createElement('div');
                 nameRow.className = 'module-name-row';
-                const nameEl = document.createElement('span');
-                nameEl.className = 'module-name';
+                const nameEl = document.createElement('button');
+                nameEl.type = 'button';
+                nameEl.className = 'module-name module-select';
                 nameEl.textContent = name;
                 nameRow.appendChild(nameEl);
                 if (moduleHasModification(moduleRecord)) {
@@ -541,34 +539,35 @@ export async function render(el) {
         }
         const listMount = document.createElement('div');
         listMount.className = 'modules-list-mount';
-        listMount.append(installedList, systemList);
         layout.append(listMount, detailMount);
         card.appendChild(layout);
-        installedBtn.addEventListener('click', () => {
-            currentTab = 'installed';
-            installedBtn.classList.add('active');
-            systemBtn.classList.remove('active');
-            installedList.style.display = '';
-            systemList.style.display = 'none';
-            syncSelectedRows();
-            syncDetailPanel();
+        const tabSystem = createTabSystem(listMount, tabs, {
+            variant: 'underline', panelClassName: 'modules-tab-panel',
+            onSelect: index => {
+                currentTab = index === 0 ? 'installed' : 'system';
+                syncSelectedRows();
+                syncDetailPanel();
+            }
         });
-        systemBtn.addEventListener('click', () => {
-            currentTab = 'system';
-            systemBtn.classList.add('active');
-            installedBtn.classList.remove('active');
-            installedList.style.display = 'none';
-            systemList.style.display = '';
-            syncSelectedRows();
-            syncDetailPanel();
-        });
+        tabSystem.addTab('Installed').append(installedList);
+        tabSystem.addTab('System').append(systemList);
         syncSelectedRows();
         syncDetailPanel();
         el.innerHTML = '';
         el.appendChild(card);
     }
     catch (err) {
-        el.innerHTML = `<div class="error">Failed to load modules: ${errorMessage(err)}</div>`;
+        if (options.tabsHost)
+            throw err;
+        const error = document.createElement('p');
+        error.setAttribute('role', 'alert');
+        error.textContent = `SETTINGS_MODULES_LOAD_FAILED: ${errorMessage(err)}`;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'button ghost sm';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => void render(el));
+        el.replaceChildren(error, retry);
     }
 }
 function openUploadPopup() {

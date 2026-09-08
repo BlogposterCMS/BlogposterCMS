@@ -1,4 +1,4 @@
-import { errorMessage, fetchDesignSettings, fetchGeneralSettings, fetchSecuritySettings, fetchSeoSettings, pickMediaShareUrl, saveAllowRegistration, saveFaviconUrl, saveGeneralSettings, saveGoogleFontsApiKey, saveMaintenanceSettings, saveSeoSettings } from './settingsPanelsData.js';
+import { errorMessage, fetchDesignSettings, fetchGeneralSettings, fetchSecuritySettings, fetchSeoSettings, pickMediaShareUrl, saveFaviconUrl, saveGeneralSettings, saveGoogleFontsApiKey, saveMaintenanceSettings, saveSeoSettings } from './settingsPanelsData.js';
 import { approvedAccessDescriptors, fetchUpdateCenterRows, inspectUpdateCenterRow, installUpdateCenterRow, updateCenterRowLabel, updateInspectionLabel, updateInstallVersion } from './updateCenterData.js';
 import { renderUiKitGallery } from './uiKitGallery.js';
 import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
@@ -10,7 +10,9 @@ const EMBEDDED_WIDGET_PANEL_PATHS = {
     modules: '/ui/widgets/plainspace/admin/modulesListWidget.js',
     providers: '/ui/widgets/plainspace/admin/loginStrategiesWidget.js',
     users: '/ui/widgets/plainspace/admin/usersListWidget.js',
-    access: '/ui/widgets/plainspace/admin/accessSettingsWidget.js'
+    access: '/ui/widgets/plainspace/admin/accessSettingsWidget.js',
+    'user-edit': '/ui/widgets/plainspace/admin/userEditWidget.js',
+    'provider-edit': '/ui/widgets/plainspace/admin/loginStrategyEditWidget.js'
 };
 const embeddedWidgetPanelPromises = new Map();
 function createShell(title, subtitle) {
@@ -18,7 +20,7 @@ function createShell(title, subtitle) {
     root.className = 'settings-surface page-list-card';
     const header = document.createElement('header');
     header.className = 'settings-surface-header page-title-bar';
-    const h = document.createElement('div');
+    const h = document.createElement('h1');
     h.className = 'page-title';
     h.textContent = title;
     const sub = document.createElement('p');
@@ -28,6 +30,7 @@ function createShell(title, subtitle) {
     header.appendChild(sub);
     const tabs = document.createElement('nav');
     tabs.className = 'settings-tabs';
+    tabs.setAttribute('aria-label', `${title} sections`);
     const content = document.createElement('div');
     content.className = 'settings-tab-panels';
     const status = document.createElement('div');
@@ -41,6 +44,7 @@ function createShell(title, subtitle) {
     const savedValues = new Map();
     let saving = false;
     const agentGroups = [];
+    const saveControls = [];
     const valueOf = (field) => field instanceof HTMLInputElement && field.type === 'checkbox'
         ? String(field.checked) : field.value;
     registerWorkspaceChanges(root, {
@@ -51,6 +55,38 @@ function createShell(title, subtitle) {
     // pending typography edit. Lock the shared surface while a write is pending.
     function bindSave(button, fields, action, message, agent) {
         fields.forEach(field => savedValues.set(field, valueOf(field)));
+        const discard = document.createElement('button');
+        discard.type = 'button';
+        discard.className = 'button ghost';
+        discard.textContent = 'Discard changes';
+        const state = document.createElement('span');
+        state.className = 'settings-save-state';
+        state.setAttribute('role', 'status');
+        const refresh = () => {
+            const dirty = fields.some(field => valueOf(field) !== savedValues.get(field));
+            discard.hidden = !dirty;
+            state.textContent = dirty ? 'Unsaved changes' : 'Saved';
+        };
+        fields.forEach(field => {
+            field.addEventListener('input', refresh);
+            field.addEventListener('change', refresh);
+        });
+        discard.addEventListener('click', () => {
+            if (saving)
+                return;
+            fields.forEach(field => {
+                const value = savedValues.get(field) || '';
+                if (field instanceof HTMLInputElement && field.type === 'checkbox')
+                    field.checked = value === 'true';
+                else
+                    field.value = value;
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            status.textContent = '';
+            refresh();
+        });
+        refresh();
+        saveControls.push({ button, fields, discard, state });
         async function save(propagate = false) {
             if (saving)
                 return;
@@ -74,6 +110,7 @@ function createShell(title, subtitle) {
                 saving = false;
                 content.inert = false;
                 button.disabled = false;
+                refresh();
             }
         }
         button.addEventListener('click', () => void save());
@@ -85,6 +122,10 @@ function createShell(title, subtitle) {
         }
     }
     function mount(parent) {
+        saveControls.forEach(({ button, discard, state }) => {
+            button.parentElement?.classList.add('settings-save-bar');
+            button.parentElement?.append(discard, state);
+        });
         parent.replaceChildren(root);
         if (!agentGroups.length)
             return;
@@ -203,9 +244,10 @@ async function reviewUpdateAccess(inspection) {
     return approvedAccessDescriptors(newAccess.filter(access => selected.has(accessLabel(access))));
 }
 async function renderGeneral(ctx) {
-    const shell = createShell('General Settings', 'Core site identity and default metadata.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
+    const shell = createShell('General Settings', 'Set the name and description used across your website.');
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
     const identity = tabs.addTab('Site identity');
+    identity.classList.add('settings-section--form');
     const titleInput = document.createElement('input');
     titleInput.type = 'text';
     const descInput = document.createElement('textarea');
@@ -219,14 +261,16 @@ async function renderGeneral(ctx) {
     shell.bindSave(save, [titleInput, descInput], () => saveGeneralSettings(ctx.meltdownEmit, ctx.jwt, {
         siteTitle: titleInput.value.trim(), siteDescription: descInput.value.trim()
     }), 'General settings saved.', { id: 'general', fields: { siteTitle: titleInput, siteDescription: descInput } });
-    identity.append(createFormField('Site Title', titleInput), createFormField('Site Description', descInput), createFormActions(save));
+    identity.append(createFormField('Site Title', titleInput, { hint: 'The name of your website.' }), createFormField('Site Description', descInput, { hint: 'A short description of what visitors will find here.' }), createFormActions(save));
     shell.mount(ctx.el);
 }
 async function renderDesign(ctx) {
-    const shell = createShell('Design Settings', 'Branding assets and typography integrations.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
+    const shell = createShell('Design Settings', 'Manage your browser icon and font connection. Page layouts live in Design Studio.');
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
     const branding = tabs.addTab('Branding');
+    branding.classList.add('settings-section--form');
     const typography = tabs.addTab('Typography');
+    typography.classList.add('settings-section--form');
     const designSettings = await fetchDesignSettings(ctx.meltdownEmit, ctx.jwt);
     const favInput = document.createElement('input');
     favInput.type = 'text';
@@ -240,6 +284,7 @@ async function renderDesign(ctx) {
             const pickedUrl = await pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt);
             if (pickedUrl) {
                 favInput.value = pickedUrl;
+                favInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
         catch (err) {
@@ -252,21 +297,23 @@ async function renderDesign(ctx) {
     favSave.textContent = 'Save favicon';
     shell.bindSave(favSave, [favInput], () => saveFaviconUrl(ctx.meltdownEmit, ctx.jwt, favInput.value.trim()), 'Favicon updated.', { id: 'branding', fields: { faviconUrl: favInput } });
     const fontInput = document.createElement('input');
-    fontInput.type = 'text';
+    fontInput.type = 'password';
+    fontInput.autocomplete = 'off';
     fontInput.value = designSettings.googleFontsApiKey;
     const fontSave = document.createElement('button');
     fontSave.type = 'button';
     fontSave.className = 'button primary';
     fontSave.textContent = 'Save typography settings';
     shell.bindSave(fontSave, [fontInput], () => saveGoogleFontsApiKey(ctx.meltdownEmit, ctx.jwt, fontInput.value.trim()), 'Typography settings saved.');
-    branding.append(createFormField('Favicon URL', favInput), createFormActions(pickBtn, favSave));
-    typography.append(createFormField('Google Fonts API Key', fontInput), createFormActions(fontSave));
+    branding.append(createFormField('Favicon URL', favInput, { hint: 'The small icon shown in browser tabs. Choose an image from your media library or enter its URL.' }), createFormActions(pickBtn, favSave));
+    typography.append(createFormField('Google Fonts API Key', fontInput, { hint: 'Optional connection for the font library. Leave empty if you do not use it.' }), createFormActions(fontSave));
     shell.mount(ctx.el);
 }
 async function renderSeo(ctx) {
-    const shell = createShell('SEO Settings', 'Search visibility and metadata defaults.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
+    const shell = createShell('SEO Settings', 'Set search defaults for your website. Individual pages can override their metadata.');
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
     const defaults = tabs.addTab('Defaults');
+    defaults.classList.add('settings-section--form');
     const seoSettings = await fetchSeoSettings(ctx.meltdownEmit, ctx.jwt);
     const titleInput = document.createElement('input');
     titleInput.type = 'text';
@@ -283,35 +330,22 @@ async function renderSeo(ctx) {
     shell.bindSave(save, [titleInput, descInput, indexInput], () => saveSeoSettings(ctx.meltdownEmit, ctx.jwt, {
         titleTemplate: titleInput.value.trim(), metaDescription: descInput.value.trim(), indexingEnabled: indexInput.checked
     }), 'SEO settings saved.', { id: 'seo', fields: { titleTemplate: titleInput, metaDescription: descInput, indexingEnabled: indexInput } });
-    defaults.append(createFormField('SEO Title Template', titleInput), createFormField('Default Meta Description', descInput), createChoice('Allow Search Engine Indexing', indexInput), createFormActions(save));
+    defaults.append(createFormField('SEO Title Template', titleInput, { hint: 'The default title pattern used by your SEO integration.' }), createFormField('Default Meta Description', descInput), createChoice('Allow Search Engine Indexing', indexInput), createFormActions(save));
     shell.mount(ctx.el);
 }
 async function renderSecurity(ctx) {
-    const shell = createShell('Security Settings', 'Registration controls and maintenance safety options.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
-    const accessTab = tabs.addTab('Access controls');
+    const shell = createShell('Site availability', 'Control what visitors see while you work on your website.');
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
     const maintenanceTab = tabs.addTab('Maintenance');
+    maintenanceTab.classList.add('settings-section--form');
     const securitySettings = await fetchSecuritySettings(ctx.meltdownEmit, ctx.jwt);
-    const allowRegistration = document.createElement('input');
-    allowRegistration.type = 'checkbox';
-    allowRegistration.checked = securitySettings.allowRegistration;
-    const installState = document.createElement('p');
-    installState.className = 'settings-hint';
-    installState.textContent = securitySettings.firstInstallDone
-        ? 'Initial setup is complete.'
-        : 'Initial setup is still pending.';
-    const accessSave = document.createElement('button');
-    accessSave.type = 'button';
-    accessSave.className = 'button primary';
-    accessSave.textContent = 'Save access settings';
-    shell.bindSave(accessSave, [allowRegistration], () => saveAllowRegistration(ctx.meltdownEmit, ctx.jwt, allowRegistration.checked), 'Access settings saved.', { id: 'registration', fields: { allowRegistration } });
     const maintenanceToggle = document.createElement('input');
     maintenanceToggle.type = 'checkbox';
     maintenanceToggle.checked = securitySettings.maintenanceMode;
     const pageSelect = document.createElement('select');
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = '-- select page --';
+    none.textContent = 'Choose a page';
     pageSelect.appendChild(none);
     securitySettings.publicPages.forEach(page => {
         const option = document.createElement('option');
@@ -326,8 +360,7 @@ async function renderSecurity(ctx) {
     maintenanceSave.className = 'button primary';
     maintenanceSave.textContent = 'Save maintenance settings';
     shell.bindSave(maintenanceSave, [maintenanceToggle, pageSelect], () => saveMaintenanceSettings(ctx.meltdownEmit, ctx.jwt, maintenanceToggle.checked, pageSelect.value), 'Maintenance settings saved.', { id: 'maintenance', fields: { maintenanceMode: maintenanceToggle, maintenancePageId: pageSelect } });
-    accessTab.append(createChoice('Allow public registration', allowRegistration), installState, createFormActions(accessSave));
-    maintenanceTab.append(createChoice('Enable maintenance mode', maintenanceToggle), createFormField('Maintenance page', pageSelect), createFormActions(maintenanceSave));
+    maintenanceTab.append(createChoice('Enable maintenance mode', maintenanceToggle), createFormField('Maintenance page', pageSelect, { hint: 'Visitors see this page while maintenance mode is enabled. Administrator access remains available.' }), createFormActions(maintenanceSave));
     shell.mount(ctx.el);
 }
 async function loadEmbeddedWidgetPanel(key) {
@@ -342,23 +375,36 @@ async function loadEmbeddedWidgetPanel(key) {
     embeddedWidgetPanelPromises.set(key, promise);
     return promise;
 }
-async function renderEmbeddedWidgetPanel(target, key) {
-    const mod = await loadEmbeddedWidgetPanel(key);
-    if (typeof mod.render === 'function') {
-        await mod.render(target);
+async function renderEmbeddedWidgetPanel(target, key, options) {
+    try {
+        const mod = await loadEmbeddedWidgetPanel(key);
+        if (typeof mod.render !== 'function')
+            throw new Error('SETTINGS_PANEL_UNAVAILABLE');
+        await mod.render(target, options);
     }
-    else {
-        target.textContent = 'This panel is temporarily unavailable.';
+    catch (err) {
+        // A renderer composing the page's tablist must retry the whole page, or
+        // old tab buttons would retain references to detached panels.
+        if (options?.tabs || options?.tabsHost)
+            throw err;
+        const error = document.createElement('p');
+        error.setAttribute('role', 'alert');
+        error.textContent = `SETTINGS_PANEL_LOAD_FAILED: ${errorMessage(err)}`;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'button ghost';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => {
+            target.replaceChildren();
+            void renderEmbeddedWidgetPanel(target, key, options);
+        });
+        target.append(error, retry);
     }
 }
 async function renderModules(ctx) {
-    const shell = createShell('Module Settings', 'Module management and provider integrations.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
-    const modulesPanel = tabs.addTab('Installed modules');
-    const providersPanel = tabs.addTab('Auth providers');
-    await renderEmbeddedWidgetPanel(modulesPanel, 'modules');
-    await renderEmbeddedWidgetPanel(providersPanel, 'providers');
+    const shell = createShell('Modules', 'Manage installed extensions and inspect the core modules that power your site.');
     shell.mount(ctx.el);
+    await renderEmbeddedWidgetPanel(shell.content, 'modules', { tabsHost: shell.tabs });
 }
 async function renderUiKit(ctx) {
     renderUiKitGallery(ctx.el);
@@ -453,8 +499,9 @@ function renderUpdateRow(row, status, mount, ctx) {
 }
 async function renderUpdates(ctx) {
     const shell = createShell('Update Center', 'Keep Blogposter and your installed modules up to date.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
     const corePanel = tabs.addTab('Blogposter');
+    corePanel.classList.add('settings-section--form');
     const updatesPanel = tabs.addTab('Module updates');
     const refresh = document.createElement('button');
     refresh.type = 'button';
@@ -481,17 +528,20 @@ async function renderUpdates(ctx) {
     await renderUpdateRows(rowsMount, shell.status, ctx);
 }
 async function renderUsersAccess(ctx) {
-    const shell = createShell('Users & Access', 'User accounts, roles and registration flow.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
-    const usersPanel = tabs.addTab('Users');
-    const accessPanel = tabs.addTab('Registration');
-    await renderEmbeddedWidgetPanel(usersPanel, 'users');
-    await renderEmbeddedWidgetPanel(accessPanel, 'access');
+    const shell = createShell('Users & access', 'Manage people, permission groups, sign-in methods and access for agents.');
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
     shell.mount(ctx.el);
+    await renderEmbeddedWidgetPanel(shell.content, 'users', { tabs });
+    const providersPanel = tabs.addTab('Sign-in methods');
+    const accessPanel = tabs.addTab('Registration & agents');
+    await Promise.all([
+        renderEmbeddedWidgetPanel(providersPanel, 'providers'),
+        renderEmbeddedWidgetPanel(accessPanel, 'access')
+    ]);
 }
 async function renderImportExport(ctx) {
     const shell = createShell('Import / Export', 'Operational data portability and backups.');
-    const tabs = createTabSystem(shell.content, shell.tabs);
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
     const exportTab = tabs.addTab('Export');
     const importTab = tabs.addTab('Import');
     const exportNote = document.createElement('p');
@@ -504,6 +554,16 @@ async function renderImportExport(ctx) {
     importTab.append(importNote);
     shell.mount(ctx.el);
 }
+async function renderAccountDetail(ctx, key) {
+    const shell = createShell(key === 'user-edit' ? 'Edit user' : 'Configure sign-in', key === 'user-edit' ? 'Manage profile information and account permissions.' : 'Configure the selected sign-in provider.');
+    const back = document.createElement('a');
+    back.className = 'button ghost sm';
+    back.textContent = 'Back to users & access';
+    back.href = '/admin/settings/users-access';
+    shell.tabs.append(back);
+    shell.mount(ctx.el);
+    await renderEmbeddedWidgetPanel(shell.content, key, key === 'user-edit' ? { userId: String(ctx.page.slug).split('/')[3] } : undefined);
+}
 const SURFACE_RENDERERS = {
     general: renderGeneral,
     design: renderDesign,
@@ -513,6 +573,8 @@ const SURFACE_RENDERERS = {
     modules: renderModules,
     updates: renderUpdates,
     'users-access': renderUsersAccess,
+    'user-edit': ctx => renderAccountDetail(ctx, 'user-edit'),
+    'provider-edit': ctx => renderAccountDetail(ctx, 'provider-edit'),
     'import-export': renderImportExport
 };
 export async function renderSettingsSurface(el, page) {
@@ -526,12 +588,21 @@ export async function renderSettingsSurface(el, page) {
         return false;
     }
     // The account-menu entry points at /settings; it must open an actual panel.
-    const surfaceKey = (slugParts[1] || 'general');
+    const surfaceKey = (/^settings\/users\/edit\/\d+$/.test(String(page.slug)) ? 'user-edit'
+        : String(page.slug) === 'settings/login/edit' ? 'provider-edit'
+            : slugParts[1] || 'general');
     const renderer = SURFACE_RENDERERS[surfaceKey];
     if (!renderer) {
         return false;
     }
-    el.textContent = 'Loading settings…';
+    // Dedicated settings own their full workspace even on existing installations
+    // whose saved page metadata still describes a customizable dashboard.
+    el.dataset.dashboardLayout = 'fixed';
+    const loading = document.createElement('section');
+    loading.className = 'settings-surface settings-loading';
+    loading.setAttribute('role', 'status');
+    loading.textContent = 'Loading settings…';
+    el.replaceChildren(loading);
     try {
         await renderer({ el, page, jwt, meltdownEmit });
         return true;
@@ -547,7 +618,10 @@ export async function renderSettingsSurface(el, page) {
         retry.className = 'button secondary';
         retry.textContent = 'Retry';
         retry.addEventListener('click', () => { void renderSettingsSurface(el, page); });
-        el.append(error, retry);
+        const failure = document.createElement('section');
+        failure.className = 'settings-surface settings-loading';
+        failure.append(error, retry);
+        el.append(failure);
         return true;
     }
 }

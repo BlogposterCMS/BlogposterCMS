@@ -1,16 +1,31 @@
 [![Tests](https://github.com/BlogposterCMS/BlogposterCMS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/BlogposterCMS/BlogposterCMS/actions/workflows/ci.yml)
 ![Alpha status](https://img.shields.io/badge/status-alpha-red)
 
-# BlogposterCMS
+# BlogposterCMS — Modular Node.js CMS and Visual Website Builder
 
-**An open-source, modular CMS with visual website building and shared workflows
-for people and AI agents. Self-host your content, compose your design, extend
-your site.**
+**An open-source, self-hosted content management system (CMS) built on Node.js,
+with a visual website builder, a modular extension framework and shared workflows
+for people and AI agents.**
 
 Blogposter combines a visual Design Studio, content management and structured
 agent access in one self-hostable project. You can edit pages visually and
 give a connected AI agent specific tasks in the same workspace, while keeping
 ownership of your website and content.
+
+## A Node.js CMS with an extensible framework
+
+Blogposter is a CMS you can install and use to manage a website. Its modular
+architecture also provides a CMS framework for developers to extend through
+backend modules, UI widgets and admin apps using documented event contracts.
+
+The backend runs on **Node.js and Express**, with JavaScript backend modules and
+TypeScript browser code. Blogposter owns the content, permissions, publishing
+and module logic; Node.js is the runtime that executes its backend. SQLite,
+PostgreSQL and MongoDB are supported through the database manager layer.
+
+[Install Blogposter](docs/server-installation.md) ·
+[Developer quickstart](docs/developer_quickstart.md) ·
+[Create a module](docs/community_module_guide.md)
 
 ## Why Blogposter?
 

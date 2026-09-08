@@ -51,12 +51,40 @@ edge; nested indentation continues to communicate the hierarchy.
 | Widgets | Fixed searchable public library, global saved-layout usage and local templates | Bounded complete scan above 20 pages, failed reads, empty results and selection tested |
 | Design Studio library | Fixed canonical design library; legacy Layouts retired | Retry distinguishes failed reads from empty data; existing Designer remains owner |
 | Home | Customizable overview, quick links and recent content | Canonical editor URLs, meaningful empty/error states; duplicate creation flow removed |
-| Settings | Existing task panels kept; common save/leave/loading/retry behavior | Independent tab drafts and duplicate-write protection tested; Settings root opens General; shared media picker verified; embedded administrative panels retained |
+| Settings | Full-height fixed pages with grouped named navigation and a single tab row; existing administrative renderers retained internally | Independent tab drafts, discard, duplicate-write protection, load/retry, registration persistence and keyboard module selection tested |
 | Import / Export | Inactive core placeholder retired | No importer/exporter module or data removed; actual operations remain module-owned |
 | Legacy/demo widgets | Hidden from new catalog insertion | Saved instances remain supported; no dashboard data erased |
 | Public widgets | Text, media, links, navigation, breadcrumbs, gallery and collection archive retained | Sanitization and core render tests; gallery clipping/focus corrected; invalid collection links no longer navigate to the current page |
 
 ## Boundaries
+
+### Settings page structure
+
+- Every supported Settings route renders one `.settings-surface` in the existing
+  fixed admin shell, including loading and failure states. The body scrolls;
+  header and tabs remain visible. The dashboard footer and page-creation control
+  are absent. This applies to existing saved page metadata as well as new sites.
+- Navigation groups existing authorized page records into Website,
+  Administration and Reference. URLs and backend permission checks are unchanged.
+  Unknown registered extension pages remain discoverable under Extensions.
+- Modules exposes Installed/System through the shared keyboard-accessible tab
+  system. Its list and inspector scroll independently on wide screens.
+- Users & access exposes Users, Permission groups, Sign-in methods and
+  Registration & agents. Provider configuration is no longer hidden in Modules.
+  Registration is edited here only; Site availability owns maintenance controls.
+- Existing `/admin/settings/users/edit/:id` and `/admin/settings/login/edit`
+  deep links resolve the registered Users & access shell through the existing
+  admin page facade. They do not require a CMS page per account. The selected
+  user id is passed explicitly, separately from the shell page id. Account and
+  provider operations retain their owning APIs and permissions. Failed account
+  permission/provider reads do not render empty editable defaults; writes are
+  guarded against duplicates and failed drafts remain available.
+- Settings forms save explicitly, retain failed drafts, and discard per group.
+  The registration agent adapter retains `settings.updateDraft` / `settings.save`
+  under group `registration`; credentials and agent codes are never in snapshots.
+  Permission-group dialogs retain the existing JSON contract and custom rules.
+- UI Kit remains an interactive component reference, not a configurable dashboard.
+  It uses the full page with its own scrolling reference sections.
 
 - Pages, Navigation Manager, Media Manager and Designer keep their existing data,
   permission and transport ownership. Fixed compositions do not create a second UI

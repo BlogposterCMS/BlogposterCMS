@@ -18,6 +18,20 @@ import {
 } from '../ui/runtime/main/runtimePageData';
 
 describe('runtimePageData', () => {
+  it.each(['settings/users/edit/12', 'settings/login/edit'])('loads %s through its existing authorized Settings page', async slug => {
+    const emit = jest.fn().mockResolvedValue({ id: 7, slug: 'settings/users-access', meta: { layout: { sidebar: 'settings-sidebar' } } });
+    expect(await fetchRuntimePageBySlug(emit, slug, 'admin')).toMatchObject({ id: 7, slug });
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
+      resource: 'pages', action: 'getBySlug', params: { slug: 'settings/users-access', lane: 'admin' }
+    }));
+  });
+
+  it('does not synthesize a Settings page when access is unavailable or reinterpret public routes', async () => {
+    const emit = jest.fn().mockResolvedValue(null);
+    expect(await fetchRuntimePageBySlug(emit, 'settings/users/edit/12', 'admin')).toBeNull();
+    await fetchRuntimePageBySlug(emit, 'settings/users/edit/12', 'public');
+    expect(emit).toHaveBeenLastCalledWith('cmsPublicRuntimeRequest', expect.objectContaining({ params: { slug: 'settings/users/edit/12', lane: 'public' } }));
+  });
   beforeEach(() => {
     window.ADMIN_TOKEN = 'admin-token';
     window.PUBLIC_TOKEN = 'public-token';

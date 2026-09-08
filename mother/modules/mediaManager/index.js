@@ -139,6 +139,20 @@ module.exports = {
 
       if (app) {
         setupUploadRoute(app);
+        // Storage SDKs remain behind the same media authority and existing settings/database owners.
+        require('./storage/routes').setupStorageRoutes(app, {
+          auth: requireAuthCookie,
+          csrf: csrfProtection,
+          mimeMap: EXTENSION_MIME_MAP,
+          resolveSafePath: relative => assertLibraryPathSafe(resolveLibraryPath(relative), 'path'),
+          readSetting: () => requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_MODULE_SETTING_VALUE, {
+            jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE, settingKey: 'storageEncrypted'
+          }),
+          writeSetting: value => requestBackendEvent(motherEmitter, BACKEND_EVENTS.UPDATE_MODULE_SETTING_VALUE, {
+            jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE, settingKey: 'storageEncrypted', value
+          }),
+          saveAttachment: data => mediaDbUpdate(motherEmitter, jwt, 'UPSERT_MEDIA_ATTACHMENT', normalizeMediaAttachment(data))
+        });
       }
 
       console.log('[MEDIA MANAGER] Ready!');

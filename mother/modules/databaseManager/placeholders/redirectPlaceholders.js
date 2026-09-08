@@ -1,7 +1,5 @@
 'use strict';
 
-const { ObjectId } = require('mongodb');
-
 const REDIRECT_PLACEHOLDERS = new Set([
   'INIT_REDIRECT_SCHEMA',
   'INIT_REDIRECT_TABLES',
@@ -453,11 +451,15 @@ async function handleRedirectPostgres(client, operation, params = {}) {
 }
 
 function mongoIdQuery(id) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   if (ObjectId.isValid(id)) return { _id: new ObjectId(id) };
   return { id };
 }
 
 async function handleRedirectMongo(db, operation, params = {}) {
+  // Shared SQL handlers must not load the MongoDB driver.
+  const { ObjectId } = require('mongodb');
   const p = paramsObject(params);
   switch (operation) {
     case 'INIT_REDIRECT_SCHEMA':

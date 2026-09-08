@@ -1,7 +1,5 @@
 "use strict";
 
-const { ObjectId } = require("mongodb");
-
 // Optimistic concurrency rejection is an expected save result, not module failure.
 function versionConflict() {
   return Object.assign(new Error('Version conflict'), { code: 'DESIGNER_VERSION_CONFLICT' });
@@ -288,6 +286,8 @@ async function handleSaveDesignPlaceholder({ dbClient, params }) {
       throw e;
     }
   } else if (dbType === "mongodb") {
+    // Load MongoDB only inside its database branch.
+    const { ObjectId } = require("mongodb");
     const db = dbClient;
     const designs = db.collection("designer_designs");
     const widgetsCol = db.collection("designer_design_widgets");
@@ -463,6 +463,8 @@ async function handleGetDesignPlaceholder({ dbClient, params }) {
     );
     return { design: { ...meta, layout, layout_json: layout }, widgets: rows, layout };
   } else if (dbType === "mongo" || dbType === "mongodb") {
+    // Load MongoDB only inside its database branch.
+    const { ObjectId } = require("mongodb");
     const objId =
       designId && ObjectId.isValid(designId) ? new ObjectId(designId) : null;
     if (!objId) return null;
@@ -604,6 +606,8 @@ async function handleGetLayoutPlaceholder({ dbClient, params }) {
       updated_at: row.updated_at,
     };
   } else if (dbType === "mongo" || dbType === "mongodb") {
+    // Load MongoDB only inside its database branch.
+    const { ObjectId } = require("mongodb");
     const coll = dbClient.collection("designer_layouts");
     const doc = await coll.findOne({ _id: ObjectId.isValid(id) ? new ObjectId(id) : id });
     if (!doc) return null;

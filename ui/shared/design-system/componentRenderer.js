@@ -3,7 +3,7 @@ import enhanceSelects, { destroyCustomSelects } from '../controls/customSelectCo
 import { createFormField, createFormChoice, createFormSwitch } from '../forms/formField.js';
 import { createTabSystem } from '../navigation/tabs.js';
 import { bpPopover } from '../overlays/popover.js';
-import { normalizeMediaUrl, normalizeLinkUrl } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
+import { normalizeMediaUrl, normalizeLinkUrl } from './publicWidgetHelpers.js';
 const sheetUrl = '/assets/css/ui-kit-components.css';
 const text = (value, fallback = '') => typeof value === 'string' ? value : fallback;
 const declarations = (styles = {}) => Object.entries(styles)

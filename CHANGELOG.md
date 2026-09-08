@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.10.5] - 2026-09-08
+
+- Restore UI architecture boundaries for release: download listing uses the shared
+  media data client, and website previews and public widgets share presentation
+  primitives without shared-to-feature imports. Existing widget URLs and visuals
+  remain compatible.
+
 - UI kits now carry named declarative components. Agents insert by component ID
   with optional props through the existing Designer command; compact catalogs
   avoid repeating definitions. Shared previews and public widgets support buttons,

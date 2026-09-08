@@ -154,8 +154,10 @@ a new UUID key and registers the existing attachment contract:
 - `meta.storage`: `provider`, `bucket`, `objectKey`, `deliveryUrl`.
 - `meta.artifact.version`: optional app version, retaining the import contract.
 
-The recent downloads list reads the canonical `media.list` admin facade (latest
-50 active public downloads). Cloud objects are not mirrored into the local
+The recent downloads list reads the canonical `media.list` admin facade through
+`ui/shared/media/mediaLibraryData.ts` (latest 50 active public downloads). Views
+delegate requests and response unwrapping to this existing data boundary rather
+than constructing module payloads themselves. Cloud objects are not mirrored into the local
 Explorer. Switching storage affects future download publications only; existing
 URLs and local builder/picker uploads stay unchanged. No automatic migration or
 bulk publication occurs. Removing a catalog entry through the existing metadata

@@ -1,5 +1,6 @@
 import { createMediaExplorerSurface } from '../../../shared/media/mediaExplorerSurface.js';
 import { createMediaStoragePanel } from '../../../shared/media/mediaStoragePanel.js';
+import { listMediaDownloads } from '../../../shared/media/mediaLibraryData.js';
 
 export async function render(el: HTMLElement | null): Promise<void> {
   const jwt = window.ADMIN_TOKEN;
@@ -29,14 +30,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
   el.appendChild(createMediaStoragePanel({
     request: window.fetch.bind(window),
     csrfToken: window.CSRF_TOKEN,
-    listDownloads: async () => {
-      const result = await emitter('cmsAdminApiRequest', {
-        jwt, moduleName: 'runtimeManager', moduleType: 'core', resource: 'media', action: 'list',
-        params: { category: 'download', status: 'active', visibility: 'public', limit: 50 }
-      });
-      const rows = result && typeof result === 'object' && 'data' in result ? result.data : result;
-      return Array.isArray(rows) ? rows : [];
-    }
+    listDownloads: () => listMediaDownloads(emitter, jwt)
   }));
   el.appendChild(surface.element);
 }

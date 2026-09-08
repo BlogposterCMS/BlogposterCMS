@@ -17,6 +17,8 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^\\.\\./sanitize/(.*)\\.js$': '<rootDir>/ui/shared/sanitize/$1.ts',
+    '^.*(?:/|\\./)(publicWidgetHelpers|websiteButton)\\.js$': '<rootDir>/ui/shared/design-system/$1.ts',
     '^.*(?:/|\\./)customSelectCore\\.js$': '<rootDir>/ui/shared/controls/customSelectCore.ts',
     '^.*(?:/|\\./)formField\\.js$': '<rootDir>/ui/shared/forms/formField.ts',
     '^.*shared/navigation/tabs\\.js$': '<rootDir>/ui/shared/navigation/tabs.ts',

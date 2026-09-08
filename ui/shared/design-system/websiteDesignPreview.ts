@@ -1,7 +1,7 @@
 import { getColorLibrarySnapshot, subscribeColorLibrary, type SavedColor } from '../colors/colorLibrary.js';
 import { FONT_PACKAGE_ROLES, getActiveFontPackage, subscribeFontPackages, type FontPackage } from '../fonts/fontPackages.js';
-import { normalizeMediaUrl } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
-import { render as renderButton } from '../../widgets/plainspace/public/basicwidgets/buttonWidget.js';
+import { normalizeMediaUrl } from './publicWidgetHelpers.js';
+import { render as renderButton } from './websiteButton.js';
 import { getSitePresetsSnapshot, subscribeSitePresets } from '../presets/sitePresets.js';
 import { renderKitComponent } from './componentRenderer.js';
 import type { KitComponent } from './componentDefinitions.js';

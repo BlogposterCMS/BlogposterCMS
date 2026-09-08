@@ -1,7 +1,7 @@
 import { getColorLibrarySnapshot, subscribeColorLibrary } from '../colors/colorLibrary.js';
 import { FONT_PACKAGE_ROLES, getActiveFontPackage, subscribeFontPackages } from '../fonts/fontPackages.js';
-import { normalizeMediaUrl } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
-import { render as renderButton } from '../../widgets/plainspace/public/basicwidgets/buttonWidget.js';
+import { normalizeMediaUrl } from './publicWidgetHelpers.js';
+import { render as renderButton } from './websiteButton.js';
 import { getSitePresetsSnapshot, subscribeSitePresets } from '../presets/sitePresets.js';
 import { renderKitComponent } from './componentRenderer.js';
 /** Read-only previews share the live library snapshots; they never persist another theme. */

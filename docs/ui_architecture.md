@@ -272,6 +272,11 @@ New UI code should prefer `blogposterApi` or direct imports from shared clients.
   DOM surface. The dashboard Media page, shell picker, and future global media
   modal should mount this surface instead of rebuilding folder, upload, share,
   rename, or delete payloads in each caller.
+- `ui/shared/design-system/publicWidgetHelpers.ts` and `websiteButton.ts` own
+  common public presentation primitives and the website button renderer. UI-kit
+  previews consume these directly; existing PlainSpace widget URLs re-export
+  them for compatibility. Shared design surfaces never import a feature zone.
+  This relocation preserves rendering and the Designer feedback contract.
 - `ui/shared/apps/appBridge.ts`: shared sandboxed iframe bridge. It installs
   `window.meltdownEmit` inside app iframes, forwards requests to the parent
   AppLoader bridge and starts the generic DOM agent surface adapter when the

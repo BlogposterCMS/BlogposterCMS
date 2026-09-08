@@ -96,6 +96,13 @@ export async function listMediaFolder(emit, jwt, subPath) {
     const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'listLocalFolder', { subPath });
     return toFolderListing(res);
 }
+/** Read the bounded download catalog through the same authenticated media facade. */
+export async function listMediaDownloads(emit, jwt) {
+    const result = await emitRuntimeAdmin(requireEmitter(emit), jwt, 'media', 'list', {
+        category: 'download', status: 'active', visibility: 'public', limit: 50
+    });
+    return Array.isArray(result) ? result : [];
+}
 export async function renameMediaItem(emit, jwt, currentPath, oldName, newName) {
     const meltdownEmit = requireEmitter(emit);
     await emitRuntimeAdmin(meltdownEmit, jwt, 'media', 'renameLocalItem', {

@@ -2,6 +2,21 @@
 import { mountWebsiteDesignPreview } from '../ui/shared/design-system/websiteDesignPreview';
 import { configureColorLibraryClient, refreshColorLibrary } from '../ui/shared/colors/colorLibrary';
 import { configureFontPackagesClient, refreshFontPackages, FONT_PACKAGE_ROLES } from '../ui/shared/fonts/fontPackages';
+import { render as renderSharedButton } from '../ui/shared/design-system/websiteButton';
+import { render as renderButtonWidget } from '../ui/widgets/plainspace/public/basicwidgets/buttonWidget';
+import { normalizeLinkUrl, normalizeMediaUrl } from '../ui/shared/design-system/publicWidgetHelpers';
+
+test('registered button widget retains the shared preview implementation and URL boundary', () => {
+  expect(renderButtonWidget).toBe(renderSharedButton);
+  expect(normalizeMediaUrl('/media/logo.svg')).toBe('/media/logo.svg');
+  expect(normalizeLinkUrl('mailto:contact@example.test')).toBe('mailto:contact@example.test');
+  expect(normalizeMediaUrl('javascript:alert(1)')).toBe('');
+  expect(normalizeLinkUrl('//untrusted.example/path')).toBe('');
+  const host = document.createElement('div');
+  renderSharedButton(host, { instanceMetadata: { href: 'javascript:alert(1)' } });
+  expect(host.querySelector('a')).toBeNull();
+  expect(host.querySelector('[data-error-code]')?.getAttribute('data-error-code')).toBe('BP_WIDGET_BUTTON_UNSAFE_URL');
+});
 
 test('visual list renders names beside both theme variants and updates from the canonical library', async () => {
   let darkValue = '#FFFFFF';

@@ -14,8 +14,33 @@ import {
   toListing,
   uploadMediaFile
 } from '../ui/widgets/plainspace/admin/mediaExplorerData';
+import { listMediaDownloads } from '../ui/shared/media/mediaLibraryData';
 
 describe('mediaExplorerData', () => {
+  it.each([false, true])('lists bounded public downloads through the shared facade (wrapped=%s)', async wrapped => {
+    const rows = [{ id: 7, category: 'download', url: '/media/downloads/app.apk' }];
+    const emit = jest.fn().mockResolvedValue(wrapped
+      ? { resource: 'media', action: 'list', data: rows }
+      : rows);
+
+    await expect(listMediaDownloads(emit, 'admin-token')).resolves.toEqual(rows);
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
+      jwt: 'admin-token', moduleName: 'runtimeManager', moduleType: 'core',
+      resource: 'media', action: 'list',
+      params: { category: 'download', status: 'active', visibility: 'public', limit: 50 }
+    });
+  });
+
+  it('keeps download failures visible and tolerates an empty catalog response', async () => {
+    await expect(listMediaDownloads(jest.fn().mockResolvedValue(null), 'admin-token'))
+      .resolves.toEqual([]);
+    await expect(listMediaDownloads(undefined, 'admin-token'))
+      .rejects.toThrow('MEDIA_LIBRARY_EMITTER_UNAVAILABLE');
+    await expect(listMediaDownloads(jest.fn().mockRejectedValue(new Error('FORBIDDEN')), 'admin-token'))
+      .rejects.toThrow('FORBIDDEN');
+  });
+
   it('normalizes folder listings and formats paths', () => {
     expect(toListing({
       folders: ['images', 42, 'docs'],

@@ -160,6 +160,17 @@ export async function listMediaFolder(
   return toFolderListing(res);
 }
 
+/** Read the bounded download catalog through the same authenticated media facade. */
+export async function listMediaDownloads(
+  emit: MediaEmitter,
+  jwt: string | null | undefined
+): Promise<Record<string, unknown>[]> {
+  const result = await emitRuntimeAdmin(requireEmitter(emit), jwt, 'media', 'list', {
+    category: 'download', status: 'active', visibility: 'public', limit: 50
+  });
+  return Array.isArray(result) ? result : [];
+}
+
 export async function renameMediaItem(
   emit: MediaEmitter,
   jwt: string | null | undefined,

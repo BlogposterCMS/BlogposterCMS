@@ -1031,6 +1031,8 @@ describe('UI architecture boundaries', () => {
     expect(widgetSource).not.toContain('createShareLink');
     expect(widgetSource).not.toContain('moduleName');
     expect(widgetSource).not.toContain('moduleType');
+    expect(widgetSource).toContain('listMediaDownloads(emitter, jwt)');
+    expect(sharedDataSource).toContain('export async function listMediaDownloads');
     expect(dataSource).toContain("from '../../../shared/media/mediaLibraryData.js'");
     expect(dataSource).toContain('export function toListing');
     expect(dataSource).toContain('mediaItemPath');

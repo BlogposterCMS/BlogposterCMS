@@ -97,23 +97,23 @@ function parseWidgetCode(content) {
 }
 function isSafeWidgetModulePath(value) {
     return typeof value === 'string'
-        && /^\/ui\/widgets\/plainspace\/public\/basicwidgets\/[A-Za-z0-9_-]+\.js$/.test(value);
+        && (/^\/ui\/widgets\/plainspace\/public\/basicwidgets\/[A-Za-z0-9_-]+\.js$/.test(value)
+            || /^\/widgets\/[A-Za-z0-9_-]+\/widget\.js$/.test(value));
 }
 async function renderWidgetModule(container, item, def, ctx) {
     if (!isSafeWidgetModulePath(def.content))
         return false;
     try {
-        const mod = await import(/* webpackIgnore: true */ def.content);
-        if (typeof mod.render !== 'function')
-            return false;
-        await mod.render(container, {
+        const [{ mountWidgetModule }, { loadWidgetModule }] = await Promise.all([
+            import('/ui/widgets/rendering/widgetModuleMount.js'),
+            import('/ui/widgets/rendering/widgetModuleLoader.js')
+        ]);
+        await mountWidgetModule(container, { id: String(item.widgetId), codeUrl: def.content }, loadWidgetModule, () => ({
             id: item.instanceId,
             widgetId: item.widgetId,
-            publicToken: ctx.publicToken,
-            meltdownEmit: ctx.meltdownEmit,
             metadata: def.metadata || {},
             instanceMetadata: isRecord(item.metadata) ? item.metadata : {}
-        });
+        }));
         return true;
     }
     catch (error) {

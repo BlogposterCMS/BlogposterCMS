@@ -434,3 +434,16 @@ describe('shared layout DOM adapter', () => {
     }
   });
 });
+
+
+test('stacked sections retain authored height and split alignment without implicit borders', () => {
+  const target = document.createElement('div');
+  const nodes = renderLayoutTree({type:'split',nodeId:'page',orientation:'horizontal',
+    settings:{mode:'stack',align:'center'},children:[{type:'leaf',nodeId:'header',
+    settings:{padding:'20px 4%',borderStyle:'solid',borderBottomWidth:'1px'}}]},target);
+  expect(nodes.get('page')!.style.alignItems).toBe('center');
+  expect(nodes.get('header')!.style.flex).toBe('0 0 auto');
+  expect(nodes.get('header')!.style.padding).toBe('20px 4%');
+  expect(nodes.get('header')!.style.borderTopWidth).toBe('0px');
+  expect(nodes.get('header')!.style.borderBottomWidth).toBe('1px');
+});

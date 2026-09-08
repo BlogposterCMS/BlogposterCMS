@@ -4,6 +4,7 @@ import {
   sanitizeRichHtml,
   sharedStyle,
   widgetSettings,
+  widgetLocale,
   type PublicWidgetContext
 } from './publicWidgetHelpers.js';
 
@@ -126,6 +127,7 @@ export async function render(el: HTMLElement | null, ctx: PublicWidgetContext = 
   const editable = document.createElement('div');
   editable.className = 'editable widget-rich-text';
   editable.dataset.textEditable = '';
+  editable.dataset.contentLocale = widgetLocale();
 
   if (ctx.id) {
     editable.id = `text-widget-${ctx.id}-editable`;

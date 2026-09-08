@@ -186,6 +186,7 @@ function applyContainerSettingsToElement(el: HTMLElement): void {
     // A split node is the persisted recursive Container shape. Its authored
     // placement mode, rather than the legacy split orientation, owns how its
     // direct Container and widget children flow.
+    el.style.alignItems = settings.align || 'stretch';
     if (settings.mode === 'grid') {
       el.style.display = 'grid';
       el.style.removeProperty('flex-direction');
@@ -210,7 +211,7 @@ function applyContainerSettingsToElement(el: HTMLElement): void {
   // Apply on the actual Container, not its widget content or editor outline.
   // Explicit values override editor decoration and round-trip via settings.
   for (const key of ['borderWidth', 'borderStyle', 'borderColor', 'borderRadius', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'] as const) {
-    el.style[key] = settings[key] || (key.endsWith('Width') ? settings.borderWidth || '' : '');
+    el.style[key] = settings[key] || (key.endsWith('Width') ? settings.borderWidth || (settings.borderStyle ? '0px' : '') : '');
   }
   if (settings.maxWidth) el.style.maxWidth = settings.maxWidth;
   else el.style.removeProperty('max-width');
@@ -695,9 +696,9 @@ export function renderLayoutTree(tree: unknown, mountEl: HTMLElement | null): Ma
       current.children.forEach((child, index) => {
         const childEl = walk(child, el);
         const size = sizes[index];
-        if (Number.isFinite(size)) {
-          childEl.style.flex = `${size} 1 0`;
-        }
+        // Stacked sections use content height; legacy proportional splits retain their ratios.
+        if (current.settings?.mode === 'stack') childEl.style.flex = '0 0 auto';
+        else if (Number.isFinite(size)) childEl.style.flex = `${size} 1 0`;
       });
     } else if (current.designRef) {
       el.dataset.designRef = current.designRef;

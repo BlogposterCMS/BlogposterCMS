@@ -59,13 +59,19 @@ function firstString(source: LooseRecord, keys: string[], fallback = ''): string
   return fallback;
 }
 
+/** Public page language selects explicit per-widget copy, with base settings as fallback. */
+export function widgetLocale(): string {
+  const language = new URL(location.href).searchParams.get('lang') || document.documentElement.lang || 'en';
+  return language.toLowerCase().split('-')[0] || 'en';
+}
+
 export function widgetSettings(
   context: PublicWidgetContext = {},
   defaults: LooseRecord = {}
 ): LooseRecord {
   const registry = isRecord(context.metadata) ? context.metadata : {};
   const instance = isRecord(context.instanceMetadata) ? context.instanceMetadata : {};
-  return {
+  const settings = {
     ...defaults,
     ...recordAt(registry, 'defaults'),
     ...recordAt(registry, 'settings'),
@@ -73,6 +79,7 @@ export function widgetSettings(
     ...recordAt(instance, 'settings'),
     ...instance
   };
+  return { ...settings, ...recordAt(recordAt(settings, 'translations'), widgetLocale()) };
 }
 
 export function readString(source: LooseRecord, keys: string[], fallback = ''): string {
@@ -185,7 +192,7 @@ export function sharedStyle(): HTMLStyleElement {
   width: 100%;
   min-height: 100%;
   color: var(--studio-text);
-  font-family: var(--font-body);
+  font-family: var(--font-body, system-ui, sans-serif);
 }
 .bp-public-widget *,
 .bp-public-widget *::before,

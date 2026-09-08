@@ -229,3 +229,11 @@ describe('shared layout document contract', () => {
     });
   });
 });
+
+
+test('box padding retains responsive shorthand and rejects CSS injection', () => {
+  expect(normalizeLayoutContainerSettings({padding:'20px 4%'}).padding).toBe('20px 4%');
+  expect(normalizeLayoutContainerSettings({padding:'1rem 2px 3px 4px'}).padding).toBe('1rem 2px 3px 4px');
+  for (const padding of ['-2px 4px','1px;position:fixed','1px 2px 3px 4px 5px'])
+    expect(normalizeLayoutContainerSettings({padding}).padding).toBeUndefined();
+});

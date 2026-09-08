@@ -17,10 +17,15 @@ function firstString(source, keys, fallback = '') {
     }
     return fallback;
 }
+/** Public page language selects explicit per-widget copy, with base settings as fallback. */
+export function widgetLocale() {
+    const language = new URL(location.href).searchParams.get('lang') || document.documentElement.lang || 'en';
+    return language.toLowerCase().split('-')[0] || 'en';
+}
 export function widgetSettings(context = {}, defaults = {}) {
     const registry = isRecord(context.metadata) ? context.metadata : {};
     const instance = isRecord(context.instanceMetadata) ? context.instanceMetadata : {};
-    return {
+    const settings = {
         ...defaults,
         ...recordAt(registry, 'defaults'),
         ...recordAt(registry, 'settings'),
@@ -28,6 +33,7 @@ export function widgetSettings(context = {}, defaults = {}) {
         ...recordAt(instance, 'settings'),
         ...instance
     };
+    return { ...settings, ...recordAt(recordAt(settings, 'translations'), widgetLocale()) };
 }
 export function readString(source, keys, fallback = '') {
     return firstString(source, keys, fallback);
@@ -132,7 +138,7 @@ export function sharedStyle() {
   width: 100%;
   min-height: 100%;
   color: var(--studio-text);
-  font-family: var(--font-body);
+  font-family: var(--font-body, system-ui, sans-serif);
 }
 .bp-public-widget *,
 .bp-public-widget *::before,

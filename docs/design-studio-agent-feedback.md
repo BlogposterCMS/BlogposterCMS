@@ -510,3 +510,22 @@ Dragging at Mobile (320–600px), Tablet (601–1024px), or Desktop (1025–3840
 records the existing responsive range, with the selected widget's explicit
 range controls available for narrower or broader corrections. Saved rules remain
 in `code.meta.responsivePlacement`; switching widths alone does not author a rule.
+
+
+Unavailable catalog widgets remain on the canvas with `DESIGNER_WIDGET_UNAVAILABLE`
+status and retain their saved instance code and placement during subsequent saves.
+Their code is not executed while the catalog definition is absent. Restore the
+extension registration before previewing its behavior; this status is not a successful render.
+
+
+Community modules now use the same registration/module mount in the Designer and
+public loader. The isolated Studio preview supplies no network operations; mutation/stream
+attempts return `WIDGET_SERVICE_DENIED` instead of creating application state.
+Saved SQL/Mongo widget reads follow y/x placement order rather than instance-id
+alphabetical order, preserving native flow reading order after reload.
+
+Native text edits persist in metadata (including the active translation), so save
+and reload keep the module stylesheet. Container padding accepts bounded CSS box
+shorthand. Stacked sections retain intrinsic size rather than legacy split flex
+weights; explicit split alignment and single-edge borders render consistently.
+These are existing layout settings exposed through the same agent snapshot.

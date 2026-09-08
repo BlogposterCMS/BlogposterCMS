@@ -17,6 +17,7 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^.*(?:/|\\./)(widgetServices|widgetModuleMount|widgetModuleLoader)\\.js$': '<rootDir>/ui/widgets/rendering/$1.ts',
     '^.*shared/feedback/adminShellLoading\\.js$': '<rootDir>/ui/shared/feedback/adminShellLoading.ts',
     '^\\./loading\\.js$': '<rootDir>/ui/shared/feedback/loading.ts',
     '^/ui/shared/overlays/popover\\.js$': '<rootDir>/ui/shared/overlays/popover.ts',

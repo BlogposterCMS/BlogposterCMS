@@ -1,3 +1,4 @@
+const { registerPublicWidgetServices } = require('./publicWidgetServices');
 'use strict';
 
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
@@ -1221,6 +1222,7 @@ function setupRuntimeEvents(motherEmitter, runtimeJwt = '') {
 }
 
 function registerPublicRuntimeRoutes(app, motherEmitter, jwt) {
+  registerPublicWidgetServices(app, motherEmitter, jwt);
   app.get('/api/public/search', (req, res) => renderPublicSearch(motherEmitter, jwt, req, res));
   app.get('/api/public/preview', (req, res) => renderPublicPreview(motherEmitter, jwt, req, res));
   app.get('/api/public/content', (req, res) => renderPublicContent(motherEmitter, jwt, req, res));

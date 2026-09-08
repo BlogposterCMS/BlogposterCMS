@@ -2,6 +2,8 @@
  * @jest-environment jsdom
  */
 
+jest.mock('../ui/widgets/rendering/widgetServices', () => ({ loadWidgetServices: jest.fn(async () => ({ dispose: jest.fn() })) }));
+
 import { renderWidget } from '../ui/runtime/main/runtimeWidgetRenderer';
 
 class CSSStyleSheetMock {
@@ -104,7 +106,7 @@ describe('runtimeWidgetRenderer', () => {
       .toContain('WIDGET_RUNTIME_BLOCKED_CODE_URL');
   });
 
-  it('adds admin context to dynamically loaded widgets', async () => {
+  it('keeps scene context without exposing admin credentials to community widgets', async () => {
     const wrapper = makeWrapper();
     const render = jest.fn();
     window.ADMIN_TOKEN = 'admin-token';
@@ -124,7 +126,7 @@ describe('runtimeWidgetRenderer', () => {
       expect.objectContaining({
         id: 'instance-1',
         widgetId: 'testWidget',
-        jwt: 'admin-token',
+        services: expect.any(Object),
         scene: expect.objectContaining({
           behavior: 'sticky',
           sceneId: 'hero',
@@ -132,6 +134,8 @@ describe('runtimeWidgetRenderer', () => {
         })
       })
     );
+    expect(render.mock.calls[0][1]).not.toHaveProperty('jwt');
+    expect(render.mock.calls[0][1]).not.toHaveProperty('emit');
   });
 
   it('renders module widgets when saved code contains only metadata', async () => {

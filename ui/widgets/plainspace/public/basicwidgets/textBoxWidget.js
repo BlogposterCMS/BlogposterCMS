@@ -1,5 +1,5 @@
 import { registerEditableElement } from '../../../rendering/editableRegistration.js';
-import { readString, sanitizeRichHtml, sharedStyle, widgetSettings } from './publicWidgetHelpers.js';
+import { readString, sanitizeRichHtml, sharedStyle, widgetSettings, widgetLocale } from './publicWidgetHelpers.js';
 function richTextStyle() {
     const style = document.createElement('style');
     style.textContent = `
@@ -115,6 +115,7 @@ export async function render(el, ctx = {}) {
     const editable = document.createElement('div');
     editable.className = 'editable widget-rich-text';
     editable.dataset.textEditable = '';
+    editable.dataset.contentLocale = widgetLocale();
     if (ctx.id) {
         editable.id = `text-widget-${ctx.id}-editable`;
     }

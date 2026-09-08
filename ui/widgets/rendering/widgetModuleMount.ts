@@ -1,3 +1,4 @@
+import { loadWidgetServices } from './widgetServices.js';
 type RuntimeWidgetError = {
   code: string;
   title: string;
@@ -102,7 +103,20 @@ export async function mountWidgetModule(
   }
 
   try {
-    await mod.render(container, createContext());
+    const context = createContext();
+    if (def.codeUrl.startsWith('/widgets/')) {
+      // Community UI never receives CMS credentials, including inside the Designer.
+      delete context.jwt;
+      delete context.emit;
+      context.services = await loadWidgetServices(def.id, context.preview === true);
+      // Stop subscriptions when a canvas instance is removed or the page leaves.
+      const services = context.services;
+      const observer = new MutationObserver(() => { if (!container.isConnected) dispose(); });
+      const dispose = () => { services.dispose(); observer.disconnect(); window.removeEventListener('pagehide', dispose); };
+      observer.observe(document.body, { childList: true, subtree: true });
+      window.addEventListener('pagehide', dispose, { once: true });
+    }
+    await mod.render(container, context);
   } catch (err) {
     console.error(`[Widget ${def.id}] WIDGET_RUNTIME_RENDER_FAILED render error:`, err);
     renderRuntimeWidgetError(container, {

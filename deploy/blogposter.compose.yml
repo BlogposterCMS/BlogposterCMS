@@ -31,6 +31,10 @@ services:
     volumes:
       - blogposter_data:/app/data
       - blogposter_library:/app/library
+      # UI-installed extension files survive image replacement; their local
+      # approval receipts remain in the already backed-up data volume.
+      - blogposter_modules:/app/modules
+      - blogposter_widgets:/app/widgets
       # The Git-managed customization repository is mounted read-only into the
       # one canonical runtime overlay path; the rest of /app/data stays private.
       - ${BLOGPOSTER_OVERRIDES_DIR:?Set the absolute module-overrides repository path}:/app/data/module-overrides:ro
@@ -40,6 +44,8 @@ services:
 volumes:
   blogposter_data:
   blogposter_library:
+  blogposter_modules:
+  blogposter_widgets:
 
 networks:
   blogposter_proxy:

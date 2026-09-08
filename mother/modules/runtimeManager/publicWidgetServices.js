@@ -24,7 +24,9 @@ function projectWidgetPolicy(value, widgetId) {
       || !Array.isArray(spec.values) || spec.values.length > 20 || spec.values.some(value => typeof value !== 'string' || !/^[a-zA-Z-]{1,20}$/.test(value))) throw new Error('WIDGET_SERVICE_POLICY_INVALID');
     preferences[name] = { cookie: spec.cookie, values: spec.values };
   }
-  return { operations, preferences, draft: policy.draft === true };
+  return require('../widgetManager/widgetPackageAccess').restrictWidgetPolicy(
+    { operations, preferences, draft: policy.draft === true }, policy.packageAccess
+  );
 }
 function registerPublicWidgetServices(app, motherEmitter, jwt) {
   app.get('/api/public/widget-services/:widgetId', async (req, res) => {

@@ -61,6 +61,23 @@ afterEach(() => {
   _internals.resetRuntimeIntegrityForTests();
 });
 
+test('approved extension survives production startup and is rechecked before a process starts', async () => {
+  const rootDir = createRuntimeFixture();
+  try {
+    const { manifestPath, bundlePath } = writeSignedFixture(rootDir);
+    const dir = path.join(rootDir, 'modules', 'approved');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'index.js'), 'module.exports = {};');
+    require('../mother/security/extensionIntegrity').saveExtensionReceipt(rootDir, 'modules', 'approved', dir, 'a'.repeat(64));
+    const audit = { info: jest.fn(), error: jest.fn() };
+    const result = await verifyRuntimeIntegrity({ rootDir, manifestPath, bundlePath, env: { APP_ENV: 'production' }, attestationVerifier: () => true, consoleLike: audit });
+    expect(result.invalidModules).toEqual([]);
+    expect(verifyRuntimeModuleIntegrityNow('approved', audit)).toBe(true);
+    fs.appendFileSync(path.join(dir, 'index.js'), ' // changed');
+    expect(() => verifyRuntimeModuleIntegrityNow('approved', audit)).toThrow('RUNTIME_INTEGRITY_MODULE_BLOCKED');
+  } finally { fs.rmSync(rootDir, { recursive: true, force: true }); }
+});
+
 test('runtime manifest covers application code, modules and production dependencies', () => {
   const rootDir = createRuntimeFixture();
   try {

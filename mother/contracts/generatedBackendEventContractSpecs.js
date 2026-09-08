@@ -14432,6 +14432,84 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
     },
     "resultType": "InspectModuleZipAccessResult"
   },
+  "inspectWidgetZip": {
+    "description": "Generated internal backend contract for inspectWidgetZip.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "InspectWidgetZipResult"
+  },
   "installAppFromDirectory": {
     "description": "Generated internal backend contract for installAppFromDirectory.",
     "payloadSchema": {
@@ -14654,6 +14732,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
             }
           ]
         },
+        "reviewedHash": {
+          "type": "json"
+        },
         "skipJWT": {
           "type": "boolean"
         },
@@ -14738,6 +14819,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
             }
           ]
         },
+        "reviewedHash": {
+          "type": "json"
+        },
         "skipJWT": {
           "type": "boolean"
         },
@@ -14767,6 +14851,84 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
       ]
     },
     "resultType": "InstallModuleUpdateResult"
+  },
+  "installWidgetZip": {
+    "description": "Generated internal backend contract for installWidgetZip.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "InstallWidgetZipResult"
   },
   "issueModuleToken": {
     "description": "Generated internal backend contract for issueModuleToken.",
@@ -18211,6 +18373,84 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
       ]
     },
     "resultType": "ListTrashedContentEntriesResult"
+  },
+  "listWidgetPackages": {
+    "description": "Generated internal backend contract for listWidgetPackages.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "ListWidgetPackagesResult"
   },
   "log": {
     "description": "Generated internal backend contract for log.",
@@ -22718,6 +22958,90 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
     },
     "resultType": "SetMetadataResult"
   },
+  "setModuleAccess": {
+    "description": "Generated internal backend contract for setModuleAccess.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "approvedAccess": {
+          "type": "json"
+        },
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        },
+        "targetModuleName": {
+          "type": "json"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "SetModuleAccessResult"
+  },
   "setModuleTokenExpiry": {
     "description": "Generated internal backend contract for setModuleTokenExpiry.",
     "payloadSchema": {
@@ -23395,6 +23719,84 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
       ]
     },
     "resultType": "SetUserTokenExpiryResult"
+  },
+  "setWidgetPackageAccess": {
+    "description": "Generated internal backend contract for setWidgetPackageAccess.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "SetWidgetPackageAccessResult"
   },
   "sitePresets.apply": {
     "description": "Generated internal backend contract for sitePresets.apply.",

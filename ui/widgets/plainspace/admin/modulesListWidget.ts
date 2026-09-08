@@ -1,3 +1,4 @@
+import { openExtensionUpload } from '../../../shared/module-access/extensionUpload.js';
 import { createTabSystem } from '../../../shared/navigation/tabs.js';
 import {
   errorMessage,
@@ -20,7 +21,7 @@ import {
   moduleUpdateStatus,
   renderModuleMeta,
   toggleModuleRegistryActivation,
-  zipDataFromDataUrl
+  setModuleAccess
 } from './modulesListData.js';
 
 interface ModulesWindow extends Window {
@@ -46,10 +47,6 @@ interface DialogApi {
 
 function dialogApi(): DialogApi | null {
   return (window as Window & { bpDialog?: DialogApi }).bpDialog || null;
-}
-
-function readFileInputFiles(input: Element | null): FileList | null {
-  return input instanceof HTMLInputElement ? input.files : null;
 }
 
 function accessEventLabel(access: ModuleAccessRequest): string {
@@ -90,7 +87,7 @@ function buildAccessReviewBody(info: ModuleZipInspection | ModuleInfo, checkedEv
     const list = document.createElement('ul');
     permissions.forEach(permission => {
       const item = document.createElement('li');
-      item.textContent = permission.permission_key || permission.key || '';
+      item.textContent = `${permission.permission_key || permission.key || ''}: ${permission.description || ''}`;
       list.appendChild(item);
     });
     section.appendChild(list);
@@ -121,7 +118,7 @@ function buildAccessReviewBody(info: ModuleZipInspection | ModuleInfo, checkedEv
       label.classList.toggle('is-disabled', checkbox.disabled);
 
       const text = document.createElement('span');
-      text.textContent = accessEventLabel(access);
+      text.textContent = accessEventLabel(access) + (access.required ? ' (required by this module)' : ' (optional)');
       label.appendChild(checkbox);
       label.appendChild(text);
 
@@ -132,7 +129,7 @@ function buildAccessReviewBody(info: ModuleZipInspection | ModuleInfo, checkedEv
       }
       if (checkbox.disabled) {
         const note = document.createElement('small');
-        note.textContent = 'One-time only';
+        note.textContent = 'Protected: unavailable for permanent approval';
         label.appendChild(note);
       }
       accessSection.appendChild(label);
@@ -180,9 +177,7 @@ async function reviewModuleAccess(
   const dialog = dialogApi();
 
   if (!dialog?.open) {
-    return confirm(`${title}\n\n${message}`)
-      ? requestedAccess.map(approvedAccessDescriptor).filter((access): access is ModuleAccessRequest => Boolean(access))
-      : null;
+    throw new Error('EXTENSION_REVIEW_UNAVAILABLE: The access review dialog is unavailable. Reload before installing.');
   }
 
   const result = await dialog.open({
@@ -222,7 +217,7 @@ function accessStatusLabel(access: ModuleAccessRequest, info: ModuleInfo, pendin
     return 'Waiting';
   }
   if (access.allowPermanent === false || access.protected) {
-    return 'One-time only';
+    return info.accessPolicyVersion === 1 ? 'Blocked (protected)' : 'One-time only';
   }
   if ((info.trustedAccessGrants || []).some(grant => grant.granted && grant.event === eventName)) {
     return 'Permanent';
@@ -293,7 +288,7 @@ function appendAccessRows(
     item.className = 'module-detail-access-row';
 
     const text = document.createElement('span');
-    text.textContent = accessEventLabel(access);
+    text.textContent = accessEventLabel(access) + (access.required ? ' (required by this module)' : ' (optional)');
 
     const status = accessStatusLabel(access, info, pendingAccess);
     const tone = status === 'Permanent' ? 'ok' : status === 'Waiting' ? 'warning' : status === 'One-time only' ? 'danger' : 'neutral';
@@ -374,7 +369,7 @@ function renderModuleDetail(moduleRecord: ModuleRecord | null, pendingAccess: Mo
     list.className = 'module-detail-list';
     permissions.forEach(permission => {
       const item = document.createElement('li');
-      item.textContent = permission.permission_key || permission.key || '';
+      item.textContent = `${permission.permission_key || permission.key || ''}: ${permission.description || ''}`;
       if (permission.description) {
         const description = document.createElement('small');
         description.textContent = permission.description;
@@ -462,6 +457,10 @@ export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLE
     title.textContent = 'Modules';
 
     titleBar.appendChild(title);
+    const installButton = document.createElement('button');
+    installButton.className = 'button secondary sm'; installButton.textContent = 'Install ZIP';
+    installButton.addEventListener('click', openUploadPopup);
+    card.appendChild(installButton);
 
     const tabs = options.tabsHost || document.createElement('div');
     tabs.classList.add('modules-tabs');
@@ -487,6 +486,20 @@ export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLE
         pendingAccess,
         currentTab === 'system'
       ));
+      if (currentTab === 'installed' && selectedInstalled) {
+        const accessButton = document.createElement('button');
+        accessButton.className = 'button secondary sm'; accessButton.textContent = 'Manage access';
+        accessButton.addEventListener('click', async () => {
+          const record = selectedInstalled!;
+          try {
+            const approved = await reviewModuleAccess('Manage access', 'Unselected and undeclared core events stay blocked. Required features may become unavailable.', moduleInfoFromRecord(record), 'Save access', false);
+            if (approved === null) return;
+            await setModuleAccess(meltdownEmit, jwt, moduleNameFromRecord(record), approved);
+            await render(el, options);
+          } catch (err) { await alertError(errorMessage(err)); }
+        });
+        detailMount.appendChild(accessButton);
+      }
     }
 
     function syncSelectedRows(): void {
@@ -557,7 +570,7 @@ export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLE
             )) {
               return;
             }
-            await installModuleUpdate(meltdownEmit, jwt, name, approvedAccess);
+            await installModuleUpdate(meltdownEmit, jwt, name, approvedAccess, inspection.hash);
             window.location.reload();
           } catch (err) {
             await alertError(`Update failed: ${errorMessage(err)}`);
@@ -697,68 +710,17 @@ export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLE
 }
 
 function openUploadPopup(): void {
-  const overlay = document.createElement('div');
-  overlay.className = 'module-upload-overlay';
-
-  const box = document.createElement('div');
-  box.className = 'module-upload-box';
-  box.innerHTML = `
-    <p>Drop a ZIP file here or select one</p>
-    <input type="file" accept=".zip" />
-    <div style="margin-top:10px;">
-      <button class="cancel-btn">Cancel</button>
-    </div>`;
-
-  const input = box.querySelector('input');
-  const cancelBtn = box.querySelector('.cancel-btn');
-
-  const remove = () => overlay.remove();
-  cancelBtn?.addEventListener('click', remove);
-
-  function handleFiles(files: FileList | null): void {
-    const file = files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const zipData = zipDataFromDataUrl(reader.result);
-        const emit = window.meltdownEmit;
-        if (typeof emit !== 'function') throw new Error('meltdownEmit unavailable');
-        const inspection = await inspectModuleZip(emit, window.ADMIN_TOKEN, zipData);
-        const moduleName = inspection.moduleName || inspection.moduleInfo?.moduleName || file.name;
-        const approvedAccess = await reviewModuleAccess(
-          `Install ${moduleName}`,
-          'Review requested module access before installation.',
-          inspection,
-          'Install'
-        );
-        if (approvedAccess === null) return;
-        await installModuleZip(emit, window.ADMIN_TOKEN, zipData, approvedAccess);
-        window.location.reload();
-      } catch (err) {
-        void alertError(`Upload failed: ${errorMessage(err)}`);
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  input?.addEventListener('change', event => {
-    handleFiles(readFileInputFiles(event.target as Element | null));
+  openExtensionUpload(async (zipData, fileName, status) => {
+    const emit = window.meltdownEmit;
+    const inspection = await inspectModuleZip(emit, window.ADMIN_TOKEN, zipData);
+    const name = inspection.moduleName || fileName;
+    const approved = await reviewModuleAccess(`Install ${name}`, 'Review the declared capabilities. Unselected and undeclared core events stay blocked. Module-owned storage, scoped assets and lifecycle events remain available.', inspection, 'Install and allow selected access');
+    if (approved === null) return false;
+    status.textContent = 'Installing and activating module…';
+    await installModuleZip(emit, window.ADMIN_TOKEN, zipData, approved, inspection.reviewedHash);
+    window.location.reload();
+    return true;
   });
-
-  box.addEventListener('dragover', event => {
-    event.preventDefault();
-    box.classList.add('dragover');
-  });
-  box.addEventListener('dragleave', () => box.classList.remove('dragover'));
-  box.addEventListener('drop', event => {
-    event.preventDefault();
-    box.classList.remove('dragover');
-    handleFiles(event.dataTransfer?.files || null);
-  });
-
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
 }
 
 (window as ModulesWindow).openUploadPopup = openUploadPopup;

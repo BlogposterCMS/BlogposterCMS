@@ -453,7 +453,8 @@ async function verifyRuntimeIntegrity(options = {}) {
       throw createIntegrityError('RUNTIME_INTEGRITY_VERSION_MISMATCH', `Signed baseline ${manifest.version} does not match package ${version}.`);
     }
 
-    const issues = compareRecords(manifest.files, collectManagedFiles(rootDir));
+    const expectedFiles = require('./extensionIntegrity').approvedRuntimeRecords(rootDir, manifest.files);
+    const issues = compareRecords(expectedFiles, collectManagedFiles(rootDir));
     const { coreIssues, invalidModules } = splitIntegrityIssues(issues);
     if (coreIssues.length) {
       const first = coreIssues[0];
@@ -504,7 +505,8 @@ function verifyRuntimeModuleIntegrityNow(moduleName, consoleLike = console) {
   assertRuntimeModuleIntegrity(normalizedModuleName);
   if (!runtimeState.enforced) return true;
   const prefix = `modules/${normalizedModuleName}`;
-  const expected = runtimeState.manifest.files.filter(record => record.path === prefix || record.path.startsWith(`${prefix}/`));
+  const expected = require('./extensionIntegrity').approvedRuntimeRecords(runtimeState.rootDir, runtimeState.manifest.files)
+    .filter(record => record.path === prefix || record.path.startsWith(`${prefix}/`));
   let actual;
   try {
     actual = collectManagedFiles(runtimeState.rootDir, [prefix]);

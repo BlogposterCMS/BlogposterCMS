@@ -1,9 +1,32 @@
 function failure(code) { return new Error(code); }
-export function createWidgetServices(widgetId, policy, host = window, preview = false) {
+export function createWidgetServices(widgetId, policy, host = window, preview = false, refreshPolicy) {
     const active = new Set();
     const closers = new Set();
     const draftKey = 'bp-widget-draft:' + widgetId;
     let previewDraft = null;
+    let disposed = false;
+    async function refresh() {
+        if (!refreshPolicy || disposed)
+            return;
+        try {
+            const next = await refreshPolicy();
+            if (disposed)
+                return;
+            if (JSON.stringify(next) !== JSON.stringify(policy))
+                for (const close of [...closers])
+                    close();
+            policy = next;
+        }
+        catch (err) {
+            policy = {};
+            for (const close of [...closers])
+                close();
+            throw err;
+        }
+    }
+    // Requests recheck before dispatch; existing streams and local helpers lose
+    // withdrawn capabilities on the next bounded poll, including on read failure.
+    const policyTimer = refreshPolicy ? host.setInterval(() => { void refresh().catch(() => { }); }, 5000) : undefined;
     function target(name, params = {}, query = {}) {
         const op = Object.hasOwn(policy.operations || {}, name) ? policy.operations[name] : undefined;
         if (!op || !['GET', 'POST'].includes(op.method))
@@ -28,6 +51,9 @@ export function createWidgetServices(widgetId, policy, host = window, preview = 
     return Object.freeze({
         preview,
         async request(name, input = {}, signal) {
+            if (disposed)
+                throw failure('WIDGET_SERVICE_DISPOSED');
+            await refresh();
             const { op, url } = target(name, input.params, input.query);
             if (op.stream || (op.method === 'GET' && input.body !== undefined))
                 throw failure('WIDGET_SERVICE_OPERATION_INVALID');
@@ -126,7 +152,8 @@ export function createWidgetServices(widgetId, policy, host = window, preview = 
                 host.sessionStorage.setItem(draftKey, JSON.stringify({ value, at: Date.now() }));
             }
         }),
-        dispose() { for (const close of closers)
+        dispose() { disposed = true; policy = {}; if (policyTimer !== undefined)
+            host.clearInterval(policyTimer); for (const close of [...closers])
             close(); }
     });
 }
@@ -136,16 +163,15 @@ export async function loadWidgetServices(widgetId, preview = false) {
     // or calls product services; exercise live operations in the public preview.
     if (preview)
         return createWidgetServices(widgetId, {}, window, true);
-    const response = await fetch('/api/public/widget-services/' + encodeURIComponent(widgetId), { credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(5000) });
-    if (!response.ok || !response.headers.get('content-type')?.includes('application/json'))
-        throw failure('WIDGET_SERVICE_POLICY_UNAVAILABLE');
-    const text = await response.text();
-    if (text.length > 65536)
-        throw failure('WIDGET_SERVICE_POLICY_INVALID');
-    const policy = JSON.parse(text);
-    if (preview) {
-        policy.draft = false;
-        policy.operations = Object.fromEntries(Object.entries(policy.operations || {}).filter(([, op]) => op.method === 'GET' && !op.stream && !op.credentials));
+    async function readPolicy() {
+        const response = await fetch('/api/public/widget-services/' + encodeURIComponent(widgetId), { credentials: 'omit', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(5000) });
+        if (!response.ok || !response.headers.get('content-type')?.includes('application/json'))
+            throw failure('WIDGET_SERVICE_POLICY_UNAVAILABLE');
+        const text = await response.text();
+        if (text.length > 65536)
+            throw failure('WIDGET_SERVICE_POLICY_INVALID');
+        return JSON.parse(text);
     }
-    return createWidgetServices(widgetId, policy, window, preview);
+    const policy = await readPolicy();
+    return createWidgetServices(widgetId, policy, window, preview, policy.managed ? readPolicy : undefined);
 }

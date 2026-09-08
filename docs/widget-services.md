@@ -67,3 +67,17 @@ registered `/app/widgets/<widget-id>` path from the separate customization
 repository. Copying a widget into a running image is not update-persistent. The
 CMS database retains registrations, page designs and Settings Manager policy in
 `/app/data`; image updates do not provide or publish private widget bundles.
+
+## UI-installed package grants
+
+The existing per-widget policy may contain a core-written `packageAccess` record
+with `policyVersion: 1`, requested services, approved service keys and package
+identity. Public projection intersects this consent with operator configuration;
+the receipt and raw grant record are never returned publicly. Widgets cannot
+self-grant through widgetInfo.json. Legacy operator-only policies remain unchanged.
+
+Managed requests fetch current policy before dispatch. Managed streams and local
+draft/preference helpers refresh every five seconds and fail closed if that read
+fails; streams close when policy changes. Disposal cancels the refresh timer.
+Already dispatched backend requests cannot be revoked retrospectively. This is
+service API enforcement, not protection against malicious same-realm JavaScript.

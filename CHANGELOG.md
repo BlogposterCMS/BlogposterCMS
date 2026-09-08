@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- Add shared drag-and-drop/file-picker ZIP installation in Modules and Widgets,
+  with an explicit manifest access review bound to the inspected package hash.
+  Modules expose granular access management; reviewed modules deny undeclared or
+  revoked core events without opening a new runtime consent prompt.
+- Add widget package inspection/registration and per-service consent under the
+  existing Widget Manager and Settings Manager policy. Requests refresh grants
+  before dispatch; active streams/local helpers refresh within five seconds.
+- Persist UI-installed extension trees and local approval integrity receipts
+  across container replacement while retaining the signed core baseline.
+
 ## [0.10.5] - 2026-09-08
 
 - Restore UI architecture boundaries for release: download listing uses the shared

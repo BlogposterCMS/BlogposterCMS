@@ -96,6 +96,20 @@ function permissionActorId(decodedJWT = {}) {
   return decodedJWT.userId || decodedJWT.sub || decodedJWT.id || null;
 }
 
+function assertAccessApprovalActor(payload) {
+  if (payload.approvedAccess === undefined) return;
+  if (!Array.isArray(payload.approvedAccess)) throw new Error('[E_MODULE_ACCESS_SHAPE] approvedAccess must be an array.');
+  if (!payload.approvedAccess.length) return;
+  requireModuleAccessManagePermission(payload);
+  const { adminApiDefinition } = require('../runtimeManager')._internals;
+  for (const requested of payload.approvedAccess) {
+    const definition = adminApiDefinition(requested?.resource, requested?.action).definition;
+    if (!definition || (definition.permission && !hasPermission(payload.decodedJWT, definition.permission))) {
+      throw new Error('[E_MODULE_ACCESS_APPROVAL_PERMISSION] You cannot grant a capability you do not hold.');
+    }
+  }
+}
+
 async function persistPermanentAccessGrant(motherEmitter, jwt, request, decodedJWT) {
   if (!request?.allowPermanent) {
     throw new Error(`[E_MODULE_ACCESS_CONSENT_PERMANENT_DENIED] Event "${request?.event || ''}" cannot be granted permanently.`);
@@ -129,6 +143,28 @@ async function persistPermanentAccessGrant(motherEmitter, jwt, request, decodedJ
 }
 
 function initModuleRegistryAdminEvents(motherEmitter, app) {
+  motherEmitter.on(BACKEND_EVENTS.SET_MODULE_ACCESS, async (payload, callback) => {
+    try {
+      assertRegistryAdminPayload(payload, BACKEND_EVENTS.SET_MODULE_ACCESS);
+      requireModuleAccessManagePermission(payload);
+      const name = assertUserManagedModuleName(payload.targetModuleName, 'managed');
+      assertAccessApprovalActor(payload);
+      const current = await getRegisteredModuleInfo(motherEmitter, payload.jwt, name);
+      if (!current.moduleName) throw new Error('[E_MODULE_ACCESS_MODULE_MISSING] Installed module not found.');
+      const { normalizeApprovedAccess } = require('./moduleAccessPolicy');
+      if (!Array.isArray(payload.approvedAccess)) throw new Error('[E_MODULE_ACCESS_SHAPE] approvedAccess must be an array.');
+      const grants = normalizeApprovedAccess(payload.approvedAccess, current.requestedAccess || [], permissionActorId(payload.decodedJWT));
+      const next = { ...current, accessPolicyVersion: 1, trustedAccessGrants: grants };
+      await updateModuleInfo(motherEmitter, payload.jwt, name, next);
+      sharedModuleAccessConsentManager.rejectAllForModule(name, 'Manifest access changed.');
+      // Legacy runners must be stopped once; reviewed runners reread grants per call.
+      if (current.accessPolicyVersion !== 1) {
+        await deactivateModule(motherEmitter, payload.jwt, name, 'Access policy changed. Activate to apply.');
+        await cleanupModuleRuntime(motherEmitter, name, 'Access policy changed.');
+      }
+      callback(null, { moduleInfo: next, requiresActivation: current.accessPolicyVersion !== 1 });
+    } catch (err) { callback(err); }
+  });
   motherEmitter.on(BACKEND_EVENTS.LIST_PENDING_MODULE_ACCESS_REQUESTS, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
 
@@ -196,6 +232,7 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
       }
 
       const safeTargetModuleName = assertUserManagedModuleName(targetModuleName, 'activated');
+      assertAccessApprovalActor(payload);
 
       // meltdown => dbUpdate => set is_active=TRUE
       requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
@@ -313,12 +350,17 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
 
       const buffer = Buffer.isBuffer(zipData) ? zipData : Buffer.from(zipData, 'base64');
 
+      require('../../utils/extensionPackage').assertPackageReview(buffer, payload.reviewedHash);
+      assertAccessApprovalActor(payload);
       const { installModuleFromZip } = require('./moduleInstallerService');
       const result = await installModuleFromZip(motherEmitter, jwt, buffer, {
         notifyAdmin: true,
+        reviewedHash: payload.reviewedHash,
         approvedAccess: payload.approvedAccess || [],
         grantedBy: payload.decodedJWT?.userId
       });
+      const active = await attemptSingleLoad(result.moduleName, motherEmitter, app, jwt);
+      if (!active) throw new Error('[E_MODULE_INSTALL_ACTIVATION] Package installed but activation failed. Review the module error and access settings.');
       callback(null, result);
     } catch (ex) {
       callback(ex);
@@ -380,8 +422,10 @@ function initModuleRegistryAdminEvents(motherEmitter, app) {
       }
 
       const { installModuleUpdate } = require('./moduleUpdateService');
+      assertAccessApprovalActor(payload);
       const result = await installModuleUpdate(motherEmitter, jwt, {
         targetModuleName,
+        reviewedHash: payload.reviewedHash,
         approvedAccess: payload.approvedAccess,
         grantedBy: payload.decodedJWT?.userId
       });
@@ -446,10 +490,11 @@ async function attemptSingleLoad(moduleName, motherEmitter, app, jwt, options = 
     const registryInfo = await getRegisteredModuleInfo(motherEmitter, jwt, moduleName);
     let moduleInfo = preserveTrustedAccess(manifestInfo, registryInfo);
     if (Array.isArray(options.approvedAccess)) {
-      moduleInfo = normalizeModuleInfoAccess(moduleInfo, moduleName, {
+      moduleInfo = normalizeModuleInfoAccess({ ...moduleInfo, requestedAccess: (moduleInfo.requestedAccess || []).map(({ resource, action, reason, required }) => ({ resource, action, reason, required })) }, moduleName, {
         approvedAccess: options.approvedAccess,
         grantedBy: options.grantedBy
       });
+      moduleInfo.accessPolicyVersion = registryInfo.accessPolicyVersion;
       await updateModuleInfo(motherEmitter, jwt, moduleName, moduleInfo);
     }
     const { ensureModulePermissionDeclarations } = require('./moduleInstallerService');

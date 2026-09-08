@@ -1,5 +1,6 @@
 import { fetchGlobalWidgetIds, fetchWidgetRegistry, getWidgetTemplates } from './widgetListData.js';
 import { registerWorkspaceAgent, agentString } from '../../../shared/agent/workspaceAgent.js';
+import { addWidgetPackageControls } from './widgetPackageControls.js';
 function readableError(err) {
     return err instanceof Error ? err.message : String(err);
 }
@@ -53,6 +54,7 @@ export async function render(el) {
       </div>
     </section>`;
     const root = el.querySelector('.widget-library');
+    addWidgetPackageControls(root, () => render(el));
     const list = root.querySelector('.widget-library__list');
     const details = root.querySelector('.widget-library__details');
     const summary = root.querySelector('.widget-library__summary');

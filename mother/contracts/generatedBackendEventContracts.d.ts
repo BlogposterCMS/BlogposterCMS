@@ -2350,6 +2350,18 @@ export interface InspectModuleZipAccessPayload {
 }
 export type InspectModuleZipAccessResult = JsonValue | undefined;
 
+export interface InspectWidgetZipPayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type InspectWidgetZipResult = JsonValue | undefined;
+
 export interface InstallAppFromDirectoryPayload {
   "appName"?: JsonValue;
   "authModuleSecret"?: string;
@@ -2386,6 +2398,7 @@ export interface InstallModuleFromZipPayload {
   "jwt"?: null | string;
   "moduleName": string;
   "moduleType"?: null | string;
+  "reviewedHash"?: JsonValue;
   "skipJWT"?: boolean;
   "zipData"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
@@ -2400,11 +2413,24 @@ export interface InstallModuleUpdatePayload {
   "jwt"?: null | string;
   "moduleName": string;
   "moduleType"?: null | string;
+  "reviewedHash"?: JsonValue;
   "skipJWT"?: boolean;
   "targetModuleName"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
 }
 export type InstallModuleUpdateResult = JsonValue | undefined;
+
+export interface InstallWidgetZipPayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type InstallWidgetZipResult = JsonValue | undefined;
 
 export interface IssueModuleTokenPayload {
   "authModuleSecret"?: string;
@@ -2981,6 +3007,18 @@ export interface ListTrashedContentEntriesPayload {
   readonly [key: string]: BackendPayloadValue;
 }
 export type ListTrashedContentEntriesResult = JsonValue | undefined;
+
+export interface ListWidgetPackagesPayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type ListWidgetPackagesResult = JsonValue | undefined;
 
 export interface LogPayload {
   "authModuleSecret"?: string;
@@ -3756,6 +3794,20 @@ export interface SetMetadataPayload {
 }
 export type SetMetadataResult = JsonValue | undefined;
 
+export interface SetModuleAccessPayload {
+  "approvedAccess"?: JsonValue;
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  "targetModuleName"?: JsonValue;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type SetModuleAccessResult = JsonValue | undefined;
+
 export interface SetModuleTokenExpiryPayload {
   "authModuleSecret"?: string;
   "decodedJWT"?: null | JsonObject;
@@ -3869,6 +3921,18 @@ export interface SetUserTokenExpiryPayload {
   readonly [key: string]: BackendPayloadValue;
 }
 export type SetUserTokenExpiryResult = JsonValue | undefined;
+
+export interface SetWidgetPackageAccessPayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type SetWidgetPackageAccessResult = JsonValue | undefined;
 
 export interface SitePresetsApplyPayload {
   "authModuleSecret"?: string;
@@ -4501,10 +4565,12 @@ export interface BackendEventContractMap {
   "indexSearchDocument": { payload: IndexSearchDocumentPayload; result: IndexSearchDocumentResult };
   "inspectModuleUpdate": { payload: InspectModuleUpdatePayload; result: InspectModuleUpdateResult };
   "inspectModuleZipAccess": { payload: InspectModuleZipAccessPayload; result: InspectModuleZipAccessResult };
+  "inspectWidgetZip": { payload: InspectWidgetZipPayload; result: InspectWidgetZipResult };
   "installAppFromDirectory": { payload: InstallAppFromDirectoryPayload; result: InstallAppFromDirectoryResult };
   "installCoreUpdate": { payload: InstallCoreUpdatePayload; result: InstallCoreUpdateResult };
   "installModuleFromZip": { payload: InstallModuleFromZipPayload; result: InstallModuleFromZipResult };
   "installModuleUpdate": { payload: InstallModuleUpdatePayload; result: InstallModuleUpdateResult };
+  "installWidgetZip": { payload: InstallWidgetZipPayload; result: InstallWidgetZipResult };
   "issueModuleToken": { payload: IssueModuleTokenPayload; result: IssueModuleTokenResult };
   "issuePublicToken": { payload: IssuePublicTokenPayload; result: IssuePublicTokenResult };
   "issueRefreshToken": { payload: IssueRefreshTokenPayload; result: IssueRefreshTokenResult };
@@ -4546,6 +4612,7 @@ export interface BackendEventContractMap {
   "listSystemModules": { payload: ListSystemModulesPayload; result: ListSystemModulesResult };
   "listTranslatedTexts": { payload: ListTranslatedTextsPayload; result: ListTranslatedTextsResult };
   "listTrashedContentEntries": { payload: ListTrashedContentEntriesPayload; result: ListTrashedContentEntriesResult };
+  "listWidgetPackages": { payload: ListWidgetPackagesPayload; result: ListWidgetPackagesResult };
   "log": { payload: LogPayload; result: LogResult };
   "loginWithStrategy": { payload: LoginWithStrategyPayload; result: LoginWithStrategyResult };
   "makeFilePublic": { payload: MakeFilePublicPayload; result: MakeFilePublicResult };
@@ -4599,6 +4666,7 @@ export interface BackendEventContractMap {
   "setGlobalLayoutTemplate": { payload: SetGlobalLayoutTemplatePayload; result: SetGlobalLayoutTemplateResult };
   "setLoginStrategyEnabled": { payload: SetLoginStrategyEnabledPayload; result: SetLoginStrategyEnabledResult };
   "setMetadata": { payload: SetMetadataPayload; result: SetMetadataResult };
+  "setModuleAccess": { payload: SetModuleAccessPayload; result: SetModuleAccessResult };
   "setModuleTokenExpiry": { payload: SetModuleTokenExpiryPayload; result: SetModuleTokenExpiryResult };
   "setModuleUpdateSource": { payload: SetModuleUpdateSourcePayload; result: SetModuleUpdateSourceResult };
   "setNavigationMenuItems": { payload: SetNavigationMenuItemsPayload; result: SetNavigationMenuItemsResult };
@@ -4607,6 +4675,7 @@ export interface BackendEventContractMap {
   "setSettings": { payload: SetSettingsPayload; result: SetSettingsResult };
   "setUserAccess": { payload: SetUserAccessPayload; result: SetUserAccessResult };
   "setUserTokenExpiry": { payload: SetUserTokenExpiryPayload; result: SetUserTokenExpiryResult };
+  "setWidgetPackageAccess": { payload: SetWidgetPackageAccessPayload; result: SetWidgetPackageAccessResult };
   "sitePresets.apply": { payload: SitePresetsApplyPayload; result: SitePresetsApplyResult };
   "sitePresets.create": { payload: SitePresetsCreatePayload; result: SitePresetsCreateResult };
   "sitePresets.delete": { payload: SitePresetsDeletePayload; result: SitePresetsDeleteResult };

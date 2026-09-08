@@ -223,16 +223,29 @@ For local development:
 3. The Module Loader validates the folder, runs a health check in a runner
    process and starts the module if it passes.
 
-For ZIP installation:
+For ZIP installation, open Settings > Modules > Install ZIP and drop one ZIP or
+choose it with the file picker (up to 10 MiB). The review lists module-owned user
+permissions separately from requested core actions, including the resolved event,
+reason and optional `required: true` marker. Grantable actions are preselected;
+only explicit confirmation installs the selected grants. Protected actions stay
+unavailable for permanent approval. The review hash must match the installed bytes.
 
-1. ZIP one module folder.
-2. Upload it in the Modules admin page.
-3. The admin UI inspects `moduleInfo.json`.
-4. The UI shows declared permissions and requested core event access.
-5. The admin approves permanent access or denies each requested event.
-6. Only approved events become permanent runtime grants.
-7. Anything not permanently granted uses the one-time approval flow before
-   the host may allow that exact core event call.
+UI-installed modules use the trusted registry's `accessPolicyVersion: 1` policy.
+Undeclared, unchecked and revoked cross-module events fail with
+`E_MODULE_ACCESS_DENIED`; they cannot reopen runtime consent. Module-owned storage,
+scoped static assets and permitted own lifecycle/query events retain their existing
+host restrictions. This is not an OS sandbox and does not authorize arbitrary code.
+
+Use **Manage access** to replace the grant set, including an empty set. Running
+reviewed modules reread registry grants on every cross-module call. Calls already
+in progress are not undone. Migrating a legacy module to this policy stops it;
+activate it again after reviewing access. A startup failure leaves the newly
+installed module inactive with its error so the operator can correct the package
+or grants. No package code runs during inspection.
+
+Existing manually provisioned legacy modules retain their previous one-time
+consent behavior until reviewed through Manage access. The earlier runtime-prompt
+examples in this guide describe that legacy behavior only.
 
 ## Updating From GitHub
 

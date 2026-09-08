@@ -1,15 +1,33 @@
 /** Operator-owned policy, separate from editable widget metadata. Backend authorization remains mandatory. */
 export type WidgetServicePolicy = {
+  managed?: boolean;
   operations?: Record<string, { path: string; method: 'GET' | 'POST'; query?: string[]; stream?: boolean; credentials?: boolean }>;
   draft?: boolean;
   preferences?: Record<string, { cookie: string; values: string[] }>;
 };
 function failure(code: string): Error { return new Error(code); }
-export function createWidgetServices(widgetId: string, policy: WidgetServicePolicy, host = window, preview = false) {
+export function createWidgetServices(widgetId: string, policy: WidgetServicePolicy, host = window, preview = false, refreshPolicy?: () => Promise<WidgetServicePolicy>) {
   const active = new Set<EventSource>();
   const closers = new Set<() => void>();
   const draftKey = 'bp-widget-draft:' + widgetId;
   let previewDraft: string | null = null;
+  let disposed = false;
+  async function refresh(): Promise<void> {
+    if (!refreshPolicy || disposed) return;
+    try {
+      const next = await refreshPolicy();
+      if (disposed) return;
+      if (JSON.stringify(next) !== JSON.stringify(policy)) for (const close of [...closers]) close();
+      policy = next;
+    } catch (err) {
+      policy = {};
+      for (const close of [...closers]) close();
+      throw err;
+    }
+  }
+  // Requests recheck before dispatch; existing streams and local helpers lose
+  // withdrawn capabilities on the next bounded poll, including on read failure.
+  const policyTimer = refreshPolicy ? host.setInterval(() => { void refresh().catch(() => {}); }, 5000) : undefined;
   function target(name: string, params: Record<string, unknown> = {}, query: Record<string, unknown> = {}) {
     const op = Object.hasOwn(policy.operations || {}, name) ? policy.operations![name] : undefined;
     if (!op || !['GET', 'POST'].includes(op.method)) throw failure('WIDGET_SERVICE_DENIED');
@@ -30,6 +48,8 @@ export function createWidgetServices(widgetId: string, policy: WidgetServicePoli
   return Object.freeze({
     preview,
     async request(name: string, input: { params?: Record<string, unknown>; query?: Record<string, unknown>; body?: unknown } = {}, signal?: AbortSignal) {
+      if (disposed) throw failure('WIDGET_SERVICE_DISPOSED');
+      await refresh();
       const { op, url } = target(name, input.params, input.query);
       if (op.stream || (op.method === 'GET' && input.body !== undefined)) throw failure('WIDGET_SERVICE_OPERATION_INVALID');
       const body = input.body === undefined ? undefined : JSON.stringify(input.body);
@@ -99,7 +119,7 @@ export function createWidgetServices(widgetId: string, policy: WidgetServicePoli
         host.sessionStorage.setItem(draftKey, JSON.stringify({ value, at: Date.now() }));
       }
     }),
-    dispose() { for (const close of closers) close(); }
+    dispose() { disposed = true; policy = {}; if (policyTimer !== undefined) host.clearInterval(policyTimer); for (const close of [...closers]) close(); }
   });
 }
 /** Missing policy means no capabilities; a widget cannot grant itself services in its manifest. */
@@ -107,14 +127,13 @@ export async function loadWidgetServices(widgetId: string, preview = false) {
   // Studio uses an opaque-origin frame. Its preview never reads host cookies
   // or calls product services; exercise live operations in the public preview.
   if (preview) return createWidgetServices(widgetId, {}, window, true);
-  const response = await fetch('/api/public/widget-services/' + encodeURIComponent(widgetId), { credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(5000) });
+  async function readPolicy(): Promise<WidgetServicePolicy> {
+  const response = await fetch('/api/public/widget-services/' + encodeURIComponent(widgetId), { credentials: 'omit', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(5000) });
   if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw failure('WIDGET_SERVICE_POLICY_UNAVAILABLE');
   const text = await response.text();
   if (text.length > 65536) throw failure('WIDGET_SERVICE_POLICY_INVALID');
-  const policy = JSON.parse(text);
-  if (preview) {
-    policy.draft = false;
-    policy.operations = Object.fromEntries(Object.entries(policy.operations || {}).filter(([, op]: [string, any]) => op.method === 'GET' && !op.stream && !op.credentials));
+  return JSON.parse(text);
   }
-  return createWidgetServices(widgetId, policy, window, preview);
+  const policy = await readPolicy();
+  return createWidgetServices(widgetId, policy, window, preview, policy.managed ? readPolicy : undefined);
 }

@@ -693,8 +693,24 @@ function prepareCommunityEventEmission({
   moduleInfo,
   jwt,
   accessGrants = [],
-  accessConsentManager = null
+  accessConsentManager = null,
+  motherEmitter
 }) {
+  if (moduleInfo?.accessPolicyVersion === 1) {
+    // Local lifecycle/storage contracts remain scoped by the existing host.
+    // All cross-module events use current registry grants, never runner state.
+    if (isCommunityOwnedEvent(eventName, moduleName) || eventName === BACKEND_EVENTS.DB_SELECT || eventName === BACKEND_EVENTS.LOG) {
+      assertCommunityEventAllowed(eventName, scopedPayload, moduleName, []);
+      return { eventName, payload: scopedPayload };
+    }
+    const { getRegisteredModuleInfo } = require('./moduleRegistryService');
+    return getRegisteredModuleInfo(motherEmitter, jwt, moduleName).then(current => {
+      const declared = current.requestedAccess?.some(item => item.event === eventName);
+      const allowed = current.accessPolicyVersion === 1 && declared && isCommunityAccessGranted(eventName, require('./moduleAccessPolicy').getGrantedModuleEvents(current));
+      if (!allowed) throw createModuleHostError('E_MODULE_ACCESS_DENIED', `Module "${moduleName}" has no approved manifest access to "${eventName}".`);
+      return { eventName, payload: createCoreEventPayload({ eventName, scopedPayload, moduleName, jwt }) };
+    });
+  }
   if (isCommunityAccessGranted(eventName, accessGrants)) {
     return {
       eventName,
@@ -773,7 +789,8 @@ function createScopedEventBus({ motherEmitter, moduleName, moduleInfo = {}, jwt,
         moduleInfo,
         jwt,
         accessGrants,
-        accessConsentManager
+        accessConsentManager,
+        motherEmitter
       });
 
       if (prepared && typeof prepared.then === 'function') {
@@ -840,13 +857,18 @@ function createScopedEventBus({ motherEmitter, moduleName, moduleInfo = {}, jwt,
   });
 }
 
-function createHealthCheckEventBus({ moduleName, jwt, nonce, markEvent, accessGrants = [] }) {
+function createHealthCheckEventBus({ moduleName, moduleInfo = {}, jwt, nonce, markEvent, accessGrants = [] }) {
   return createBoundaryObject({
     emit: createBoundaryFunction(function emit(eventName, payload, callback) {
       if (typeof callback !== 'function') {
         throw new Error('HealthCheck-Emitter: A callback is required in emitter events.');
       }
       const scopedPayload = normalizeCommunityPayload({ moduleName, jwt, nonce }, payload);
+      if (moduleInfo.accessPolicyVersion === 1 && !isCommunityOwnedEvent(eventName, moduleName)
+        && eventName !== BACKEND_EVENTS.DB_SELECT && eventName !== BACKEND_EVENTS.LOG
+        && !(moduleInfo.requestedAccess?.some(item => item.event === eventName) && isCommunityAccessGranted(eventName, accessGrants))) {
+        throw createModuleHostError('E_MODULE_ACCESS_DENIED', `No approved manifest access to "${eventName}".`);
+      }
       assertCommunityEventAllowed(eventName, scopedPayload, moduleName, accessGrants);
       markEvent(eventName);
       callback(null);
@@ -951,7 +973,7 @@ function createCommunityHealthCheckHost({
 }) {
   assertValidModuleName(moduleName);
   const normalizedModuleDir = path.resolve(moduleDir);
-  const events = createHealthCheckEventBus({ moduleName, jwt, nonce, markEvent, accessGrants });
+  const events = createHealthCheckEventBus({ moduleName, moduleInfo, jwt, nonce, markEvent, accessGrants });
   const storage = createCommunityStorageFacade({
     motherEmitter: null,
     moduleName,

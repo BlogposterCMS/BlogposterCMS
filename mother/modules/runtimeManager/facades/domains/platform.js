@@ -32,6 +32,7 @@ const adminActions = Object.freeze({
     delete: { eventName: BACKEND_EVENTS.DELETE_SETTING, moduleName: 'settingsManager', permission: 'settings.core.edit' }
   }),
   modules: Object.freeze({
+    setAccess: { eventName: BACKEND_EVENTS.SET_MODULE_ACCESS, moduleName: 'moduleLoader', permission: 'modules.manageAccess' },
     registry: { eventName: BACKEND_EVENTS.GET_MODULE_REGISTRY, moduleName: 'moduleLoader', permission: 'modules.list' },
     system: { eventName: BACKEND_EVENTS.LIST_SYSTEM_MODULES, moduleName: 'moduleLoader', permission: 'modules.list' },
     activeStaticFrontends: { eventName: BACKEND_EVENTS.LIST_ACTIVE_STATIC_FRONTENDS, moduleName: 'moduleLoader', permission: 'modules.listActive' },

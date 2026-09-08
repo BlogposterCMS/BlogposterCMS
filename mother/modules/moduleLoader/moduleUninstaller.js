@@ -100,6 +100,7 @@ async function uninstallModule(motherEmitter, jwt, moduleName, options = {}) {
     if (fs.existsSync(moduleFolder)) {
       fs.rmSync(moduleFolder, { recursive: true, force: true });
     }
+    require('../../security/extensionIntegrity').removeExtensionReceipt(path.dirname(modulesRoot), 'modules', safeModuleName);
 
     return { success: true, moduleName: safeModuleName };
   } catch (err) {

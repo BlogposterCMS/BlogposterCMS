@@ -20,6 +20,7 @@ export function toModules(value) {
 export function toModuleZipInspection(value) {
     const source = value && typeof value === 'object' ? value : {};
     return {
+        reviewedHash: source.reviewedHash,
         moduleName: source.moduleName || source.moduleInfo?.moduleName,
         moduleInfo: source.moduleInfo || {},
         permissions: Array.isArray(source.permissions) ? source.permissions : source.moduleInfo?.permissions || [],
@@ -134,17 +135,19 @@ export async function inspectModuleUpdate(emit, jwt, targetModuleName) {
     const res = await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'inspectUpdate', { targetModuleName }, 65_000);
     return toModuleUpdateInspection(res);
 }
-export async function installModuleZip(emit, jwt, zipData, approvedAccess = []) {
+export async function installModuleZip(emit, jwt, zipData, approvedAccess = [], reviewedHash) {
     const meltdownEmit = requireEmitter(emit);
     await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installZip', {
         zipData,
+        reviewedHash,
         approvedAccess
     }, 305_000);
 }
-export async function installModuleUpdate(emit, jwt, targetModuleName, approvedAccess = []) {
+export async function installModuleUpdate(emit, jwt, targetModuleName, approvedAccess = [], reviewedHash) {
     const meltdownEmit = requireEmitter(emit);
     await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installUpdate', {
         targetModuleName,
+        reviewedHash,
         approvedAccess
     }, 305_000);
 }
@@ -154,4 +157,7 @@ export async function setModuleUpdateSource(emit, jwt, targetModuleName, trusted
         targetModuleName,
         trustedUpdateSource
     });
+}
+export async function setModuleAccess(emit, jwt, targetModuleName, approvedAccess) {
+    await emitRuntimeAdmin(requireEmitter(emit), jwt, 'modules', 'setAccess', { targetModuleName, approvedAccess });
 }

@@ -195,6 +195,22 @@ async function ensureWidgetDatabases(motherEmitter, jwt, nonce) {
  *   - saveLayout.v1 (drag/drop reordering)
  */
 function setupWidgetManagerEvents(motherEmitter) {
+  const packages = require('./widgetPackageService');
+  function packageHandler(permission, action) {
+    return async (payload, callback) => {
+      try {
+        assertWidgetManagerPayload(payload, 'widgetPackage');
+        if (!payload.decodedJWT || !hasPermission(payload.decodedJWT, permission)) throw new Error(`[WIDGET_PACKAGE_PERMISSION] Missing ${permission}.`);
+        // Service configuration remains Settings Manager-owned and admin-only.
+        if (!hasPermission(payload.decodedJWT, 'settings.core.edit')) throw new Error('[WIDGET_PACKAGE_PERMISSION] Missing settings.core.edit.');
+        callback(null, await action(payload));
+      } catch (err) { callback(err); }
+    };
+  }
+  motherEmitter.on(BACKEND_EVENTS.INSPECT_WIDGET_ZIP, packageHandler('widgets.create', payload => packages.inspectWidgetPackage(motherEmitter, payload.jwt, Buffer.from(payload.zipData || '', 'base64'))));
+  motherEmitter.on(BACKEND_EVENTS.INSTALL_WIDGET_ZIP, packageHandler('widgets.create', payload => packages.installWidgetPackage(motherEmitter, payload.jwt, Buffer.from(payload.zipData || '', 'base64'), payload)));
+  motherEmitter.on(BACKEND_EVENTS.LIST_WIDGET_PACKAGES, packageHandler('widgets.read', payload => packages.listWidgetPackages(motherEmitter, payload.jwt)));
+  motherEmitter.on(BACKEND_EVENTS.SET_WIDGET_PACKAGE_ACCESS, packageHandler('widgets.update', payload => packages.setWidgetPackageAccess(motherEmitter, payload.jwt, payload)));
   console.log('[WIDGET MANAGER] Setting up meltdown events...');
 
 // CREATE WIDGET
@@ -264,7 +280,6 @@ motherEmitter.on(BACKEND_EVENTS.CREATE_WIDGET, async (payload, callback) => {
     callback(ex);
   }
 });
-
 
   // GET WIDGETS
   motherEmitter.on(BACKEND_EVENTS.GET_WIDGETS, (payload, callback) => {
@@ -495,7 +510,7 @@ function normalizeCommunityWidgetInfo(info = {}, expectedWidgetId = '') {
       throw new Error(`Community widget metadata cannot declare ${field}; widgets cannot claim ${label}.`);
     }
   }
-  if (!VALID_WIDGET_ID.test(widgetId)) {
+  if (!VALID_WIDGET_ID.test(widgetId) || ['__proto__', 'constructor', 'prototype'].includes(widgetId)) {
     throw new Error('widgetId must contain only letters, numbers, underscores or dashes.');
   }
   if (expectedId && widgetId !== expectedId) {

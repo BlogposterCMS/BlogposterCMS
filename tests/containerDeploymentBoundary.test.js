@@ -14,7 +14,7 @@ test('container keeps runtime, native modules and non-root persistent state toge
   expect(dockerfile).toContain('npm prune --omit=dev');
   expect(dockerfile).toContain('verify-runtime-integrity-baseline.js');
   expect(dockerfile).toContain('USER node');
-  expect(dockerfile).toContain('VOLUME ["/app/data", "/app/library"]');
+  expect(dockerfile).toContain('VOLUME ["/app/data", "/app/library", "/app/modules", "/app/widgets"]');
   for (const name of ['install.lock', 'modulePasswords.json', 'placeholderData.json']) {
     expect(dockerfile).toContain(`ln -s /app/data/${name} /app/`);
     expect(read('.dockerignore')).not.toContain(`!${name}`);

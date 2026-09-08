@@ -38,6 +38,11 @@ const DENIED_GRANT_RESOURCES = new Set([
   'users'
 ]);
 const HARD_DENIED_GRANT_EVENTS = new Set([
+  BACKEND_EVENTS.INSTALL_WIDGET_ZIP,
+  BACKEND_EVENTS.INSPECT_WIDGET_ZIP,
+  BACKEND_EVENTS.LIST_WIDGET_PACKAGES,
+  BACKEND_EVENTS.SET_WIDGET_PACKAGE_ACCESS,
+  BACKEND_EVENTS.SET_MODULE_ACCESS,
   BACKEND_EVENTS.CMS_ADMIN_API_REQUEST,
   BACKEND_EVENTS.CMS_PUBLIC_RUNTIME_REQUEST,
   BACKEND_EVENTS.CREATE_DATABASE,
@@ -246,6 +251,7 @@ function normalizeAccessRequest(item) {
     protected: protectedResource,
     allowPermanent: !protectedResource,
     reason: normalizeString(item.reason || ''),
+    required: item.required === true,
     risk: normalizeString(item.risk || 'standard')
   };
 }
@@ -321,6 +327,7 @@ function normalizeModuleInfoAccess(moduleInfo = {}, moduleName = '', options = {
     [DECLARED_PERMISSIONS_FIELD]: permissions,
     [REQUESTED_ACCESS_FIELD]: requestedAccess
   };
+  delete sanitized.accessPolicyVersion;
   delete sanitized.accessGrants;
   delete sanitized.approvedAccess;
   sanitized[TRUSTED_ACCESS_GRANTS_FIELD] = trustedAccessGrants;
@@ -338,6 +345,7 @@ function stripTrustedAccess(moduleInfo = {}) {
 function preserveTrustedAccess(manifestInfo = {}, registryInfo = {}) {
   return {
     ...manifestInfo,
+    accessPolicyVersion: registryInfo.accessPolicyVersion === 1 ? 1 : undefined,
     [TRUSTED_ACCESS_GRANTS_FIELD]: Array.isArray(registryInfo?.[TRUSTED_ACCESS_GRANTS_FIELD])
       ? registryInfo[TRUSTED_ACCESS_GRANTS_FIELD]
       : []

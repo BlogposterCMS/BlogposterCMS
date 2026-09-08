@@ -86,3 +86,18 @@ This preview has module, configuration and executor regression tests. Real
 Linux provisioning, container replacement and rollback remain required before
 stable OTA promotion. Windows/source development can run the CMS without the
 host executor; the Update Center then reports hosting setup is required.
+
+## UI-installed extension persistence
+
+The official Compose contract also mounts named volumes at `/app/modules` and
+`/app/widgets`. Include both paths in `BLOGPOSTER_DATA_DESTINATIONS` alongside
+`/app/data,/app/library` so the host updater backs up and restores package bytes
+with their registry, settings and integrity receipts. Existing installations must
+migrate their current extension directories before replacing a container; never
+attach empty volumes over an existing customized tree without preserving it.
+
+Release-owned files copied into those volumes remain subject to the signed
+baseline. If a later release changes such bundled files, synchronize those exact
+files from the verified release image during the deployment migration; a stale
+or modified baseline fails closed. Locally approved packages may not replace a
+release-owned extension. This change does not deploy or migrate an existing host.

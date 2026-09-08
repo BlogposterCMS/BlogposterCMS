@@ -13,7 +13,7 @@ BLOGPOSTER_RELEASE_ENV_FILE=/opt/blogposter/release.env
 BLOGPOSTER_SERVICE=blogposter
 BLOGPOSTER_BACKUP_DIR=/opt/blogposter/backups
 BLOGPOSTER_STATE_DIR=/opt/blogposter/updater-state
-BLOGPOSTER_DATA_DESTINATIONS=/app/data,/app/library
+BLOGPOSTER_DATA_DESTINATIONS=/app/data,/app/library,/app/modules,/app/widgets
 BLOGPOSTER_UPDATE_TIMEOUT_SECONDS=180
 BLOGPOSTER_ATTESTATION_MODE=github
 

@@ -82,3 +82,13 @@ Design-only contract drift is reported as
 `BP_WIDGET_CONTRACT_*` code for community widgets. Strict widgets fail
 registration with `[WM:WIDGET_DESIGN_CONTRACT]` when they use an untrusted
 source root, omit a v1 inline design contract, or mutate global document styles.
+
+## Community package management
+
+The existing admin facade exposes `widgets.inspectZip`, `widgets.installZip`,
+`widgets.packages`, and `widgets.setPackageAccess`. ZIP installation requires the
+hash returned by inspection and the selected declared service keys. The Widget
+Manager owns registration; Settings Manager owns service policy and consent.
+See [Community Widgets](../community_widgets.md#install-zip-and-manage-access).
+These structured actions are available to existing authenticated facade clients;
+a dedicated AgentManager file-picker/review adapter is not yet supplied.

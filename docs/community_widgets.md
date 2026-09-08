@@ -78,3 +78,42 @@ unsent drafts and locale/theme preferences configured by the site operator throu
 Settings Manager. This does not permit direct credential, storage or event-stream
 access in widget scripts. See [Public widget services](widget-services.md) for the
 contract, preview restrictions and server-side authorization requirements.
+
+## Install ZIP and manage access
+
+Open Widgets > Install ZIP. Drop one ZIP or choose a file (maximum 10 MiB).
+Package exactly one folder with `widget.js` and `widgetInfo.json`. UI packages
+must declare `version` and `requestedAccess`, including an empty array for a
+presentation-only widget. For example:
+
+```json
+{
+  "widgetId": "notes",
+  "widgetType": "public",
+  "label": "Notes",
+  "category": "Content",
+  "version": "1.0.0",
+  "requestedAccess": [
+    { "service": "draft", "name": "draft", "reason": "Keep unsent notes", "required": false },
+    { "service": "operation", "name": "search", "reason": "Find public entries" }
+  ]
+}
+```
+
+Services are `operation`, `draft` (name `draft`) or `preference` (name `locale`
+or `theme`). Declarations cannot provide events, destinations, credentials or
+Settings values. The site operator must already have configured the underlying
+service in `PUBLIC_WIDGET_SERVICES`. The review shows that configured operation;
+unconfigured services stay disabled. Confirmed grants are stored in that setting's
+widget entry as `packageAccess`, separate from the package files and public metadata.
+
+Use **Manage installed access** to select a package and replace its allowed service
+set. Install requires `widgets.create` and `settings.core.edit`; managing grants
+requires `widgets.update` and `settings.core.edit`. Registry visibility remains on
+the existing Widget Manager/PlainSpace contracts. A successful install appears in
+the existing Designer widget catalog without a server restart. Duplicate IDs are
+rejected rather than overwriting existing widgets. ZIP inspection executes no code.
+
+A manifest and the existing static scanner are not a JavaScript sandbox. Only
+install reviewed, trusted widget code. Revoking service access does not make a
+public endpoint private; the endpoint must enforce its own authorization.

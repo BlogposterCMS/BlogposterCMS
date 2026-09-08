@@ -3,6 +3,18 @@ import { createWidgetServices, loadWidgetServices } from '../ui/widgets/renderin
 const { projectWidgetPolicy } = require('../mother/modules/runtimeManager/publicWidgetServices');
 const response = () => ({ ok: true, headers: { get: () => 'application/json' }, body: { getReader: () => { let read = false; return { read: async () => read ? { done: true } : (read = true, { done: false, value: new Uint8Array([123,125]) }) }; } } });
 beforeEach(() => { window.sessionStorage.clear(); (window as any).fetch = jest.fn(async () => response()); });
+
+test('managed services recheck revoked grants before dispatch and fail closed on refresh failure', async () => {
+  const refresh = jest.fn(async () => ({ operations: {} }));
+  const services = createWidgetServices('sample', { managed: true, operations: { search: { method: 'GET', path: '/api/public/search' } } }, window, false, refresh);
+  try {
+    await expect(services.request('search')).rejects.toThrow('WIDGET_SERVICE_DENIED');
+    expect(window.fetch).not.toHaveBeenCalled();
+    refresh.mockRejectedValueOnce(new Error('WIDGET_SERVICE_POLICY_UNAVAILABLE'));
+    await expect(services.request('search')).rejects.toThrow('WIDGET_SERVICE_POLICY_UNAVAILABLE');
+    expect(window.fetch).not.toHaveBeenCalled();
+  } finally { services.dispose(); }
+});
 test('missing grants deny requests and draft storage', async () => {
   const services = createWidgetServices('example', {});
   await expect(services.request('send')).rejects.toThrow('WIDGET_SERVICE_DENIED');

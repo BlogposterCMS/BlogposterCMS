@@ -1,5 +1,36 @@
 # Security Notes
 
+## UI-installed community packages
+
+ZIP inspection never executes package code. Package size, decompression size,
+entry count, traversal, duplicate/case-colliding names, symlinks and mixed package
+types are checked. Confirmation is bound to the ZIP SHA-256. SHA-256 binds bytes;
+it does not establish publisher identity or prove absence of malware.
+
+Reviewed modules store `accessPolicyVersion: 1` and grants in the module registry.
+The runtime rereads that registry for cross-module events, requires declaration
+and approval, and never uses runtime consent as a fallback for denied events.
+Health checks apply the same allowlist. Existing scoped storage, assets and own
+lifecycle/query contracts remain available. Legacy manually provisioned modules
+retain their old policy until an administrator reviews them; conversion stops
+the legacy runner. Updates preserve the strict policy and require a matching
+review hash; new access requires review and removed declarations lose grants.
+
+Widget package consent lives inside Settings Manager's `PUBLIC_WIDGET_SERVICES`,
+intersected with operator-configured services. The package cannot configure URLs,
+credentials or core events. Requests recheck policy before dispatch; streams and
+local helpers refresh within five seconds. Public endpoints remain responsible
+for their own authorization. These mechanisms are not a browser/OS sandbox.
+
+The supported UI installer writes local administrator approval receipts in
+`data/extension-integrity/{modules,widgets}/<id>.json`. Receipts contain file hashes,
+not permission grants. Boot integrity combines those exact extension files with
+the verified signed core baseline; receipts cannot override release-owned paths.
+Module process startup rechecks the tree. Protect the data volume and receipts as
+trusted operator state. An attacker who already controls the application OS user
+or data volume is outside this integrity guarantee. Strong isolation for arbitrary
+hostile code remains a separate deployment requirement.
+
 ## Public static compression and HTML handoff
 
 Only successful public CSS, JavaScript and SVG responses are eligible for the

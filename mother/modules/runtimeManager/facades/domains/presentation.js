@@ -28,6 +28,10 @@ const adminActions = Object.freeze({
     setStart: { eventName: BACKEND_EVENTS.SET_AS_START, moduleName: 'pagesManager', permission: 'pages.manage' }
   }),
   widgets: Object.freeze({
+    inspectZip: { eventName: BACKEND_EVENTS.INSPECT_WIDGET_ZIP, moduleName: 'widgetManager', permission: 'widgets.create' },
+    installZip: { eventName: BACKEND_EVENTS.INSTALL_WIDGET_ZIP, moduleName: 'widgetManager', permission: 'widgets.create' },
+    packages: { eventName: BACKEND_EVENTS.LIST_WIDGET_PACKAGES, moduleName: 'widgetManager', permission: 'widgets.read' },
+    setPackageAccess: { eventName: BACKEND_EVENTS.SET_WIDGET_PACKAGE_ACCESS, moduleName: 'widgetManager', permission: 'widgets.update' },
     list: { eventName: BACKEND_EVENTS.GET_WIDGETS, moduleName: 'widgetManager', permission: 'widgets.read' },
     create: { eventName: BACKEND_EVENTS.CREATE_WIDGET, moduleName: 'widgetManager', permission: 'widgets.create' },
     update: { eventName: BACKEND_EVENTS.UPDATE_WIDGET, moduleName: 'widgetManager', permission: 'widgets.update' },

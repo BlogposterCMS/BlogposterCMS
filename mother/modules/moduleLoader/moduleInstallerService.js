@@ -17,6 +17,8 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
+const crypto = require('crypto');
+const { packageHash, validateArchiveLimits } = require('../../utils/extensionPackage');
 const { sanitizeModuleName } = require('../../utils/moduleUtils');
 const {
   insertModuleRegistryEntry,
@@ -123,6 +125,7 @@ function assertSafeArchiveEntry(entry) {
 
 function validateZipEntries(zip) {
   const entries = zip.getEntries();
+  validateArchiveLimits(entries);
   if (!entries.length) {
     throw new Error('[MODULE INSTALLER] Uploaded ZIP is empty.');
   }
@@ -215,19 +218,24 @@ function validateModuleDirectory(foundModuleDir, moduleInfo, extractedRoot) {
 async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, options = {}) {
   let tempZipPath = null;
   let extractedTemp = null;
+  let installedFolder = null;
+  let installedName = null;
   try {
+    packageHash(uploadedZipBuffer);
+    if (options.reviewedHash) require('../../utils/extensionPackage').assertPackageReview(uploadedZipBuffer, options.reviewedHash);
     // 1) Save ZIP to temp
     const tempDir = path.resolve(options.tempDir || path.resolve(__dirname, '../../../temp_uploads'));
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    tempZipPath = path.join(tempDir, `moduleUpload_${Date.now()}.zip`);
+    const uploadId = crypto.randomUUID();
+    tempZipPath = path.join(tempDir, `moduleUpload_${uploadId}.zip`);
     fs.writeFileSync(tempZipPath, uploadedZipBuffer);
 
     // 2) Extract
     const zip = new AdmZip(tempZipPath);
     validateZipEntries(zip);
-    extractedTemp = path.join(tempDir, `unzipped_${Date.now()}`);
+    extractedTemp = path.join(tempDir, `unzipped_${uploadId}`);
     fs.mkdirSync(extractedTemp, { recursive: true });
     zip.extractAllTo(extractedTemp, true);
 
@@ -240,6 +248,8 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
       approvedAccess: options.approvedAccess || [],
       grantedBy: options.grantedBy
     });
+    // Only the trusted installer can opt a registry record into explicit consent.
+    if (options.reviewedHash) normalizedModuleInfo.accessPolicyVersion = 1;
     const moduleSourceDir = validateModuleDirectory(foundModuleDir, normalizedModuleInfo, extractedTemp);
 
     // 3) Move to final /modules folder
@@ -254,13 +264,18 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
     }
 
     fs.renameSync(moduleSourceDir, finalModuleFolder);
+    installedFolder = finalModuleFolder;
+    installedName = normalizedModuleInfo.moduleName;
+    if (options.reviewedHash) {
+      require('../../security/extensionIntegrity').saveExtensionReceipt(path.dirname(modulesRoot), 'modules', normalizedModuleInfo.moduleName, finalModuleFolder, options.reviewedHash);
+    }
 
-    // 4) Insert or update module_registry
+    await ensureModulePermissionDeclarations(motherEmitter, jwt, normalizedModuleInfo);
+    // Registry insertion is last, so a failed install never leaves an active row.
     await insertModuleRegistryEntry(motherEmitter, jwt, normalizedModuleInfo.moduleName, true, null, normalizedModuleInfo)
       .catch(err => {
         throw new Error(`DB Insert Registry failed: ${err.message}`);
       });
-    await ensureModulePermissionDeclarations(motherEmitter, jwt, normalizedModuleInfo);
 
     if (options.notifyAdmin) {
       motherEmitter.emit(BACKEND_EVENTS.LOG, {
@@ -271,6 +286,10 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
 
     return { success: true, moduleName: normalizedModuleInfo.moduleName };
   } catch (err) {
+    if (installedFolder && options.reviewedHash) {
+      fs.rmSync(installedFolder, { recursive: true, force: true });
+      require('../../security/extensionIntegrity').removeExtensionReceipt(path.dirname(path.dirname(installedFolder)), 'modules', installedName);
+    }
     console.error('[MODULE INSTALLER] Error installing from ZIP =>', err.message);
     await updateModuleLastError(motherEmitter, jwt, '(unknown)', err.message).catch(() => {});
     throw err;
@@ -285,6 +304,7 @@ async function installModuleFromZip(motherEmitter, jwt, uploadedZipBuffer, optio
 }
 
 function inspectModuleZipBuffer(uploadedZipBuffer) {
+  const reviewedHash = packageHash(uploadedZipBuffer);
   const zip = new AdmZip(uploadedZipBuffer);
   const entries = validateZipEntries(zip);
   const matches = entries.filter(entry => {
@@ -298,6 +318,7 @@ function inspectModuleZipBuffer(uploadedZipBuffer) {
   const parsed = JSON.parse(matches[0].getData().toString('utf8'));
   const moduleInfo = validateModuleInfo(parsed);
   return {
+    reviewedHash,
     moduleName: moduleInfo.moduleName,
     moduleInfo,
     permissions: moduleInfo.permissions || [],

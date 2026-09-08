@@ -327,3 +327,15 @@ existing installer error code. If folder swapping fails after the old module
 was moved aside, the updater restores the previous folder before surfacing
 `E_MODULE_UPDATE_SWAP_FAILED`; a failed restore uses
 `E_MODULE_UPDATE_ROLLBACK_FAILED`.
+
+## Explicit package consent
+
+The supported UI ZIP path now uses strict manifest consent. See the
+[community guide](../community_module_guide.md#installing-a-module).
+`modules.inspectZip` returns `reviewedHash`; `modules.installZip` requires that hash
+and `approvedAccess`. `modules.setAccess` replaces the approved descriptors under
+`modules.manageAccess`. A grantor must hold the target action permission.
+`modules.installUpdate` also accepts the reviewed update hash for strict packages.
+Legacy one-time consent behavior above does not apply to UI-reviewed packages.
+These actions use the existing Runtime Manager facade and generated event catalog;
+a dedicated AgentManager upload/review interaction adapter is not yet supplied.

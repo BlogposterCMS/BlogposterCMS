@@ -6,6 +6,7 @@ import {
   type WidgetTemplate
 } from './widgetListData.js';
 import { registerWorkspaceAgent, agentString } from '../../../shared/agent/workspaceAgent.js';
+import { addWidgetPackageControls } from './widgetPackageControls.js';
 
 type LibraryView = 'all' | 'global' | 'templates';
 type LibraryEntry = { key: string; widgetId: string; title: string; description: string; template?: WidgetTemplate };
@@ -64,6 +65,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
       </div>
     </section>`;
   const root = el.querySelector<HTMLElement>('.widget-library')!;
+  addWidgetPackageControls(root, () => render(el));
   const list = root.querySelector<HTMLElement>('.widget-library__list')!;
   const details = root.querySelector<HTMLElement>('.widget-library__details')!;
   const summary = root.querySelector<HTMLElement>('.widget-library__summary')!;

@@ -459,7 +459,7 @@ function mergeTrustedAccess(existingInfo = {}, nextInfo = {}, approvedAccess = [
       ? merged[TRUSTED_ACCESS_GRANTS_FIELD]
       : [];
     const byEvent = new Map();
-    for (const grant of previous) if (grant?.event) byEvent.set(grant.event, grant);
+    for (const grant of previous) if (grant?.event && nextInfo.requestedAccess?.some(request => request.event === grant.event)) byEvent.set(grant.event, grant);
     for (const grant of additions) if (grant?.event) byEvent.set(grant.event, grant);
     merged = {
       ...merged,
@@ -563,6 +563,7 @@ async function installModuleUpdate(motherEmitter, jwt, params = {}, options = {}
     }
     const downloaded = await downloadAndVerifyUpdatePackage(candidate, row, options);
     const inspection = inspectUpdateZipBuffer(downloaded.buffer, targetModuleName, row.module_info);
+    if (row.module_info.accessPolicyVersion === 1) require('../../utils/extensionPackage').assertPackageReview(downloaded.buffer, params.reviewedHash);
     const approvedAccess = Object.prototype.hasOwnProperty.call(params, 'approvedAccess')
       ? params.approvedAccess
       : undefined;
@@ -612,6 +613,9 @@ async function installModuleUpdate(motherEmitter, jwt, params = {}, options = {}
       currentVersion: row.module_info.version
     });
     prepared.moduleSourceDir = null;
+    if (nextInfo.accessPolicyVersion === 1) {
+      require('../../security/extensionIntegrity').saveExtensionReceipt(path.dirname(modulesRoot), 'modules', targetModuleName, swap.finalModuleDir, downloaded.hash);
+    }
 
     await updateModuleInfo(motherEmitter, jwt, targetModuleName, nextInfo);
     return {

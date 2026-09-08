@@ -9,6 +9,7 @@ export {
 } from '../../../shared/module-access/moduleAccessConsentData.js';
 
 export interface ModuleInfo {
+  accessPolicyVersion?: number;
   moduleName?: string;
   version?: string;
   developer?: string;
@@ -48,6 +49,7 @@ export interface ModuleAccessRequest {
   allowPermanent?: boolean;
   reason?: string;
   risk?: string;
+  required?: boolean;
 }
 
 export interface ModuleAccessGrant extends ModuleAccessRequest {
@@ -103,6 +105,7 @@ export interface ModuleUpdateStatus {
 }
 
 export interface ModuleZipInspection {
+  reviewedHash?: string;
   moduleName?: string;
   moduleInfo?: ModuleInfo;
   permissions?: ModulePermissionDeclaration[];
@@ -146,6 +149,7 @@ export function toModules(value: unknown): ModuleRecord[] {
 export function toModuleZipInspection(value: unknown): ModuleZipInspection {
   const source = value && typeof value === 'object' ? value as ModuleZipInspection : {};
   return {
+    reviewedHash: source.reviewedHash,
     moduleName: source.moduleName || source.moduleInfo?.moduleName,
     moduleInfo: source.moduleInfo || {},
     permissions: Array.isArray(source.permissions) ? source.permissions : source.moduleInfo?.permissions || [],
@@ -313,11 +317,13 @@ export async function installModuleZip(
   emit: ModulesEmitter,
   jwt: string | null | undefined,
   zipData: string,
-  approvedAccess: ModuleAccessRequest[] | string[] = []
+  approvedAccess: ModuleAccessRequest[] | string[] = [],
+  reviewedHash?: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
   await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installZip', {
     zipData,
+    reviewedHash,
     approvedAccess
   }, 305_000);
 }
@@ -326,11 +332,13 @@ export async function installModuleUpdate(
   emit: ModulesEmitter,
   jwt: string | null | undefined,
   targetModuleName: string,
-  approvedAccess: ModuleAccessRequest[] | string[] = []
+  approvedAccess: ModuleAccessRequest[] | string[] = [],
+  reviewedHash?: string
 ): Promise<void> {
   const meltdownEmit = requireEmitter(emit);
   await emitRuntimeAdmin(meltdownEmit, jwt, 'modules', 'installUpdate', {
     targetModuleName,
+    reviewedHash,
     approvedAccess
   }, 305_000);
 }
@@ -346,4 +354,8 @@ export async function setModuleUpdateSource(
     targetModuleName,
     trustedUpdateSource
   });
+}
+
+export async function setModuleAccess(emit: ModulesEmitter, jwt: string | null | undefined, targetModuleName: string, approvedAccess: ModuleAccessRequest[]): Promise<void> {
+  await emitRuntimeAdmin(requireEmitter(emit), jwt, 'modules', 'setAccess', { targetModuleName, approvedAccess });
 }

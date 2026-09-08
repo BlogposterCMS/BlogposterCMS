@@ -57,14 +57,14 @@ COPY .release-integrity/runtime-integrity-manifest.bundle.json /app/.integrity/r
 COPY .release-integrity/runtime-integrity-trusted-root.jsonl /app/.integrity/runtime-integrity-trusted-root.jsonl
 # Existing file-backed state follows the same persisted data volume as SQLite.
 # No customer database, secrets, media or install state enters the build context.
-RUN mkdir -p /app/data /app/library /app/logs /app/temp_uploads \
+RUN mkdir -p /app/data /app/library /app/logs /app/temp_uploads /app/modules /app/widgets \
     && ln -s /app/data/install.lock /app/install.lock \
     && ln -s /app/data/modulePasswords.json /app/mother/modules/databaseManager/modulePasswords.json \
     && ln -s /app/data/placeholderData.json /app/mother/modules/databaseManager/placeholders/placeholderData.json \
-    && chown -R node:node /app/data /app/library /app/logs /app/temp_uploads
+    && chown -R node:node /app/data /app/library /app/logs /app/temp_uploads /app/modules /app/widgets
 USER node
 EXPOSE 3000
-VOLUME ["/app/data", "/app/library"]
+VOLUME ["/app/data", "/app/library", "/app/modules", "/app/widgets"]
 # The listener starts only after module bootstrap; the bounded readiness route
 # also exposes the packaged version so the external updater can verify cutover.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \

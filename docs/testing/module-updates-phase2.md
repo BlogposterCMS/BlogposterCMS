@@ -91,3 +91,13 @@ date and Designer rendered after reload. Release 0.10.13 preflight produced all
 After integration of main 56667e26, the release build and placeholder parity passed.
 The full suite passed 385 suites / 2146 tests (12 skipped); the final two focused
 GeoIP regressions also passed, including HTTP transport after scope retirement.
+
+Production 0.10.13 exposed a missing GeoIP startup entry: its signed package was
+correct but activation failed closed with CORE_MODULE_NOT_STARTED. The prior
+source fixture contained that entry, while the curated release did not. Version
+0.10.15 corrects the actual bootstrap list. A regression now checks both directions
+between the startup registry and package policy; it failed before the fix.
+
+The corrected curated checkout started all 68 lifecycles under PID 43156, including
+GeoIP. All 57 focused bootstrap/policy/GeoIP/package regressions passed after the
+previously failing catalog-equivalence assertion was corrected by registration.

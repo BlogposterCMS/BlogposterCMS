@@ -347,7 +347,10 @@ test('notification reader updates neither restart delivery nor rewrite its regis
 test('every CMS module and canonical bundled widget has an individual package policy', () => {
   const { MODULE_POLICY } = require('../mother/modules/updater/coreModulePackages');
   const modules = require('../mother/server/bootstrap/coreModules').coreModulesForApp({});
-  for (const name of ['auth', ...modules.map(module => module.name)]) {
+  const startedModules = ['auth', ...modules.map(module => module.name)];
+  // Check both directions: a published package must also have a running lifecycle.
+  expect(Object.entries(MODULE_POLICY).filter(([, policy]) => policy.kind !== 'widget').map(([name]) => name).sort()).toEqual([...startedModules].sort());
+  for (const name of startedModules) {
     expect(MODULE_POLICY[name]).toBeDefined();
     expect(require(path.resolve(__dirname, '../mother/modules', name)).lifecycleVersion).toBe(1);
   }

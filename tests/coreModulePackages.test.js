@@ -88,3 +88,14 @@ test('preview release manifests retain their exact signed tag identity', () => {
   fixture.manifest.source.tag = 'v0.10.7-rc.1';
   expect(parseManifest(JSON.stringify(fixture.manifest), 'translationManager').version).toBe('0.10.7-rc.1');
 });
+
+
+test('signed root release notes do not force a host update for module-only releases', () => {
+  const { hostFingerprint } = require('../mother/modules/updater/coreModulePackages');
+  const files = [{ path: 'app.js', size: 1, sha256: 'a'.repeat(64) }, { path: 'CHANGELOG.md', size: 12, sha256: 'b'.repeat(64) }];
+  const before = hostFingerprint(files, { version: '1.0.0' });
+  files[1] = { path: 'CHANGELOG.md', size: 42, sha256: 'c'.repeat(64) };
+  expect(hostFingerprint(files, { version: '1.0.1' })).toBe(before);
+  files[0].sha256 = 'd'.repeat(64);
+  expect(hostFingerprint(files, { version: '1.0.1' })).not.toBe(before);
+});

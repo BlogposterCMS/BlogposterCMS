@@ -90,7 +90,8 @@ function isHostFile(moduleName, filename) {
 function hostFingerprint(files, packageInfo, lockfiles = {}) {
   const normalizedPackage = { ...packageInfo };
   delete normalizedPackage.version;
-  const records = files.filter(record => record.path !== 'package.json' && !Object.prototype.hasOwnProperty.call(lockfiles, record.path) && !hotFile(record.path))
+  // Release text is signed for integrity, but does not change host interfaces.
+  const records = files.filter(record => record.path !== 'CHANGELOG.md' && record.path !== 'package.json' && !Object.prototype.hasOwnProperty.call(lockfiles, record.path) && !hotFile(record.path))
     .map(record => [record.path, record.size, record.sha256]);
   records.push(['package.json', hash(JSON.stringify(stable(normalizedPackage)))]);
   for (const [filename, lockfile] of Object.entries(lockfiles)) {

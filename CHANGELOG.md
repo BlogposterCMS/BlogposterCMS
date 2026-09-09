@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.10.25] - 2026-09-10
+
+- Keep signed release-note changes out of host compatibility checks so module-only updates remain independent.
+
 ## [0.10.24] - 2026-09-10
 
 - Include installed release notes in the signed container baseline and verify their presence in the final image.

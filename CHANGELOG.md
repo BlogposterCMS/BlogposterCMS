@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.10.9] - 2026-09-09
+
+- Publish host-compatible signed core module generations for live update
+  acceptance on 0.10.8. Module behavior, shared runtime, dependencies and schemas
+  are unchanged; the new release identity exercises the official update path.
+
 ## [0.10.8] - 2026-09-09
 
 - Supply and verify the mandatory Linux sandbox tools in the existing CI and

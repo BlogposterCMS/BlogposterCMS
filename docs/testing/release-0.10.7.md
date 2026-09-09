@@ -1,5 +1,21 @@
 # Release 0.10.7 acceptance
 
+## Published baseline and compatible acceptance release
+
+Version 0.10.8 was published by successful release run 34333081087, commit
+`0d1a785672f968d1f1cc3775a2cd2f164b5652b2`. Its source CI run 34332359372 passed
+367 suites (2,004 tests passed, one Windows-only skip), build, parity, CodeQL and
+the non-root container check. The shared GitHub runner UID already held 46 tasks;
+the dedicated test UID passed both real Linux integration suites.
+
+Version 0.10.9 retains those runtime and module bytes, dependencies and schemas.
+Only package release identity and these release notes change, to exercise
+officially signed module discovery/activation against the 0.10.8 host. Successful
+publication alone does not prove hot update acceptance; record the live results
+below after the production checks.
+
+## Earlier validation evidence
+
 The tag's GitHub validation correctly failed before publication: the runner did
 not have bubblewrap installed. Version 0.10.8 supplies the dependency and adds the
 real negative sandbox preflight to both existing jobs. Ubuntu's packaged

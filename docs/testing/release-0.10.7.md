@@ -2,7 +2,12 @@
 
 The tag's GitHub validation correctly failed before publication: the runner did
 not have bubblewrap installed. Version 0.10.8 supplies the dependency and adds the
-real negative sandbox preflight to both existing jobs. No unsigned image or
+real negative sandbox preflight to both existing jobs. Ubuntu's packaged
+`bwrap-userns-restrict` AppArmor profile must also be loaded: installing bwrap
+alone failed namespace loopback setup with `RTM_NEWADDR: Operation not permitted`.
+The profile restricts child capabilities; global user-namespace restrictions
+remain enabled. See [Ubuntu's guidance](https://discourse.ubuntu.com/t/understanding-apparmor-user-namespace-restriction/58007).
+No unsigned image or
 failed release was deployed, and the 0.10.7 tag remains immutable.
 The two affected Linux integration suites were also run locally in the validated
 Docker sandbox configuration: 19 tests passed and one Windows-only check skipped.

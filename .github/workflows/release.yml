@@ -36,7 +36,10 @@ jobs:
       - name: Install and verify Linux community isolation
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y bubblewrap util-linux
+          sudo apt-get install --no-install-recommends -y bubblewrap util-linux apparmor-profiles
+          # Ubuntu restricts user namespaces even when bwrap is installed. Its
+          # packaged profile grants setup access and strips child capabilities.
+          sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
           node tools/verify-community-sandbox.js
       - name: Run vulnerability audit
         run: npm audit --audit-level=high

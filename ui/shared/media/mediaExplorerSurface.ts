@@ -13,6 +13,7 @@ import {
 import { bpDialog } from '../dialogs/bpDialog.js';
 import { registerWorkspaceChanges } from '../navigation/workspaceChanges.js';
 import { registerWorkspaceAgent, agentString } from '../agent/workspaceAgent.js';
+import type { MediaStorageLocation } from './mediaStorageLocations.js';
 
 export type MediaExplorerMode = 'manage' | 'picker';
 export type MediaExplorerView = 'grid' | 'list';
@@ -32,6 +33,8 @@ export interface MediaExplorerSurfaceOptions {
   enableUpload?: boolean;
   enableMutations?: boolean;
   onSelectFile?: (selection: MediaExplorerSelection) => void;
+  loadStorageLocations?: () => Promise<MediaStorageLocation[]>;
+  onPublishDownload?: (connectionId: string) => Promise<void>;
 }
 
 export interface MediaExplorerSurface {
@@ -101,6 +104,8 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   const shareBtn = commandButton('Share link', 'link', true);
   const renameBtn = commandButton('Rename', 'file-pen-line', true);
   const deleteBtn = commandButton('Delete', 'trash-2', true);
+  const publishBtn = commandButton('Publish download', 'upload', true);
+  if (options.onPublishDownload) commands.append(publishBtn);
   deleteBtn.classList.add('danger');
   if (enableUpload) commands.append(uploadBtn);
   if (enableMutations) commands.append(folderBtn);
@@ -196,6 +201,17 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   let loadState: 'loading' | 'ready' | 'error' = 'loading';
   let loadError = '';
   let busy = false;
+  let locationId = 'local';
+  let storageLocations: MediaStorageLocation[] = [];
+  let storageError = '';
+  const isRemote = () => locationId !== 'local';
+  const locationLabel = () => storageLocations.find(location => location.id === locationId)?.label || 'Library';
+  const listFolder = (path: string) => {
+    if (!isRemote()) return listMediaFolder(emit, jwt, path);
+    const location = storageLocations.find(item => item.id === locationId);
+    if (!location) return Promise.reject(new Error('MEDIA_EXPLORER_STORAGE_UNAVAILABLE'));
+    return location.list(path);
+  };
   const history = [currentPath];
   let historyIndex = 0;
   const folderCache = new Map<string, FolderState>();
@@ -216,10 +232,11 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   function updateCommands() {
     const selected = selectedEntry();
     const unavailable = busy || loadState !== 'ready';
-    uploadBtn.disabled = folderBtn.disabled = unavailable;
+    uploadBtn.disabled = folderBtn.disabled = unavailable || isRemote();
+    publishBtn.disabled = unavailable;
     openBtn.disabled = unavailable || selected?.kind !== 'folder';
-    shareBtn.disabled = unavailable || selected?.kind !== 'file';
-    renameBtn.disabled = deleteBtn.disabled = unavailable || !selected;
+    shareBtn.disabled = unavailable || selected?.kind !== 'file' || (isRemote() && !publicMediaUrl(selected));
+    renameBtn.disabled = deleteBtn.disabled = unavailable || !selected || isRemote();
     useBtn.disabled = unavailable || selected?.kind !== 'file' || !acceptsMedia(selected, options.accept);
     backBtn.disabled = busy || historyIndex === 0;
     forwardBtn.disabled = busy || historyIndex >= history.length - 1;
@@ -247,7 +264,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   function renderCrumbs() {
     crumbs.replaceChildren();
     let cursor = '';
-    for (const [index, part] of ['Library', ...pathParts(currentPath)].entries()) {
+    for (const [index, part] of [locationLabel(), ...pathParts(currentPath)].entries()) {
       if (index) {
         cursor = mediaItemPath(cursor, part);
         const separator = document.createElement('span');
@@ -263,7 +280,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
       button.onclick = () => { void navigate(target); };
       crumbs.append(button);
     }
-    folderHeading.textContent = pathParts(currentPath).at(-1) || 'Library';
+    folderHeading.textContent = pathParts(currentPath).at(-1) || locationLabel();
   }
 
   async function loadTree(path: string) {
@@ -272,7 +289,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
     folderCache.set(path, state);
     renderFolders();
     try {
-      const listing = await listMediaFolder(emit, jwt, path);
+      const listing = await listFolder(path);
       // A main-pane refresh can supersede this sidebar-only request.
       if (folderCache.get(path) !== state) return;
       folderCache.set(path, { folders: listing.folders });
@@ -284,7 +301,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   }
   function renderFolders() {
     const label = document.createElement('h3');
-    label.textContent = 'Folders';
+    label.textContent = options.loadStorageLocations ? 'Storage' : 'Folders';
     folders.replaceChildren(label);
     function row(path: string, name: string, depth: number): HTMLElement {
       const item = document.createElement('li');
@@ -326,8 +343,42 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
       return item;
     }
     const tree = document.createElement('ul');
-    tree.append(row('', 'Library', 0));
+    if (!options.loadStorageLocations) tree.append(row('', 'Library', 0));
+    else {
+      for (const location of [{ id: 'local', label: 'Local server' }, ...storageLocations]) {
+        const item = document.createElement('li');
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'media-folder__name';
+        button.append(icon('folder'), document.createTextNode(location.label));
+        button.setAttribute('aria-label', `Open storage ${location.label}`);
+        if (location.id === locationId) button.setAttribute('aria-current', 'location');
+        button.onclick = () => { void selectLocation(location.id); };
+        item.append(button);
+        if (location.id === locationId) { const branch = document.createElement('ul'); branch.append(row('', 'Files', 1)); item.append(branch); }
+        tree.append(item);
+      }
+      const settings = document.createElement('a'); settings.href = '/admin/settings/general?tab=storage';
+      settings.className = 'media-command media-command--label'; settings.style.textDecoration = 'none'; settings.textContent = 'Connect storage';
+      folders.append(settings);
+      if (storageError) {
+        const retry = commandButton('Retry storage connections', 'refresh-cw', true);
+        retry.title = storageError; retry.onclick = () => { void reloadLocations(); }; folders.append(retry);
+      }
+    }
     folders.append(tree);
+  }
+
+  async function reloadLocations() {
+    if (!options.loadStorageLocations) return;
+    try { storageLocations = await options.loadStorageLocations(); storageError = ''; }
+    catch (error) { storageError = `MEDIA_EXPLORER_STORAGE_FAILED: ${errorMessage(error)}`; }
+    renderFolders();
+  }
+  async function selectLocation(id: string) {
+    if (busy) return;
+    if (id !== 'local' && !storageLocations.some(location => location.id === id)) throw new Error('MEDIA_EXPLORER_STORAGE_UNAVAILABLE');
+    locationId = id; folderCache.clear(); expanded.clear(); expanded.add('');
+    history.splice(0, history.length, ''); historyIndex = 0; search.value = '';
+    await load('');
   }
 
   function renderDetails() {
@@ -377,7 +428,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   }
   async function choose(entry: MediaEntry) {
     if (!acceptsMedia(entry, options.accept)) return;
-    const result = await createMediaShareLink(emit, jwt, entry.path);
+    const result = isRemote() ? { shareURL: publicMediaUrl(entry) } : await createMediaShareLink(emit, jwt, entry.path);
     if (!result.shareURL) throw new Error('MEDIA_EXPLORER_SELECTION_FAILED: No usable file URL was returned.');
     options.onSelectFile?.({ ...result, name: entry.path });
   }
@@ -463,7 +514,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
     renderCrumbs();
     renderEntries();
     try {
-      const listing = await listMediaFolder(emit, jwt, path);
+      const listing = await listFolder(path);
       if (version !== loadVersion) return;
       loadState = 'ready';
       currentPath = listing.currentPath || path;
@@ -499,23 +550,30 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
     [...folderCache.keys()].filter(key => key === path || key.startsWith(`${path}/`)).forEach(key => folderCache.delete(key));
   }
   async function renameEntry(entry: MediaEntry, name: string) {
+    if (isRemote()) throw new Error('MEDIA_EXPLORER_STORAGE_MUTATION_UNSUPPORTED');
     await renameMediaItem(emit, jwt, currentPath, entry.name, name.trim());
     invalidateFolder(entry.path);
     await refreshAfterMutation(`Renamed to ${name.trim()}`);
   }
   async function deleteEntry(entry: MediaEntry) {
+    if (isRemote()) throw new Error('MEDIA_EXPLORER_STORAGE_MUTATION_UNSUPPORTED');
     await deleteMediaItem(emit, jwt, currentPath, entry.name);
     invalidateFolder(entry.path);
     await refreshAfterMutation(`Deleted ${entry.name}`);
   }
   async function createFolder(name: string) {
+    if (isRemote()) throw new Error('MEDIA_EXPLORER_STORAGE_MUTATION_UNSUPPORTED');
     await createMediaFolder(emit, jwt, currentPath, name.trim());
     await refreshAfterMutation(`Created ${name.trim()}`);
   }
   backBtn.onclick = () => { if (historyIndex > 0) void navigate(history[historyIndex - 1]!, historyIndex - 1); };
   forwardBtn.onclick = () => { if (historyIndex + 1 < history.length) void navigate(history[historyIndex + 1]!, historyIndex + 1); };
   upBtn.onclick = () => { void navigate(pathParts(currentPath).slice(0, -1).join('/')); };
-  refreshBtn.onclick = () => { void load(currentPath); };
+  refreshBtn.onclick = () => { void reloadLocations().then(() => load(currentPath)); };
+  publishBtn.onclick = () => { void perform(async () => {
+    await options.onPublishDownload?.(locationId.startsWith('external:') ? 'local' : locationId);
+    await reloadLocations(); await load(currentPath);
+  }); };
   gridBtn.onclick = () => { currentView = 'grid'; renderEntries(); };
   listBtn.onclick = () => { currentView = 'list'; renderEntries(); };
   search.oninput = () => renderEntries();
@@ -524,7 +582,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   shareBtn.onclick = () => {
     const entry = selectedEntry(); if (entry?.kind !== 'file') return;
     void perform(async () => {
-      const result = await createMediaShareLink(emit, jwt, entry.path);
+      const result = isRemote() ? { shareURL: publicMediaUrl(entry) } : await createMediaShareLink(emit, jwt, entry.path);
       if (!result.shareURL) throw new Error('MEDIA_EXPLORER_SHARE_FAILED: No share URL was returned.');
       await dialogApi().prompt('Share link', result.shareURL);
       setStatus(`Share link created for ${entry.name}`);
@@ -563,6 +621,7 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   });
 
   renderFolders();
+  if (options.loadStorageLocations) void reloadLocations();
   void load(currentPath);
   function agentEntry(params: Record<string, unknown>): MediaEntry {
     const path = agentString(params, 'path');
@@ -572,11 +631,14 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   }
   registerWorkspaceAgent({ root, id: mode === 'picker' ? 'media-picker' : 'media', title: mode === 'picker' ? 'Choose media' : 'Files and media',
     read: () => ({ dirty: false, busy: busy || loadState === 'loading', error: loadError || (statusEl.dataset.kind === 'error' ? statusEl.textContent : null),
-      mode, currentPath, selection: selectedPath || null, query: search.value, view: currentView,
+      mode, currentPath, storageId: locationId, storages: [{ id: 'local', label: 'Local server' }, ...storageLocations.map(({ id, label }) => ({ id, label }))],
+      storageError: storageError || null, mutationsSupported: !isRemote(), selection: selectedPath || null, query: search.value, view: currentView,
       entryCount: listingEntries.length, visibleCount: visibleEntries().length,
       entries: visibleEntries().map(entry => ({ ...entry, selectable: entry.kind === 'folder' || acceptsMedia(entry, options.accept) })),
       accept: options.accept || null, history: { back: historyIndex > 0, forward: historyIndex + 1 < history.length }
     }), actions: [
+      ...(options.loadStorageLocations ? [{ action: 'media.openStorage', label: 'Open storage', params: [{ name: 'id', type: 'string' as const, required: true }],
+        run: async (p: Record<string, unknown>) => { await selectLocation(agentString(p, 'id')); if (loadState === 'error') throw new Error(loadError); } }] : []),
       { action: 'media.openFolder', label: 'Open folder', params: [{ name: 'path', type: 'string', required: true }],
         run: async p => {
           const path = typeof p.path === 'string' ? p.path : '';

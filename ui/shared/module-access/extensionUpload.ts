@@ -1,3 +1,11 @@
+/** One store entry point for module and widget installation. */
+export function createExtensionStoreButton(): HTMLButtonElement {
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'icon-btn';
+  button.setAttribute('aria-label', 'Install extension ZIP'); button.title = 'Install extension ZIP';
+  const icon = document.createElement('img'); icon.src = '/assets/icons/store.svg'; icon.alt = ''; icon.width = icon.height = 20;
+  button.append(icon); return button;
+}
+
 /** Shared file picker; the owning module/widget client performs inspection and installation. */
 export function openExtensionUpload(install: (zipData: string, fileName: string, status: HTMLElement) => Promise<boolean>): void {
   const overlay = document.createElement('div');
@@ -8,9 +16,12 @@ export function openExtensionUpload(install: (zipData: string, fileName: string,
   const box = document.createElement('div');
   box.className = 'module-upload-box';
   const label = document.createElement('label');
+  label.className = 'module-upload-dropzone'; label.tabIndex = 0; label.setAttribute('role', 'button');
   label.textContent = 'Drop one ZIP file here or choose a file (up to 10 MiB)';
   const input = document.createElement('input');
   input.type = 'file'; input.accept = '.zip,application/zip';
+  input.hidden = true;
+  label.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); input.click(); } });
   label.append(input);
   const status = document.createElement('p');
   status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
@@ -49,5 +60,5 @@ export function openExtensionUpload(install: (zipData: string, fileName: string,
   box.addEventListener('dragover', event => { event.preventDefault(); box.classList.add('dragover'); });
   box.addEventListener('dragleave', () => box.classList.remove('dragover'));
   box.addEventListener('drop', event => { event.preventDefault(); box.classList.remove('dragover'); void handle(event.dataTransfer?.files || null); });
-  box.append(label, status, cancel); overlay.append(box); document.body.append(overlay); input.focus();
+  box.append(label, status, cancel); overlay.append(box); document.body.append(overlay); label.focus();
 }

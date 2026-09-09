@@ -1,244 +1,354 @@
 import { createFormActions, createFormChoice, createFormField } from '/ui/shared/forms/formField.js';
-/** Uses the existing form controls and media catalog; password values are write-only. */
-export function createMediaStoragePanel({ request, csrfToken, listDownloads }) {
-    const panel = document.createElement('details');
-    // The media widget has a fixed viewport; configuration must not push its actions outside it.
-    panel.style.maxHeight = '60%';
-    panel.style.overflow = 'auto';
-    panel.style.flexShrink = '0';
-    panel.style.minWidth = '0';
-    const summary = document.createElement('summary');
-    summary.textContent = 'Storage & downloads';
-    const form = document.createElement('form');
+import { registerWorkspaceChanges } from '../navigation/workspaceChanges.js';
+import { bpDialog } from '../dialogs/bpDialog.js';
+/** Keep the overview small; only the explicit editor mounts credential controls. */
+function createStorageOverview(options) {
+    const root = document.createElement('section');
+    root.className = 'media-storage-panel settings-group';
+    root.setAttribute('aria-label', 'Storage connections');
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'button secondary';
+    add.textContent = 'Add connection';
+    add.disabled = true;
+    const rows = document.createElement('div');
+    rows.className = 'settings-group';
     const status = document.createElement('p');
+    status.className = 'form-status';
     status.setAttribute('role', 'status');
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'button ghost';
+    retry.textContent = 'Reload connections';
+    root.append(createFormActions(add), rows, status, createFormActions(retry));
+    async function edit(id) {
+        const state = { canClose: () => true };
+        const body = createMediaStoragePanel({ ...options, mode: 'edit', initialConnectionId: id, editorState: state });
+        await bpDialog.open({ title: id === 'new' ? 'Add connection' : 'Edit connection', body, dismissable: false,
+            beforeClose: () => state.canClose(), actions: [{ id: 'close', label: 'Close', variant: 'ghost' }] });
+        await load();
+    }
+    async function load() {
+        add.disabled = true;
+        retry.disabled = true;
+        rows.replaceChildren();
+        status.textContent = 'Loading connections…';
+        try {
+            const response = await options.request('/admin/api/media/storage', { credentials: 'same-origin' });
+            const data = await response.json();
+            if (!response.ok || data.error || !Array.isArray(data.connections))
+                throw new Error(data.error || 'MEDIA_STORAGE_RESPONSE_INVALID');
+            for (const connection of data.connections) {
+                const row = document.createElement('div');
+                row.className = 'form-actions';
+                const description = document.createElement('div');
+                description.style.flex = '1';
+                description.style.minWidth = '0';
+                description.style.overflowWrap = 'anywhere';
+                const title = document.createElement('strong');
+                title.textContent = connection.name;
+                const detail = document.createElement('p');
+                detail.className = 'form-status';
+                detail.textContent = `${data.adapters.find(adapter => adapter.id === connection.provider)?.label || connection.provider}${connection.connectionId === data.defaultConnectionId ? ' · Default destination' : ''}`;
+                description.append(title, detail);
+                const editButton = document.createElement('button');
+                editButton.type = 'button';
+                editButton.className = 'button secondary';
+                editButton.textContent = 'Edit';
+                editButton.setAttribute('aria-label', `Edit ${connection.name}`);
+                editButton.disabled = !data.canConfigure;
+                editButton.onclick = () => { void edit(connection.connectionId); };
+                row.append(description, editButton);
+                rows.append(row);
+            }
+            add.disabled = !data.canConfigure;
+            status.textContent = data.canConfigure ? '' : 'Storage changes require Settings permission.';
+        }
+        catch (error) {
+            status.textContent = error instanceof Error ? error.message : 'MEDIA_STORAGE_REQUEST_FAILED';
+        }
+        finally {
+            retry.disabled = false;
+        }
+    }
+    add.onclick = () => { void edit('new'); };
+    retry.onclick = () => { void load(); };
+    void load();
+    return root;
+}
+/** Adapter descriptors drive the form; the same connections are selected by the Explorer. */
+export function createMediaStoragePanel(options) {
+    if (options.mode === 'settings')
+        return createStorageOverview(options);
+    const settings = options.mode === 'edit';
+    const panel = document.createElement('section');
+    panel.className = 'media-storage-panel';
+    panel.setAttribute('aria-label', settings ? 'Storage connections' : 'Publish download');
+    const status = document.createElement('p');
+    status.className = 'form-status';
+    status.setAttribute('role', 'status');
+    const form = document.createElement('form');
     const controls = document.createElement('fieldset');
+    Object.assign(controls.style, { display: 'grid', gap: '24px', minWidth: '0', border: '0', padding: '0', margin: '0' });
     controls.disabled = true;
+    form.append(controls);
+    function button(label, variant = 'secondary') {
+        const control = document.createElement('button');
+        control.type = 'button';
+        control.className = `button ${variant}`;
+        control.textContent = label;
+        return control;
+    }
+    const connections = document.createElement('select');
+    connections.name = 'connectionId';
+    if (!settings)
+        controls.append(createFormField('Storage destination', connections));
+    const name = document.createElement('input');
+    name.name = 'connectionName';
+    name.maxLength = 120;
     const provider = document.createElement('select');
     provider.name = 'provider';
-    for (const [value, label] of [['local', 'Local server'], ['alibaba-oss', 'Alibaba OSS'], ['s3', 'AWS S3 / S3-compatible storage']]) {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = label;
-        provider.append(option);
-    }
-    controls.append(createFormField('Storage provider', provider));
-    const cloud = document.createElement('div');
-    const fields = {};
-    const definitions = [
-        ['bucket', 'Bucket', 'Existing bucket name.'],
-        ['region', 'Region', 'Alibaba: oss-cn-hangzhou. AWS: eu-central-1.'],
-        ['endpoint', 'Endpoint (optional)', 'Leave empty for Alibaba/AWS defaults; enter an HTTPS endpoint for another S3 provider.'],
-        ['publicBaseUrl', 'Download / CDN base URL (optional)', 'Defaults to the Alibaba/AWS bucket URL. Required for custom endpoints. The bucket or CDN must permit public reads.'],
-        ['accessKeyId', 'Access key ID', 'Leave empty to retain the saved credential.'],
-        ['accessKeySecret', 'Access key secret', 'Stored on the server; never returned to this form.']
-    ];
-    for (const [name, label, hint] of definitions) {
-        const input = document.createElement('input');
-        input.name = name;
-        input.type = name.startsWith('accessKey') ? 'password' : 'text';
-        if (input.type === 'password')
-            input.autocomplete = 'new-password';
-        fields[name] = input;
-        cloud.append(createFormField(label, input, { hint }));
-    }
-    const pathStyle = document.createElement('input');
-    pathStyle.type = 'checkbox';
-    pathStyle.name = 'forcePathStyle';
-    const pathField = document.createElement('div');
-    pathField.append(createFormChoice('Use path-style addressing (S3-compatible providers)', pathStyle));
-    cloud.append(pathField);
-    controls.append(cloud);
-    function button(label) {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'btn btn-secondary';
-        item.textContent = label;
-        return item;
-    }
-    const save = button('Save storage');
+    const adapterFields = document.createElement('div');
+    Object.assign(adapterFields.style, { display: 'grid', gap: '24px', minWidth: '0' });
+    const makeDefault = document.createElement('input');
+    makeDefault.type = 'checkbox';
+    makeDefault.name = 'makeDefault';
+    const save = button('Save connection', 'primary');
     save.type = 'submit';
-    const test = button('Test saved connection');
-    controls.append(createFormActions(save, test));
-    form.append(controls);
-    const uploads = document.createElement('fieldset');
-    uploads.disabled = true;
-    for (const group of [controls, uploads]) {
-        group.style.minWidth = '0';
-        group.style.border = '0';
-        group.style.padding = '0';
-        group.style.margin = '0';
-    }
+    const discard = button('Discard changes', 'ghost');
+    const test = button('Test connection');
+    const retry = button('Reload connections', 'ghost');
     const file = document.createElement('input');
     file.type = 'file';
     file.name = 'downloadFile';
+    file.hidden = true;
+    const choose = button('Choose download file');
+    const fileName = document.createElement('span');
+    fileName.textContent = 'No file selected';
+    fileName.setAttribute('aria-live', 'polite');
     const version = document.createElement('input');
     version.name = 'appVersion';
     version.maxLength = 120;
-    const publish = button('Upload and publish');
+    const publish = button('Upload and publish', 'primary');
+    const result = document.createElement('div');
     const notice = document.createElement('p');
-    notice.textContent = 'Publishes a new download using the saved storage. Existing files are not moved. Anyone with the public URL can download it.';
-    const linkArea = document.createElement('div');
-    uploads.append(createFormField('Download file', file), createFormField('App version (optional)', version), notice, createFormActions(publish), linkArea);
-    const recent = document.createElement('ul');
-    const refresh = button('Refresh published downloads');
-    const retry = button('Reload storage settings');
-    panel.append(summary, form, uploads, status, retry, refresh, recent);
-    let canConfigure = false;
-    let ready = false;
+    notice.textContent = 'Creates a new public download in the selected storage. Anyone with its public URL can download it.';
+    if (settings)
+        controls.append(createFormField('Connection name', name), createFormField('Storage adapter', provider), adapterFields, createFormChoice('Default destination for new downloads', makeDefault), createFormActions(save, discard, test));
+    else {
+        const fileActions = createFormActions(choose);
+        fileActions.append(fileName);
+        controls.append(file, fileActions, createFormField('App version (optional)', version), notice, createFormActions(publish), result);
+    }
+    panel.append(form, status, createFormActions(retry));
+    let snapshot;
+    let selectedId = options.initialConnectionId || '';
+    let fields = new Map();
+    let baseline = '';
     let dirty = false;
-    function updateProvider() {
-        cloud.hidden = provider.value === 'local';
-        pathField.hidden = provider.value !== 's3';
-    }
-    function setBusy(busy) {
-        controls.disabled = busy || !canConfigure || !ready;
-        uploads.disabled = busy || !ready || dirty;
-        retry.disabled = busy;
-        test.disabled = dirty;
-    }
-    function fill(config) {
-        provider.value = config.provider;
-        for (const name of Object.keys(fields))
-            fields[name].value = name.startsWith('accessKey') ? '' : String(config[name] || '');
-        pathStyle.checked = Boolean(config.forcePathStyle);
-        dirty = false;
-        // Refresh the shared custom-select label after loading a saved native value.
-        provider.dispatchEvent(new Event('change', { bubbles: true }));
-        dirty = false;
-        updateProvider();
-        status.textContent = config.credentialsConfigured ? 'Credentials saved on server.' : 'Storage settings loaded.';
-    }
-    async function api(suffix = '', options = {}) {
-        const response = await request(`/admin/api/media/storage${suffix}`, { credentials: 'same-origin', ...options,
-            headers: { 'X-CSRF-Token': csrfToken || '', ...options.headers } });
-        const result = await response.json().catch(() => {
-            throw new Error('MEDIA_STORAGE_RESPONSE_INVALID: Reload Blogposter after updating the server.');
-        });
-        if (!response.ok || result.error)
-            throw new Error(result.error || 'MEDIA_STORAGE_REQUEST_FAILED');
-        return result;
-    }
-    function showError(error) { status.textContent = error instanceof Error ? error.message : 'MEDIA_STORAGE_REQUEST_FAILED'; }
-    function appendLink(target, url, label) {
-        // Persisted metadata is untrusted even though Media Manager also normalizes URLs.
-        const parsed = new URL(url, window.location.origin);
-        if (!['http:', 'https:'].includes(parsed.protocol))
-            return;
-        const link = document.createElement('a');
-        link.href = parsed.href;
-        link.textContent = label;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        target.append(link);
-    }
-    async function loadDownloads() {
-        if (!listDownloads)
-            return;
-        refresh.disabled = true;
-        try {
-            const rows = await listDownloads();
-            recent.replaceChildren();
-            for (const row of rows) {
-                if (!row.url)
-                    continue;
-                const item = document.createElement('li');
-                appendLink(item, row.url, row.fileName || row.file_name || row.url);
-                recent.append(item);
+    let busy = false;
+    let ready = false;
+    let canConfigure = false;
+    const values = () => JSON.stringify([name.value, provider.value, makeDefault.checked, ...[...fields].map(([key, input]) => [key, input.type === 'checkbox' ? input.checked : input.value])]);
+    registerWorkspaceChanges(panel, { isDirty: () => settings && dirty, isBusy: () => busy });
+    if (options.editorState)
+        options.editorState.canClose = () => {
+            if (busy || dirty) {
+                status.textContent = busy ? 'Please wait until saving finishes.' : 'Save or discard your changes before closing.';
+                return false;
             }
-        }
-        catch (error) {
-            showError(error);
-        }
-        finally {
-            refresh.disabled = false;
+            return true;
+        };
+    function updateState() {
+        controls.disabled = busy || !ready || (settings && !canConfigure);
+        connections.disabled = settings && dirty;
+        provider.disabled = selectedId !== 'new';
+        name.disabled = selectedId === 'local';
+        save.disabled = discard.disabled = !dirty;
+        test.disabled = dirty || selectedId === 'new';
+        retry.disabled = busy || dirty;
+        const destination = snapshot?.connections.find(connection => connection.connectionId === selectedId);
+        publish.disabled = !destination || (destination.provider !== 'local' && !destination.publicBaseUrl);
+    }
+    function renderFields(connection) {
+        adapterFields.replaceChildren();
+        fields = new Map();
+        for (const field of snapshot?.adapters.find(adapter => adapter.id === provider.value)?.fields || []) {
+            const input = document.createElement('input');
+            input.name = field.name;
+            input.type = field.secret ? 'password' : field.type === 'checkbox' ? 'checkbox' : field.type === 'url' ? 'url' : 'text';
+            if (field.secret)
+                input.autocomplete = 'new-password';
+            else if (input.type === 'checkbox')
+                input.checked = connection?.[field.name] === true;
+            else
+                input.value = String(connection?.[field.name] || '');
+            fields.set(field.name, input);
+            adapterFields.append(input.type === 'checkbox' ? createFormChoice(field.label, input) : createFormField(field.label, input, {
+                hint: field.secret ? connection?.credentialsConfigured ? 'Saved on server. Leave empty to keep the saved value.' : 'Stored encrypted on the server; never returned to this form.' : field.hint,
+                required: Boolean(field.required && !(field.secret && connection?.credentialsConfigured))
+            }));
         }
     }
+    function fill(id) {
+        if (!snapshot)
+            return;
+        selectedId = id;
+        const selected = snapshot.connections.find(connection => connection.connectionId === id);
+        connections.replaceChildren(...snapshot.connections.map(connection => {
+            const option = document.createElement('option');
+            option.value = connection.connectionId;
+            option.textContent = connection.name;
+            return option;
+        }));
+        if (id === 'new') {
+            const option = document.createElement('option');
+            option.value = 'new';
+            option.textContent = 'New connection';
+            connections.append(option);
+        }
+        connections.value = id;
+        provider.replaceChildren(...snapshot.adapters.filter(adapter => id !== 'new' || adapter.id !== 'local').map(adapter => {
+            const option = document.createElement('option');
+            option.value = adapter.id;
+            option.textContent = adapter.label;
+            return option;
+        }));
+        provider.value = selected?.provider || snapshot.adapters.find(adapter => adapter.id !== 'local')?.id || '';
+        name.value = selected?.name || '';
+        makeDefault.checked = snapshot.defaultConnectionId === id;
+        renderFields(selected);
+        // Keep the shared custom-select presentation in sync without marking a loaded value dirty.
+        connections.dispatchEvent(new Event('change'));
+        provider.dispatchEvent(new Event('change'));
+        baseline = values();
+        dirty = false;
+        status.textContent = id === 'new' ? 'Enter a name and connection details.' : settings ? 'Connection loaded.'
+            : selected?.provider === 'local' || selected?.publicBaseUrl ? `Destination: ${selected?.name}` : 'Set a public download base URL in Settings before publishing to this connection.';
+        updateState();
+    }
+    async function api(suffix = '', init = {}) {
+        const response = await options.request(`/admin/api/media/storage${suffix}`, { credentials: 'same-origin', ...init,
+            headers: { 'X-CSRF-Token': options.csrfToken || '', ...init.headers } });
+        const data = await response.json().catch(() => { throw new Error('MEDIA_STORAGE_RESPONSE_INVALID: Reload Blogposter after updating the server.'); });
+        if (!response.ok || data.error)
+            throw new Error(data.error || 'MEDIA_STORAGE_REQUEST_FAILED');
+        return data;
+    }
+    const showError = (error) => { status.textContent = error instanceof Error ? error.message : 'MEDIA_STORAGE_REQUEST_FAILED'; };
     async function load() {
-        setBusy(true);
+        busy = true;
+        updateState();
         try {
-            const config = await api();
-            canConfigure = config.canConfigure === true;
+            snapshot = await api();
+            if (!Array.isArray(snapshot.connections) || !Array.isArray(snapshot.adapters))
+                throw new Error('MEDIA_STORAGE_RESPONSE_INVALID');
+            canConfigure = snapshot.canConfigure === true;
             ready = true;
-            fill(config);
+            fill(selectedId === 'new' || snapshot.connections.some(connection => connection.connectionId === selectedId) ? selectedId : snapshot.defaultConnectionId);
         }
         catch (error) {
             ready = false;
             showError(error);
         }
         finally {
-            setBusy(false);
+            busy = false;
+            updateState();
         }
     }
-    provider.addEventListener('change', updateProvider);
-    const markDirty = () => { dirty = true; status.textContent = 'Unsaved storage settings.'; setBusy(false); };
+    const markDirty = () => { if (!settings || busy)
+        return; dirty = selectedId === 'new' || values() !== baseline; status.textContent = dirty ? 'Unsaved connection changes.' : 'Connection loaded.'; updateState(); };
     form.addEventListener('input', markDirty);
-    form.addEventListener('change', markDirty);
+    form.addEventListener('change', event => { if (event.target !== connections)
+        markDirty(); });
+    connections.addEventListener('change', event => { if (event.bubbles && !dirty && !busy)
+        fill(connections.value); });
+    provider.addEventListener('change', event => { if (event.bubbles && selectedId === 'new')
+        renderFields(); });
+    discard.addEventListener('click', () => { fill(selectedId); dirty = false; status.textContent = 'Changes discarded.'; updateState(); });
+    retry.addEventListener('click', () => { void load(); });
     form.addEventListener('submit', async (event) => {
+        // The shared dialog has its own submit action; saving this form must not trigger Close.
         event.preventDefault();
-        setBusy(true);
+        event.stopPropagation();
+        if (!settings || busy || !dirty || !canConfigure)
+            return;
+        busy = true;
+        updateState();
         try {
-            const body = { provider: provider.value, forcePathStyle: pathStyle.checked,
-                ...Object.fromEntries(Object.entries(fields).map(([name, input]) => [name, input.value])) };
-            fill(await api('', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
-            status.textContent = 'Storage saved. Test the connection before publishing.';
+            const response = await api('', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                    connectionId: selectedId, name: name.value, provider: provider.value, makeDefault: makeDefault.checked,
+                    ...Object.fromEntries([...fields].map(([key, input]) => [key, input.type === 'checkbox' ? input.checked : input.value]))
+                }) });
+            snapshot = response;
+            fill(response.connectionId);
+            status.textContent = 'Connection saved.';
         }
         catch (error) {
             showError(error);
         }
         finally {
-            setBusy(false);
+            busy = false;
+            updateState();
         }
     });
     test.addEventListener('click', async () => {
-        setBusy(true);
+        busy = true;
+        updateState();
         try {
-            await api('/test', { method: 'POST' });
-            status.textContent = provider.value === 'local' ? 'Local storage available.'
-                : 'Bucket connection verified. Public download access still depends on the bucket/CDN policy.';
+            await api(`/test?connectionId=${encodeURIComponent(selectedId)}`, { method: 'POST' });
+            status.textContent = 'Connection verified. Public download access depends on the server or CDN policy.';
         }
         catch (error) {
             showError(error);
         }
         finally {
-            setBusy(false);
+            busy = false;
+            updateState();
         }
     });
+    choose.addEventListener('click', () => file.click());
+    file.addEventListener('change', () => { fileName.textContent = file.files?.[0]?.name || 'No file selected'; });
     publish.addEventListener('click', async () => {
-        if (!file.files?.[0]) {
+        if (!file.files?.[0] || busy) {
             status.textContent = 'Choose a download file.';
             return;
         }
-        setBusy(true);
+        busy = true;
+        updateState();
         status.textContent = 'Uploading and publishing…';
-        linkArea.replaceChildren();
+        result.replaceChildren();
         try {
             const body = new FormData();
             body.append('appVersion', version.value);
             body.append('file', file.files[0]);
-            const result = await api('/upload', { method: 'POST', body });
-            appendLink(linkArea, result.url, 'Open published download');
+            const uploaded = await api(`/upload?connectionId=${encodeURIComponent(selectedId)}`, { method: 'POST', body });
+            const url = new URL(uploaded.url, window.location.origin);
+            if (!['https:', 'http:'].includes(url.protocol))
+                throw new Error('MEDIA_STORAGE_URL_INVALID');
+            const link = document.createElement('a');
+            link.href = url.href;
+            link.textContent = 'Open published download';
+            link.className = 'button secondary';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
             const checksum = document.createElement('p');
-            checksum.textContent = `SHA-256: ${result.checksum}`;
-            linkArea.append(checksum);
-            status.textContent = 'Published. Open the download link to verify public access.';
+            checksum.textContent = `SHA-256: ${uploaded.checksum}`;
+            checksum.style.overflowWrap = 'anywhere';
+            result.append(link, checksum);
             file.value = '';
-            await loadDownloads();
+            fileName.textContent = 'No file selected';
+            status.textContent = 'Published.';
+            options.onPublished?.();
         }
         catch (error) {
             showError(error);
         }
         finally {
-            setBusy(false);
+            busy = false;
+            updateState();
         }
     });
-    retry.addEventListener('click', () => { void load(); });
-    refresh.addEventListener('click', () => { void loadDownloads(); });
-    // Lazy loading keeps the existing local Explorer independent of storage configuration availability.
-    panel.addEventListener('toggle', () => { if (panel.open && !ready) {
-        void load();
-        void loadDownloads();
-    } });
-    updateProvider();
+    void load();
     return panel;
 }

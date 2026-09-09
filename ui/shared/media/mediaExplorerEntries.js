@@ -4,7 +4,8 @@ export function mediaEntries(listing, path) {
     return ['folder', 'file'].flatMap(kind => (kind === 'folder' ? listing.folders : listing.files).map(name => ({
         kind, name, path: mediaItemPath(path, name),
         size: details.get(name)?.size ?? null,
-        modifiedAt: details.get(name)?.modifiedAt || ''
+        modifiedAt: details.get(name)?.modifiedAt || '',
+        ...(typeof details.get(name)?.url === 'string' ? { url: details.get(name).url } : {})
     })));
 }
 export function mediaType(entry) {
@@ -45,6 +46,16 @@ export function mediaDate(value) {
     return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 export function publicMediaUrl(entry) {
+    // An explicit empty remote URL must never fall back to a similarly named local file.
+    if (entry.kind === 'file' && entry.url !== undefined) {
+        try {
+            const url = new URL(entry.url);
+            return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+        }
+        catch {
+            return '';
+        }
+    }
     // Preview only the existing public static route. Browsing must never create
     // share links or make a private file public as a side effect.
     if (entry.kind !== 'file' || !entry.path.startsWith('public/'))

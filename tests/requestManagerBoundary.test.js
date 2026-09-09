@@ -2,6 +2,7 @@ const assert = require('assert');
 const EventEmitter = require('events');
 
 jest.mock('axios', () => jest.fn());
+jest.mock('dns', () => ({ promises: { lookup: jest.fn(async () => [{address:'93.184.216.34',family:4}]) } }));
 
 const axios = require('axios');
 const requestManager = require('../mother/modules/requestManager');

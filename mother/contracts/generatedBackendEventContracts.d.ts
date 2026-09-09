@@ -2379,12 +2379,14 @@ export type InstallAppFromDirectoryResult = JsonValue | undefined;
 export interface InstallCoreUpdatePayload {
   "authModuleSecret"?: string;
   "decodedJWT"?: null | JsonObject;
+  "generationId"?: JsonValue;
   "image"?: JsonValue;
   "isExternalRequest"?: boolean;
   "jwt"?: null | string;
   "moduleName": string;
   "moduleType"?: null | string;
   "skipJWT"?: boolean;
+  "targetModuleName"?: JsonValue;
   "version"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
 }

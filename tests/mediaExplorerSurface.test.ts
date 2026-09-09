@@ -10,6 +10,24 @@ function tick(): Promise<void> {
 }
 
 describe('mediaExplorerSurface', () => {
+  it('shows connected storage in the normal file view and isolates local mutations', async () => {
+    const emit = jest.fn(async () => ({ folders: [], files: ['local.png'], currentPath: '', parentPath: '' }));
+    const list = jest.fn(async (path: string) => ({ folders: [], files: ['remote.apk'], currentPath: path, parentPath: '',
+      details: [{ name: 'remote.apk', size: 10, modifiedAt: '', url: 'https://cdn.example.com/remote.apk' }] }));
+    const surface = createMediaExplorerSurface({ mode: 'manage', emit, loadStorageLocations: async () => [{ id: 'cloud', label: 'Release server', list }] });
+    document.body.append(surface.element);
+    await tick();
+    surface.element.querySelector<HTMLButtonElement>('[aria-label="Open storage Release server"]')!.click();
+    await tick();
+    expect(list).toHaveBeenCalledWith('');
+    expect(surface.element.querySelector('.media-item.file')?.textContent).toContain('remote.apk');
+    expect(surface.element.querySelector<HTMLButtonElement>('[aria-label="New folder"]')!.disabled).toBe(true);
+    expect(surface.element.textContent).not.toContain('local.png');
+    surface.element.querySelector<HTMLButtonElement>('[aria-label="Open storage Local server"]')!.click();
+    await tick();
+    expect(surface.element.textContent).toContain('local.png');
+    expect(surface.element.querySelector<HTMLButtonElement>('[aria-label="New folder"]')!.disabled).toBe(false);
+  });
   beforeEach(() => {
     document.body.innerHTML = '';
     window.ADMIN_TOKEN = 'admin-token';

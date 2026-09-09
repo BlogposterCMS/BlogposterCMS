@@ -1031,8 +1031,11 @@ describe('UI architecture boundaries', () => {
     expect(widgetSource).not.toContain('createShareLink');
     expect(widgetSource).not.toContain('moduleName');
     expect(widgetSource).not.toContain('moduleType');
-    expect(widgetSource).toContain('listMediaDownloads(emitter, jwt)');
-    expect(sharedDataSource).toContain('export async function listMediaDownloads');
+    expect(widgetSource).toContain('listMediaStorageLocations(window.fetch.bind(window), emitter, jwt)');
+    const locationsSource = fs.readFileSync(path.join(rootDir, 'ui/shared/media/mediaStorageLocations.ts'), 'utf8');
+    expect(locationsSource).toContain('listMediaCatalog(emit, jwt)');
+    expect(locationsSource).not.toContain('moduleName');
+    expect(sharedDataSource).toContain('export async function listMediaCatalog');
     expect(dataSource).toContain("from '../../../shared/media/mediaLibraryData.js'");
     expect(dataSource).toContain('export function toListing');
     expect(dataSource).toContain('mediaItemPath');
@@ -1954,7 +1957,6 @@ describe('UI architecture boundaries', () => {
       '/admin/assets',
       '/ui',
       '/apps',
-      '/widgets',
       '/plainspace',
       '/assets'
     ].forEach(route => {
@@ -1965,6 +1967,8 @@ describe('UI architecture boundaries', () => {
         )
       );
     });
+    // Community assets now use the stricter sandbox gateway, not express.static.
+    expect(source).toContain("app.use('/widgets', guardWidgetStaticRoot, require('./widgetSandboxAssets').widgetSandboxAssets(widgetsPath))");
   });
 
   test('maintenance mode allows browser asset roots through unchanged', () => {

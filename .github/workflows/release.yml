@@ -60,6 +60,15 @@ jobs:
         run: cp "${{ steps.runtime_integrity_attestation.outputs.bundle-path }}" runtime-integrity-manifest.bundle.json
       - name: Export TUF-verified public trust roots for offline startup
         run: gh attestation trusted-root > runtime-integrity-trusted-root.jsonl
+      - name: Prepare independently updatable core module manifests
+        run: node tools/create-core-module-packages.js prepare . runtime-integrity-manifest.json
+      - name: Attest core module manifests
+        id: core_module_attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: core-module-*.json
+      - name: Package verified core module generations
+        run: node tools/create-core-module-packages.js pack . "${{ steps.core_module_attestation.outputs.bundle-path }}"
       - name: Zip Build Artifacts
         run: zip -r blogposter_cms_build.zip public/build/
 
@@ -72,6 +81,7 @@ jobs:
             runtime-integrity-manifest.json
             runtime-integrity-manifest.bundle.json
             runtime-integrity-trusted-root.jsonl
+            core-module-*.zip
 
   publish_image:
     needs: validate
@@ -170,6 +180,7 @@ jobs:
           cp deploy/install-blogposter release-assets/install-blogposter
           cp deploy/create-install-config.js release-assets/create-install-config.js
           cp deploy/blogposter.compose.yml release-assets/blogposter.compose.yml
+          cp deploy/blogposter-community.apparmor deploy/blogposter-community.seccomp.json deploy/blogposter-community.compose.yml deploy/community-profiles.LICENSE release-assets/
           cp deploy/deployment.env.example release-assets/deployment.env.example
           chmod 0755 release-assets/blogposter-update
       - name: Attest host update control assets
@@ -185,6 +196,10 @@ jobs:
             release-assets/install-blogposter
             release-assets/create-install-config.js
             release-assets/blogposter.compose.yml
+            release-assets/blogposter-community.apparmor
+            release-assets/blogposter-community.seccomp.json
+            release-assets/blogposter-community.compose.yml
+            release-assets/community-profiles.LICENSE
             release-assets/blogposter-updater.conf.example
       - name: Stage host update control attestation
         run: cp "${{ steps.update_control_attestation.outputs.bundle-path }}" release-assets/update-control.bundle.json

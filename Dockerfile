@@ -42,6 +42,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /tmp/gh.tar.gz
 
 FROM ${NODE_IMAGE} AS runtime
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y bubblewrap util-linux \
+    && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production APP_ENV=production PORT=3000 \
     CONTENT_DB_TYPE=sqlite SQLITE_STORAGE=/app/data \
     DEV_AUTOLOGIN=false DEV_AGENT_LOGIN=false BLOGPOSTER_DEV_RELOAD=false \

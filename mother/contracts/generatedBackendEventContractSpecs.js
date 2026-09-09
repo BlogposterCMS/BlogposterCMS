@@ -14616,6 +14616,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
             }
           ]
         },
+        "generationId": {
+          "type": "json"
+        },
         "image": {
           "type": "json"
         },
@@ -14650,6 +14653,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
         },
         "skipJWT": {
           "type": "boolean"
+        },
+        "targetModuleName": {
+          "type": "json"
         },
         "version": {
           "type": "json"

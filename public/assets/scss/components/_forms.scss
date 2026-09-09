@@ -95,6 +95,9 @@
   min-width: 0;
 }
 
+// The storage form already has visible labels; do not render the global aria tooltip as content.
+.media-storage-panel[aria-label]::after { content: none; display: none; }
+
 .app-scope .form-field > label,
 .app-scope .form-field__label {
   color: var(--studio-text);

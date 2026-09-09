@@ -1,6 +1,7 @@
 /** Operator-owned policy, separate from editable widget metadata. Backend authorization remains mandatory. */
 export type WidgetServicePolicy = {
   managed?: boolean;
+  codeHash?: string;
   operations?: Record<string, { path: string; method: 'GET' | 'POST'; query?: string[]; stream?: boolean; credentials?: boolean }>;
   draft?: boolean;
   preferences?: Record<string, { cookie: string; values: string[] }>;
@@ -47,6 +48,7 @@ export function createWidgetServices(widgetId: string, policy: WidgetServicePoli
   }
   return Object.freeze({
     preview,
+    refresh,
     async request(name: string, input: { params?: Record<string, unknown>; query?: Record<string, unknown>; body?: unknown } = {}, signal?: AbortSignal) {
       if (disposed) throw failure('WIDGET_SERVICE_DISPOSED');
       await refresh();
@@ -123,7 +125,7 @@ export function createWidgetServices(widgetId: string, policy: WidgetServicePoli
   });
 }
 /** Missing policy means no capabilities; a widget cannot grant itself services in its manifest. */
-export async function loadWidgetServices(widgetId: string, preview = false) {
+export async function loadWidgetServices(widgetId: string, preview = false, expectedCodeHash?: string) {
   // Studio uses an opaque-origin frame. Its preview never reads host cookies
   // or calls product services; exercise live operations in the public preview.
   if (preview) return createWidgetServices(widgetId, {}, window, true);
@@ -132,7 +134,9 @@ export async function loadWidgetServices(widgetId: string, preview = false) {
   if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw failure('WIDGET_SERVICE_POLICY_UNAVAILABLE');
   const text = await response.text();
   if (text.length > 65536) throw failure('WIDGET_SERVICE_POLICY_INVALID');
-  return JSON.parse(text);
+  const policy = JSON.parse(text);
+  if (expectedCodeHash && (!policy.managed || policy.codeHash !== expectedCodeHash)) throw failure('WIDGET_SERVICE_PACKAGE_CHANGED');
+  return policy;
   }
   const policy = await readPolicy();
   return createWidgetServices(widgetId, policy, window, preview, policy.managed ? readPolicy : undefined);

@@ -86,7 +86,8 @@ contract, preview restrictions and server-side authorization requirements.
 
 ## Install ZIP and manage access
 
-Open Widgets > Install ZIP. Drop one ZIP or choose a file (maximum 10 MiB).
+Open the store icon at the top right of Settings > Widgets. Drop one ZIP onto
+the dialog's dropzone or click it to choose a file on your computer (maximum 10 MiB).
 Package exactly one folder with `widget.js` and `widgetInfo.json`. UI packages
 must declare `version` and `requestedAccess`, including an empty array for a
 presentation-only widget. For example:

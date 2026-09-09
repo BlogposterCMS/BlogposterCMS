@@ -1,4 +1,4 @@
-import { openExtensionUpload } from '../../../shared/module-access/extensionUpload.js';
+import { openExtensionUpload, createExtensionStoreButton } from '../../../shared/module-access/extensionUpload.js';
 import { createTabSystem } from '../../../shared/navigation/tabs.js';
 import {
   errorMessage,
@@ -433,7 +433,7 @@ function renderModuleDetail(moduleRecord: ModuleRecord | null, pendingAccess: Mo
   return panel;
 }
 
-export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLElement } = {}): Promise<void> {
+export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLElement; actionsHost?: HTMLElement } = {}): Promise<void> {
   const jwt = window.ADMIN_TOKEN;
   const meltdownEmit = window.meltdownEmit;
   if (!el) return;
@@ -457,10 +457,10 @@ export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLE
     title.textContent = 'Modules';
 
     titleBar.appendChild(title);
-    const installButton = document.createElement('button');
-    installButton.className = 'button secondary sm'; installButton.textContent = 'Install ZIP';
+    const installButton = createExtensionStoreButton();
     installButton.addEventListener('click', openUploadPopup);
-    card.appendChild(installButton);
+    if (options.actionsHost) options.actionsHost.replaceChildren(installButton);
+    else titleBar.appendChild(installButton);
 
     const tabs = options.tabsHost || document.createElement('div');
     tabs.classList.add('modules-tabs');

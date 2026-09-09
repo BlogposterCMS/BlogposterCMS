@@ -1,0 +1,8 @@
+# Add after the base Compose file. The root-owned profiles must be installed
+# before starting the CMS; missing profiles fail closed at container creation.
+services:
+  blogposter:
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=/opt/blogposter/blogposter-community.seccomp.json
+      - apparmor=blogposter-community

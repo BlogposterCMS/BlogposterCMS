@@ -18,3 +18,4 @@ module.exports = function createLocalAdapter({ resolveSafePath }) {
     async downloadUrl(key) { return `/media/${key.split('/').map(encodeURIComponent).join('/')}`; }
   };
 };
+module.exports.definition = { id: 'local', label: 'Local server', fields: [] };

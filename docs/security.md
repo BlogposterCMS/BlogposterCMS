@@ -1,5 +1,19 @@
 # Security Notes
 
+## Signed core module updates
+
+Core listener scopes forward emission through the original authenticated
+MotherEmitter. They grant no additional permissions. The generation loader is
+for trusted core code only and is not a sandbox. The existing administrator-only
+Updater verifies official release-workflow attestations, exact package bytes and
+host compatibility before loading a generation. A fixed host policy controls
+which modules qualify; callers cannot provide URLs, paths or source code.
+The active code selection is atomic and reverified on startup. An ambiguous
+activation-worker failure requires recovery rather than an unsafe rollback.
+Shared runtime, dependencies and schema changes retain the signed host-release
+boundary. See [independent core module updates](core-module-updates.md) for scope,
+recovery and the distinction between local fixtures and production acceptance.
+
 ## UI-installed community packages
 
 ZIP inspection never executes package code. Package size, decompression size,
@@ -7,29 +21,24 @@ entry count, traversal, duplicate/case-colliding names, symlinks and mixed packa
 types are checked. Confirmation is bound to the ZIP SHA-256. SHA-256 binds bytes;
 it does not establish publisher identity or prove absence of malware.
 
-Reviewed modules store `accessPolicyVersion: 1` and grants in the module registry.
-The runtime rereads that registry for cross-module events, requires declaration
-and approval, and never uses runtime consent as a fallback for denied events.
-Health checks apply the same allowlist. Existing scoped storage, assets and own
-lifecycle/query contracts remain available. Legacy manually provisioned modules
-retain their old policy until an administrator reviews them; conversion stops
-the legacy runner. Updates preserve the strict policy and require a matching
-review hash; new access requires review and removed declarations lose grants.
+Community code now uses the mandatory isolation contract described in
+[Community isolation and migration](community-isolation.md). Modules run only in
+Linux namespaces with read-only package code, no host secrets/data/network and a
+seccomp process/socket policy. Widgets run in opaque-origin workers with a
+bounded UI tree and service bridge. Core/bundled product code remains trusted.
+There is no ordinary Node or same-document community execution fallback.
+The runner exposes no procfs and cannot create further namespaces, including
+through clone flags. Docker deployments use the narrowly extended Moby profiles
+documented in the isolation guide; the outer container retains no capabilities,
+no-new-privileges and its default masked/read-only paths. Never apply these
+profiles globally or use them without the mandatory inner runner filter.
 
-Widget package consent lives inside Settings Manager's `PUBLIC_WIDGET_SERVICES`,
-intersected with operator-configured services. The package cannot configure URLs,
-credentials or core events. Requests recheck policy before dispatch; streams and
-local helpers refresh within five seconds. Public endpoints remain responsible
-for their own authorization. These mechanisms are not a browser/OS sandbox.
-
-The supported UI installer writes local administrator approval receipts in
-`data/extension-integrity/{modules,widgets}/<id>.json`. Receipts contain file hashes,
-not permission grants. Boot integrity combines those exact extension files with
-the verified signed core baseline; receipts cannot override release-owned paths.
-Module process startup rechecks the tree. Protect the data volume and receipts as
-trusted operator state. An attacker who already controls the application OS user
-or data volume is outside this integrity guarantee. Strong isolation for arbitrary
-hostile code remains a separate deployment requirement.
+The module registry and Settings Manager remain the access authorities. Only
+installer/host code writes packages and approval receipts. Hashes bind reviewed
+bytes but do not establish publisher identity. Operator/host compromise and
+kernel/browser vulnerabilities remain outside the extension access guarantee.
+Browser resource exhaustion remains a limitation; do not claim absolute malware
+prevention. Existing packages and data are retained on incompatible upgrades.
 
 ## Public static compression and HTML handoff
 
@@ -177,7 +186,7 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
 - **Rate limiting** – `config/security.js` sets limits for login attempts and meltdown API calls. Tune these using `LOGIN_LIMIT_MAX` and `API_RATE_LIMIT_MAX` if needed.
 - **Weak credentials** – Logins and first-install passwords under 12 characters are only accepted from local non-production requests while `DEV_AUTOLOGIN` is enabled or `ALLOW_WEAK_CREDS=I_KNOW_THIS_IS_LOCAL` is set. Production startup aborts if a user named `admin` or a short password is detected.
 - **CSRF protection** – Admin routes use CSRF tokens to prevent cross-site request forgery. Clients must include the token when authenticating or performing sensitive actions.
-- **Module process isolation** - Optional community modules run in external runner processes instead of the CMS host process. They receive no raw Express app, no host objects and only whitelisted service environment variables. Module-owned data access goes through `moduleHost.storage`, which normalizes physical tables and rejects raw SQL markers instead of exposing a host `dbClient`. Module manifests may declare only their own permission namespace and must request core event access separately; the admin UI stores approved event grants in the registry. Protected user, role, permission, module, settings, auth and app-management events cannot become permanent grants and require a one-time approval by an admin who has both `modules.manageAccess` and the target permission. This is not a full OS sandbox; use container, microVM, filesystem and network policy before treating Marketplace code as fully untrusted production input.
+- **Community isolation** - See [the enforced runtime contract and migration requirements](community-isolation.md). Ordinary child processes alone are not an untrusted-code sandbox.
 - **JWT event bus** – All internal actions pass through the meltdown event bus. Each event carries a signed token and is validated before execution to prevent unauthorized operations. HTTP-exposed direct events are additionally selected from executable backend contracts with payload/result schemas and bounded deadlines. Contract validation is defense in depth and never replaces JWT, permission, app-manifest or module-host checks.
 
 - **HTTP security headers** – Configure a Content-Security-Policy and other headers (using middleware such as `helmet`) to protect against common attacks like XSS and clickjacking.

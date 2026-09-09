@@ -1,3 +1,7 @@
+> Community execution requires the mandatory Linux/worker isolation contract.
+> See [migration and current limitations](community-isolation.md). Provider
+> secrets, direct network access and runtime-consent fallbacks are unavailable.
+
 # Community Module Guide
 
 This guide explains how to build a BlogposterCMS community module in the
@@ -14,7 +18,7 @@ In BlogposterCMS, a community module is a folder under `modules/` with:
 - `moduleInfo.json` for metadata, declared module-owned permissions and
   requested core event access.
 - `index.js` exporting `initialize(...)`.
-- optional `frontend/` static files registered through `moduleHost`.
+- a separate UI-only widget package when the feature needs a user interface.
 - module-owned data stored through `moduleHost.storage`.
 
 The important difference: a Blogposter community module does not get raw server
@@ -48,7 +52,7 @@ This keeps permissions and security understandable. A public widget cannot
 quietly become backend code, a preset cannot mutate users, and a community
 module cannot pretend to be a core module. If a module needs access to a core
 event, it must declare `requestedAccess` and the admin must approve it during
-install, activation or a one-time runtime prompt.
+install or access review; runtime prompts cannot grant access.
 
 For the complete difference between user permissions and module event grants,
 read the [Permission System](permission_system.md) guide.
@@ -97,8 +101,7 @@ Rules:
   `modules.install`, `settings.core.edit`, `*` or retired broad keys.
 - `requestedAccess` is only a request. The admin can approve it during
   install or activation before it becomes a permanent runtime grant.
-- Events that were not permanently granted stay blocked until the runtime
-  one-time approval prompt approves one exact call.
+- Undeclared, unapproved or revoked events remain blocked at runtime.
 - User, role, permission, module, settings, auth and app-management events are
   high-risk. They must not become broad permanent module grants.
 
@@ -179,40 +182,14 @@ eventBus.emit('listContentEntries', {
 });
 ```
 
-Without permanent approval, the host blocks the event during health check. At
-runtime it opens a one-time admin prompt. If the admin denies or the prompt
-expires, the call fails.
+Without explicit approval, the host blocks the event during health check and
+at runtime. A module cannot reopen a prompt or grant itself access.
 
-## Static Frontend Files
+## UI belongs to widgets
 
-Create:
-
-```text
-modules/
-  helloModule/
-    frontend/
-      index.html
-      hello.js
-```
-
-Register them:
-
-```js
-module.exports = {
-  async initialize({ moduleHost }) {
-    const mount = await moduleHost.registerStaticAssets({
-      dir: 'frontend',
-      mountPath: '/'
-    });
-
-    console.log(`Static files mounted at ${mount.mountPath}`);
-  }
-};
-```
-
-Files are always mounted below `/modules/<moduleName>`. The host rejects
-traversal, symlinks, package manifests, lockfiles, `.env*` files and raw
-TypeScript source requests.
+Modules cannot register static frontends or access Express. Use the
+[isolated widget UI contract](community-isolation.md) and keep backend logic in
+the module. An old frontend folder is retained during migration, never served.
 
 ## Installing A Module
 
@@ -223,7 +200,7 @@ For local development:
 3. The Module Loader validates the folder, runs a health check in a runner
    process and starts the module if it passes.
 
-For ZIP installation, open Settings > Modules > Install ZIP and drop one ZIP or
+For ZIP installation, open the store icon at the top right of Settings > Modules and drop one ZIP or
 choose it with the file picker (up to 10 MiB). The review lists module-owned user
 permissions separately from requested core actions, including the resolved event,
 reason and optional `required: true` marker. Grantable actions are preselected;
@@ -243,9 +220,8 @@ activate it again after reviewing access. A startup failure leaves the newly
 installed module inactive with its error so the operator can correct the package
 or grants. No package code runs during inspection.
 
-Existing manually provisioned legacy modules retain their previous one-time
-consent behavior until reviewed through Manage access. The earlier runtime-prompt
-examples in this guide describe that legacy behavior only.
+Previously provisioned modules must be reviewed through Manage access. There
+is no legacy runtime-prompt fallback.
 
 ## Updating From GitHub
 
@@ -286,11 +262,9 @@ If an installation contains files under `data/module-overrides/<moduleName>`,
 the Modules admin page marks that module with a red `Modification` badge. This
 folder is user-owned and is never overwritten by the module ZIP installer.
 
-Static frontend overrides are active when the module uses
-`staticFrontend: true`. Additional static roots must be listed in
-`moduleInfo.overridablePaths`. The directory hierarchy mirrors the managed
-module, and an override miss falls back to the original file. Store only the
-override tree in Git; mount it read-only into the canonical runtime path.
+Former static frontend overrides are preserved as operator files but are no
+longer served. Migrate their UI into a widget package; no module metadata flag
+can restore static mounting.
 
 Treat the badge as an explicit local-change warning, not as permission to patch
 backend module code in place. Backend entry files such as `index.js`, manifests
@@ -322,6 +296,6 @@ admin iframe apps or public widget packages.
 - Permission names start with `<moduleName>.`.
 - Requested core actions are documented and approved in the admin UI.
 - System events such as user deletion, role edits, module install or settings
-  edits are one-time only and cannot become permanent grants.
+  edits are protected and cannot be granted to community code.
 - Own data uses `moduleHost.storage`.
-- Static files are registered with `moduleHost.registerStaticAssets`.
+- UI is installed separately through Widget Manager; module static mounts are denied.

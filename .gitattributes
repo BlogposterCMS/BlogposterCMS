@@ -1,0 +1,4 @@
+# Keep shell scripts, generated contracts and source checks stable on Windows.
+* text=auto eol=lf
+# Integrity-pinned upstream distributions must retain their exact reviewed bytes.
+ui/shared/vendor/** -text

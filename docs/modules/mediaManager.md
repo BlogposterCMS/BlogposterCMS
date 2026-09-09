@@ -117,7 +117,13 @@ exposing provider credentials to Pages or public HTML.
 
 ## Storage adapters and downloadable files
 
-Open **Media → Storage & downloads**. All three adapters ship as production
+Open **Settings → General → Storage** (`/admin/settings/general?tab=storage`).
+The overview lists named connections, their adapter and the default destination.
+**Add connection** or **Edit** opens the shared dialog. Choose the adapter for a
+new connection, enter its fields and save. Unsaved changes must be saved or
+explicitly discarded before closing; failed saves retain the entered values.
+Multiple connections can use the same provider. Select a default destination for
+new downloads; the publication dialog can override it. All four adapters ship as production
 dependencies in the normal Blogposter installation/image; users do not install
 SDK packages separately:
 
@@ -128,22 +134,28 @@ SDK packages separately:
 - **AWS S3 / S3-compatible storage**: official AWS SDK v3. Enter bucket, region,
   access key ID and secret. Other S3 services can specify an HTTPS endpoint and
   path-style addressing. Compatibility depends on that service's S3 support.
+- **WebDAV / Nextcloud**: enter the full HTTPS WebDAV folder address, username
+  and password/app password. Redirects are rejected so credentials stay at the
+  configured server. Private servers can be browsed without a public base URL;
+  direct downloads/publication require a separately accessible public base URL.
+  SFTP, FTP and SMB are not implemented; a server address must use a supported adapter.
 
 An optional HTTPS download/CDN base URL points to the bucket root, without the
 object key. Native Alibaba/AWS defaults are derived if this field and endpoint
-are empty. Custom endpoints require an explicit delivery base URL. Bucket/CDN
+are empty. Custom endpoints require an explicit delivery base URL for publication. Bucket/CDN
 read policy must permit public downloads under `downloads/`; Blogposter never
 changes bucket policy or sets public object ACLs. A private bucket can be used
 behind a CDN configured to authenticate to the origin.
 
-Save, then **Test saved connection**. This calls Alibaba `getBucketInfo` or S3
+Save, then **Test connection**. This calls Alibaba `getBucketInfo` or S3
 `HeadBucket` (local: directory access). It checks that operation only, not object
-write/delete permission or anonymous CDN access. Provider accounts may need
+write/delete permission or anonymous CDN access (WebDAV: depth-zero PROPFIND). Provider accounts may need
 separate permissions for the bucket check. For a full live check, publish a
 small disposable file and open its returned URL without authentication, then
 compare its SHA-256 hash. SDK unit tests are not cloud acceptance evidence.
 
-**Upload and publish** explicitly creates a public download. This route accepts
+In Media, **Publish download** opens the shared dialog with an explicit storage
+destination. **Upload and publish** creates a public download. This route accepts
 the existing presentation MIME/extension set plus APK, ZIP and PDF. It spools the
 upload to a temporary file with backpressure, calculates SHA-256, uploads under
 a new UUID key and registers the existing attachment contract:
@@ -151,14 +163,16 @@ a new UUID key and registers the existing attachment contract:
 - `url`: stable direct delivery URL, never an expiring signed link.
 - `storagePath`: local public path or provider object key.
 - `checksum`, `sizeBytes`, `visibility: public`, `category: download`.
-- `meta.storage`: `provider`, `bucket`, `objectKey`, `deliveryUrl`.
+- `meta.storage`: `connectionId`, `provider`, `bucket`, `objectKey`, `deliveryUrl`.
 - `meta.artifact.version`: optional app version, retaining the import contract.
 
-The recent downloads list reads the canonical `media.list` admin facade through
-`ui/shared/media/mediaLibraryData.ts` (latest 50 active public downloads). Views
-delegate requests and response unwrapping to this existing data boundary rather
-than constructing module payloads themselves. Cloud objects are not mirrored into the local
-Explorer. Switching storage affects future download publications only; existing
+The Media Explorer sidebar shows Local server and each named connection. Remote
+folders/files use the same file view; adapters list the actual remote folder.
+Legacy external catalog links remain visible under External files locations via
+the canonical `media.list` data client. Remote browsing does not mirror bytes or
+create another catalog. Folder creation, rename, delete and ordinary local upload
+remain enabled only for Local server; remote writes use Publish download.
+Switching storage affects future download publications only; existing
 URLs and local builder/picker uploads stay unchanged. No automatic migration or
 bulk publication occurs. Removing a catalog entry through the existing metadata
 API does not delete the underlying object or revoke an already-public URL.
@@ -171,12 +185,22 @@ upload limit. Resumable/multipart cloud uploads are not implemented.
 
 ### Server boundary and adapter contract
 
-Implementations live in `mother/modules/mediaManager/storage/` and share
-`put({ key, filePath, mimeType, sizeBytes })`, `head(key)`, `delete(key)`, `test()`
+Implementations live in `mother/modules/mediaManager/storage/adapters/`, following
+the folder discovery pattern used by `auth/strategies`. To add an adapter, add a
+server-side `.js` file exporting a factory plus `definition: { id, label, fields }`.
+Each field declares `name`, `label`, optional `type` (`url`, `checkbox`, text),
+`secret`, `required` and `hint`. The Settings form uses this descriptor directly.
+An optional `normalize(config, { fail, httpsUrl })` handles provider-specific validation.
+No provider switch or additional UI form is required. Restart after installing
+trusted adapter code; there is no arbitrary-code upload/install endpoint.
+
+Factories share `put({ key, filePath, mimeType, sizeBytes })`, `head(key)`, `delete(key)`, `test()`
 and `downloadUrl(key, options)`. The cloud `downloadUrl` methods support signed
-URLs internally; there is no public arbitrary-key signing endpoint. New providers
-add a factory and configuration fields here, retaining Media Manager's catalog,
-authorization and publication workflow. SDKs are lazy-loaded server-side.
+URLs internally; there is no public arbitrary-key signing endpoint. Remote adapters
+also implement `list(path)` returning `{ folders: string[], objects: [{ key, size,
+modifiedAt }] }` with full object keys and immediate child prefixes. Local browsing
+retains `listLocalFolder`. Reads accept safe object paths; writes/deletes remain
+restricted to unique `downloads/` keys. SDKs are lazy-loaded server-side.
 
 The Media Manager HTTP upload boundary exposes:
 
@@ -184,8 +208,16 @@ The Media Manager HTTP upload boundary exposes:
 | --- | --- | --- |
 | GET | `/admin/api/media/storage` | `media.manage`, sanitized configuration |
 | PUT | `/admin/api/media/storage` | plus `settings.unified.editSettings`, save |
+| GET | `/admin/api/media/storage/files?connectionId=…&path=…` | `media.manage`, remote folder listing |
 | POST | `/admin/api/media/storage/test` | both permissions, saved bucket check |
 | POST | `/admin/api/media/storage/upload` | `media.manage`, multipart `file` and optional `appVersion`, publish |
+
+Test and upload accept `?connectionId=…`; an unknown id fails closed. Omitting it
+uses the saved default for backwards compatibility. PUT uses `connectionId: "new"`
+to add, or an existing id to edit, plus `name`, `provider`, adapter fields and
+`makeDefault`. GET returns safe `connections`, `adapters` and `defaultConnectionId`.
+The encrypted version-2 document keeps connections together; legacy single-provider
+settings are retained as a named connection and migrated on the next save.
 
 All writes require the existing CSRF protection and validated cookie session.
 The configuration is stored through Unified Settings as
@@ -195,14 +227,16 @@ build context. Back up this key with the database; replicas sharing the database
 must share the key. Keep the existing `data` volume persistent during upgrades.
 On Windows, restrict that directory's ACL to the service account; POSIX key files
 are created with mode 0600. Missing or corrupt keys/configuration fail closed.
-Blank credential controls retain saved values for the same provider; switching
-providers requires new credentials, and selecting local clears cloud credentials.
+Blank credential controls retain saved values only for that connection/provider.
+New connections require their own credentials. Selecting Local server preserves
+other saved connections. The built-in local connection is always available.
 SDK error details are replaced with searchable `MEDIA_STORAGE_*` codes so signed
 requests and credentials do not reach responses. If metadata creation fails,
 the newly uploaded object is deleted; `MEDIA_STORAGE_METADATA_FAILED_CLEANUP_REQUIRED`
 means that compensation also failed and the provider needs manual inspection.
 
-The existing `cms.media.*` agent surface still owns Explorer operations. Storage
+The existing `cms.media.*` agent surface still owns Explorer operations, including
+`media.openStorage` with stable connection ids and snapshot storage/mutation state. Storage
 configuration and streaming publication currently use the authenticated HTTP
 boundary above; an AgentManager command adapter for those actions remains to be
 added. Never put credential values in agent snapshots.
@@ -217,7 +251,8 @@ SDK references: [Alibaba upload](https://www.alibabacloud.com/help/en/oss/simple
 
 The existing `ui/shared/media/mediaExplorerSurface.ts` serves the Media workspace
 and the editor picker. A click selects; double-click / Enter opens a folder.
-Back/Forward follow local folder history; Up navigates to the parent. The sidebar
+Back/Forward follow folder history within the selected storage; switching storage
+resets that history and selection. Up navigates to the parent. The sidebar
 loads children on demand, and search is explicitly scoped to the current folder.
 Name/type/date/size sorting keeps folders first. Selection is cleared when its
 file disappears from search results so toolbar actions cannot affect hidden files.
@@ -225,8 +260,9 @@ file disappears from search results so toolbar actions cannot affect hidden file
 Manage mode defaults to a file list with one contextual toolbar. Picker mode
 uses the same navigation and offers an explicit **Use selected file** action;
 unsupported file types remain visible but cannot be selected for insertion.
-Grid and details previews use the existing `/media/` URL only for raster images
-already under `public/`. Browsing never creates share links or moves files.
+Grid and details previews use the existing `/media/` URL for local raster images
+under `public/`, or the connection's direct delivery URL for remote images.
+Browsing never creates share links or moves files.
 Private files keep their icon until explicitly shared by the existing action.
 
 `listLocalFolder` retains its `folders` / `files` name arrays and adds optional

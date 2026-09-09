@@ -497,6 +497,7 @@ function pickTable(widgetType) {
 }
 
 function normalizeCommunityWidgetInfo(info = {}, expectedWidgetId = '') {
+  require('./widgetSandboxSource').assertWidgetSandboxContract(info);
   const widgetId = String(info.widgetId || '').trim();
   const widgetType = String(info.widgetType || '').trim();
   const expectedId = String(expectedWidgetId || '').trim();

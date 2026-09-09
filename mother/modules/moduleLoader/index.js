@@ -279,34 +279,11 @@ async function loadAllModules({ emitter, app, jwt }) {
   console.log('[MODULE LOADER] All optional modules loaded / retried successfully. The meltdown continues.');
 }
 
-function serveStaticFrontend({ row, folderNames = [], modulesPath, app, modificationRoot }) {
-  if (!row || !row.is_active || !app || typeof app.use !== 'function') return false;
-
-  const moduleName = sanitizeModuleName(row.module_name);
-  assertRuntimeModuleIntegrity(moduleName);
-  if (RESERVED_CORE_MODULES.has(moduleName)) return false;
-  if (!folderNames.includes(moduleName)) return false;
-
-  const rowModuleInfo = normalizeModuleInfo(row);
-  if (rowModuleInfo.staticFrontend !== true) return false;
-
-  const modulePath = path.join(modulesPath, moduleName);
-  const frontendPath = path.join(modulePath, 'frontend');
-  if (!fs.existsSync(frontendPath)) return false;
-
-  const checkedModulePath = assertCommunityModuleFolderShape(modulePath, moduleName, { modulesRoot: modulesPath });
-  const layers = resolveStaticAssetLayers({
-    moduleName,
-    moduleInfo: rowModuleInfo,
-    moduleDir: checkedModulePath,
-    requestedDir: 'frontend',
-    modificationRoot
-  });
-  const root = layers[layers.length - 1];
-  const mountPath = normalizeMountPath(moduleName, '/');
-  mountStaticAssetLayers(app, mountPath, layers, createCommunityStaticAssetOptions());
-  console.log(`[MODULE LOADER] Serving static frontend for module: ${moduleName}`);
-  return { moduleName, mountPath, dir: root, overrideActive: layers.length > 1 };
+function serveStaticFrontend({ row }) {
+  if (normalizeModuleInfo(row || {}).staticFrontend === true) {
+    throw new Error('[E_MODULE_UI_DENIED] Modules are backend-only; migrate frontend code to a widget. Files are preserved.');
+  }
+  return false;
 }
 
 /**

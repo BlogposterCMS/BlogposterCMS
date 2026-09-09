@@ -543,7 +543,17 @@ function resetRuntimeIntegrityForTests() {
   runtimeState = { enforced: false, rootDir: null, manifest: null, invalidModules: new Map() };
 }
 
+/** Release-owned code can only change with the signed release, never a ZIP update. */
+function assertExtensionInstallerOwnership(kind, id) {
+  if (!['modules', 'widgets'].includes(kind) || !/^[A-Za-z0-9_-]{1,80}$/.test(id)) throw new Error('EXTENSION_INTEGRITY_ID');
+  const prefix = `${kind}/${id}/`;
+  if (runtimeState.enforced && runtimeState.manifest.files.some(file => file.path.startsWith(prefix))) {
+    throw createIntegrityError('EXTENSION_INTEGRITY_CORE_CONFLICT', 'This extension belongs to the signed release; update it with the release.');
+  }
+}
+
 module.exports = {
+  assertExtensionInstallerOwnership,
   INTEGRITY_SCHEMA_VERSION,
   MANAGED_PATHS,
   MUTABLE_RUNTIME_PATHS,

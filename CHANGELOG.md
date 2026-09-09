@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+## [0.10.7] - 2026-09-09
+
+- Update the locked Nodemailer dependency to 9.1.1 for its security fixes and
+  preserve reviewed vendor bytes and LF source files in Windows checkouts.
+
+- Replace module/widget ZIP bars with a header store icon opening the shared
+  dropzone/file picker. Place breadcrumbs under navigation with transparent chrome.
+- Simplify Storage settings to a connection overview; add/edit opens the shared
+  modal with retained failed drafts and a save/discard close guard.
+- Add signed independent updates for translation, content, search, workflow and
+  export module handlers through the existing Update Center. Verify compatible
+  host/schema bytes, persist active generations, drain in-flight work and restore
+  old handlers after failed readiness without restarting the CMS. Shared runtime,
+  frontend and schema changes continue to require a coordinated host update.
+- Enforce backend-only community modules in Linux namespaces with read-only code,
+  secret-free environments, seccomp and bounded host messaging. Remove module
+  static UI and runtime-consent fallbacks; require current reviewed grants.
+  Add Docker seccomp/AppArmor profiles for rootless isolation, omit runner procfs
+  and deny further namespace creation. Verify the isolation on the target host
+  without granting container capabilities or exposing production volumes.
+- Isolate community widget code in opaque-origin workers with an inert UI bridge.
+  Require the v2 widget contract and block incompatible packages while preserving
+  their files, IDs, settings and saved content. Add read-only migration inventory
+  and a real Linux negative-test command; document deployment prerequisites.
+  Widget ZIP replacement keeps verified backups and binds live grants to the
+  loaded script hash so old instances cannot acquire new-version permissions.
+- Make RequestManager egress fail closed with an explicit HTTPS host allowlist,
+  pinned public IPv4 addresses, no redirects/proxies and bounded transfers.
+
+- Move storage configuration into Settings > General > Storage. Support multiple
+  named connections and show their folders/files in the existing Media Explorer.
+  Load provider descriptors from individual adapter files, with local, Alibaba
+  OSS, S3-compatible and HTTPS WebDAV adapters; publication selects a destination.
 - Move widget management from Content to Settings > Widgets, preserving existing
   page identity and saved state during the admin-page upgrade.
 

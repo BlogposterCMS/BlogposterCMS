@@ -7,6 +7,12 @@ const { requestBackendEvent } = require('../../contracts/backendEventContracts')
 const path = require('path');
 const { abortConfigError } = require('../config/environment');
 const { coreModulesForApp } = require('./coreModules');
+const { createCoreModuleLifecycle } = require('./coreModuleLifecycle');
+const { loadCoreModuleCode } = require('./coreModuleCode');
+const { createCoreModuleStore } = require('../../modules/updater/coreModuleStore');
+const { createCoreModuleUpdates } = require('../../modules/updater/coreModuleUpdates');
+const { MODULE_POLICY } = require('../../modules/updater/coreModulePackages');
+const { compareVersions } = require('../../modules/moduleLoader/moduleUpdateService');
 
 function createCoreModuleTokenFactory({ motherEmitter, authModuleSecret }) {
   return function getCoreModuleToken(moduleName) {
@@ -85,16 +91,34 @@ async function bootstrapCoreModules({
   }
   console.log('[SERVER INIT] dbManagerToken obtained.');
 
+  const coreModuleLifecycle = createCoreModuleLifecycle(motherEmitter);
+  const moduleStore = createCoreModuleStore({ rootDir });
+  const coreModuleUpdates = createCoreModuleUpdates({ rootDir, lifecycle: coreModuleLifecycle });
+  const hostVersion = require(path.join(rootDir, 'package.json')).version;
   for (const mod of coreModulesForApp({ app, authModuleSecret })) {
     console.log(`[SERVER INIT] Loading ${mod.name}...`);
     const moduleJwt = await getCachedCoreToken(mod.name);
-    await require(path.join(rootDir, mod.path, 'index.js'))
-      .initialize({
-        motherEmitter,
+    let generation = null;
+    if (Object.prototype.hasOwnProperty.call(MODULE_POLICY, mod.name)) {
+      try { generation = moduleStore.active(mod.name); }
+      catch (error) {
+        // A newly deployed signed host may supersede a valid old override.
+        // Invalid signatures or modified code still fail closed at startup.
+        if (error.code !== 'CORE_MODULE_HOST_INCOMPATIBLE') throw error;
+        console.warn(`[CORE_MODULE_OVERRIDE_HOST_CHANGED] ${mod.name}; using bundled module.`);
+      }
+      if (generation && compareVersions(generation.manifest.version, hostVersion) <= 0) generation = null;
+    }
+    const implementation = generation
+      ? loadCoreModuleCode({ moduleName: mod.name, moduleDir: generation.moduleDir, canonicalModuleDir: path.join(rootDir, mod.path) })
+      : require(path.join(rootDir, mod.path, 'index.js'));
+    await coreModuleLifecycle.start(mod.name, implementation, {
         isCore: true,
         jwt: moduleJwt,
         jwtToken: moduleJwt,
         moduleDbSalt,
+        moduleGeneration: { generationId: generation?.generationId || null, releaseVersion: generation?.manifest.version || hostVersion },
+        ...(mod.name === 'updater' ? { coreModuleUpdates } : {}),
         ...mod.extra
       });
     console.log(`[SERVER INIT] ${mod.name} loaded.`);
@@ -116,6 +140,7 @@ async function bootstrapCoreModules({
   await verifyProductionCredentials({ motherEmitter, authModuleSecret });
 
   return {
+    coreModuleLifecycle,
     getCachedCoreToken,
     getCoreModuleToken
   };

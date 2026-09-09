@@ -12,22 +12,41 @@ function assertCoreUpdateActor(payload) {
   }
 }
 
-function initializeCoreUpdateEvents(emitter) {
+function initializeCoreUpdateEvents(emitter, { coreModuleUpdates } = {}) {
+  let dispatchingInstall = false;
+  function withModules(state, force = false) {
+    if (!coreModuleUpdates) return state;
+    coreModuleUpdates.observeRelease(state, { force });
+    return { ...state, moduleUpdates: coreModuleUpdates.snapshot() };
+  }
   // These listeners also serve the existing Runtime Manager agent interface.
   emitter.on(BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, async (payload, callback) => {
-    try { assertCoreUpdateActor(payload); callback(null, await getCoreUpdateStatus()); }
+    try { assertCoreUpdateActor(payload); callback(null, withModules(await getCoreUpdateStatus())); }
     catch (err) { callback(err); }
   });
   emitter.on(BACKEND_EVENTS.CHECK_CORE_UPDATE, async (payload, callback) => {
-    try { assertCoreUpdateActor(payload); callback(null, await requestHost('check')); }
+    try { assertCoreUpdateActor(payload); callback(null, withModules(await requestHost('check'), true)); }
     catch (err) { callback(err); }
   });
   emitter.on(BACKEND_EVENTS.INSTALL_CORE_UPDATE, async (payload, callback) => {
+    let ownsDispatch = false;
     try {
       assertCoreUpdateActor(payload);
+      if (dispatchingInstall || coreModuleUpdates?.busy()) throw new Error('CORE_UPDATE_BUSY');
+      dispatchingInstall = true;
+      ownsDispatch = true;
+      if (payload.targetModuleName !== undefined) {
+        if (!coreModuleUpdates) throw new Error('CORE_MODULE_UPDATES_UNAVAILABLE');
+        const host = await getCoreUpdateStatus();
+        if (!host.configured) throw new Error('CORE_MODULE_HOST_STATE_UNAVAILABLE');
+        if (['installing', 'downloading', 'cancelling', 'backing_up', 'restarting', 'verifying', 'rolling_back', 'recovery_failed'].includes(host.phase)) throw new Error('CORE_UPDATE_BUSY');
+        callback(null, coreModuleUpdates.install({ moduleName: payload.targetModuleName, generationId: payload.generationId, version: payload.version }));
+        return;
+      }
       // Only the reviewed version/digest cross the privileged host boundary.
       callback(null, await requestHost('install', { version: payload.version, image: payload.image }));
     } catch (err) { callback(err); }
+    finally { if (ownsDispatch) dispatchingInstall = false; }
   });
 }
 

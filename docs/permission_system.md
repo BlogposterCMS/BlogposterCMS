@@ -133,36 +133,25 @@ Example:
   ],
   "requestedAccess": [
     {
-      "event": "listContentEntries",
+      "resource": "content",
+      "action": "list",
       "reason": "Show existing content entries before syncing"
     }
   ]
 }
 ```
 
-During install or activation, the admin UI shows requested access and can save
-approved events as permanent grants. A module that does not receive a permanent
-grant stays blocked until a one-time runtime prompt approves one exact call.
+During install or access review, the admin UI shows declared actions and stores
+approved grants in the registry. Runtime calls reread those grants. Undeclared,
+unapproved or revoked actions fail closed; one-time runtime prompts are no
+longer an authorization path. The approving administrator needs both
+modules.manageAccess and the target permission. Package metadata cannot supply
+trusted grants or give the module an administrator token.
 
-One-time runtime approval is handled by the Module Access Consent queue. The
-prompt shows:
-
-- module name
-- event name
-- resource and action
-- reason from the module manifest when available
-- whether permanent approval is allowed
-- sanitized payload summary
-- timeout or rejection path
-
-Approving a one-time request does not give the module an admin token. The
-host executes that single core event as the approving admin and then consumes
-the approval.
-
-Protected resources such as users, roles, permissions, modules, settings, auth
-and app management are never permanent community-module grants. They can only
-run through the one-time prompt, and only when the approving admin has both
-`modules.manageAccess` and the target permission, such as `users.delete`.
+Protected user, role, permission, module, settings, auth and app-management
+operations cannot be granted to community code. Use the trusted administration
+surface for those operations. The [runtime sandbox](community-isolation.md)
+prevents bypassing the event boundary with direct file or network access.
 
 ## Confirmation Rules
 
@@ -170,16 +159,16 @@ run through the one-time prompt, and only when the approving admin has both
 | --- | --- |
 | Admin deletes a user in the UI | The current user needs `users.delete`, and the UI should show a destructive confirmation. |
 | Community module asks for any core event without a grant | The host blocks it by default. |
-| Community module asks for a permanently approved event | The host allows the call through the saved grant. |
-| Community module asks for a grantable event without permanent approval | The admin gets a one-time prompt; approval allows only that exact call. |
-| Community module asks for a protected security action | The admin gets a one-time-only prompt; permanent approval is unavailable. |
+| Community module asks for an approved event | The host rechecks its declaration and current registry grant before dispatch. |
+| Community module asks for a grantable event without approval | The call is blocked; an administrator can review the manifest in Modules. |
+| Community module asks for a protected security action | The call stays blocked. |
 | Module declares `shopSync.sync` | The key can appear in user/group permission checkboxes after validation. |
 | User gets `shopSync.sync` | That user may use UI/API surfaces that explicitly require that key. |
 
 So the rule is default deny:
 
 - Module-owned sandbox work can run inside the module boundary.
-- Core CMS work needs permanent approval or one-time approval.
+- Core CMS work needs a declared, currently approved registry grant.
 - High-risk security administration must not become a permanent community
   module capability.
 
@@ -201,8 +190,7 @@ For community modules:
 - Put cross-core event needs in `moduleInfo.requestedAccess` with a clear
   reason.
 - Treat user, role, permission, module, settings, auth and app management
-  events as high-risk. They require one-time admin consent and cannot be saved
-  as permanent grants.
+  events as protected. They are unavailable to community code.
 - Store your own data through `moduleHost.storage`.
 
 For admin UI:

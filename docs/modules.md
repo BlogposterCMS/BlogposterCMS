@@ -17,7 +17,7 @@ the combined server installer connects both parts during normal setup.
 
 When creating your own modules, start by exporting an `initialize` function that receives `{ motherEmitter, eventBus, moduleHost, moduleInfo, app, isCore }`. Community modules do not receive raw loader tokens; the process runner keeps the JWT and nonce on the host side and injects them when IPC-backed event calls are accepted. Core modules still receive high-trust host integration through the core bootstrap path.
 
-`eventBus` is a scoped IPC facade; it injects the module identity and token into emitted payloads, prevents token/nonce overrides, tags listeners for cleanup, allows only read/query CMS event names plus module-owned lifecycle signals, allows listeners only on module-owned event names, blocks listener-count introspection for system/foreign events, and refuses raw SQL placeholders. The `databaseManager` repeats this rule at the database boundary: community modules cannot write directly through `dbInsert`, `dbUpdate`, `dbDelete`, cannot call `performDbOperation` directly, cannot receive the host `dbClient` through custom placeholders, and cannot spoof `moduleType: "core"`. `moduleHost` exposes stable capabilities such as `registerStaticAssets({ dir, mountPath })` and `storage` for module-owned data.
+`eventBus` is a scoped IPC facade; it injects the module identity and token into emitted payloads, prevents token/nonce overrides, tags listeners for cleanup, allows only read/query CMS event names plus module-owned lifecycle signals, allows listeners only on module-owned event names, blocks listener-count introspection for system/foreign events, and refuses raw SQL placeholders. The `databaseManager` repeats this rule at the database boundary: community modules cannot write directly through `dbInsert`, `dbUpdate`, `dbDelete`, cannot call `performDbOperation` directly, cannot receive the host `dbClient` through custom placeholders, and cannot spoof `moduleType: "core"`. `moduleHost` exposes stable capabilities such as `eventBus` and `storage` for module-owned data; static UI mounts are denied.
 
 Community modules should use `moduleHost.storage` for their own data instead of emitting database events directly. The storage facade accepts logical table names such as `items`, maps them to isolated host-owned tables such as `community_<module>_items`, rejects raw SQL markers, and sends host-marked CRUD requests over IPC. Cross-module or core CMS data still needs a documented core contract.
 
@@ -27,23 +27,22 @@ Community modules may declare their own permission names in
 `modules.install`, `userManagement.editRole`, `settings.*`, `*` or retired
 broad keys. Core data or actions must be requested as explicit
 `moduleInfo.requestedAccess` `{ resource, action }` entries and approved by an administrator
-during install or activation for permanent grants, or by the one-time runtime
-prompt for one exact call. Security-critical resources such as users, roles,
-permissions, modules, settings, auth and apps can only use the one-time prompt
-and must not become broad permanent community-module grants.
+during install or access review. Runtime calls reread the registry and fail
+closed after revocation. One-time prompts are not an execution path. Protected
+system-management actions cannot become community grants.
 
 For the full permission flow from catalog to user checkbox to runtime check,
 see the [Permission System](permission_system.md) guide.
 
-Community modules never receive the raw Express `app`. Static assets are constrained under `/modules/<moduleName>` and must live inside the module folder. Use `moduleHost.registerStaticAssets()` or a documented core module contract instead of Express routes.
+Community modules never receive the raw Express app or publish static assets. UI belongs to isolated widget packages; backend behavior uses documented core contracts.
 
 Community modules cannot opt out of the process runner or import CMS host internals. Their module folder also cannot contain bundled package-manager runtime state such as `node_modules`, package manifests or lockfiles. System, network and database authority must be requested through explicit core contracts.
 
-The runner boundary keeps community code out of the CMS host process and makes the module API usable by a future Go host. It is not a complete OS sandbox by itself; Marketplace production hardening should still add container, microVM, filesystem and network policy around the runner process.
+The runner boundary keeps community code out of the CMS host process and makes the module API usable by a future Go host. The mandatory Linux namespace/seccomp sandbox is described in [Community isolation](community-isolation.md); there is no unconfined runner fallback.
 
 ## Module, Widget And App Boundary
 
-- Modules own backend capabilities and may expose events or static assets through `moduleHost`.
+- Modules own backend capabilities and expose events through `moduleHost`; widgets own UI.
 - Widgets own small renderable UI surfaces and call frontend/API contracts only.
 - Apps own larger admin or tool experiences. They run in sandboxed iframes,
   receive no parent admin token, and communicate through AppLoader's
@@ -63,7 +62,7 @@ The runner boundary keeps community code out of the CMS host process and makes t
 
 Modules communicate exclusively through the meltdown event bus. Every event payload contains a signed JWT that declares the module name, type and requested permissions. The `motherEmitter` validates these tokens before dispatching the event. If a token lacks the required permission, the call is rejected.
 
-This mechanism ensures that even community modules cannot bypass security boundaries. Always keep your JWT secrets private and avoid exposing them in logs or client-side code.
+JWT checks authorize mediated events; the separate runtime sandbox prevents direct file and network bypasses. Always keep your JWT secrets private and avoid exposing them in logs or client-side code.
 
 ## Creating a New Module
 

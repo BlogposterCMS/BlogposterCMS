@@ -1,5 +1,6 @@
 import { emitRuntimeAdmin } from '../../../../shared/api-client/runtimeFacade.js';
 import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
+import { createCoreModuleUpdateList, type CoreModuleUpdateRow } from './coreModuleUpdateList.js';
 
 export interface CoreUpdateStatus {
   configured: boolean;
@@ -8,6 +9,7 @@ export interface CoreUpdateStatus {
   jobId?: string;
   errorCode?: string;
   lastCheckedAt?: string;
+  moduleUpdates?: CoreModuleUpdateRow[];
   candidate?: { currentVersion: string; latestVersion: string; image: string; available: boolean; releaseNotes?: string; releaseUrl?: string };
 }
 
@@ -44,11 +46,13 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
   let submitting = false;
   let confirming = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const drawModules = createCoreModuleUpdateList(mount, row => { void confirmModule(row); });
   function draw(next: CoreUpdateStatus) {
     // A CMS restart temporarily removes the bridge; preserve known job progress.
     if (!next.configured && state && ACTIVE.has(state.phase)) {
       status.textContent = 'Reconnecting to Blogposter after restart…';
       check.disabled = install.disabled = true;
+      drawModules(state.moduleUpdates || [], true);
       return;
     }
     state = next;
@@ -61,9 +65,10 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
     const url = next.candidate?.releaseUrl || '';
     release.hidden = !/^https:\/\/github\.com\/BlogposterCMS\/BlogposterCMS\/releases\/tag\/v\d+\.\d+\.\d+$/.test(url);
     if (!release.hidden) release.href = url;
-    check.disabled = submitting || confirming || !next.configured || ACTIVE.has(next.phase) || next.phase === 'recovery_failed';
+    check.disabled = submitting || confirming || !next.configured || ACTIVE.has(next.phase) || next.phase === 'recovery_failed' || Boolean(next.moduleUpdates?.some(row => row.status === 'installing'));
     install.hidden = !next.candidate?.available;
     install.disabled = check.disabled;
+    drawModules(next.moduleUpdates || [], check.disabled);
   }
   async function refresh() {
     try { draw(await coreUpdateRequest(emit, jwt, 'status')); }
@@ -73,13 +78,28 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
     if (submitting) return;
     submitting = true; check.disabled = install.disabled = true;
     requestError.textContent = '';
-    try { draw(await coreUpdateRequest(emit, jwt, action, params)); }
+    try {
+      const result = await coreUpdateRequest(emit, jwt, action, params);
+      if (typeof result.configured === 'boolean') draw(result);
+    }
     catch (err) { requestError.textContent = err instanceof Error ? err.message : 'CORE_UPDATE_REQUEST_FAILED'; }
     finally { submitting = false; }
     // Reconcile status after every response, including an ambiguous network failure.
     await refresh();
   }
   check.addEventListener('click', () => { void run('check'); });
+  async function confirmModule(row: CoreModuleUpdateRow) {
+    if (submitting || confirming || check.disabled || !row.available || !row.generationId) return;
+    confirming = true;
+    if (state) draw(state);
+    try {
+      const result = await bpDialog.open({ kind: 'modal', title: `Update ${row.moduleName} to ${row.latestVersion}?`,
+        message: 'Only this module will pause briefly. Blogposter and the other modules keep running.',
+        actions: [{ id: 'cancel', label: 'Later', variant: 'ghost' }, { id: 'install', label: 'Install module update', variant: 'primary' }] });
+      if (result.action === 'install') await run('install', { targetModuleName: row.moduleName, version: row.latestVersion, generationId: row.generationId });
+    } catch (error) { requestError.textContent = error instanceof Error ? error.message : 'CORE_MODULE_CONFIRMATION_FAILED'; }
+    finally { confirming = false; await refresh(); }
+  }
   install.addEventListener('click', async () => {
     const candidate = state?.candidate;
     if (!candidate?.available || install.disabled) return;
@@ -97,7 +117,7 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
   const poll = async () => {
     if (!mount.isConnected) return;
     await refresh();
-    timer = setTimeout(poll, state && ACTIVE.has(state.phase) ? 3000 : 30000);
+    timer = setTimeout(poll, state && (ACTIVE.has(state.phase) || state.moduleUpdates?.some(row => ['checking', 'installing'].includes(row.status))) ? 3000 : 30000);
   };
   timer = setTimeout(poll, 3000);
   // Polls stop when this existing settings surface is unmounted.

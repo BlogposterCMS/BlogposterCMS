@@ -58,6 +58,15 @@ describe('Media storage HTTP publication boundary', () => {
     expect(records).toHaveLength(0);
   });
 
+  test('unknown connection ids fail closed instead of publishing to the default', async () => {
+    const body = new FormData(); body.append('file', new Blob(['apk']), 'app.apk');
+    const response = await fetch(`${url}/upload?connectionId=missing`, { method: 'POST', headers, body });
+    expect(await response.json()).toEqual({ error: 'MEDIA_STORAGE_CONNECTION_NOT_FOUND' });
+    expect(records).toHaveLength(0);
+    expect((await fetch(`${url}/files?connectionId=missing`, { headers })).status).toBe(400);
+    expect((await fetch(`${url}/files?connectionId=missing`)).status).toBe(403);
+  });
+
   test('metadata failure compensates the uploaded object', async () => {
     saveAttachment.mockRejectedValue(new Error('database failure'));
     const response = await upload();

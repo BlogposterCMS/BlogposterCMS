@@ -33,3 +33,17 @@ test('polling stops after settings panel unmount', async () => {
   await jest.advanceTimersByTimeAsync(3000);
   expect(emit).toHaveBeenCalledTimes(1);
 });
+
+test('module installation disables host install and retains module version and progress', async () => {
+  await renderCoreUpdatePanel(mount, emitterFor({ configured: true, phase: 'available', candidate,
+    moduleUpdates: [{ moduleName: 'translationManager', currentVersion: '0.9.4', latestVersion: '0.9.5', status: 'installing', available: false }] }), 'user');
+  expect(mount.textContent).toContain('translationManager');
+  expect([...mount.querySelectorAll('button')].every(button => button.disabled)).toBe(true);
+});
+
+test('module package errors are rendered as text and cannot offer an install', async () => {
+  await renderCoreUpdatePanel(mount, emitterFor({ configured: true, phase: 'current', moduleUpdates: [{ moduleName: 'translationManager',
+    currentVersion: '0.9.4', status: 'error', available: false, errorCode: '<script>bad()</script>' }] }), 'user');
+  expect(mount.querySelector('script')).toBeNull();
+  expect(mount.textContent).toContain('<script>bad()</script>');
+});

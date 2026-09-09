@@ -321,6 +321,10 @@ textarea):focus {
   gap: var(--studio-field-gap);
   min-width: 0;
 }
+.bp-ui-kit-surface .media-storage-panel[aria-label]::after {
+  content: none;
+  display: none;
+}
 .bp-ui-kit-surface .app-scope .form-field > label,
 .bp-ui-kit-surface .app-scope .form-field__label {
   color: var(--studio-text);

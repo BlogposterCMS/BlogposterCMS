@@ -54,9 +54,14 @@ export function initContentHeader() {
     else
         clearBreadcrumbResize();
     const header = document.querySelector('.content-header');
-    document.body.classList.toggle('has-content-footer', Boolean(header));
+    document.body.classList.remove('has-content-footer');
     if (!header)
         return;
+    // Keep the canonical header above the workspace rather than fixed to the viewport bottom.
+    const mainContent = document.querySelector('.main-content');
+    const host = header.closest('#content-header') || header;
+    if (mainContent && mainContent.parentElement && host !== mainContent && mainContent.contains(host))
+        mainContent.before(host);
     if (!header.dataset.scrollBound) {
         header.dataset.scrollBound = 'true';
         const updateShadow = () => {

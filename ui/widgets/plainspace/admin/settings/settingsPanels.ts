@@ -29,6 +29,7 @@ import type {
 import { renderUiKitGallery } from './uiKitGallery.js';
 import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
 import { mountWebsiteDesignSettings } from './websiteDesignSettings.js';
+import { createMediaStoragePanel } from '../../../../shared/media/mediaStoragePanel.js';
 import {
   createFormActions,
   createFormChoice as createChoice,
@@ -52,7 +53,7 @@ type SurfaceKey =
   | 'import-export';
 type EmbeddedPanelKey = 'modules' | 'providers' | 'users' | 'access' | 'user-edit' | 'provider-edit';
 type EmbeddedPanelModule = {
-  render?: (target: HTMLElement, options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; userId?: string }) => Promise<void> | void;
+  render?: (target: HTMLElement, options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; actionsHost?: HTMLElement; userId?: string }) => Promise<void> | void;
 };
 
 type RenderCtx = {
@@ -335,8 +336,14 @@ async function reviewUpdateAccess(inspection: ModuleUpdateInspection): Promise<M
 }
 
 async function renderGeneral(ctx: RenderCtx) {
-  const shell = createShell('General Settings', 'Set the name and description used across your website.');
-  const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
+  const shell = createShell('General Settings', 'Manage your website identity and connected storage.');
+  let storage: HTMLElement | undefined;
+  const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline', onSelect: index => {
+    // Fetch connection settings only when their tab is opened.
+    if (index === 1 && storage && !storage.childElementCount) storage.append(createMediaStoragePanel({
+      mode: 'settings', request: window.fetch.bind(window), csrfToken: window.CSRF_TOKEN
+    }));
+  } });
   const identity = tabs.addTab('Site identity');
   identity.classList.add('settings-section--form');
 
@@ -362,6 +369,10 @@ async function renderGeneral(ctx: RenderCtx) {
     createFormField('Site Description', descInput, { hint: 'A short description of what visitors will find here.' }),
     createFormActions(save)
   );
+  // Storage is site configuration; keep it on the existing Settings route and tab contract.
+  storage = tabs.addTab('Storage');
+  storage.classList.add('settings-section--form');
+  if (new URLSearchParams(window.location.search).get('tab') === 'storage') tabs.select(1);
   shell.mount(ctx.el);
 }
 
@@ -556,7 +567,7 @@ async function loadEmbeddedWidgetPanel(key: EmbeddedPanelKey): Promise<EmbeddedP
 }
 
 async function renderEmbeddedWidgetPanel(target: HTMLElement, key: EmbeddedPanelKey,
-  options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; userId?: string }) {
+  options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; actionsHost?: HTMLElement; userId?: string }) {
   try {
     const mod = await loadEmbeddedWidgetPanel(key);
     if (typeof mod.render !== 'function') throw new Error('SETTINGS_PANEL_UNAVAILABLE');
@@ -580,8 +591,10 @@ async function renderEmbeddedWidgetPanel(target: HTMLElement, key: EmbeddedPanel
 
 async function renderModules(ctx: RenderCtx) {
   const shell = createShell('Modules', 'Manage installed extensions and inspect the core modules that power your site.');
+  const actionsHost = document.createElement('div'); actionsHost.className = 'settings-header-actions';
+  shell.root.querySelector('header')!.append(actionsHost);
   shell.mount(ctx.el);
-  await renderEmbeddedWidgetPanel(shell.content, 'modules', { tabsHost: shell.tabs });
+  await renderEmbeddedWidgetPanel(shell.content, 'modules', { tabsHost: shell.tabs, actionsHost });
 }
 
 async function renderUiKit(ctx: RenderCtx) {

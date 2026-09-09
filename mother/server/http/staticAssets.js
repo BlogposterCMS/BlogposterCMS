@@ -235,7 +235,7 @@ function mountStaticAssetRoutes(app, {
     );
   }
   app.use('/apps', setStaticCorsHeaders, guardAppStaticRoot, blockBrowserSourceFiles, express.static(appStaticPath));
-  app.use('/widgets', setStaticCorsHeaders, guardWidgetStaticRoot, blockBrowserSourceFiles, express.static(widgetsPath));
+  app.use('/widgets', guardWidgetStaticRoot, require('./widgetSandboxAssets').widgetSandboxAssets(widgetsPath));
   app.use('/plainspace', blockBrowserSourceFiles, express.static(path.join(publicPath, 'plainspace')));
 
   app.get('/assets/icon-list.json', async (_req, res) => {

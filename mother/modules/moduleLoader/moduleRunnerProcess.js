@@ -2,6 +2,26 @@
 
 const path = require('path');
 
+// bubblewrap exposes only stdio. Console output must never share protocol stdout.
+if (process.env.BP_RUNNER_STDIO === '1') {
+  const write = process.stdout.write.bind(process.stdout);
+  process.send = message => write(JSON.stringify(message) + '\n');
+  process.stdout.write = process.stderr.write.bind(process.stderr);
+  let input = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', chunk => {
+    input += chunk;
+    if (Buffer.byteLength(input) > 2097152) process.exit(1);
+    let end;
+    while ((end = input.indexOf('\n')) >= 0) {
+      const message = JSON.parse(input.slice(0, end));
+      input = input.slice(end + 1);
+      process.emit('message', message);
+    }
+  });
+  process.stdin.on('end', () => process.exit(0));
+}
+
 let nextMessageId = 1;
 let nextListenerId = 1;
 const pendingResponses = new Map();
@@ -284,7 +304,8 @@ function createModuleHost({ moduleInfo, moduleName }) {
     capabilities: Object.freeze({
       events: true,
       moduleStorage: true,
-      staticAssets: true,
+      staticAssets: false,
+      osSandboxed: true,
       rawExpressApp: false,
       rawSql: false,
       systemWrites: false,

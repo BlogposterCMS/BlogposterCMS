@@ -5,6 +5,7 @@ const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog
 
 
 const axios = require('axios');
+const { pinnedAgent } = require('./outboundPolicy');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const notificationEmitter = require('../../emitters/notificationEmitter');
 
@@ -32,7 +33,7 @@ function assertCoreHttpRequest(motherEmitter, payload = {}) {
     throw new Error(`Community module "${moduleName}" cannot use requestManager.httpRequest directly.`);
   }
 
-  if (moduleType !== 'core') {
+  if (moduleType !== 'core' || registeredType !== 'core') {
     throw new Error('requestManager.httpRequest is core-only.');
   }
 }
@@ -46,8 +47,8 @@ function assertSafeRequestMethod(method) {
 }
 
 function assertAllowedRequestUrl(url) {
-  if (!/^https?:\/\//i.test(url)) {
-    throw new Error('Invalid URL');
+  if (!/^https:\/\//i.test(url)) {
+    throw new Error('[E_REQUEST_URL_DENIED] HTTPS is required.');
   }
 
   const allowedHosts = (process.env.REQUEST_MANAGER_ALLOWED_HOSTS || '')
@@ -56,10 +57,11 @@ function assertAllowedRequestUrl(url) {
     .filter(Boolean);
 
   if (!allowedHosts.length) {
-    return;
+    throw new Error('[E_REQUEST_HOSTS_UNCONFIGURED] No outbound hosts are configured.');
   }
 
   const parsed = new URL(url);
+  if (parsed.username || parsed.password || parsed.port || parsed.hash) throw new Error('[E_REQUEST_URL_DENIED] Credentials, nonstandard ports and fragments are forbidden.');
   if (!allowedHosts.includes(parsed.host.toLowerCase())) {
     throw new Error(`Host "${parsed.host}" is not allowed for outbound requests.`);
   }
@@ -98,8 +100,13 @@ module.exports = {
           }
           const safeMethod = assertSafeRequestMethod(method);
           assertAllowedRequestUrl(url);
-          const resp = await axios({ method: safeMethod, url, data, headers, maxRedirects: 0 });
-          callback(null, { status: resp.status, data: resp.data });
+          const httpsAgent = await pinnedAgent(new URL(url).hostname);
+          try {
+            const resp = await axios({ method: safeMethod, url, data, headers, httpsAgent,
+              proxy: false, maxRedirects: 0, timeout: 10000,
+              maxBodyLength: 65536, maxContentLength: 1048576 });
+            callback(null, { status: resp.status, data: resp.data });
+          } finally { httpsAgent.destroy(); }
         } catch (err) {
           notificationEmitter.notify({
             moduleName: 'requestManager',

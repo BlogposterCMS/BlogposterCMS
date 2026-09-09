@@ -1,8 +1,8 @@
 import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
-import { openExtensionUpload } from '../../../shared/module-access/extensionUpload.js';
+import { openExtensionUpload, createExtensionStoreButton } from '../../../shared/module-access/extensionUpload.js';
 
 interface Access { service: string; name: string; reason: string; required?: boolean; available?: boolean; operation?: { path: string; method: string } }
-interface Package { widgetId: string; label?: string; version?: string; developer?: string; description?: string; reviewedHash?: string; requestedAccess: Access[]; approvedAccess?: string[] }
+interface Package { widgetId: string; replacing?: boolean; label?: string; version?: string; developer?: string; description?: string; reviewedHash?: string; requestedAccess: Access[]; approvedAccess?: string[] }
 type Dialog = { open(options: { title: string; message: string; body: Node; actions: Array<{ id: string; label: string; variant?: string }> }): Promise<{ action?: string }> };
 
 function call(action: string, params: Record<string, unknown> = {}): Promise<any> {
@@ -39,9 +39,9 @@ export async function reviewWidgetPackage(pkg: Package, installing: boolean): Pr
     body.append(label);
   }
   if (!checks.length) { const note = document.createElement('p'); note.textContent = 'No widget services requested.'; body.append(note); }
-  const result = await dialog.open({ title: installing ? 'Install widget' : 'Widget access',
+  const result = await dialog.open({ title: installing ? (pkg.replacing ? 'Replace widget package' : 'Install widget') : 'Widget access',
     message: 'Only selected, declared services are allowed. Direct core events are blocked. This review is not a malware scan; install code you trust.', body,
-    actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'confirm', label: installing ? 'Install and allow selected access' : 'Save access', variant: 'primary' }] });
+    actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'confirm', label: installing ? (pkg.replacing ? 'Back up and replace package' : 'Install and allow selected access') : 'Save access', variant: 'primary' }] });
   return result.action === 'confirm' ? checks.filter(check => check.checked && !check.disabled).map(check => check.value) : null;
 }
 
@@ -49,13 +49,13 @@ export function addWidgetPackageControls(root: HTMLElement, refresh: () => Promi
   const header = root.querySelector('header');
   if (!header) return;
   const status = document.createElement('p'); status.setAttribute('role', 'status');
-  const install = document.createElement('button'); install.className = 'button secondary sm'; install.textContent = 'Install ZIP';
+  const install = createExtensionStoreButton();
   install.addEventListener('click', () => openExtensionUpload(async (zipData, _name, progress) => {
     const pkg = await call('inspectZip', { zipData }) as Package;
     const approvedAccess = await reviewWidgetPackage(pkg, true);
     if (approvedAccess === null) return false;
     progress.textContent = 'Installing widget…';
-    await call('installZip', { zipData, reviewedHash: pkg.reviewedHash, approvedAccess });
+    await call('installZip', { zipData, reviewedHash: pkg.reviewedHash, approvedAccess, replaceExisting: pkg.replacing === true });
     await refresh();
     return true;
   }));
@@ -81,5 +81,5 @@ export function addWidgetPackageControls(root: HTMLElement, refresh: () => Promi
     } catch (err) { status.textContent = err instanceof Error ? err.message : String(err); }
     finally { manage.disabled = false; }
   });
-  header.append(install, manage); root.append(status);
+  header.append(manage, install); root.append(status);
 }

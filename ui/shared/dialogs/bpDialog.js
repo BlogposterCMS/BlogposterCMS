@@ -168,6 +168,8 @@ function runDomDialog(options) {
         footer.className = 'bp-dialog__actions';
         let settled = false;
         const closeWith = (result) => {
+            if (options.beforeClose && !options.beforeClose())
+                return;
             if (settled)
                 return;
             settled = true;

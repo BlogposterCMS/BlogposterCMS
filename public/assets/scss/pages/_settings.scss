@@ -2,7 +2,7 @@
 #content:has(> .settings-surface) { overflow: hidden; padding: 0 20px 20px 0; }
 // Settings have their own named navigation and no dashboard footer actions.
 body.has-content-footer .admin-panel #content[data-dashboard-layout='fixed']:has(> .settings-surface) { padding-bottom: 20px; }
-body:has(#content > .settings-surface) .content-header { display: none; }
+body:has(#content > .settings-surface) .content-header > :not(#content-breadcrumb) { display: none; }
 body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bottom: 0; }
 .settings-surface {
   box-sizing: border-box;
@@ -16,9 +16,12 @@ body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bot
   :is(nav, [role='tablist'], [role='tabpanel'])[aria-label]::after { content: none; display: none; }
 }
 .settings-surface-header {
+  position: relative;
   flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   .page-title { margin: 0; font-size: 1.45rem; letter-spacing: -0.02em; color: var(--studio-text); }
 }
+.settings-surface-header:has(.settings-header-actions) { padding-right: 52px; }
+.settings-header-actions { position: absolute; right: 0; top: 0; }
 .settings-hint { margin: 0; max-width: 72ch; color: var(--studio-text-muted); font-size: 0.9rem; line-height: 1.55; }
 .settings-tabs { flex: 0 0 auto; min-width: 0; &:empty { display: none; } }
 .settings-tab-panels {

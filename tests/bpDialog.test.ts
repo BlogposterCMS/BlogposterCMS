@@ -15,6 +15,15 @@ async function waitForDialog(): Promise<void> {
 }
 
 describe('bpDialog', () => {
+  it('keeps a guarded form open until it permits closing', async () => {
+    let allowed = false;
+    const result = bpDialog.open({ title: 'Edit', beforeClose: () => allowed, actions: [{ id: 'close', label: 'Close' }] });
+    await waitForDialog();
+    clickAction('close');
+    expect(document.querySelector('[data-action="close"]')).not.toBeNull();
+    allowed = true; clickAction('close');
+    await expect(result).resolves.toMatchObject({ action: 'close' });
+  });
   afterEach(() => {
     document.querySelectorAll('.bp-dialog-root').forEach(el => el.remove());
   });

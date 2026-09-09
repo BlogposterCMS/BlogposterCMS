@@ -462,7 +462,9 @@ describe('dashboard studio styles', () => {
     expect(topHeaderCss).toContain('z-index: 140');
     expect(contentHeaderPartial).not.toContain(' title=');
     expect(contentHeaderPagesPartial).not.toContain(' title=');
-    expect(contentHeaderCss).toContain('position: fixed');
+    // Breadcrumbs now follow navigation in normal flow rather than covering it.
+    expect(contentHeaderCss).toContain('position: static');
+    expect(contentHeaderCss).toContain('background: transparent');
     expect(contentHeaderCss).toContain('bottom: 0');
     expect(contentHeaderCss).toContain('left: 88px');
     expect(contentHeaderCss).toContain('z-index: 70');
@@ -486,7 +488,7 @@ describe('dashboard studio styles', () => {
     expect(canvasHoverCss).not.toContain('var(--user-color)');
     expect(boundingBoxCss).toContain('border: 1px dashed var(--studio-border-strong)');
     expect(boundingBoxCss).not.toContain('var(--user-color)');
-    expect(contentHeaderActionsTs).toContain("classList.toggle('has-content-footer', Boolean(header))");
+    expect(contentHeaderActionsTs).toContain("classList.remove('has-content-footer')");
     expect(topHeaderActionsTs).toContain("homeLink.removeAttribute('title')");
     expect(topHeaderActionsTs).toContain('setSearchExpanded(searchContainer, searchInput, expanded)');
     expect(searchExpansionTs).toContain("searchContainer.classList.toggle('is-expanded', expanded)");

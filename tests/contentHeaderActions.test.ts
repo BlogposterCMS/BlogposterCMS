@@ -15,6 +15,13 @@ function breadcrumbPathnames(): string[] {
 }
 
 describe('contentHeaderActions', () => {
+  it('places the existing breadcrumb host between navigation and workspace', () => {
+    document.body.innerHTML = '<div class="admin-panel"><header id="main-header"></header><div class="main-content"><section id="content"><div id="content-header"><div class="content-header"><div id="content-breadcrumb"></div></div></div></section></div></div>';
+    initContentHeader(); initContentHeader();
+    expect(document.querySelector('#main-header')!.nextElementSibling?.id).toBe('content-header');
+    expect(document.querySelectorAll('#content-header')).toHaveLength(1);
+    expect(document.body.classList.contains('has-content-footer')).toBe(false);
+  });
   beforeEach(() => {
     delete (window as any).ADMIN_BASE;
     document.body.innerHTML = '<div class="content-header"><div id="content-breadcrumb"></div></div>';

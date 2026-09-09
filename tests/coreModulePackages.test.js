@@ -1,0 +1,63 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const { createFixture } = require('./helpers/coreModuleFixture');
+const { parseManifest, createModuleManifest } = require('../mother/modules/updater/coreModulePackages');
+
+let fixture;
+beforeEach(() => { fixture = createFixture(); });
+afterEach(() => { fs.rmSync(fixture.directory, { recursive: true, force: true }); });
+function verify() { return fixture.verify({ rootDir: fixture.rootDir, generationDir: fixture.generationDir, moduleName: 'translationManager' }); }
+
+test('checks the official attestation identity and immutable host trust roots before accepting a generation', () => {
+  const result = verify();
+  expect(result.manifest.version).toBe('0.10.7');
+  expect(result.generationId).toMatch(/^[a-f0-9]{64}$/);
+  expect(fixture.attestationVerifier).toHaveBeenCalledWith(expect.objectContaining({
+    expectedVersion: '0.10.7', expectedSourceCommit: 'a'.repeat(40),
+    trustedRootPath: path.join(fixture.rootDir, '.integrity/runtime-integrity-trusted-root.jsonl')
+  }));
+});
+
+test('a signature failure cannot be replaced by matching local hashes', () => {
+  fixture.attestationVerifier.mockImplementation(() => { throw new Error('signature rejected'); });
+  expect(verify).toThrow('signature rejected');
+});
+
+test.each(['modify', 'extra', 'missing'])('rejects %s code relative to the signed manifest', change => {
+  const code = path.join(fixture.generationDir, 'code');
+  if (change === 'modify') fs.appendFileSync(path.join(code, 'index.js'), '\n// changed');
+  if (change === 'extra') fs.writeFileSync(path.join(code, 'surprise.js'), 'module.exports = true;');
+  if (change === 'missing') fs.unlinkSync(path.join(code, 'dbInit.js'));
+  expect(verify).toThrow('CORE_MODULE_PACKAGE_INTEGRITY_FAILED');
+});
+
+test.each(['schema', 'host', 'dependency'])('rejects incompatible %s changes', change => {
+  if (change === 'schema') fs.appendFileSync(path.join(fixture.rootDir, 'mother/modules/translationManager/dbInit.js'), '\n// changed');
+  if (change === 'host') fs.writeFileSync(path.join(fixture.rootDir, 'app.js'), 'changed');
+  if (change === 'dependency') fs.writeFileSync(path.join(fixture.rootDir, 'package.json'), JSON.stringify({ name: 'blogposter_cms', version: '0.10.6', engines: { node: '>=26' } }));
+  expect(verify).toThrow('CORE_MODULE_HOST_INCOMPATIBLE');
+});
+
+test('release packaging refuses bytes changed after the signed baseline was created', () => {
+  fs.appendFileSync(path.join(fixture.source, 'mother/modules/translationManager/index.js'), 'changed');
+  expect(() => createModuleManifest({ rootDir: fixture.source, moduleName: 'translationManager', runtimeManifest: fixture.runtimeManifest }))
+    .toThrow('CORE_MODULE_RELEASE_BYTES_CHANGED');
+});
+
+test.each(['../escape.js', '/absolute.js', 'C:/outside.js', 'a//b.js'])('rejects unsafe manifest path %s', filename => {
+  fixture.manifest.files[0].path = filename;
+  expect(() => parseManifest(JSON.stringify(fixture.manifest), 'translationManager')).toThrow('CORE_MODULE_MANIFEST_FILE_INVALID');
+});
+
+test('package declarations cannot enable an unmigrated module', () => {
+  fixture.manifest.moduleName = 'auth';
+  expect(() => parseManifest(JSON.stringify(fixture.manifest), 'auth')).toThrow('CORE_MODULE_RESTART_REQUIRED');
+});
+
+test('preview release manifests retain their exact signed tag identity', () => {
+  fixture.manifest.version = '0.10.7-rc.1';
+  fixture.manifest.source.tag = 'v0.10.7-rc.1';
+  expect(parseManifest(JSON.stringify(fixture.manifest), 'translationManager').version).toBe('0.10.7-rc.1');
+});

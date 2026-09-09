@@ -22,6 +22,20 @@ module.exports = function createS3Adapter(config, dependencies = {}) {
       } finally { body.destroy(); }
     },
     async head(key) { return client.send(new sdk.HeadObjectCommand(object(key))); },
+    async list(prefix = '') {
+      const objects = []; const folders = new Set(); const visited = new Set(); let token;
+      do {
+        const page = await client.send(new sdk.ListObjectsV2Command({ Bucket: config.bucket,
+          Prefix: prefix ? `${prefix}/` : '', Delimiter: '/', MaxKeys: 1000, ContinuationToken: token }));
+        objects.push(...(page.Contents || []).map(item => ({ key: item.Key, size: item.Size, modifiedAt: item.LastModified?.toISOString() || '' })));
+        for (const item of page.CommonPrefixes || []) folders.add(item.Prefix);
+        token = page.IsTruncated ? page.NextContinuationToken : null;
+        // Broken endpoints must not keep a worker in an endless pagination loop.
+        if (objects.length + folders.size > 10000 || visited.size >= 100 || (page.IsTruncated && (!token || visited.has(token)))) throw new Error('MEDIA_STORAGE_LIST_LIMIT');
+        if (token) visited.add(token);
+      } while (token);
+      return { objects, folders: [...folders] };
+    },
     async delete(key) { await client.send(new sdk.DeleteObjectCommand(object(key))); },
     async test() { await client.send(new sdk.HeadBucketCommand({ Bucket: config.bucket })); },
     async downloadUrl(key, { expiresIn = 300 } = {}) {
@@ -29,3 +43,8 @@ module.exports = function createS3Adapter(config, dependencies = {}) {
     }
   };
 };
+module.exports.definition = { id: 's3', label: 'AWS S3 / S3-compatible', fields: [
+  ...require('../objectStorageConfig').fields,
+  { name: 'forcePathStyle', label: 'Use path-style addressing', type: 'checkbox' }
+] };
+module.exports.normalize = require('../objectStorageConfig').normalize;

@@ -3,6 +3,7 @@ import { approvedAccessDescriptors, fetchUpdateCenterRows, inspectUpdateCenterRo
 import { renderUiKitGallery } from './uiKitGallery.js';
 import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
 import { mountWebsiteDesignSettings } from './websiteDesignSettings.js';
+import { createMediaStoragePanel } from '../../../../shared/media/mediaStoragePanel.js';
 import { createFormActions, createFormChoice as createChoice, createFormField } from '/ui/shared/forms/formField.js';
 import { createTabSystem } from '/ui/shared/navigation/tabs.js';
 import { registerWorkspaceChanges } from '../../../../shared/navigation/workspaceChanges.js';
@@ -245,8 +246,15 @@ async function reviewUpdateAccess(inspection) {
     return approvedAccessDescriptors(newAccess.filter(access => selected.has(accessLabel(access))));
 }
 async function renderGeneral(ctx) {
-    const shell = createShell('General Settings', 'Set the name and description used across your website.');
-    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
+    const shell = createShell('General Settings', 'Manage your website identity and connected storage.');
+    let storage;
+    const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline', onSelect: index => {
+            // Fetch connection settings only when their tab is opened.
+            if (index === 1 && storage && !storage.childElementCount)
+                storage.append(createMediaStoragePanel({
+                    mode: 'settings', request: window.fetch.bind(window), csrfToken: window.CSRF_TOKEN
+                }));
+        } });
     const identity = tabs.addTab('Site identity');
     identity.classList.add('settings-section--form');
     const titleInput = document.createElement('input');
@@ -263,6 +271,11 @@ async function renderGeneral(ctx) {
         siteTitle: titleInput.value.trim(), siteDescription: descInput.value.trim()
     }), 'General settings saved.', { id: 'general', fields: { siteTitle: titleInput, siteDescription: descInput } });
     identity.append(createFormField('Site Title', titleInput, { hint: 'The name of your website.' }), createFormField('Site Description', descInput, { hint: 'A short description of what visitors will find here.' }), createFormActions(save));
+    // Storage is site configuration; keep it on the existing Settings route and tab contract.
+    storage = tabs.addTab('Storage');
+    storage.classList.add('settings-section--form');
+    if (new URLSearchParams(window.location.search).get('tab') === 'storage')
+        tabs.select(1);
     shell.mount(ctx.el);
 }
 async function renderDesign(ctx) {
@@ -459,8 +472,11 @@ async function renderEmbeddedWidgetPanel(target, key, options) {
 }
 async function renderModules(ctx) {
     const shell = createShell('Modules', 'Manage installed extensions and inspect the core modules that power your site.');
+    const actionsHost = document.createElement('div');
+    actionsHost.className = 'settings-header-actions';
+    shell.root.querySelector('header').append(actionsHost);
     shell.mount(ctx.el);
-    await renderEmbeddedWidgetPanel(shell.content, 'modules', { tabsHost: shell.tabs });
+    await renderEmbeddedWidgetPanel(shell.content, 'modules', { tabsHost: shell.tabs, actionsHost });
 }
 async function renderUiKit(ctx) {
     renderUiKitGallery(ctx.el);

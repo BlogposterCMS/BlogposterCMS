@@ -51,6 +51,6 @@ not become a second module system or own CMS business logic.
 - **Permission Checks** – Many events verify explicit permissions before executing. Admin routes require valid credentials and user roles.
 
 - **Identity Binding** - Registered module type wins over the payload, and non-high-trust module tokens cannot emit as another module.
-- **Host Contract** - Community modules use `moduleHost` capabilities such as `eventBus` and `registerStaticAssets()` instead of direct server access.
+- **Host Contract** - Community modules use `moduleHost` capabilities such as `eventBus` and scoped storage instead of direct server access. Community modules are backend-only; widgets use the isolated UI bridge.
 
-By layering these protections the CMS keeps community code out of the host process. Real Marketplace production hardening still needs OS/container isolation around the runner process.
+These layers keep community code out of the host process. The mandatory Linux namespace and seccomp boundary and its deployment prerequisites are documented in [Community isolation](community-isolation.md).

@@ -1,8 +1,20 @@
 /** @jest-environment jsdom */
-import { openExtensionUpload } from '../ui/shared/module-access/extensionUpload';
+import { openExtensionUpload, createExtensionStoreButton } from '../ui/shared/module-access/extensionUpload';
 import { reviewWidgetPackage } from '../ui/widgets/plainspace/admin/widgetPackageControls';
 
 beforeEach(() => { document.body.innerHTML = ''; delete (window as any).bpDialog; });
+
+test('store icon opens a keyboard-accessible ZIP dropzone with a hidden native picker', () => {
+  const button = createExtensionStoreButton();
+  expect(button.querySelector('img')?.getAttribute('src')).toBe('/assets/icons/store.svg');
+  expect(button.getAttribute('aria-label')).toBe('Install extension ZIP');
+  openExtensionUpload(jest.fn());
+  const input = document.querySelector<HTMLInputElement>('input[type=file]')!;
+  expect(input.hidden).toBe(true);
+  const click = jest.spyOn(input, 'click').mockImplementation(() => {});
+  document.querySelector('.module-upload-dropzone')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  expect(click).toHaveBeenCalledTimes(1);
+});
 
 test('file picker rejects multiple files before inspection', async () => {
   const install = jest.fn();

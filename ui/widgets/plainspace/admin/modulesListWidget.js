@@ -1,4 +1,4 @@
-import { openExtensionUpload } from '../../../shared/module-access/extensionUpload.js';
+import { openExtensionUpload, createExtensionStoreButton } from '../../../shared/module-access/extensionUpload.js';
 import { createTabSystem } from '../../../shared/navigation/tabs.js';
 import { errorMessage, fetchModuleLists, fetchModuleUpdateStatuses, fetchPendingModuleAccessRequests, inspectModuleZip, inspectModuleUpdate, installModuleUpdate, installModuleZip, mergeModuleUpdateStatuses, moduleHasModification, moduleHasUpdate, moduleUpdateStatus, renderModuleMeta, toggleModuleRegistryActivation, setModuleAccess } from './modulesListData.js';
 function dialogApi() {
@@ -365,11 +365,12 @@ export async function render(el, options = {}) {
         title.className = 'modules-title page-title';
         title.textContent = 'Modules';
         titleBar.appendChild(title);
-        const installButton = document.createElement('button');
-        installButton.className = 'button secondary sm';
-        installButton.textContent = 'Install ZIP';
+        const installButton = createExtensionStoreButton();
         installButton.addEventListener('click', openUploadPopup);
-        card.appendChild(installButton);
+        if (options.actionsHost)
+            options.actionsHost.replaceChildren(installButton);
+        else
+            titleBar.appendChild(installButton);
         const tabs = options.tabsHost || document.createElement('div');
         tabs.classList.add('modules-tabs');
         tabs.setAttribute('aria-label', 'Module categories');

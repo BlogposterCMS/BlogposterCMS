@@ -3,18 +3,18 @@
   display: flex;
   align-items: center;
   padding: 10px clamp(24px, 4vw, 52px);
-  background: var(--studio-surface);
-  border-top: 1px solid var(--studio-border);
+  background: transparent;
+  border-top: 0;
   border-bottom: 0;
-  min-height: var(--studio-content-footer-height);
-  position: fixed;
+  min-height: 36px;
+  position: static;
   right: 0;
   bottom: 0;
   left: 88px;
-  backdrop-filter: blur(18px);
+  backdrop-filter: none;
   z-index: 70;
   transition: box-shadow var(--motion-duration-base) var(--motion-ease-standard);
-  box-shadow: 0 -1px 0 var(--studio-border);
+  box-shadow: none;
 
 
   #content-breadcrumb {
@@ -76,6 +76,8 @@
   }
 
 }
+
+.admin-panel > #content-header { flex: 0 0 auto; padding-left: 88px; }
 
 body.has-content-footer #content {
   padding-bottom: calc(var(--studio-content-footer-height, 60px) + 16px);

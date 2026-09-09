@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.16] - 2026-09-09
+
+- Publish compatible signed packages for all 37 CMS modules and 31 bundled widgets on the complete 0.10.15 baseline.
+
 ## [0.10.15] - 2026-09-09
 
 - Register GeoIP during host startup so its published individual update package has an active lifecycle. Enforce exact agreement between started modules and the package catalog.

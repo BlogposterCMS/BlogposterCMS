@@ -1,5 +1,9 @@
 # Analytics overview changelog
 
+## [0.10.16] - 2026-09-09
+
+- Publish a compatible signed generation for independent updates on the complete 0.10.15 host baseline.
+
 ## [0.10.15] - 2026-09-09
 
 - Include the complete module startup registry in the verified host baseline.

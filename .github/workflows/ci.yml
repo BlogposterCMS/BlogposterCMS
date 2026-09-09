@@ -31,6 +31,9 @@ jobs:
           # packaged profile grants setup access and strips child capabilities.
           sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
           node tools/verify-community-sandbox.js
+      - name: Run real Linux sandbox integration tests
+        # A fresh process avoids threads retained by unrelated native test suites.
+        run: npm test -- --runInBand tests/moduleProcessRuntime.test.js tests/moduleRegistryEventsActivation.test.js
       - name: Run vulnerability audit
         run: npm audit --audit-level=high
       - name: Build
@@ -39,7 +42,7 @@ jobs:
         run: npm run placeholder-parity
       - name: Run test suite
         # RLIMIT_NPROC counts threads across the runner UID, including Jest workers.
-        run: npm test -- --runInBand
+        run: npm test -- --runInBand --testPathIgnorePatterns 'tests/(moduleProcessRuntime|moduleRegistryEventsActivation)\.test\.js$'
 
   codeql_analysis:
     needs: lint_and_test

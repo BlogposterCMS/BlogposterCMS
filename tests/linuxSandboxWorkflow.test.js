@@ -17,5 +17,10 @@ test.each(['ci.yml', 'release.yml'])('%s retains the Linux sandbox gate', filena
   expect(gate.run).toContain('apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict');
   expect(gate.run.trim().endsWith('node tools/verify-community-sandbox.js')).toBe(true);
   expect(gate.run).not.toMatch(/sysctl|unconfined|\|\|\s*true/);
-  expect(steps.find(step => step.name === 'Run test suite').run).toBe('npm test -- --runInBand');
+  const integration = steps.find(step => step.name === 'Run real Linux sandbox integration tests');
+  expect(integration.run).toBe('npm test -- --runInBand tests/moduleProcessRuntime.test.js tests/moduleRegistryEventsActivation.test.js');
+  expect(integration['continue-on-error']).not.toBe(true);
+  expect(steps.indexOf(integration)).toBeLessThan(steps.findIndex(step => step.name === 'Build'));
+  const rest = steps.find(step => step.name === 'Run test suite').run;
+  expect(rest).toBe("npm test -- --runInBand --testPathIgnorePatterns 'tests/(moduleProcessRuntime|moduleRegistryEventsActivation)\\.test\\.js$'");
 });

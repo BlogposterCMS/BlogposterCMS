@@ -76,3 +76,18 @@ The 0.10.11 and 0.10.12 workflows were cancelled before production deployment to
 include this correction. Version 0.10.13 is the prepared baseline. Publication is
 coordinated with the agent publishing other completed work; expanded production
 acceptance remains pending.
+
+All original 36 modules and 31 bundled widgets were subsequently installed through
+the actual local browser dialogs under PID 23200. A deliberate cold start under
+PID 19372 loaded all 67 selected generations, with every lifecycle active. The new
+GeoIP module was then present as a host generation; its separate acceptance follows.
+
+GeoIP was individually installed through the browser under unchanged PID 35872.
+The subsequent deliberate cold start (PID 17520) restored all 68 selected packages
+(37 CMS modules and 31 widgets), all active. Update Center reported modules up to
+date and Designer rendered after reload. Release 0.10.13 preflight produced all
+68 package manifests with nonempty package-specific release notes.
+
+After integration of main 56667e26, the release build and placeholder parity passed.
+The full suite passed 385 suites / 2146 tests (12 skipped); the final two focused
+GeoIP regressions also passed, including HTTP transport after scope retirement.

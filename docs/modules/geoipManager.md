@@ -76,3 +76,8 @@ GeoIP is a trusted backend core module, not a widget or app. It provides only
 approximate lookup results through the existing authenticated event contract.
 Analytics owns consent and recording; RequestManager owns outbound policy.
 Credentials stay server-side and no additional public lookup endpoint is added.
+
+Independent updates replace authenticated GeoIP event handlers. Provider adapters,
+connections and concurrency/backoff state remain host-owned; their source and
+configuration changes require the host update path. Failed candidate readiness
+keeps the existing service and event handler active.

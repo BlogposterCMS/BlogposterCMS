@@ -27,6 +27,7 @@ const MODULE_POLICY = Object.freeze({
   fontPackages: Object.freeze({ hostFiles: ['fontPackagesService.js'] }),
   sitePresets: Object.freeze({ hostFiles: ['sitePresetsService.js'] }),
   settingsManager: Object.freeze({ hostFiles: ['settingsService.js'] }),
+  geoipManager: Object.freeze({ hostFiles: ['service.js'], hostDirectories: ['providers'] }),
   requestManager: Object.freeze({ hostFiles: ['outboundPolicy.js'] }),
   dependencyLoader: Object.freeze({ hostFiles: ['dependencyLoaderService.js'] }),
   agentAccess: Object.freeze({ hostFiles: ['accessCodeState.js'] }),

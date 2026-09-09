@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.13] - 2026-09-09
+
+- Complete individual updates for 37 CMS modules and 31 bundled widgets, with signed package-specific changelogs. Preserve admin cookies when authentication dependencies pause during updates; report retryable availability without granting access.
+
 - Share page-editor data and extension access-review helpers between shell and
   widgets, preserving existing service ownership and compatibility exports.
 
@@ -17,10 +21,6 @@
   spacing, loading messages, color picking and dialog dropdown behavior.
 - Keep installed update candidates in compact expandable rows with check status
   and timestamps, preserving the existing Update Center services.
-
-## [0.10.13] - 2026-09-09
-
-- Complete individual updates for 36 CMS modules and 31 bundled widgets, with signed package-specific changelogs. Preserve admin cookies when authentication dependencies pause during updates; report retryable availability without granting access.
 
 ## [0.10.12] - 2026-09-09
 

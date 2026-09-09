@@ -33,8 +33,13 @@ function createGeoipService(config, request, registry = providers) {
   } };
 }
 
-// Stable host ingress, like Analytics' collector. Module lifecycle owns the active implementation.
+// Stable host ingress, like Analytics' collector. Provider connections and limits
+// belong to the host and survive replacement of authenticated event handlers.
 let active = null;
 const lookup = ip => active ? active.lookup(ip) : Promise.resolve({ status: 'GEOIP_NOT_INITIALIZED' });
 function activate(service) { active = service; return () => { if (active === service) active = null; }; }
-module.exports = { createGeoipService, normalizeLocation, lookup, activate };
+function getOrCreateService(config, request) {
+  active ||= createGeoipService(config, request);
+  return active;
+}
+module.exports = { createGeoipService, normalizeLocation, lookup, activate, getOrCreateService };

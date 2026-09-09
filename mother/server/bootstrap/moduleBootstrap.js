@@ -131,6 +131,7 @@ async function bootstrapCoreModules({
         moduleGeneration: { generationId: generation?.generationId || null, releaseVersion: generation?.manifest.version || hostVersion },
         browserDirectory: generation?.moduleDir,
         ...(mod.name === 'updater' ? { coreModuleUpdates } : {}),
+        ...(mod.name === 'geoipManager' ? { serviceEmitter: motherEmitter } : {}),
         ...(mod.name === 'fontsManager' ? { strategyEmitter: motherEmitter } : {}),
         ...mod.extra
       });

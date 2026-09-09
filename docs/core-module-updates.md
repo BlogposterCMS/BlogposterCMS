@@ -162,4 +162,8 @@ System contains service and CMS module updates; Installed contains community mod
 Installed has stacked Modules and Widgets sections. Bundled widgets use signed individual update packages and their own changelogs. Community widgets retain the reviewed ZIP installation workflow and do not claim automatic update discovery.
 
 
-The earlier five-module production acceptance used signed baseline 0.10.8 and module packages 0.10.9, including persistence after restart. It does not establish acceptance of the expanded 36-module/31-widget scope; see [current acceptance](testing/module-updates-phase2.md).
+The earlier five-module production acceptance used signed baseline 0.10.8 and module packages 0.10.9, including persistence after restart. It does not establish acceptance of the expanded 37-module/31-widget scope; see [current acceptance](testing/module-updates-phase2.md).
+
+GeoIP event handlers participate in independent updates. Its canonical service and
+provider adapters retain connections, request limits and configuration for the host
+lifetime; changes to those shared bytes require a compatible host baseline.

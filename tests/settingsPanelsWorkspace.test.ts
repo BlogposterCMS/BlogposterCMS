@@ -33,13 +33,14 @@ describe('Settings workspace save and recovery', () => {
 
   it('retains other-tab drafts after saving one settings section', async () => {
     await renderSettingsSurface(host, { slug: 'settings/design' });
-    const faviconLabel = [...host.querySelectorAll('label')].find(label => label.textContent === 'Favicon URL')!;
-    const fields = [host.querySelector<HTMLInputElement>(`#${faviconLabel.htmlFor}`)!, host.querySelector<HTMLInputElement>('input[type="password"]')!];
+
+    const fields = [host.querySelector<HTMLInputElement>('[aria-label="Favicon URL"]')!, host.querySelector<HTMLInputElement>('input[type="password"]')!];
     fields[0].value = '/favicon.png';
     fields[1].value = 'pending typography';
-    button('Save favicon').click();
+    fields[0].dispatchEvent(new Event('input', { bubbles: true }));
+    button('Save changes').click();
     await settle();
-    expect(host.textContent).toContain('Favicon updated.');
+    expect(host.textContent).toContain('Branding saved.');
     expect(await confirmWorkspaceNavigation()).toBe(false);
     fields[1].value = '';
     expect(await confirmWorkspaceNavigation()).toBe(true);
@@ -55,8 +56,8 @@ describe('Settings workspace save and recovery', () => {
     emit.mockClear();
     button('Save SEO settings').click();
     button('Save SEO settings').click();
-    // One existing facade write per setting, never a second batch from a double click.
-    expect(emit).toHaveBeenCalledTimes(3);
+    // SEO defaults have one authoritative write, including double-click protection.
+    expect(emit).toHaveBeenCalledTimes(1);
     expect(await confirmWorkspaceNavigation()).toBe(false);
     expect(bpDialog.alert).toHaveBeenCalled();
     reject(new Error('offline'));
@@ -75,7 +76,8 @@ describe('Settings workspace save and recovery', () => {
     await renderSettingsSurface(host, { slug: 'settings/general' });
     expect(host.querySelector('input')).toBeNull();
     expect(host.textContent).toContain('SETTINGS_LOAD_FAILED: offline');
-    emit.mockResolvedValue('Site name');
+    // Privacy is a structured setting; site identity remains plain text.
+    emit.mockImplementation(async (_event, payload) => payload.params?.key === 'WEBSITE_ANALYTICS_CONFIG' ? '' : 'Site name');
     button('Retry').click();
     await settle();
     expect(host.querySelector('input')?.value).toBe('Site name');

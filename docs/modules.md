@@ -1,5 +1,8 @@
 # Module Architecture
 
+The separate [GeoIP Manager](modules/geoipManager.md) provides prepared, disabled-by-default
+local MaxMind, paid and self-hosted lookup adapters for trusted core consumers.
+
 The core [Analytics Manager](modules/analyticsManager.md) owns bounded activity
 and public delivery reports through the existing authenticated admin facade.
 

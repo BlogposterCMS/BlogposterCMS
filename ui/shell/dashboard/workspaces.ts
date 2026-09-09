@@ -1,4 +1,5 @@
 import { beginAdminRegion, failAdminRegion, finishAdminRegion } from '../../shared/feedback/adminShellLoading.js';
+import { createExtensionStoreButton, openExtensionUpload } from '../../shared/module-access/extensionUpload.js';
 import {
   ADMIN_LANE,
   createWorkspacePage,
@@ -611,6 +612,13 @@ async function renderWorkspaceNav(): Promise<void> {
   }
   if (actionNav) {
     buildWorkspaceActions(actionNav, workspaces, adminBase, activeWorkspaceSlug);
+    const store = createExtensionStoreButton(); store.id = 'extension-store';
+    store.onclick = () => openExtensionUpload(async (data, name, progress, kind) => {
+      // Shell navigation chooses the package owner; inspection and grants stay with that owner.
+      if (kind === 'widget') return (await import('../../shared/module-access/widgetPackageControls.js')).installWidgetArchive(data, name, progress);
+      return (await import('../../shared/module-access/modulePackageControls.js')).installModuleArchive(data, name, progress);
+    }, true);
+    actionNav.append(store);
   }
   if (sidebarNav && activeWorkspaceSlug) {
     buildSidebar(sidebarNav, sidebarPages, adminBase, activeWorkspaceSlug);

@@ -34,7 +34,7 @@
   background: var(--bg);
   color: var(--fg);
   font-weight: 600;
-  line-height: var(--btn-h);
+  line-height: 1;
   cursor: pointer;
   user-select: none;
   transition: filter var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay), background var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay), color var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay);
@@ -49,6 +49,10 @@
 }
 .bp-ui-kit-surface {
   /* Focus */
+}
+.bp-ui-kit-surface .app-scope .button:not(.text),
+.bp-ui-kit-surface .app-scope .icon-button {
+  text-decoration: none;
 }
 .bp-ui-kit-surface .app-scope .button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand) 45%, transparent);
@@ -74,7 +78,7 @@
 .bp-ui-kit-surface .app-scope .button.ghost {
   --bg: var(--studio-surface-solid);
   --fg: var(--studio-text);
-  box-shadow: var(--studio-shadow-soft);
+  box-shadow: none;
 }
 .bp-ui-kit-surface .app-scope .button.secondary {
   --bg: var(--studio-surface-muted);
@@ -114,6 +118,10 @@
 .bp-ui-kit-surface .app-scope .button:not(:disabled):active {
   filter: brightness(0.97) saturate(1.01);
 }
+.bp-ui-kit-surface .app-scope .button.ghost:not(:disabled):hover,
+.bp-ui-kit-surface .app-scope .button.ghost:not(:disabled):active {
+  box-shadow: none;
+}
 .bp-ui-kit-surface {
   /* Sizes */
 }
@@ -141,7 +149,7 @@
 }
 .bp-ui-kit-surface .app-scope .button .icon + span,
 .bp-ui-kit-surface .app-scope .button span + .icon {
-  margin-left: 6px;
+  margin-left: 0;
 }
 .bp-ui-kit-surface {
   /* Compact icon actions reuse the floating language of the dashboard chrome. */
@@ -301,7 +309,8 @@ textarea):focus {
   outline: none;
   border-color: transparent;
   background: var(--studio-surface-solid);
-  box-shadow: var(--studio-focus-ring);
+  box-shadow: none;
+  border-color: var(--studio-border-strong);
 }
 .bp-ui-kit-surface .app-scope :where(input, textarea)::placeholder {
   color: var(--studio-text-muted);
@@ -732,6 +741,8 @@ textarea):focus {
   gap: 4px;
 }
 .bp-ui-kit-surface .bp-popover__item {
+  text-decoration: none;
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -749,7 +760,8 @@ textarea):focus {
 .bp-ui-kit-surface .bp-popover__item:hover,
 .bp-ui-kit-surface .bp-popover__item:focus-visible {
   background: var(--studio-surface-muted);
-  box-shadow: var(--studio-focus-ring);
+  box-shadow: none;
+  outline: none;
 }
 .bp-ui-kit-surface .bp-popover__item img {
   width: 17px;

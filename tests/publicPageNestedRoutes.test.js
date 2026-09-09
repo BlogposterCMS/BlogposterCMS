@@ -24,7 +24,7 @@ function request(server, requestPath, headers = {}) {
   });
 }
 
-function createEmitter(expectedSlug, seenSlugs) {
+function createEmitter(expectedSlug, seenSlugs, config = { enabled: true, mode: 'opt-out' }) {
   return {
     emit(eventName, payload, callback) {
       if (eventName === 'ensurePublicToken') {
@@ -32,6 +32,9 @@ function createEmitter(expectedSlug, seenSlugs) {
         return;
       }
       if (eventName === 'cmsPublicRuntimeRequest') {
+        if (payload.resource === 'settings') {
+          callback(null, { resource: 'settings', action: 'public', eventName: 'test', data: { WEBSITE_ANALYTICS_CONFIG: JSON.stringify(config) } }); return;
+        }
         seenSlugs.push(payload.params.slug);
         const data = payload.action === 'envelope' ? {
           meta: { seoTitle: 'Published <title>', seoDesc: 'Published description', seoImage: '/cover.png' },
@@ -46,10 +49,12 @@ function createEmitter(expectedSlug, seenSlugs) {
   };
 }
 
-function createServer(expectedSlug, seenSlugs) {
+function createServer(expectedSlug, seenSlugs, config, validateAdminToken) {
   const app = express();
+  app.use(require('cookie-parser')());
   app.use(createPublicPageRoutes({
-    motherEmitter: createEmitter(expectedSlug, seenSlugs),
+    motherEmitter: createEmitter(expectedSlug, seenSlugs, config),
+    validateAdminToken,
     plainSpaceVersion: 'test',
     renderMode: 'client',
     rootDir: path.join(__dirname, '..'),
@@ -60,6 +65,23 @@ function createServer(expectedSlug, seenSlugs) {
 }
 
 describe('nested public page routes', () => {
+  it('only links visits after recognition consent and verifies the account independently of browser identifiers', async () => {
+    const collector = require('../mother/modules/analyticsManager/collector');
+    collector.take(); collector.setEnabled(true);
+    const validate = jest.fn(async token => { if (token !== 'verified') throw new Error('expired'); return { isUser: true, userId: 42 }; });
+    const server = createServer('guides/known', [], { enabled: true, recognition: true }, validate);
+    const consent = encodeURIComponent(JSON.stringify({ at: Date.now(), version: 1, analytics: true, recognition: true }));
+    try {
+      await request(server, '/guides/known', { cookie: 'admin_jwt=verified' });
+      expect(collector.take()).toHaveLength(0); expect(validate).not.toHaveBeenCalled();
+      await request(server, '/guides/known?secret=private', { cookie: `bp_consent=${consent}; admin_jwt=verified; bp_visitor=11111111-1111-4111-8111-111111111111; bp_session=22222222-2222-4222-8222-222222222222` });
+      const rows = collector.take(); expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ actor: '42', path: '/guides/known', visitor: '11111111-1111-4111-8111-111111111111', session: '22222222-2222-4222-8222-222222222222' });
+      expect(JSON.stringify(rows)).not.toContain('secret');
+      await request(server, '/guides/known', { cookie: `bp_consent=${consent}; admin_jwt=forged` });
+      expect(collector.take()[0].actor).toBe('anonymous');
+    } finally { collector.setEnabled(false); await new Promise(resolve => server.close(resolve)); }
+  });
   it('records one delivery and excludes DNT/GPC and missing pages', async () => {
     const collector = require('../mother/modules/analyticsManager/collector');
     collector.take(); collector.setEnabled(true);

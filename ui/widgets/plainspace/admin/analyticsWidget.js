@@ -7,15 +7,18 @@ function node(tag, text = '', className = '') {
     el.className = className;
     return el;
 }
-function table(title, columns, rows) {
+function table(title, columns, rows, emptyMessage = 'No recorded activity in this period.') {
     const section = node('section', '', 'analytics-panel');
     section.append(node('h3', title));
     if (!rows.length) {
-        section.append(node('p', 'No recorded activity in this period.'));
+        section.append(node('p', emptyMessage));
         return section;
     }
     const wrapper = node('div', '', 'analytics-table-scroll');
     const table = node('table', '', 'table');
+    // Preserve readable columns on narrow widgets; the existing wrapper scrolls.
+    if (columns.length > 5)
+        table.style.minWidth = '1200px';
     const head = node('thead');
     const header = node('tr');
     columns.forEach(label => { const th = node('th', label); th.scope = 'col'; header.append(th); });
@@ -111,6 +114,29 @@ export async function renderAnalytics(el, view) {
             }
             if (grid.childElementCount)
                 content.append(grid);
+            if (view === 'website') {
+                const settings = node('a', 'Consent & connections', 'button secondary sm');
+                settings.href = '/admin/settings/general?tab=privacy';
+                content.append(settings);
+                const filter = node('input');
+                filter.type = 'search';
+                filter.placeholder = 'Page, account, visitor, session or referrer';
+                const filterLabel = node('label', 'Filter recent visits ');
+                filterLabel.append(filter);
+                const visits = node('div');
+                const draw = () => {
+                    const query = filter.value.toLowerCase().trim();
+                    const rows = (data.recentPages || []).filter(row => Object.values(row).some(value => String(value).toLowerCase().includes(query)));
+                    visits.replaceChildren(table('Recent page deliveries (latest 500)', ['Time', 'Page', 'Path', 'Account ID', 'Browser visitor ID', 'Session', 'Referrer domain', 'Location (approximate)', 'Device / browser / OS'], rows.map(row => [new Date(row.at).toLocaleString(), `${row.title || row.page} (${row.page})`, row.path || 'Not recorded',
+                        row.actor === 'unknown' ? 'Not recorded' : row.actor, row.visitor || 'Not linked', row.session || 'Not linked', row.source,
+                        [row.country, row.region, row.city].filter(Boolean).join(' / ') || row.geoStatus || 'Not recorded',
+                        `${row.device} / ${row.browser} / ${row.os}`]), query ? 'No matching visits in the latest 500 records.' : 'No recorded page deliveries in this period.'));
+                };
+                filter.addEventListener('input', draw);
+                draw();
+                content.append(filterLabel, visits);
+                content.append(node('p', 'Visitor and session IDs link consenting browser visits; they do not prove a person’s identity. Missing referrers may also be hidden by the browser. Consent applies to future deliveries; earlier anonymous visits cannot be attributed retroactively.'));
+            }
             if (view === 'system')
                 content.append(table('Recent system activity', ['Time', 'Event', 'Actor', 'Outcome'], data.recent.filter(row => row.kind === 'system').map(row => [new Date(row.at).toLocaleString(), row.event, row.actor, row.outcome])));
             content.append(node('p', 'HTML deliveries include automated clients and reloads; they are not unique visitors or sessions. Device/software categories come from self-reported user agents. Internal event counts can include several events for one action. No historic log backfill.'));

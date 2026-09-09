@@ -16,6 +16,12 @@ test('store icon opens a keyboard-accessible ZIP dropzone with a hidden native p
   expect(click).toHaveBeenCalledTimes(1);
 });
 
+test('global store chooses the owning package type in the ZIP dialog', () => {
+  openExtensionUpload(jest.fn(), true);
+  const select = document.querySelector<HTMLSelectElement>('[aria-label="Package type"]')!;
+  expect([...select.options].map(option => option.value)).toEqual(['module', 'widget']);
+});
+
 test('file picker rejects multiple files before inspection', async () => {
   const install = jest.fn();
   openExtensionUpload(install);
@@ -30,12 +36,14 @@ test('dropping a file uses the same inspection callback without installing on ca
   let inspected: (value: unknown) => void;
   const completed = new Promise(resolve => { inspected = resolve; });
   const install = jest.fn(async (data: string, name: string) => { inspected({ data, name }); return false; });
-  openExtensionUpload(install);
+  openExtensionUpload(install, true);
+  document.querySelector<HTMLSelectElement>('[aria-label="Package type"]')!.value = 'widget';
   const drop = new Event('drop', { bubbles: true, cancelable: true });
   Object.defineProperty(drop, 'dataTransfer', { value: { files: [new File(['zip bytes'], 'sample.zip')] } });
   document.querySelector('.module-upload-box')!.dispatchEvent(drop);
   await expect(completed).resolves.toEqual({ data: btoa('zip bytes'), name: 'sample.zip' });
   expect(install).toHaveBeenCalledTimes(1);
+  expect((install.mock.calls[0] as unknown[])[3]).toBe('widget');
 });
 
 test('review preselects configured services only and submits the user selection', async () => {

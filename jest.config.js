@@ -17,6 +17,23 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    "^.*page-editor/pageEditorData\\.js$": "<rootDir>/ui/shared/page-editor/pageEditorData.ts",
+    "^.*module-access/moduleAccessConsentData\\.js$": "<rootDir>/ui/shared/module-access/moduleAccessConsentData.ts",
+    "^.*shared/page-editor/pageEditorData\\.js$": "<rootDir>/ui/shared/page-editor/pageEditorData.ts",
+    "^.*shared/module-access/(modulesListData|widgetPackageControls|modulePackageControls)\\.js$": "<rootDir>/ui/shared/module-access/$1.ts",
+    "^\\./modulesListData\\.js$": "<rootDir>/ui/shared/module-access/modulesListData.ts",
+    '^.*analytics/connectors/index\\.js$': '<rootDir>/ui/shared/analytics/connectors/index.ts',
+    '^\\./analyticsSettings\\.js$': '<rootDir>/ui/widgets/plainspace/admin/settings/analyticsSettings.ts',
+    '^\\./connectors/index\\.js$': '<rootDir>/ui/shared/analytics/connectors/index.ts',
+    '^\\./googleAnalytics\\.js$': '<rootDir>/ui/shared/analytics/connectors/googleAnalytics.ts',
+    '^.*(?:/|\\./)contentSlot\\.js$': '<rootDir>/ui/shared/article/contentSlot.ts',
+    '^.*layout/layoutDocument\\.js$': '<rootDir>/ui/shared/layout/layoutDocument.ts',
+    '^.*(?:/|\\./)workspaceAgent\\.js$': '<rootDir>/ui/shared/agent/workspaceAgent.ts',
+    '^.*(?:/|\\./)workspaceChanges\\.js$': '<rootDir>/ui/shared/navigation/workspaceChanges.ts',
+    '^.*layout/pagePresentation\\.js$': '<rootDir>/ui/shared/layout/pagePresentation.ts',
+    '^.*(?:/|\\./)(articleData|articleSchema|articleLoader|pageContentAction)\\.js$': '<rootDir>/ui/shared/article/$1.ts',
+    '^.*pageEditorWidgets/pageEditorData\\.js$': '<rootDir>/ui/widgets/plainspace/admin/pageEditorWidgets/pageEditorData.ts',
+    '^\\./brandingFields\\.js$': '<rootDir>/ui/widgets/plainspace/admin/settings/brandingFields.ts',
     '^.*shared/media/mediaStoragePanel\\.js$': '<rootDir>/ui/shared/media/mediaStoragePanel.ts',
     '^.*widgetPackageControls\\.js$': '<rootDir>/ui/widgets/plainspace/admin/widgetPackageControls.ts',
     '^.*extensionUpload\\.js$': '<rootDir>/ui/shared/module-access/extensionUpload.ts',
@@ -180,6 +197,7 @@ module.exports = {
     '^\\./mediaExplorerData\\.js$': '<rootDir>/ui/widgets/plainspace/admin/mediaExplorerData.ts',
     '^\\./accessSettingsData\\.js$': '<rootDir>/ui/widgets/plainspace/admin/accessSettingsData.ts',
     '^\\./userEditData\\.js$': '<rootDir>/ui/widgets/plainspace/admin/userEditData.ts',
+    '^\\./userPermissionsDialog\\.js$': '<rootDir>/ui/widgets/plainspace/admin/userPermissionsDialog.ts',
     '^\\.\\./\\.\\./\\.\\./\\.\\./\\.\\./ui/widgets/plainspace/admin/defaultwidgets/contentSummaryWidget\\.js$': '<rootDir>/ui/widgets/plainspace/admin/defaultwidgets/contentSummaryWidget.ts',
     '^\\.\\./\\.\\./\\.\\./\\.\\./\\.\\./ui/widgets/plainspace/admin/defaultwidgets/pageStats\\.js$': '<rootDir>/ui/widgets/plainspace/admin/defaultwidgets/pageStats.ts',
     '^\\.\\./\\.\\./\\.\\./\\.\\./\\.\\./\\.\\./ui/widgets/plainspace/admin/defaultwidgets/pageList/pageList\\.js$': '<rootDir>/ui/widgets/plainspace/admin/defaultwidgets/pageList/pageList.ts',
@@ -230,5 +248,5 @@ module.exports = {
   },
   // Node 24 supports require(ESM); Jest 29's VM needs the sanitizer's small
   // parser graph transformed to CommonJS. All other dependencies stay untouched.
-  transformIgnorePatterns: ['/node_modules/(?!htmlparser2/|domhandler/|domutils/|domelementtype/|dom-serializer/|entities/|launder/)'],
+  transformIgnorePatterns: ['/node_modules/(?!@tiptap/extension-unique-id/|uuid/|htmlparser2/|domhandler/|domutils/|domelementtype/|dom-serializer/|entities/|launder/)'],
 };

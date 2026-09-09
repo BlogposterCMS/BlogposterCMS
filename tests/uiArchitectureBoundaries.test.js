@@ -653,7 +653,7 @@ describe('UI architecture boundaries', () => {
       'utf8'
     );
     const dataSource = fs.readFileSync(
-      path.join(rootDir, 'ui', 'widgets', 'plainspace', 'admin', 'modulesListData.ts'),
+      path.join(rootDir, 'ui', 'shared', 'module-access', 'modulesListData.ts'),
       'utf8'
     );
 
@@ -1074,7 +1074,7 @@ describe('UI architecture boundaries', () => {
       'utf8'
     );
     const dataSource = fs.readFileSync(
-      path.join(rootDir, 'ui', 'widgets', 'plainspace', 'admin', 'pageEditorWidgets', 'pageEditorData.ts'),
+      path.join(rootDir, 'ui', 'shared', 'page-editor', 'pageEditorData.ts'),
       'utf8'
     );
 
@@ -1300,6 +1300,8 @@ describe('UI architecture boundaries', () => {
 
   test('webpack ignored imports are limited to explicit dynamic gateways', () => {
     const allowedFiles = new Set([
+      'ui/shared/article/articleLoader.ts',
+      'ui/shared/article/articleLoader.js',
       'ui/runtime/main/adminWidgetSurfaces.ts',
       'ui/runtime/main/adminWidgetSurfaces.js',
       'ui/runtime/publicLoaderImporter.ts',

@@ -1521,6 +1521,18 @@ export interface GenerateXmlSitemapPayload {
 }
 export type GenerateXmlSitemapResult = JsonValue | undefined;
 
+export interface GeoipLookupPayload {
+  "authModuleSecret"?: string;
+  "decodedJWT"?: null | JsonObject;
+  "isExternalRequest"?: boolean;
+  "jwt"?: null | string;
+  "moduleName": string;
+  "moduleType"?: null | string;
+  "skipJWT"?: boolean;
+  readonly [key: string]: BackendPayloadValue;
+}
+export type GeoipLookupResult = JsonValue | undefined;
+
 export interface GetAllLayoutsForPagePayload {
   "authModuleSecret"?: string;
   "decodedJWT"?: null | JsonObject;
@@ -4503,6 +4515,7 @@ export interface BackendEventContractMap {
   "generateRobotsTxt": { payload: GenerateRobotsTxtPayload; result: GenerateRobotsTxtResult };
   "generateSeoSitemap": { payload: GenerateSeoSitemapPayload; result: GenerateSeoSitemapResult };
   "generateXmlSitemap": { payload: GenerateXmlSitemapPayload; result: GenerateXmlSitemapResult };
+  "geoipLookup": { payload: GeoipLookupPayload; result: GeoipLookupResult };
   "getAllLayoutsForPage": { payload: GetAllLayoutsForPagePayload; result: GetAllLayoutsForPageResult };
   "getAllPages": { payload: GetAllPagesPayload; result: GetAllPagesResult };
   "getAllPermissions": { payload: GetAllPermissionsPayload; result: GetAllPermissionsResult };

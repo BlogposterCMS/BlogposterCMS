@@ -1,20 +1,25 @@
 /** One store entry point for module and widget installation. */
 export function createExtensionStoreButton(): HTMLButtonElement {
-  const button = document.createElement('button'); button.type = 'button'; button.className = 'icon-btn';
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'icon-btn extension-store-button';
   button.setAttribute('aria-label', 'Install extension ZIP'); button.title = 'Install extension ZIP';
   const icon = document.createElement('img'); icon.src = '/assets/icons/store.svg'; icon.alt = ''; icon.width = icon.height = 20;
   button.append(icon); return button;
 }
 
 /** Shared file picker; the owning module/widget client performs inspection and installation. */
-export function openExtensionUpload(install: (zipData: string, fileName: string, status: HTMLElement) => Promise<boolean>): void {
+export function openExtensionUpload(install: (zipData: string, fileName: string, status: HTMLElement, kind: 'module' | 'widget') => Promise<boolean>, chooseKind = false): void {
   const overlay = document.createElement('div');
-  overlay.className = 'module-upload-overlay';
+  overlay.className = 'module-upload-overlay app-scope';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Install extension');
   const box = document.createElement('div');
   box.className = 'module-upload-box';
+  const kind = document.createElement('select'); kind.setAttribute('aria-label', 'Package type');
+  for (const [value, text] of [['module', 'Module'], ['widget', 'Widget']]) {
+    const option = document.createElement('option'); option.value = value!; option.textContent = text!; kind.append(option);
+  }
+  if (chooseKind) box.append(kind);
   const label = document.createElement('label');
   label.className = 'module-upload-dropzone'; label.tabIndex = 0; label.setAttribute('role', 'button');
   label.textContent = 'Drop one ZIP file here or choose a file (up to 10 MiB)';
@@ -38,7 +43,7 @@ export function openExtensionUpload(install: (zipData: string, fileName: string,
       status.textContent = 'EXTENSION_FILE_INVALID: Choose one ZIP up to 10 MiB.';
       return;
     }
-    busy = true; input.disabled = true; cancel.disabled = true;
+    busy = true; input.disabled = true; cancel.disabled = true; kind.disabled = true;
     status.textContent = 'Inspecting package…';
     try {
       const file = files[0]!;
@@ -49,12 +54,12 @@ export function openExtensionUpload(install: (zipData: string, fileName: string,
         reader.onabort = () => reject(new Error('EXTENSION_FILE_READ_ABORTED'));
         reader.readAsDataURL(file);
       });
-      if (await install(data, file.name, status)) { overlay.remove(); previous?.focus(); }
+      if (await install(data, file.name, status, kind.value === 'widget' ? 'widget' : 'module')) { overlay.remove(); previous?.focus(); }
       else status.textContent = 'Installation cancelled. No access granted.';
     } catch (err) {
       status.setAttribute('role', 'alert');
       status.textContent = err instanceof Error ? err.message : String(err);
-    } finally { busy = false; input.disabled = false; cancel.disabled = false; }
+    } finally { busy = false; input.disabled = false; cancel.disabled = false; kind.disabled = false; }
   }
   input.addEventListener('change', () => void handle(input.files));
   box.addEventListener('dragover', event => { event.preventDefault(); box.classList.add('dragover'); });

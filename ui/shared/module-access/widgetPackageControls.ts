@@ -1,0 +1,85 @@
+import { emitRuntimeAdmin } from '../api-client/runtimeFacade.js';
+
+interface Access { service: string; name: string; reason: string; required?: boolean; available?: boolean; operation?: { path: string; method: string } }
+interface Package { widgetId: string; replacing?: boolean; label?: string; version?: string; developer?: string; description?: string; reviewedHash?: string; requestedAccess: Access[]; approvedAccess?: string[] }
+type Dialog = { open(options: { title: string; message: string; body: Node; actions: Array<{ id: string; label: string; variant?: string }> }): Promise<{ action?: string }> };
+
+function call(action: string, params: Record<string, unknown> = {}): Promise<any> {
+  if (!window.meltdownEmit) throw new Error('WIDGET_PACKAGE_EMITTER_UNAVAILABLE');
+  return emitRuntimeAdmin(window.meltdownEmit, window.ADMIN_TOKEN, 'widgets', action, params, 65_000);
+}
+
+export async function reviewWidgetPackage(pkg: Package, installing: boolean): Promise<string[] | null> {
+  const dialog = (window as Window & { bpDialog?: Dialog }).bpDialog;
+  if (!dialog?.open) throw new Error('EXTENSION_REVIEW_UNAVAILABLE: Reload to restore the access review dialog.');
+  const body = document.createElement('div');
+  body.className = 'module-access-review';
+  const description = document.createElement('p');
+  description.textContent = [pkg.label || pkg.widgetId, pkg.version, pkg.developer, pkg.description].filter(Boolean).join(' · ');
+  body.appendChild(description);
+  const checks: HTMLInputElement[] = [];
+  for (const access of pkg.requestedAccess) {
+    const key = `${access.service}:${access.name}`;
+    const label = document.createElement('label'); label.className = 'module-access-option';
+    const check = document.createElement('input'); check.type = 'checkbox'; check.value = key;
+    check.disabled = installing && access.available === false;
+    check.checked = !check.disabled && (installing || !!pkg.approvedAccess?.includes(key));
+    checks.push(check);
+    const text = document.createElement('span');
+    text.textContent = `${access.service}: ${access.name}${access.required ? ' (required by this widget)' : ' (optional)'}`;
+    const reason = document.createElement('small'); reason.textContent = access.reason;
+    label.append(check, text, reason);
+    if (access.operation) {
+      const target = document.createElement('small'); target.textContent = `${access.operation.method} ${access.operation.path}`; label.append(target);
+    }
+    if (check.disabled) {
+      const note = document.createElement('small'); note.textContent = 'Not configured by the site operator; stays blocked.'; label.append(note);
+    }
+    body.append(label);
+  }
+  if (!checks.length) { const note = document.createElement('p'); note.textContent = 'No widget services requested.'; body.append(note); }
+  const result = await dialog.open({ title: installing ? (pkg.replacing ? 'Replace widget package' : 'Install widget') : 'Widget access',
+    message: 'Only selected, declared services are allowed. Direct core events are blocked. This review is not a malware scan; install code you trust.', body,
+    actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'confirm', label: installing ? (pkg.replacing ? 'Back up and replace package' : 'Install and allow selected access') : 'Save access', variant: 'primary' }] });
+  return result.action === 'confirm' ? checks.filter(check => check.checked && !check.disabled).map(check => check.value) : null;
+}
+
+/** The global store retains the widget owner's manifest review and permissions. */
+export async function installWidgetArchive(zipData: string, _name: string, progress: HTMLElement): Promise<boolean> {
+  const pkg = await call('inspectZip', { zipData }) as Package;
+  const approvedAccess = await reviewWidgetPackage(pkg, true);
+  if (approvedAccess === null) return false;
+  progress.textContent = 'Installing widget…';
+  await call('installZip', { zipData, reviewedHash: pkg.reviewedHash, approvedAccess, replaceExisting: pkg.replacing === true });
+  window.location.reload(); return true;
+}
+
+export function addWidgetPackageControls(root: HTMLElement, refresh: () => Promise<void>): void {
+  const header = root.querySelector('header');
+  if (!header) return;
+  const status = document.createElement('p'); status.setAttribute('role', 'status');
+  const manage = document.createElement('button'); manage.className = 'button secondary sm'; manage.textContent = 'Manage installed access';
+  manage.addEventListener('click', async () => {
+    manage.disabled = true;
+    try {
+      const packages = await call('packages') as Package[];
+      const dialog = (window as Window & { bpDialog?: Dialog }).bpDialog;
+      if (!dialog?.open) throw new Error('EXTENSION_REVIEW_UNAVAILABLE');
+      const body = document.createElement('div');
+      const select = document.createElement('select'); select.setAttribute('aria-label', 'Installed widget');
+      for (const pkg of packages) { const option = document.createElement('option'); option.value = pkg.widgetId; option.textContent = pkg.label || pkg.widgetId; select.append(option); }
+      if (!packages.length) { status.textContent = 'No UI-installed widget packages.'; return; }
+      body.append(select);
+      const result = await dialog.open({ title: 'Installed widget access', message: 'Choose a widget to review its current grants.', body, actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'confirm', label: 'Review access' }] });
+      if (result.action !== 'confirm') return;
+      const pkg = packages.find(item => item.widgetId === select.value)!;
+      const approvedAccess = await reviewWidgetPackage(pkg, false);
+      if (approvedAccess === null) return;
+      await call('setPackageAccess', { widgetId: pkg.widgetId, approvedAccess });
+      status.textContent = 'Access saved. Existing service instances refresh their grants automatically.';
+    } catch (err) { status.textContent = err instanceof Error ? err.message : String(err); }
+    finally { manage.disabled = false; }
+  });
+  const accessActions = document.createElement('div'); accessActions.className = 'form-actions'; accessActions.append(manage);
+  header.after(accessActions); root.append(status);
+}

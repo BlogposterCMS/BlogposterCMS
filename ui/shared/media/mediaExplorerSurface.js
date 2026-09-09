@@ -454,7 +454,9 @@ export function createMediaExplorerSurface(options = {}) {
     async function choose(entry) {
         if (!acceptsMedia(entry, options.accept))
             return;
-        const result = isRemote() ? { shareURL: publicMediaUrl(entry) } : await createMediaShareLink(emit, jwt, entry.path);
+        const result = options.publicUrlOnly || isRemote() ? { shareURL: publicMediaUrl(entry) } : await createMediaShareLink(emit, jwt, entry.path);
+        if (options.publicUrlOnly && !result.shareURL)
+            throw new Error('MEDIA_PUBLIC_IMAGE_REQUIRED: Choose an image from public media or a configured public storage location.');
         if (!result.shareURL)
             throw new Error('MEDIA_EXPLORER_SELECTION_FAILED: No usable file URL was returned.');
         options.onSelectFile?.({ ...result, name: entry.path });

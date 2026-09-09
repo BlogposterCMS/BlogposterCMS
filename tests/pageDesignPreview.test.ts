@@ -19,6 +19,7 @@ test('labels inherited designs and clears stale preview when no design is attach
   renderPageDesignPreview(host, null, [], '/admin');
   expect(host.querySelector('.page-manager__design-preview')).toBeNull();
   expect(host.textContent).toContain('No design attached');
+  expect(host.querySelector('.button.primary')?.textContent).toBe('Design page');
 });
 
 test('offers direct design editing and page-specific attachment shortcuts', () => {
@@ -26,8 +27,15 @@ test('offers direct design editing and page-specific attachment shortcuts', () =
   document.body.append(host);
   renderPageDesignPreview(host, { sourcePage: { id: 'parent' }, inherited: true, depth: 1, designId: '14' }, [], '/admin', 'child');
   expect(host.querySelector('.button.primary')?.getAttribute('href')).toBe('/admin/studio/design/14');
+  expect(host.querySelector('.button.primary')?.textContent).toBe('Edit design');
+  const settings = host.querySelector<HTMLAnchorElement>('[aria-label="Site settings"]')!;
+  expect(settings.href).toContain('/admin/pages/edit/child');
+  expect(settings.textContent).toBe('');
+  expect(settings.querySelector('img')?.getAttribute('src')).toBe('/assets/icons/settings.svg');
+  expect(settings.previousElementSibling?.textContent).toBe('Edit design');
   host.querySelector<HTMLButtonElement>('[aria-label="More page actions"]')!.click();
   const links = [...document.querySelectorAll<HTMLAnchorElement>('[role="menuitem"]')];
+  expect(links.every(link => link.className === 'bp-popover__item')).toBe(true);
   expect(links.map(link => link.getAttribute('href'))).toEqual([
     '/admin/pages/edit/child#page-design', '/admin/pages/edit/child#page-html', '/admin/pages/edit/child#page-html-upload'
   ]);

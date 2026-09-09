@@ -686,10 +686,12 @@ function setupPagesManagerEvents(motherEmitter) {
         }).then(async page => {
   if (!page) return cb(new Error('Page not found'));
   const pageSeo = {
-    title: page.seo_title || page.title || '',
+    title: page.title || '',
+    seoTitle: page.seo_title || '',
     description: page.meta_desc || '',
     keywords: page.seo_keywords || '',
-    ogImage: page.seo_image || ''
+    ogImage: page.seo_image || '',
+    featuredImage: typeof page.meta?.featuredImage === 'string' ? page.meta.featuredImage : ''
   };
   const resolvedSeo = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_SEO_META, {
     jwt, moduleName: 'seoManager', moduleType: 'core',
@@ -699,7 +701,7 @@ function setupPagesManagerEvents(motherEmitter) {
     console.warn('PUBLIC_SEO_RESOLVE_FAILED: Using the published page metadata.', error.message);
     return null;
   });
-  const seo = resolvedSeo?.seo || pageSeo;
+  const seo = resolvedSeo?.seo || { ...pageSeo, title: pageSeo.seoTitle || pageSeo.title, ogImage: pageSeo.ogImage || pageSeo.featuredImage };
   const usesMain = ['main', 'composed', 'inherit'].includes(pageLayoutMode(page));
   const settings = usesMain ? await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PUBLIC_SETTINGS, {
     jwt, moduleName: 'settingsManager', moduleType: 'core', keys: [SITE_MAIN_DESIGN_SETTING]

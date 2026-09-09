@@ -72,6 +72,6 @@ describe('shared runtime startup layout reads', () => {
     jest.mocked(fetchRuntimePageBySlug).mockRejectedValue(new Error('offline'));
     await expect(renderRuntimePage({ lane: 'admin', slug: 'home', debug: false }, 'content-only')).rejects.toThrow('offline');
     expect(document.getElementById('content')?.dataset.adminLoading).toBe('error');
-    expect(document.querySelector('#content .admin-shell-error')?.textContent).toContain('Erneut versuchen');
+    expect(document.querySelector('#content .admin-shell-error')?.textContent).toContain('Try again');
   });
 });

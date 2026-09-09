@@ -12,6 +12,7 @@ describe('workspace navigation', () => {
     ]);
     const { initWorkspaceNav } = await import('../ui/shell/dashboard/workspaces');
     await initWorkspaceNav();
+    expect(document.querySelector('#workspace-actions #extension-store img')?.getAttribute('src')).toBe('/assets/icons/store.svg');
     expect([...document.querySelectorAll('#subpage-nav a')].map(a => a.textContent)).toEqual(['General', 'Users & access', 'Modules', 'Widgets', 'UI Kit']);
     expect([...document.querySelectorAll('.settings-nav-group')].map(group => group.textContent)).toEqual(['Website', 'Administration', 'Reference']);
     expect(document.querySelector('#subpage-nav [aria-current="page"]')?.textContent).toBe('General');

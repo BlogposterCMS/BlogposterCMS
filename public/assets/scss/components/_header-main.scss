@@ -6,7 +6,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px clamp(24px, 4vw, 52px) 12px;
+  padding: 18px 24px 12px;
+  // Match the center line of the sidebar's 40px controls in its 88px rail.
+  padding-left: 24px;
   justify-content: space-between;
   backdrop-filter: none;
   background: transparent;
@@ -64,16 +66,16 @@
         cursor: pointer;
         isolation: isolate;
 
-        // Scale only the visual shell so labels and icons stay sharp while hovering.
+        // Only the selected workspace gets a surface; inactive actions stay plain.
         &::before {
           content: "";
           position: absolute;
           inset: 0;
           z-index: -1;
-          border: 1px solid var(--studio-border);
+          border: 1px solid transparent;
           border-radius: inherit;
-          background: var(--studio-surface-solid);
-          box-shadow: var(--studio-shadow-soft);
+          background: transparent;
+          box-shadow: none;
           transform: scale(1);
           transform-origin: center;
           transition:
@@ -119,9 +121,7 @@
           border-color: transparent;
           background: transparent;
           &::before {
-            border-color: var(--studio-border);
-            background: var(--studio-surface-solid);
-            transform: scale(1.035);
+            transform: none;
           }
         }
 
@@ -131,8 +131,8 @@
           background: transparent;
           box-shadow: none;
           &::before {
-            border-color: transparent;
-            background: transparent;
+            border-color: var(--studio-border);
+            background: var(--studio-surface-solid);
             box-shadow: none;
             transform: none;
           }
@@ -176,6 +176,10 @@
   gap: .5rem;
   margin-left: 12px;
   align-items: center;
+}
+
+@media (max-width: 700px) {
+  .main-header { padding-left: 12px; padding-right: 12px; }
 }
 
 #widgets-toggle-inline,

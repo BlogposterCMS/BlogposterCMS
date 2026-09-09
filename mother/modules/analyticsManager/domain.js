@@ -10,6 +10,9 @@ function normalizeRecord(input, now = Date.now()) {
   if (!input || !['system', 'page'].includes(input.kind)) throw new Error('ANALYTICS_INVALID_KIND');
   const record = { version: 1, at: new Date(now).toISOString() };
   for (const key of DIMENSIONS) record[key] = label(input[key]);
+  if (input.kind === 'page') {
+    for (const key of ['title', 'path', 'visitor', 'session', 'country', 'region', 'city', 'geoStatus']) record[key] = label(input[key], '');
+  }
   record.durationMs = Math.max(0, Math.min(3600000, Number(input.durationMs) || 0));
   return record;
 }
@@ -49,6 +52,9 @@ function summarize(records, days = 7, now = Date.now()) {
     pages: count(rows, 'page'), system: count(rows, 'system'),
     errors: rows.filter(row => row.kind === 'system' && row.outcome === 'error').length,
     previous: { pages: count(previous, 'page'), system: count(previous, 'system') },
-    tables, timeline: [...timeline.values()].sort((a, b) => a.day.localeCompare(b.day)), recent: rows.slice(-50).reverse() };
+    tables, timeline: [...timeline.values()].sort((a, b) => a.day.localeCompare(b.day)),
+    // Filter before limiting: a busy emitter must not hide all website visits.
+    recentPages: rows.filter(row => row.kind === 'page').sort((a, b) => b.at.localeCompare(a.at)).slice(0, 500),
+    recent: rows.slice(-50).reverse() };
 }
 module.exports = { DIMENSIONS, normalizeRecord, clientDimensions, summarize };

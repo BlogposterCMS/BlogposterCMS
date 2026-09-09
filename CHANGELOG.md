@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+- Share page-editor data and extension access-review helpers between shell and
+  widgets, preserving existing service ownership and compatibility exports.
+
+- Add the article dialog and direct page authoring flow, with shared media picking,
+  stable content blocks and warnings when a composition has no content slot.
+- Refine page rows, page settings, SEO previews, branding and advanced account
+  rights through the existing dialogs, controls and save/discard boundaries.
+- Add consent-based website visit history, configurable cookie preferences and a
+  disabled GA4 connector whose live delivery remains explicitly untested.
+- Add the optional GeoIP module with local database and HTTPS service providers;
+  it remains disabled until configured and keeps credentials server-side.
+- Move the extension ZIP action to the main navigation and refine shared admin
+  spacing, loading messages, color picking and dialog dropdown behavior.
+- Keep installed update candidates in compact expandable rows with check status
+  and timestamps, preserving the existing Update Center services.
+
 ## [0.10.12] - 2026-09-09
 
 - Publish compatible signed generations for all 36 modules and 31 bundled widgets, each with its own release notes, for individual production update acceptance.

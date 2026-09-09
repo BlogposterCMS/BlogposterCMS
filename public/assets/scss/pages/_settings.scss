@@ -10,7 +10,8 @@ body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bot
   min-width: 0; min-height: 0; width: 100%; height: 100%; margin: 0;
   padding: clamp(20px, 2.4vw, 36px); overflow: hidden;
   border: 1px solid var(--studio-border); border-radius: var(--studio-radius-panel);
-  background: var(--studio-surface-solid); box-shadow: var(--studio-shadow-soft);
+  // A full-height workspace needs a short contact shadow, not the floating-card shadow.
+  background: var(--studio-surface-solid); box-shadow: 0 2px 8px color-mix(in srgb, var(--studio-text) 6%, transparent);
   color: var(--studio-text); container: settings-workspace / inline-size;
   [hidden] { display: none !important; }
   :is(nav, [role='tablist'], [role='tabpanel'])[aria-label]::after { content: none; display: none; }
@@ -22,6 +23,9 @@ body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bot
 }
 .settings-surface-header:has(.settings-header-actions) { padding-right: 52px; }
 .settings-header-actions { position: absolute; right: 0; top: 0; }
+// Breadcrumbs name settings pages; preserve any real header actions.
+.settings-surface-header > :is(.page-title, .settings-hint) { display: none; }
+.settings-surface-header:not(:has(.settings-header-actions)) { display: none; }
 .settings-hint { margin: 0; max-width: 72ch; color: var(--studio-text-muted); font-size: 0.9rem; line-height: 1.55; }
 .settings-tabs { flex: 0 0 auto; min-width: 0; &:empty { display: none; } }
 .settings-tab-panels {
@@ -67,6 +71,33 @@ body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bot
   > :is(.permission-group-section, .permission-advanced-section, .form-actions, .form-status),
   > .form-field:has(textarea) { grid-column: 1 / -1; }
   > .form-status:empty { display: none; }
+}
+// Keep the account form compact; the shared dialog owns scrolling and focus.
+.user-edit-widget > .permission-group-section {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+  > strong { flex-basis: 100%; }
+  .permission-checkbox { display: inline-flex; align-items: center; gap: 8px; }
+}
+.permission-advanced-section { display: grid; justify-items: start; gap: 8px; p { margin: 0; } }
+.bp-dialog:has(.user-permissions-dialog) { width: min(720px, 100%); }
+.user-permissions-dialog {
+  display: grid; gap: 12px; min-width: 0;
+  [hidden] { display: none !important; }
+  > input { width: 100%; min-width: 0; }
+  p { margin: 0; }
+}
+.user-permissions-list { display: grid; gap: 20px; }
+.user-permissions-group {
+  min-width: 0; margin: 0; padding: 0; border: 0;
+  legend { width: 100%; padding: 0 0 8px; font-size: 13px; font-weight: 600; }
+}
+.user-permissions-option {
+  display: flex; align-items: flex-start; gap: 12px; padding: 10px 8px;
+  border-top: 1px solid var(--studio-border, #e5e7eb); cursor: pointer;
+  > input { flex: 0 0 auto; margin: 3px 0 0; }
+  > span { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+  small { color: var(--studio-text-muted, #64748b); font-size: 12px; }
+  &:hover { background: var(--studio-surface-muted, #f6f7f8); }
 }
 .settings-surface .login-strategy-edit { max-width: 800px; }
 .settings-surface :is(.users-list, .roles-list, .login-strategies-list) {
@@ -121,3 +152,108 @@ body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bot
   #content:has(> .settings-surface) { padding: 0 12px 12px; }
   .settings-surface { padding: 20px 16px; gap: 20px; }
 }
+// Update state is a compact summary, not a grid stretched over the full viewport.
+.core-update-panel {
+  display: flex; flex-direction: column; align-items: stretch; gap: 16px;
+  height: auto; min-height: 0;
+  p, pre, h4 { margin: 0; }
+  > :is(p, pre):empty { display: none; }
+  [hidden] { display: none !important; }
+  > [role='status'], > [role='alert'] {
+    padding: 12px 14px; border-radius: var(--studio-field-radius);
+    background: var(--studio-surface-muted); font-size: 13px; line-height: 1.5;
+  }
+}
+.core-update-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  .form-actions { margin: 0; }
+}
+.core-update-identity { display: grid; gap: 5px; }
+.core-module-updates {
+  display: grid; gap: 0; margin-top: 8px; border-top: 1px solid var(--studio-border); padding-top: 20px;
+  > h4 { font-size: 14px; margin-bottom: 6px; }
+  > .settings-hint { margin-bottom: 12px; }
+}
+.core-module-update-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--studio-border);
+  p { font-size: 13px; overflow-wrap: anywhere; }
+  .button { flex-shrink: 0; }
+}
+.core-update-document-area {
+  padding: 0; background: transparent;
+  border-radius: var(--studio-field-radius);
+}
+.core-update-document {
+  box-sizing: border-box; min-height: 220px; margin: 0;
+  padding: clamp(20px, 4vw, 40px); border: 1px solid var(--studio-border);
+  background: var(--studio-surface-solid); box-shadow: none;
+  h3 { margin: 0 0 6px; font-size: 20px; }
+  pre { margin: 24px 0; font-size: 14px; line-height: 1.75; }
+  a { font-size: 13px; }
+}
+.settings-update-toolbar {
+  display: flex; align-items: center; gap: 16px;
+  .settings-tabs { flex: 1; }
+  > .icon-button { flex: 0 0 36px; background: transparent; box-shadow: none; }
+}
+
+// One compact release list; details preserve expansion during status polling.
+.core-update-document, .core-module-update-row, .modules-list .module-details {
+  padding: 0; min-height: 0; border: 0; border-bottom: 1px solid var(--studio-border);
+  background: transparent; box-shadow: none;
+  > summary { display: flex; align-items: center; gap: 12px; padding: 16px 0; cursor: pointer; list-style: none; }
+  > summary::after { content: '⌄'; flex: 0 0 auto; }
+  &[open] > summary::after { transform: rotate(180deg); }
+  > pre, > p, > .button, > a, > .module-actions { margin: 0 0 16px; }
+  pre { white-space: pre-wrap; font: inherit; line-height: 1.6; }
+  .module-name-row { width: 100%; }
+}
+.core-module-updates { padding-top: 0; margin-top: 0; border: 0; }
+.core-module-update-row { display: block; }
+.update-versions { margin-left: auto; white-space: nowrap; color: var(--studio-text-muted); font-size: 13px; }
+.core-update-document > summary, .core-module-update-row > summary,
+.modules-list .module-details > summary { padding: 12px 0; font-size: 13px; font-weight: 400; }
+.core-update-identity > [role='status'] { font-size: 13px; }
+.core-update-identity h4 { font-size: 14px; }
+.core-module-updates { padding-top: 20px; border-top: 1px solid var(--studio-border); }
+.core-module-updates > .settings-hint { margin-bottom: 6px; }
+
+// Give each compact status group breathing room without stretching its text.
+.core-update-panel { gap: 0; }
+.core-update-summary,
+.core-module-updates,
+.installed-update-panel .modules-list-mount {
+  box-sizing: border-box;
+  min-height: 260px;
+  padding-top: 20px;
+  align-content: start;
+  align-items: start;
+}
+.installed-update-panel h4 { font-size: 14px; margin: 0 0 8px; }
+.installed-update-panel .settings-hint { margin: 0 0 6px; }
+
+.branding-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.branding-image { min-width: 0; }
+.branding-image h4 { margin: 0 0 12px; font-size: 14px; }
+.branding-image__preview {
+  height: 150px; display: flex; align-items: center; justify-content: center;
+  background: #fff; color: #72767d; border: 1px solid var(--studio-border); border-radius: var(--studio-field-radius);
+  padding: 20px;
+  > img { max-width: 100%; max-height: 100%; object-fit: contain; }
+}
+.branding-image--logoDarkUrl .branding-image__preview { background: #202327; color: #bac0c8; }
+.branding-image__actions { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.branding-image__actions .button { min-width: 0; }
+.branding-image__actions .icon-button { background: transparent; box-shadow: none; }
+.branding-image__url summary { cursor: pointer; font-size: 12px; color: var(--studio-text-muted); }
+.branding-image__url input { margin-top: 8px; }
+.branding-image--faviconUrl { grid-column: 1 / -1; border-top: 1px solid var(--studio-border); padding-top: 20px; }
+.branding-image--faviconUrl .branding-image__preview { width: 64px; height: 64px; padding: 12px; float: left; margin-right: 16px; }
+.branding-image--faviconUrl .branding-image__url { clear: both; }
+.branding-image .settings-hint { margin: 8px 0; min-height: 18px; }
+.branding-settings .branding-save { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.branding-save .settings-save-state { order: -2; margin-right: auto; }
+.branding-save .button.ghost { order: -1; }
+.branding-fields [hidden] { display: none !important; }
+@media (max-width: 600px) { .branding-fields { grid-template-columns: 1fr; } }

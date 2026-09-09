@@ -220,3 +220,12 @@ For admin UI:
 - [User Management](modules/userManagement.md)
 - [Community Module Guide](community_module_guide.md)
 - [Module Architecture](modules.md)
+
+### Account editor advanced rights
+
+Permission groups remain on the account form. **Edit advanced rights** opens the
+shared dialog with grouped, searchable direct rights. Group-inherited access is
+unchanged. **Apply changes** stages the dialog draft; **Cancel**, Escape or backdrop
+dismissal drops that draft. **Save user** persists through the existing user access
+service; **Discard changes** restores the last saved selection. Existing direct
+keys absent from the current registry remain preserved when editing other rights.

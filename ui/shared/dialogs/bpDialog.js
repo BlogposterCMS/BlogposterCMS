@@ -216,6 +216,8 @@ function runDomDialog(options) {
             });
             footer.appendChild(button);
         });
+        if (options.footerContent)
+            footer.appendChild(options.footerContent);
         function onRootClick(event) {
             if (event.target === root && options.dismissable !== false) {
                 closeWith({ action: 'cancel', value: null });

@@ -4,6 +4,44 @@
 
 import { createColorPicker } from '../ui/shared/controls/colorPicker';
 
+test('literal-only pickers hide unrelated libraries, label swatches and keep Enter inside the picker', () => {
+  const onSelect = jest.fn();
+  const picker = createColorPicker({ initialColor: '#123456', onSelect });
+  document.body.replaceChildren(picker.el);
+  expect((picker.el.querySelector('.saved-color-library') as HTMLElement).hidden).toBe(true);
+  expect(picker.el.querySelector('form')).toBeNull();
+  const search = picker.el.querySelector<HTMLInputElement>('.color-search')!;
+  search.value = '#abc';
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  search.dispatchEvent(enter);
+  expect(enter.defaultPrevented).toBe(true);
+  expect(onSelect).toHaveBeenLastCalledWith('#AABBCC', expect.objectContaining({ linked: false }));
+  expect(picker.el.querySelector('[aria-label="Select #AABBCC"]')?.getAttribute('aria-pressed')).toBe('true');
+  const quick = picker.el.querySelectorAll('.color-section')[1]!.textContent;
+  const quickCount = picker.el.querySelectorAll('.color-section')[1]!.children.length;
+  picker.updateOptions({ documentColors: ['#111111'] });
+  expect(picker.el.querySelectorAll('.color-section')[1]!.children.length).toBe(quickCount);
+  expect(picker.el.querySelectorAll('.color-section')[1]!.textContent).toBe(quick);
+});
+
+test('invalid color names never silently become black and custom color keyboard controls work', () => {
+  const onSelect = jest.fn();
+  const picker = createColorPicker({ initialColor: '#123456', onSelect });
+  document.body.replaceChildren(picker.el);
+  let fillStyle = '#000000';
+  const context = { get fillStyle() { return fillStyle; }, set fillStyle(value: string) { if (value.startsWith('#')) fillStyle = value; } };
+  const spy = jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as any);
+  const search = picker.el.querySelector<HTMLInputElement>('.color-search')!;
+  search.value = 'not-a-color'; search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(picker.el.textContent).toContain('COLOR_PICKER_VALUE_INVALID');
+  spy.mockRestore();
+  picker.el.querySelector<HTMLButtonElement>('[aria-label="Custom color"]')!.click();
+  expect(picker.el.querySelector('.hue-wrapper')!.classList.contains('hidden')).toBe(false);
+  picker.el.querySelector('.cp-color-area')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }));
+  expect(onSelect).toHaveBeenCalled();
+});
+
 test('shared picker renders named saved colors and supports linked or detached selection', () => {
   const onSelect = jest.fn();
   const picker = createColorPicker({

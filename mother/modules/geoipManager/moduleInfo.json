@@ -1,0 +1,6 @@
+{
+  "moduleName": "geoipManager",
+  "version": "0.1.0",
+  "developer": "Blogposter",
+  "description": "Reusable GeoIP lookup with prepared local MaxMind, paid and self-hosted providers; disabled until configured."
+}

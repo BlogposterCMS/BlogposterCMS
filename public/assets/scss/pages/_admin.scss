@@ -79,8 +79,10 @@ body:has(> .admin-panel) {
   #sidebar { min-height: 0; }
   .sidebar {
     height: 100%;
-    overflow-y: auto;
+    // Floating icon labels must be able to extend over the adjacent content.
+    overflow: visible;
   }
+  .sidebar.settings-sidebar { overflow-y: auto; }
 
   #content {
     min-height: 0;

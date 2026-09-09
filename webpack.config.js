@@ -19,6 +19,7 @@ function resolveSource(basePath, relativePath) {
 }
 
 const entry = {
+  articleEditor: { import: './ui/shared/article/articleEditor.ts', library: { name: 'BlogposterArticleEditor', type: 'window' } },
   adminSearch: resolveSource(__dirname, './ui/shell/entries/adminSearch'),
   agentConsole: resolveSource(__dirname, './ui/shared/entries/agentConsole'),
   appBridge: resolveSource(__dirname, './ui/shared/entries/appBridge'),

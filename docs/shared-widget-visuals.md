@@ -3,6 +3,20 @@
 Browser-only APIs live under `ui/shared`; they do not query data, grant permissions
 or require a Node service. Widgets use their existing module facade for data.
 
+## Shared color picker
+
+`createColorPicker` retains literal and saved/linked color contracts. Its swatch
+grid fits the host width, its custom HSV/opacity editor stays in normal flow, and
+empty saved-color libraries are hidden when the caller provides no library actions.
+Color names and hex values are applied with Enter; invalid values report
+`COLOR_PICKER_VALUE_INVALID` without replacing the current selection. Hue and opacity
+are labelled sliders; the saturation/brightness area also accepts arrow keys.
+
+Account accent uses the existing `openPopover` portal with outside-click and Escape
+dismissal. Selection updates only the account draft; Save user persists it and
+Discard restores it. The picker does not change theme ownership or create a new
+color store. Keep this control shared with Setup and the UI Kit.
+
 ## Responsive widget hosts
 
 Every editable admin dashboard uses a `dashboard-workspace` inline-size
@@ -88,3 +102,10 @@ manifest/SRI change; the verifier never updates hashes automatically. Hashes
 detect drift from reviewed bytes, not malicious code already approved in them.
 This new gate covers ECharts; existing legacy vendors, including html-to-image,
 have not received a full repository-wide supply-chain audit in this change.
+
+Dialog selects automatically reuse the custom select's floating Popover API path at open time, including forms moved into a dialog after enhancement. The list stays anchored on scroll/resize, Escape closes it before its dialog, and a newly mounted modal dismisses older lists. Browsers without Popover API retain the inline fallback.
+
+Shared page-editor data lives in `ui/shared/page-editor`; extension data and access
+review live in `ui/shared/module-access`. Legacy widget paths re-export these
+implementations. Shell actions reuse these helpers without importing widgets.
+The article loader is the fixed local `/build/articleEditor.js` lazy gateway.

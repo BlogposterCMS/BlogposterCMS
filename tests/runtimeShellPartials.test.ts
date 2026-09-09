@@ -42,7 +42,7 @@ describe('runtimeShellPartials', () => {
       .mockResolvedValueOnce({ ok: true, text: async () => '<nav>Navigation</nav>' });
     await hydrateRuntimeShellPartials();
     expect(document.getElementById('top-header')?.dataset.adminLoading).toBe('error');
-    expect(document.querySelector('#top-header .admin-shell-error')?.textContent).toContain('Erneut versuchen');
+    expect(document.querySelector('#top-header .admin-shell-error')?.textContent).toContain('Try again');
     expect(document.getElementById('main-header')?.textContent).toBe('Navigation');
   });
 

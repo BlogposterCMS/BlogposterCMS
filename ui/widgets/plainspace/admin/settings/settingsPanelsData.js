@@ -87,22 +87,27 @@ export async function pickMediaShareUrl(emit, jwt) {
     return null;
 }
 export async function fetchSeoSettings(emit, jwt) {
-    const values = await fetchSettingValues(emit, jwt, [
+    const record = await emitRuntimeAdmin(requireEmitter(emit), jwt, 'seo', 'defaults');
+    // Read legacy form values only until the first explicit save to SEO Manager.
+    // New writes have one owner; there is no dual-write synchronization.
+    const values = record?.meta?.settingsVersion === 1 ? null : await fetchSettingValues(emit, jwt, [
         'SEO_META_DESCRIPTION',
         'SEO_TITLE_TEMPLATE',
         'SEO_INDEXING_ENABLED'
     ]);
     return {
-        metaDescription: values.SEO_META_DESCRIPTION,
-        titleTemplate: values.SEO_TITLE_TEMPLATE,
-        indexingEnabled: values.SEO_INDEXING_ENABLED === '' ? true : stringToBool(values.SEO_INDEXING_ENABLED)
+        metaDescription: values?.SEO_META_DESCRIPTION || record?.description || '',
+        titleTemplate: record?.meta?.titleTemplate ?? values?.SEO_TITLE_TEMPLATE ?? '',
+        indexingEnabled: values?.SEO_INDEXING_ENABLED ? stringToBool(values.SEO_INDEXING_ENABLED) : !record?.robots?.split(',').includes('noindex'),
+        defaultImage: record?.og_image || ''
     };
 }
 export async function saveSeoSettings(emit, jwt, values) {
-    await saveSettingValues(emit, jwt, {
-        SEO_TITLE_TEMPLATE: values.titleTemplate,
-        SEO_META_DESCRIPTION: values.metaDescription,
-        SEO_INDEXING_ENABLED: boolToString(values.indexingEnabled)
+    await emitRuntimeAdmin(requireEmitter(emit), jwt, 'seo', 'setDefaults', {
+        description: values.metaDescription,
+        ogImage: values.defaultImage || '',
+        robots: values.indexingEnabled ? 'index,follow' : 'noindex,follow',
+        meta: { titleTemplate: values.titleTemplate, settingsVersion: 1 }
     });
 }
 export async function fetchAllPages(emit, jwt) {

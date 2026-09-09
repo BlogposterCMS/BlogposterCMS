@@ -7,6 +7,7 @@
 
 .modules-title-bar {
   @include p.page-title-bar;
+  display: none;
 }
 
 .modules-title {
@@ -283,16 +284,18 @@
 .module-upload-box {
   background: var(--studio-surface-solid);
   padding: 20px;
-  border-radius: 6px;
+  border-radius: var(--studio-radius-panel);
   text-align: center;
   width: min(440px, calc(100vw - 40px));
 }
 .module-upload-dropzone {
   display: grid; place-items: center; min-height: 160px; padding: 24px;
-  border: 2px dashed var(--studio-border); border-radius: var(--studio-radius-control);
+  border: 2px dashed var(--studio-border); border-radius: var(--studio-radius-panel);
   cursor: pointer;
   &:focus-visible { outline: 2px solid var(--user-color); outline-offset: 3px; }
 }
+.module-upload-overlay[aria-label]::after { display: none; }
+.extension-store-button[aria-label]::after { display: none; }
 
 .module-upload-box.dragover {
   border: 2px dashed #888;

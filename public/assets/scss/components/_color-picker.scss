@@ -1,22 +1,37 @@
 .color-picker {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
-  height: 100%;
+  height: auto;
   position: relative;
+  min-width: 0;
+  color: var(--studio-text);
+  font: inherit;
+  box-sizing: border-box;
+  [hidden], .hidden { display: none !important; }
+  // The color area's ::after is its black gradient, not a legacy tooltip.
+  [aria-label]:not(.cp-color-area)::after { content: none !important; }
+  > div { min-width: 0; }
+  .color-search { width: 100%; min-width: 0; box-sizing: border-box; }
+  .color-input-error { margin: 0; color: var(--color-error); font-size: 12px; }
+  .show-more { align-self: flex-start; margin-top: 8px; }
+  button:focus-visible, input:focus-visible, .cp-color-area:focus-visible {
+    outline: 2px solid var(--studio-text); outline-offset: 3px;
+  }
 
   .color-section {
     display: grid;
     grid-auto-flow: row;
-    grid-template-columns: repeat(6, 45px);
-    gap: 18px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
     align-items: center;
+    justify-items: center;
   }
 
   .color-circle {
-    width: 42px;
-    height: 42px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid var(--color-border);
@@ -25,14 +40,16 @@
   }
 
   .color-circle.active {
-    border-color: var(--user-color);
+    outline: 2px solid var(--studio-text);
+    outline-offset: 3px;
+    border-color: var(--studio-surface-solid);
   }
 
   .color-circle.add-custom {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
+    background: var(--studio-surface-solid);
     border: 1px dashed #ccc;
     color: #555;
   }
@@ -40,14 +57,16 @@
   .hue-wrapper {
     display: none;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     align-items: stretch;
     padding: 8px;
-    background: #fff;
-    border: 1px solid #eee;
+    background: var(--studio-surface-solid);
+    border: 1px solid var(--studio-border);
     border-radius: 8px;
-    box-shadow: var(--shadow-default);
-    position: absolute;
+    box-shadow: none;
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
     &.hidden { display: none; }
     &:not(.hidden) { display: flex; }
 
@@ -61,8 +80,10 @@
 
     .cp-color-area {
       position: relative;
-      width: 200px;
+      box-sizing: border-box;
+      width: 100%;
       height: 150px;
+      touch-action: none;
       border-radius: 4px;
       cursor: crosshair;
       background: hsl(0, 100%, 50%);
@@ -77,10 +98,15 @@
         content: '';
         position: absolute;
         inset: 0;
+        opacity: 1;
+        transform: none;
+        visibility: visible;
+        pointer-events: none;
         background: linear-gradient(to top, #000, rgba(0,0,0,0));
       }
       .cp-cursor {
         position: absolute;
+        z-index: 1;
         width: 12px;
         height: 12px;
         border: 2px solid #fff;
@@ -98,6 +124,19 @@
       height: 12px;
       border-radius: 4px;
       cursor: pointer;
+      padding: 0;
+      border: 0;
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px; height: 16px; border-radius: 50%;
+        border: 2px solid #fff; background: #171717;
+        box-shadow: 0 0 0 1px #555;
+      }
+      &::-moz-range-thumb {
+        width: 12px; height: 12px; border-radius: 50%;
+        border: 2px solid #fff; background: #171717;
+        box-shadow: 0 0 0 1px #555;
+      }
     }
 
     .cp-hue {
@@ -111,7 +150,7 @@
 
     .cp-input-row {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       align-items: center;
     }
 
@@ -133,7 +172,7 @@
     .cp-hex {
       flex: 1;
       padding: 2px 4px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--studio-border);
       border-radius: 4px;
       font-size: 12px;
       text-align: center;
@@ -149,9 +188,12 @@
   }
 
   .color-section-label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
     margin-right: 4px;
     font-size: 12px;
-    color: var(--color-text);
+    color: var(--studio-text);
   }
 
   .saved-color-library {
@@ -161,7 +203,7 @@
     padding: 12px;
     border: 1px solid color-mix(in srgb, var(--user-color) 16%, transparent);
     border-radius: 12px;
-    background: color-mix(in srgb, var(--user-color) 4%, var(--color-white));
+    background: var(--studio-surface-muted);
   }
 
   .saved-color-library__header,
@@ -205,8 +247,8 @@
     padding: 7px 9px;
     border: 1px solid transparent;
     border-radius: 9px;
-    background: var(--color-white);
-    color: var(--color-text);
+    background: var(--studio-surface-solid);
+    color: var(--studio-text);
     text-align: left;
 
     &.active {
@@ -245,7 +287,7 @@
     button {
       border: 0;
       background: transparent;
-      color: var(--color-text);
+      color: var(--studio-text);
       font-size: 10px;
     }
   }
@@ -312,9 +354,25 @@
   top: calc(100% + 4px);
   left: 0;
   z-index: 1000;
-  background: var(--color-white);
+  background: var(--studio-surface-solid);
   padding: 8px;
-  border: 1px solid #eee;
-  box-shadow: var(--shadow-default);
+  border: 1px solid var(--studio-border);
+  box-shadow: none;
   border-radius: 8px;
+  width: min(320px, calc(100vw - 24px));
+  height: auto;
+  max-height: min(520px, calc(100vh - 24px));
+  overflow: auto;
+}
+
+// Account picker uses the shared portal, which handles viewport positioning.
+.bp-popover:has(> .color-picker) {
+  width: 320px;
+  padding: 16px;
+  max-height: min(560px, calc(100vh - 24px));
+}
+.app-scope .color-picker-toggle {
+  width: 36px; height: 36px;
+  border: 2px solid var(--studio-surface-solid);
+  outline: 1px solid var(--studio-border);
 }

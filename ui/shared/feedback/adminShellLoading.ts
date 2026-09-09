@@ -21,15 +21,15 @@ function ensureFeedback(region: HTMLElement): HTMLElement {
   if (existing) return existing;
   const feedback = document.createElement('div');
   feedback.className = 'admin-shell-feedback';
-  feedback.append(createLoader({ variant: 'skeleton', label: 'Bereich wird geladen', lines: 4 }));
+  feedback.append(createLoader({ variant: 'skeleton', label: 'Loading section', lines: 4 }));
   const error = document.createElement('div');
   error.className = 'admin-shell-error';
   error.setAttribute('role', 'alert');
   const message = document.createElement('p');
-  message.textContent = 'Dieser Bereich konnte nicht geladen werden.';
+  message.textContent = 'This section could not be loaded.';
   const retry = document.createElement('a');
   retry.className = 'button secondary';
-  retry.textContent = 'Erneut versuchen';
+  retry.textContent = 'Try again';
   retry.href = window.location.href;
   // Reload the current authenticated route, including after a timed-out request.
   // The top target bypasses content navigation and discards unfinished work.

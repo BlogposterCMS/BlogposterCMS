@@ -115,6 +115,7 @@ const BACKEND_EVENTS = Object.freeze({
   GENERATE_ROBOTS_TXT: "generateRobotsTxt",
   GENERATE_SEO_SITEMAP: "generateSeoSitemap",
   GENERATE_XML_SITEMAP: "generateXmlSitemap",
+  GEOIP_LOOKUP: "geoipLookup",
   GET_ALL_LAYOUTS_FOR_PAGE: "getAllLayoutsForPage",
   GET_ALL_PAGES: "getAllPages",
   GET_ALL_PERMISSIONS: "getAllPermissions",

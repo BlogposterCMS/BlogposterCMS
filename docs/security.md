@@ -74,6 +74,26 @@ it does not add a server-side URL fetch or a Chromium service.
 
 ## Analytics
 
+Website collection now defaults off. SettingsManager validates the atomic
+public-safe consent configuration, including fixed provider IDs and bounded
+lifetimes. No secret or executable URL is accepted there. Consent cookies are
+untrusted preferences; correlation UUIDs never grant authority. Account IDs are
+copied only from the existing validated user principal with explicit recognition
+consent. DNT/GPC and disabled consent/collection suppress optional recording.
+Consent withdrawal stops future collection and reloads the page; retained history
+expires under the existing 60-day policy. The banner cannot intercept arbitrary
+custom HTML scripts; their owners must integrate the consent lifecycle.
+
+GA4 is disabled and explicitly untested for live ingestion. Basic-mode loading
+requires explicit analytics consent; the nonce authorizes only the configured
+fixed Google script URL. Advertising signals remain denied. GeoIP belongs to
+`geoipManager`, with server-only credentials and an operator-provided database
+or a RequestManager allowlisted HTTPS service. No raw IP is retained by Analytics;
+external GeoIP lookup transmits the IP only after explicit analytics consent.
+The internal GeoIP event requires a verified registered core-module principal and
+rejects external/user/public calls. Existing outbound DNS/SSRF restrictions remain
+unchanged, including for self-hosted services.
+
 `analytics.summary` requires `analytics.read` at the existing admin facade and
 module boundary. There is no public analytics-read or arbitrary collection API.
 The authenticated emitter observer copies only allowlisted labels and verified
@@ -391,3 +411,12 @@ the established server/client sanitizer and script-nonce boundaries. Widget
 imports use an absolute URL only after the existing same-origin/path allowlist.
 UI-kit JSON import calls the existing Site Presets domain, which rejects code
 and unknown component presets. Import does not activate site-wide styles.
+
+### Article editor input boundary
+
+The article dialog uses a restricted rich-text schema and removes active pasted
+HTML. Agent nodes are schema-checked, bounded, and reject executable media/link
+URLs. Videos are direct files rather than arbitrary iframe embeds. This is an
+editing boundary, not a replacement for the existing server/public sanitizer:
+Pages update permissions and public HTML sanitization remain authoritative.
+Stable HTML block IDs are content identifiers, never authorization credentials.

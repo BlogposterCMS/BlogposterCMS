@@ -121,6 +121,19 @@ describe('mediaExplorerSurface', () => {
     });
   });
 
+  it.each(['public', 'private'])('public URL image selection never creates shares (%s)', async initialPath => {
+    const onSelectFile = jest.fn();
+    const emit = jest.fn(async (_event, payload) => payload.action === 'listLocalFolder'
+      ? { folders: [], files: ['hero.png'], parentPath: '', currentPath: initialPath } : {});
+    const surface = createMediaExplorerSurface({ mode: 'picker', emit, initialPath, publicUrlOnly: true, onSelectFile });
+    document.body.append(surface.element); await tick();
+    surface.element.querySelector<HTMLButtonElement>('.media-item.file .media-item__main')!.click();
+    surface.element.querySelector<HTMLButtonElement>('[aria-label="Use selected file"]')!.click(); await tick();
+    expect(emit.mock.calls.some(([, payload]) => payload.resource === 'shares')).toBe(false);
+    if (initialPath === 'public') expect(onSelectFile).toHaveBeenCalledWith({ shareURL: '/media/hero.png', name: 'public/hero.png' });
+    else { expect(onSelectFile).not.toHaveBeenCalled(); expect(surface.element.textContent).toContain('MEDIA_PUBLIC_IMAGE_REQUIRED'); }
+  });
+
   it('keeps the newest folder when earlier requests finish late', async () => {
     let oldResult!: (value: unknown) => void;
     const emit = jest.fn((_event, payload) => payload.params.subPath === 'old'

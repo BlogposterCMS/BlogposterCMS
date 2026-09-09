@@ -200,7 +200,8 @@ For local development:
 3. The Module Loader validates the folder, runs a health check in a runner
    process and starts the module if it passes.
 
-For ZIP installation, open the store icon at the top right of Settings > Modules and drop one ZIP or
+For ZIP installation, open the store icon at the right of the main navigation,
+select Module, and drop one ZIP or
 choose it with the file picker (up to 10 MiB). The review lists module-owned user
 permissions separately from requested core actions, including the resolved event,
 reason and optional `required: true` marker. Grantable actions are preselected;

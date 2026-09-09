@@ -4,6 +4,19 @@ jest.mock('../ui/widgets/plainspace/admin/analyticsData.js', () => ({ fetchAnaly
 import { fetchAnalytics } from '../ui/widgets/plainspace/admin/analyticsData.js';
 import { render, renderAnalytics } from '../ui/widgets/plainspace/admin/analyticsWidget';
 
+test('website visit search links browser records and distinguishes an empty filter from no activity', async () => {
+  (fetchAnalytics as jest.Mock).mockResolvedValue({ version: 1, pages: 1, system: 0, errors: 0, previous: { pages: 0, system: 0 }, to: '2026-09-07', retentionDays: 60,
+    health: { enabled: true, dropped: 0, truncated: false }, timeline: [], recent: [], tables: {},
+    recentPages: [{ at: '2026-09-07', page: '22', title: '<img src=x>', actor: '42', visitor: 'browser-fixture', session: 'session-fixture', path: '/example', source: 'example.com', device: 'desktop', browser: 'Chrome', os: 'Windows' }] });
+  const el = document.createElement('div'); await renderAnalytics(el, 'website');
+  expect(el.querySelector('img')).toBeNull(); expect(el.textContent).toContain('browser-fixture');
+  const search = el.querySelector<HTMLInputElement>('input[type=search]')!;
+  search.value = 'missing'; search.dispatchEvent(new Event('input'));
+  expect(el.textContent).toContain('No matching visits in the latest 500 records.');
+  search.value = 'session-fixture'; search.dispatchEvent(new Event('input'));
+  expect(el.textContent).toContain('/example');
+});
+
 test('renders untrusted metadata as text and exposes data gaps', async () => {
   (fetchAnalytics as jest.Mock).mockResolvedValue({ version: 1, pages: 1, system: 2, errors: 0, previous: { pages: 0, system: 1 }, to: '2026-09-07', retentionDays: 60,
     health: { enabled: true, dropped: 2, truncated: false }, timeline: [], recent: [], tables: { event: [{ name: '<img src=x onerror=alert(1)>', count: 1 }] } });

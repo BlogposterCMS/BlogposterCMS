@@ -119,13 +119,20 @@ function normalizeSeoInput(payload = {}, fallback = {}) {
 }
 
 function mergeSeoMeta(defaults = {}, content = {}, explicit = {}) {
+  defaults ||= {}; content ||= {}; explicit ||= {};
+  const pageTitle = content.title || defaults.title || '';
+  const template = normalizeText(defaults.meta?.titleTemplate || '', 240);
+  const title = explicit.title || content.seoTitle || (template ? template.replace(/%title%/g, () => pageTitle) : pageTitle);
+  const robots = normalizeRobots(explicit.robots || content.robots || defaults.robots);
   return {
-    title: explicit.title || content.title || defaults.title || '',
+    title,
     description: explicit.description || content.description || defaults.description || '',
     keywords: explicit.keywords || content.keywords || defaults.keywords || '',
     canonicalUrl: explicit.canonical_url || explicit.canonicalUrl || content.canonicalUrl || defaults.canonical_url || '',
-    robots: explicit.robots || content.robots || defaults.robots || 'index,follow',
-    ogImage: explicit.og_image || explicit.ogImage || content.ogImage || defaults.og_image || '',
+    // The global indexing switch must also apply to pages with their own metadata.
+    robots: String(defaults.robots || '').split(',').includes('noindex')
+      ? normalizeRobots(`noindex,${robots.split(',').filter(value => value !== 'index').join(',')}`) : robots,
+    ogImage: explicit.og_image || explicit.ogImage || content.ogImage || content.featuredImage || defaults.og_image || '',
     structuredData: explicit.structured_data || explicit.structuredData || content.structuredData || defaults.structured_data || {},
     meta: {
       ...(defaults.meta || {}),
@@ -216,12 +223,14 @@ function contentEntrySeo(entry) {
   if (!entry) return {};
   const meta = entry.meta || {};
   return {
-    title: meta.seoTitle || meta.title || entry.title || '',
+    title: meta.title || entry.title || '',
+    seoTitle: meta.seoTitle || '',
     description: meta.metaDesc || meta.description || entry.excerpt || '',
     keywords: meta.seoKeywords || meta.keywords || '',
     canonicalUrl: entry.permalink || '',
     robots: meta.robots || 'index,follow',
     ogImage: meta.ogImage || meta.seoImage || '',
+    featuredImage: meta.featuredImage || entry.content?.featuredImage || '',
     structuredData: meta.structuredData || {},
     meta: {
       contentTypeKey: entry.content_type_key,
@@ -236,11 +245,15 @@ function setupSeoEvents(motherEmitter) {
     try {
       assertCorePayload(payload, BACKEND_EVENTS.SET_SEO_DEFAULTS);
       requirePermission(payload, 'seo.manage');
+      const rows = await seoDbSelect(motherEmitter, payload.jwt, 'GET_SEO_META', { targetType: 'global', targetKey: 'default' });
+      const existing = (Array.isArray(rows) ? rows[0] : rows) || {};
+      // Settings only owns the fields it edits; preserve other SEO integrations.
       const result = await seoDbUpdate(motherEmitter, payload.jwt, 'UPSERT_SEO_META', normalizeSeoInput({
         ...payload,
+        meta: { ...existing.meta, ...payload.meta },
         targetType: 'global',
         targetKey: 'default'
-      }));
+      }, existing));
       callback(null, result);
     } catch (err) {
       callback(err);

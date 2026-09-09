@@ -26,7 +26,9 @@ describe('settings panels shared UI kit', () => {
     const rendered = await renderSettingsSurface(host, { slug: 'settings/general' });
 
     expect(rendered).toBe(true);
-    expect(host.querySelectorAll('.form-field')).toHaveLength(2);
+    expect(host.querySelectorAll('.form-field').length).toBeGreaterThan(2);
+    expect(host.textContent).toContain('Privacy & analytics');
+    expect(host.textContent).toContain('UNTESTED');
     expect(host.querySelector('.form-actions .button.primary')).not.toBeNull();
     expect(host.querySelector('.form-status[role="status"]')).not.toBeNull();
 
@@ -48,13 +50,12 @@ describe('settings panels shared UI kit', () => {
     window.meltdownEmit = jest.fn().mockResolvedValue('');
     const host = document.createElement('div');
     await renderSettingsSurface(host, { slug: 'settings/design' });
-    const labels = Array.from(host.querySelectorAll('label'));
+
     for (const [label, key] of [['Logo (light / default)', 'SITE_LOGO_URL'], ['Logo (dark)', 'SITE_LOGO_DARK_URL']]) {
-      const field = labels.find(item => item.textContent === label)!;
-      const input = host.querySelector<HTMLInputElement>(`#${field.htmlFor}`)!;
+      const input = host.querySelector<HTMLInputElement>(`[aria-label="${label} URL"]`)!;
       input.value = '/brand.svg';
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      const save = Array.from(host.querySelectorAll('button')).find(item => item.textContent === `Save ${label}`)!;
+      const save = Array.from(host.querySelectorAll('button')).find(item => item.textContent === 'Save changes')!;
       save.click();
       await new Promise(resolve => setTimeout(resolve, 0));
       expect(window.meltdownEmit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({

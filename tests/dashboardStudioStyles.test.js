@@ -70,7 +70,7 @@ test('fixed CMS workspaces fill the viewport below their headers without a foote
   expect(readCssRule(css, `${workspace} > .main-content {`)).toContain('flex: 1 1 0');
   expect(readCssRule(css, `${workspace} > .main-content {`)).toContain('min-height: 0');
   expect(readCssRule(css, `${workspace} .sidebar {`)).toContain('height: 100%');
-  expect(readCssRule(css, `${workspace} .sidebar {`)).toContain('overflow-y: auto');
+  expect(readCssRule(css, `${workspace} .sidebar {`)).toContain('overflow: visible');
   expect(readCssRule(css, `${workspace} #content {`)).toContain('background: transparent');
   expect(readCssRule(css, `${workspace} #adminGrid {`)).toContain('grid-template-rows: minmax(0, 1fr)');
   const card = readCssRule(css, `${workspace} #adminGrid > .dashboard-widget[data-dashboard-slot=page] {`);
@@ -425,8 +425,8 @@ describe('dashboard studio styles', () => {
     expect(mainNavHoverCss).toContain('background: transparent');
     expect(mainNavHoverCss).toContain('transform: none');
     expect(mainNavHoverCss).not.toContain('transform: scale(1.035)');
-    expect(mainNavHoverChromeCss).toContain('background: var(--studio-surface-solid)');
-    expect(mainNavHoverChromeCss).toContain('transform: scale(1.035)');
+    expect(mainNavHoverChromeCss).not.toContain('background: var(--studio-surface-solid)');
+    expect(mainNavHoverChromeCss).toContain('transform: none');
     expect(mainNavHoverCss).not.toContain('var(--user-color)');
     expect(mainNavActiveCss).toContain('background: transparent');
     expect(mainNavActiveCss).toContain('border-color: transparent');

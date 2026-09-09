@@ -22,6 +22,8 @@ export interface BpDialogOpenOptions {
   kind?: BpDialogKind;
   body?: string | Node | (() => Node);
   actions?: BpDialogAction[];
+  /** Domain-owned controls can share the standard footer without a second dialog. */
+  footerContent?: Node;
   prompt?: BpDialogPromptOptions;
   dismissable?: boolean;
   /** Forms can keep the dialog open while saving or until an explicit discard. */
@@ -283,6 +285,7 @@ function runDomDialog(options: BpDialogOpenOptions): Promise<BpDialogResult> {
       });
       footer.appendChild(button);
     });
+    if (options.footerContent) footer.appendChild(options.footerContent);
 
     function onRootClick(event: MouseEvent) {
       if (event.target === root && options.dismissable !== false) {

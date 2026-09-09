@@ -8,7 +8,8 @@
   flex-direction: column;
   gap: 8px;
   align-items: stretch;
-  padding: 8px clamp(20px, 4vw, 48px);
+  // Use the same inset and control width as the workspace navigation below.
+  padding: 8px 24px;
   min-height: 48px;
   position: relative;
   // backdrop-filter creates a stacking context; keep header flyouts above dashboard widgets.
@@ -61,7 +62,7 @@
 
   .top-header__content {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
   }
@@ -113,12 +114,12 @@
   }
 
   .left-icons a.project-link {
-    width: auto;
+    width: var(--studio-control-size);
     min-width: var(--studio-control-size);
     max-width: min(220px, 44vw);
-    justify-content: flex-start;
+    justify-content: center;
     gap: 8px;
-    padding: 0 10px;
+    padding: 0;
     text-decoration: none;
     transform-origin: center;
     background: transparent;
@@ -148,6 +149,8 @@
   }
 
   .project-link__name {
+    // Keep the dynamic site name for the link's accessible label, not visible chrome.
+    display: none;
     position: relative;
     z-index: 1;
     min-width: 0;
@@ -286,9 +289,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    flex: 1;
+    // Retain the existing notification hook with standard icon-button geometry.
+    flex: 0 0 auto;
     margin: 0;
-    min-width: 80px;
+    min-width: var(--studio-control-size);
     overflow: visible;
     .logo-icon {
       width: auto;
@@ -398,6 +402,8 @@
 
       &:focus {
         outline: none;
+        // The expanded search shell already indicates focus, without a square field ring.
+        box-shadow: none;
       }
     }
 
@@ -442,4 +448,8 @@
       display: block;
     }
   }
+}
+
+@media (max-width: 700px) {
+  .top-header { padding-inline: 12px; }
 }

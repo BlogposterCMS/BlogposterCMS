@@ -1,6 +1,14 @@
 const { normalizeRecord, clientDimensions, summarize } = require('../mother/modules/analyticsManager/domain');
 const collector = require('../mother/modules/analyticsManager/collector');
 
+test('page history stays chronological and separate from high-volume system events', () => {
+  const now = Date.now();
+  const page = normalizeRecord({ kind: 'page', page: '22', title: 'Example', actor: '42', visitor: 'browser', session: 'session' }, now - 500);
+  const rows = [page, ...Array.from({ length: 600 }, () => normalizeRecord({ kind: 'system' }, now))];
+  const result = summarize(rows, 7, now);
+  expect(result.recentPages).toEqual([page]);
+});
+
 test('analytics retains only bounded, explicit metadata', () => {
   const row = normalizeRecord({ kind: 'system', event: 'x'.repeat(300), jwt: 'secret', password: 'private', data: { secret: true }, durationMs: -3 }, 0);
   expect(row.event).toHaveLength(120);

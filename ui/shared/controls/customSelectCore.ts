@@ -182,6 +182,7 @@ function handleDisplayKeydown(event: KeyboardEvent, select: HTMLSelectElement, s
   }
 
   if (event.key === 'Escape') {
+    if (state.wrapper.classList.contains('open')) event.stopPropagation();
     state.close();
   }
 }
@@ -212,6 +213,7 @@ function handleListKeydown(event: KeyboardEvent, select: HTMLSelectElement, stat
     state.close();
     if (event.key === 'Escape') {
       event.preventDefault();
+      event.stopPropagation();
       state.display.focus();
     }
   }
@@ -262,7 +264,7 @@ function enhanceSelect(select: HTMLSelectElement): void {
 
   // Opted-in widget menus use the browser top layer to escape clipped/transformed
   // canvas containers while retaining this control's existing state and keyboard logic.
-  const floating = select.dataset.floatingOptions === 'true' && typeof optionList.showPopover === 'function';
+  let floating = select.dataset.floatingOptions === 'true' && typeof optionList.showPopover === 'function';
   if (floating) optionList.setAttribute('popover', 'manual');
   const positionOptions = (): void => {
     if (!floating || !wrapper.classList.contains('open')) return;
@@ -287,6 +289,11 @@ function enhanceSelect(select: HTMLSelectElement): void {
     optionsObserver: null,
     open: () => {
       if (select.disabled) return;
+      // Forms may be enhanced before they move into a dialog. Resolve the host
+      // at opening time and reuse the existing top-layer positioning path.
+      floating = typeof optionList.showPopover === 'function' &&
+        (select.dataset.floatingOptions === 'true' || Boolean(select.closest('.bp-dialog, dialog, [role="dialog"]')));
+      if (floating) optionList.setAttribute('popover', 'manual');
       closeAll(select);
       state.refresh();
       wrapper.classList.add('open');
@@ -404,6 +411,9 @@ function bindRootObserver(root: ParentNode): void {
       record.removedNodes.forEach(cleanupRemovedSelects);
 
       record.addedNodes.forEach(node => {
+        // A newly opened modal takes precedence over an older select menu,
+        // including shared dialogs that are not native top-layer dialogs.
+        if (node instanceof Element && (node.matches('dialog, [role="dialog"]') || node.querySelector('dialog, [role="dialog"]'))) closeAll();
         if (node instanceof HTMLSelectElement) {
           enhanceSelect(node);
           return;

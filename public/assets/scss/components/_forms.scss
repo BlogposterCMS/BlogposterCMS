@@ -70,7 +70,8 @@
   outline: none;
   border-color: transparent;
   background: var(--studio-surface-solid);
-  box-shadow: var(--studio-focus-ring);
+  box-shadow: none;
+  border-color: var(--studio-border-strong);
 }
 
 .app-scope :where(input, textarea)::placeholder {

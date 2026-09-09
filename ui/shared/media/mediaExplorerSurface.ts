@@ -30,6 +30,8 @@ export interface MediaExplorerSurfaceOptions {
   csrfToken?: string | null;
   initialPath?: string;
   accept?: string;
+  /** SEO/image fields require a direct public asset and must not publish private files. */
+  publicUrlOnly?: boolean;
   enableUpload?: boolean;
   enableMutations?: boolean;
   onSelectFile?: (selection: MediaExplorerSelection) => void;
@@ -428,7 +430,8 @@ export function createMediaExplorerSurface(options: MediaExplorerSurfaceOptions 
   }
   async function choose(entry: MediaEntry) {
     if (!acceptsMedia(entry, options.accept)) return;
-    const result = isRemote() ? { shareURL: publicMediaUrl(entry) } : await createMediaShareLink(emit, jwt, entry.path);
+    const result = options.publicUrlOnly || isRemote() ? { shareURL: publicMediaUrl(entry) } : await createMediaShareLink(emit, jwt, entry.path);
+    if (options.publicUrlOnly && !result.shareURL) throw new Error('MEDIA_PUBLIC_IMAGE_REQUIRED: Choose an image from public media or a configured public storage location.');
     if (!result.shareURL) throw new Error('MEDIA_EXPLORER_SELECTION_FAILED: No usable file URL was returned.');
     options.onSelectFile?.({ ...result, name: entry.path });
   }

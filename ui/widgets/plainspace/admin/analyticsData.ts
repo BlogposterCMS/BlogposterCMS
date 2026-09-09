@@ -6,6 +6,7 @@ export interface AnalyticsSummary {
   previous: { pages: number; system: number };
   tables: Record<string, Array<{ name: string; count: number }>>;
   timeline: Array<{ day: string; pages: number; system: number }>;
+  recentPages?: Array<{ at: string; page: string; title?: string; path?: string; actor: string; visitor?: string; session?: string; source: string; device: string; browser: string; os: string; country?: string; region?: string; city?: string; geoStatus?: string }>;
   recent: Array<{ at: string; kind: string; event: string; module: string; actor: string; outcome: string }>;
   health: { enabled: boolean; queued: number; dropped: number; lastError: string | null; truncated: boolean };
   retentionDays: number;

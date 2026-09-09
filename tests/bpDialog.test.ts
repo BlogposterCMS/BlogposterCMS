@@ -85,6 +85,7 @@ describe('bpDialog', () => {
   });
 
   it('uses consumer-provided confirmation labels', async () => {
+    // Shared footer placement is also used by domain-owned form submit controls.
     const promise = bpDialog.confirm('Publish page?', {
       confirmLabel: 'Publish',
       cancelLabel: 'Keep draft'
@@ -96,5 +97,16 @@ describe('bpDialog', () => {
     clickAction('confirm');
 
     await expect(promise).resolves.toBe(true);
+  });
+  it('places domain controls in the shared footer beside Cancel', async () => {
+    const create = document.createElement('button');
+    create.type = 'button'; create.textContent = 'Create page';
+    const promise = bpDialog.open({ title: 'Add page', footerContent: create,
+      actions: [{ id: 'cancel', label: 'Cancel' }] });
+    await waitForDialog();
+    expect(create.parentElement?.className).toBe('bp-dialog__actions');
+    expect(create.previousElementSibling?.textContent).toBe('Cancel');
+    clickAction('cancel');
+    await expect(promise).resolves.toMatchObject({ action: 'cancel' });
   });
 });

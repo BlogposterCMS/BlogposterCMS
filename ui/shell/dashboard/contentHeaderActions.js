@@ -60,6 +60,9 @@ export function initContentHeader() {
     // Keep the canonical header above the workspace rather than fixed to the viewport bottom.
     const mainContent = document.querySelector('.main-content');
     const host = header.closest('#content-header') || header;
+    // Home has no parent trail; hide the host too so it reserves no empty row.
+    const slug = adminSlugFromPath(window.location.pathname, window.ADMIN_BASE);
+    host.hidden = slug === '' || slug === 'home' || window.location.pathname === adminBaseHref(window.ADMIN_BASE);
     if (mainContent && mainContent.parentElement && host !== mainContent && mainContent.contains(host))
         mainContent.before(host);
     if (!header.dataset.scrollBound) {

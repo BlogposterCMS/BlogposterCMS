@@ -11,7 +11,7 @@ const notificationEmitter = require('../../emitters/notificationEmitter');
 
 const MODULE_NAME = 'requestManager';
 const MODULE_TYPE = 'core';
-const allowedModules = ['databaseManager', 'news'];
+const allowedModules = ['databaseManager', 'news', 'geoipManager'];
 const SAFE_METHODS = new Set(['delete', 'get', 'head', 'patch', 'post', 'put']);
 
 function getRegisteredModuleType(motherEmitter, moduleName) {
@@ -119,7 +119,7 @@ module.exports = {
             moduleName: 'requestManager',
             notificationType: 'system',
             priority: 'warning',
-            message: `[REQUEST MANAGER] Request error => ${err.message}`
+            message: payload?.moduleName === 'geoipManager' ? 'GEOIP_OUTBOUND_REQUEST_FAILED' : `[REQUEST MANAGER] Request error => ${err.message}`
           });
           callback(err);
         }

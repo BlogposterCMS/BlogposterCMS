@@ -18,23 +18,25 @@ export async function render(el, options = {}) {
     root.setAttribute('aria-label', 'Page content');
     root.innerHTML = `
     <section id="page-design" class="page-layout-control" aria-label="Page layout"></section>
-    <header class="content-title-bar"><div><h3>Page content</h3><p>Write the content for this page or attach an HTML file. Your layout stays linked.</p></div></header>
-    <label class="page-content-body"><span>Page content (HTML)</span><textarea rows="10" aria-label="Page content HTML" placeholder="<h1>Getting started</h1><p>Your content…</p>"></textarea></label>
+    <header class="content-title-bar"><div><h3>Page content</h3><p>Manage the content shown inside this layout.</p></div></header>
+    <details class="page-content-source"><summary>Edit HTML source</summary><label class="page-content-body"><span>Page content (HTML)</span><textarea rows="10" aria-label="Page content HTML" placeholder="<h1>Getting started</h1><p>Your content…</p>"></textarea></label><p>Place attached child content here: <code>&lt;div data-dynamic-host="true"&gt;&lt;/div&gt;</code>. Insert this marker at the desired position in your HTML.</p></details>
     <div class="page-content-actions"><button id="page-html-upload" type="button" class="button secondary sm" data-upload>Import HTML</button></div>
     <input type="file" accept=".html,.htm,text/html" hidden>
     <p class="page-content-feedback" role="status" aria-live="polite"></p>
     <div class="selected-content" aria-label="Attached content"></div>
-    <label id="page-html" class="page-content-search"><span class="bp-sr-only">Search available content</span><input type="search" placeholder="Search HTML files…" aria-label="Search available content"></label>
+    <details class="page-content-library"><summary>Choose another HTML file</summary><label id="page-html" class="page-content-search"><span class="bp-sr-only">Search available content</span><input type="search" placeholder="Search HTML files…" aria-label="Search available content"></label>
     <div class="page-content-library-status" aria-live="polite"></div>
-    <div class="design-gallery" aria-label="Available content"></div>`;
+    <div class="design-gallery" aria-label="Available content"></div></details>`;
     el.replaceChildren(root);
+    if (window.location.hash === '#page-html')
+        root.querySelector('.page-content-library').open = true;
     // Page-list shortcuts enter the existing attachment workflow and save owner.
     const entry = window.location.hash.slice(1);
     function focusEntry() {
         if (!['page-design', 'page-html', 'page-html-upload'].includes(entry))
             return;
         requestAnimationFrame(() => {
-            const target = root.querySelector(`#${entry}`);
+            const target = root.querySelector(`#${entry}`) || actions.querySelector(`#${entry}`);
             target?.scrollIntoView?.({ block: 'center' });
             const control = target?.matches('button') ? target : target?.querySelector('select, input');
             control?.focus();
@@ -271,7 +273,7 @@ export async function render(el, options = {}) {
         const builders = await fetchBuilderApps(emit, jwt);
         for (const builder of builders) {
             const link = document.createElement('a');
-            link.className = 'button ghost sm';
+            link.className = builder.name === 'designer' ? 'button primary sm' : 'button secondary sm';
             link.dataset.builder = builder.name;
             link.href = builderUrl(builder.name);
             link.textContent = builder.name === 'designer' ? 'Open Design Studio' : `Open ${builder.title || builder.name}`;

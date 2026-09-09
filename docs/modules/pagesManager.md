@@ -1,5 +1,31 @@
 # Pages Manager
 
+## Page Settings: SEO and images
+
+The existing page editor (`/admin/pages/edit/:id`, available from the settings
+action in Pages) includes SEO title, description, Featured image and Link preview
+image. Image controls use the existing media explorer and support public URLs,
+preview and removal. These fields share the page draft, Save and Discard actions;
+the existing `page.updateDraft` agent action can edit `seoTitle`, `seoDesc`,
+`featuredImage` and `seoImage`.
+
+Featured images are optional and stored in page `meta.featuredImage`, preserved
+by the Content Engine mirror and usable in content lists. `seo_image` remains
+the link-preview override. Preview images fall back to the featured image, then
+the global SEO image. SEO titles use the existing translated `seoTitle` field.
+These settings never change Designer layout assignments or insert a hero image.
+
+The admin page list edits the selected page's title and address inline. Enter
+saves through the existing page service; Escape restores the draft. Icon actions
+sit at the right of the row. Parent/status settings remain in the page editor;
+deleting a page or setting it as Home requires the shared confirmation dialog.
+New pages and subpages use the shared dialog, with Cancel/Create in its footer.
+The row menu contains deletion; copy/open links sit beside the address. Example
+import is available from the page-list overflow menu.
+Status stays beside the title on every row. Hover reveals page actions; clicking
+a parent row toggles its children with reduced-motion-aware animation. Selection
+does not focus an input; click the title/address directly to edit.
+
 ## Boundaries
 
 Pages Manager is the current page projection facade while Content Engine becomes canonical.
@@ -170,8 +196,8 @@ See [public startup performance](../public-startup-performance.md).
 
 ## Admin editing routes and deleted records
 
-The canonical content editor remains `/admin/pages/edit/:id`; Content's Page
-Manager links to that existing route. The editor stages metadata, SEO and content
+The canonical page settings editor remains `/admin/pages/edit/:id`; Content's Page
+Manager links to that existing route. The editor stages metadata, SEO and HTML content
 for one explicit save. Deleted pages live in the Deleted filter and are excluded
 from new parent/menu targets; an existing parent relationship is preserved until
 explicitly changed.
@@ -183,3 +209,57 @@ The shared popover menu links to #page-design, #page-html and #page-html-upload
 in that editor. Attachments remain staged in its existing draft and saved through
 Pages. Import HTML focuses the upload action rather than opening a file chooser
 without a user gesture.
+
+Page status uses the shared popover and existing guarded form save. Inline labels size to content so clicking empty row space does not focus a field.
+
+The fixed page editor uses Details, Layout & content and SEO & previews tabs. All tabs retain a single draft and save footer. HTML source is expandable; attachment deep links open the content tab.
+
+Layout help and HTML file selection are expandable. Switching editor tabs enhances newly visible selects. SEO text is grouped separately from image previews; existing media fields and draft actions remain authoritative.
+
+### Article-only pages
+
+The brush action reads the current page before opening an editor. Own designs
+open Design Studio; existing HTML/attachments open the page HTML editor. Empty
+pages offer **Create design** or **Article only** in the shared popover. A site or
+ancestor design alone does not bypass that choice. Creating a design uses the
+existing Designer save and Pages layout metadata contracts.
+
+Article only opens the shared large dialog with a lazy-loaded Tiptap editing
+kernel. It supports headings, rich text, links, lists, quotes, code, tables,
+images and direct video files. Media uses the existing library picker; select a
+media node and use Media description for alternative text/title. External iframe
+embeds are not supported. Close protects unsaved work; Save article explicitly
+persists content without publishing or changing SEO, parents or inherited layout.
+
+Pages remains the only content owner: `page.html` plus
+`meta.contentFormat = "article-v1"`. Block IDs persist as `data-block-id` HTML
+attributes. Editor JSON is a transient view, not a second document store.
+Existing arbitrary HTML is never silently converted to the restricted schema.
+Save re-reads the page and refuses changed content; this is an optimistic UI
+check, not an atomic database lock between simultaneous saves.
+
+Agents use the existing Pages surface action `pages.openArticle` with a page ID,
+then inspect the `article-<id>` workspace surface. It exposes the document and
+stable blocks, and `article.replaceBlock`, `article.appendBlock`,
+`article.deleteBlock`, `article.save`. Existing revision, draft-review and save
+confirmation guards apply. Opening returns `opening: true`; wait for the article
+surface before editing. All saves use the regular Pages facade and permissions.
+
+New-page dialogs offer **Create design** and **Write article** directly. Both
+save through the same Pages form before opening the chosen authoring surface;
+collections retain their grouping-only creation action. A failed editor handoff
+leaves the created page available instead of creating another page.
+
+Page rows diagnose missing content destinations in their resolved design chain.
+The red triangle says "Kein Inhaltsplatz definiert" and explains the remedy.
+Checks use saved Designer trees and the existing presentation resolver; failed
+reads are logged as `PAGE_CONTENT_SLOT_CHECK_FAILED`, not misreported as missing
+slots. A standalone article is valid without a parent. Attached content pages
+(`is_content`) also check their parent's destination.
+
+In an HTML parent, place `<div data-dynamic-host="true"></div>` where attached
+child content belongs. This is the existing Designer host marker, not a second
+shortcode language or an arbitrary page lookup. Only children already selected
+by the existing public attached-content contract are mounted there. Legacy HTML
+without a marker keeps its previous fallback placement and receives a warning
+when used as an attached-content parent. The HTML source editor shows the snippet.

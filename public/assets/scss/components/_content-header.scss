@@ -2,7 +2,9 @@
   --studio-content-footer-height: 60px;
   display: flex;
   align-items: center;
-  padding: 10px clamp(24px, 4vw, 52px);
+  padding: 10px 24px;
+  // Share the navigation rail's left edge without an additional breadcrumb inset.
+  padding-left: 24px;
   background: transparent;
   border-top: 0;
   border-bottom: 0;
@@ -22,7 +24,7 @@
     display: flex;
     align-items: center;
     overflow: hidden;
-    padding-left: 8px;
+    padding-left: 0;
 
     .breadcrumb-segment {
       display: flex;
@@ -77,7 +79,10 @@
 
 }
 
-.admin-panel > #content-header { flex: 0 0 auto; padding-left: 88px; }
+.admin-panel > #content-header { flex: 0 0 auto; }
+
+// Explicit display rules must respect Home's hidden breadcrumb host.
+#content-header[hidden], .content-header[hidden] { display: none; }
 
 body.has-content-footer #content {
   padding-bottom: calc(var(--studio-content-footer-height, 60px) + 16px);
@@ -86,6 +91,7 @@ body.has-content-footer #content {
 @media (max-width: 700px) {
   .content-header {
     left: 64px;
-    padding-inline: 16px;
+    padding-inline: 12px;
+    padding-left: 12px;
   }
 }

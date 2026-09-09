@@ -1,3 +1,6 @@
+import { createBrandingFields } from './brandingFields.js';
+import { createAnalyticsSettings } from './analyticsSettings.js';
+import { createImageField } from '../../../../shared/media/imageField.js';
 import { errorMessage, fetchDesignSettings, fetchGeneralSettings, fetchSecuritySettings, fetchSeoSettings, pickMediaShareUrl, saveFaviconUrl, saveSettingValue, saveGeneralSettings, saveGoogleFontsApiKey, saveMaintenanceSettings, saveSeoSettings } from './settingsPanelsData.js';
 import { approvedAccessDescriptors, fetchUpdateCenterRows, inspectUpdateCenterRow, installUpdateCenterRow, updateCenterRowLabel, updateInspectionLabel, updateInstallVersion } from './updateCenterData.js';
 import { renderUiKitGallery } from './uiKitGallery.js';
@@ -55,7 +58,7 @@ function createShell(title, subtitle) {
     });
     // Each tab keeps its own saved baseline; saving branding must not clear a
     // pending typography edit. Lock the shared surface while a write is pending.
-    function bindSave(button, fields, action, message, agent) {
+    function bindSave(button, fields, action, message, agent, disablePristine = false) {
         fields.forEach(field => savedValues.set(field, valueOf(field)));
         const discard = document.createElement('button');
         discard.type = 'button';
@@ -67,6 +70,8 @@ function createShell(title, subtitle) {
         const refresh = () => {
             const dirty = fields.some(field => valueOf(field) !== savedValues.get(field));
             discard.hidden = !dirty;
+            if (disablePristine)
+                button.disabled = saving || !dirty;
             state.textContent = dirty ? 'Unsaved changes' : 'Saved';
         };
         fields.forEach(field => {
@@ -274,8 +279,18 @@ async function renderGeneral(ctx) {
     // Storage is site configuration; keep it on the existing Settings route and tab contract.
     storage = tabs.addTab('Storage');
     storage.classList.add('settings-section--form');
+    const privacy = tabs.addTab('Privacy & analytics');
+    const privacyEditor = await createAnalyticsSettings(ctx.meltdownEmit, ctx.jwt);
+    const privacySave = document.createElement('button');
+    privacySave.type = 'button';
+    privacySave.className = 'button primary';
+    privacySave.textContent = 'Save privacy & analytics';
+    shell.bindSave(privacySave, Object.values(privacyEditor.fields), privacyEditor.save, 'Privacy & analytics saved.', { id: 'privacy', fields: privacyEditor.fields });
+    privacy.append(privacyEditor.root, createFormActions(privacySave));
     if (new URLSearchParams(window.location.search).get('tab') === 'storage')
         tabs.select(1);
+    if (new URLSearchParams(window.location.search).get('tab') === 'privacy')
+        tabs.select(2);
     shell.mount(ctx.el);
 }
 async function renderDesign(ctx) {
@@ -289,63 +304,22 @@ async function renderDesign(ctx) {
     typography.classList.add('settings-section--form');
     const presets = tabs.addTab('UI kits');
     const designSettings = await fetchDesignSettings(ctx.meltdownEmit, ctx.jwt);
-    const logoInputs = {};
-    // Both variants use the existing settings persistence and media picker.
-    for (const variant of [
-        { key: 'SITE_LOGO_URL', field: 'logoUrl', label: 'Logo (light / default)', value: designSettings.logoUrl, hint: 'Website logo for light mode. Also used in dark mode when no dark logo is set.' },
-        { key: 'SITE_LOGO_DARK_URL', field: 'logoDarkUrl', label: 'Logo (dark)', value: designSettings.logoDarkUrl, hint: 'Optional logo for dark mode. The Logo widget switches automatically with the color scheme.' }
-    ]) {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = variant.value;
-        logoInputs[variant.field] = input;
-        const pick = document.createElement('button');
-        pick.type = 'button';
-        pick.className = 'button ghost';
-        pick.textContent = 'Choose from media';
-        pick.addEventListener('click', async () => {
-            try {
-                const url = await pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt);
-                if (url) {
-                    input.value = url;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-            }
-            catch (err) {
-                shell.status.textContent = `SETTINGS_LOGO_MEDIA_FAILED: ${errorMessage(err)}`;
-            }
-        });
-        const save = document.createElement('button');
-        save.type = 'button';
-        save.className = 'button primary';
-        save.textContent = `Save ${variant.label}`;
-        shell.bindSave(save, [input], () => saveSettingValue(ctx.meltdownEmit, ctx.jwt, variant.key, input.value.trim()), 'Logo updated.', { id: variant.field, fields: { [variant.field]: input } });
-        branding.append(createFormField(variant.label, input, { hint: variant.hint }), createFormActions(pick, save));
-    }
-    const favInput = document.createElement('input');
-    favInput.type = 'text';
-    favInput.value = designSettings.faviconUrl;
-    const pickBtn = document.createElement('button');
-    pickBtn.type = 'button';
-    pickBtn.className = 'button ghost';
-    pickBtn.textContent = 'Choose from media';
-    pickBtn.addEventListener('click', async () => {
-        try {
-            const pickedUrl = await pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt);
-            if (pickedUrl) {
-                favInput.value = pickedUrl;
-                favInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }
-        catch (err) {
-            shell.status.textContent = `Unable to open media explorer: ${errorMessage(err)}`;
-        }
-    });
-    const favSave = document.createElement('button');
-    favSave.type = 'button';
-    favSave.className = 'button primary';
-    favSave.textContent = 'Save favicon';
-    shell.bindSave(favSave, [favInput], () => saveFaviconUrl(ctx.meltdownEmit, ctx.jwt, favInput.value.trim()), 'Favicon updated.', { id: 'branding', fields: { faviconUrl: favInput } });
+    branding.classList.add('branding-settings');
+    const editor = createBrandingFields(designSettings, () => pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt), message => { shell.status.textContent = message; });
+    const logoInputs = editor.fields;
+    const saveBranding = document.createElement('button');
+    saveBranding.type = 'button';
+    saveBranding.className = 'button primary';
+    saveBranding.textContent = 'Save changes';
+    const footer = createFormActions(saveBranding);
+    footer.classList.add('branding-save');
+    branding.append(editor.root, footer);
+    // Reuse the existing save/dirty/agent contract and settings persistence.
+    shell.bindSave(saveBranding, Object.values(editor.fields), async () => {
+        await saveSettingValue(ctx.meltdownEmit, ctx.jwt, 'SITE_LOGO_URL', editor.fields.logoUrl.value.trim());
+        await saveSettingValue(ctx.meltdownEmit, ctx.jwt, 'SITE_LOGO_DARK_URL', editor.fields.logoDarkUrl.value.trim());
+        await saveFaviconUrl(ctx.meltdownEmit, ctx.jwt, editor.fields.faviconUrl.value.trim());
+    }, 'Branding saved.', { id: 'branding', fields: editor.fields }, true);
     const fontInput = document.createElement('input');
     fontInput.type = 'password';
     fontInput.autocomplete = 'off';
@@ -355,7 +329,6 @@ async function renderDesign(ctx) {
     fontSave.className = 'button primary';
     fontSave.textContent = 'Save typography settings';
     shell.bindSave(fontSave, [fontInput], () => saveGoogleFontsApiKey(ctx.meltdownEmit, ctx.jwt, fontInput.value.trim()), 'Typography settings saved.');
-    branding.append(createFormField('Favicon URL', favInput, { hint: 'The small icon shown in browser tabs. Choose an image from your media library or enter its URL.' }), createFormActions(pickBtn, favSave));
     typography.append(createFormField('Google Fonts API Key', fontInput, { hint: 'Optional connection for the font library. Leave empty if you do not use it.' }), createFormActions(fontSave));
     shell.mount(ctx.el);
     try {
@@ -392,14 +365,23 @@ async function renderSeo(ctx) {
     const indexInput = document.createElement('input');
     indexInput.type = 'checkbox';
     indexInput.checked = seoSettings.indexingEnabled;
+    const imageInput = document.createElement('input');
+    imageInput.type = 'text';
+    imageInput.value = seoSettings.defaultImage || '';
+    const imageField = createImageField('Default link preview image', imageInput, {
+        emit: ctx.meltdownEmit, jwt: ctx.jwt,
+        hint: 'Used when a page has neither a link preview image nor a featured image.',
+        reportError: message => { shell.status.textContent = message; shell.status.setAttribute('role', 'alert'); }
+    });
     const save = document.createElement('button');
     save.type = 'button';
     save.className = 'button primary';
     save.textContent = 'Save SEO settings';
-    shell.bindSave(save, [titleInput, descInput, indexInput], () => saveSeoSettings(ctx.meltdownEmit, ctx.jwt, {
-        titleTemplate: titleInput.value.trim(), metaDescription: descInput.value.trim(), indexingEnabled: indexInput.checked
-    }), 'SEO settings saved.', { id: 'seo', fields: { titleTemplate: titleInput, metaDescription: descInput, indexingEnabled: indexInput } });
-    defaults.append(createFormField('SEO Title Template', titleInput, { hint: 'The default title pattern used by your SEO integration.' }), createFormField('Default Meta Description', descInput), createChoice('Allow Search Engine Indexing', indexInput), createFormActions(save));
+    shell.bindSave(save, [titleInput, descInput, indexInput, imageInput], () => saveSeoSettings(ctx.meltdownEmit, ctx.jwt, {
+        titleTemplate: titleInput.value.trim(), metaDescription: descInput.value.trim(), indexingEnabled: indexInput.checked,
+        defaultImage: imageInput.value.trim()
+    }), 'SEO settings saved.', { id: 'seo', fields: { titleTemplate: titleInput, metaDescription: descInput, indexingEnabled: indexInput, defaultImage: imageInput } });
+    defaults.append(createFormField('SEO Title Template', titleInput, { hint: 'Use %title% for the page title, e.g. %title% | My website. A page SEO title overrides this pattern.' }), createFormField('Default Meta Description', descInput), imageField.root, createChoice('Allow Search Engine Indexing', indexInput), createFormActions(save));
     shell.mount(ctx.el);
 }
 async function renderSecurity(ctx) {
@@ -472,42 +454,38 @@ async function renderEmbeddedWidgetPanel(target, key, options) {
 }
 async function renderModules(ctx) {
     const shell = createShell('Modules', 'Manage installed extensions and inspect the core modules that power your site.');
-    const actionsHost = document.createElement('div');
-    actionsHost.className = 'settings-header-actions';
-    shell.root.querySelector('header').append(actionsHost);
     shell.mount(ctx.el);
-    await renderEmbeddedWidgetPanel(shell.content, 'modules', { tabsHost: shell.tabs, actionsHost });
+    await renderEmbeddedWidgetPanel(shell.content, 'modules', { tabsHost: shell.tabs });
 }
 async function renderUiKit(ctx) {
     renderUiKitGallery(ctx.el);
 }
 async function renderUpdateRows(mount, status, ctx) {
     mount.textContent = 'Checking module updates...';
-    const rows = await fetchUpdateCenterRows(ctx.meltdownEmit, ctx.jwt);
+    const checkedRows = await fetchUpdateCenterRows(ctx.meltdownEmit, ctx.jwt);
+    const rows = checkedRows.filter(row => row.available);
     mount.innerHTML = '';
-    if (!rows.length) {
-        const empty = document.createElement('p');
-        empty.className = 'settings-hint';
-        empty.textContent = 'No installed community modules found.';
-        mount.appendChild(empty);
-        return;
-    }
-    const availableCount = rows.filter(row => row.available).length;
+    const heading = document.createElement('h4');
+    heading.textContent = 'Installed module updates';
     const summary = document.createElement('p');
     summary.className = 'settings-hint';
-    summary.textContent = availableCount
-        ? `${availableCount} module update${availableCount === 1 ? '' : 's'} available.`
-        : 'All configured module update sources are current.';
+    summary.textContent = rows.length ? `${rows.length} module updates available`
+        : !checkedRows.length ? 'No installed modules'
+            : checkedRows.every(row => row.status === 'current') ? 'Up to date' : 'Some modules could not be checked';
+    const checked = document.createElement('p');
+    checked.className = 'settings-hint';
+    checked.textContent = `Last checked: ${new Date().toLocaleString()}`;
+    mount.append(heading, summary, checked);
     const list = document.createElement('ul');
     list.className = 'modules-list page-list';
     rows.forEach(row => {
         list.appendChild(renderUpdateRow(row, status, mount, ctx));
     });
-    mount.append(summary, list);
+    mount.append(list);
 }
 function renderUpdateRow(row, status, mount, ctx) {
     const item = document.createElement('li');
-    const details = document.createElement('div');
+    const details = document.createElement('details');
     details.className = 'module-details';
     const nameRow = document.createElement('div');
     nameRow.className = 'module-name-row';
@@ -559,13 +537,20 @@ function renderUpdateRow(row, status, mount, ctx) {
         }
     });
     actions.appendChild(updateButton);
-    nameRow.append(name, badge, actions);
+    const versions = document.createElement('span');
+    versions.className = 'update-versions';
+    versions.textContent = `${row.currentVersion} → ${row.latestVersion}`;
+    nameRow.append(name, versions);
     const meta = document.createElement('div');
     meta.className = 'module-meta';
     meta.textContent = row.latestVersion && row.latestVersion !== row.currentVersion
         ? `${row.meta} -> v${row.latestVersion}`
         : row.meta;
-    details.append(nameRow, meta);
+    const heading = document.createElement('summary');
+    heading.append(nameRow);
+    const notes = document.createElement('p');
+    notes.textContent = 'No module-specific release notes were provided.';
+    details.append(heading, meta, notes, actions);
     item.appendChild(details);
     return item;
 }

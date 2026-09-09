@@ -6,6 +6,9 @@ import {
 export interface OpenMediaExplorerOptions {
   jwt?: string;
   subPath?: string;
+  publicUrlOnly?: boolean;
+  /** Existing image callers keep their default; article video uses the same picker. */
+  accept?: 'image/*' | 'video/*';
 }
 
 export interface OpenMediaExplorerResult {
@@ -54,7 +57,8 @@ export async function openMediaExplorer(opts: OpenMediaExplorerOptions = {}): Pr
       uploadFetch: window.fetchWithTimeout,
       csrfToken: window.CSRF_TOKEN,
       initialPath,
-      accept: 'image/*',
+      accept: opts.accept === 'video/*' ? 'video/*' : 'image/*',
+      publicUrlOnly: opts.publicUrlOnly,
       enableMutations: false,
       onSelectFile: (selection: MediaExplorerSelection) => {
         settle({

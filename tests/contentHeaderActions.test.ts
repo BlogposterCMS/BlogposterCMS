@@ -15,6 +15,23 @@ function breadcrumbPathnames(): string[] {
 }
 
 describe('contentHeaderActions', () => {
+  it.each(['/admin/home', '/admin/home/', '/admin'])('hides the whole breadcrumb row on %s and restores it after navigation', pathname => {
+    document.body.innerHTML = '<div id="content-header"><div class="content-header"><div id="content-breadcrumb"></div></div></div>';
+    window.history.pushState({}, '', pathname);
+    initContentHeader();
+    expect(document.getElementById('content-header')?.hidden).toBe(true);
+    window.history.pushState({}, '', '/admin/content/pages');
+    initContentHeader();
+    expect(document.getElementById('content-header')?.hidden).toBe(false);
+    expect(breadcrumbLabels()).toEqual(['content', 'pages']);
+  });
+
+  it('recognizes Home under a configured admin base', () => {
+    (window as any).ADMIN_BASE = '/cms/admin/';
+    window.history.pushState({}, '', '/cms/admin/home');
+    initContentHeader();
+    expect(document.querySelector<HTMLElement>('.content-header')?.hidden).toBe(true);
+  });
   it('places the existing breadcrumb host between navigation and workspace', () => {
     document.body.innerHTML = '<div class="admin-panel"><header id="main-header"></header><div class="main-content"><section id="content"><div id="content-header"><div class="content-header"><div id="content-breadcrumb"></div></div></div></section></div></div>';
     initContentHeader(); initContentHeader();

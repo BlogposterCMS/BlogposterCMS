@@ -629,6 +629,9 @@
   margin: 0;
   font-size: 1.35rem;
 }
+// Keep layout context and commands while omitting the repeated workspace title.
+.page-manager__header > div:first-child { display: none; }
+.page-manager__header > .page-manager__layout-context { grid-column: 2; }
 .page-manager__header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -910,4 +913,115 @@
   .page-manager__page-icon {
     display: none;
   }
+}
+.page-manager__layout { grid-template-columns: minmax(0, 1fr); }
+// Existing page drafts live in the selected row, with actions at its right edge.
+.page-manager__row:has(> .is-inline) { background: var(--studio-surface-muted); }
+.page-manager__row:has(> .is-inline) > .page-manager__select { display: none; }
+.page-manager__details.is-inline {
+  flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  padding: 12px; border: 0; border-radius: 0; background: transparent;
+  .page-manager__form { flex: 1 1 180px; gap: 2px; }
+  .page-manager__form > label > span,
+  .page-manager__form small,
+  .page-manager__form > label:nth-of-type(n + 3) { display: none; }
+  .page-manager__form input {
+    min-height: 28px; padding: 3px 6px; border-color: transparent;
+    background: transparent; box-shadow: none;
+    &:focus { background: var(--studio-surface-solid); }
+    &[name='title'] { font-weight: 600; color: var(--studio-text); }
+    &[name='slug'] { color: var(--studio-text-muted); font-size: 12px; }
+  }
+  .page-manager__save { border: 0; padding: 0; justify-content: flex-start; gap: 8px; }
+  .page-manager__save:has(button:disabled) { display: none; }
+}
+.page-manager__row-actions {
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  gap: 6px; margin-left: auto;
+  .page-manager__actions { margin: 0; gap: 6px; }
+}
+.page-manager__details.is-inline .page-manager__form > label:first-of-type {
+  display: flex; align-items: center; gap: 8px;
+  input { width: auto; min-width: 60px; max-width: 100%; flex: 0 1 auto; field-sizing: content; }
+  > .page-manager__status { display: inline; flex: 0 0 auto; }
+}
+// Row actions stay plain until pointer or keyboard interaction.
+.page-manager__row-actions .icon-button {
+  background: transparent; box-shadow: none;
+  &:hover:not(:disabled) { background: var(--studio-surface-solid); box-shadow: var(--studio-shadow-control); }
+  &:focus-visible { box-shadow: var(--studio-focus-ring); }
+}
+.page-manager--creation-dialog {
+  padding: 0;
+  .page-manager__details { padding: 0; border: 0; background: transparent; }
+  .page-manager__details-heading, [data-action='cancel'], .page-manager__save { display: none; }
+}
+.page-manager__details.is-inline .page-manager__form > label:nth-of-type(2) {
+  display: flex; align-items: center; gap: 4px;
+  input { width: auto; min-width: 60px; max-width: 100%; field-sizing: content; }
+  .icon-button { flex: 0 0 28px; width: 28px; height: 28px; background: transparent; box-shadow: none; }
+  .icon-button:hover:not(:disabled) { background: var(--studio-surface-solid); box-shadow: var(--studio-shadow-control); }
+}
+.page-manager__header-actions .button.secondary {
+  --bg: var(--studio-surface-solid);
+  border: 1px solid var(--studio-border);
+  box-shadow: none;
+}
+.page-manager__header-actions [data-action='add'] {
+  justify-content: center; align-items: center; gap: 8px;
+  .icon + span { margin-left: 0; }
+}
+.page-manager__header-actions [hidden] { display: none; }
+.page-manager__header-actions > .icon-button {
+  background: transparent; box-shadow: none; border: 0;
+  &:hover { background: var(--studio-surface-muted); }
+}
+.app-scope .page-manager__form input:focus {
+  outline: none; box-shadow: none; border: 1px solid var(--studio-border-strong);
+}
+.app-scope .page-manager__details.is-inline .page-manager__form input:focus {
+  background: transparent; border-color: transparent;
+  border-bottom-color: var(--studio-border-strong); border-radius: 0;
+}
+.page-manager--creation-dialog { container-type: normal; }
+.page-manager__identity-line { display: flex; align-items: center; gap: 8px; }
+.page-manager__hover-actions { visibility: hidden; }
+.page-manager__row:hover > .page-manager__hover-actions,
+.page-manager__row:focus-within > .page-manager__hover-actions { visibility: visible; }
+.page-manager__filter-toolbar {
+  display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--studio-border);
+  .page-manager__filters { flex: 1; border: 0; }
+  .page-manager__header-actions { flex: 0 0 auto; align-items: center; }
+}
+.page-manager__row {
+  min-height: 72px;
+  > .page-manager__toggle, > .page-manager__toggle-space { order: 0; flex: 0 0 28px; width: 28px; display: block; }
+}
+.page-manager__select, .page-manager__details.is-inline { gap: 12px; padding: 8px 12px; }
+.page-manager__details.is-inline { flex-wrap: nowrap; }
+.page-manager__identity { gap: 0; }
+.page-manager__identity-line, .page-manager__address-line { height: 28px; }
+.page-manager__identity-line .page-name { color: var(--studio-text); flex: 0 1 auto; }
+.page-manager .page-manager__status {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 28px;
+  padding: 2px 4px; font-size: 13px; border: 0; background: transparent;
+  box-shadow: none; text-decoration: none; width: auto; flex: 0 0 auto;
+  .icon { width: 12px; height: 12px; }
+}
+.page-manager__address-line { display: flex; align-items: center; gap: 4px; }
+.page-manager__hover-link { visibility: hidden; }
+.page-manager__address-line .icon-button { width: 28px; height: 28px; flex: 0 0 28px; background: transparent; box-shadow: none; }
+.page-manager__row:hover .page-manager__hover-link,
+.page-manager__row:focus-within .page-manager__hover-link { visibility: visible; }
+.page-manager__details.is-inline .page-manager__form { gap: 0; }
+// Labels forward clicks to inputs: keep their hit area beside the visible text.
+.page-manager__details.is-inline .page-manager__form > label {
+  width: fit-content; max-width: 100%; justify-self: start;
+}
+.page-manager__details.is-inline .page-manager__form input { padding-inline: 0; font-size: 0.87rem; }
+.page-manager__row > .page-manager__row-actions { padding-right: 12px; }
+@container page-manager (max-width: 650px) {
+  .page-manager__filter-toolbar { flex-wrap: wrap; gap: 4px; }
+  .page-manager__filter-toolbar .page-manager__header-actions { margin-left: auto; }
+  .page-manager__row-actions { gap: 2px; }
 }

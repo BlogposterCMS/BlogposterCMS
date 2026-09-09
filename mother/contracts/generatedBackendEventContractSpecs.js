@@ -9269,6 +9269,84 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
     },
     "resultType": "GenerateXmlSitemapResult"
   },
+  "geoipLookup": {
+    "description": "Generated internal backend contract for geoipLookup.",
+    "payloadSchema": {
+      "type": "object",
+      "required": [
+        "moduleName"
+      ],
+      "properties": {
+        "authModuleSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decodedJWT": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "isExternalRequest": {
+          "type": "boolean"
+        },
+        "jwt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "moduleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleType": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "skipJWT": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "json"
+          },
+          {
+            "type": "function"
+          }
+        ]
+      }
+    },
+    "resultSchema": {
+      "anyOf": [
+        {
+          "type": "json"
+        },
+        {
+          "type": "undefined"
+        }
+      ]
+    },
+    "resultType": "GeoipLookupResult"
+  },
   "getAllLayoutsForPage": {
     "description": "Generated internal backend contract for getAllLayoutsForPage.",
     "payloadSchema": {

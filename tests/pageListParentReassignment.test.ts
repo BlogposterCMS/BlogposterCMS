@@ -11,13 +11,16 @@ const {
 } = require('../ui/widgets/plainspace/admin/defaultwidgets/pageList/pageList.js');
 
 describe('page parent reassignment helpers', () => {
-  test('keeps expanded nested pages when switching filters and back', () => {
+  test('keeps expanded nested pages when switching filters and back', async () => {
     const host = document.createElement('div');
     renderPageList(host, basePages());
     const row = (name: string) => Array.from(host.querySelectorAll<HTMLTableRowElement>('.page-manager__row'))
       .find(item => item.querySelector('.page-name')?.textContent === name)!;
     row('Home').querySelector<HTMLButtonElement>('.page-manager__toggle')!.click();
+    // Branch changes settle asynchronously while the workspace guards actions.
+    await new Promise(resolve => setTimeout(resolve, 0));
     row('About').querySelector<HTMLButtonElement>('.page-manager__toggle')!.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
     const filter = (name: string) => Array.from(host.querySelectorAll<HTMLButtonElement>('.filter'))
       .find(item => item.dataset.filter === name)!.click();
     filter('Active');

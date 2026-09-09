@@ -154,6 +154,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     motherEmitter
   }));
   app.use(createPublicPageRoutes({
+    validateAdminToken: authContext.validateAdminToken,
     injectDevReload,
     motherEmitter,
     plainSpaceVersion,

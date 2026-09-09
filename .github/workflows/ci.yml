@@ -31,12 +31,19 @@ jobs:
           # packaged profile grants setup access and strips child capabilities.
           sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
           sudo useradd --system --create-home --user-group blogposter-sandbox-test
+          # Export tracked files only: never expose checkout credentials in .git.
+          sudo install -d -o blogposter-sandbox-test -g blogposter-sandbox-test /tmp/blogposter-sandbox-tests
+          git archive HEAD | sudo -u blogposter-sandbox-test tar -x -C /tmp/blogposter-sandbox-tests
+          sudo cp -a node_modules /tmp/blogposter-sandbox-tests/node_modules
+          sudo chown -R blogposter-sandbox-test:blogposter-sandbox-test /tmp/blogposter-sandbox-tests/node_modules
+          cd /tmp/blogposter-sandbox-tests
           sudo -u blogposter-sandbox-test "$(command -v node)" tools/verify-community-sandbox.js
       - name: Run real Linux sandbox integration tests
         # RLIMIT_NPROC is UID-wide. Keep runner services out of the test budget,
         # matching the dedicated unprivileged application user in production.
         run: |
           printf 'Runner UID task count: '; ps -u "$(id -u)" -L --no-headers | wc -l
+          cd /tmp/blogposter-sandbox-tests
           sudo -u blogposter-sandbox-test "$(command -v node)" node_modules/jest/bin/jest.js --runInBand tests/moduleProcessRuntime.test.js tests/moduleRegistryEventsActivation.test.js
       - name: Run vulnerability audit
         run: npm audit --audit-level=high

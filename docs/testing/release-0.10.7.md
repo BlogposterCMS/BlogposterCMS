@@ -10,6 +10,8 @@ remain enabled. See [Ubuntu's guidance](https://discourse.ubuntu.com/t/understan
 CI runs Jest in band and executes the two real sandbox suites as a dedicated
 unprivileged test user before the build, followed by every remaining suite.
 A fresh Jest process under the shared runner UID was insufficient.
+The test user receives a tracked-file archive and installed dependencies in its
+own temporary workspace, without the runner's private home or Git credentials.
 Linux's process limit counts
 all threads belonging to the runner UID; both parallel and in-band full-suite
 runs failed namespace creation with EAGAIN despite the standalone preflight

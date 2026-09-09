@@ -1,5 +1,9 @@
 # Page List changelog
 
+## [0.10.18] - 2026-09-09
+
+- Publish a compatible signed generation for individual update and cold-start acceptance on the 0.10.17 baseline.
+
 ## [0.10.16] - 2026-09-09
 
 - Publish a compatible signed generation for independent updates on the complete 0.10.15 host baseline.

@@ -5,6 +5,15 @@ import { registerWorkspaceAgent } from '../ui/shared/agent/workspaceAgent';
 jest.mock('../ui/shared/agent/workspaceAgent', () => ({ registerWorkspaceAgent: jest.fn(() => ({ stop: jest.fn() })) }));
 jest.mock('../ui/shared/dialogs/bpDialog', () => ({ bpDialog: { open: jest.fn() } }));
 
+// jsdom has no layout engine. ProseMirror's deferred focus scroll needs the
+// Range geometry API even though this test exercises content and save guards.
+beforeAll(() => {
+  Object.defineProperties(Range.prototype, {
+    getClientRects: { configurable: true, value: () => [] },
+    getBoundingClientRect: { configurable: true, value: () => new DOMRect() }
+  });
+});
+
 it('exposes stable block edits and protects a dirty dialog until an explicit save', async () => {
   let options: any, finish: (value: unknown) => void;
   (bpDialog.open as jest.Mock).mockImplementation(value => {

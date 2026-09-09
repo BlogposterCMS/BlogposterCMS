@@ -161,6 +161,7 @@ jobs:
             "if(process.getuid()===0)throw new Error('CONTAINER_ROOT_USER');
             require('./mother/security/runtimeIntegrity').verifyRuntimeIntegrity({rootDir:'/app'})
             .then(()=>{require('sqlite3').verbose();require('bcrypt');require('express');
+            if(!require('fs').readFileSync('CHANGELOG.md','utf8').includes('## ['+require('./package.json').version+']'))throw new Error('CONTAINER_RELEASE_NOTES_MISSING');
             console.log('CONTAINER_OFFLINE_INTEGRITY_OK')})
             .catch(e=>{console.error(e.code||'CONTAINER_INTEGRITY_FAILED');process.exit(1)})"
       - name: Verify public image provenance without saved credentials

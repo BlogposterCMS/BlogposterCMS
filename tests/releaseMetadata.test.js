@@ -14,3 +14,10 @@ test('release package, lockfile, changelog and host policy remain aligned', () =
   const updater = fs.readFileSync(path.join(root, 'deploy/blogposter-update'), 'utf8');
   expect(updater).toContain(`UPDATER_VERSION='${policy.minimumUpdaterVersion}'`);
 });
+
+
+test('installed release notes are included in the closed image context and signed baseline', () => {
+  expect(fs.readFileSync(path.join(root, '.dockerignore'), 'utf8').split(/\r?\n/)).toContain('!CHANGELOG.md');
+  const integrity = require('../mother/security/runtimeIntegrity');
+  expect(integrity.MANAGED_PATHS).toContain('CHANGELOG.md');
+});

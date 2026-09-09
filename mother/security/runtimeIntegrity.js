@@ -15,6 +15,7 @@ const MAX_ARTIFACT_BYTES = 64 * 1024 * 1024;
 const MANAGED_PATHS = Object.freeze([
   'app.js',
   'package.json',
+  'CHANGELOG.md',
   'package-lock.json',
   'config',
   'mother',

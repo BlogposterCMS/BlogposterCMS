@@ -1,5 +1,9 @@
 # updater changelog
 
+## [0.10.24] - 2026-09-10
+
+- Include installed release notes in the signed container baseline and verify their presence in the final image.
+
 ## [0.10.23] - 2026-09-09
 
 - Resume verified image-download chunks with visible progress; cancel only before the backup/install commit gate.

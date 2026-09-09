@@ -1,6 +1,7 @@
 # Closed build context: only generic product source and build inputs enter images.
 **
 !package.json
+!CHANGELOG.md
 !package-lock.json
 !app.js
 !babel.config.js

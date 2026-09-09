@@ -23,6 +23,11 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Install and verify Linux community isolation
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y bubblewrap util-linux
+          node tools/verify-community-sandbox.js
       - name: Run vulnerability audit
         run: npm audit --audit-level=high
       - name: Build

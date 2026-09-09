@@ -1,5 +1,12 @@
 # Release 0.10.7 acceptance
 
+The tag's GitHub validation correctly failed before publication: the runner did
+not have bubblewrap installed. Version 0.10.8 supplies the dependency and adds the
+real negative sandbox preflight to both existing jobs. No unsigned image or
+failed release was deployed, and the 0.10.7 tag remains immutable.
+The two affected Linux integration suites were also run locally in the validated
+Docker sandbox configuration: 19 tests passed and one Windows-only check skipped.
+
 This release introduces signed independent updates for five core modules and
 the isolated community module/widget contract. It also includes the captured
 Media Manager and package-picker changes. Shared runtime, UI and schema changes

@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
-## [0.10.7] - 2026-09-09
+## [0.10.8] - 2026-09-09
+
+- Supply and verify the mandatory Linux sandbox tools in the existing CI and
+  release jobs. Version 0.10.7 was not published as a release because the runner
+  lacked bubblewrap; this version carries its module, installer and media changes.
 
 - Update the locked Nodemailer dependency to 9.1.1 for its security fixes and
   preserve reviewed vendor bytes and LF source files in Windows checkouts.
@@ -37,6 +41,11 @@
   OSS, S3-compatible and HTTPS WebDAV adapters; publication selects a destination.
 - Move widget management from Content to Settings > Widgets, preserving existing
   page identity and saved state during the admin-page upgrade.
+
+## [0.10.7] - 2026-09-09
+
+- Source tag only: Linux validation stopped publication because bubblewrap was
+  absent from the CI runner. No image or release was deployed; see 0.10.8.
 
 ## [0.10.6] - 2026-09-08
 

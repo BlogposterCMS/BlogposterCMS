@@ -7,8 +7,10 @@ real negative sandbox preflight to both existing jobs. Ubuntu's packaged
 alone failed namespace loopback setup with `RTM_NEWADDR: Operation not permitted`.
 The profile restricts child capabilities; global user-namespace restrictions
 remain enabled. See [Ubuntu's guidance](https://discourse.ubuntu.com/t/understanding-apparmor-user-namespace-restriction/58007).
-CI runs Jest in band and executes the two real sandbox suites in a fresh process
-before the build, followed by every remaining suite. Linux's process limit counts
+CI runs Jest in band and executes the two real sandbox suites as a dedicated
+unprivileged test user before the build, followed by every remaining suite.
+A fresh Jest process under the shared runner UID was insufficient.
+Linux's process limit counts
 all threads belonging to the runner UID; both parallel and in-band full-suite
 runs failed namespace creation with EAGAIN despite the standalone preflight
 passing. Separate local Linux tests also passed as non-root (19 passed, one

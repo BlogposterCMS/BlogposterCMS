@@ -38,7 +38,8 @@ jobs:
       - name: Verify placeholder parity
         run: npm run placeholder-parity
       - name: Run test suite
-        run: npm test
+        # RLIMIT_NPROC counts threads across the runner UID, including Jest workers.
+        run: npm test -- --runInBand
 
   codeql_analysis:
     needs: lint_and_test

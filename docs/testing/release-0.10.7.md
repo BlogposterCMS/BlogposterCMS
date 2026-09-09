@@ -7,6 +7,9 @@ real negative sandbox preflight to both existing jobs. Ubuntu's packaged
 alone failed namespace loopback setup with `RTM_NEWADDR: Operation not permitted`.
 The profile restricts child capabilities; global user-namespace restrictions
 remain enabled. See [Ubuntu's guidance](https://discourse.ubuntu.com/t/understanding-apparmor-user-namespace-restriction/58007).
+CI runs Jest in band because Linux's process limit counts all threads belonging
+to the runner UID. Parallel Jest workers exhausted the unchanged 64-task limit
+at namespace creation, although the standalone negative preflight passed.
 No unsigned image or
 failed release was deployed, and the 0.10.7 tag remains immutable.
 The two affected Linux integration suites were also run locally in the validated

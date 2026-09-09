@@ -8,6 +8,7 @@
   release jobs, including Ubuntu's restricted bwrap AppArmor profile without
   disabling global namespace protection. Version 0.10.7 was not published as a release because the runner
   lacked bubblewrap; this version carries its module, installer and media changes.
+  Run CI tests sequentially to retain the sandbox's process limit on shared UIDs.
 
 - Update the locked Nodemailer dependency to 9.1.1 for its security fixes and
   preserve reviewed vendor bytes and LF source files in Windows checkouts.

@@ -10,6 +10,7 @@ const { coreModulesForApp } = require('./coreModules');
 const { createCoreModuleLifecycle } = require('./coreModuleLifecycle');
 const { loadCoreModuleCode } = require('./coreModuleCode');
 const { createCoreModuleStore } = require('../../modules/updater/coreModuleStore');
+const { runModuleWorker } = require('../../modules/updater/coreModuleWorker');
 const { createCoreModuleUpdates } = require('../../modules/updater/coreModuleUpdates');
 const { MODULE_POLICY } = require('../../modules/updater/coreModulePackages');
 const { compareVersions } = require('../../modules/moduleLoader/moduleUpdateService');
@@ -72,10 +73,17 @@ async function bootstrapCoreModules({
   const coreModuleUpdates = createCoreModuleUpdates({ rootDir, lifecycle: coreModuleLifecycle });
   const hostVersion = require(path.join(rootDir, 'package.json')).version;
 
-  function selectedModule(moduleName, modulePath) {
+  async function selectedModule(moduleName, modulePath) {
     let generation = null;
     if (Object.prototype.hasOwnProperty.call(MODULE_POLICY, moduleName)) {
-      try { generation = moduleStore.active(moduleName); }
+      try {
+        const selected = moduleStore.state(moduleName);
+        // Reuse the verified worker boundary during cold starts too. Hashing and
+        // attestation must not starve database callbacks of already started modules.
+        if (selected.active) generation = await runModuleWorker({
+          rootDir, operation: 'inspect', moduleName, generationId: selected.active
+        });
+      }
       catch (error) {
         if (error.code !== 'CORE_MODULE_HOST_INCOMPATIBLE') throw error;
         console.warn(`[CORE_MODULE_OVERRIDE_HOST_CHANGED] ${moduleName}; using bundled module.`);
@@ -91,7 +99,7 @@ async function bootstrapCoreModules({
   }
 
   console.log('[SERVER INIT] Loading Auth module...');
-  const selectedAuth = selectedModule('auth', 'mother/modules/auth');
+  const selectedAuth = await selectedModule('auth', 'mother/modules/auth');
   await coreModuleLifecycle.start('auth', selectedAuth.implementation, {
       isCore: true,
       JWT_SECRET: jwtSecret,
@@ -122,7 +130,7 @@ async function bootstrapCoreModules({
   for (const mod of coreModulesForApp({ app, authModuleSecret })) {
     console.log(`[SERVER INIT] Loading ${mod.name}...`);
     const moduleJwt = await getCachedCoreToken(mod.name);
-    const { implementation, generation } = selectedModule(mod.name, mod.path);
+    const { implementation, generation } = await selectedModule(mod.name, mod.path);
     await coreModuleLifecycle.start(mod.name, implementation, {
         isCore: true,
         jwt: moduleJwt,
@@ -140,7 +148,7 @@ async function bootstrapCoreModules({
 
   for (const [moduleName, policy] of Object.entries(MODULE_POLICY)) {
     if (policy.kind !== 'widget') continue;
-    const { implementation, generation } = selectedModule(moduleName);
+    const { implementation, generation } = await selectedModule(moduleName);
     await coreModuleLifecycle.start(moduleName, implementation, {
       moduleGeneration: { generationId: generation?.generationId || null, releaseVersion: generation?.manifest.version || hostVersion },
       browserDirectory: generation?.moduleDir

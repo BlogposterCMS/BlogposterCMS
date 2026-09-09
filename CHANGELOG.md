@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.17] - 2026-09-09
+
+- Verify selected module packages in the existing worker during cold starts, keeping database callbacks responsive while all module generations are restored.
+
 ## [0.10.16] - 2026-09-09
 
 - Publish compatible signed packages for all 37 CMS modules and 31 bundled widgets on the complete 0.10.15 baseline.

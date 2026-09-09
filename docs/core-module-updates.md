@@ -7,7 +7,7 @@ source-directory or executable-code API is introduced.
 
 ## Supported scope
 
-All 35 entries in `coreModulesForApp`, plus Auth, participate in the generation
+All 36 entries in `coreModulesForApp`, plus Auth, participate in the generation
 lifecycle. The 31 bundled widget packages are a projection of PlainSpace's
 existing default-widget catalog, not a second registry. Widget packages select
 only their declared browser entry; they cannot contain backend code.
@@ -20,6 +20,12 @@ community ModuleLoader and its sandbox infrastructure remain host components.
 Community modules/widgets retain their existing reviewed package installation.
 Do not equate an individual package version with hot replacement of every file
 in its source directory.
+
+Cold starts revalidate selected generations through the same bounded verification
+worker used for live updates. Hashing and signature checks must stay outside the
+main event loop so database replies and timers of already started modules can run.
+An invalid signature aborts startup; only a host-compatibility mismatch permits
+falling back to the bundled implementation.
 Media additionally owns a generation-specific router behind one stable host mount.
 Admission pauses only for its matching routes; existing responses and asynchronous
 handlers drain before activation. Candidate routes must retain the exact method/path

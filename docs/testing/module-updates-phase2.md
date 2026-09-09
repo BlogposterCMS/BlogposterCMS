@@ -1,10 +1,10 @@
 # Individual module updates: acceptance
 
-Status: implemented locally; expanded production acceptance remains pending.
+Status: implemented and published; production acceptance is in progress below.
 
 ## Implemented
 
-- All 36 CMS modules and 31 bundled widget entries use the existing signed package,
+- All 37 CMS modules and 31 bundled widget entries use the existing signed package,
   compatibility, review and durable selection path. Each has its own changelog.
 - Backend event handlers, HTTP routes and owned timers drain before replacement.
   Failed readiness retains the old implementation. Admitted asynchronous chains
@@ -101,3 +101,34 @@ between the startup registry and package policy; it failed before the fix.
 The corrected curated checkout started all 68 lifecycles under PID 43156, including
 GeoIP. All 57 focused bootstrap/policy/GeoIP/package regressions passed after the
 previously failing catalog-equivalence assertion was corrected by registration.
+
+## Signed production acceptance
+
+The official 0.10.13 image was installed with the existing host updater, backup,
+signature checks and readiness check. Release 0.10.14 supplies compatible signed
+module packages; the two releases have identical host compatibility fingerprints.
+
+All 31 bundled widgets and 35 backend modules were individually installed using
+the production Update Center dialogs. Package-specific notes were displayed.
+Container PID 1091006 remained unchanged throughout all 66 installations and the
+container remained healthy. Importer staging hit a release-download timeout;
+GeoIP activation failed closed because the baseline lacked its startup entry.
+Neither failure replaced the running implementation.
+
+The 0.10.15 registration correction and compatible 0.10.16 packages were published.
+The prepared 0.10.15 image passed offline runtime-integrity verification (13,758
+managed files, no blocked modules). Subsequent direct GitHub release downloads
+from production timed out while the GitHub API remained reachable. Transport
+failures are separate from completed lifecycle replacement and signature checks.
+
+The deliberate 66-package cold start preserved every selection but exposed a
+main-loop starvation failure: synchronous verification delayed database replies,
+causing contentEngine to be deactivated by a timeout. Container health alone did
+not establish acceptance. Selections were preserved separately for investigation;
+the normal signed updater then restored bundled 0.10.15 with backup and readiness
+checks. The temporary release pin was removed.
+
+The correction moves cold-start inspection to the existing verification worker.
+Bootstrap regressions cover I/O progress before selected generations start and
+fail-closed startup when signature inspection fails. Production cold-start
+acceptance remains open until the corrected signed release is exercised.

@@ -1,6 +1,7 @@
 'use strict';
 
 const { createCoreModuleScope, lifecycleError } = require('./coreModuleScope');
+const { createCoreModuleHttpScope } = require('./coreModuleHttpScope');
 
 /** Host-owned lifecycle; package trust must be checked before invoking replace. */
 function createCoreModuleLifecycle(motherEmitter) {
@@ -10,10 +11,11 @@ function createCoreModuleLifecycle(motherEmitter) {
   async function initialize(moduleName, implementation, context, deferred = false) {
     if (typeof implementation?.initialize !== 'function') throw lifecycleError('CORE_MODULE_ENTRY_INVALID', moduleName);
     const scope = createCoreModuleScope(motherEmitter, moduleName, { deferred });
+    const http = implementation.httpLifecycleVersion === 1 ? createCoreModuleHttpScope(scope) : null;
     try {
-      await implementation.initialize({ ...context, motherEmitter: scope.emitter, lifecycle: scope, isModuleUpdate: deferred });
+      await implementation.initialize({ ...context, ...(http ? { app: http.app } : {}), motherEmitter: scope.emitter, lifecycle: scope, isModuleUpdate: deferred });
       if (!deferred) scope.activate();
-      return { scope, implementation, context };
+      return { scope, implementation, context, http };
     } catch (error) {
       try { await scope.dispose(); } catch (cleanupError) {
         throw Object.assign(new AggregateError([error, cleanupError], `CORE_MODULE_INIT_CLEANUP_FAILED: ${moduleName}`), {
@@ -27,11 +29,20 @@ function createCoreModuleLifecycle(motherEmitter) {
   return {
     async start(moduleName, implementation, context) {
       if (modules.has(moduleName) || busy.has(moduleName)) throw lifecycleError('CORE_MODULE_ALREADY_STARTED', moduleName);
+      if (implementation?.httpLifecycleVersion === 1 && typeof context.app?.use !== 'function') {
+        throw lifecycleError('CORE_MODULE_HTTP_HOST_MISSING', moduleName);
+      }
       busy.add(moduleName);
-      try { modules.set(moduleName, await initialize(moduleName, implementation, context)); }
+      try {
+        const record = await initialize(moduleName, implementation, context);
+        if (record.http) {
+          context.app.use((req, res, next) => modules.get(moduleName).http.dispatch(req, res, next));
+        }
+        modules.set(moduleName, record);
+      }
       finally { busy.delete(moduleName); }
     },
-    async replace(moduleName, implementation, { healthCheck, beforeActivate = async () => {}, generation, timeoutMs = 10000 } = {}) {
+    async replace(moduleName, implementation, { healthCheck, beforeActivate = async () => {}, generation, browserDirectory, timeoutMs = 10000 } = {}) {
       const current = modules.get(moduleName);
       if (!current) throw lifecycleError('CORE_MODULE_NOT_STARTED', moduleName);
       if (current.recoveryRequired) throw lifecycleError('CORE_MODULE_RECOVERY_REQUIRED', moduleName);
@@ -47,7 +58,8 @@ function createCoreModuleLifecycle(motherEmitter) {
         await current.scope.drain(timeoutMs);
         try {
           next = await initialize(moduleName, implementation, {
-            ...current.context, moduleGeneration: generation || current.context.moduleGeneration
+            ...current.context, moduleGeneration: generation || current.context.moduleGeneration,
+            browserDirectory
           }, true);
           // A host-compatible replacement retains its registered event surface.
           // This also catches initializers that swallow a setup error.
@@ -56,6 +68,7 @@ function createCoreModuleLifecycle(motherEmitter) {
           if (previousEvents.length !== nextEvents.length || previousEvents.some((event, index) => event !== nextEvents[index])) {
             throw lifecycleError('CORE_MODULE_EVENT_SURFACE_CHANGED', moduleName);
           }
+          if (current.http?.signature() !== next.http?.signature()) throw lifecycleError('CORE_MODULE_HTTP_SURFACE_CHANGED', moduleName);
           await healthCheck(implementation, { ...next.context, motherEmitter: next.scope.emitter });
           // Persist the verified selection before exposing its listeners. A
           // crash after this point restarts into the same selected generation.
@@ -86,6 +99,14 @@ function createCoreModuleLifecycle(motherEmitter) {
         }
         return { moduleName, status: 'active', restartedHost: false };
       } finally { busy.delete(moduleName); }
+    },
+    // Internal static-asset selection; filesystem paths never enter admin snapshots.
+    browserSelection(moduleName) {
+      const record = modules.get(moduleName);
+      return record?.context.browserDirectory ? {
+        generationId: record.context.moduleGeneration?.generationId,
+        moduleDir: record.context.browserDirectory
+      } : null;
     },
     snapshot: () => [...modules.entries()].map(([moduleName, record]) => ({
       ...record.scope.snapshot(), moduleName,

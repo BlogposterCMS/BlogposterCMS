@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.10.10] - 2026-09-09
+
+- Enable individual, verified updates for all 36 CMS modules and the 31 bundled
+  widget entries in the existing Update Center. Preserve active sessions,
+  registries, queues and completed database work across generation changes.
+  Designer browser assets travel with its backend; widget assets activate for
+  new page loads. Shared host contracts and schema changes remain compatibility
+  checks, and each package carries its own signed changelog.
+
 - Document successful live acceptance of all five signed core module updates,
   unchanged CMS process identity, retry after a download timeout and persistence
   after a deliberate restart.

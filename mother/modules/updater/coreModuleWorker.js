@@ -22,9 +22,22 @@ async function execute({ rootDir, operation, moduleName, version, generationId }
     const generationDir = path.join(temporary, 'generation');
     const manifest = extractModuleArchive(fs.readFileSync(archivePath), moduleName, generationDir);
     if (manifest.version !== version) throw packageError('CORE_MODULE_RELEASE_IDENTITY_MISMATCH');
-    return store.stage(moduleName, generationDir);
+    return await stageWithRetry(store, moduleName, generationDir);
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+async function stageWithRetry(store, moduleName, generationDir, { platform = process.platform,
+  wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)) } = {}) {
+  // Windows scanners can briefly lock newly copied files. Retry only staging,
+  // which has not selected code; never retry an ambiguous activation write.
+  for (let attempt = 0; ; attempt++) {
+    try { return store.stage(moduleName, generationDir); }
+    catch (error) {
+      if (platform !== 'win32' || !['EPERM', 'EBUSY'].includes(error.code) || attempt >= 3) throw error;
+      await wait(100 * (attempt + 1));
+    }
   }
 }
 
@@ -55,4 +68,4 @@ if (!isMainThread) {
   execute(workerData).then(result => parentPort.postMessage({ result }), error => parentPort.postMessage({ error: error.code || 'CORE_MODULE_WORKER_FAILED' }));
 }
 
-module.exports = { runModuleWorker };
+module.exports = { runModuleWorker, stageWithRetry };

@@ -393,7 +393,7 @@ function sanitizeAppForwardPayload(input = {}) {
 }
 
 function appsRootFor(baseDir) {
-  return path.resolve(baseDir || path.resolve(__dirname, '../../../apps'));
+  return path.resolve(baseDir || require('./appRoot'));
 }
 
 function assertInsideAppsRoot(appsRoot, candidatePath, label = 'path') {
@@ -946,7 +946,11 @@ module.exports = {
     validateAppManifest,
     uninstallApp
   },
-  async initialize({ motherEmitter, isCore, jwt, baseDir }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    if (!Array.isArray(await listAppRegistry(motherEmitter, jwt))) throw new Error('CORE_MODULE_APP_REGISTRY_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, baseDir, isModuleUpdate = false }) {
     if (!isCore) {
       notify({
         moduleName: MODULE_NAME,
@@ -966,7 +970,8 @@ module.exports = {
       motherEmitter.registerModuleType(MODULE_NAME, MODULE_TYPE);
     }
 
-    await loadAllApps({ motherEmitter, jwt, baseDir });
+    // Updating handlers must not rescan or mutate the installed app registry.
+    if (!isModuleUpdate) await loadAllApps({ motherEmitter, jwt, baseDir });
     const appsPath = appsRootFor(baseDir);
 
     motherEmitter.on(BACKEND_EVENTS.LIST_APPS, async (payload, callback) => {

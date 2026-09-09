@@ -13,6 +13,12 @@ const MODULE_NAME = 'unifiedSettings';
 const MODULE_TYPE = 'core';
 
 module.exports = {
+  lifecycleVersion: 1,
+  async healthCheck() {
+    if (!Array.isArray(registryService.retrieveAllRegisteredModules())) {
+      throw new Error('CORE_MODULE_SETTINGS_REGISTRY_NOT_READY');
+    }
+  },
   /**
    * initialize:
    *   Called by mother/index.js (or a similar loader) when loading core modules.

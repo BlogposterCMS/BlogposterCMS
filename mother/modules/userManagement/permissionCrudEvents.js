@@ -41,7 +41,7 @@ function setupPermissionCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.managePermissions'));
     }
 
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'permissions',
@@ -75,7 +75,7 @@ function setupPermissionCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.managePermissions'));
     }
 
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'permissions'

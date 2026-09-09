@@ -152,6 +152,7 @@ function mountStaticAssetRoutes(app, {
   rootDir,
   securityConfig
 }) {
+  require('./coreModuleBrowserAssets').mountCoreModuleBrowserAssets(app, { rootDir });
   const publicPath = path.join(rootDir, 'public');
   const assetsPath = path.join(publicPath, 'assets');
   const buildPath = path.join(publicPath, 'build');

@@ -16,7 +16,18 @@ const MODULE_NAME = 'databaseManager';
 const MODULE_TYPE = 'core';
 
 module.exports = {
-  async initialize({ motherEmitter, app, isCore, jwt }) {
+  lifecycleVersion: 1,
+  async healthCheck() {
+    // Engines and pools are canonical host services. Probe an existing database
+    // directly: the candidate's event handlers are not public until activation.
+    const engine = require('./engines/engineFactory').getEngine();
+    const type = getDbType();
+    if (type === 'sqlite') await engine.performSqliteOperation('databaseManager', 'SELECT 1', [], false);
+    else if (type === 'postgres') await engine.performPostgresOperation('databaseManager', 'SELECT 1', [], false);
+    else if (type === 'mongodb') await engine.performMongoOperation('databaseManager', 'find', { collectionName: 'module_users', query: {} });
+    else throw new Error('CORE_MODULE_DATABASE_ENGINE_UNSUPPORTED');
+  },
+  async initialize({ motherEmitter, app, isCore, jwt, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[DB MANAGER] Must be loaded as a core module.');
     }
@@ -45,7 +56,7 @@ module.exports = {
     registerApplySchemaDefinitionEvent(motherEmitter);
 
     // Possibly check/create "databaseManager" shared schema
-    await initializeDatabaseManagerDatabase(motherEmitter, jwt);
+    if (!isModuleUpdate) await initializeDatabaseManagerDatabase(motherEmitter, jwt);
 
     notificationEmitter.notify({
       moduleName: MODULE_NAME,

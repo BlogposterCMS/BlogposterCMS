@@ -41,14 +41,22 @@ function requireAuthPermission(payload, permissions, displayPermission) {
 }
 
 module.exports = {
-  initialize({ motherEmitter, JWT_SECRET, isCore }) {
+  lifecycleVersion: 1,
+  async healthCheck({ JWT_SECRET }) {
+    if (!JWT_SECRET || typeof global.loginStrategies?.adminLocal?.loginFunction !== 'function') {
+      throw new Error('CORE_MODULE_AUTH_NOT_READY');
+    }
+    const jwt = require('jsonwebtoken');
+    jwt.verify(jwt.sign({ purpose: 'module-readiness' }, JWT_SECRET, { expiresIn: 30 }), JWT_SECRET);
+  },
+  initialize({ motherEmitter, JWT_SECRET, isCore, isModuleUpdate = false, strategyEmitter = motherEmitter,
+    authModuleSecret = process.env.AUTH_MODULE_INTERNAL_SECRET }) {
     if (!isCore) {
       throw new Error('[AUTH MODULE] Must be loaded as a core module.');
     }
     if (!JWT_SECRET) {
       throw new Error('[AUTH MODULE] Missing JWT_SECRET, cannot sign tokens.');
     }
-    const authModuleSecret = process.env.AUTH_MODULE_INTERNAL_SECRET;
     if (!authModuleSecret) {
       throw new Error('[AUTH MODULE] Missing AUTH_MODULE_INTERNAL_SECRET.');
     }
@@ -171,13 +179,13 @@ module.exports = {
 
     // Finally, load all strategy files from ./strategies => e.g. google.js, facebook.js, etc.
     const strategiesPath = path.join(__dirname, 'strategies');
-    if (fs.existsSync(strategiesPath)) {
+    if (!isModuleUpdate && fs.existsSync(strategiesPath)) {
       const strategyFiles = fs.readdirSync(strategiesPath).filter(file => file.endsWith('.js'));
       strategyFiles.forEach(file => {
-        const strategy = require(path.join(strategiesPath, file));
+        const strategy = require(`./strategies/${file}`);
         if (typeof strategy.initialize === 'function') {
           strategy.initialize({
-            motherEmitter,
+            motherEmitter: strategyEmitter,
             JWT_SECRET,
             authModuleSecret
           });
@@ -223,7 +231,7 @@ motherEmitter.on(BACKEND_EVENTS.LOGIN_WITH_STRATEGY, (raw, cb) => {
 
   /* safe execute */
   try {
-    strat.loginFunction(payload, callback);
+    return strat.loginFunction(payload, callback);
   } catch (ex) {
     console.error('[AUTH] Strategy "%s" threw:', strategy, ex);
     callback(ex);

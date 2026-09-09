@@ -1,6 +1,7 @@
 
 
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 
 // mother/modules/dependencyLoader/index.js
 require('dotenv').config();
@@ -90,7 +91,15 @@ function assertDependencyRequestAllowed(motherEmitter, payload = {}) {
  *   4) meltdown => "requestDependency"
  */
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, jwtToken }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE, table: '__rawSQL__',
+      data: { rawSQL: 'LIST_DEPENDENCYLOADER_DEPENDENCIES' }
+    });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_DEPENDENCIES_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, jwtToken, isModuleUpdate = false }) {
     console.log('[DEPENDENCY LOADER] Initializing dependency loader... because apparently we need it.');
 
     if (!isCore) {
@@ -108,14 +117,12 @@ module.exports = {
     }
 
     try {
-      // 1) ensure DB => "dependencyloader_db"
-      await ensureDependencyLoaderDatabase(motherEmitter, moduleJwt);
-
-      // 2) ensure schema + table => "dependencyloader".module_dependencies
-      await ensureDependencyLoaderSchemaAndTable(motherEmitter, moduleJwt);
-
-      // 3) load the dependencies from that table into global cache
-      await loadDependencies(motherEmitter, moduleJwt);
+      // The canonical dependency cache stays alive across listener replacement.
+      if (!isModuleUpdate) {
+        await ensureDependencyLoaderDatabase(motherEmitter, moduleJwt);
+        await ensureDependencyLoaderSchemaAndTable(motherEmitter, moduleJwt);
+        await loadDependencies(motherEmitter, moduleJwt);
+      }
 
       // 4) meltdown => "requestDependency"
       motherEmitter.on(BACKEND_EVENTS.REQUEST_DEPENDENCY, (payload, originalCb) => {

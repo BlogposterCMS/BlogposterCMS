@@ -1144,6 +1144,10 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
         status,
         reason: context.reason,
         generatedAt: new Date().toISOString(),
+        browserGeneration: Array.from(document.scripts)
+            .map(script => script.getAttribute('src') || '')
+            .map(src => src.match(/^\/_module-assets\/designerManager\/([a-f0-9]{64})\//)?.[1])
+            .find(Boolean) || null,
         contracts: {
             transport: 'AgentManager/AppLoader agentSurface',
             structuredSnapshot: true,

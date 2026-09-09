@@ -389,7 +389,13 @@ function setupSeoEvents(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  // Keep schema/bootstrap work outside replacement of the owned event handlers.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await seoDbSelect(motherEmitter, jwt, 'LIST_SEO_META', { limit: 1, offset: 0 });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_SEO_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[SEO MANAGER] Must be loaded as a core module.');
     }
@@ -404,10 +410,12 @@ module.exports = {
     }
 
     console.log('[SEO MANAGER] Initializing SEO Manager...');
-    await ensureSeoDatabase(motherEmitter, jwt, nonce);
-    await ensureSeoSchema(motherEmitter, jwt);
+    if (!isModuleUpdate) {
+      await ensureSeoDatabase(motherEmitter, jwt, nonce);
+      await ensureSeoSchema(motherEmitter, jwt);
+    }
     setupSeoEvents(motherEmitter);
-    await seedSeoDefaults(motherEmitter, jwt);
+    if (!isModuleUpdate) await seedSeoDefaults(motherEmitter, jwt);
     console.log('[SEO MANAGER] Initialized successfully.');
   },
   setupSeoEvents,

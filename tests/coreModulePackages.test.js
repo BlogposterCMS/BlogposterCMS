@@ -10,6 +10,19 @@ beforeEach(() => { fixture = createFixture(); });
 afterEach(() => { fs.rmSync(fixture.directory, { recursive: true, force: true }); });
 function verify() { return fixture.verify({ rootDir: fixture.rootDir, generationDir: fixture.generationDir, moduleName: 'translationManager' }); }
 
+test('database packages exclude mutable installation credentials and placeholder data', () => {
+  const directory = path.join(fixture.source, 'mother/modules/databaseManager');
+  fs.mkdirSync(path.join(directory, 'placeholders'), { recursive: true });
+  fs.writeFileSync(path.join(directory, 'index.js'), 'module.exports = {};');
+  fs.writeFileSync(path.join(directory, 'moduleInfo.json'), '{"moduleName":"databaseManager"}');
+  fs.writeFileSync(path.join(directory, 'modulePasswords.json'), '{"fixtureOnly":true}');
+  fs.writeFileSync(path.join(directory, 'placeholders/placeholderData.json'), '{"fixtureOnly":true}');
+  const runtimeManifest = { ...fixture.runtimeManifest,
+    files: require('../mother/security/runtimeIntegrity').collectManagedFiles(fixture.source) };
+  const manifest = createModuleManifest({ rootDir: fixture.source, moduleName: 'databaseManager', runtimeManifest });
+  expect(manifest.files.map(file => file.path)).toEqual(['index.js', 'moduleInfo.json']);
+});
+
 test('checks the official attestation identity and immutable host trust roots before accepting a generation', () => {
   const result = verify();
   expect(result.manifest.version).toBe('0.10.7');
@@ -52,8 +65,8 @@ test.each(['../escape.js', '/absolute.js', 'C:/outside.js', 'a//b.js'])('rejects
 });
 
 test('package declarations cannot enable an unmigrated module', () => {
-  fixture.manifest.moduleName = 'auth';
-  expect(() => parseManifest(JSON.stringify(fixture.manifest), 'auth')).toThrow('CORE_MODULE_RESTART_REQUIRED');
+  fixture.manifest.moduleName = 'unknownModule';
+  expect(() => parseManifest(JSON.stringify(fixture.manifest), 'unknownModule')).toThrow('CORE_MODULE_RESTART_REQUIRED');
 });
 
 test('preview release manifests retain their exact signed tag identity', () => {

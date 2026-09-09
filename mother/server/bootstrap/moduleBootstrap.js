@@ -65,12 +65,40 @@ async function bootstrapCoreModules({
   tokenSalts,
   jwtExpiryConfig
 }) {
+  const coreModuleLifecycle = createCoreModuleLifecycle(motherEmitter);
+  app.locals = app.locals || {};
+  app.locals.coreModuleLifecycle = coreModuleLifecycle;
+  const moduleStore = createCoreModuleStore({ rootDir });
+  const coreModuleUpdates = createCoreModuleUpdates({ rootDir, lifecycle: coreModuleLifecycle });
+  const hostVersion = require(path.join(rootDir, 'package.json')).version;
+
+  function selectedModule(moduleName, modulePath) {
+    let generation = null;
+    if (Object.prototype.hasOwnProperty.call(MODULE_POLICY, moduleName)) {
+      try { generation = moduleStore.active(moduleName); }
+      catch (error) {
+        if (error.code !== 'CORE_MODULE_HOST_INCOMPATIBLE') throw error;
+        console.warn(`[CORE_MODULE_OVERRIDE_HOST_CHANGED] ${moduleName}; using bundled module.`);
+      }
+      if (generation && compareVersions(generation.manifest.version, hostVersion) <= 0) generation = null;
+    }
+    const implementation = MODULE_POLICY[moduleName]?.kind === 'widget'
+      ? require('./coreBrowserModule')
+      : generation
+      ? loadCoreModuleCode({ moduleName, moduleDir: generation.moduleDir, canonicalModuleDir: path.join(rootDir, modulePath) })
+      : require(path.join(rootDir, modulePath, 'index.js'));
+    return { implementation, generation };
+  }
+
   console.log('[SERVER INIT] Loading Auth module...');
-  require(path.join(rootDir, 'mother', 'modules', 'auth', 'index.js'))
-    .initialize({
-      motherEmitter,
+  const selectedAuth = selectedModule('auth', 'mother/modules/auth');
+  await coreModuleLifecycle.start('auth', selectedAuth.implementation, {
       isCore: true,
       JWT_SECRET: jwtSecret,
+      authModuleSecret,
+      // Strategies are host-owned and must not capture a retired event facade.
+      strategyEmitter: motherEmitter,
+      moduleGeneration: { generationId: selectedAuth.generation?.generationId || null, releaseVersion: selectedAuth.generation?.manifest.version || hostVersion },
       userPasswordSalt,
       moduleDbSalt,
       tokenSalts,
@@ -91,37 +119,31 @@ async function bootstrapCoreModules({
   }
   console.log('[SERVER INIT] dbManagerToken obtained.');
 
-  const coreModuleLifecycle = createCoreModuleLifecycle(motherEmitter);
-  const moduleStore = createCoreModuleStore({ rootDir });
-  const coreModuleUpdates = createCoreModuleUpdates({ rootDir, lifecycle: coreModuleLifecycle });
-  const hostVersion = require(path.join(rootDir, 'package.json')).version;
   for (const mod of coreModulesForApp({ app, authModuleSecret })) {
     console.log(`[SERVER INIT] Loading ${mod.name}...`);
     const moduleJwt = await getCachedCoreToken(mod.name);
-    let generation = null;
-    if (Object.prototype.hasOwnProperty.call(MODULE_POLICY, mod.name)) {
-      try { generation = moduleStore.active(mod.name); }
-      catch (error) {
-        // A newly deployed signed host may supersede a valid old override.
-        // Invalid signatures or modified code still fail closed at startup.
-        if (error.code !== 'CORE_MODULE_HOST_INCOMPATIBLE') throw error;
-        console.warn(`[CORE_MODULE_OVERRIDE_HOST_CHANGED] ${mod.name}; using bundled module.`);
-      }
-      if (generation && compareVersions(generation.manifest.version, hostVersion) <= 0) generation = null;
-    }
-    const implementation = generation
-      ? loadCoreModuleCode({ moduleName: mod.name, moduleDir: generation.moduleDir, canonicalModuleDir: path.join(rootDir, mod.path) })
-      : require(path.join(rootDir, mod.path, 'index.js'));
+    const { implementation, generation } = selectedModule(mod.name, mod.path);
     await coreModuleLifecycle.start(mod.name, implementation, {
         isCore: true,
         jwt: moduleJwt,
         jwtToken: moduleJwt,
         moduleDbSalt,
         moduleGeneration: { generationId: generation?.generationId || null, releaseVersion: generation?.manifest.version || hostVersion },
+        browserDirectory: generation?.moduleDir,
         ...(mod.name === 'updater' ? { coreModuleUpdates } : {}),
+        ...(mod.name === 'fontsManager' ? { strategyEmitter: motherEmitter } : {}),
         ...mod.extra
       });
     console.log(`[SERVER INIT] ${mod.name} loaded.`);
+  }
+
+  for (const [moduleName, policy] of Object.entries(MODULE_POLICY)) {
+    if (policy.kind !== 'widget') continue;
+    const { implementation, generation } = selectedModule(moduleName);
+    await coreModuleLifecycle.start(moduleName, implementation, {
+      moduleGeneration: { generationId: generation?.generationId || null, releaseVersion: generation?.manifest.version || hostVersion },
+      browserDirectory: generation?.moduleDir
+    });
   }
 
   try {

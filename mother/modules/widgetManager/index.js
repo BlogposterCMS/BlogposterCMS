@@ -99,7 +99,15 @@ module.exports = {
     validateCommunityWidgetDesignContract,
     validateWidgetDesignContract
   },
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    for (const widgetType of ['public', 'admin']) {
+      await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+        jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE, table: pickTable(widgetType), data: {}
+      });
+    }
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     // 1) Must be loaded as a core module
     if (!isCore) {
       throw new Error('[WIDGET MANAGER] Must be loaded as a core module.');
@@ -121,17 +129,18 @@ module.exports = {
 
     try {
       // Create or ensure both widget tables
-      await ensureWidgetDatabases(motherEmitter, jwt, nonce);
+      if (!isModuleUpdate) await ensureWidgetDatabases(motherEmitter, jwt, nonce);
 
       // Register meltdown event listeners
       setupWidgetManagerEvents(motherEmitter);
 
       // Load community widgets from the public assets folder
-      await loadCommunityWidgets(motherEmitter, jwt);
+      if (!isModuleUpdate) await loadCommunityWidgets(motherEmitter, jwt);
 
       console.log('[WIDGET MANAGER] Initialized successfully.');
     } catch (err) {
       console.error('[WIDGET MANAGER] Error =>', err.message);
+      throw err;
     }
   },
   MODULE_NAME,
@@ -643,7 +652,7 @@ function assertCommunityWidgetScriptsAllowed(widgetDir, folderName) {
 
 async function loadCommunityWidgets(motherEmitter, jwt) {
   console.log('[WIDGET MANAGER] Scanning community widgets...');
-  const baseDir = path.resolve(__dirname, '../../../widgets');
+  const baseDir = require('./widgetRoot');
 
   if (!fs.existsSync(baseDir)) {
     console.log('[WIDGET MANAGER] No community widgets folder =>', baseDir);

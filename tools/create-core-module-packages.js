@@ -2,13 +2,18 @@
 
 const fs = require('fs');
 const path = require('path');
-const { MODULE_POLICY, createModuleManifest } = require('../mother/modules/updater/coreModulePackages');
+const { MODULE_POLICY, createModuleManifest, fingerprintRoot } = require('../mother/modules/updater/coreModulePackages');
+const { collectManagedFiles } = require('../mother/security/runtimeIntegrity');
 const { buildModuleArchive } = require('../mother/modules/updater/coreModuleArchive');
 
 function prepare({ rootDir, outputDir, runtimeManifest }) {
   fs.mkdirSync(outputDir, { recursive: true });
+  // Release inputs are fixed for this run. Hash the host tree once for the whole
+  // catalog; archive creation still rechecks the bytes of each packaged file.
+  const packagingSnapshot = { files: collectManagedFiles(rootDir),
+    hostFingerprint: fingerprintRoot(rootDir, runtimeManifest.files) };
   for (const moduleName of Object.keys(MODULE_POLICY)) {
-    const manifest = createModuleManifest({ rootDir, moduleName, runtimeManifest });
+    const manifest = createModuleManifest({ rootDir, moduleName, runtimeManifest, packagingSnapshot });
     fs.writeFileSync(path.join(outputDir, `core-module-${moduleName}.json`), `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });
   }
 }
@@ -17,7 +22,7 @@ function pack({ rootDir, outputDir, bundlePath }) {
   const bundle = fs.readFileSync(bundlePath);
   for (const moduleName of Object.keys(MODULE_POLICY)) {
     const manifest = fs.readFileSync(path.join(outputDir, `core-module-${moduleName}.json`));
-    const archive = buildModuleArchive({ moduleName, moduleDir: path.join(rootDir, 'mother/modules', moduleName), manifest, bundle });
+    const archive = buildModuleArchive({ rootDir, moduleName, moduleDir: path.join(rootDir, 'mother/modules', moduleName), manifest, bundle });
     fs.writeFileSync(path.join(outputDir, `core-module-${moduleName}.zip`), archive, { flag: 'wx' });
   }
 }

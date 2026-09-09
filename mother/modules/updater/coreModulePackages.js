@@ -3,6 +3,9 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { readModuleReleaseNotes, MAX_RELEASE_NOTES_BYTES } = require('./coreModuleReleaseNotes');
+const { BROWSER_PREFIX, ownsBrowserFile, browserRecords } = require('./coreModuleBrowserFiles');
+const { WIDGET_POLICY } = require('./coreWidgetPackages');
 const { collectManagedFiles, verifyAttestation, TRUSTED_REPOSITORY } = require('../../security/runtimeIntegrity');
 
 // Host-owned policy: package metadata cannot opt another module into hot loading.
@@ -12,7 +15,39 @@ const MODULE_POLICY = Object.freeze({
   contentEngine: Object.freeze({ hostFiles: ['contentService.js'] }),
   searchManager: Object.freeze({ hostFiles: ['searchService.js'] }),
   workflowManager: Object.freeze({ hostFiles: ['workflowService.js'] }),
-  exportManager: Object.freeze({ hostFiles: [] })
+  exportManager: Object.freeze({ hostFiles: [] }),
+  mediaManager: Object.freeze({ hostFiles: ['mediaService.js'] }),
+  designerManager: Object.freeze({ hostFiles: ['dbPlaceholders.js', 'schemaDefinition.json'] }),
+  metadataManager: Object.freeze({ hostFiles: ['metadataService.js'] }),
+  commentsManager: Object.freeze({ hostFiles: ['commentsService.js'] }),
+  navigationManager: Object.freeze({ hostFiles: ['navigationService.js'] }),
+  seoManager: Object.freeze({ hostFiles: ['seoService.js'] }),
+  redirectManager: Object.freeze({ hostFiles: ['redirectService.js'] }),
+  colorLibrary: Object.freeze({ hostFiles: ['colorLibraryService.js'] }),
+  fontPackages: Object.freeze({ hostFiles: ['fontPackagesService.js'] }),
+  sitePresets: Object.freeze({ hostFiles: ['sitePresetsService.js'] }),
+  settingsManager: Object.freeze({ hostFiles: ['settingsService.js'] }),
+  requestManager: Object.freeze({ hostFiles: ['outboundPolicy.js'] }),
+  dependencyLoader: Object.freeze({ hostFiles: ['dependencyLoaderService.js'] }),
+  agentAccess: Object.freeze({ hostFiles: ['accessCodeState.js'] }),
+  agentManager: Object.freeze({ hostFiles: ['surfaceState.js', 'apiDefinition.json', 'httpApi.js'] }),
+  analyticsManager: Object.freeze({ hostFiles: ['runtimeState.js', 'collector.js', 'domain.js'] }),
+  databaseManager: Object.freeze({ hostFiles: ['dbSetup.js', 'meltdownBridging/databaseEventBoundary.js'], hostDirectories: ['engines', 'config', 'helpers', 'placeholders'] }),
+  auth: Object.freeze({ hostFiles: ['authService.js', 'authMiddleware.js', 'permissionMiddleware.js', 'devAutoLogin.js'], hostDirectories: ['strategies'] }),
+  runtimeManager: Object.freeze({ hostFiles: ['publicWidgetServices.js'], hostDirectories: ['facades'] }),
+  fontsManager: Object.freeze({ hostFiles: [], hostDirectories: ['strategies', 'config'] }),
+  notificationManager: Object.freeze({ hostFiles: ['notificationDelivery.js', 'notificationManagerService.js', 'integrationsRegistry.json'], hostDirectories: ['integrations'] }),
+  updater: Object.freeze({ hostFiles: ['coreUpdateService.js', 'updateScheduler.js', 'coreModuleWorker.js', 'coreModuleUpdates.js', 'coreModuleStore.js', 'coreModuleReleaseNotes.js', 'coreModulePackages.js', 'coreModuleBrowserFiles.js', 'coreWidgetPackages.js', 'coreModuleArchive.js'] }),
+  unifiedSettings: Object.freeze({ hostFiles: ['registryState.js'] }),
+  serverManager: Object.freeze({ hostFiles: ['serverManagerService.js'] }),
+  importer: Object.freeze({ hostFiles: ['importRoots.js'] }),
+  shareManager: Object.freeze({ hostFiles: ['shareService.js'] }),
+  plainSpace: Object.freeze({ hostFiles: ['hostRoot.js', 'plainSpaceService.js', 'config/adminPages.js', 'config/defaultWidgets.js'] }),
+  pagesManager: Object.freeze({ hostFiles: ['pagesService.js', 'publicPresentation.js', 'comingSoonSeed.js'] }),
+  userManagement: Object.freeze({ hostFiles: ['userInitService.js', 'permissionUtils.js', 'userAccessService.js'] }),
+  appLoader: Object.freeze({ hostFiles: ['appRoot.js', 'appRegistryService.js'] }),
+  widgetManager: Object.freeze({ hostFiles: ['widgetRoot.js', 'widgetPackageService.js', 'widgetPackageAccess.js', 'widgetSandboxSource.js', 'widgetPackageFiles.js', 'widgetDesignContract.js'] }),
+  ...WIDGET_POLICY
 });
 const HASH = /^[a-f0-9]{64}$/;
 // Release CI also creates preview artifacts; normal discovery remains stable-only.
@@ -34,10 +69,16 @@ function supportedModule(moduleName) {
   return MODULE_POLICY[moduleName];
 }
 function hotFile(filename) {
-  return Object.entries(MODULE_POLICY).some(([name, policy]) => {
+  return Object.keys(MODULE_POLICY).some(name => {
     const prefix = `mother/modules/${name}/`;
-    return filename.startsWith(prefix) && !policy.hostFiles.includes(filename.slice(prefix.length));
+    return ownsBrowserFile(name, filename) || (filename.startsWith(prefix) && !isHostFile(name, filename.slice(prefix.length)));
   });
+}
+
+function isHostFile(moduleName, filename) {
+  const policy = MODULE_POLICY[moduleName];
+  return Boolean(policy && (policy.hostFiles.includes(filename) ||
+    policy.hostDirectories?.some(directory => filename.startsWith(`${directory}/`))));
 }
 
 /** Version-only package changes do not invalidate a host; dependency changes do. */
@@ -66,7 +107,7 @@ function fingerprintRoot(rootDir, files) {
 }
 
 function parseManifest(raw, moduleName) {
-  supportedModule(moduleName);
+  const policy = supportedModule(moduleName);
   let manifest;
   try { manifest = JSON.parse(String(raw)); }
   catch { throw packageError('CORE_MODULE_MANIFEST_INVALID'); }
@@ -78,6 +119,12 @@ function parseManifest(raw, moduleName) {
     throw packageError('CORE_MODULE_MANIFEST_INVALID');
   }
   const seen = new Set();
+  // Optional for previously published packages; never accept malformed review data.
+  if ((manifest.releaseNotes !== undefined && (typeof manifest.releaseNotes !== 'string' ||
+      Buffer.byteLength(manifest.releaseNotes, 'utf8') > MAX_RELEASE_NOTES_BYTES)) ||
+      (manifest.breakingChange !== undefined && typeof manifest.breakingChange !== 'boolean')) {
+    throw packageError('CORE_MODULE_RELEASE_NOTES_INVALID');
+  }
   let size = 0;
   for (const record of manifest.files) {
     const filename = record?.path;
@@ -87,10 +134,14 @@ function parseManifest(raw, moduleName) {
         !HASH.test(record.sha256 || '') || !Number.isSafeInteger(record.size) || record.size < 0) {
       throw packageError('CORE_MODULE_MANIFEST_FILE_INVALID');
     }
+    if (filename.startsWith(BROWSER_PREFIX) && !ownsBrowserFile(moduleName, filename.slice(BROWSER_PREFIX.length))) {
+      throw packageError('CORE_MODULE_BROWSER_FILE_DENIED');
+    }
+    if (policy.kind === 'widget' && !filename.startsWith(BROWSER_PREFIX)) throw packageError('CORE_WIDGET_BACKEND_CODE_DENIED');
     seen.add(filename.toLowerCase()); size += record.size;
   }
-  if (size > MAX_BYTES || !manifest.files.some(record => record.path === 'index.js') ||
-      !manifest.files.some(record => record.path === 'moduleInfo.json')) throw packageError('CORE_MODULE_MANIFEST_FILE_INVALID');
+  const required = policy.kind === 'widget' ? [BROWSER_PREFIX + policy.entry] : ['index.js', 'moduleInfo.json'];
+  if (size > MAX_BYTES || required.some(filename => !manifest.files.some(record => record.path === filename))) throw packageError('CORE_MODULE_MANIFEST_FILE_INVALID');
   return manifest;
 }
 
@@ -119,22 +170,34 @@ function moduleFiles(moduleDir) {
   return records.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function createModuleManifest({ rootDir, moduleName, runtimeManifest }) {
-  supportedModule(moduleName);
+function createModuleManifest({ rootDir, moduleName, runtimeManifest, packagingSnapshot }) {
+  const policy = supportedModule(moduleName);
+  const widget = policy.kind === 'widget';
+  const prefix = `mother/modules/${moduleName}/`;
+  // Reuse the runtime integrity boundary: mutable database credentials and
+  // placeholder data are installation state, never release package contents.
+  const managedFiles = packagingSnapshot?.files || collectManagedFiles(rootDir);
+  const backendFiles = managedFiles.filter(record => record.path.startsWith(prefix))
+    .map(record => ({ path: record.path.slice(prefix.length), size: record.size, sha256: record.sha256 }));
   if (JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8')).version !== runtimeManifest.version) {
     throw packageError('CORE_MODULE_RELEASE_IDENTITY_MISMATCH');
   }
   const manifest = {
     schemaVersion: 1, product: 'blogpostercms-core-module', moduleName,
     version: runtimeManifest.version, source: runtimeManifest.source,
-    hostFingerprint: fingerprintRoot(rootDir, runtimeManifest.files),
-    files: moduleFiles(path.join(rootDir, 'mother/modules', moduleName))
+    hostFingerprint: packagingSnapshot?.hostFingerprint || fingerprintRoot(rootDir, runtimeManifest.files),
+    files: [...(widget ? [] : backendFiles),
+      ...browserRecords(moduleName, managedFiles)].sort((a, b) => a.path.localeCompare(b.path)),
+    ...(widget
+      ? readModuleReleaseNotes(path.dirname(path.join(rootDir, policy.entry)), runtimeManifest.version, path.basename(policy.entry).replace(/\.js$/, '.CHANGELOG.md'))
+      : readModuleReleaseNotes(path.join(rootDir, 'mother/modules', moduleName), runtimeManifest.version))
   };
   // Release packaging must describe the exact bytes already covered by CI's
   // baseline, not source edits made after that baseline was generated.
-  const prefix = `mother/modules/${moduleName}/`;
   const expected = runtimeManifest.files.filter(record => record.path.startsWith(prefix))
     .map(record => ({ path: record.path.slice(prefix.length), size: record.size, sha256: record.sha256 }));
+  expected.push(...browserRecords(moduleName, runtimeManifest.files));
+  expected.sort((a, b) => a.path.localeCompare(b.path));
   if (JSON.stringify(expected) !== JSON.stringify(manifest.files)) throw packageError('CORE_MODULE_RELEASE_BYTES_CHANGED');
   return parseManifest(JSON.stringify(manifest), moduleName);
 }
@@ -156,8 +219,10 @@ function verifyModuleGeneration({ rootDir, generationDir, moduleName, attestatio
   const actual = moduleFiles(path.join(generationDir, 'code'));
   const expected = [...manifest.files].sort((a, b) => a.path.localeCompare(b.path));
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw packageError('CORE_MODULE_PACKAGE_INTEGRITY_FAILED');
-  const info = JSON.parse(fs.readFileSync(path.join(generationDir, 'code/moduleInfo.json'), 'utf8'));
-  if (info.moduleName !== moduleName) throw packageError('CORE_MODULE_IDENTITY_MISMATCH');
+  if (MODULE_POLICY[moduleName].kind !== 'widget') {
+    const info = JSON.parse(fs.readFileSync(path.join(generationDir, 'code/moduleInfo.json'), 'utf8'));
+    if (info.moduleName !== moduleName) throw packageError('CORE_MODULE_IDENTITY_MISMATCH');
+  }
   // Checking live host bytes also catches changes since initial startup. This
   // intentionally fails on source/dev installations whose dependency tree differs.
   const currentHost = fingerprintRoot(rootDir, collectManagedFiles(rootDir));
@@ -165,4 +230,4 @@ function verifyModuleGeneration({ rootDir, generationDir, moduleName, attestatio
   return { manifest, generationId: hash(fs.readFileSync(manifestPath)), moduleDir: path.join(generationDir, 'code') };
 }
 
-module.exports = { MODULE_POLICY, packageError, hostFingerprint, parseManifest, moduleFiles, createModuleManifest, verifyModuleGeneration };
+module.exports = { MODULE_POLICY, isHostFile, packageError, hostFingerprint, fingerprintRoot, parseManifest, moduleFiles, createModuleManifest, verifyModuleGeneration };

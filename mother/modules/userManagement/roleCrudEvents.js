@@ -66,7 +66,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     const permJson = permissions || {};
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -105,7 +105,7 @@ function setupRoleCrudEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: userManagement.listRoles'));
     }
 
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles'
@@ -191,7 +191,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // First, fetch the existing role
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -212,7 +212,7 @@ function setupRoleCrudEvents(motherEmitter) {
   if (newRoleName) updatedData.role_name = newRoleName;
   if (newDescription) updatedData.description = newDescription;
   if (newPermissions) updatedData.permissions = JSON.stringify(newPermissions);
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: 'userManagement',
     table: 'roles',
@@ -251,7 +251,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // Check if the role is system or not
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -265,7 +265,7 @@ function setupRoleCrudEvents(motherEmitter) {
     return callback(new Error('Cannot delete a system role (e.g. admin).'));
   }
   // 1) Remove references from user_roles
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
     jwt,
     moduleName: 'userManagement',
     table: 'user_roles',
@@ -274,7 +274,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
   }).then(() => {
     // 2) Delete the role itself
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       jwt,
       moduleName: 'userManagement',
       table: 'roles',
@@ -315,7 +315,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // Insert into user_roles
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
       jwt,
       moduleName: 'userManagement',
       table: 'user_roles',
@@ -323,7 +323,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }).then(() => {
   // On success => increment the user's token_version
   const idField = getDbType() === 'mongodb' ? '_id' : 'id';
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: 'userManagement',
     table: 'users',
@@ -372,7 +372,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     traceRuntimeEvent('[USER MGMT] getRolesForUser => selecting roles for userId:', userId);
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'user_roles',
@@ -388,7 +388,7 @@ function setupRoleCrudEvents(motherEmitter) {
 
   // Now select from 'roles' to return role objects
   // Now select from 'roles' to return role objects
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     table: 'roles'
@@ -425,7 +425,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }
 
     // Delete the row from user_roles
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       jwt,
       moduleName: 'userManagement',
       table: 'user_roles',
@@ -433,7 +433,7 @@ function setupRoleCrudEvents(motherEmitter) {
     }).then(() => {
   // Then increment token_version
   const idField = getDbType() === 'mongodb' ? '_id' : 'id';
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
     jwt,
     moduleName: 'userManagement',
     table: 'users',

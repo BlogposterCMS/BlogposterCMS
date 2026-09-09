@@ -12,7 +12,7 @@ const { hasPermission } = require('../userManagement/permissionUtils');
 const MODULE_NAME = 'unifiedSettings';
 const MODULE_TYPE = 'core';
 
-let schemaRegistry = {};
+const schemaRegistry = require('./registryState');
 
 function normalizeModuleKey(value = '') {
   return String(value || '')
@@ -333,7 +333,7 @@ function retrieveAllRegisteredModules() {
 }
 
 function resetRegistry() {
-  schemaRegistry = {};
+  for (const key of Object.keys(schemaRegistry)) delete schemaRegistry[key];
 }
 
 module.exports = {

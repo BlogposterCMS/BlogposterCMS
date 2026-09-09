@@ -18,7 +18,7 @@ const MAX_TOKEN_TTL_SECONDS = 60 * 60;
 const VALID_CODE_ID = /^[a-f0-9]{24}$/;
 const VALID_CODE_SECRET = /^[A-Za-z0-9_-]{32,}$/;
 
-const accessCodes = new Map();
+const accessCodes = require('./accessCodeState');
 
 function nowIso() {
   return new Date().toISOString();
@@ -386,6 +386,11 @@ function resetForTests() {
 }
 
 module.exports = {
+  lifecycleVersion: 1,
+  async healthCheck() {
+    // Host state can originate in a different VM realm than candidate code.
+    if (!require('node:util').types.isMap(accessCodes)) throw new Error('CORE_MODULE_AGENT_ACCESS_NOT_READY');
+  },
   initialize,
   setupAgentAccessEvents,
   _internals: {

@@ -572,20 +572,40 @@ function renderUpdateRow(row, status, mount, ctx) {
 async function renderUpdates(ctx) {
     const shell = createShell('Update Center', 'Keep Blogposter and your installed modules up to date.');
     const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
-    const corePanel = tabs.addTab('Blogposter');
-    corePanel.classList.add('settings-section--form');
-    const updatesPanel = tabs.addTab('Module updates');
+    const corePanel = tabs.addTab('System');
+    const updatesPanel = tabs.addTab('Installed');
+    updatesPanel.classList.add('installed-update-panel');
+    const modulesPanel = document.createElement('section');
+    modulesPanel.setAttribute('aria-label', 'Modules');
+    const widgetsPanel = document.createElement('section');
+    widgetsPanel.setAttribute('aria-label', 'Widgets');
+    widgetsPanel.className = 'core-module-updates';
+    updatesPanel.append(modulesPanel, widgetsPanel);
+    // Official bundled widgets share signed release discovery. Community ZIP
+    // packages retain their existing reviewed installation and sandbox contracts.
+    const widgetStatus = document.createElement('p');
+    widgetStatus.className = 'settings-hint';
+    widgetStatus.textContent = 'Community widgets are updated by installing a reviewed ZIP package.';
+    widgetsPanel.append(widgetStatus);
     const refresh = document.createElement('button');
     refresh.type = 'button';
-    refresh.className = 'button ghost sm';
-    refresh.textContent = 'Check updates';
+    refresh.className = 'icon-button';
+    refresh.setAttribute('aria-label', 'Check all updates');
+    refresh.title = 'Check all updates';
+    refresh.innerHTML = '<img src="/assets/icons/refresh-cw.svg" width="18" height="18" alt="" />';
+    let checkCore;
+    refresh.disabled = true;
+    const toolbar = document.createElement('div');
+    toolbar.className = 'settings-update-toolbar';
+    shell.tabs.before(toolbar);
+    toolbar.append(shell.tabs, refresh);
     const rowsMount = document.createElement('div');
     rowsMount.className = 'modules-list-mount';
     refresh.addEventListener('click', async () => {
         refresh.disabled = true;
         try {
-            await renderUpdateRows(rowsMount, shell.status, ctx);
-            shell.status.textContent = 'Update check completed.';
+            await Promise.all([checkCore?.(), renderUpdateRows(rowsMount, shell.status, ctx)]);
+            shell.status.textContent = 'Update checks requested. See each source for its status.';
         }
         catch (err) {
             shell.status.textContent = `Update check failed: ${errorMessage(err)}`;
@@ -594,10 +614,11 @@ async function renderUpdates(ctx) {
             refresh.disabled = false;
         }
     });
-    updatesPanel.append(refresh, rowsMount);
+    modulesPanel.append(rowsMount);
     shell.mount(ctx.el);
-    await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt);
+    checkCore = await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt, true, widgetsPanel);
     await renderUpdateRows(rowsMount, shell.status, ctx);
+    refresh.disabled = false;
 }
 async function renderUsersAccess(ctx) {
     const shell = createShell('Users & access', 'Manage people, permission groups, sign-in methods and access for agents.');

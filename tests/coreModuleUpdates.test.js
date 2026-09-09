@@ -4,7 +4,9 @@ const { createCoreModuleUpdates } = require('../mother/modules/updater/coreModul
 
 function fixture() {
   const generationId = 'a'.repeat(64);
-  const lifecycle = { snapshot: () => [{ moduleName: 'translationManager', generation: { releaseVersion: '0.10.6' } }],
+  // Fixture versions must not depend on the checkout's next release number.
+  const lifecycle = { snapshot: () => Object.keys(require('../mother/modules/updater/coreModulePackages').MODULE_POLICY)
+    .map(moduleName => ({ moduleName, generation: { releaseVersion: '0.10.6' } })),
     replace: jest.fn(async (name, implementation, options) => {
       await options.healthCheck(implementation, {});
       await options.beforeActivate();
@@ -65,4 +67,37 @@ test('host incompatibility offers no independent install', async () => {
   await f.check();
   expect(f.service.snapshot()[0]).toMatchObject({ status: 'host_required', available: false });
   expect(f.install).toThrow('CORE_MODULE_REVIEW_CHANGED');
+});
+
+test('widget installation selects assets without loading uploaded code into Node', async () => {
+  const f = fixture();
+  await f.check();
+  const row = f.service.snapshot().find(item => item.kind === 'widget');
+  expect(row).toBeDefined();
+  f.service.install({ moduleName: row.moduleName, generationId: row.generationId, version: row.latestVersion });
+  await f.service.settled();
+  expect(f.load).not.toHaveBeenCalled();
+  expect(f.lifecycle.replace.mock.calls[0][1]).toBe(require('../mother/server/bootstrap/coreBrowserModule'));
+  expect(f.service.snapshot().find(item => item.moduleName === row.moduleName).status).toBe('completed');
+});
+
+test('keeps per-module verified notes attached to the reviewed generation on failure', async () => {
+  const f = fixture();
+  f.run.mockImplementation(async ({ moduleName }) => ({ generationId: f.generationId,
+    manifest: { releaseNotes: `Changes for ${moduleName}`, breakingChange: moduleName === 'translationManager' } }));
+  await f.check();
+  expect(f.service.snapshot()[0]).toMatchObject({ releaseNotes: 'Changes for translationManager', breakingChange: true });
+  expect(f.service.snapshot()[1]).toMatchObject({ releaseNotes: 'Changes for contentEngine', breakingChange: false });
+  f.implementation.healthCheck.mockRejectedValue(new Error('Not ready'));
+  f.install(); await f.service.settled();
+  expect(f.service.snapshot()[0]).toMatchObject({ status: 'error', releaseNotes: 'Changes for translationManager', breakingChange: true });
+});
+
+
+test('a successful current release check marks unchanged modules current', async () => {
+  const f = fixture();
+  f.service.observeRelease({ configured: true, phase: 'current', candidate: { available: false, latestVersion: '0.10.6' } });
+  await f.service.settled();
+  expect(f.service.snapshot().every(row => row.status === 'current')).toBe(true);
+  expect(f.run).not.toHaveBeenCalled();
 });

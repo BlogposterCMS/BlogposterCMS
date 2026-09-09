@@ -292,7 +292,13 @@ function setupCommentsEvents(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  // Keep schema/bootstrap work outside replacement of the owned event handlers.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await commentsDbSelect(motherEmitter, jwt, 'LIST_COMMENTS_FOR_ENTRY', { limit: 1, offset: 0 });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_COMMENTS_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[COMMENTS MANAGER] Must be loaded as a core module.');
     }
@@ -307,8 +313,10 @@ module.exports = {
     }
 
     console.log('[COMMENTS MANAGER] Initializing Comments Manager...');
-    await ensureCommentsDatabase(motherEmitter, jwt, nonce);
-    await ensureCommentsSchema(motherEmitter, jwt);
+    if (!isModuleUpdate) {
+      await ensureCommentsDatabase(motherEmitter, jwt, nonce);
+      await ensureCommentsSchema(motherEmitter, jwt);
+    }
     setupCommentsEvents(motherEmitter);
     console.log('[COMMENTS MANAGER] Initialized successfully.');
   },

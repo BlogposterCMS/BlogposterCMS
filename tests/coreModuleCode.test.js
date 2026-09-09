@@ -12,11 +12,34 @@ let root;
 beforeEach(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-core-code-')); });
 afterEach(() => { fs.rmSync(root, { recursive: true, force: true }); });
 
+test('fingerprinted services retain the exact canonical instance across generations', () => {
+  const canonicalModuleDir = path.join(root, 'canonical');
+  const moduleDir = path.join(root, 'generation');
+  fs.mkdirSync(canonicalModuleDir); fs.mkdirSync(moduleDir);
+  for (const directory of [canonicalModuleDir, moduleDir]) {
+    fs.writeFileSync(path.join(directory, 'index.js'), "module.exports = require('./contentService');");
+    fs.writeFileSync(path.join(directory, 'contentService.js'), 'module.exports = { queue: [] };');
+  }
+  const service = require(path.join(canonicalModuleDir, 'contentService.js'));
+  service.queue.push('pending');
+  const loaded = loadCoreModuleCode({ moduleName: 'contentEngine', moduleDir, canonicalModuleDir });
+  expect(loaded).toBe(service);
+  expect(loaded.queue).toEqual(['pending']);
+});
+
 function write(relativePath, source) {
   const filename = path.join(root, relativePath);
   fs.mkdirSync(path.dirname(filename), { recursive: true });
   fs.writeFileSync(filename, source);
 }
+
+test('new generations retain the host runtime global and process identities', () => {
+  write('host/index.js', 'module.exports = {};');
+  write('candidate/index.js', 'module.exports = { registry: global, runtime: process };');
+  const loaded = loadCoreModuleCode({ moduleName: 'example', moduleDir: path.join(root, 'candidate'), canonicalModuleDir: path.join(root, 'host') });
+  expect(loaded.registry).toBe(global);
+  expect(loaded.runtime).toBe(process);
+});
 
 test('generations have private local caches but share canonical host services', () => {
   write('host/shared.js', 'module.exports = { marker: Math.random() };');

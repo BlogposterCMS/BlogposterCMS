@@ -11,6 +11,49 @@ function fixture() {
   return { emitter, scope };
 }
 
+test('owned intervals wait for activation, drain their work, and resume after failed readiness', async () => {
+  const emitter = new EventEmitter();
+  const scope = createCoreModuleScope(emitter, 'scheduledModule', { deferred: true });
+  let finish;
+  const work = new Promise(resolve => { finish = resolve; });
+  const tick = jest.fn(() => work);
+  scope.every(1000, tick, { immediate: true });
+  expect(tick).not.toHaveBeenCalled();
+  scope.activate();
+  expect(tick).toHaveBeenCalledTimes(1);
+  const drained = scope.drain();
+  expect(scope.snapshot().pending).toBe(1);
+  finish();
+  await drained;
+  scope.activate();
+  expect(tick).toHaveBeenCalledTimes(2);
+  await scope.drain();
+  await scope.dispose();
+});
+
+test('an admitted async handler can finish nested module calls while new callers are gated', async () => {
+  const emitter = new EventEmitter();
+  const scope = createCoreModuleScope(emitter, 'nestedModule');
+  let continueOuter;
+  const gate = new Promise(resolve => { continueOuter = resolve; });
+  scope.emitter.on('nested', (_payload, callback) => callback(null, 'completed'));
+  scope.emitter.on('outer', async (_payload, callback) => {
+    await gate;
+    scope.emitter.emit('nested', {}, callback);
+  });
+  scope.activate();
+  const reply = jest.fn();
+  emitter.emit('outer', {}, reply);
+  const draining = scope.drain();
+  const rejected = jest.fn();
+  emitter.emit('nested', {}, rejected);
+  expect(rejected.mock.calls[0][0].code).toBe('CORE_MODULE_UPDATING');
+  continueOuter();
+  await draining;
+  expect(reply).toHaveBeenCalledWith(null, 'completed');
+  await scope.dispose();
+});
+
 test('candidate with missing event handlers cannot replace the active generation', async () => {
   const emitter = new EventEmitter();
   const lifecycle = createCoreModuleLifecycle(emitter);

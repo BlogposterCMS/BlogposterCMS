@@ -56,12 +56,13 @@ function parseWidgetMetadata(value) {
   }
 }
 
-async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
+async function initialize({ motherEmitter, jwt, nonce, moduleType, isModuleUpdate = false } = {}) {
   assertCoreAdapterInitialize({ motherEmitter, jwt, moduleType });
 
   console.log("[DESIGNER MODULE] Initializing designer service...");
 
-    // 1) Ensure dedicated database or schema for the designer module
+  if (!isModuleUpdate) {
+    // Schema and placeholder registration are host startup work, never candidate preparation.
     await requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_DATABASE, {
   jwt,
   moduleName: MODULE_NAME,
@@ -76,7 +77,8 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
 });
 
     // 2) Apply generic schema definition for all supported databases
-    const schemaPath = path.join(__dirname, "schemaDefinition.json");
+    // Schema ownership stays canonical even when booting a persisted generation.
+    const schemaPath = require.resolve('./schemaDefinition.json');
     await requestBackendEvent(motherEmitter, BACKEND_EVENTS.APPLY_SCHEMA_DEFINITION, {
   jwt,
   moduleName: MODULE_NAME,
@@ -110,6 +112,7 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType } = {}) {
       functionName: "handleListLayoutsPlaceholder",
     });
 
+  }
     // 3) Listen for design save events and persist via custom placeholder
     motherEmitter.on(BACKEND_EVENTS.DESIGNER_SAVE_DESIGN, async (payload = {}, callback) => {
         try {

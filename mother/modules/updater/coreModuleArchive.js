@@ -5,6 +5,7 @@ const path = require('path');
 const AdmZip = require('adm-zip');
 const crypto = require('crypto');
 const { parseManifest, packageError } = require('./coreModulePackages');
+const { BROWSER_PREFIX } = require('./coreModuleBrowserFiles');
 
 /** Extract only files enumerated by a bounded manifest; never execute an archive. */
 function extractModuleArchive(buffer, moduleName, destination) {
@@ -43,14 +44,16 @@ function extractModuleArchive(buffer, moduleName, destination) {
   return manifest;
 }
 
-function buildModuleArchive({ moduleDir, moduleName, manifest, bundle }) {
+function buildModuleArchive({ moduleDir, moduleName, manifest, bundle, rootDir }) {
   const parsed = parseManifest(manifest, moduleName);
   const archive = new AdmZip();
   // Preserve the exact attested bytes, including formatting and final newline.
   archive.addFile('manifest.json', Buffer.from(manifest));
   archive.addFile('manifest.bundle.json', Buffer.isBuffer(bundle) ? bundle : Buffer.from(bundle));
   for (const record of parsed.files) {
-    const data = fs.readFileSync(path.join(moduleDir, record.path));
+    const browserFile = record.path.startsWith(BROWSER_PREFIX);
+    if (browserFile && !rootDir) throw packageError('CORE_MODULE_BROWSER_ROOT_MISSING');
+    const data = fs.readFileSync(browserFile ? path.join(rootDir, record.path.slice(BROWSER_PREFIX.length)) : path.join(moduleDir, record.path));
     if (data.length !== record.size || crypto.createHash('sha256').update(data).digest('hex') !== record.sha256) throw packageError('CORE_MODULE_RELEASE_BYTES_CHANGED');
     archive.addFile(`code/${record.path}`, data);
   }

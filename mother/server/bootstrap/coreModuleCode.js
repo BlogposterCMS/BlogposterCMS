@@ -5,6 +5,7 @@ const path = require('path');
 const vm = require('vm');
 const { createRequire } = require('module');
 const { lifecycleError } = require('./coreModuleScope');
+const { isHostFile } = require('../../modules/updater/coreModulePackages');
 
 /** Load a verified generation with local caches and canonical shared imports.
  * This is trusted core code, not a sandbox. The updater must verify every byte
@@ -33,6 +34,10 @@ function loadCoreModuleCode({ moduleName, moduleDir, canonicalModuleDir }) {
     if (!inside(fs.realpathSync(filename)) || fs.lstatSync(filename).isSymbolicLink()) {
       throw lifecycleError('CORE_MODULE_CODE_PATH_ESCAPE', moduleName);
     }
+    // Fingerprinted shared services must keep their canonical instance, including
+    // mutation queues used by callers outside the updating module.
+    const relative = path.relative(root, filename).split(path.sep).join('/');
+    if (isHostFile(moduleName, relative)) return hostRequire(`./${relative}`);
     if (cache.has(filename)) return cache.get(filename).exports;
     const record = { exports: {}, filename, loaded: false };
     cache.set(filename, record);
@@ -48,14 +53,19 @@ function loadCoreModuleCode({ moduleName, moduleDir, canonicalModuleDir }) {
           const local = request.startsWith('.') ? resolveLocal(request, filename) : null;
           return local ? load(local) : sharedRequire(request);
         };
-        requireGeneration.resolve = request => (
-          request.startsWith('.') ? resolveLocal(request, filename) || sharedRequire.resolve(request) : sharedRequire.resolve(request)
-        );
+        requireGeneration.resolve = request => {
+          const local = request.startsWith('.') ? resolveLocal(request, filename) : null;
+          if (!local) return sharedRequire.resolve(request);
+          const relative = path.relative(root, local).split(path.sep).join('/');
+          return isHostFile(moduleName, relative) ? hostRequire.resolve(`./${relative}`) : local;
+        };
         // Keep __dirname within this immutable generation for module-owned data.
         // Imports escaping its directory resolve against the original host.
+        // Retain the host's runtime globals as well: enabled strategy registries
+        // must not move to a different realm when evaluating a new generation.
         const execute = vm.compileFunction(fs.readFileSync(filename, 'utf8'),
-          ['exports', 'require', 'module', '__filename', '__dirname'], { filename });
-        execute.call(record.exports, record.exports, requireGeneration, record, filename, path.dirname(filename));
+          ['exports', 'require', 'module', '__filename', '__dirname', 'global', 'process'], { filename });
+        execute.call(record.exports, record.exports, requireGeneration, record, filename, path.dirname(filename), global, process);
       }
       record.loaded = true;
       return record.exports;

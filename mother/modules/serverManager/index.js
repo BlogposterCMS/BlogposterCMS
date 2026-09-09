@@ -32,7 +32,14 @@ function assertServerManagerPayload(payload, eventName) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE,
+      table: '__rawSQL__', data: { rawSQL: 'SERVERMANAGER_LIST_LOCATIONS' }
+    });
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[SERVER MANAGER] Must be loaded as a core module.');
     }
@@ -49,11 +56,11 @@ module.exports = {
     console.log('[SERVER MANAGER] Initializing ServerManager Module...');
 
     try {
-      // 1) Ensure DB or schema
-      await ensureServerManagerDatabase(motherEmitter, jwt, nonce);
-
-      // 2) Ensure table/collection or "schema"
-      await ensureSchemaAndTable(motherEmitter, jwt, nonce);
+      // Only host startup owns schema initialization; replacement is read-only.
+      if (!isModuleUpdate) {
+        await ensureServerManagerDatabase(motherEmitter, jwt, nonce);
+        await ensureSchemaAndTable(motherEmitter, jwt, nonce);
+      }
 
       // 3) Register meltdown events (CRUD)
       setupServerManagerEventListeners(motherEmitter);
@@ -61,6 +68,7 @@ module.exports = {
       console.log('[SERVER MANAGER] Module initialized successfully. Let the meltdown begin!');
     } catch (err) {
       console.error('[SERVER MANAGER] Error initializing =>', err.message);
+      throw err;
     }
   }
 };

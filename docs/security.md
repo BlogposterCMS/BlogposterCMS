@@ -2,6 +2,15 @@
 
 ## Signed core module updates
 
+Media routes retain their existing authentication, permission and CSRF middleware
+inside a generation-owned router. A stable host mount selects the active router;
+the updater never removes or rewrites the host's Express stack. Matching new
+requests receive `CORE_MODULE_UPDATING` while existing responses and async handlers
+drain. Candidate readiness and method/path equality are required before activation.
+Designer preparation cannot mutate shared database placeholder registration.
+Per-module release notes are bounded text signed with the candidate manifest;
+they are not executable markup or a declaration of additional update permissions.
+
 Core listener scopes forward emission through the original authenticated
 MotherEmitter. They grant no additional permissions. The generation loader is
 for trusted core code only and is not a sandbox. The existing administrator-only
@@ -331,6 +340,15 @@ state under `/app/data/notificationManager`. The signed registry inside
 made writable in production.
 
 ## Developing Secure Modules
+
+Individual CMS updates preserve host-owned engines, permission definitions,
+revocation state, installation authorities and shared service instances. The
+fixed package policy includes a projection of the canonical bundled-widget
+catalog; uploaded metadata cannot create a new backend package identity.
+Bundled-widget packages may contain only their declared browser entry/source,
+never Node entry points. Signed asset generations retain existing public CORS
+headers and sandbox permissions; shared ES imports use canonical URLs.
+See [module update boundaries](core-module-updates.md) for pinned host contracts.
 
 The Updater is a protected core module, not a community-installable package.
 Its periodic checks and UI actions use the same fixed Unix-socket executor.

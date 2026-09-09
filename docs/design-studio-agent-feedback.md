@@ -1,5 +1,11 @@
 # Design Studio Agent Feedback
 
+The existing feedback snapshot includes `browserGeneration`: the immutable
+Designer asset generation hash, or `null` for bundled host assets. This identifies
+the code used by an open Studio document after a module update without exposing
+launch tokens. The manifest launch URL and AgentManager/AppLoader channel remain
+unchanged; open documents adopt a new browser generation on reload.
+
 Container `settings.height` accepts `auto` or 1–10000px and is independent of
 `minHeight`, which still sets the lower bound. The inspector exposes Auto/Fixed
 height; shared presentation CSS retains the explicit value after CanvasGrid

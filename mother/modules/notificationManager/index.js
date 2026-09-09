@@ -7,7 +7,8 @@ const { requestBackendEvent } = require('../../contracts/backendEventContracts')
  * mother/modules/notificationManager/index.js
  */
 const notificationEmitter = require('../../emitters/notificationEmitter');
-const { loadIntegrations, getRecentNotifications } = require('./notificationManagerService');
+const { getRecentNotifications, resolveStatePaths, _internals } = require('./notificationManagerService');
+const { initializeNotificationDelivery } = require('./notificationDelivery');
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const { coreUpdateNotification } = require('../updater/coreUpdateService');
@@ -23,7 +24,12 @@ function assertNotificationPayload(payload, eventName) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, app, isCore, jwt, notificationStateDir }) {
+  lifecycleVersion: 1,
+  async healthCheck({ notificationStateDir }) {
+    const options = notificationStateDir ? { stateDir: notificationStateDir } : {};
+    _internals.readRegistryFile(resolveStatePaths(options).registryPath, 'persistent notification registry');
+  },
+  async initialize({ motherEmitter, app, isCore, jwt, notificationStateDir, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[NOTIFICATION MANAGER] Must be loaded as a core module.');
     }
@@ -40,36 +46,7 @@ module.exports = {
     // Production uses /app/data/notificationManager. Tests may inject an
     // isolated state directory without changing the runtime authority.
     const stateOptions = notificationStateDir ? { stateDir: notificationStateDir } : {};
-    const integrations = await loadIntegrations(stateOptions);
-
-    // Initialisiere aktive Integrationen einmalig
-    const activeInstances = {};
-    for (const name of Object.keys(integrations)) {
-      const integration = integrations[name];
-      if (!integration.active) continue;
-      try {
-        if (typeof integration.module.verify === 'function') {
-          await integration.module.verify(integration.config);
-        }
-        activeInstances[name] = await integration.module.initialize(integration.config);
-      } catch (err) {
-        console.error(`[NOTIFICATION MANAGER] Init "${name}" failed =>`, err.message);
-      }
-    }
-
-    // NotificationEmitter-Listener => verarbeiten Notifications
-    notificationEmitter.on('notify', async (payload) => {
-      const { notificationType, priority } = payload;
-      console.log('[NOTIFICATION MANAGER] Received notification =>', { notificationType, priority });
-
-      for (const name of Object.keys(activeInstances)) {
-        try {
-          await activeInstances[name].notify(payload);
-        } catch (err) {
-          console.error(`[NOTIFICATION MANAGER] Integration "${name}" error =>`, err.message);
-        }
-      }
-    });
+    if (!isModuleUpdate) await initializeNotificationDelivery(notificationEmitter, stateOptions);
 
     motherEmitter.on(BACKEND_EVENTS.GET_RECENT_NOTIFICATIONS, async (payload, cb) => {
       const callback = onceCallback(cb);

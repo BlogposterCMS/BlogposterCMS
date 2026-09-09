@@ -1272,6 +1272,9 @@ function startScheduledPublisher(motherEmitter, jwt, options = {}) {
     }
   };
 
+  if (options.lifecycle) {
+    return options.lifecycle.every(intervalMs, tick, { immediate: true });
+  }
   const timer = setInterval(tick, intervalMs);
   if (typeof timer.unref === 'function') timer.unref();
   tick();
@@ -1279,7 +1282,14 @@ function startScheduledPublisher(motherEmitter, jwt, options = {}) {
 }
 
 module.exports = {
-  async initialize({ app, motherEmitter, isCore, jwt }) {
+  lifecycleVersion: 1,
+  httpLifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_SETTING, {
+      jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'FIRST_INSTALL_DONE'
+    });
+  },
+  async initialize({ app, motherEmitter, isCore, jwt, lifecycle }) {
     if (!isCore) throw new Error('[RUNTIME MANAGER] Must be loaded as a core module.');
     if (!jwt) throw new Error('[RUNTIME MANAGER] initialization requires a valid JWT token.');
     if (!app) throw new Error('[RUNTIME MANAGER] Express app is required.');
@@ -1291,7 +1301,7 @@ module.exports = {
     console.log('[RUNTIME MANAGER] Initializing public runtime hooks...');
     setupRuntimeEvents(motherEmitter, jwt);
     registerPublicRuntimeRoutes(app, motherEmitter, jwt);
-    startScheduledPublisher(motherEmitter, jwt);
+    startScheduledPublisher(motherEmitter, jwt, { lifecycle });
     console.log('[RUNTIME MANAGER] Ready.');
   },
 

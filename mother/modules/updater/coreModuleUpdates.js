@@ -13,7 +13,8 @@ function createCoreModuleUpdates({ rootDir, lifecycle, run = runModuleWorker, lo
   let checking = null;
   const currentVersion = moduleName => lifecycle.snapshot().find(row => row.moduleName === moduleName)?.generation?.releaseVersion || require(path.join(rootDir, 'package.json')).version;
   const snapshot = () => Object.keys(MODULE_POLICY).map(moduleName => ({
-    moduleName, currentVersion: currentVersion(moduleName), status: 'not_checked', available: false,
+    moduleName, kind: MODULE_POLICY[moduleName].kind || 'module', label: MODULE_POLICY[moduleName].label || moduleName,
+    currentVersion: currentVersion(moduleName), status: 'not_checked', available: false,
     ...rows.get(moduleName)
   }));
 
@@ -26,7 +27,9 @@ function createCoreModuleUpdates({ rootDir, lifecycle, run = runModuleWorker, lo
       rows.set(moduleName, { status: 'checking', available: false, latestVersion: version });
       try {
         const candidate = await run({ rootDir, operation: 'stage-release', moduleName, version });
-        rows.set(moduleName, { status: 'available', available: true, latestVersion: version, generationId: candidate.generationId });
+        // Review text comes only from the verified manifest of this generation.
+        rows.set(moduleName, { status: 'available', available: true, latestVersion: version, generationId: candidate.generationId,
+          releaseNotes: candidate.manifest?.releaseNotes, breakingChange: candidate.manifest?.breakingChange });
       } catch (error) {
         rows.set(moduleName, { status: error.code === 'CORE_MODULE_HOST_INCOMPATIBLE' ? 'host_required' : 'error',
           available: false, latestVersion: version, errorCode: error.code || 'CORE_MODULE_CHECK_FAILED' });
@@ -39,7 +42,9 @@ function createCoreModuleUpdates({ rootDir, lifecycle, run = runModuleWorker, lo
     busy: () => jobs.size > 0,
     observeRelease(state, { force = false } = {}) {
       const version = state?.candidate?.latestVersion;
-      if (!state?.candidate?.available || !/^\d+\.\d+\.\d+$/.test(version || '') || checking || (!force && checkedRelease === version)) return;
+      // A successful check with no newer host release also establishes current
+      // module versions; otherwise the module section stays unchecked forever.
+      if (!(state?.candidate?.available || (state?.configured && state.phase === 'current')) || !/^\d+\.\d+\.\d+$/.test(version || '') || checking || (!force && checkedRelease === version)) return;
       checkedRelease = version;
       checking = check(version).finally(() => { checking = null; });
     },
@@ -52,16 +57,19 @@ function createCoreModuleUpdates({ rootDir, lifecycle, run = runModuleWorker, lo
       const job = Promise.resolve().then(async () => {
         try {
           const candidate = await run({ rootDir, operation: 'inspect', moduleName, generationId });
-          const implementation = load({ moduleName, moduleDir: candidate.moduleDir, canonicalModuleDir: path.join(rootDir, 'mother/modules', moduleName) });
+          const implementation = MODULE_POLICY[moduleName].kind === 'widget'
+            ? require('../../server/bootstrap/coreBrowserModule')
+            : load({ moduleName, moduleDir: candidate.moduleDir, canonicalModuleDir: path.join(rootDir, 'mother/modules', moduleName) });
           if (typeof implementation.healthCheck !== 'function') throw packageError('CORE_MODULE_HEALTH_CHECK_MISSING');
           await lifecycle.replace(moduleName, implementation, {
             generation: { generationId, releaseVersion: version },
+            browserDirectory: candidate.moduleDir,
             healthCheck: (next, context) => next.healthCheck(context),
             beforeActivate: () => run({ rootDir, operation: 'activate', moduleName, generationId })
           });
-          rows.set(moduleName, { status: 'completed', available: false, latestVersion: version, generationId });
+          rows.set(moduleName, { ...row, status: 'completed', available: false, latestVersion: version, generationId });
         } catch (error) {
-          rows.set(moduleName, { status: 'error', available: false, latestVersion: version, errorCode: error.code || 'CORE_MODULE_INSTALL_FAILED' });
+          rows.set(moduleName, { ...row, status: 'error', available: false, latestVersion: version, errorCode: error.code || 'CORE_MODULE_INSTALL_FAILED' });
         } finally { jobs.delete(moduleName); }
       });
       jobs.set(moduleName, job);

@@ -311,7 +311,12 @@ function setupSettingsListeners(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, moduleDbSalt, jwt }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await selectRaw(motherEmitter, jwt, 'GET_SETTING', { key: 'FIRST_INSTALL_DONE' });
+    if (rows === undefined) throw new Error('CORE_MODULE_SETTINGS_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, moduleDbSalt, jwt, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[SETTINGS MANAGER] Must be loaded as a core module.');
     }
@@ -328,12 +333,16 @@ module.exports = {
     console.log('[SETTINGS MANAGER] Initializing SETTINGS MANAGER...');
 
     try {
-      await ensuresettingsManagerDatabase(motherEmitter, moduleDbSalt, jwt);
-      await ensureSettingsSchemaAndTables(motherEmitter, jwt);
+      // Preserve the existing settings store while preparing new listeners.
+      if (!isModuleUpdate) {
+        await ensuresettingsManagerDatabase(motherEmitter, moduleDbSalt, jwt);
+        await ensureSettingsSchemaAndTables(motherEmitter, jwt);
+      }
       setupSettingsListeners(motherEmitter);
       console.log('[SETTINGS MANAGER] SETTINGS MANAGER initialized successfully.');
     } catch (err) {
       console.error('[SETTINGS MANAGER] Error during initialization:', err.message);
+      throw err;
     }
   },
   setupSettingsListeners,

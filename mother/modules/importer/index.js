@@ -16,10 +16,7 @@ const { hasPermission } = require('../userManagement/permissionUtils');
 
 const MODULE_NAME = 'importer';
 const MODULE_TYPE = 'core';
-const DEFAULT_IMPORT_ROOTS = [
-  path.resolve(__dirname, '../../../temp_uploads/imports'),
-  path.resolve(__dirname, '../../../data/imports')
-];
+const DEFAULT_IMPORT_ROOTS = require('./importRoots');
 const CONTROL_OPTION_KEYS = new Set([
   'motherEmitter',
   'jwt',
@@ -121,25 +118,31 @@ function sanitizeRunImportOptions(importerName, options = {}) {
   return sanitized;
 }
 
-function loadImporters(dir) {
+function loadImporters(dir, strict = false) {
   const map = {};
   if (!fs.existsSync(dir)) return map;
   for (const file of fs.readdirSync(dir)) {
     if (!file.endsWith('.js')) continue;
     try {
-      const imp = require(path.join(dir, file));
+      const imp = require(`./importers/${file}`);
       if (imp && imp.name && typeof imp.import === 'function') {
         map[imp.name] = imp;
       }
     } catch (e) {
       console.error(`[IMPORTER] Failed to load ${file}:`, e.message);
+      if (strict) throw Object.assign(new Error(`CORE_MODULE_IMPORTER_LOAD_FAILED: ${file}`), { cause: e });
     }
   }
   return map;
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt }) {
+  lifecycleVersion: 1,
+  async healthCheck() {
+    const importers = loadImporters(path.join(__dirname, 'importers'), true);
+    if (!Object.keys(importers).length) throw new Error('CORE_MODULE_IMPORTERS_MISSING');
+  },
+  async initialize({ motherEmitter, isCore, jwt, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[IMPORTER] Must be loaded as a core module.');
     }
@@ -155,7 +158,7 @@ module.exports = {
     console.log('[IMPORTER] Initializing...');
 
     const baseDir = path.join(__dirname, 'importers');
-    const importers = loadImporters(baseDir);
+    const importers = loadImporters(baseDir, isModuleUpdate);
 
     motherEmitter.on(BACKEND_EVENTS.LIST_IMPORTERS, (payload, cb) => {
       cb = onceCallback(cb);

@@ -1,5 +1,7 @@
 'use strict';
 
+const { AsyncLocalStorage } = require('node:async_hooks');
+
 function lifecycleError(code, moduleName) {
   return Object.assign(new Error(`${code}: ${moduleName}`), { code, moduleName });
 }
@@ -9,8 +11,35 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
   const registrations = [];
   const pending = new Set();
   const cleanups = [];
+  const intervals = [];
+  const continuations = new AsyncLocalStorage();
   let state = deferred ? 'preparing' : 'initializing';
   let facade;
+
+  function stopIntervals() {
+    for (const interval of intervals) {
+      clearInterval(interval.timer);
+      interval.timer = null;
+    }
+  }
+
+  function startIntervals() {
+    for (const interval of intervals) {
+      if (interval.timer) continue;
+      const tick = async () => {
+        if (state !== 'active' || interval.running) return;
+        interval.running = true;
+        const work = {};
+        pending.add(work);
+        try { await continuations.run(work, interval.run); }
+        catch (error) { interval.onError(error); }
+        finally { interval.running = false; pending.delete(work); }
+      };
+      interval.timer = setInterval(tick, interval.intervalMs);
+      interval.timer.unref?.();
+      if (interval.immediate) void tick();
+    }
+  }
 
   function register(event, listener, once = false, prepend = false) {
     if (!['active', 'initializing', 'preparing'].includes(state)) {
@@ -20,7 +49,8 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
     const registration = { event, listener, wrapped: null };
     registration.wrapped = function (...args) {
       const callbackIndex = args.findIndex(value => typeof value === 'function');
-      if (state !== 'active' && state !== 'initializing') {
+      const continuing = state === 'draining' && pending.has(continuations.getStore());
+      if (state !== 'active' && state !== 'initializing' && !continuing) {
         if (callbackIndex >= 0) args[callbackIndex](lifecycleError('CORE_MODULE_UPDATING', moduleName));
         return;
       }
@@ -41,7 +71,7 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
         };
       }
       try {
-        const result = listener.apply(facade, args);
+        const result = continuations.run(operation, () => listener.apply(facade, args));
         if (result && typeof result.then === 'function') {
           return Promise.resolve(result).then(value => {
             returned = true; finish(); return value;
@@ -107,12 +137,37 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
 
   return {
     emitter: facade,
+    every(intervalMs, run, { immediate = false, onError = () => console.warn('CORE_MODULE_BACKGROUND_FAILED', moduleName) } = {}) {
+      if (!['initializing', 'preparing'].includes(state) || !Number.isFinite(intervalMs) || intervalMs < 1 ||
+          typeof run !== 'function' || typeof onError !== 'function') throw lifecycleError('CORE_MODULE_INTERVAL_INVALID', moduleName);
+      // Candidates own definitions, not running timers. Draining stops new ticks
+      // and awaits in-flight work; restoring the old generation restarts its timer.
+      const interval = { intervalMs, run, immediate, onError, timer: null, running: false };
+      intervals.push(interval);
+      return () => {
+        clearInterval(interval.timer);
+        interval.timer = null;
+        const index = intervals.indexOf(interval);
+        if (index >= 0) intervals.splice(index, 1);
+      };
+    },
+    beginWork({ continuation = false } = {}) {
+      if (!['active', 'initializing'].includes(state) && !(continuation && state === 'draining')) throw lifecycleError('CORE_MODULE_UPDATING', moduleName);
+      const operation = {};
+      pending.add(operation);
+      const finish = () => pending.delete(operation);
+      // HTTP handlers can keep their admitted async chain while new requests
+      // are gated. A detached continuation loses admission after work finishes.
+      finish.run = callback => continuations.run(operation, callback);
+      return finish;
+    },
     activate() {
       if (state === 'disposed') throw lifecycleError('CORE_MODULE_SCOPE_CLOSED', moduleName);
       if (state === 'preparing') {
         for (const record of registrations) motherEmitter[record.prepend ? 'prependListener' : 'on'](record.event, record.wrapped);
       }
       state = 'active';
+      startIntervals();
     },
     suspend() {
       if (state !== 'draining' || pending.size) throw lifecycleError('CORE_MODULE_STILL_BUSY', moduleName);
@@ -123,6 +178,7 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
       if (state !== 'suspended') throw lifecycleError('CORE_MODULE_RESUME_INVALID', moduleName);
       for (const record of registrations) motherEmitter.on(record.event, record.wrapped);
       state = 'active';
+      startIntervals();
     },
     onCleanup(cleanup) {
       if (typeof cleanup !== 'function' || state === 'disposed') throw lifecycleError('CORE_MODULE_CLEANUP_INVALID', moduleName);
@@ -131,10 +187,12 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
     async drain(timeoutMs = 10000) {
       if (!Number.isFinite(timeoutMs) || timeoutMs < 1) throw lifecycleError('CORE_MODULE_DRAIN_TIMEOUT_INVALID', moduleName);
       state = 'draining';
+      stopIntervals();
       const deadline = Date.now() + timeoutMs;
       while (pending.size) {
         if (Date.now() >= deadline) {
           state = 'active';
+          startIntervals();
           throw lifecycleError('CORE_MODULE_DRAIN_TIMEOUT', moduleName);
         }
         await new Promise(resolve => setTimeout(resolve, Math.min(10, timeoutMs)));
@@ -143,6 +201,7 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
     async dispose() {
       if (pending.size) throw lifecycleError('CORE_MODULE_STILL_BUSY', moduleName);
       state = 'disposed';
+      stopIntervals();
       methods.removeAllListeners();
       const errors = [];
       for (const cleanup of cleanups.splice(0).reverse()) {

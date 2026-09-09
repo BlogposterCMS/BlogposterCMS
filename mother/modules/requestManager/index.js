@@ -68,6 +68,13 @@ function assertAllowedRequestUrl(url) {
 }
 
 module.exports = {
+  lifecycleVersion: 1,
+  async healthCheck() {
+    // Readiness never calls a configured external destination or changes policy.
+    if (typeof axios.request !== 'function' || typeof pinnedAgent !== 'function') {
+      throw new Error('CORE_MODULE_REQUEST_NOT_READY');
+    }
+  },
   async initialize({ motherEmitter, isCore }) {
     if (!isCore) {
       throw new Error('[REQUEST MANAGER] Must be loaded as a core module.');

@@ -26,6 +26,11 @@ worker used for live updates. Hashing and signature checks must stay outside the
 main event loop so database replies and timers of already started modules can run.
 An invalid signature aborts startup; only a host-compatibility mismatch permits
 falling back to the bundled implementation.
+
+Importer readiness checks every installed importer. The optional source-only
+Docs example is omitted when its example directory is absent from the release
+image. Resolution errors other than absence, and errors inside an installed
+example, still fail readiness with `CORE_MODULE_IMPORTER_LOAD_FAILED`.
 Media additionally owns a generation-specific router behind one stable host mount.
 Admission pauses only for its matching routes; existing responses and asynchronous
 handlers drain before activation. Candidate routes must retain the exact method/path

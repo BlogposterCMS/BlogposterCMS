@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.19] - 2026-09-09
+
+- Keep omitted optional source examples from blocking individual Importer updates; preserve strict failures for broken installed importers.
+
 ## [0.10.18] - 2026-09-09
 
 - Publish compatible signed packages for all 37 CMS modules and 31 bundled widgets on the 0.10.17 baseline with asynchronous cold-start verification.

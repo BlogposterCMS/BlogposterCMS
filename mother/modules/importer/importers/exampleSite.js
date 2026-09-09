@@ -3,7 +3,16 @@
 const { BACKEND_EVENTS } = require('../../../contracts/generatedBackendEventCatalog');
 const { requestBackendEvent } = require('../../../contracts/backendEventContracts');
 const { hasPermission } = require('../../userManagement/permissionUtils');
-const { buildDocsExample } = require('../../../../examples/docs-site');
+// Source examples are optional and are deliberately absent from release images.
+// Only an unresolved example is optional; errors inside an installed example
+// must still fail importer readiness instead of being silently ignored.
+let exampleAvailable = true;
+try { require.resolve('../../../../examples/docs-site'); }
+catch (error) {
+  if (error.code !== 'MODULE_NOT_FOUND') throw error;
+  exampleAvailable = false;
+}
+const buildDocsExample = exampleAvailable ? require('../../../../examples/docs-site').buildDocsExample : null;
 const activeImports = new Set();
 const allowedOptions = new Set(['exampleId', 'rootSlug', 'dryRun', 'motherEmitter', 'jwt', 'decodedJWT', 'importPayload']);
 
@@ -35,7 +44,7 @@ async function assertUnused(example, request) {
 
 /** Optional installed example, using the existing Importer and domain events.
  * It accepts a bundled example ID, never arbitrary packages or executable input. */
-module.exports = {
+module.exports = exampleAvailable ? {
   name: 'exampleSite',
   description: 'Import an editable English Docs example as draft pages and a shared draft design.',
   async import(options = {}) {
@@ -98,4 +107,4 @@ module.exports = {
       throw error;
     } finally { activeImports.delete(example.rootSlug); }
   }
-};
+} : null;

@@ -1,5 +1,9 @@
 # importer changelog
 
+## [0.10.19] - 2026-09-09
+
+- Keep omitted optional source examples from blocking individual Importer updates; preserve strict failures for broken installed importers.
+
 ## [0.10.18] - 2026-09-09
 
 - Publish a compatible signed generation for individual update and cold-start acceptance on the 0.10.17 baseline.
@@ -31,4 +35,3 @@ Changes for this module are maintained here. See the root changelog for shared h
 ## [0.10.11] - 2026-09-09
 
 - Support verified individual handler updates with retained host state and read-only readiness checks; shared host contracts remain compatibility requirements.
-

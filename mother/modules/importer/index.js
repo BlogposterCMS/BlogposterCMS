@@ -130,7 +130,9 @@ function loadImporters(dir, strict = false) {
       }
     } catch (e) {
       console.error(`[IMPORTER] Failed to load ${file}:`, e.message);
-      if (strict) throw Object.assign(new Error(`CORE_MODULE_IMPORTER_LOAD_FAILED: ${file}`), { cause: e });
+      if (strict) throw Object.assign(new Error(`CORE_MODULE_IMPORTER_LOAD_FAILED: ${file}`), {
+        code: 'CORE_MODULE_IMPORTER_LOAD_FAILED', cause: e
+      });
     }
   }
   return map;

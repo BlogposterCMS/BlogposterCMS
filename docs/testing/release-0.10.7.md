@@ -1,4 +1,4 @@
-# Release 0.10.7 acceptance
+# Independent module update acceptance (0.10.8 / 0.10.9)
 
 ## Published baseline and compatible acceptance release
 
@@ -13,6 +13,34 @@ Only package release identity and these release notes change, to exercise
 officially signed module discovery/activation against the 0.10.8 host. Successful
 publication alone does not prove hot update acceptance; record the live results
 below after the production checks.
+
+## Completed production acceptance
+
+- Signed 0.10.8 baseline installed with the existing 1.2.3 executor. All four
+  persistent volumes were backed up with the writer stopped; archive hashes and
+  gzip integrity passed. The previous image and deployment configuration remain.
+- Slow registry blob delivery required a byte-preserving delta of the published
+  image, retaining already verified base layers. Docker restored the official
+  digest through an exact-digest pull. A temporary exact-release transport adapter
+  supplied staged manifests/bundles after upstream timeouts; the installed
+  executor's signatures, expected-target guard, locks, backup, readiness and
+  rollback logic were unchanged. This is not proof of fresh-host online delivery.
+- The published image passed all eight negative sandbox checks on the actual
+  Linux host with the signed profiles, no network, read-only root, no added
+  capabilities and no production volumes. Startup verified 12,353 files with
+  zero blocked modules after reconciling the bundled dummy module's old metadata
+  against the signed release. Old metadata and complete module backup remain.
+- Content, search, workflow, export and translation updated to signed 0.10.9
+  through the authenticated browser. Container ID, process ID and process start
+  time remained unchanged throughout all five updates; the CMS host stayed 0.10.8.
+  Page Management remained usable during the updates and after reload.
+- Translation's first package download timed out safely. The existing check
+  action retried successfully, followed by a successful module update.
+- A separate, deliberate restart then reverified and loaded all five persisted
+  0.10.9 generations. The browser showed every module current after reload.
+- Failed candidate readiness/old-handler recovery was exercised locally, not by
+  deploying deliberately broken signed code to production. No destructive
+  production rollback rehearsal was performed.
 
 ## Earlier validation evidence
 
@@ -67,10 +95,8 @@ work is excluded; the supported host executor remains 1.2.3.
 - Local frozen-release browser: real CMS version 0.10.7, five module statuses and
   the new breadcrumb position rendered. Production administrator login verified
   against unchanged 0.10.6 before cutover.
-- Pending: official release signatures/image, stopped-writer backup, production
-  cutover and authenticated browser acceptance.
-- Pending: subsequent host-compatible signed module update on production with
-  unchanged CMS container/process identity and verified persisted generation.
+- The earlier pending publication, backup, browser and persistence gates are
+  completed in the production acceptance section above.
 
 Keep the previous image, deployment configuration and all four persistent-volume
 backups together. See the community migration guide and core module update guide.

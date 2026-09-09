@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Document successful live acceptance of all five signed core module updates,
+  unchanged CMS process identity, retry after a download timeout and persistence
+  after a deliberate restart.
+
 ## [0.10.9] - 2026-09-09
 
 - Publish host-compatible signed core module generations for live update

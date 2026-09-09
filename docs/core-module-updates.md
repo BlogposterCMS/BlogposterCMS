@@ -102,3 +102,9 @@ host-compatible signed module release through the regular Update Center. Record
 container identity, actual module version, unaffected requests, failure recovery
 and verified selection after process restart. Local fixtures or a healthy
 container do not establish completion of these production checks.
+
+On 2026-09-09, all five official 0.10.9 module generations were installed through
+the production browser on the signed 0.10.8 host. Container/process identity and
+start time stayed unchanged. A download timeout was retried successfully, content
+remained available, and a deliberate later restart loaded all five selections
+again. See [release acceptance](testing/release-0.10.7.md) for evidence and limits.

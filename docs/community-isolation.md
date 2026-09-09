@@ -110,6 +110,10 @@ nothing; inspection shows configuration availability without granting access.
    can require operator restoration from this backup; there is no cross-volume
    database/filesystem transaction. Signed release-owned widgets require a
    signed release update instead of ZIP replacement.
+   Release-owned files in persistent volumes are not replaced by an image pull.
+   When their signed bytes change, back up and verify the old release identity,
+   copy only the reviewed replacement from the verified image while the CMS is
+   stopped, then verify startup. Never overwrite unrelated installed packages.
 6. Deploy matching server/browser artifacts, reload open CMS/Designer sessions,
    and verify layouts, stored drafts, permissions and revocation. Incompatible
    widgets show `WIDGET_SANDBOX_MIGRATION_REQUIRED`; module errors appear through

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.12] - 2026-09-09
+
+- Publish compatible signed generations for all 36 modules and 31 bundled widgets, each with its own release notes, for individual production update acceptance.
+
 ## [0.10.11] - 2026-09-09
 
 - Keep widget-specific changelog edits compatible with independent updates.

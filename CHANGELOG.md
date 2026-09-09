@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.14] - 2026-09-09
+
+- Publish host-compatible signed generations for all 37 CMS modules and 31 bundled widgets, with separate changelogs, for individual update acceptance on 0.10.13.
+
 ## [0.10.13] - 2026-09-09
 
 - Complete individual updates for 37 CMS modules and 31 bundled widgets, with signed package-specific changelogs. Preserve admin cookies when authentication dependencies pause during updates; report retryable availability without granting access.

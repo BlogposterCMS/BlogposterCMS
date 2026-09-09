@@ -40,14 +40,13 @@ jobs:
           # Ubuntu restricts user namespaces even when bwrap is installed. Its
           # packaged profile grants setup access and strips child capabilities.
           sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
-          node tools/verify-community-sandbox.js
+          sudo useradd --system --create-home --user-group blogposter-sandbox-test
+          sudo -u blogposter-sandbox-test "$(command -v node)" tools/verify-community-sandbox.js
       - name: Run real Linux sandbox integration tests
         # RLIMIT_NPROC is UID-wide. Keep runner services out of the test budget,
         # matching the dedicated unprivileged application user in production.
         run: |
           printf 'Runner UID task count: '; ps -u "$(id -u)" -L --no-headers | wc -l
-          sudo useradd --system --create-home --user-group blogposter-sandbox-test
-          sudo -u blogposter-sandbox-test "$(command -v node)" tools/verify-community-sandbox.js
           sudo -u blogposter-sandbox-test "$(command -v node)" node_modules/jest/bin/jest.js --runInBand tests/moduleProcessRuntime.test.js tests/moduleRegistryEventsActivation.test.js
       - name: Run vulnerability audit
         run: npm audit --audit-level=high

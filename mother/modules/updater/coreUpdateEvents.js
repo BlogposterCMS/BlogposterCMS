@@ -17,7 +17,7 @@ function initializeCoreUpdateEvents(emitter, { coreModuleUpdates } = {}) {
   function withModules(state, force = false) {
     if (!coreModuleUpdates) return state;
     coreModuleUpdates.observeRelease(state, { force });
-    return { ...state, moduleUpdates: coreModuleUpdates.snapshot() };
+    return { ...state, moduleUpdates: coreModuleUpdates.snapshot(), moduleUpdateBatch: coreModuleUpdates.batchSnapshot() };
   }
   // These listeners also serve the existing Runtime Manager agent interface.
   emitter.on(BACKEND_EVENTS.GET_CORE_UPDATE_STATUS, async (payload, callback) => {
@@ -35,12 +35,14 @@ function initializeCoreUpdateEvents(emitter, { coreModuleUpdates } = {}) {
       if (dispatchingInstall || coreModuleUpdates?.busy()) throw new Error('CORE_UPDATE_BUSY');
       dispatchingInstall = true;
       ownsDispatch = true;
-      if (payload.targetModuleName !== undefined) {
+      if (payload.targetModules !== undefined && (payload.targetModuleName !== undefined || payload.image !== undefined || payload.version !== undefined || payload.generationId !== undefined)) throw new Error('CORE_MODULE_SELECTION_INVALID');
+      if (payload.targetModuleName !== undefined || payload.targetModules !== undefined) {
         if (!coreModuleUpdates) throw new Error('CORE_MODULE_UPDATES_UNAVAILABLE');
         const host = await getCoreUpdateStatus();
         if (!host.configured) throw new Error('CORE_MODULE_HOST_STATE_UNAVAILABLE');
         if (['installing', 'downloading', 'cancelling', 'backing_up', 'restarting', 'verifying', 'rolling_back', 'recovery_failed'].includes(host.phase)) throw new Error('CORE_UPDATE_BUSY');
-        callback(null, coreModuleUpdates.install({ moduleName: payload.targetModuleName, generationId: payload.generationId, version: payload.version }));
+        callback(null, payload.targetModules !== undefined ? coreModuleUpdates.installBatch(payload.targetModules)
+          : coreModuleUpdates.install({ moduleName: payload.targetModuleName, generationId: payload.generationId, version: payload.version }));
         return;
       }
       // Only the reviewed version/digest cross the privileged host boundary.

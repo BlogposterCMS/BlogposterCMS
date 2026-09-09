@@ -1,9 +1,9 @@
 const labels = {
     not_checked: 'Not checked yet', checking: 'Checking module package…',
-    current: 'Current', available: 'Update available', installing: 'Updating this module…',
+    current: 'Current', available: 'Update available', queued: 'Waiting in update queue', installing: 'Updating this module…',
     completed: 'Module updated', host_required: 'Requires a Blogposter host update', error: 'Module update failed'
 };
-export function createCoreModuleUpdateList(mount, install, titleText = 'CMS module updates') {
+export function createCoreModuleUpdateList(mount, install, titleText = 'CMS module updates', selection) {
     const section = document.createElement('section');
     section.className = 'core-module-updates';
     const title = document.createElement('h4');
@@ -25,7 +25,7 @@ export function createCoreModuleUpdateList(mount, install, titleText = 'CMS modu
         checked.textContent = complete && lastCheckedAt ? `Last checked: ${new Date(lastCheckedAt).toLocaleString()}` : 'Last checked: Not checked yet';
         // This is an update list, not an inventory. Keep in-flight changes visible
         // while polling temporarily clears availability, including a failed install.
-        rows = rows.filter(row => row.available || row.status === 'installing' ||
+        rows = rows.filter(row => row.available || ['queued', 'installing'].includes(row.status) ||
             (row.status === 'error' && Boolean(row.latestVersion) && row.latestVersion !== row.currentVersion));
         section.hidden = false;
         const names = new Set(rows.map(row => row.moduleName));
@@ -37,8 +37,13 @@ export function createCoreModuleUpdateList(mount, install, titleText = 'CMS modu
         for (const row of rows) {
             let entry = entries.get(row.moduleName);
             if (!entry) {
-                const container = document.createElement('details');
-                container.className = 'core-module-update-row';
+                const container = document.createElement('div');
+                container.className = 'core-module-update-entry';
+                const details = document.createElement('details');
+                details.className = 'core-module-update-row';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.hidden = !selection;
                 const summary = document.createElement('summary');
                 const notes = document.createElement('pre');
                 notes.className = 'module-release-notes';
@@ -46,18 +51,27 @@ export function createCoreModuleUpdateList(mount, install, titleText = 'CMS modu
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'button ghost sm';
-                entry = { container, summary, button, row };
+                entry = { container, summary, button, checkbox, row };
                 entries.set(row.moduleName, entry);
+                checkbox.addEventListener('change', () => {
+                    const current = entries.get(row.moduleName);
+                    if (current && !checkbox.disabled)
+                        selection?.change(current.row, checkbox.checked);
+                });
                 button.addEventListener('click', () => {
                     const current = entries.get(row.moduleName);
                     if (current && !current.button.disabled)
                         install(current.row);
                 });
-                container.append(summary, notes, button);
+                details.append(summary, notes, button);
+                container.append(checkbox, details);
                 section.append(container);
             }
             // Preserve DOM identity and focus while status polling refreshes rows.
             entry.row = row;
+            entry.checkbox.setAttribute('aria-label', `Select ${row.label || row.moduleName} update`);
+            entry.checkbox.checked = Boolean(selection?.selected(row));
+            entry.checkbox.disabled = disabled || !row.available || !row.generationId;
             entry.container.querySelector('pre').textContent = row.releaseNotes || 'No module-specific release notes were provided.';
             const name = document.createElement('span');
             name.textContent = row.label || row.moduleName;

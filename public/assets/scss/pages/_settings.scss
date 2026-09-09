@@ -193,9 +193,20 @@ body.has-content-footer:has(#content > .settings-surface) .dev-mode-banner { bot
   a { font-size: 13px; }
 }
 .settings-update-toolbar {
-  display: flex; align-items: center; gap: 16px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   .settings-tabs { flex: 1; }
   > .icon-button { flex: 0 0 36px; background: transparent; box-shadow: none; }
+}
+.core-module-update-selection {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex-basis: 100%;
+  > label { display: flex; align-items: center; gap: 8px; }
+  > [role='status'] { font-size: 13px; overflow-wrap: anywhere; }
+}
+.core-module-update-entry {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start;
+  > input[type='checkbox'] { margin-top: 14px; }
+  > details { min-width: 0; }
+  summary { flex-wrap: wrap; overflow-wrap: anywhere; }
 }
 
 // One compact release list; details preserve expansion during status polling.

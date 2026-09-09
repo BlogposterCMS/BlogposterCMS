@@ -2,6 +2,38 @@
 
 const { createCoreModuleUpdates } = require('../mother/modules/updater/coreModuleUpdates');
 
+test('batch installs only selected packages sequentially and continues after a failure', async () => {
+  const f = fixture(); await f.check();
+  const targets = f.service.snapshot().slice(0, 3).map(row => ({ moduleName: row.moduleName, generationId: row.generationId, version: row.latestVersion }));
+  let release;
+  f.lifecycle.replace.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+  f.lifecycle.replace.mockRejectedValueOnce(new Error('not ready'));
+  f.service.installBatch(targets);
+  targets[2].moduleName = 'mutated';
+  await new Promise(resolve => setImmediate(resolve));
+  expect(f.lifecycle.replace).toHaveBeenCalledTimes(1);
+  expect(f.service.snapshot()[1].status).toBe('queued');
+  expect(() => f.install()).toThrow('CORE_MODULE_UPDATE_BUSY');
+  release();
+  await f.service.settled();
+  expect(f.lifecycle.replace.mock.calls.map(call => call[0])).toEqual(f.service.snapshot().slice(0, 3).map(row => row.moduleName));
+  expect(f.service.batchSnapshot()).toEqual({ status: 'completed_with_errors', total: 3, completed: 2, failed: 1, currentModule: null });
+  expect(f.service.snapshot()[3].available).toBe(true);
+  expect(f.service.busy()).toBe(false);
+});
+
+test('batch rejects an invalid whole selection before any installation', async () => {
+  const f = fixture(); await f.check();
+  const target = { moduleName: 'translationManager', generationId: f.generationId, version: '0.10.7' };
+  for (const selection of [[], null, [target, target], [target, null]]) {
+    expect(() => f.service.installBatch(selection)).toThrow(/CORE_MODULE_(SELECTION_INVALID|REVIEW_CHANGED)/);
+  }
+  expect(() => f.service.installBatch([target, { ...target, moduleName: 'contentEngine', generationId: 'changed' }])).toThrow('CORE_MODULE_REVIEW_CHANGED');
+  expect(f.lifecycle.replace).not.toHaveBeenCalled();
+  expect(f.service.batchSnapshot()).toBeNull();
+  expect(f.service.snapshot()[0].available).toBe(true);
+});
+
 function fixture() {
   const generationId = 'a'.repeat(64);
   // Fixture versions must not depend on the checkout's next release number.

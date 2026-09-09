@@ -11,6 +11,7 @@ export interface CoreUpdateStatus {
   errorCode?: string;
   lastCheckedAt?: string;
   moduleUpdates?: CoreModuleUpdateRow[];
+  moduleUpdateBatch?: { status: string; total: number; completed: number; failed: number; currentModule: string | null } | null;
   candidate?: { currentVersion: string; latestVersion: string; image: string; available: boolean; releaseNotes?: string; releaseUrl?: string };
 }
 
@@ -31,7 +32,7 @@ export function coreUpdateRequest(emit: Window['meltdownEmit'], jwt: string, act
   return emitRuntimeAdmin<CoreUpdateStatus>(emit, jwt, 'coreUpdates', action, params);
 }
 
-export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['meltdownEmit'], jwt: string, externalCheck = false, widgetMount?: HTMLElement): Promise<() => Promise<void>> {
+export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['meltdownEmit'], jwt: string, externalCheck = false, widgetMount?: HTMLElement, toolbarMount?: HTMLElement): Promise<() => Promise<void>> {
   mount.classList.add('core-update-panel');
   mount.classList.remove('settings-section--form');
   const version = document.createElement('h4');
@@ -62,8 +63,31 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
   let submitting = false;
   let confirming = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const drawCoreModules = createCoreModuleUpdateList(mount, row => { void confirmModule(row); });
-  const drawWidgetModules = createCoreModuleUpdateList(widgetMount || mount, row => { void confirmModule(row); }, 'Bundled widget updates');
+  // Keep explicit opt-outs across status polls; newly available packages start selected.
+  const deselected = new Set<string>();
+  const bulk = document.createElement('div'); bulk.className = 'core-module-update-selection';
+  const allLabel = document.createElement('label');
+  const all = document.createElement('input'); all.type = 'checkbox';
+  allLabel.append(all, 'Select all module and widget updates');
+  const updateSelected = document.createElement('button'); updateSelected.type = 'button'; updateSelected.className = 'button primary sm';
+  const progress = document.createElement('span'); progress.setAttribute('role', 'status');
+  bulk.append(allLabel, updateSelected, progress); (toolbarMount || mount).append(bulk);
+  const eligible = () => (state?.moduleUpdates || []).filter(row => row.available && row.generationId && row.latestVersion);
+  const selection = {
+    selected: (row: CoreModuleUpdateRow) => (row.available || ['queued', 'installing'].includes(row.status)) && !deselected.has(row.moduleName),
+    change: (row: CoreModuleUpdateRow, selected: boolean) => {
+      if (selected) deselected.delete(row.moduleName); else deselected.add(row.moduleName);
+      if (state) draw(state);
+    }
+  };
+  all.addEventListener('change', () => {
+    for (const row of eligible()) {
+      if (all.checked) deselected.delete(row.moduleName); else deselected.add(row.moduleName);
+    }
+    if (state) draw(state);
+  });
+  const drawCoreModules = createCoreModuleUpdateList(mount, row => { void confirmModule(row); }, 'CMS module updates', selection);
+  const drawWidgetModules = createCoreModuleUpdateList(widgetMount || mount, row => { void confirmModule(row); }, 'Bundled widget updates', selection);
   const drawModules = (rows: CoreModuleUpdateRow[], disabled: boolean, checkedAt?: string) => {
     drawCoreModules(rows.filter(row => row.kind !== 'widget'), disabled, checkedAt);
     drawWidgetModules(rows.filter(row => row.kind === 'widget'), disabled, checkedAt);
@@ -97,10 +121,19 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
     const url = changelog?.releaseUrl || '';
     release.hidden = !/^https:\/\/github\.com\/BlogposterCMS\/BlogposterCMS\/releases\/tag\/v\d+\.\d+\.\d+$/.test(url);
     if (!release.hidden) release.href = url;
-    check.disabled = submitting || confirming || !next.configured || ACTIVE.has(next.phase) || next.phase === 'recovery_failed' || Boolean(next.moduleUpdates?.some(row => row.status === 'installing'));
+    check.disabled = submitting || confirming || !next.configured || ACTIVE.has(next.phase) || next.phase === 'recovery_failed' || next.moduleUpdateBatch?.status === 'installing' || Boolean(next.moduleUpdates?.some(row => ['queued', 'installing'].includes(row.status)));
     install.hidden = !next.candidate?.available;
     install.disabled = check.disabled;
     drawModules(next.moduleUpdates || [], check.disabled, next.lastCheckedAt);
+    const available = eligible();
+    const selected = available.filter(selection.selected);
+    all.checked = available.length > 0 && selected.length === available.length;
+    all.indeterminate = selected.length > 0 && selected.length < available.length;
+    all.disabled = check.disabled || !available.length;
+    updateSelected.textContent = `Update selected (${selected.length})`;
+    updateSelected.disabled = check.disabled || !selected.length || Boolean(next.moduleUpdates?.some(row => row.status === 'checking'));
+    const batch = next.moduleUpdateBatch;
+    progress.textContent = batch ? `${batch.completed + batch.failed} / ${batch.total} processed · ${batch.completed} updated · ${batch.failed} failed${batch.currentModule ? ` · Updating ${batch.currentModule}…` : ''}` : '';
   }
   async function refresh() {
     try { draw(await coreUpdateRequest(emit, jwt, 'status')); }
@@ -118,8 +151,25 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
     finally { submitting = false; }
     // Reconcile status after every response, including an ambiguous network failure.
     await refresh();
+    if (action === 'install') {
+      clearTimeout(timer);
+      timer = setTimeout(poll, 3000);
+    }
   }
   check.addEventListener('click', () => { void run('check'); });
+  updateSelected.addEventListener('click', async () => {
+    if (updateSelected.disabled) return;
+    const selected = eligible().filter(selection.selected);
+    confirming = true;
+    if (state) draw(state);
+    try {
+      const result = await bpDialog.open({ kind: 'modal', title: `Update ${selected.length} selected modules and widgets?`,
+        message: `Updates run one at a time and continue when you leave this page.\n${selected.map(row => `${row.label || row.moduleName}: ${row.currentVersion} → ${row.latestVersion}${row.breakingChange ? ' (breaking update; review its changelog)' : ''}`).join('\n')}`,
+        actions: [{ id: 'cancel', label: 'Later', variant: 'ghost' }, { id: 'install', label: 'Install selected updates', variant: 'primary' }] });
+      if (result.action === 'install') await run('install', { targetModules: selected.map(row => ({ moduleName: row.moduleName, generationId: row.generationId, version: row.latestVersion })) });
+    } catch (error) { requestError.textContent = error instanceof Error ? error.message : 'CORE_MODULE_CONFIRMATION_FAILED'; }
+    finally { confirming = false; await refresh(); }
+  });
   async function confirmModule(row: CoreModuleUpdateRow) {
     if (submitting || confirming || check.disabled || !row.available || !row.generationId) return;
     confirming = true;
@@ -151,7 +201,7 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
   const poll = async () => {
     if (!mount.isConnected) return;
     await refresh();
-    timer = setTimeout(poll, state && (ACTIVE.has(state.phase) || state.moduleUpdates?.some(row => ['checking', 'installing'].includes(row.status))) ? 3000 : 30000);
+    timer = setTimeout(poll, state && (ACTIVE.has(state.phase) || state.moduleUpdateBatch?.status === 'installing' || state.moduleUpdates?.some(row => ['checking', 'queued', 'installing'].includes(row.status))) ? 3000 : 30000);
   };
   timer = setTimeout(poll, 3000);
   // Polls stop when this existing settings surface is unmounted.

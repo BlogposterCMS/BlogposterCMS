@@ -132,3 +132,10 @@ The correction moves cold-start inspection to the existing verification worker.
 Bootstrap regressions cover I/O progress before selected generations start and
 fail-closed startup when signature inspection fails. Production cold-start
 acceptance remains open until the corrected signed release is exercised.
+### Multi-selection acceptance (0.10.20 source)
+
+- All 387 local suites passed: 2,157 tests passed, 12 skipped. Build and generated backend event contract check passed.
+- Browser: default selection across CMS modules and bundled widgets, deselecting one item, exact three-item confirmation, and disabled empty selection verified.
+- A local fixture used the real queue and UI with simulated activation: after navigating away, two selected packages completed, one deliberate readiness failure remained visible, and the unselected widget remained available. This does not establish signed production package acceptance.
+- Actual local CMS Update Center checked in System and Installed tabs, including disabled disconnected state and a 390px viewport.
+- Production before this release remains host 0.10.17 with 61 selected 0.10.18 generations and unchanged PID 1103820. New selection UI and all-package cold-start production acceptance remain pending.

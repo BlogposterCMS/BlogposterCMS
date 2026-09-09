@@ -601,7 +601,7 @@ async function renderUpdates(ctx) {
     });
     modulesPanel.append(rowsMount);
     shell.mount(ctx.el);
-    checkCore = await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt, true, widgetsPanel);
+    checkCore = await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt, true, widgetsPanel, toolbar);
     await renderUpdateRows(rowsMount, shell.status, ctx);
     refresh.disabled = false;
 }

@@ -2399,6 +2399,7 @@ export interface InstallCoreUpdatePayload {
   "moduleType"?: null | string;
   "skipJWT"?: boolean;
   "targetModuleName"?: JsonValue;
+  "targetModules"?: JsonValue;
   "version"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
 }

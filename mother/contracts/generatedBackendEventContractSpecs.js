@@ -14735,6 +14735,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
         "targetModuleName": {
           "type": "json"
         },
+        "targetModules": {
+          "type": "json"
+        },
         "version": {
           "type": "json"
         }

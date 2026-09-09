@@ -11,6 +11,8 @@ function createCoreModuleUpdates({ rootDir, lifecycle, run = runModuleWorker, lo
   const jobs = new Map();
   let checkedRelease = null;
   let checking = null;
+  let batch = null;
+  let batchJob = null;
   const currentVersion = moduleName => lifecycle.snapshot().find(row => row.moduleName === moduleName)?.generation?.releaseVersion || require(path.join(rootDir, 'package.json')).version;
   const snapshot = () => Object.keys(MODULE_POLICY).map(moduleName => ({
     moduleName, kind: MODULE_POLICY[moduleName].kind || 'module', label: MODULE_POLICY[moduleName].label || moduleName,
@@ -37,22 +39,57 @@ function createCoreModuleUpdates({ rootDir, lifecycle, run = runModuleWorker, lo
     }
   }
 
-  return {
+  function validate({ moduleName, generationId, version } = {}) {
+    const row = rows.get(moduleName);
+    if (!row?.available || row.generationId !== generationId || row.latestVersion !== version) throw packageError('CORE_MODULE_REVIEW_CHANGED');
+    if (compareVersions(version, currentVersion(moduleName)) <= 0) throw packageError('CORE_MODULE_DOWNGRADE_DENIED');
+  }
+
+  const service = {
     snapshot,
-    busy: () => jobs.size > 0,
+    batchSnapshot: () => batch ? { ...batch } : null,
+    busy: () => jobs.size > 0 || Boolean(batchJob),
     observeRelease(state, { force = false } = {}) {
       const version = state?.candidate?.latestVersion;
       // A successful check with no newer host release also establishes current
       // module versions; otherwise the module section stays unchecked forever.
-      if (!(state?.candidate?.available || (state?.configured && state.phase === 'current')) || !/^\d+\.\d+\.\d+$/.test(version || '') || checking || (!force && checkedRelease === version)) return;
+      if (batchJob || !(state?.candidate?.available || (state?.configured && state.phase === 'current')) || !/^\d+\.\d+\.\d+$/.test(version || '') || checking || (!force && checkedRelease === version)) return;
       checkedRelease = version;
       checking = check(version).finally(() => { checking = null; });
     },
-    install({ moduleName, generationId, version }) {
+    install(target) {
+      if (service.busy()) throw packageError('CORE_MODULE_UPDATE_BUSY');
+      validate(target);
+      return installOne(target);
+    },
+    installBatch(targets) {
+      if (service.busy() || checking) throw packageError('CORE_MODULE_UPDATE_BUSY');
+      if (!Array.isArray(targets) || !targets.length || targets.length > Object.keys(MODULE_POLICY).length ||
+          new Set(targets.map(target => target?.moduleName)).size !== targets.length) throw packageError('CORE_MODULE_SELECTION_INVALID');
+      // Validate the whole reviewed selection before changing any module. Copy
+      // identities so callers cannot mutate the queue after dispatch.
+      targets.forEach(target => validate(target || {}));
+      const selection = targets.map(({ moduleName, generationId, version }) => ({ moduleName, generationId, version }));
+      batch = { status: 'installing', total: selection.length, completed: 0, failed: 0, currentModule: null };
+      selection.forEach(({ moduleName }) => rows.set(moduleName, { ...rows.get(moduleName), status: 'queued', available: false }));
+      batchJob = Promise.resolve().then(async () => {
+        for (const target of selection) {
+          batch.currentModule = target.moduleName;
+          installOne(target);
+          await jobs.get(target.moduleName);
+          if (rows.get(target.moduleName).status === 'completed') batch.completed++;
+          else batch.failed++;
+        }
+        batch.status = batch.failed ? 'completed_with_errors' : 'completed';
+        batch.currentModule = null;
+      }).finally(() => { batchJob = null; });
+      return service.batchSnapshot();
+    },
+    // The server owns the queue; closing the settings page does not cancel it.
+    async settled() { if (checking) await checking; if (batchJob) await batchJob; await Promise.all(jobs.values()); }
+  };
+  function installOne({ moduleName, generationId, version }) {
       const row = rows.get(moduleName);
-      if (jobs.has(moduleName)) throw packageError('CORE_MODULE_UPDATE_BUSY');
-      if (!row?.available || row.generationId !== generationId || row.latestVersion !== version) throw packageError('CORE_MODULE_REVIEW_CHANGED');
-      if (compareVersions(version, currentVersion(moduleName)) <= 0) throw packageError('CORE_MODULE_DOWNGRADE_DENIED');
       rows.set(moduleName, { ...row, available: false, status: 'installing' });
       const job = Promise.resolve().then(async () => {
         try {
@@ -74,10 +111,8 @@ function createCoreModuleUpdates({ rootDir, lifecycle, run = runModuleWorker, lo
       });
       jobs.set(moduleName, job);
       return { moduleName, status: 'installing', generationId };
-    },
-    // Internal completion signal for shutdown/tests; UI uses the existing status action.
-    async settled() { if (checking) await checking; await Promise.all(jobs.values()); }
-  };
+  }
+  return service;
 }
 
 module.exports = { createCoreModuleUpdates };

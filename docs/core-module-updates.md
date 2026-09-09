@@ -170,6 +170,19 @@ A successful current host release also reconciles module versions, so unchanged 
 
 System contains service and CMS module updates; Installed contains community module updates. The shared refresh checks both tabs regardless of selection.
 
+Available CMS and bundled widget packages have default-selected checkboxes. The
+shared selection spans both tabs and survives status polling; unchecked packages
+are omitted from the reviewed `targetModules` array sent through `coreUpdates.install`.
+The System host update retains its separate restart confirmation. Individual
+package changelogs and breaking-change notices remain available before confirmation.
+
+The existing updater validates the entire selection (unique names, exact reviewed
+generation/version) before starting a server-owned sequential queue. Status returns
+`moduleUpdateBatch` with total, completed, failed and currentModule, while each row
+retains its own failure code. A failed package does not stop later selected packages.
+Navigation does not cancel the queue; process restarts do not automatically replay
+unfinished jobs. Completed generation selections retain their existing persistence.
+
 Installed has stacked Modules and Widgets sections. Bundled widgets use signed individual update packages and their own changelogs. Community widgets retain the reviewed ZIP installation workflow and do not claim automatic update discovery.
 
 

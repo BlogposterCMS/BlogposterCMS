@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.20] - 2026-09-09
+
+- Select module and widget updates with default-selected checkboxes and a shared batch action; the existing updater continues the reviewed queue when leaving the page and reports individual failures.
+
 ## [0.10.19] - 2026-09-09
 
 - Keep omitted optional source examples from blocking individual Importer updates; preserve strict failures for broken installed importers.

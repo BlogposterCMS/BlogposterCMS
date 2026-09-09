@@ -6,6 +6,19 @@ const base = { jwt: 'verified', moduleName: 'updater', moduleType: 'core', decod
 let emitter;
 beforeEach(() => { jest.clearAllMocks(); emitter = new EventEmitter(); initializeCoreUpdateEvents(emitter); });
 function emit(event, payload) { return new Promise(resolve => emitter.emit(event, payload, (err, data) => resolve({ err, data }))); }
+
+test('batch uses the existing permission and host guards without dispatching a host install', async () => {
+  const modules = { busy: () => false, installBatch: jest.fn(() => ({ status: 'installing' })) };
+  emitter = new EventEmitter(); initializeCoreUpdateEvents(emitter, { coreModuleUpdates: modules });
+  const targetModules = [{ moduleName: 'translationManager', generationId: 'a'.repeat(64), version: '0.10.7' }];
+  service.getCoreUpdateStatus.mockResolvedValue({ configured: true, phase: 'available' });
+  expect((await emit('installCoreUpdate', { ...base, targetModules, decodedJWT: {} })).err.message).toContain('CORE_UPDATE_FORBIDDEN');
+  expect((await emit('installCoreUpdate', { ...base, targetModules, image: 'host' })).err.message).toBe('CORE_MODULE_SELECTION_INVALID');
+  expect(modules.installBatch).not.toHaveBeenCalled();
+  expect((await emit('installCoreUpdate', { ...base, targetModules })).err).toBeNull();
+  expect(modules.installBatch).toHaveBeenCalledWith(targetModules);
+  expect(service.requestHost).not.toHaveBeenCalled();
+});
 test.each(['getCoreUpdateStatus', 'checkCoreUpdate', 'installCoreUpdate'])('rejects unauthorized %s before host access', async event => {
   const { err } = await emit(event, { ...base, decodedJWT: { permissions: {} } });
   expect(err.message).toContain('CORE_UPDATE_FORBIDDEN'); expect(service.requestHost).not.toHaveBeenCalled();

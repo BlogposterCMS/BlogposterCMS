@@ -1,5 +1,33 @@
 /** @jest-environment jsdom */
 import { renderCoreUpdatePanel } from '../ui/widgets/plainspace/admin/settings/coreUpdatePanel';
+import { bpDialog } from '../ui/shared/dialogs/bpDialog';
+
+test('default selection spans modules and widgets and preserves opt-outs during polling', async () => {
+  const rows = ['contentEngine', 'widgetHtml'].map((moduleName, index) => ({ moduleName, kind: index ? 'widget' : 'module',
+    currentVersion: '1.0.0', latestVersion: '1.1.0', generationId: 'a'.repeat(64), status: 'available', available: true }));
+  const emit = emitterFor({ configured: true, phase: 'current', moduleUpdates: rows });
+  await renderCoreUpdatePanel(mount, emit, 'user');
+  const checkboxes = [...mount.querySelectorAll<HTMLInputElement>('.core-module-update-entry input')];
+  const master = mount.querySelector<HTMLInputElement>('.core-module-update-selection input')!;
+  const button = mount.querySelector<HTMLButtonElement>('.core-module-update-selection button')!;
+  expect(checkboxes.every(box => box.checked)).toBe(true);
+  expect(button.textContent).toBe('Update selected (2)');
+  checkboxes[1].click();
+  await jest.advanceTimersByTimeAsync(3000);
+  expect(checkboxes[1].checked).toBe(false);
+  expect(master.indeterminate).toBe(true);
+  expect(button.textContent).toBe('Update selected (1)');
+  const dialog = jest.spyOn(bpDialog, 'open').mockResolvedValue({ action: 'install' });
+  button.click();
+  for (let i = 0; i < 12; i++) await Promise.resolve();
+  const installCall = emit.mock.calls.find(call => (call as any)[1]?.action === 'install') as any;
+  expect(installCall[1].params).toEqual({ targetModules: [{ moduleName: 'contentEngine', version: '1.1.0', generationId: 'a'.repeat(64) }] });
+  dialog.mockRestore();
+  master.click();
+  expect(checkboxes.every(box => box.checked)).toBe(true);
+  master.click();
+  expect(button.disabled).toBe(true);
+});
 
 let mount: HTMLElement;
 beforeEach(() => { jest.useFakeTimers(); mount = document.createElement('section'); document.body.append(mount); });

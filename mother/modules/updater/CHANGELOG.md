@@ -1,5 +1,9 @@
 # updater changelog
 
+## [0.10.21] - 2026-09-09
+
+- Publish a compatible signed generation for selected batch updates and cold-start acceptance on the 0.10.20 baseline.
+
 ## [Unreleased]
 
 ## [0.10.20] - 2026-09-09

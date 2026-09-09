@@ -1,5 +1,9 @@
 # importer changelog
 
+## [0.10.21] - 2026-09-09
+
+- Publish a compatible signed generation for selected batch updates and cold-start acceptance on the 0.10.20 baseline.
+
 ## [0.10.19] - 2026-09-09
 
 - Keep omitted optional source examples from blocking individual Importer updates; preserve strict failures for broken installed importers.

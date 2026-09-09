@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.21] - 2026-09-09
+
+- Publish compatible signed packages for all 37 CMS modules and 31 bundled widgets for selection and batch-update acceptance on host 0.10.20.
+
 ## [0.10.20] - 2026-09-09
 
 - Select module and widget updates with default-selected checkboxes and a shared batch action; the existing updater continues the reviewed queue when leaving the page and reports individual failures.

@@ -138,3 +138,18 @@ test('both sections show up to date and the successful check time', async () => 
   }
   expect(mount.querySelectorAll('.core-module-update-row')).toHaveLength(0);
 });
+
+
+test('download cancellation is bound to the current job and disappears after the commit gate', async () => {
+  const state = { configured: true, phase: 'downloading', candidate, jobId: 'job-123', canCancel: true,
+    progress: { completedBytes: 5, totalBytes: 10, resumable: true } };
+  const emit = emitterFor(state);
+  await renderCoreUpdatePanel(mount, emit, 'user');
+  const button = [...mount.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Cancel download')!;
+  expect(button.hidden).toBe(false); expect(mount.textContent).toContain('50%');
+  button.click(); await Promise.resolve();
+  expect(emit.mock.calls.some((call: any) => call[1]?.params?.operation === 'cancel' && call[1]?.params?.jobId === 'job-123')).toBe(true);
+  state.phase = 'backing_up'; state.canCancel = false;
+  await jest.advanceTimersByTimeAsync(3000);
+  expect(button.hidden).toBe(true);
+});

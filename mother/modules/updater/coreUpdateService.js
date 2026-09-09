@@ -2,6 +2,17 @@
 
 const http = require('http');
 const { version } = require('../../../package.json');
+const fs = require('fs');
+const path = require('path');
+
+// The installed release carries its own notes, independent of host connectivity.
+function installedReleaseNotes() {
+  try {
+    const changelog = fs.readFileSync(path.join(__dirname, '../../../CHANGELOG.md'), 'utf8');
+    const section = changelog.split(/^## /m).find(part => part.startsWith(`[${version}]`));
+    return section ? { latestVersion: version, releaseNotes: section.slice(section.indexOf('\n') + 1).trim() } : undefined;
+  } catch { return undefined; }
+}
 
 // This socket is the only core-update transport. Never accept a caller URL/path.
 const SOCKET = '/run/blogposter-updater/control.sock';
@@ -20,7 +31,7 @@ function requestHost(action, target, { request = http.request, socketPath = SOCK
           const value = JSON.parse(data);
           if (res.statusCode >= 400) throw new Error(value.errorCode || 'CORE_UPDATE_HOST_FAILED');
           if (!value || value.configured !== true || typeof value.phase !== 'string') throw new Error('CORE_UPDATE_RESPONSE_INVALID');
-          resolve({ ...value, installedVersion: version });
+          resolve({ ...value, installedVersion: version, installedRelease: installedReleaseNotes() });
         } catch (err) { reject(err); }
       });
       res.on('error', reject);
@@ -35,7 +46,7 @@ async function getCoreUpdateStatus() {
   try { return await requestHost('status'); }
   catch (err) {
     // The whole CMS stays usable when hosting has not provisioned the adapter.
-    return { configured: false, installedVersion: version, phase: 'unavailable',
+    return { configured: false, installedVersion: version, installedRelease: installedReleaseNotes(), phase: 'unavailable',
       errorCode: err.code === 'ENOENT' ? 'CORE_UPDATE_HOST_NOT_CONFIGURED' : 'CORE_UPDATE_HOST_UNAVAILABLE' };
   }
 }

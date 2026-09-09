@@ -139,3 +139,19 @@ acceptance remains open until the corrected signed release is exercised.
 - A local fixture used the real queue and UI with simulated activation: after navigating away, two selected packages completed, one deliberate readiness failure remained visible, and the unselected widget remained available. This does not establish signed production package acceptance.
 - Actual local CMS Update Center checked in System and Installed tabs, including disabled disconnected state and a 390px viewport.
 - Production before this release remains host 0.10.17 with 61 selected 0.10.18 generations and unchanged PID 1103820. New selection UI and all-package cold-start production acceptance remain pending.
+
+### Paused after user feedback (2026-09-09)
+
+Host 0.10.20 is deployed and healthy (PID 1112664); the checkbox UI is visible in production. Signed release 0.10.21 is published, but no 0.10.21 module batch or final host deployment has been started. Complete 68-package activation and cold-start acceptance remain open. Package checks encountered time-dependent GitHub connectivity failures. The temporary container DNS overrides were removed and the original updater discovery configuration restored. Further testing/deployment is paused at the user's request; ask before extended network troubleshooting. See AGENTS.md.
+
+### Scheduled attempt (2026-09-09, 21:00 Europe/Zurich)
+
+The current published release 0.10.21 includes the completed main publication 56667e26. The initial bounded production connectivity check succeeded, but the subsequent Update Center package check ended with only 31 of 68 packages ready and RUNTIME_INTEGRITY_DOWNLOAD_TIMEOUT errors. No package batch or host apply was started. Production remains healthy on host 0.10.20 with unchanged PID 1112664. The official 0.10.21 image was transferred, reconstructed with layer/config verification and loaded for staging only; staging is not deployment. All-package activation and cold-start acceptance remain pending. The one-shot automation is paused; further retries or network work require Matteo's answer under AGENTS.md.
+
+### Manual full-release deployment and local audit (2026-09-09, 23:20 Europe/Zurich)
+
+After explicit user approval, one further package check again encountered RUNTIME_INTEGRITY_DOWNLOAD_TIMEOUT. The ordinary host apply then stopped at CORE_UPDATE_MANIFEST_BUNDLE_DOWNLOAD_FAILED before replacing the runtime. Official release metadata and detached bundles were copied over SSH. A temporary operator script sourced the installed updater and supplied only the three exact uploaded v0.10.21 metadata assets; signature, release identity, OCI provenance, backup, readiness and rollback logic remained unchanged. The previously transferred image passed runtime integrity (13,758 files, zero blocked modules). The normal apply completed with CORE_UPDATE_APPLIED for 0.10.21 and container health healthy (PID 1136580). This was a complete host release update, not a successful 68-package hot-update batch; that acceptance remains open.
+
+Browser: existing session rendered Home, populated Media and the Design Studio listing. Opening the actual Designer caused a login redirect, so authenticated canvas/deep-link acceptance remains unverified. No content was modified. The scheduled automation remains paused.
+
+Local root audit against release commit 962b9ff7: 464 modified/untracked paths; 344 already match the release. Remaining differences include stale shared-helper implementations, release/build metadata, local AGENTS guidance, notes and a genuinely unpublished updater download/cancel/resume implementation (including deploy/download-update-image.js and updater protocol 1.3.0). No matching download-descriptor producer or focused downloader tests were found in tools/tests during this audit; do not represent that work as complete or blindly deploy the old root checkout.

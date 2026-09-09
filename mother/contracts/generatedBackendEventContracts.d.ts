@@ -2394,9 +2394,11 @@ export interface InstallCoreUpdatePayload {
   "generationId"?: JsonValue;
   "image"?: JsonValue;
   "isExternalRequest"?: boolean;
+  "jobId"?: JsonValue;
   "jwt"?: null | string;
   "moduleName": string;
   "moduleType"?: null | string;
+  "operation"?: JsonValue;
   "skipJWT"?: boolean;
   "targetModuleName"?: JsonValue;
   "targetModules"?: JsonValue;

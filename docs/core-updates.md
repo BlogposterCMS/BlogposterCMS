@@ -241,3 +241,17 @@ Packaged manifests without their trust roots fail with
 those image-owned anchors. Source installations without packaged artifacts
 retain GitHub CLI's normal online TUF verification. Refresh anchors through a
 new externally verified release image, not writable runtime state.
+
+
+### Host download recovery (0.10.22)
+
+Updater 1.3.0 uses a Linux amd64 archive described by the signed release manifest.
+Verified 8 MiB chunks survive cancellation or a failed connection. Reinstalling
+that exact reviewed release reuses them after hash verification. The host retains
+its existing registry digest/provenance checks before stopping the writer.
+Cancel download closes the host commit gate and terminates only its transport
+process group. Cancellation is disabled once backup/installation is permitted.
+Install the attested host control assets, including download-update-image.js,
+before using this release. CMS modules and bundled widgets retain their separate
+update selection and changelogs. Manual transfer can supply official release
+assets; it does not bypass provenance, backup or readiness checks.

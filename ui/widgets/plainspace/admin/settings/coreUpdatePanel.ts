@@ -8,6 +8,8 @@ export interface CoreUpdateStatus {
   installedRelease?: { latestVersion: string; releaseNotes: string; releaseUrl?: string };
   phase: string;
   jobId?: string;
+  canCancel?: boolean;
+  progress?: { completedBytes: number; totalBytes: number; resumable: boolean };
   errorCode?: string;
   lastCheckedAt?: string;
   moduleUpdates?: CoreModuleUpdateRow[];
@@ -15,7 +17,7 @@ export interface CoreUpdateStatus {
   candidate?: { currentVersion: string; latestVersion: string; image: string; available: boolean; releaseNotes?: string; releaseUrl?: string };
 }
 
-const ACTIVE = new Set(['checking', 'installing', 'downloading', 'backing_up', 'restarting', 'verifying', 'rolling_back']);
+const ACTIVE = new Set(['checking', 'installing', 'downloading', 'cancelling', 'backing_up', 'restarting', 'verifying', 'rolling_back']);
 const LABELS: Record<string, string> = {
   idle: 'Ready to check for updates.', checking: 'Checking for updates…',
   current: 'Blogposter is up to date.', available: 'An update is available.',
@@ -24,6 +26,7 @@ const LABELS: Record<string, string> = {
   verifying: 'Verifying the updated installation…', completed: 'Update installed successfully.',
   rolling_back: 'Restoring the previous version…', rolled_back: 'The update failed. The previous version was restored.',
   recovery_failed: 'The update was interrupted. Your hosting administrator needs to check recovery.',
+  paused: 'Download paused. Verified parts will be reused.', cancelling: 'Stopping download…',
   failed: 'The update operation failed. Check again before retrying.'
 };
 
@@ -53,7 +56,8 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
   const hint = document.createElement('p'); hint.className = 'settings-hint'; hint.textContent = 'Installation includes a backup and a brief restart. You can leave this page and return to see progress.';
   const summary = document.createElement('div'); summary.className = 'core-update-summary';
   const identity = document.createElement('div'); identity.className = 'core-update-identity';
-  identity.append(version, status, checked); actions.append(check, install); summary.append(identity, actions);
+  const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'button ghost sm'; cancel.textContent = 'Cancel download'; cancel.hidden = true;
+  identity.append(version, status, checked); actions.append(check, install, cancel); summary.append(identity, actions);
   // Group related status and controls; empty messages must not reserve grid rows.
   documentPage.append(documentTitle, documentVersion, notes, release, install);
   documentArea.append(documentPage);
@@ -96,7 +100,7 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
     // A CMS restart temporarily removes the bridge; preserve known job progress.
     if (!next.configured && state && ACTIVE.has(state.phase)) {
       status.textContent = 'Reconnecting to Blogposter after restart…';
-      check.disabled = install.disabled = true;
+      check.disabled = install.disabled = cancel.disabled = true;
       drawModules(state.moduleUpdates || [], true);
       return;
     }
@@ -109,7 +113,7 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
     if (!next.configured) status.textContent = 'Update service unavailable';
     if (next.configured && next.phase === 'current') status.textContent = 'Up to date';
     checked.textContent = next.lastCheckedAt ? `Last checked: ${new Date(next.lastCheckedAt).toLocaleString()}` : 'Not checked yet.';
-    documentArea.hidden = !next.candidate?.available && !ACTIVE.has(next.phase);
+    documentArea.hidden = !next.candidate?.available && !ACTIVE.has(next.phase) && !next.installedRelease?.releaseNotes;
     const systemName = document.createElement('span'); systemName.textContent = 'Blogposter System';
     const systemVersions = document.createElement('span'); systemVersions.className = 'update-versions';
     systemVersions.textContent = `${next.installedVersion || next.candidate?.currentVersion || 'Unknown'} → ${next.candidate?.latestVersion || 'Pending'}`;
@@ -122,6 +126,10 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
     release.hidden = !/^https:\/\/github\.com\/BlogposterCMS\/BlogposterCMS\/releases\/tag\/v\d+\.\d+\.\d+$/.test(url);
     if (!release.hidden) release.href = url;
     check.disabled = submitting || confirming || !next.configured || ACTIVE.has(next.phase) || next.phase === 'recovery_failed' || next.moduleUpdateBatch?.status === 'installing' || Boolean(next.moduleUpdates?.some(row => ['queued', 'installing'].includes(row.status)));
+    install.textContent = next.phase === 'paused' ? 'Resume update' : 'Install update';
+    cancel.hidden = !next.canCancel;
+    cancel.disabled = !next.canCancel || !next.configured || submitting || confirming;
+    if (next.progress && ['downloading', 'paused'].includes(next.phase)) status.textContent += ` ${Math.floor(next.progress.completedBytes / next.progress.totalBytes * 100)}%`;
     install.hidden = !next.candidate?.available;
     install.disabled = check.disabled;
     drawModules(next.moduleUpdates || [], check.disabled, next.lastCheckedAt);
@@ -141,7 +149,7 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
   }
   async function run(action: 'check' | 'install', params: Record<string, unknown> = {}) {
     if (submitting) return;
-    submitting = true; check.disabled = install.disabled = true;
+    submitting = true; check.disabled = install.disabled = cancel.disabled = true;
     requestError.textContent = '';
     try {
       const result = await coreUpdateRequest(emit, jwt, action, params);
@@ -156,6 +164,7 @@ export async function renderCoreUpdatePanel(mount: HTMLElement, emit: Window['me
       timer = setTimeout(poll, 3000);
     }
   }
+  cancel.addEventListener('click', () => { if (state?.canCancel && state.jobId) void run('install', { operation: 'cancel', jobId: state.jobId }); });
   check.addEventListener('click', () => { void run('check'); });
   updateSelected.addEventListener('click', async () => {
     if (updateSelected.disabled) return;

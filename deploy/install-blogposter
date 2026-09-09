@@ -27,7 +27,7 @@ trap 'rm -rf -- "$stage"' EXIT
 chmod 0700 "$stage"
 # Copy to private root-owned staging before verifying, preventing source mutation
 # between signature verification and privileged execution.
-assets=(install-update-agent create-install-config.js update-agent.js blogposter-update
+assets=(download-update-image.js install-update-agent create-install-config.js update-agent.js blogposter-update
   blogposter-update-agent.service blogposter-updates.compose.yml blogposter.compose.yml blogposter-updater.conf.example)
 for asset in "${assets[@]}" blogposter-update.json blogposter-update.bundle.json update-control.bundle.json; do
   install -m 0600 "$asset_dir/$asset" "$stage/$asset"

@@ -7,7 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const ACTIVE = new Set(['checking', 'installing', 'downloading', 'backing_up', 'restarting', 'verifying', 'rolling_back']);
+const ACTIVE = new Set(['checking', 'installing', 'downloading', 'cancelling', 'backing_up', 'restarting', 'verifying', 'rolling_back']);
 const PHASES = Object.freeze({
   CORE_UPDATE_DOWNLOADING: 'downloading', CORE_UPDATE_BACKING_UP: 'backing_up',
   CORE_UPDATE_RESTARTING: 'restarting', CORE_UPDATE_VERIFYING: 'verifying',
@@ -24,21 +24,25 @@ function validTarget(value) {
     /^[a-z0-9.-]+\/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$/.test(value.image);
 }
 
-function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, now = () => new Date().toISOString() }) {
+function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, signalImpl = (pid, signal) => process.kill(-pid, signal), now = () => new Date().toISOString() }) {
   fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
   const statePath = path.join(stateDir, 'agent-state.json');
   let state = { configured: true, phase: 'idle', candidate: null, jobId: null, errorCode: null };
   if (fs.existsSync(statePath)) state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
   // Never replay a privileged operation after daemon/process interruption.
-  if (ACTIVE.has(state.phase)) state = { ...state, phase: 'recovery_failed', errorCode: 'CORE_UPDATE_AGENT_INTERRUPTED' };
+  if (ACTIVE.has(state.phase)) {
+    const safe = state.controlProtocol === 1 && state.commitGranted === false && state.target;
+    state = { ...state, phase: safe ? 'paused' : 'recovery_failed', canCancel: false, errorCode: 'CORE_UPDATE_AGENT_INTERRUPTED' };
+  }
   let busy = false;
+  let cancelRunning = null;
   function save(patch) {
     state = { ...state, ...patch, updatedAt: now() };
     const temp = `${statePath}.tmp`;
     fs.writeFileSync(temp, JSON.stringify(state), { mode: 0o600 });
     fs.renameSync(temp, statePath);
   }
-  save({});
+  save({ capabilities: { cancelDownload: true } });
 
   function start(operation, target) {
     if (state.phase === 'recovery_failed') throw updateError('CORE_UPDATE_RECOVERY_REQUIRED');
@@ -55,18 +59,27 @@ function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, now =
     }
     busy = true;
     const jobId = crypto.randomUUID();
-    save({ jobId, phase: operation === 'check' ? 'checking' : 'installing', errorCode: null, target: target || null });
+    const progress = operation === 'install' && state.target?.image === target.image && state.target?.version === target.version ? state.progress : null;
+    save({ jobId, phase: operation === 'check' ? 'checking' : 'installing', errorCode: null, target: target || null,
+      progress, controlProtocol: 1, commitGranted: false, canCancel: operation === 'install' });
     const args = [operation === 'check' ? 'check' : 'apply', '--config', config];
-    if (operation === 'install') args.push('--expected-version', target.version, '--expected-image', target.image);
+    if (operation === 'install') args.push('--expected-version', target.version, '--expected-image', target.image, '--controlled');
     let child;
     let snapshot = null;
     let lastError = null;
     let finished = false;
+    let cancelled = false;
+    let killTimer;
     function finish(exitCode) {
       if (finished) return;
       finished = true;
       busy = false;
-      if (operation === 'check' && exitCode === 0 && snapshot) {
+      cancelRunning = null;
+      clearTimeout(killTimer);
+      save({ canCancel: false });
+      if (cancelled) {
+        save({ phase: 'paused', errorCode: null });
+      } else if (operation === 'check' && exitCode === 0 && snapshot) {
         save({ phase: snapshot.available ? 'available' : 'current', candidate: snapshot, lastCheckedAt: now(), errorCode: null });
       } else if (operation === 'install' && exitCode === 0 && state.phase === 'completed') {
         save({ candidate: { ...state.candidate, available: false, currentVersion: target.version }, errorCode: null });
@@ -77,7 +90,30 @@ function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, now =
     }
     try {
       // Fixed executable and argument vector; no shell, caller paths or environment.
-      child = spawnImpl(updater, args, { stdio: ['ignore', 'pipe', 'pipe'], env: { PATH: process.env.PATH, HOME: process.env.HOME, LANG: 'C.UTF-8' } });
+      child = spawnImpl(updater, args, { detached: true, stdio: ['pipe', 'pipe', 'pipe'], env: { PATH: process.env.PATH, HOME: process.env.HOME, LANG: 'C.UTF-8' } });
+      // The owned process group contains transport children, never the CMS.
+      // The stdin gate below is the authority for entering live data changes.
+      const signalOwnedGroup = signal => {
+        if (!Number.isInteger(child.pid) || child.pid <= 0) throw updateError('CORE_UPDATE_CANCEL_FAILED');
+        try { signalImpl(child.pid, signal); } catch (err) { if (err.code !== 'ESRCH') throw updateError('CORE_UPDATE_CANCEL_FAILED'); }
+      };
+      cancelRunning = () => {
+        if (cancelled) return state;
+        if (!state.canCancel || state.commitGranted) throw updateError('CORE_UPDATE_CANCEL_TOO_LATE');
+        cancelled = true;
+        save({ phase: 'cancelling', canCancel: false });
+        // EOF also denies the commit gate if termination races the final chunk.
+        child.stdin.end();
+        signalOwnedGroup('SIGTERM');
+        killTimer = setTimeout(() => {
+          if (!finished) {
+            try { signalOwnedGroup('SIGKILL'); } catch { save({ errorCode: 'CORE_UPDATE_CANCEL_FAILED' }); }
+          }
+        }, 5000);
+        killTimer.unref?.();
+        return state;
+      };
+      child.stdin.on('error', () => { lastError = 'CORE_UPDATE_CONTROL_FAILED'; });
       function read(stream) {
         let pending = '';
         stream.on('data', data => {
@@ -99,7 +135,24 @@ function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, now =
                     releaseUrl: `https://github.com/BlogposterCMS/BlogposterCMS/releases/tag/v${value.latestVersion}` };
                 }
               } catch { lastError = 'CORE_UPDATE_SNAPSHOT_INVALID'; }
-            } else if (PHASES[code] && operation === 'install') save({ phase: PHASES[code] });
+            } else if (code === 'CORE_UPDATE_READY_TO_APPLY' && operation === 'install') {
+              if (!cancelled && !state.commitGranted) {
+                // Persist BEFORE granting permission, so a crash cannot replay.
+                save({ commitGranted: true, canCancel: false, phase: 'backing_up' });
+                child.stdin.end('continue\n');
+              }
+            } else if (code === 'CORE_UPDATE_DOWNLOAD_PROGRESS' && operation === 'install' && !cancelled && !state.commitGranted) {
+              try {
+                const p = JSON.parse(message);
+                if (p.resumable === true && [p.completedBytes, p.totalBytes, p.completedChunks, p.totalChunks].every(Number.isSafeInteger) &&
+                    p.totalBytes > 0 && p.totalBytes <= 2147483648 && p.completedBytes >= 0 && p.completedBytes <= p.totalBytes &&
+                    p.totalChunks > 0 && p.totalChunks <= 256 && p.completedChunks >= 0 && p.completedChunks <= p.totalChunks) {
+                  save({ progress: { completedBytes: p.completedBytes, totalBytes: p.totalBytes, completedChunks: p.completedChunks, totalChunks: p.totalChunks, resumable: true } });
+                }
+              } catch { lastError = 'CORE_UPDATE_PROGRESS_INVALID'; }
+            } else if (PHASES[code] && operation === 'install' && !cancelled) {
+              save({ phase: PHASES[code], canCancel: code === 'CORE_UPDATE_DOWNLOADING' && !state.commitGranted });
+            }
             if (/(FAILED|DENIED|MISMATCH|MISSING|INVALID|CHANGED|LOCKED|UNKNOWN|OLD)$/.test(code)) lastError = code;
           }
         });
@@ -113,7 +166,15 @@ function createUpdateAgent({ stateDir, updater, config, spawnImpl = spawn, now =
   return {
     status: () => state,
     check: () => start('check'),
-    install: target => start('install', target)
+    install: target => start('install', target),
+    cancel: input => {
+      if (!input || Array.isArray(input) || Object.keys(input).join(',') !== 'jobId' ||
+          typeof input.jobId !== 'string' || !/^[a-f0-9-]{36}$/.test(input.jobId)) throw updateError('CORE_UPDATE_CANCEL_INVALID');
+      if (input.jobId !== state.jobId) throw updateError('CORE_UPDATE_JOB_CHANGED');
+      if (state.phase === 'paused') return state;
+      if (!busy || !cancelRunning) throw updateError('CORE_UPDATE_CANCEL_TOO_LATE');
+      return cancelRunning();
+    }
   };
 }
 
@@ -122,7 +183,7 @@ function createControlServer(agent) {
     const send = (status, value) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); };
     try {
       if (req.method === 'GET' && req.url === '/status') return send(200, agent.status());
-      if (req.method !== 'POST' || !['/check', '/install'].includes(req.url)) return send(404, { errorCode: 'CORE_UPDATE_ACTION_DENIED' });
+      if (req.method !== 'POST' || !['/check', '/install', '/cancel'].includes(req.url)) return send(404, { errorCode: 'CORE_UPDATE_ACTION_DENIED' });
       let body = '';
       for await (const chunk of req) {
         body += chunk.toString();
@@ -130,7 +191,7 @@ function createControlServer(agent) {
       }
       const input = JSON.parse(body || '{}');
       if (req.url === '/check' && (Array.isArray(input) || !input || Object.keys(input).length)) throw updateError('CORE_UPDATE_REQUEST_INVALID');
-      send(202, req.url === '/check' ? agent.check() : agent.install(input));
+      send(202, req.url === '/check' ? agent.check() : req.url === '/cancel' ? agent.cancel(input) : agent.install(input));
     } catch (err) { send(400, { errorCode: err.code?.startsWith('CORE_UPDATE_') ? err.code : 'CORE_UPDATE_REQUEST_INVALID' }); }
   });
   server.requestTimeout = 10000;

@@ -193,10 +193,12 @@ jobs:
           # Retain the signed OCI proof as a public release asset so update
           # hosts verify provenance without storing a GitHub API credential.
           cp "${{ steps.image_attestation.outputs.bundle-path }}" release-assets/blogposter-image.bundle.json
-          node tools/create-core-update-manifest.js release-assets/blogposter-update.json
+          docker save "${{ steps.image.outputs.repository }}@${{ steps.build.outputs.digest }}" | gzip -1 > release-assets/blogposter-image-linux-amd64.tar.gz
+          BLOGPOSTER_IMAGE_ARCHIVE=release-assets/blogposter-image-linux-amd64.tar.gz node tools/create-core-update-manifest.js release-assets/blogposter-update.json
           cp deploy/blogposter-update release-assets/blogposter-update
           cp deploy/blogposter-updater.conf.example release-assets/blogposter-updater.conf.example
           cp deploy/update-agent.js release-assets/update-agent.js
+          cp deploy/download-update-image.js release-assets/download-update-image.js
           cp deploy/blogposter-update-agent.service release-assets/blogposter-update-agent.service
           cp deploy/blogposter-updates.compose.yml release-assets/blogposter-updates.compose.yml
           cp deploy/install-update-agent release-assets/install-update-agent
@@ -211,6 +213,7 @@ jobs:
         uses: actions/attest@v4
         with:
           subject-path: |
+            release-assets/download-update-image.js
             release-assets/update-agent.js
             release-assets/blogposter-update
             release-assets/blogposter-update-agent.service

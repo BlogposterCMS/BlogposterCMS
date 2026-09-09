@@ -1,5 +1,10 @@
 # updater changelog
 
+## [0.10.22] - 2026-09-09
+
+- Resume verified image-download chunks with visible progress; cancel only before the backup/install commit gate.
+- Include the portable image and downloader in signed release/installer assets; retain installed release notes without a network check.
+
 ## [0.10.21] - 2026-09-09
 
 - Publish a compatible signed generation for selected batch updates and cold-start acceptance on the 0.10.20 baseline.

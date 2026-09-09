@@ -11,7 +11,7 @@ for command in systemctl getent groupadd install gh flock docker; do
 done
 asset_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # Verify every executable/configuration asset before granting host privileges.
-for asset in update-agent.js blogposter-update blogposter-update-agent.service blogposter-updates.compose.yml; do
+for asset in download-update-image.js update-agent.js blogposter-update blogposter-update-agent.service blogposter-updates.compose.yml; do
   gh attestation verify "$asset_dir/$asset" --bundle "$asset_dir/update-control.bundle.json" \
     --repo BlogposterCMS/BlogposterCMS \
     --signer-workflow BlogposterCMS/BlogposterCMS/.github/workflows/release.yml >/dev/null
@@ -33,6 +33,7 @@ updater_gid="$(getent group blogposter-updater | cut -d: -f3)"
 [[ "$updater_gid" =~ ^[0-9]+$ ]] || { echo 'CORE_UPDATE_SETUP_GROUP_INVALID'; exit 1; }
 install -d -m 0755 /opt/blogposter/bin
 install -m 0755 "$asset_dir/blogposter-update" /opt/blogposter/bin/blogposter-update
+install -m 0644 "$asset_dir/download-update-image.js" /opt/blogposter/bin/download-update-image.js
 install -m 0644 "$asset_dir/update-agent.js" /opt/blogposter/bin/update-agent.js
 install -m 0644 "$asset_dir/blogposter-updates.compose.yml" /opt/blogposter/blogposter-updates.compose.yml
 install -m 0644 "$asset_dir/blogposter-update-agent.service" /etc/systemd/system/blogposter-update-agent.service

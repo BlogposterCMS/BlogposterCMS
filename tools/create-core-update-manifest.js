@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createDownloadDescriptor } = require('./create-update-download-descriptor');
 
 function fail(code, message) {
   const err = new Error(`[${code}] ${message}`);
@@ -92,6 +93,7 @@ function main() {
     releaseNotes: section ? section.slice(section.indexOf('\n') + 1).trim() : '',
     policy: readJson(path.join(rootDir, 'deploy', 'update-policy.json'), 'CORE_UPDATE_POLICY_READ_FAILED')
   });
+  if (process.env.BLOGPOSTER_IMAGE_ARCHIVE) manifest.image.download = createDownloadDescriptor(process.env.BLOGPOSTER_IMAGE_ARCHIVE, manifest.version);
   fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });
   console.log(`[CORE_UPDATE_MANIFEST_CREATED] ${outputPath}`);
 }

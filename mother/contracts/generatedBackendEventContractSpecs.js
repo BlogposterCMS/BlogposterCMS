@@ -14703,6 +14703,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
         "isExternalRequest": {
           "type": "boolean"
         },
+        "jobId": {
+          "type": "json"
+        },
         "jwt": {
           "anyOf": [
             {
@@ -14728,6 +14731,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
               "minLength": 1
             }
           ]
+        },
+        "operation": {
+          "type": "json"
         },
         "skipJWT": {
           "type": "boolean"

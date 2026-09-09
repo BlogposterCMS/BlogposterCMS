@@ -32,6 +32,13 @@ function initializeCoreUpdateEvents(emitter, { coreModuleUpdates } = {}) {
     let ownsDispatch = false;
     try {
       assertCoreUpdateActor(payload);
+      // Cancellation retains the existing install permission and exact job identity.
+      if (payload.operation === 'cancel') {
+        if (['targetModules', 'targetModuleName', 'image', 'version', 'generationId'].some(key => payload[key] !== undefined)) throw new Error('CORE_UPDATE_CANCEL_INVALID');
+        callback(null, await requestHost('cancel', { jobId: payload.jobId }));
+        return;
+      }
+      if (payload.operation !== undefined) throw new Error('CORE_UPDATE_ACTION_DENIED');
       if (dispatchingInstall || coreModuleUpdates?.busy()) throw new Error('CORE_UPDATE_BUSY');
       dispatchingInstall = true;
       ownsDispatch = true;

@@ -427,3 +427,13 @@ URLs. Videos are direct files rather than arbitrary iframe embeds. This is an
 editing boundary, not a replacement for the existing server/public sanitizer:
 Pages update permissions and public HTML sanitization remain authoritative.
 Stable HTML block IDs are content identifiers, never authorization credentials.
+
+
+### Resumable host image downloads
+
+The signed manifest binds archive size, full SHA-256 and ordered chunk hashes.
+Only fixed official release URLs and approved HTTPS asset redirects are accepted.
+Private host cache files reject links and are rehashed before import. Cancellation
+uses the existing settings.core.edit boundary and exact host job id; the host
+persists its commit grant before permitting any live data change. An interrupted
+post-grant job still requires recovery rather than automatic replay.

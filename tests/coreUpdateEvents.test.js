@@ -53,3 +53,12 @@ test('running module update prevents a simultaneous full host update', async () 
   expect((await emit('installCoreUpdate', { ...base, version: '0.10.7', image: 'reviewed' })).err.message).toBe('CORE_UPDATE_BUSY');
   expect(service.requestHost).not.toHaveBeenCalled();
 });
+
+
+test('cancel uses install permission and forwards only the exact job identity', async () => {
+  const input = { ...base, operation: 'cancel', jobId: 'reviewed-job' };
+  expect((await emit('installCoreUpdate', { ...input, decodedJWT: {} })).err.message).toContain('CORE_UPDATE_FORBIDDEN');
+  expect((await emit('installCoreUpdate', { ...input, image: 'mixed' })).err.message).toBe('CORE_UPDATE_CANCEL_INVALID');
+  await emit('installCoreUpdate', input);
+  expect(service.requestHost).toHaveBeenCalledWith('cancel', { jobId: 'reviewed-job' });
+});

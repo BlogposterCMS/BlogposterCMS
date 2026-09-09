@@ -13,7 +13,7 @@ beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-update-test-'));
   children = [];
   spawnImpl = jest.fn(() => {
-    const child = new EventEmitter(); child.stdout = new PassThrough(); child.stderr = new PassThrough(); children.push(child); return child;
+    const child = new EventEmitter(); child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough(); children.push(child); return child;
   });
   agent = createUpdateAgent({ stateDir: dir, updater: '/fixed/updater', config: '/fixed/config', spawnImpl });
 });
@@ -44,7 +44,7 @@ test('install binds reviewed version and digest; double click does not spawn twi
   expect(agent.install({ version: '0.9.5', image }).jobId).toBe(first.jobId);
   expect(spawnImpl).toHaveBeenCalledTimes(2);
   expect(spawnImpl.mock.calls[1][0]).toBe('/fixed/updater');
-  expect(spawnImpl.mock.calls[1][1]).toEqual(['apply', '--config', '/fixed/config', '--expected-version', '0.9.5', '--expected-image', image]);
+  expect(spawnImpl.mock.calls[1][1]).toEqual(['apply', '--config', '/fixed/config', '--expected-version', '0.9.5', '--expected-image', image, '--controlled']);
   expect(spawnImpl.mock.calls[1][2].shell).toBeUndefined();
   children[1].stdout.write('[CORE_UPDATE_RESTARTING] restarting\n');
   expect(agent.status().phase).toBe('restarting');
@@ -69,10 +69,18 @@ test('rollback completion is not confused with success or recovery failure', () 
 
 test('interrupted host job persists and cannot be silently replayed or reset by check', () => {
   candidate(); agent.install({ version: '0.9.5', image });
+  children[1].stdout.write('[CORE_UPDATE_READY_TO_APPLY] verified\n');
   const reopened = createUpdateAgent({ stateDir: dir, updater: '/fixed/updater', config: '/fixed/config', spawnImpl });
   expect(reopened.status()).toMatchObject({ phase: 'recovery_failed', errorCode: 'CORE_UPDATE_AGENT_INTERRUPTED' });
   expect(() => reopened.check()).toThrow('CORE_UPDATE_RECOVERY_REQUIRED');
   expect(() => reopened.install({ version: '0.9.5', image })).toThrow('CORE_UPDATE_RECOVERY_REQUIRED');
+});
+
+test('interruption before the commit gate remains paused without replaying a job', () => {
+  candidate(); agent.install({ version: '0.9.5', image });
+  const reopened = createUpdateAgent({ stateDir: dir, updater: '/fixed/updater', config: '/fixed/config', spawnImpl });
+  expect(reopened.status()).toMatchObject({ phase: 'paused', errorCode: 'CORE_UPDATE_AGENT_INTERRUPTED' });
+  expect(spawnImpl).toHaveBeenCalledTimes(2);
 });
 
 test('control API denies unknown commands and extra request fields', async () => {
@@ -92,4 +100,26 @@ test('control API denies unknown commands and extra request fields', async () =>
     expect(await call('/install', { version: '0.9.5', image })).toMatchObject({ errorCode: 'CORE_UPDATE_TARGET_CHANGED' });
     expect(spawnImpl).not.toHaveBeenCalled();
   } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
+
+test('cancellation denies the commit gate and preserves the reviewed target for resume', () => {
+  const signalImpl = jest.fn();
+  agent = createUpdateAgent({ stateDir: dir, updater: '/fixed/updater', config: '/fixed/config', spawnImpl, signalImpl });
+  agent.check();
+  children[0].stdout.write(`[CORE_UPDATE_SNAPSHOT] ${JSON.stringify({ currentVersion: '0.9.4', latestVersion: '0.9.5', image, available: true })}\n`);
+  children[0].emit('close', 0);
+  const job = agent.install({ version: '0.9.5', image }); children[1].pid = 123;
+  expect(() => agent.cancel({ jobId: '00000000-0000-0000-0000-000000000000' })).toThrow('CORE_UPDATE_JOB_CHANGED');
+  agent.cancel({ jobId: job.jobId });
+  children[1].stdout.write('[CORE_UPDATE_READY_TO_APPLY] ready\n');
+  expect(agent.status().commitGranted).toBe(false);
+  expect(signalImpl).toHaveBeenCalledWith(123, 'SIGTERM');
+  children[1].emit('close', 1);
+  expect(agent.status().phase).toBe('paused');
+  agent.install({ version: '0.9.5', image });
+  children[2].stdout.write('[CORE_UPDATE_READY_TO_APPLY] ready\n');
+  expect(agent.status()).toMatchObject({ commitGranted: true, canCancel: false });
+  expect(() => agent.cancel({ jobId: agent.status().jobId })).toThrow('CORE_UPDATE_CANCEL_TOO_LATE');
+  children[2].emit('close', 1);
 });

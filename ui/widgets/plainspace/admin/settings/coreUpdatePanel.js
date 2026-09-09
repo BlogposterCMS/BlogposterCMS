@@ -1,7 +1,7 @@
 import { emitRuntimeAdmin } from '../../../../shared/api-client/runtimeFacade.js';
 import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
 import { createCoreModuleUpdateList } from './coreModuleUpdateList.js';
-const ACTIVE = new Set(['checking', 'installing', 'downloading', 'backing_up', 'restarting', 'verifying', 'rolling_back']);
+const ACTIVE = new Set(['checking', 'installing', 'downloading', 'cancelling', 'backing_up', 'restarting', 'verifying', 'rolling_back']);
 const LABELS = {
     idle: 'Ready to check for updates.', checking: 'Checking for updates…',
     current: 'Blogposter is up to date.', available: 'An update is available.',
@@ -10,6 +10,7 @@ const LABELS = {
     verifying: 'Verifying the updated installation…', completed: 'Update installed successfully.',
     rolling_back: 'Restoring the previous version…', rolled_back: 'The update failed. The previous version was restored.',
     recovery_failed: 'The update was interrupted. Your hosting administrator needs to check recovery.',
+    paused: 'Download paused. Verified parts will be reused.', cancelling: 'Stopping download…',
     failed: 'The update operation failed. Check again before retrying.'
 };
 export function coreUpdateRequest(emit, jwt, action, params = {}) {
@@ -64,8 +65,13 @@ export async function renderCoreUpdatePanel(mount, emit, jwt, externalCheck = fa
     summary.className = 'core-update-summary';
     const identity = document.createElement('div');
     identity.className = 'core-update-identity';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'button ghost sm';
+    cancel.textContent = 'Cancel download';
+    cancel.hidden = true;
     identity.append(version, status, checked);
-    actions.append(check, install);
+    actions.append(check, install, cancel);
     summary.append(identity, actions);
     // Group related status and controls; empty messages must not reserve grid rows.
     documentPage.append(documentTitle, documentVersion, notes, release, install);
@@ -123,7 +129,7 @@ export async function renderCoreUpdatePanel(mount, emit, jwt, externalCheck = fa
         // A CMS restart temporarily removes the bridge; preserve known job progress.
         if (!next.configured && state && ACTIVE.has(state.phase)) {
             status.textContent = 'Reconnecting to Blogposter after restart…';
-            check.disabled = install.disabled = true;
+            check.disabled = install.disabled = cancel.disabled = true;
             drawModules(state.moduleUpdates || [], true);
             return;
         }
@@ -138,7 +144,7 @@ export async function renderCoreUpdatePanel(mount, emit, jwt, externalCheck = fa
         if (next.configured && next.phase === 'current')
             status.textContent = 'Up to date';
         checked.textContent = next.lastCheckedAt ? `Last checked: ${new Date(next.lastCheckedAt).toLocaleString()}` : 'Not checked yet.';
-        documentArea.hidden = !next.candidate?.available && !ACTIVE.has(next.phase);
+        documentArea.hidden = !next.candidate?.available && !ACTIVE.has(next.phase) && !next.installedRelease?.releaseNotes;
         const systemName = document.createElement('span');
         systemName.textContent = 'Blogposter System';
         const systemVersions = document.createElement('span');
@@ -154,6 +160,11 @@ export async function renderCoreUpdatePanel(mount, emit, jwt, externalCheck = fa
         if (!release.hidden)
             release.href = url;
         check.disabled = submitting || confirming || !next.configured || ACTIVE.has(next.phase) || next.phase === 'recovery_failed' || next.moduleUpdateBatch?.status === 'installing' || Boolean(next.moduleUpdates?.some(row => ['queued', 'installing'].includes(row.status)));
+        install.textContent = next.phase === 'paused' ? 'Resume update' : 'Install update';
+        cancel.hidden = !next.canCancel;
+        cancel.disabled = !next.canCancel || !next.configured || submitting || confirming;
+        if (next.progress && ['downloading', 'paused'].includes(next.phase))
+            status.textContent += ` ${Math.floor(next.progress.completedBytes / next.progress.totalBytes * 100)}%`;
         install.hidden = !next.candidate?.available;
         install.disabled = check.disabled;
         drawModules(next.moduleUpdates || [], check.disabled, next.lastCheckedAt);
@@ -179,7 +190,7 @@ export async function renderCoreUpdatePanel(mount, emit, jwt, externalCheck = fa
         if (submitting)
             return;
         submitting = true;
-        check.disabled = install.disabled = true;
+        check.disabled = install.disabled = cancel.disabled = true;
         requestError.textContent = '';
         try {
             const result = await coreUpdateRequest(emit, jwt, action, params);
@@ -199,6 +210,8 @@ export async function renderCoreUpdatePanel(mount, emit, jwt, externalCheck = fa
             timer = setTimeout(poll, 3000);
         }
     }
+    cancel.addEventListener('click', () => { if (state?.canCancel && state.jobId)
+        void run('install', { operation: 'cancel', jobId: state.jobId }); });
     check.addEventListener('click', () => { void run('check'); });
     updateSelected.addEventListener('click', async () => {
         if (updateSelected.disabled)

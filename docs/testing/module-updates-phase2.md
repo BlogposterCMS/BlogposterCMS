@@ -52,3 +52,8 @@ Status: implemented locally; expanded production acceptance remains pending.
 
 The local fixture substitutes transport and attestation verification. It is not
 proof of production signatures and introduces no production bypass flag.
+
+The 0.10.10 workflow was cancelled before publication when final review found that
+widget changelog edits incorrectly changed host compatibility. A regression now
+proves notes-only edits remain compatible while shared-code edits do not. The
+corrected signed baseline is 0.10.11; the earlier tag remains immutable.

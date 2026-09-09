@@ -71,7 +71,11 @@ function supportedModule(moduleName) {
 function hotFile(filename) {
   return Object.keys(MODULE_POLICY).some(name => {
     const prefix = `mother/modules/${name}/`;
-    return ownsBrowserFile(name, filename) || (filename.startsWith(prefix) && !isHostFile(name, filename.slice(prefix.length)));
+    const policy = MODULE_POLICY[name];
+    // Widget notes are signed package metadata, not a shared runtime contract.
+    // Editing only a widget changelog must not force every module to update its host.
+    const widgetNotes = policy.kind === 'widget' && filename === policy.entry.replace(/\.js$/, '.CHANGELOG.md');
+    return widgetNotes || ownsBrowserFile(name, filename) || (filename.startsWith(prefix) && !isHostFile(name, filename.slice(prefix.length)));
   });
 }
 

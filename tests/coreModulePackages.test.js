@@ -10,6 +10,20 @@ beforeEach(() => { fixture = createFixture(); });
 afterEach(() => { fs.rmSync(fixture.directory, { recursive: true, force: true }); });
 function verify() { return fixture.verify({ rootDir: fixture.rootDir, generationDir: fixture.generationDir, moduleName: 'translationManager' }); }
 
+test('widget changelog edits preserve host compatibility while shared code edits do not', () => {
+  const { hostFingerprint } = require('../mother/modules/updater/coreModulePackages');
+  const policy = Object.values(require('../mother/modules/updater/coreWidgetPackages').WIDGET_POLICY)[0];
+  const files = [
+    {path: policy.entry.replace(/\.js$/, '.CHANGELOG.md'),size:1,sha256:'a'.repeat(64)},
+    {path:'ui/shared/example.js',size:1,sha256:'b'.repeat(64)}
+  ];
+  const before = hostFingerprint(files, {name:'fixture',version:'1.0.0'});
+  files[0].sha256 = 'c'.repeat(64);
+  expect(hostFingerprint(files, {name:'fixture',version:'1.0.1'})).toBe(before);
+  files[1].sha256 = 'd'.repeat(64);
+  expect(hostFingerprint(files, {name:'fixture',version:'1.0.1'})).not.toBe(before);
+});
+
 test('database packages exclude mutable installation credentials and placeholder data', () => {
   const directory = path.join(fixture.source, 'mother/modules/databaseManager');
   fs.mkdirSync(path.join(directory, 'placeholders'), { recursive: true });

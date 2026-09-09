@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-## [0.10.10] - 2026-09-09
+## [0.10.11] - 2026-09-09
+
+- Keep widget-specific changelog edits compatible with independent updates.
 
 - Enable individual, verified updates for all 36 CMS modules and the 31 bundled
   widget entries in the existing Update Center. Preserve active sessions,

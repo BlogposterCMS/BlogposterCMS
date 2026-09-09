@@ -4,6 +4,10 @@ Changes for this module are maintained here. See the root changelog for shared h
 
 ## [Unreleased]
 
+## [0.10.13] - 2026-09-09
+
+- Enable signed individual agentAccess updates with retained host state; temporarily unavailable authentication dependencies preserve active sessions.
+
 ## [0.10.12] - 2026-09-09
 
 - Refresh the verified agentAccess generation independently while preserving shared services and data schemas.

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.13] - 2026-09-09
+
+- Enable signed individual Logo updates with a dedicated changelog and persistent browser-generation selection.
+
 ## [0.10.12] - 2026-09-09
 
 - Select the verified Logo browser generation independently; new page loads adopt it without restarting the CMS.

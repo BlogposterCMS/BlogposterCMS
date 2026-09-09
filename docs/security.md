@@ -2,6 +2,13 @@
 
 ## Signed core module updates
 
+Authentication routes distinguish CORE_MODULE_UPDATING from invalid credentials.
+A paused dependency returns HTTP 503 with Retry-After and retains the existing
+session cookie; no request gains authorization while validation is unavailable.
+Batch responses preserve per-item outcomes so completed mutations are not retried
+as a whole. Invalid tokens still follow the existing rejection/clearing path.
+
+
 Media routes retain their existing authentication, permission and CSRF middleware
 inside a generation-owned router. A stable host mount selects the active router;
 the updater never removes or rewrites the host's Express stack. Matching new

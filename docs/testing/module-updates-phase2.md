@@ -57,3 +57,22 @@ The 0.10.10 workflow was cancelled before publication when final review found th
 widget changelog edits incorrectly changed host compatibility. A regression now
 proves notes-only edits remain compatible while shared-code edits do not. The
 corrected signed baseline is 0.10.11; the earlier tag remains immutable.
+
+## Session continuity follow-up
+
+A browser test of User Management exposed an existing HTTP error path that cleared
+admin cookies when token validation depended on a paused module. HTTP adapters now
+return retryable availability responses and keep cookies; invalid-token handling
+remains fail-closed. Eleven HTTP regressions cover shell/login, installation-status
+queries, individual/batch facade calls, recovery and actual invalid credentials.
+
+The full curated suite passed 373 suites / 2075 tests (12 skipped). Later focused
+HTTP checks cover the added installation-status cases. Local automatic login was
+disabled, User Management was held before activation, and browser page requests
+were exercised during the pause. After release of the hold, a new Home tab rendered
+using the existing session without a login; selected update PID was 23200.
+
+The 0.10.11 and 0.10.12 workflows were cancelled before production deployment to
+include this correction. Version 0.10.13 is the prepared baseline. Publication is
+coordinated with the agent publishing other completed work; expanded production
+acceptance remains pending.

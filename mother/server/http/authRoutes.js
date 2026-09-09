@@ -1,5 +1,7 @@
 'use strict';
 
+const { respondIfModuleUpdating } = require('../../utils/coreModuleAvailability');
+
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
@@ -104,6 +106,7 @@ function createAuthRoutes({
       console.log(`[LOGIN ROUTE] User "${username}" authenticated successfully.`);
       return res.json({ success: true });
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.warn('[LOGIN ROUTE] Login failed =>', err.message);
       return res.status(401).json({ success: false, error: err.message });
     }
@@ -133,6 +136,7 @@ function createAuthRoutes({
           await validateAdminToken(adminJwt);
           return res.redirect('/admin/home');
         } catch (err) {
+          if (respondIfModuleUpdating(res, err)) return;
           console.warn('[GET /admin/login] Invalid admin token =>', err.message);
           res.clearCookie('admin_jwt', {
             path: '/',
@@ -157,6 +161,7 @@ function createAuthRoutes({
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
       res.send(html);
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.error('[GET /admin/login] Error:', err);
       res.status(500).send('Server misconfiguration');
     }

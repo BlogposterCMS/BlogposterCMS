@@ -1,5 +1,7 @@
 'use strict';
 
+const { isModuleUpdating, respondIfModuleUpdating } = require('../../utils/coreModuleAvailability');
+
 const express = require('express');
 const {
   explainExternalEventRejection,
@@ -28,6 +30,7 @@ function httpBoundaryError(code, message, status, eventName = null, details = nu
 }
 
 function respondWithEventError(res, error, contract) {
+  if (respondIfModuleUpdating(res, error)) return;
   const status = Number(error?.status) || 500;
   return res.status(status).json(serializeEventContractError(error, contract));
 }
@@ -98,6 +101,7 @@ function createMeltdownRouter({
         targetPayload.decodedJWT = decoded;
         targetPayload.jwt = jwt;
       } catch (err) {
+        if (respondIfModuleUpdating(res, err)) return;
         console.warn('[POST /api/meltdown] Invalid admin token =>', err.message);
         res.clearCookie('admin_jwt', {
           path: '/',
@@ -220,6 +224,12 @@ function createMeltdownRouter({
           targetPayload.decodedJWT = decoded;
           targetPayload.jwt = jwt;
         } catch (err) {
+          if (isModuleUpdating(err)) {
+            res.setHeader('Retry-After', '1');
+            results.push({ eventName: responseEventName, ...serializeEventContractError(
+              httpBoundaryError('CORE_MODULE_UPDATING', 'A module is being updated. Please retry shortly.', 503, responseEventName), contract) });
+            continue;
+          }
           console.warn('[POST /api/meltdown/batch] Invalid admin token =>', err.message);
           results.push({
             eventName: responseEventName,

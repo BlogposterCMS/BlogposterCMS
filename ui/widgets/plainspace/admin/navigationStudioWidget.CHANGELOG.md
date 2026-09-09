@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.13] - 2026-09-09
+
+- Enable signed individual Navigation Studio updates with a dedicated changelog and persistent browser-generation selection.
+
 ## [0.10.12] - 2026-09-09
 
 - Select the verified Navigation Studio browser generation independently; new page loads adopt it without restarting the CMS.

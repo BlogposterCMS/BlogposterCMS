@@ -1,5 +1,7 @@
 'use strict';
 
+const { respondIfModuleUpdating } = require('../../utils/coreModuleAvailability');
+
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
@@ -163,6 +165,7 @@ function createAdminShellRoutes({
       }
       return res.redirect('/admin/login');
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.error('[GET /admin] Error:', err);
       return res.redirect('/admin/login');
     }
@@ -208,6 +211,7 @@ function createAdminShellRoutes({
           res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
           return res.send(html);
         } catch (err) {
+          if (respondIfModuleUpdating(res, err)) return;
           console.warn('[GET /admin/home] Invalid admin token =>', err.message);
           res.clearCookie('admin_jwt', {
             path: '/',
@@ -232,6 +236,7 @@ function createAdminShellRoutes({
       html = injectDevBanner(html);
       return res.send(html);
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.error('[ADMIN /home] Error:', err);
       const devAutoLoginAllowed = await isDevAutoLoginAllowed();
       let html = fs.readFileSync(path.join(publicPath, 'login.html'), 'utf8');
@@ -269,6 +274,7 @@ function createAdminShellRoutes({
     try {
       decoded = await validateAdminToken(adminJwt);
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.warn('[GET /admin/app] Invalid admin token =>', err.message);
       res.clearCookie('admin_jwt', {
         path: '/',
@@ -286,6 +292,7 @@ function createAdminShellRoutes({
     try {
       launchInfo = await dispatchAppLoaderEvent(adminJwt, decoded, BACKEND_EVENTS.GET_APP_LAUNCH_INFO, { appName });
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.warn('[GET /admin/app] launch info failed =>', err.message);
       if (/Forbidden/i.test(err.message)) return res.status(403).send('Forbidden');
       if (/Unknown app|Missing app\.json|Invalid app name/i.test(err.message)) {
@@ -337,6 +344,7 @@ function createAdminShellRoutes({
         const dv = parseInt(design?.design?.version, 10);
         if (!Number.isNaN(dv)) designVersion = String(dv);
       } catch (err) {
+        if (respondIfModuleUpdating(res, err)) return;
         console.warn('[GET /admin/app] failed to fetch design metadata =>', err.message);
       }
     } else if (idParam) {
@@ -352,6 +360,7 @@ function createAdminShellRoutes({
         const origin = new URL(`${req.protocol}://${requestHost}`).origin;
         if (!configuredOrigins.includes(origin)) configuredOrigins.push(origin);
       } catch (err) {
+        if (respondIfModuleUpdating(res, err)) return;
         console.warn('[GET /admin/app] Failed to derive request origin =>', err.message);
       }
     }
@@ -407,6 +416,7 @@ function createAdminShellRoutes({
     try {
       await validateAdminToken(adminJwt);
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.warn('[GET /admin/*] Invalid admin token =>', err.message);
       res.clearCookie('admin_jwt', {
         path: '/',
@@ -461,6 +471,7 @@ function createAdminShellRoutes({
       res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
       res.send(html);
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.error('[ADMIN /admin/*] Error:', err);
       next(err);
     }

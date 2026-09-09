@@ -1,5 +1,7 @@
 'use strict';
 
+const { respondIfModuleUpdating } = require('../../utils/coreModuleAvailability');
+
 const express = require('express');
 const { hasPermission } = require('../../modules/userManagement/permissionUtils');
 const {
@@ -27,7 +29,8 @@ function createAppManagementRoutes({
     let decoded;
     try {
       decoded = await validateAdminToken(adminJwt);
-    } catch {
+    } catch (error) {
+      if (respondIfModuleUpdating(res, error)) return;
       return res.status(401).send('Unauthorized');
     }
     const allowed = hasPermission(decoded, 'builder.manage') ||
@@ -49,6 +52,7 @@ function createAppManagementRoutes({
         pagesSeeded: ADMIN_PAGES.length
       });
     } catch (err) {
+      if (respondIfModuleUpdating(res, err)) return;
       console.error('[RESEED] Failed:', err);
       return res.status(500).json({ success: false, error: err.message });
     }

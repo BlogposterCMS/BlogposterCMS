@@ -1,5 +1,7 @@
 'use strict';
 
+const { respondIfModuleUpdating } = require('../../utils/coreModuleAvailability');
+
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
@@ -310,7 +312,8 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
       req.agentDecodedJWT = await validateAdminToken(jwt);
       req.agentMotherEmitter = motherEmitter;
       next();
-    } catch {
+    } catch (error) {
+      if (respondIfModuleUpdating(res, error)) return;
       res.status(401).json({ error: 'Invalid token' });
     }
   });

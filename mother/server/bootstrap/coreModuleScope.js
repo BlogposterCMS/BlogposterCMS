@@ -3,7 +3,8 @@
 const { AsyncLocalStorage } = require('node:async_hooks');
 
 function lifecycleError(code, moduleName) {
-  return Object.assign(new Error(`${code}: ${moduleName}`), { code, moduleName });
+  return Object.assign(new Error(`${code}: ${moduleName}`), { code, moduleName,
+    ...(code === 'CORE_MODULE_UPDATING' ? { status: 503 } : {}) });
 }
 
 /** Own registrations without replacing the authenticated MotherEmitter. */

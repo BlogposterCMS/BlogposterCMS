@@ -132,7 +132,8 @@ test('runtime public search API forces published public results', async () => {
         title: 'Private Post',
         status: 'draft',
         visibility: 'private'
-      }
+      },
+      ...['/admin/content/pages','/%61dmin/settings','/api/private','/ADMIN/home'].map((url,index) => ({ id: 'system-'+index, title:'System page', status:'published', visibility:'public', url }))
     ]);
   });
 
@@ -154,6 +155,7 @@ test('runtime public search API forces published public results', async () => {
     assert.strictEqual(payloadSeen.limit, 3);
     assert.strictEqual(payloadSeen.offset, 1);
     assert.strictEqual(result.data.results.length, 1);
+    assert.strictEqual(result.data.pagination.count, 1);
     assert.strictEqual(result.data.results[0].id, 'doc-live');
     assert.strictEqual(result.data.results[0].meta.publicLabel, 'visible');
     assert.strictEqual(result.data.results[0].meta.secretNote, undefined);

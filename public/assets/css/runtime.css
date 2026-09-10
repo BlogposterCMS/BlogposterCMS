@@ -27,6 +27,7 @@ html[data-designer-live-preview='true'] body::-webkit-scrollbar {
   min-width: 0;
 }
 
+
 .runtime-design-document,
 .runtime-design-document > .runtime-layout-container {
   width: 100%;
@@ -116,4 +117,9 @@ html[data-designer-live-preview='true'] body::-webkit-scrollbar {
   position: sticky !important;
   top: 0 !important;
   align-self: start;
+}
+
+/* Explicit flow display rules must not override a saved visibility condition. */
+.runtime-layout-container[data-layout-interaction][hidden] {
+  display: none !important;
 }

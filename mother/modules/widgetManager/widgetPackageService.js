@@ -21,7 +21,13 @@ async function readPolicies(emitter, jwt) {
 }
 
 async function writePolicies(emitter, jwt, value) {
-  await requestBackendEvent(emitter, BACKEND_EVENTS.SET_SETTING, { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'PUBLIC_WIDGET_SERVICES', value });
+  // Settings Manager persists scalar text; passing an object stores "[object Object]".
+  await requestBackendEvent(emitter, BACKEND_EVENTS.SET_SETTING, { jwt, moduleName: 'settingsManager', moduleType: 'core', key: 'PUBLIC_WIDGET_SERVICES', value: JSON.stringify(value) });
+}
+
+async function registeredWidget(emitter, jwt, id) {
+  const widgets = await requestBackendEvent(emitter, BACKEND_EVENTS.GET_WIDGETS, { jwt, moduleName: 'widgetManager', moduleType: 'core', widgetType: 'public' });
+  return widgets?.find(widget => widget.widgetId === id);
 }
 
 function stagePackage(buffer, options = {}) {
@@ -74,7 +80,11 @@ function inspectionOf(prepared, config) {
 
 async function inspectWidgetPackage(emitter, jwt, buffer, options = {}) {
   const prepared = stagePackage(buffer, options);
-  try { return { ...inspectionOf(prepared, await readPolicies(emitter, jwt)), replacing: fs.existsSync(path.join(options.widgetsRoot || ROOT, prepared.widget.widgetId)) }; }
+  try {
+    const registered = await registeredWidget(emitter, jwt, prepared.widget.widgetId);
+    const hasFiles = fs.existsSync(path.join(options.widgetsRoot || ROOT, prepared.widget.widgetId));
+    return { ...inspectionOf(prepared, await readPolicies(emitter, jwt)), replacing: hasFiles || !!registered, repairingMissingFiles: !!registered && !hasFiles };
+  }
   finally { fs.rmSync(prepared.staged, { recursive: true, force: true }); }
 }
 
@@ -89,27 +99,31 @@ async function installWidgetPackage(emitter, jwt, buffer, params, options = {}) 
     const root = options.widgetsRoot || ROOT;
     fs.mkdirSync(root, { recursive: true });
     target = path.join(root, id);
-    const replacing = fs.existsSync(target);
+    const hasFiles = fs.existsSync(target);
+    const registered = await registeredWidget(emitter, jwt, id);
+    const replacing = hasFiles || !!registered;
     require('../../security/runtimeIntegrity').assertExtensionInstallerOwnership('widgets', id);
+    if (registered && registered.content !== `/widgets/${id}/widget.js`) throw packageError('WIDGET_PACKAGE_ID_CONFLICT', 'Existing widget is not owned by this package path.');
     if (replacing) {
       if (params.replaceExisting !== true) throw packageError('WIDGET_PACKAGE_EXISTS', 'Review and confirm replacement of this existing widget.');
       if (!require('../userManagement/permissionUtils').hasPermission(params.decodedJWT, 'widgets.update')) throw packageError('WIDGET_PACKAGE_PERMISSION', 'Replacing a widget requires widgets.update.');
-      const widgets = await requestBackendEvent(emitter, BACKEND_EVENTS.GET_WIDGETS, {jwt,moduleName:'widgetManager',moduleType:'core',widgetType:'public'});
-      if (!widgets?.some(widget => widget.widgetId === id && widget.content === `/widgets/${id}/widget.js`)) throw packageError('WIDGET_PACKAGE_ID_CONFLICT', 'Existing widget is not owned by this package path.');
+      if (!registered) throw packageError('WIDGET_PACKAGE_ID_CONFLICT', 'Existing files have no package-owned widget registration.');
     }
     const config = await readPolicies(emitter, jwt);
     const inspection = inspectionOf(prepared, config);
     const approved = approveWidgetAccess(prepared.requestedAccess, params.approvedAccess);
     if (inspection.requestedAccess.some(item => !item.available && approved.includes(`${item.service}:${item.name}`))) throw packageError('WIDGET_SERVICE_UNCONFIGURED', 'An approved service is not configured by the site operator.');
     oldPolicy = config.widgets[id];
-    files = require('./widgetPackageFiles').stageWidgetFiles(root, id, prepared.dir, replacing, oldPolicy);
+    // A restored database can retain the exact registration while its widget volume is absent.
+    // Reviewed repair retains that identity and needs update permission, without a second row.
+    files = require('./widgetPackageFiles').stageWidgetFiles(root, id, prepared.dir, hasFiles, oldPolicy);
     config.widgets[id] = { ...(oldPolicy || {}), packageAccess: { policyVersion: 1, ...prepared.info, requestedAccess: prepared.requestedAccess, approvedAccess: approved, hash: prepared.reviewedHash } };
     // Record consent before exposing files. A collision never overwrites a core widget.
     await writePolicies(emitter, jwt, config);
     policyWritten = true;
     files.expose();
     require('../../security/extensionIntegrity').saveExtensionReceipt(path.dirname(root), 'widgets', id, target, prepared.reviewedHash);
-    if (!replacing) {
+    if (!registered) {
       const result = await requestBackendEvent(emitter, BACKEND_EVENTS.CREATE_WIDGET, { jwt, moduleName: 'widgetManager', moduleType: 'core', ...prepared.widget, content: `/widgets/${id}/widget.js` });
       if (!result?.created) throw packageError('WIDGET_PACKAGE_ID_CONFLICT', 'A widget with this ID already exists.');
     }

@@ -4,6 +4,13 @@ import { widgetSettings, renderWidgetMessage, type PublicWidgetContext } from '.
 /** Definitions travel in existing instance metadata; no public access to private kits is needed. */
 export function render(host: HTMLElement | null, ctx: PublicWidgetContext = {}): void {
   if (!host) return;
-  try { renderKitComponent(host, widgetSettings(ctx, {}).component); }
+  const settings = widgetSettings(ctx, {});
+  if (settings.interaction) {
+    // Interactive composition uses the same renderer as isolated community widgets.
+    void import('../../../../shared/widget-ui/mountDocument.js').then(({ mountUiDocument }) => mountUiDocument(host, settings.interaction, (ctx as any).preview === true))
+      .catch(error => renderWidgetMessage(host, 'WIDGET_DOCUMENT_INVALID', 'Interactive container unavailable', String(error?.message || 'Invalid document.')));
+    return;
+  }
+  try { renderKitComponent(host, settings.component); }
   catch (error) { renderWidgetMessage(host, 'UI_KIT_COMPONENT_INVALID', 'UI kit component unavailable', error instanceof Error ? error.message : 'Invalid definition.'); }
 }

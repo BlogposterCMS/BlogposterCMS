@@ -1,4 +1,5 @@
 import { hasStyleSourceSettings, normalizeStyleSourceSettings } from './styleSource.js';
+import { normalizeContainerInteraction } from './containerInteractionModel.js';
 export const DESIGN_DOCUMENT_VERSION = 1;
 /** Slots belong to this document only; linked designs have independent content ownership. */
 export function pageContentHostIds(tree) {
@@ -143,6 +144,9 @@ function normalizeAlignment(value) {
 export function normalizeLayoutContainerSettings(value) {
     const source = isRecord(value) ? value : {};
     const settings = {};
+    const interaction = normalizeContainerInteraction(source.interaction);
+    if (interaction)
+        settings.interaction = interaction;
     const mode = normalizeContainerMode(source.mode ?? source.layoutMode ?? source.layout_mode);
     const gap = normalizeCssLength(source.gap ?? source.layoutGap ?? source.layout_gap);
     const padding = normalizeBoxSpacing(source.padding ?? source.layoutPadding ?? source.layout_padding);
@@ -166,9 +170,13 @@ export function normalizeLayoutContainerSettings(value) {
         settings.background = background;
     if (maxWidth)
         settings.maxWidth = maxWidth;
+    const minWidth = normalizeCssLength(source.minWidth ?? source.min_width);
+    if (minWidth)
+        settings.minWidth = minWidth;
     if (minHeight)
         settings.minHeight = minHeight;
-    const height = normalizeCssLength(source.height);
+    // Data-backed flow containers grow with their results unless the author fixed their height.
+    const height = normalizeCssLength(source.height ?? (interaction?.source && mode !== 'free' ? 'auto' : undefined));
     if (height === 'auto' || (height && /^\d+(?:\.\d+)?px$/.test(height) && parseFloat(height) >= 1 && parseFloat(height) <= 10000))
         settings.height = height;
     if (source.position === 'normal' || source.position === 'sticky')

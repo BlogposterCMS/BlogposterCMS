@@ -268,5 +268,9 @@ export async function renderRuntimeDesignDocument(
     composedContentHosts.set(target, getRuntimeDesignContentMount(pageDesign));
   }
 
+  if (shell.querySelector('[data-layout-interaction]')) {
+    const { mountContainerInteractions } = await import('../../shared/layout/containerInteractions.js');
+    mountContainerInteractions(shell);
+  }
   return true;
 }

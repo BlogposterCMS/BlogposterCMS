@@ -204,5 +204,9 @@ export async function renderRuntimeDesignDocument(target, document, allWidgets, 
         // must never capture article content through a descendant DOM query.
         composedContentHosts.set(target, getRuntimeDesignContentMount(pageDesign));
     }
+    if (shell.querySelector('[data-layout-interaction]')) {
+        const { mountContainerInteractions } = await import('../../shared/layout/containerInteractions.js');
+        mountContainerInteractions(shell);
+    }
     return true;
 }

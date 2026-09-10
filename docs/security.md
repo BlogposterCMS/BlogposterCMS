@@ -449,3 +449,27 @@ Private host cache files reject links and are rehashed before import. Cancellati
 uses the existing settings.core.edit boundary and exact host job id; the host
 persists its commit grant before permitting any live data change. An interrupted
 post-grant job still requires recovery rather than automatic replay.
+
+
+### Declarative widget UI and Designer interactions
+
+The reviewed v2 widget bridge accepts bounded presentation trees and local style
+values, not executable HTML, arbitrary CSS or DOM handles. URL CSS is rejected;
+automatically loaded images use only same-origin `/media/` or `/assets/` paths
+without query strings. Sanitized article rendering removes embedded forms,
+scripts, styles and frames. Native links require explicit user interaction.
+The existing package hash and revocable named-service policy remain authoritative
+for requests, drafts, preferences and streams. No UI condition grants permission.
+
+Designer container rules are normalized in the canonical layout contract on
+save and projection. Conditions read own JSON fields with no evaluation or
+prototype traversal. Built-in article sources call only the existing published
+public search/content adapters without credentials. Custom business operations
+remain module-owned and require the existing reviewed widget service grants.
+See [the interaction contract](designer-interactions.md).
+
+Published widget metadata now retains bounded nested translations and declarative
+conditions. Complete-value limits (32 levels, 16,384 values, 256 KiB string/key
+characters) replace silent truncation; dangerous prototype keys are excluded.
+Programmatic worker navigation additionally requires a recent trusted host UI
+gesture and a validated same-origin path. Preview denies navigation.

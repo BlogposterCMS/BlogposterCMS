@@ -393,28 +393,7 @@ function toFiniteNumber(value, fallback) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function publicJsonValue(value, depth = 0) {
-  if (depth > 4) return undefined;
-  if (value == null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value
-      .map(item => publicJsonValue(item, depth + 1))
-      .filter(item => item !== undefined);
-  }
-  if (typeof value === 'object') {
-    const out = {};
-    for (const [key, nested] of Object.entries(value)) {
-      const safeKey = String(key || '').trim();
-      if (!safeKey || safeKey === '__proto__' || safeKey === 'constructor' || safeKey === 'prototype') continue;
-      const safeValue = publicJsonValue(nested, depth + 1);
-      if (safeValue !== undefined) out[safeKey] = safeValue;
-    }
-    return out;
-  }
-  return undefined;
-}
+const { publicJsonValue } = require('./publicWidgetMetadata');
 
 function publicWidgetLayoutItem(item = {}) {
   const result = {
@@ -494,7 +473,12 @@ function toPublicSearchDocument(doc = {}) {
 }
 
 function isPublicSearchDocument(doc) {
-  return doc &&
+  // Historic indexes may label CMS system pages as published. Apply the same
+  // reserved-route boundary used for public redirects before exposing results.
+  let publicPath;
+  try { publicPath = decodeURIComponent(new URL(doc?.url || doc?.permalink || '/', 'https://public.invalid').pathname).toLowerCase(); }
+  catch { return false; }
+  return doc && shouldCheckRedirect({ method: 'GET', path: publicPath }) &&
     String(doc.status || '').toLowerCase() === 'published' &&
     String(doc.visibility || 'public').toLowerCase() === 'public';
 }
@@ -816,13 +800,14 @@ async function renderPublicSearch(motherEmitter, jwt, req, res) {
       offset
     });
 
+    const publicResults = (Array.isArray(results) ? results : []).filter(isPublicSearchDocument).map(toPublicSearchDocument);
     res.set('Cache-Control', 'public, max-age=30');
     return res.json({
-      results: (Array.isArray(results) ? results : []).filter(isPublicSearchDocument).map(toPublicSearchDocument),
+      results: publicResults,
       pagination: {
         limit,
         offset,
-        count: Array.isArray(results) ? results.length : 0
+        count: publicResults.length
       }
     });
   } catch (err) {

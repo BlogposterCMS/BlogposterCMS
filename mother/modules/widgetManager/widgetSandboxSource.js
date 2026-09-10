@@ -3,9 +3,10 @@
 /** Append the UI-only host contract to a self-contained worker script declaring render(ui, context). */
 function widgetSandboxSource(source) {
   return source + `\n;
-const __bpActions = new Map(), __bpPending = new Map(); let __bpId = 0;
+const __bpActions = new Map(), __bpPending = new Map(), __bpStreams = new Map(); let __bpId = 0;
 const __bpUI = Object.freeze({
   render(tree) { postMessage({type:'view',tree}); },
+  navigate(path) { postMessage({type:'navigate',path}); },
   on(name, handler) { __bpActions.set(name, handler); }
 });
 function __bpCall(method, name, input) {
@@ -17,6 +18,14 @@ function __bpCall(method, name, input) {
 }
 const __bpServices = Object.freeze({
   request: (name, input = {}) => __bpCall('request',name,input),
+  async subscribe(name, event, receive, onError) {
+    // Register before requesting: a fast stream may arrive before its service result.
+    const key = String(__bpId + 1);
+    __bpStreams.set(key,{receive,onError});
+    try { await __bpCall('subscribe', name, {event}); }
+    catch (error) { __bpStreams.delete(key); throw error; }
+    return Object.freeze({close() { __bpStreams.delete(key); return __bpCall('unsubscribe', null, key); }});
+  },
   draft: Object.freeze({get: () => __bpCall('draft.get'), set: value => __bpCall('draft.set',null,value)}),
   preferences: Object.freeze({get: name => __bpCall('preferences.get',name), set: (name,value) => __bpCall('preferences.set',name,value)})
 });
@@ -25,9 +34,14 @@ addEventListener('message', async ({data}) => {
     if (data.type === 'init') await render(__bpUI, Object.freeze({...data.context,services:__bpServices}));
     else if (data.type === 'ping') postMessage({type:'pong'});
     else if (data.type === 'action') await __bpActions.get(data.action)?.(data);
+    else if (data.type === 'stream') {
+      const stream = __bpStreams.get(data.key);
+      if (data.error) { __bpStreams.delete(data.key); stream?.onError?.(data.error); }
+      else stream?.receive?.(data.data);
+    }
     else if (data.type === 'result') {
       const pending = __bpPending.get(data.id); __bpPending.delete(data.id);
-      if (data.error) pending?.reject(new Error(data.error)); else pending?.resolve(data.result);
+      if (data.error) pending?.reject(Object.assign(new Error(data.error),{status:data.status})); else pending?.resolve(data.result);
     }
   } catch { postMessage({type:'error',code:'WIDGET_WORKER_FAILED'}); }
 });`;

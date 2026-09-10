@@ -85,9 +85,10 @@ function splitOrientationForPosition(position: string, targetEl?: HTMLElement | 
   return 'horizontal';
 }
 
-function readContainerSettings(el: HTMLElement | null | undefined): LayoutContainerSettings {
+export function readContainerSettings(el: HTMLElement | null | undefined): LayoutContainerSettings {
   if (!el) return {};
   return normalizeLayoutContainerSettings({
+    interaction: el.dataset.layoutInteraction ? JSON.parse(el.dataset.layoutInteraction) : undefined,
     mode: el.dataset.layoutMode || (el.dataset.split === 'true'
       ? modeForOrientation(el.dataset.orientation === 'horizontal' ? 'horizontal' : 'vertical')
       : 'free'),
@@ -106,6 +107,7 @@ function readContainerSettings(el: HTMLElement | null | undefined): LayoutContai
     borderColor: el.dataset.layoutBorderColor,
     borderRadius: el.dataset.layoutBorderRadius,
     maxWidth: el.dataset.layoutMaxWidth,
+    minWidth: el.dataset.layoutMinWidth,
     minHeight: el.dataset.layoutMinHeight,
     height: el.dataset.layoutHeight,
     position: el.dataset.layoutPosition,
@@ -115,6 +117,8 @@ function readContainerSettings(el: HTMLElement | null | undefined): LayoutContai
 
 function writeContainerSettings(el: HTMLElement, settings: LayoutContainerSettings): void {
   const normalized = normalizeLayoutContainerSettings(settings);
+  if (normalized.interaction) el.dataset.layoutInteraction = JSON.stringify(normalized.interaction);
+  else delete el.dataset.layoutInteraction;
   const currentMode = normalized.mode || readContainerSettings(el).mode || (el.dataset.split === 'true'
     ? modeForOrientation(el.dataset.orientation === 'horizontal' ? 'horizontal' : 'vertical')
     : 'free');
@@ -135,6 +139,8 @@ function writeContainerSettings(el: HTMLElement, settings: LayoutContainerSettin
     if (normalized[key] !== undefined) el.dataset[dataKey] = normalized[key];
     else delete el.dataset[dataKey];
   }
+  if (normalized.minWidth) el.dataset.layoutMinWidth = normalized.minWidth;
+  else delete el.dataset.layoutMinWidth;
   if (normalized.maxWidth) el.dataset.layoutMaxWidth = normalized.maxWidth;
   else delete el.dataset.layoutMaxWidth;
   if (normalized.minHeight) el.dataset.layoutMinHeight = normalized.minHeight;
@@ -213,6 +219,9 @@ function applyContainerSettingsToElement(el: HTMLElement): void {
   for (const key of ['borderWidth', 'borderStyle', 'borderColor', 'borderRadius', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'] as const) {
     el.style[key] = settings[key] || (key.endsWith('Width') ? settings.borderWidth || (settings.borderStyle ? '0px' : '') : '');
   }
+  // A minimum width lets existing row wrapping protect authored content.
+  if (settings.minWidth) el.style.minWidth = settings.minWidth;
+  else el.style.removeProperty('min-width');
   if (settings.maxWidth) el.style.maxWidth = settings.maxWidth;
   else el.style.removeProperty('max-width');
   if (settings.minHeight) el.style.minHeight = settings.minHeight;

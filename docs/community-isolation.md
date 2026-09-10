@@ -64,20 +64,26 @@ function render(ui, context) {
 }
 ```
 
-The host builds an inert view tree, limited to 500 nodes, depth 20, and 16 KiB per
-text node. Allowed tags are div, section, p, span, strong, h2, h3, ul, li, label,
-button, input, textarea, select and option. Fields are tag, text, children,
-action, name, value, label and input type (text, number, email, checkbox, date,
-search). No HTML, URL attributes, custom styles or arbitrary DOM handles cross
-the boundary. Buttons and inputs reuse the existing UI classes. Click/input/change
-events deliver only the declared action and bounded value/checked state.
+The host renders a bounded declarative view tree using the shared widget UI renderer:
+500 nodes, depth 20, 16 KiB per text field and 128 KiB per message. Stable `key`
+values preserve controls, cursor position and Chinese IME composition during updates.
+Inert semantic markup, native form controls, a plaintext composer, sanitized
+article content, popovers, tooltips, dialogs/drawers, status output and existing
+UI-kit components are supported. No arbitrary DOM handle, executable HTML or
+stylesheet crosses the boundary. Local style values pass the existing UI-kit
+validator; URL-bearing CSS is rejected. Automatic images are restricted to
+same-origin `/media/` and `/assets/` paths without queries. Links are validated
+and only navigate following a user action. Public styles live in their own root.
 
-`context` contains widgetId, preview and the service facade. `request`,
-`draft.get/set` and `preferences.get/set` are asynchronous; they retain the
-existing widget policy and storage keys. The v2 facade currently does not expose
-stream subscriptions or navigation. Do not migrate a widget needing those
-features by silently dropping them; its author must adapt it to supported named
-operations or extend the reviewed bridge first. Missing grants fail closed.
+`context` contains widgetId, preview, locale, origin, pathname, languages and a
+bounded instance mode, plus the service facade. Requests, drafts and preferences
+remain asynchronous. `services.subscribe(name, event, receive, onError)` returns
+an asynchronous subscription handle for an already approved stream operation;
+closing, expiration, policy refresh and revocation retain existing service limits.
+Stream events may arrive before subscription acknowledgment and are registered
+before the request. Errors expose only safe codes and selected HTTP status values.
+See [Designer interactions](designer-interactions.md) for data bindings and examples.
+
 No tokens or complete page/Designer objects are copied into a worker. Public
 policy contains the installed script hash; every service refresh compares it
 with the script loaded by that instance. An old tab cannot inherit a replacement
@@ -159,7 +165,11 @@ The running CMS was not changed by this preflight. This is sandbox acceptance,
 not a signed release, package migration or production CMS cutover.
 
 Migration is intentionally not an automatic source-to-source rewrite. Local or
-third-party widgets with DOM, streaming or navigation dependencies stay blocked
+third-party widgets with direct DOM or unrestricted network dependencies stay blocked
 until their author supplies a compatible package. Operator backups and existing
 package files remain the recovery source; a code deployment is not a completed
 production migration.
+
+The v2 presentation extension and approved stream/navigation path are documented in
+[Designer interactions](designer-interactions.md). Existing packages still require
+an author-supplied worker migration and review of their exact bytes/grants.

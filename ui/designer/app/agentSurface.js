@@ -9,6 +9,7 @@ import { activateFontPackage, createFontPackage, deleteFontPackage, fontPackages
 import { applySitePreset, deleteSitePreset, refreshSitePresets, sitePresetsAgentState, sitePresetComponentJson, exportSitePresetJson, importSitePresetJson, sitePresetJsonParts, sitePresetJsonFromParts } from '/ui/shared/presets/sitePresets.js';
 import { getBuilderViewportState } from './renderer/viewportState.js';
 import { readDesignerDraftInputs } from './renderer/draftInputs.js';
+import { readContainerSettings } from '../../shared/layout/layoutDom.js';
 import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
 import { normalizeResponsivePlacementContract, resolveResponsivePlacementGeometry, responsiveRuleForWidth } from '/ui/shared/layout/responsivePlacement.js';
 const SURFACE_ID = 'studio.designer';
@@ -333,7 +334,7 @@ const DESIGNER_AGENT_ACTIONS = Object.freeze([
         action: 'container.settings.set',
         label: 'Set container settings',
         category: 'layout',
-        description: 'Updates typed container settings including gap, padding, borderWidth and per-edge borderTopWidth/borderRightWidth/borderBottomWidth/borderLeftWidth (0–64px), borderStyle, borderColor and borderRadius (0–512px).',
+        description: 'Updates typed container settings, including interaction (version:1, presentation:normal|popover|dialog|drawer, triggerId, triggerEvent:click|input|focus, source:sampleArticles|publishedArticles, queryId, when:{ref,operator,value}). Null interaction restores a static container. Also supports gap, padding, minWidth (CSS length or min-content), borderWidth and per-edge borderTopWidth/borderRightWidth/borderBottomWidth/borderLeftWidth (0–64px), borderStyle, borderColor and borderRadius (0–512px).',
         params: [
             { name: 'id', type: 'string', required: true },
             { name: 'settings', type: 'object', required: true }
@@ -728,6 +729,7 @@ function layoutNodeFeedback(el, index) {
         },
         positionAvailability: containerPositionAvailability(el, el.closest('.layout-root')),
         settings: {
+            interaction: readContainerSettings(el).interaction || null,
             gap: el.dataset.layoutGap || null,
             padding: el.dataset.layoutPadding || null,
             columns: Number.parseInt(el.dataset.layoutColumns || '0', 10) || null,
@@ -1565,6 +1567,12 @@ export async function buildDesignerAgentSnapshot(context = { reason: 'manual' })
             colorLibrary,
             fontPackages,
             sitePresets,
+            // Keep rules shallow enough for AgentManager's bounded snapshot transport.
+            containerInteractions: Array.from(document.querySelectorAll('[data-layout-interaction]')).map(el => {
+                const rule = readContainerSettings(el).interaction;
+                return { id: el.dataset.nodeId, ...rule, when: undefined,
+                    conditionRef: rule.when?.ref, conditionOperator: rule.when?.operator, conditionValue: rule.when?.value };
+            }),
             collaboration: designerHandoffState(),
             feedback
         },

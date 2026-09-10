@@ -47,10 +47,11 @@ function splitOrientationForPosition(position, targetEl) {
     }
     return 'horizontal';
 }
-function readContainerSettings(el) {
+export function readContainerSettings(el) {
     if (!el)
         return {};
     return normalizeLayoutContainerSettings({
+        interaction: el.dataset.layoutInteraction ? JSON.parse(el.dataset.layoutInteraction) : undefined,
         mode: el.dataset.layoutMode || (el.dataset.split === 'true'
             ? modeForOrientation(el.dataset.orientation === 'horizontal' ? 'horizontal' : 'vertical')
             : 'free'),
@@ -68,6 +69,7 @@ function readContainerSettings(el) {
         borderColor: el.dataset.layoutBorderColor,
         borderRadius: el.dataset.layoutBorderRadius,
         maxWidth: el.dataset.layoutMaxWidth,
+        minWidth: el.dataset.layoutMinWidth,
         minHeight: el.dataset.layoutMinHeight,
         height: el.dataset.layoutHeight,
         position: el.dataset.layoutPosition,
@@ -76,6 +78,10 @@ function readContainerSettings(el) {
 }
 function writeContainerSettings(el, settings) {
     const normalized = normalizeLayoutContainerSettings(settings);
+    if (normalized.interaction)
+        el.dataset.layoutInteraction = JSON.stringify(normalized.interaction);
+    else
+        delete el.dataset.layoutInteraction;
     const currentMode = normalized.mode || readContainerSettings(el).mode || (el.dataset.split === 'true'
         ? modeForOrientation(el.dataset.orientation === 'horizontal' ? 'horizontal' : 'vertical')
         : 'free');
@@ -107,6 +113,10 @@ function writeContainerSettings(el, settings) {
         else
             delete el.dataset[dataKey];
     }
+    if (normalized.minWidth)
+        el.dataset.layoutMinWidth = normalized.minWidth;
+    else
+        delete el.dataset.layoutMinWidth;
     if (normalized.maxWidth)
         el.dataset.layoutMaxWidth = normalized.maxWidth;
     else
@@ -214,6 +224,11 @@ function applyContainerSettingsToElement(el) {
     for (const key of ['borderWidth', 'borderStyle', 'borderColor', 'borderRadius', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth']) {
         el.style[key] = settings[key] || (key.endsWith('Width') ? settings.borderWidth || (settings.borderStyle ? '0px' : '') : '');
     }
+    // A minimum width lets existing row wrapping protect authored content.
+    if (settings.minWidth)
+        el.style.minWidth = settings.minWidth;
+    else
+        el.style.removeProperty('min-width');
     if (settings.maxWidth)
         el.style.maxWidth = settings.maxWidth;
     else

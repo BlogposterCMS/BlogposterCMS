@@ -589,3 +589,24 @@ The existing snapshot reports `DESIGNER_AGENT_FEEDBACK_WIDGET_SANDBOX_BLOCKED`
 with the widget ID and runtime error code when an isolated widget cannot render.
 Saved placements are preserved. The v2 worker receives no Designer credentials;
 preview service requests stay unavailable. See [migration](community-isolation.md).
+
+
+## Container events and data
+
+Use `container.settings.set` with `settings.interaction` to configure the same
+rules as the Behavior inspector. `null` restores a static container. The rule
+is part of the saved layout document and `feedback.layoutTree.nodes[].settings`.
+A shallow `state.containerInteractions` list preserves rule values through the
+snapshot depth limit; condition fields are flattened as `conditionRef`,
+`conditionOperator` and `conditionValue`. Existing revision/draft guards still
+apply. Read fresh state after a command acknowledgment before the next mutation.
+
+The canvas keeps contents editable. The public renderer and Live preview run
+the interaction. Current built-in data choices are published public articles and
+explicit example articles; additional business sources require a module adapter.
+No separate Designer-only agent API or workflow backend is introduced.
+See [Designer interactions](designer-interactions.md) for fields and limits.
+
+Container `minWidth` is exposed by the existing `container.settings.set` command
+and layout feedback. The Layout inspector also offers **Minimum width**, paired
+with the existing Auto height setting for wrapping row containers.

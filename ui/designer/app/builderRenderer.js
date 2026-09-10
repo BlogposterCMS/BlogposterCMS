@@ -25,6 +25,8 @@ import { createActionBar } from './renderer/actionBar.js';
 import { createSaveManager } from './renderer/saveManager.js';
 import { registerBuilderEvents } from './renderer/eventHandlers.js';
 import { emitAdminFacade } from './runtime/runtimeFacade.js';
+import { createContainerInteractionInspector } from './widgets/containerInteractionInspector.js';
+import { readContainerSettings } from '../../shared/layout/layoutDom.js';
 import { createNavigationInspector } from './widgets/navigationInspector.js';
 import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
 import { widgetSettings } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
@@ -222,6 +224,21 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         loadLocations: async () => {
             const result = await emitAdminFacade(meltdownEmit, 'navigation', 'locations', {});
             return Array.isArray(result) ? result : result?.locations || [];
+        }
+    });
+    const containerInteractionInspector = createContainerInteractionInspector(sceneInspector, {
+        read: () => {
+            const el = state.activeWidgetEl ? null : inspectorLayoutContainer(layoutRoot, getActiveScene()?.id);
+            return el ? { id: el.dataset.nodeId, interaction: readContainerSettings(el).interaction } : null;
+        },
+        targets: () => Array.from(layoutRoot.querySelectorAll('[data-node-id],[data-instance-id]')).map(el => ({
+            id: el.dataset.instanceId || el.dataset.nodeId,
+            label: el.dataset.elementName || el.dataset.sectionTitle || el.dataset.widgetId || el.dataset.nodeId
+        })),
+        apply: interaction => {
+            const el = inspectorLayoutContainer(layoutRoot, getActiveScene()?.id);
+            if (el && !state.activeWidgetEl)
+                setContainerSettings(el, { interaction });
         }
     });
     const SIDEBAR_PANEL_NAMES = new Set(['insert', 'layout', 'layers', 'design']);
@@ -1440,6 +1457,9 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         const gap = sceneInspector.querySelector('.scene-section-gap');
         const padding = sceneInspector.querySelector('.scene-section-padding');
         const minHeight = sceneInspector.querySelector('.scene-section-height');
+        const minWidth = sceneInspector.querySelector('.scene-container-min-width');
+        if (minWidth)
+            minWidth.value = String(sectionEl?.dataset.layoutMinWidth || '0px');
         const heightMode = sceneInspector.querySelector('.scene-container-height-mode');
         const exactHeight = sceneInspector.querySelector('.scene-container-height-value');
         const authoredHeight = sectionEl?.dataset.layoutHeight;
@@ -1520,7 +1540,10 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         if (!scene || !sectionEl || !target)
             return;
         const nested = !sectionEl.classList.contains('layout-section');
-        if (target.matches('.scene-container-height-mode, .scene-container-height-value')) {
+        if (target.matches('.scene-container-min-width')) {
+            setContainerSettings(sectionEl, { minWidth: target.value || '0px' });
+        }
+        else if (target.matches('.scene-container-height-mode, .scene-container-height-value')) {
             const mode = sceneInspector.querySelector('.scene-container-height-mode')?.value;
             const value = sceneInspector.querySelector('.scene-container-height-value')?.value;
             setContainerSettings(sectionEl, { height: mode === 'fixed' ? `${Math.max(1, Math.min(10000, Number(value) || 320))}px` : 'auto' });
@@ -1859,6 +1882,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
             </select>
           </label>
         </div>
+        <label class="scene-select-field"><span>Minimum width</span><input class="scene-container-min-width" value="0px" placeholder="0px or min-content" /></label>
         <label class="scene-select-field"><span>Minimum height</span><input class="scene-section-height" type="number" min="80" max="2400" step="10" value="320" /></label>
         <label class="scene-select-field"><span>Height</span><select class="scene-container-height-mode"><option value="auto">Auto</option><option value="fixed">Fixed height</option></select></label>
         <label class="scene-select-field"><span>Height (px)</span><input class="scene-container-height-value" type="number" min="1" max="10000" step="1" value="320" disabled /></label>
@@ -2320,6 +2344,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         syncInspectorCollectionArchive(el, widgetDef);
         syncInspectorGallery(el, widgetDef);
         navigationInspector.sync();
+        containerInteractionInspector.sync();
         const contentTab = sceneInspector.querySelector('[data-inspector-mode="content"]');
         if (contentTab)
             contentTab.textContent = el ? 'Content' : 'Layout';

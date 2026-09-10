@@ -11,10 +11,11 @@ const { approvedRuntimeRecords, treeRecords } = require('../mother/security/exte
 class Host extends EventEmitter {
   constructor() { super(); this.config = { version: 1, widgets: { sample: { draft: true } } }; this.created = false; }
   emit(event, payload, callback) {
-    if (event === 'getSetting') { callback(null, JSON.parse(JSON.stringify(this.config))); return true; }
-    if (event === 'setSetting') { this.config = JSON.parse(JSON.stringify(payload.value)); callback(null, {}); return true; }
+    if (event === 'getSetting') { callback(null, JSON.stringify(this.config)); return true; }
+    // Match the real Settings text boundary; object-friendly mocks hid invalid persistence.
+    if (event === 'setSetting') { this.config = JSON.parse(String(payload.value)); callback(null, {}); return true; }
     if (event === 'createWidget') { callback(null, { created: !this.created }); this.created = true; return true; }
-    if (event === 'getWidgets') { callback(null, this.created ? [{widgetId:'sample',content:'/widgets/sample/widget.js'}] : []); return true; }
+    if (event === 'getWidgets') { callback(null, this.created ? [{widgetId:'sample',content:this.existingContent || '/widgets/sample/widget.js'}] : []); return true; }
     return super.emit(event, payload, callback);
   }
 }
@@ -52,12 +53,26 @@ test('installation stores consent outside package and revocation removes public 
 
 test('an ID collision restores files, integrity receipt and prior operator configuration', async () => {
   host.created = true;
+  host.existingContent = '/ui/native/widget.js';
   const original = JSON.stringify(host.config);
   const zip = archive();
   await expect(installWidgetPackage(host, 'token', zip, { reviewedHash: packageHash(zip), approvedAccess: [] }, options)).rejects.toThrow('WIDGET_PACKAGE_ID_CONFLICT');
   expect(JSON.stringify(host.config)).toBe(original);
   expect(fs.existsSync(path.join(options.widgetsRoot, 'sample'))).toBe(false);
   expect(approvedRuntimeRecords(root, [])).toEqual([]);
+});
+
+test('reviewed repair retains an existing package registration when its files are missing', async () => {
+  host.created = true;
+  const zip = archive();
+  const inspection = await inspectWidgetPackage(host, 'token', zip, options);
+  expect(inspection).toMatchObject({ replacing: true, repairingMissingFiles: true });
+  const params = { reviewedHash: packageHash(zip), approvedAccess: ['draft:draft'], replaceExisting: true };
+  await expect(installWidgetPackage(host, 'token', zip, params, options)).rejects.toThrow('WIDGET_PACKAGE_PERMISSION');
+  const result = await installWidgetPackage(host, 'token', zip, { ...params, decodedJWT: { permissions: { widgets: { update: true } } } }, options);
+  expect(result).toMatchObject({ installed: true, replaced: true, widgetId: 'sample' });
+  expect(host.created).toBe(true);
+  expect(fs.existsSync(path.join(options.widgetsRoot, 'sample/widget.js'))).toBe(true);
 });
 
 test.each([

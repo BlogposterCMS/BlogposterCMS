@@ -1,44 +1,25 @@
 import { loadWidgetServices } from './widgetServices.js';
 
-type ViewNode = { tag: string; text?: string; children?: ViewNode[]; action?: string; name?: string; value?: string; label?: string; type?: string };
-const TAGS = new Set(['div', 'section', 'p', 'span', 'strong', 'h2', 'h3', 'ul', 'li', 'label', 'button', 'input', 'textarea', 'select', 'option']);
+import { createWidgetUi } from '../../shared/widget-ui/renderer.js';
+import type { UiNode as ViewNode } from '../../shared/widget-ui/model.js';
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{0,59}$/;
 const mounted = new WeakMap<HTMLElement, () => void>();
 
-/** Build only inert UI elements. No HTML parser, URL attributes, arbitrary styles or script-bearing nodes. */
+/** Navigation follows a real UI gesture and stays on this site; a timer cannot redirect visitors. */
+export function widgetNavigationPath(value: unknown, origin: string, gestureAt: number, preview = false): string {
+  if (preview || !gestureAt || Date.now() - gestureAt > 5000) throw new Error('WIDGET_NAVIGATION_GESTURE_REQUIRED');
+  if (typeof value !== 'string' || value.length > 2048 || !value.startsWith('/') || value.startsWith('//')) throw new Error('WIDGET_NAVIGATION_PATH_DENIED');
+  const url = new URL(value, origin);
+  if (url.origin !== origin) throw new Error('WIDGET_NAVIGATION_PATH_DENIED');
+  return url.pathname + url.search + url.hash;
+}
+
+/** Compatibility helper; the live mount uses this same shared UI implementation. */
 export function buildWidgetView(tree: ViewNode): HTMLElement {
-  let count = 0;
-  function build(node: ViewNode, depth: number): HTMLElement {
-    if (!node || !TAGS.has(node.tag) || ++count > 500 || depth > 20) throw new Error('WIDGET_VIEW_INVALID');
-    const element = document.createElement(node.tag);
-    if (node.text !== undefined) {
-      if (typeof node.text !== 'string' || node.text.length > 16384) throw new Error('WIDGET_VIEW_TEXT_LIMIT');
-      element.textContent = node.text;
-    }
-    if (node.label !== undefined) element.setAttribute('aria-label', String(node.label).slice(0, 200));
-    if (node.action) {
-      if (!NAME.test(node.action)) throw new Error('WIDGET_VIEW_ACTION_INVALID');
-      element.dataset.widgetAction = node.action;
-    }
-    if (node.name) {
-      if (!NAME.test(node.name)) throw new Error('WIDGET_VIEW_NAME_INVALID');
-      element.setAttribute('name', node.name);
-    }
-    if (node.tag === 'button') { element.setAttribute('type', 'button'); element.className = 'button secondary sm'; }
-    if (node.tag === 'input') {
-      if (node.type && !['text', 'number', 'email', 'checkbox', 'date', 'search'].includes(node.type)) throw new Error('WIDGET_VIEW_INPUT_INVALID');
-      element.setAttribute('type', node.type || 'text');
-      // Native fields inherit the existing host form rules; packages cannot inject classes.
-    }
-    if (node.children !== undefined && !Array.isArray(node.children)) throw new Error('WIDGET_VIEW_CHILDREN_INVALID');
-    for (const child of node.children || []) element.append(build(child, depth + 1));
-    // Select values can only be applied after their options exist.
-    if (['input', 'textarea', 'select', 'option'].includes(node.tag) && node.value !== undefined) {
-      (element as HTMLInputElement).value = String(node.value).slice(0, 16384);
-    }
-    return element;
-  }
-  return build(tree, 0);
+  const host = document.createElement('div');
+  const renderer = createWidgetUi(host, { shadow: false });
+  renderer.render(tree);
+  return host.lastElementChild!.firstElementChild as HTMLElement;
 }
 
 // Only this trusted bridge runs in the iframe. Extension code runs in its opaque-origin
@@ -85,6 +66,11 @@ export async function mountSandboxWidget(container: HTMLElement, id: string, cod
   frame.setAttribute('referrerpolicy', 'no-referrer');
   frame.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'; payment 'none'; usb 'none'");
   const view = document.createElement('div');
+  let gestureAt = 0;
+  const renderer = createWidgetUi(view, { preview: context.preview === true,
+    onUserGesture: () => { gestureAt = Date.now(); },
+    dispatch: event => channel.port1.postMessage({ type: 'action', ...event }) });
+  const streams = new Map<string, { close: () => void }>();
   const channel = new MessageChannel();
   let disposed = false, started = false, inflight = 0, messages = 0, epoch = Date.now(), lastPong = Date.now();
   let resolveReady!: () => void, rejectReady!: (error: Error) => void;
@@ -94,14 +80,19 @@ export async function mountSandboxWidget(container: HTMLElement, id: string, cod
     const alert = document.createElement('p'); alert.setAttribute('role', 'alert'); alert.dataset.errorCode = code; alert.textContent = code;
     container.replaceChildren(alert); rejectReady(new Error(code));
   };
-  const observer = new MutationObserver(() => { if (!container.isConnected) dispose(); });
+  // Public documents can finish asynchronous widget loading before the shell is attached.
+  let wasConnected = container.isConnected;
+  const observer = new MutationObserver(() => {
+    if (container.isConnected) wasConnected = true;
+    else if (wasConnected) dispose();
+  });
   const timer = window.setInterval(() => {
     if (Date.now() - lastPong > 10000) return fail('WIDGET_SANDBOX_TIMEOUT');
     channel.port1.postMessage({ type: 'ping' });
   }, 2000);
   function dispose() {
     if (disposed) return;
-    disposed = true; services.dispose(); observer.disconnect(); clearInterval(timer);
+    disposed = true; renderer.dispose(); streams.forEach(stream => stream.close()); streams.clear(); services.dispose(); observer.disconnect(); clearInterval(timer);
     channel.port1.close(); channel.port2.close(); frame.remove();
     window.removeEventListener('pagehide', dispose);
     rejectReady(new Error('WIDGET_SANDBOX_DISPOSED'));
@@ -116,9 +107,18 @@ export async function mountSandboxWidget(container: HTMLElement, id: string, cod
       if (message.type === 'connected' && !started) {
         started = true;
         // Never serialize the full runtime context (tokens, page objects, DOM or emitters).
-        channel.port1.postMessage({ type: 'start', source, context: { widgetId: id, preview: context.preview === true } });
+        channel.port1.postMessage({ type: 'start', source, context: { widgetId: id, preview: context.preview === true,
+          locale: new URL(document.baseURI).searchParams.get('lang') || document.documentElement.lang || 'en',
+          languageInUrl: (new URL(document.baseURI).searchParams.get('lang') || '').slice(0,40),
+          colorScheme: window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+          origin: new URL(document.baseURI).origin, pathname: new URL(document.baseURI).pathname,
+          mode: typeof context.instanceMetadata?.mode === 'string' ? context.instanceMetadata.mode.slice(0,80) : '',
+          languages: navigator.languages.slice(0,8) } });
       } else if (message.type === 'view') {
-        view.replaceChildren(buildWidgetView(message.tree)); resolveReady();
+        renderer.render(message.tree); resolveReady();
+      } else if (message.type === 'navigate') {
+        window.location.assign(widgetNavigationPath(message.path, window.location.origin, gestureAt, context.preview === true));
+        gestureAt = 0;
       } else if (message.type === 'pong') lastPong = Date.now();
       else if (message.type === 'error') { console.error('WIDGET_WORKER_FAILED', String(message.detail || '').slice(0, 250)); fail('WIDGET_WORKER_FAILED'); }
       else if (message.type === 'service') {
@@ -128,25 +128,27 @@ export async function mountSandboxWidget(container: HTMLElement, id: string, cod
           await services.refresh();
           let result: unknown;
           if (message.method === 'request' && NAME.test(message.name)) result = await services.request(message.name, message.input);
+          else if (message.method === 'subscribe' && NAME.test(message.name) && NAME.test(message.input?.event)) {
+            const key = String(message.id);
+            const stream = services.subscribe(message.name, message.input.event,
+              data => channel.port1.postMessage({ type: 'stream', key, data }),
+              () => { streams.delete(key); channel.port1.postMessage({ type: 'stream', key, error: 'WIDGET_STREAM_CLOSED' }); });
+            streams.set(key, stream); result = key;
+          } else if (message.method === 'unsubscribe') {
+            streams.get(String(message.input))?.close(); streams.delete(String(message.input)); result = true;
+          }
           else if (message.method === 'draft.get') result = services.draft.get();
           else if (message.method === 'draft.set') result = services.draft.set(message.input);
           else if (message.method === 'preferences.get' && NAME.test(message.name)) result = services.preferences.get(message.name);
           else if (message.method === 'preferences.set' && NAME.test(message.name)) result = services.preferences.set(message.name, message.input);
           else throw new Error('WIDGET_SERVICE_DENIED');
           if (!disposed) channel.port1.postMessage({ type: 'result', id: message.id, result });
-        } catch { if (!disposed) channel.port1.postMessage({ type: 'result', id: message.id, error: 'WIDGET_SERVICE_DENIED' }); }
+        } catch (error) { if (!disposed) channel.port1.postMessage({ type: 'result', id: message.id,
+          error: 'WIDGET_SERVICE_DENIED', status: [400,401,403,404,409,429,503].includes((error as any)?.status) ? (error as any).status : undefined }); }
         finally { inflight--; }
       } else throw new Error('WIDGET_SANDBOX_MESSAGE_INVALID');
     } catch { fail('WIDGET_SANDBOX_MESSAGE_INVALID'); }
   };
-  const dispatch = (event: Event) => {
-    const target = event.target instanceof Element ? event.target.closest('[data-widget-action]') : null;
-    if (!target || !view.contains(target)) return;
-    const input = target as HTMLInputElement;
-    channel.port1.postMessage({ type: 'action', action: target.getAttribute('data-widget-action'), event: event.type,
-      value: typeof input.value === 'string' ? input.value.slice(0, 16384) : '', checked: input.checked === true });
-  };
-  view.addEventListener('click', dispatch); view.addEventListener('input', dispatch); view.addEventListener('change', dispatch);
   frame.addEventListener('load', () => {
     if (!started) frame.contentWindow?.postMessage({ type: 'connect' }, '*', [channel.port2]);
   }, { once: true });

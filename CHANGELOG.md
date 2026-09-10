@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- Preserve nested public widget translations and UI conditions within explicit metadata limits; keep closed interactive containers hidden under flow layout CSS.
+- Expose container minimum width for responsive rows, with saved Designer and agent parity.
+- Persist reviewed widget grants as JSON text and repair registered packages with missing files through the permission-checked ZIP installer.
+
+- Exclude reserved CMS/API paths from public article search even when historical index rows mark them as public.
+
+- Add configurable events, public article data and visibility conditions to existing Designer containers, with popover/dialog/drawer presentation and the same saved layout/agent contract.
+- Extend the isolated widget UI renderer with stable controls, a Chinese-IME-aware composer, scoped styling, safe article/media rendering and approved stream subscriptions. Reuse existing UI-kit and overlay mechanics without changing admin theme values.
+
 ## [0.10.29] - 2026-09-10
 
 - Correct the ACR promotion-tag lookup after release publication; missing tags can be created and lookup failures stop safely.

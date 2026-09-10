@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.10.28] - 2026-09-10
+
+- Supply the existing verifier stage's public HTTPS CA bundle when an ACR source build retrieves its signature trust roots.
+
 ## [0.10.27] - 2026-09-10
 
 - Align container integrity regression coverage with the shared verified-input stage used by CI and ACR source builds.

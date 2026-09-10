@@ -39,6 +39,8 @@ RUN apt-get update \
 # the signed release inputs if CI did not supply them in the build context.
 FROM build AS integrity-inputs
 COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh
+# The slim base has no OS CA bundle; gh needs HTTPS trust for its TUF refresh.
+COPY --from=github-cli /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 RUN node tools/prepare-runtime-integrity.js
 
 # Signature verification cannot replace byte-for-byte build verification.

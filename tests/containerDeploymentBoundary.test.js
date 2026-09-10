@@ -67,6 +67,9 @@ test('build context excludes local secrets and site state by default', () => {
 test('release images require packaged trust roots and pass offline verification', () => {
   const rootAsset = 'runtime-integrity-trusted-root.jsonl';
   expect(read('Dockerfile')).toContain('FROM build AS integrity-inputs');
+  // Node embeds its own roots, but gh uses the OS trust store during source builds.
+  const inputStage = read('Dockerfile').split('FROM build AS integrity-inputs')[1].split('FROM integrity-inputs AS verified-build')[0];
+  expect(inputStage).toContain('COPY --from=github-cli /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt');
   expect(read('Dockerfile')).toContain('RUN node tools/prepare-runtime-integrity.js');
   expect(read('Dockerfile')).toContain('FROM integrity-inputs AS verified-build');
   expect(read('Dockerfile')).toContain('COPY --from=verified-build /app /app');

@@ -24,13 +24,16 @@ beforeEach(() => {
   manifest = buildRuntimeIntegrityManifest({ rootDir, version: '1.2.3',
     releaseTag: 'v1.2.3', sourceCommit: 'a'.repeat(40) });
 });
-afterEach(() => fs.rmSync(rootDir, { recursive: true, force: true }));
+afterEach(() => {
+  jest.restoreAllMocks();
+  fs.rmSync(rootDir, { recursive: true, force: true });
+});
 
 function dependencies() {
   return {
     rootDir,
     fetchFile: jest.fn(async (url, target) => fs.writeFileSync(target,
-      url.endsWith('manifest.json') ? JSON.stringify(manifest) : 'signed bundle')),
+      url.endsWith('manifest.json') ? JSON.stringify(manifest) : 'signed bundle', { mode: 0o600 })),
     runner: jest.fn(() => ({ status: 0, stdout: 'verifier-managed roots\n' })),
     verify: jest.fn(() => true)
   };
@@ -53,6 +56,21 @@ test('source builds fetch exact release metadata and obtain trust roots from the
   expect(() => verifyBuildBaseline({ rootDir, manifestPath })).toThrow('RUNTIME_INTEGRITY_BUILD_BASELINE_MISMATCH');
 });
 
+test('verified public inputs remain readable to the non-root runtime', async () => {
+  const chmod = jest.spyOn(fs, 'chmodSync');
+  const deps = dependencies();
+  await prepareRuntimeIntegrity(deps);
+  expect(chmod).toHaveBeenCalledTimes(names.length);
+  for (const name of names) {
+    expect(chmod).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`${name.replaceAll('.', '\\.')}$`)), 0o644);
+    // Windows does not expose POSIX group/other bits; Linux also proves the mode.
+    if (process.platform !== 'win32') {
+      expect(fs.statSync(path.join(rootDir, '.release-integrity', name)).mode & 0o777).toBe(0o644);
+    }
+  }
+  expect(deps.verify.mock.invocationCallOrder[0]).toBeLessThan(chmod.mock.invocationCallOrder[0]);
+});
+
 test('complete CI inputs are verified without release downloads', async () => {
   const deps = dependencies();
   const dir = path.join(rootDir, '.release-integrity');
@@ -73,6 +91,7 @@ test('partial inputs fail without mixing CI and downloaded files', async () => {
 });
 
 test.each(['signature', 'version', 'roots', 'download'])('failed %s cannot publish trusted inputs', async failure => {
+  const chmod = jest.spyOn(fs, 'chmodSync');
   const deps = dependencies();
   if (failure === 'signature') deps.verify.mockImplementation(() => { throw new Error('BAD_SIGNATURE'); });
   if (failure === 'version') {
@@ -82,6 +101,7 @@ test.each(['signature', 'version', 'roots', 'download'])('failed %s cannot publi
   if (failure === 'roots') deps.runner.mockReturnValue({ status: 1 });
   if (failure === 'download') deps.fetchFile.mockRejectedValue(new Error('DOWNLOAD_FAILED'));
   await expect(prepareRuntimeIntegrity(deps)).rejects.toThrow();
+  expect(chmod).not.toHaveBeenCalled();
   expect(fs.existsSync(path.join(rootDir, '.release-integrity'))).toBe(false);
   expect(fs.readdirSync(rootDir).some(name => name.startsWith('.integrity-build-'))).toBe(false);
 });

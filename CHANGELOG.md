@@ -2,7 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.29] - 2026-09-10
+
 - Correct the ACR promotion-tag lookup after release publication; missing tags can be created and lookup failures stop safely.
+- Preserve non-root access to the three verified public signature inputs downloaded during ACR source builds.
 
 ## [0.10.28] - 2026-09-10
 

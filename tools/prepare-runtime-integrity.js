@@ -70,6 +70,9 @@ async function prepareRuntimeIntegrity({
       expectedVersion: version,
       expectedSourceCommit: manifest.source.commit
     });
+    // Downloads start owner-only. These three verified public release assets
+    // must also be readable by the non-root runtime after Docker copies them.
+    for (const name of ASSETS) fs.chmodSync(path.join(staging, name), 0o644);
     if (!supplied) {
       fs.mkdirSync(destination, { recursive: true });
       for (const name of ASSETS) fs.renameSync(path.join(staging, name), path.join(destination, name));

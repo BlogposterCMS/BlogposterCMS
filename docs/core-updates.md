@@ -220,6 +220,8 @@ bundle. The pinned verifier obtains public trust roots through its own TUF
 policy. Wrong versions/signatures or different build output stop the build.
 The preparation stage reuses the verifier stage's OS CA bundle for HTTPS trust
 because the slim Node base does not include one.
+After verification, the three public signature inputs receive mode `0644` so
+the final non-root runtime can read downloaded inputs as well as CI inputs.
 
 Configure the ACR tag rule as `^acr-v(?<imageTag>\d+\.\d+\.\d+)$` and the image
 tag as `${imageTag}`. Release CI creates the immutable `acr-vVERSION` source tag

@@ -1,4 +1,5 @@
 import { loadWidgetServices } from './widgetServices.js';
+import { createWidgetHeartbeat } from './widgetHeartbeat.js';
 import { createWidgetUi } from '../../shared/widget-ui/renderer.js';
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{0,59}$/;
 const mounted = new WeakMap();
@@ -87,7 +88,7 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
         dispatch: event => channel.port1.postMessage({ type: 'action', ...event }) });
     const streams = new Map();
     const channel = new MessageChannel();
-    let disposed = false, started = false, inflight = 0, messages = 0, epoch = Date.now(), lastPong = Date.now();
+    let disposed = false, started = false, inflight = 0, messages = 0, epoch = Date.now();
     let resolveReady, rejectReady;
     const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     const fail = (code) => {
@@ -107,11 +108,7 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
         else if (wasConnected)
             dispose();
     });
-    const timer = window.setInterval(() => {
-        if (Date.now() - lastPong > 10000)
-            return fail('WIDGET_SANDBOX_TIMEOUT');
-        channel.port1.postMessage({ type: 'ping' });
-    }, 2000);
+    const heartbeat = createWidgetHeartbeat(() => channel.port1.postMessage({ type: 'ping' }), () => fail('WIDGET_SANDBOX_TIMEOUT'));
     function dispose() {
         if (disposed)
             return;
@@ -121,7 +118,7 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
         streams.clear();
         services.dispose();
         observer.disconnect();
-        clearInterval(timer);
+        heartbeat.dispose();
         channel.port1.close();
         channel.port2.close();
         frame.remove();
@@ -160,7 +157,7 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
                 gestureAt = 0;
             }
             else if (message.type === 'pong')
-                lastPong = Date.now();
+                heartbeat.reply();
             else if (message.type === 'error') {
                 console.error('WIDGET_WORKER_FAILED', String(message.detail || '').slice(0, 250));
                 fail('WIDGET_WORKER_FAILED');

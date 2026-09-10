@@ -59,7 +59,7 @@ module.exports = {
     '^.*(?:/|\\./)(websiteDesignSettings)\\.js$': '<rootDir>/ui/widgets/plainspace/admin/settings/$1.ts',
     '^.*shared/design-system/(styleLibrariesPanel|websiteDesignPreview)\\.js$': '<rootDir>/ui/shared/design-system/$1.ts',
     '^.*basicwidgets/buttonWidget\\.js$': '<rootDir>/ui/widgets/plainspace/public/basicwidgets/buttonWidget.ts',
-    '^.*(?:/|\\./)(widgetServices|widgetModuleMount|widgetModuleLoader|widgetSandbox)\\.js$': '<rootDir>/ui/widgets/rendering/$1.ts',
+    '^.*(?:/|\\./)(widgetServices|widgetModuleMount|widgetModuleLoader|widgetSandbox|widgetHeartbeat)\\.js$': '<rootDir>/ui/widgets/rendering/$1.ts',
     '^.*shared/feedback/adminShellLoading\\.js$': '<rootDir>/ui/shared/feedback/adminShellLoading.ts',
     '^\\./loading\\.js$': '<rootDir>/ui/shared/feedback/loading.ts',
     '^/ui/shared/overlays/popover\\.js$': '<rootDir>/ui/shared/overlays/popover.ts',

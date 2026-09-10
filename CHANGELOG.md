@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Keep isolated widgets alive when a browser hides/freezes a tab or delays its event loop. Resume heartbeat probes with a fresh response window, while retaining the ten-second foreground timeout and normal sandbox teardown.
+
 ## [0.10.32] - 2026-09-10
 
 - Synchronize generated backend search contracts with the native tag filters.

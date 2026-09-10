@@ -50,6 +50,14 @@ services. Browser memory exhaustion is not completely prevented by this model;
 oversized/fast messages and nonresponsive workers are terminated, but the browser
 still owns worker resource scheduling.
 
+The shared widget heartbeat probes every two seconds while its document is visible
+and runnable. Ten seconds without a reply terminates an unresponsive worker with
+`WIDGET_SANDBOX_TIMEOUT`. Hidden/frozen documents pause probes; returning to the
+document or a delayed host timer starts a fresh response window. Background time
+and system-clock adjustments are not evidence that a worker has hung. This does
+not change the worker CSP, reviewed services, message limits or removal lifecycle.
+See [lifecycle verification](testing/widget-sandbox-lifecycle.md).
+
 Set `uiContractVersion: 2` in widgetInfo.json. Bundle a classic script with a
 top-level `render(ui, context)` function in widget.js; no ES imports/exports,
 package manager or installation scripts. Inspection parses but never executes it.

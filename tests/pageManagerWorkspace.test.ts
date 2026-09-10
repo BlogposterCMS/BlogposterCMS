@@ -19,6 +19,15 @@ jest.mock('../ui/shared/dialogs/bpDialog', () => ({ bpDialog: {
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('Page Manager workspace', () => {
+  it('retains ancestors of exact tag matches without including unrelated or substring tags', () => {
+    const records = [
+      { id: 1, title: 'Docs', status: 'published' },
+      { id: 2, title: 'Guide', parent_id: 1, status: 'published', meta: { tags: ['academy', 'how-to'] } },
+      { id: 3, title: 'Unrelated', status: 'published', meta: { tags: ['academy-extra'] } }
+    ];
+    expect(matchingHierarchyRows(records, 'All', '', ['academy']).map(row => row.page.id)).toEqual([1, 2]);
+    expect(matchingHierarchyRows(records, 'All', '', ['missing'])).toEqual([]);
+  });
   let host: HTMLElement;
   let pages: any[];
   let emit: jest.Mock;

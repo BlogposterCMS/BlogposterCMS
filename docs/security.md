@@ -480,3 +480,12 @@ its opaque iframe's restrictive srcdoc CSP in that case. Existing document
 nonces are reused when available; malformed values are rejected. Inherited
 parent CSP still applies, and no `unsafe-inline`, same-origin sandbox grant,
 credential forwarding or preview network permission is added.
+## Public editorial tags and locale projections
+
+`meta.tags` is explicitly public classification. Never store permissions, private
+notes or personal identifiers there. The same bounded Unicode validator runs at
+the Pages, Content Engine and Search write boundaries. Public tag filtering uses
+bound SQL/JSON membership or MongoDB `$all`, with publication/visibility enforced
+before pagination. Localized article projections retain the canonical status and
+identity; a missing locale is not replaced with another language's article.
+Search mirrors remain repairable derived state, not an authorization authority.

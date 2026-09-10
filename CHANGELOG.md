@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Add native article tags, Page Manager tag filtering and agent draft/filter actions. Reuse `meta.tags` across Pages, Content Engine, public search and Designer data bindings, with exact all-tag filtering before pagination and bounded Unicode validation.
+- Preserve all saved translations on page metadata edits and derive language-specific public article/search projections from one canonical entry. Respect the requested locale in initial public HTML and widget bootstrap; retain publication and permission boundaries.
+
 ## [0.10.31] - 2026-09-10
 
 - Add reviewed widget service-configuration import in Settings and native design JSON import in the Design library. Preserve installer grants, create design copies as drafts, and retain the existing Settings/Designer permission boundaries.

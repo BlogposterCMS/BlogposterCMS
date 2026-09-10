@@ -8,6 +8,24 @@ const {
   trashPageContentEntry
 } = require('../mother/modules/pagesManager/contentEngineAdapter');
 
+test('locale mirrors retain one canonical identity with all translations and shared tags', async () => {
+  const emitter = new EventEmitter(); const written = [];
+  emitter.on('getContentEntryBySource', (p, cb) => cb(null, p.sourceId === '7' ? {id:22,language:'en'} : null));
+  for (const event of ['createContentEntry','updateContentEntry']) emitter.on(event,(p,cb)=>{written.push(p);cb(null,{id:p.entryId||23});});
+  await mirrorPageToContentEngine(emitter, {jwt:'t',pageId:7,title:'Guide',slug:'guide',status:'published',language:'en',meta:{tags:['academy']},
+    translations:[{language:'en',title:'Guide',html:'<p>English</p>'},{language:'zh',title:'指南',html:'<p>中文内容</p>'}]});
+  expect(written.map(p=>[p.sourceId,p.language,p.title,p.entryId])).toEqual([['7','en','Guide',22]]);
+  expect(written[0].content.translations).toHaveLength(2);
+  expect(written.every(p=>p.meta.tags[0]==='academy')).toBe(true);
+});
+
+test('metadata-only mirror uses all saved translations instead of the editor current-locale patch', () => {
+  const row={id:7,language:'en',meta:{tags:[]},translations:[{language:'en',title:'Guide'},{language:'zh',title:'指南'}]};
+  const data=buildPageDataFromPageRow('t',row,{translations:[{language:'en',title:'Guide'}]});
+  expect(data.translations).toHaveLength(2);
+  expect(data.meta.tags).toEqual([]);
+});
+
 test('page content mirror maps page data to a content entry payload', () => {
   const payload = buildPageContentEntryPayload({
     jwt: 't',

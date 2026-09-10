@@ -1,4 +1,5 @@
 import { createTabSystem } from '../../../../shared/navigation/tabs.js';
+import { normalizeContentTags } from '../../../../shared/content/contentTags.js';
 import enhanceSelects from '../../../../shared/controls/customSelect.js';
 import { createImageField } from '../../../../shared/media/imageField.js';
 import { createFormField } from '../../../../shared/forms/formField.js';
@@ -107,6 +108,12 @@ export async function render(el: HTMLElement | null): Promise<void> {
   field('slug', 'Slug');
   field('status', 'Status', 'select');
   field('publishAt', 'Publish at', 'datetime-local');
+  field('tags', 'Tags');
+  const tagHint = document.createElement('p');
+  tagHint.id = 'page-editor-tags-hint';
+  tagHint.textContent = 'Public labels for search and filtering. Separate tags with commas; use the same labels across translations.';
+  fields.get('tags')!.setAttribute('aria-describedby', tagHint.id);
+  general.append(tagHint);
   const seoHeading = document.createElement('h3'); seoHeading.textContent = 'SEO and link previews';
   const seo = document.createElement('section'); seo.className = 'page-editor-seo';
   seo.setAttribute('aria-label', 'SEO and link previews');
@@ -161,7 +168,8 @@ export async function render(el: HTMLElement | null): Promise<void> {
     const saved: PageEditorFormValues = {
       title: page.trans_title || page.title || '', slug: page.slug || '', status: page.status || 'draft',
       seoDesc: page.meta_desc || '', seoImage: page.seo_image || '', publishAt: asString(page.meta?.publish_at),
-      seoTitle: page.seo_title || '', featuredImage: asString(page.meta?.featuredImage)
+      seoTitle: page.seo_title || '', featuredImage: asString(page.meta?.featuredImage),
+      tags: normalizeContentTags(page.meta?.tags).join(', ')
     };
     fields.forEach((input, name) => { input.value = saved[name] || ''; });
     imageFields.forEach(image => image.refresh());
@@ -194,7 +202,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
       Object.assign(draft, {
         title: form.title.trim(), trans_title: form.title.trim(), slug: form.slug.trim(), status: form.status,
         meta_desc: form.seoDesc, seo_image: form.seoImage.trim(), seo_title: form.seoTitle?.trim() || '',
-        meta: { ...draft.meta, publish_at: form.publishAt, featuredImage: form.featuredImage?.trim() || '' }
+        meta: { ...draft.meta, tags: normalizeContentTags(form.tags), publish_at: form.publishAt, featuredImage: form.featuredImage?.trim() || '' }
       });
       Object.assign(page, draft, { meta: { ...draft.meta } });
       dirty = false;

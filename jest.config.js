@@ -17,6 +17,8 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^.*content/contentTags\\.js$': '<rootDir>/ui/shared/content/contentTags.ts',
+    '^\\./pageTagFilter\\.js$': '<rootDir>/ui/widgets/plainspace/admin/defaultwidgets/pageList/pageTagFilter.ts',
     '^\\./(widgetServiceConfiguration|widgetServiceConfigurationControl)\\.js$': '<rootDir>/ui/shared/module-access/$1.ts',
     '^\\./(designerImportControl|designerImportData)\\.js$': '<rootDir>/ui/widgets/plainspace/admin/$1.ts',
     '^.*widget-ui/(.*)\\.js$': '<rootDir>/ui/shared/widget-ui/$1.ts',

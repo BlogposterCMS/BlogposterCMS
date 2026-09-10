@@ -119,9 +119,12 @@ function createPublicPageRoutes({
       // Never turn an admin session or a raw page record into public bootstrap data.
       // A signed preview renders the parent-owned draft. Its shell must also
       // boot on a fresh site without a published start page or matching slug.
+      // Use the same explicit locale for the first HTML, content slot and hydrated widgets.
+      const localeQuery = String(req.query?.lang || req.query?.language || 'en').trim().toLowerCase();
+      const language = /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/.test(localeQuery) ? localeQuery : 'en';
       const page = livePreviewRequested
-        ? { id: '__designer_live_preview__', slug, language: 'en' }
-        : await requestPublic('pages', slug ? 'getBySlug' : 'start', { slug, language: 'en' });
+        ? { id: '__designer_live_preview__', slug, language }
+        : await requestPublic('pages', slug ? 'getBySlug' : 'start', { slug, language });
 
       if (!page?.id) return next();
 
@@ -130,7 +133,6 @@ function createPublicPageRoutes({
       const token = global.pagesPublicToken;
       const slugToUse = slug || sanitizeSlug(page.slug);
       const nonce = crypto.randomBytes(16).toString('base64');
-      const language = page.language || 'en';
       // Settings is the single configuration authority; unavailable settings fail closed.
       let analyticsConfig = normalizeConfig(null);
       if (!livePreviewRequested) {
@@ -152,6 +154,7 @@ function createPublicPageRoutes({
         : await loadPublicPresentation(requestPublic, slugToUse, language);
 
       let html = await fs.promises.readFile(pageHtmlPath, 'utf8');
+      html = html.replace(/(<html\b[^>]*\blang=")[^"]*(")/i, `$1${language}$2`);
       if (presentation) {
         presentation.bootstrap.pathname = req.path;
         html = html.replace('<html ', '<html data-bp-public-layout-ready="true" ');

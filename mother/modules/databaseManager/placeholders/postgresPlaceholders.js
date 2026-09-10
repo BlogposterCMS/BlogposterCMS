@@ -573,6 +573,10 @@ switch (operation) {
         WHERE p.id = $1;
       `, [pageId, lang]);
 
+      if (rows[0] && params?.[2] === true) {
+        const translations = await client.query('SELECT language, title, html, css, meta_desc, seo_title, seo_keywords FROM pagesManager.page_translations WHERE page_id = $1 ORDER BY language LIMIT 65', [pageId]);
+        rows[0].translations = translations.rows;
+      }
       return rows[0] || null;
     }
 

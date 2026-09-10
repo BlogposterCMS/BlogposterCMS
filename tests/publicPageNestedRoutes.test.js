@@ -65,6 +65,16 @@ function createServer(expectedSlug, seenSlugs, config, validateAdminToken) {
 }
 
 describe('nested public page routes', () => {
+  it('keeps the requested public locale in first HTML and widget bootstrap', async () => {
+    const server = createServer('guides/known', []);
+    try {
+      const response = await request(server, '/guides/known?lang=zh');
+      expect(response.status).toBe(200);
+      expect(response.body).toContain('window.LANG = "zh"');
+      expect(response.body).toContain('lang="zh"');
+      expect(response.body).toContain('"language":"zh"');
+    } finally { await new Promise(resolve => server.close(resolve)); }
+  });
   it('only links visits after recognition consent and verifies the account independently of browser identifiers', async () => {
     const collector = require('../mother/modules/analyticsManager/collector');
     collector.take(); collector.setEnabled(true);

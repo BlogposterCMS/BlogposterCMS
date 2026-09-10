@@ -98,7 +98,7 @@ function buildPageDataFromPageRow(jwt, row, fallback = {}) {
     slug: firstDefined(row.slug, fallback.slug, ''),
     status: firstDefined(row.status, fallback.status, 'draft'),
     seo_image: firstDefined(row.seo_image, row.seoImage, fallback.seo_image, fallback.seoImage, ''),
-    translations: fallbackTranslations.length > 0 ? fallbackTranslations : [translation],
+    translations: Array.isArray(row.translations) ? row.translations : fallbackTranslations.length > 0 ? fallbackTranslations : [translation],
     parent_id: firstDefined(row.parent_id, row.parentId, fallback.parent_id, fallback.parentId, null),
     is_content: firstDefined(row.is_content, row.isContent, fallback.is_content, fallback.isContent, false),
     lane: firstDefined(row.lane, fallback.lane, 'public'),
@@ -190,19 +190,14 @@ async function mirrorPageToContentEngine(motherEmitter, pageData) {
     return { err: sourceLookup.err };
   }
 
-  const entryPayload = buildPageContentEntryPayload(pageData);
-  if (sourceLookup.result?.id) {
-    return emitOptional(motherEmitter, BACKEND_EVENTS.UPDATE_CONTENT_ENTRY, {
-      ...entryPayload,
-      entryId: sourceLookup.result.id
-    });
-  }
-
-  if (!hasEnoughForFirstMirror(pageData)) {
+  if (!sourceLookup.result?.id && !hasEnoughForFirstMirror(pageData)) {
     return { skipped: true, reason: 'incomplete-page-data' };
   }
 
-  return emitOptional(motherEmitter, BACKEND_EVENTS.CREATE_CONTENT_ENTRY, entryPayload);
+  // Keep one canonical entry and revision history for the page and its translations.
+  const entryPayload = buildPageContentEntryPayload(pageData);
+  return emitOptional(motherEmitter, sourceLookup.result?.id ? BACKEND_EVENTS.UPDATE_CONTENT_ENTRY : BACKEND_EVENTS.CREATE_CONTENT_ENTRY,
+    { ...entryPayload, ...(sourceLookup.result?.id ? { entryId: sourceLookup.result.id } : {}) });
 }
 
 async function trashPageContentEntry(motherEmitter, pageData = {}) {

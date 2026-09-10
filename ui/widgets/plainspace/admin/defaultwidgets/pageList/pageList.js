@@ -5,6 +5,7 @@ import { registerWorkspaceChanges } from '/ui/shared/navigation/workspaceChanges
 import enhanceSelects from '/ui/shared/controls/customSelect.js';
 import { debounce } from '/ui/shared/utils/debounce.js';
 import { pageService, sanitizeSlug } from './pageService.js';
+import { createPageTagFilter, matchesPageTags, pageTags } from './pageTagFilter.js';
 import { renderPageDesignPreview } from './pageDesignPreview.js';
 import { openArticle } from '/ui/shared/article/articleLoader.js';
 import { readArticlePage, pageContentKind, createPageDesign } from '/ui/shared/article/articleData.js';
@@ -271,14 +272,14 @@ export async function render(el, options = {}) {
     }
 }
 /** Include ancestors so a search result never loses its place in the page hierarchy. */
-export function matchingHierarchyRows(pages, filter, query) {
+export function matchingHierarchyRows(pages, filter, query, tags = []) {
     const rows = buildPageHierarchyRows(pages);
     // Collections use the same Pages records, including their children. Their
     // count remains the number of parent/marked pages, not the visible row count.
     const candidates = filter === 'Collections'
         ? deriveCollections(pages).flatMap(collection => [collection.page, ...collection.children.map(child => child.page)])
         : filterPages(pages, filter);
-    const matches = new Set(candidates.filter(page => `${page.title || ''} ${page.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase())));
+    const matches = new Set(candidates.filter(page => `${page.title || ''} ${page.slug || ''}`.toLowerCase().includes(query.trim().toLowerCase()) && matchesPageTags(page, tags)));
     const included = new Set(rows.filter(row => matches.has(row.page)).map(row => row.rowId));
     const byId = new Map(rows.map(row => [row.rowId, row]));
     for (const rowId of Array.from(included)) {
@@ -387,6 +388,8 @@ export function renderPageList(el, pages, options = {}) {
     filterToolbar.className = 'page-manager__filter-toolbar';
     filters.before(filterToolbar);
     filterToolbar.append(filters, requireElement(root, '.page-manager__header-actions'));
+    const tagFilter = createPageTagFilter(() => renderTree());
+    filterToolbar.before(tagFilter.element);
     const feedback = requireElement(root, '.page-manager__feedback');
     const retry = requireElement(root, '[data-action="retry"]');
     function renderLayoutContext() {
@@ -645,9 +648,10 @@ export function renderPageList(el, pages, options = {}) {
             return `<button class="filter" type="button" data-filter="${filter}" aria-pressed="${filter === currentFilter}">${label}<span>${filterPages(pages, filter).length}</span></button>`;
         }).join('');
         requireElement(root, '[data-action="add"]').innerHTML = `${icon('plus')}<span>${currentFilter === 'Collections' ? 'Add collection' : 'Add page'}</span>`;
-        const rows = matchingHierarchyRows(pages, currentFilter, query);
+        tagFilter.refresh(pages);
+        const rows = matchingHierarchyRows(pages, currentFilter, query, tagFilter.value() ? [tagFilter.value()] : []);
         const visible = new Set();
-        const showMatches = Boolean(query.trim()) || currentFilter !== 'All';
+        const showMatches = Boolean(query.trim() || tagFilter.value()) || currentFilter !== 'All';
         tree.innerHTML = rows.length ? '' : '<div class="page-manager__empty"><strong>No pages found</strong><p>Try another search or filter, or add your first page.</p></div>';
         for (const row of rows) {
             const id = normalizePageId(row.page.id);
@@ -1043,7 +1047,7 @@ export function renderPageList(el, pages, options = {}) {
     const editableFields = ['title', 'slug', 'parent_id', 'status'];
     registerWorkspaceAgent({ root, id: 'pages', title: 'Pages',
         read: () => ({ dirty, busy, error: feedback.dataset.error === 'true' ? feedback.textContent : null,
-            selection: selectedId, creating, refreshPending, filter: currentFilter, query, lastExampleImport,
+            selection: selectedId, creating, refreshPending, filter: currentFilter, query, tag: tagFilter.value(), lastExampleImport,
             contentSlotWarnings: [...slotWarnings].map(id => ({ pageId: id, code: 'PAGE_CONTENT_SLOT_MISSING' })),
             mainDesign: { id: mainDesign || null, loading: mainDesignLoading, error: mainDesignError || null,
                 designs: designLibrary.map(({ id, title }) => ({ id, title })) },
@@ -1051,8 +1055,10 @@ export function renderPageList(el, pages, options = {}) {
                 ? pagePresentationFromList(pages.find(page => normalizePageId(page.id) === selectedId), pages, mainDesign) : null,
             draft: readAgentForm(details, editableFields),
             pageCount: pages.length,
-            pages: matchingHierarchyRows(pages, currentFilter, query).map(({ page: { id, title, slug, status, parent_id, is_start } }) => ({ id, title, slug, status, parent_id, is_start })) }),
+            pages: matchingHierarchyRows(pages, currentFilter, query, tagFilter.value() ? [tagFilter.value()] : []).map(({ page }) => ({ id: page.id, title: page.title, slug: page.slug, status: page.status, parent_id: page.parent_id, is_start: page.is_start, tags: pageTags(page) })) }),
         actions: [
+            { action: 'pages.filterTag', label: 'Filter pages by tag', params: [{ name: 'tag', type: 'string', required: true }],
+                run: p => { tagFilter.set(p.tag); renderTree(); } },
             { action: 'pages.openArticle', label: 'Open article editor', params: [{ name: 'id', type: 'string', required: true }], run: async (p) => {
                     const id = agentString(p, 'id');
                     if (!pages.some(page => normalizePageId(page.id) === id))

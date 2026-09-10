@@ -1,4 +1,5 @@
 import { emitRuntimeAdmin, runtimeAdminPayload } from '../api-client/runtimeFacade.js';
+import { normalizeContentTags } from '../content/contentTags.js';
 // Keep page-manager and layout-template event payloads outside the DOM widget.
 function requireEmitter(emit) {
     if (typeof emit !== 'function') {
@@ -43,6 +44,7 @@ export function buildPageUpdatePayload(jwt, page, values) {
             }],
         meta: {
             ...(page.meta || {}),
+            ...(values.tags !== undefined ? { tags: normalizeContentTags(values.tags) } : {}),
             // Presentation is edited by the existing Content/Designer attachment flow.
             // Saving SEO fields must not invent or overwrite a template assignment.
             publish_at: publishAt,

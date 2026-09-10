@@ -1,4 +1,5 @@
 import { emitRuntimeAdmin, runtimeAdminPayload } from '../api-client/runtimeFacade.js';
+import { normalizeContentTags } from '../content/contentTags.js';
 
 export interface PageRecord {
   id?: string | number;
@@ -31,6 +32,7 @@ export interface PageEditorFormValues {
   seoImage: string;
   seoTitle?: string;
   featuredImage?: string;
+  tags?: string;
 }
 
 interface PageDataLoaderLike {
@@ -93,6 +95,7 @@ export function buildPageUpdatePayload(
     }],
     meta: {
       ...(page.meta || {}),
+      ...(values.tags !== undefined ? { tags: normalizeContentTags(values.tags) } : {}),
       // Presentation is edited by the existing Content/Designer attachment flow.
       // Saving SEO fields must not invent or overwrite a template assignment.
       publish_at: publishAt,

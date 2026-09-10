@@ -656,6 +656,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         ...page,
         id: page.id || page._id.toHexString(),
         translation,
+        ...(params?.[2] === true ? { translations: await db.collection('page_translations').find({page_id:page._id}).sort({language:1}).limit(65).toArray() } : {}),
         parentSlug: parent ? parent.slug : null
       };
     }

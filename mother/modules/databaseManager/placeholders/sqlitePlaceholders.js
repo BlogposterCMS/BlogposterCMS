@@ -556,6 +556,9 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
         try { row.meta = JSON.parse(row.meta); } catch { row.meta = null; }
       }
 
+      if (row && params?.[2] === true) {
+        row.translations = await db.all('SELECT language, title, html, css, meta_desc, seo_title, seo_keywords FROM pagesManager_page_translations WHERE page_id = ? ORDER BY language LIMIT 65', [pageId]);
+      }
       return row || null;
     }
 

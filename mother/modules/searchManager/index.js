@@ -8,6 +8,8 @@ require('dotenv').config();
 
 const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
+const { normalizeContentTags, normalizeTaggedMeta } = require('../../../ui/shared/content/contentTags.js');
+const { contentLocales } = require('../contentEngine/contentLocales');
 const {
   ensureSearchDatabase,
   ensureSearchSchema,
@@ -150,7 +152,8 @@ function normalizeSearchDocument(payload = {}, fallback = {}) {
   const status = normalizeStatus(payload.status ?? fallback.status ?? 'published');
   const visibility = normalizeVisibility(payload.visibility ?? fallback.visibility ?? (status === 'published' ? 'public' : 'private'));
   const language = normalizeKey(payload.language || fallback.language || 'en', 20) || 'en';
-  const searchText = normalizeText([title, excerpt, body, contentTypeKey, url].filter(Boolean).join(' '), 30000);
+  const meta = normalizeTaggedMeta(sanitizeMetaValue(payload.meta ?? fallback.meta ?? {}));
+  const searchText = normalizeText([title, excerpt, body, contentTypeKey, url, ...(meta?.tags || [])].filter(Boolean).join(' '), 30000);
 
   if (!title && !body && !excerpt) {
     throw new Error('Search document needs title, excerpt or body text.');
@@ -167,7 +170,7 @@ function normalizeSearchDocument(payload = {}, fallback = {}) {
     status,
     visibility,
     searchText,
-    meta: sanitizeMetaValue(payload.meta ?? fallback.meta ?? {})
+    meta
   };
 }
 
@@ -187,6 +190,7 @@ function contentEntryToSearchDocument(entry = {}) {
     visibility: entry.status === 'published' ? 'public' : 'private',
     meta: {
       source: 'contentEngine',
+      ...(meta.tags !== undefined ? { tags: normalizeContentTags(meta.tags) } : {}),
       contentTypeKey: entry.content_type_key || entry.contentTypeKey
     }
   });
@@ -196,13 +200,38 @@ function normalizeQuery(value = '') {
   return normalizeText(value, 300);
 }
 
+async function saveSearchProjection(motherEmitter, jwt, payload) {
+  const primary = normalizeSearchDocument(payload);
+  if (!Array.isArray(payload.localizedDocuments)) {
+    return searchDbUpdate(motherEmitter, jwt, 'UPSERT_SEARCH_DOCUMENT', primary);
+  }
+  if (!primary.entryId || payload.localizedDocuments.length > 65 || payload.localizedDocuments.length === 0) {
+    throw Object.assign(new Error('CONTENT_LOCALES_INVALID: A canonical entry and bounded locale list are required.'), {code:'CONTENT_LOCALES_INVALID'});
+  }
+  // Validate the entire replacement before touching derived search state. All
+  // locales share publication policy and canonical identity; only index rows differ.
+  const documents = payload.localizedDocuments.map(localized => {
+    const document = normalizeSearchDocument({...localized, entryId:primary.entryId,
+      status:primary.status, visibility:primary.visibility, meta:primary.meta, url:primary.url});
+    document.sourceId = document.language === primary.language ? primary.sourceId : `${primary.sourceId}:${document.language}`;
+    return document;
+  });
+  await searchDbUpdate(motherEmitter, jwt, 'DELETE_SEARCH_DOCUMENT', primary);
+  let result;
+  for (const document of documents) {
+    const saved = await searchDbUpdate(motherEmitter, jwt, 'UPSERT_SEARCH_DOCUMENT', document);
+    if (!result || document.language === primary.language) result = saved;
+  }
+  return result;
+}
+
 function setupSearchEvents(motherEmitter) {
   motherEmitter.on(BACKEND_EVENTS.INDEX_SEARCH_DOCUMENT, async (payload, originalCb) => {
     const callback = onceCallback(originalCb);
     try {
       assertCorePayload(payload, BACKEND_EVENTS.INDEX_SEARCH_DOCUMENT);
       requirePermission(payload, 'search.manage');
-      const result = await searchDbUpdate(motherEmitter, payload.jwt, 'UPSERT_SEARCH_DOCUMENT', normalizeSearchDocument(payload));
+      const result = await saveSearchProjection(motherEmitter, payload.jwt, payload);
       callback(null, result);
     } catch (err) {
       callback(err);
@@ -241,6 +270,7 @@ function setupSearchEvents(motherEmitter) {
         query: normalizeQuery(payload.query || payload.q || ''),
         contentTypeKey: normalizeKey(payload.contentTypeKey || payload.contentType || ''),
         language: payload.language ? normalizeKey(payload.language, 20) : '',
+        tags: normalizeContentTags(payload.tags ?? payload.tag),
         status: manager ? (payload.status ? normalizeStatus(payload.status) : '') : 'published',
         visibility: manager ? (payload.visibility ? normalizeVisibility(payload.visibility) : '') : 'public',
         limit: Math.min(Number(payload.limit) || 20, 100),
@@ -271,7 +301,10 @@ function setupSearchEvents(motherEmitter) {
       const errors = [];
       for (const entry of entries) {
         try {
-          indexed.push(await searchDbUpdate(motherEmitter, payload.jwt, 'UPSERT_SEARCH_DOCUMENT', contentEntryToSearchDocument(entry)));
+          indexed.push(await saveSearchProjection(motherEmitter, payload.jwt, {
+            ...contentEntryToSearchDocument(entry),
+            localizedDocuments: contentLocales(entry).map(contentEntryToSearchDocument)
+          }));
         } catch (err) {
           errors.push({ entryId: entry.id, message: err.message });
         }

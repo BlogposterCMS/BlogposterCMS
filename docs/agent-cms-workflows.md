@@ -90,3 +90,16 @@ use the existing editing/save/publish and page-layout workflow. Existing designs
 and pages remain independent. The import has no new AgentManager command yet;
 its domain helper remains separate from the file picker, and Studio's existing
 agent adapter takes over after import.
+## Article labels and shared guides
+
+Read the current page snapshot, use `page.updateDraft` with the `tags` field,
+then the existing save action. Native API clients can set `meta.tags` through
+`pages.update`; preserve other metadata from the current record. The Page Manager
+surface exposes `pages.filterTag` and includes page tags in its snapshot.
+
+Reuse one article and URL across help, documentation and learning-path views.
+The existing Designer public search data source accepts `tag` (comma-separated
+AND filtering), `q`, `lang` and `limit`. Read `items[].tags` to display
+labels. Tags are public editorial classification, not authorization. Save/reload
+and check both public search and the translated article; a tag input alone is
+not evidence of successful indexing. See [Search Manager](modules/searchManager.md).

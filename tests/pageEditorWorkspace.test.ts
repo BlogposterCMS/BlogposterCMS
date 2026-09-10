@@ -135,6 +135,21 @@ describe('fixed Page Editor', () => {
     expect(page.meta_desc).toBe('Draft description');
   });
 
+  it('saves tags through the same page draft, survives reload and rejects invalid labels without writing', async () => {
+    edit('tags', 'Academy, 入门, academy');
+    expect(page.meta.tags).toBeUndefined();
+    await submit();
+    expect(page.meta.tags).toEqual(['academy', '入门']);
+    expect(writes()[0][1].params.meta).toMatchObject({ keep: true, tags: ['academy', '入门'] });
+    await render(host);
+    expect(find<HTMLInputElement>('[name="tags"]').value).toBe('academy, 入门');
+    edit('tags', '<script>'); await submit();
+    expect(writes()).toHaveLength(1);
+    expect(find('.page-editor-feedback').textContent).toContain('CONTENT_TAGS_INVALID');
+    edit('tags', ''); await submit();
+    expect(page.meta.tags).toEqual([]);
+  });
+
   it('guards double submits and leaving during a pending save', async () => {
     edit('title', 'Changed');
     let release!: () => void;

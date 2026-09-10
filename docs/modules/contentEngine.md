@@ -45,6 +45,13 @@ move to a cleaner content contract.
 source page id. The mirror is optional and fault tolerant: if Content Engine is
 not loaded or the mirror fails, the existing page event still completes.
 
+One page keeps one canonical entry containing all saved translations. The Pages
+owner requests all locales for its mirror, including on metadata-only edits, so
+saving tags in one language does not discard another language. Public permalink
+resolution selects the requested translation without changing the entry ID or
+publication state; a missing translation returns no result. Public page HTML and
+widget bootstrap use the same explicit `lang`/`language` query parameter.
+
 New backend features should prefer Content Engine events and only expose
 page projection events where existing UI code still depends on `pagesManager`.
 
@@ -103,7 +110,9 @@ Collections are represented by public pages with child pages, or by public
 pages whose metadata contains `isCollection: true`. Admin UI should discover
 and manage those structures through `pagesManager` events such as
 `getPagesByLane`, `getChildPages`, `createPage` and `updatePage`. Content
-Engine does not register categories, tags or custom taxonomy terms.
+Engine does not register a separate taxonomy. Public editorial labels are a
+normalized `meta.tags` array shared with Pages and Search; see
+[Search Manager](searchManager.md#article-tags-and-translations).
 
 ## Search Indexing
 

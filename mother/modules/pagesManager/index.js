@@ -1,6 +1,7 @@
 
 
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
+const { normalizeTaggedMeta } = require('../../../ui/shared/content/contentTags.js');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 const { ownPagePresentation, resolvePagePresentation, validatePageDesignMode, pageLayoutMode, SITE_MAIN_DESIGN_SETTING } = require('../../../ui/shared/layout/pagePresentation.js');
@@ -112,7 +113,8 @@ async function fetchPageRowForContentMirror(motherEmitter, { jwt, pageId, langua
       data: {
         rawSQL: 'GET_PAGE_BY_ID',
         0: pageId,
-        1: language || 'en'
+        1: language || 'en',
+        2: true // The owner mirror needs every saved locale, including on metadata-only edits.
       }
     }, { timeoutMs: MIRROR_FETCH_TIMEOUT });
     return page || null;
@@ -294,7 +296,7 @@ function setupPagesManagerEvents(motherEmitter) {
       is_content = false,
       lane = 'public',
       language = 'en',
-      meta = null,
+      meta: rawMeta = null,
       weight: rawWeight = 0,
       autoSuffixSlug = false,
       skipContentMirror = false
@@ -312,7 +314,8 @@ function setupPagesManagerEvents(motherEmitter) {
     if (decodedJWT && !hasPermission(decodedJWT, 'pages.create')) {
       return callback(new Error('Forbidden – missing permission: pages.create'));
     }
-    try { validatePageDesignMode({ meta }); } catch (error) { return callback(error); }
+    let meta;
+    try { meta = normalizeTaggedMeta(rawMeta); validatePageDesignMode({ meta }); } catch (error) { return callback(error); }
   
     const mainTitle = rawTitle.trim() || (translations[0]?.title ?? '').trim();
     if (!mainTitle) {
@@ -686,7 +689,7 @@ function setupPagesManagerEvents(motherEmitter) {
         }).then(async page => {
   if (!page) return cb(new Error('Page not found'));
   const pageSeo = {
-    title: page.title || '',
+    title: page.trans_title || page.title || '',
     seoTitle: page.seo_title || '',
     description: page.meta_desc || '',
     keywords: page.seo_keywords || '',
@@ -825,7 +828,7 @@ function setupPagesManagerEvents(motherEmitter) {
     if (typeof lane !== 'undefined') updateParams.lane = lane;
     if (typeof language !== 'undefined') updateParams.language = language;
     if (typeof title !== 'undefined') updateParams.title = title;
-    if (hasMeta) updateParams.meta = meta;
+    if (hasMeta) updateParams.meta = normalizeTaggedMeta(meta);
     if (hasWeight) updateParams.weight = weight;
 
       if (!jwt || moduleName !== 'pagesManager' || moduleType !== 'core') {

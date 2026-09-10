@@ -1,5 +1,8 @@
 'use strict';
 
+const { normalizeContentTags, normalizeTaggedMeta } = require('../../../ui/shared/content/contentTags.js');
+const { localizedContent, contentLocales } = require('./contentLocales');
+
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
@@ -268,6 +271,7 @@ function buildSearchDocumentPayload(jwt, entry = {}) {
     visibility: entry.status === 'published' ? 'public' : 'private',
     meta: {
       source: 'contentEngine',
+      ...(meta.tags !== undefined ? { tags: normalizeContentTags(meta.tags) } : {}),
       contentTypeKey: entry.contentTypeKey || entry.content_type_key || ''
     }
   };
@@ -276,6 +280,7 @@ function buildSearchDocumentPayload(jwt, entry = {}) {
 async function mirrorContentEntryToSearch(motherEmitter, jwt, entry) {
   const payload = buildSearchDocumentPayload(jwt, entry);
   if (!payload) return;
+  payload.localizedDocuments = contentLocales(entry).map(localized => buildSearchDocumentPayload(jwt, localized));
   const result = await emitOptional(motherEmitter, BACKEND_EVENTS.INDEX_SEARCH_DOCUMENT, payload);
   if (result?.err) {
     console.warn('[CONTENT ENGINE] Search index mirror failed:', result.err.message);
@@ -321,7 +326,7 @@ function normalizeEntryInput(payload, existing = {}) {
     authorId: normalizeScalarId(firstDefined(payload.authorId, payload.author_id, existing.author_id)),
     excerpt: normalizeText(payload.excerpt ?? existing.excerpt ?? '', 2000),
     content: normalizeContentPayload(payload.content, existing.content ?? {}),
-    meta: normalizeObjectPayload(payload.meta, existing.meta ?? {}),
+    meta: normalizeTaggedMeta(normalizeObjectPayload(payload.meta, existing.meta ?? {})),
     publishedAt: normalizeDateString(firstDefined(payload.publishedAt, payload.published_at, existing.published_at), null)
   };
 }
@@ -491,7 +496,7 @@ function setupContentEngineEvents(motherEmitter) {
       if (!permalink) throw new Error('permalink or path is required.');
       const language = normalizeLanguage(payload.language || 'en');
       const result = await contentDbSelect(motherEmitter, payload.jwt, 'RESOLVE_CONTENT_PERMALINK', { permalink, language });
-      callback(null, Array.isArray(result) ? result[0] || null : result || null);
+      callback(null, localizedContent(Array.isArray(result) ? result[0] || null : result || null, language));
     } catch (err) {
       callback(err);
     }
@@ -716,6 +721,7 @@ module.exports = {
   },
   setupContentEngineEvents,
   _internals: {
+    buildSearchDocumentPayload,
     assertContentEntryAddressAvailable,
     buildPermalink,
     normalizeContentPayload,

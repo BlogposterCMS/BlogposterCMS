@@ -110,9 +110,10 @@ test('reindexContentEntries indexes Content Engine entries', async () => {
 
   assert.ifError(err);
   assert.strictEqual(result.count, 1);
-  assert.strictEqual(updates[0].data.rawSQL, 'UPSERT_SEARCH_DOCUMENT');
-  assert.strictEqual(updates[0].data.params.entryId, '3');
-  assert.match(updates[0].data.params.searchText, /Indexed Short Body/);
+  assert.strictEqual(updates[0].data.rawSQL, 'DELETE_SEARCH_DOCUMENT');
+  assert.strictEqual(updates[1].data.rawSQL, 'UPSERT_SEARCH_DOCUMENT');
+  assert.strictEqual(updates[1].data.params.entryId, '3');
+  assert.match(updates[1].data.params.searchText, /Indexed Short Body/);
 });
 
 test('search internals convert content entries to search documents', () => {

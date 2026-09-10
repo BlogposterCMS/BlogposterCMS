@@ -210,6 +210,28 @@ Set an exact mirror reference including its digest, choose
 operator's external source-build verification; it does not claim GitHub's
 attestation applies to a separately rebuilt image.
 
+### ACR overseas-builder transfer
+
+`deploy/acr-release/Dockerfile` imports the completed official release by its
+reviewed immutable digest. It does not compile the repository or regenerate its
+signed integrity inputs. A raw ACR source build of the root Dockerfile cannot
+replace the release pipeline because those external inputs are absent in Git.
+
+For the operator-triggered transfer, use the published `codex/acr-release-mirror`
+branch, context `/deploy/acr-release`, filename `Dockerfile`, Linux amd64 and
+the exact reviewed version as the ACR tag (currently `0.10.25`). Keep overseas
+building enabled. Start once after the source release pipeline and detached
+manifest verification pass. Future transfers require reviewing and updating
+the pinned source digest and the destination tag first; this rule is not an
+automatic latest-release tracker.
+
+Before deployment, compare the ACR image's filesystem layers and runtime config
+with the official image, run its offline integrity check, and pin the resulting
+ACR digest in the existing updater mirror configuration. Retain signed release
+metadata, normal backup, readiness and rollback checks. ACR may reserialize OCI
+metadata, so its manifest digest need not equal the source manifest digest.
+The transfer does not mirror module ZIPs or future update discovery metadata.
+
 ## Runtime self-verification
 
 Every production image contains the integrity manifest and detached bundle

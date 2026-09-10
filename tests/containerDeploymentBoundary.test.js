@@ -4,6 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const read = name => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
 
+test('ACR transport cannot rebuild or modify the attested runtime', () => {
+  // Only inheriting an immutable official image keeps code and signed inputs together.
+  const instructions = read('deploy/acr-release/Dockerfile').split(/\r?\n/)
+    .map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+  expect(instructions).toHaveLength(1);
+  expect(instructions[0]).toMatch(/^FROM ghcr\.io\/blogpostercms\/blogpostercms@sha256:[a-f0-9]{64}$/);
+});
+
 test('container keeps runtime, native modules and non-root persistent state together', () => {
   const dockerfile = read('Dockerfile');
   expect(dockerfile.match(/^FROM \$\{NODE_IMAGE\} AS (build|runtime)$/gm)).toHaveLength(2);

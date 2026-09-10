@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Provide an ACR overseas-builder transport for the already verified release image, preserving its packaged integrity inputs.
+
 ## [0.10.25] - 2026-09-10
 
 - Keep signed release-note changes out of host compatibility checks so module-only updates remain independent.

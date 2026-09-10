@@ -3,11 +3,12 @@ import { normalizeContentTags } from '../../../../shared/content/contentTags.js'
 import enhanceSelects from '../../../../shared/controls/customSelect.js';
 import { createImageField } from '../../../../shared/media/imageField.js';
 import { createFormField } from '../../../../shared/forms/formField.js';
+import { mountPageLanguageControl } from '../../../../shared/page-editor/pageEditorLanguage.js';
 import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
 import { registerWorkspaceChanges } from '../../../../shared/navigation/workspaceChanges.js';
 import { render as renderContent } from './pageContentWidget.js';
 import { registerWorkspaceAgent, patchAgentForm, agentString } from '../../../../shared/agent/workspaceAgent.js';
-import { asString, clearPageEditorCache, errorMessage, savePageEditorPage, loadPageEditorPage } from './pageEditorData.js';
+import { asString, clearPageEditorCache, errorMessage, savePageEditorPage, loadPageEditorPage, loadPageEditorTranslation, normalizePageLanguage } from './pageEditorData.js';
 export async function render(el) {
     if (!el)
         return;
@@ -16,7 +17,7 @@ export async function render(el) {
     el.innerHTML = '<p role="status">Loading page…</p>';
     let source;
     try {
-        source = await loadPageEditorPage(emit, jwt, window.location.pathname, window.ADMIN_BASE || 'admin', window.pageDataPromise, window.pageDataLoader);
+        source = await loadPageEditorPage(emit, jwt, window.location.pathname, window.ADMIN_BASE || 'admin', window.pageDataPromise, window.pageDataLoader, new URLSearchParams(window.location.search).get('contentLang') || undefined);
     }
     catch (error) {
         el.textContent = `PAGE_EDITOR_LOAD_FAILED: ${errorMessage(error)}`;
@@ -29,7 +30,7 @@ export async function render(el) {
     }
     // An attachment is a page draft field, not a second save authority. Keep the
     // loaded record unchanged until the existing Pages update acknowledges it.
-    const page = source;
+    let page = source;
     const draft = { ...page, meta: { ...page.meta } };
     let dirty = false;
     let busy = false;
@@ -52,6 +53,10 @@ export async function render(el) {
     const feedback = root.querySelector('.page-editor-feedback');
     const save = root.querySelector('[data-save]');
     const discard = root.querySelector('[data-discard]');
+    const languageHost = document.createElement('section');
+    languageHost.setAttribute('aria-label', 'Page translation');
+    body.before(languageHost);
+    const languageControl = mountPageLanguageControl(languageHost, openLanguage, text => setFeedback(text, true));
     const footer = document.createElement('footer');
     footer.className = 'page-editor-footer';
     footer.append(feedback, root.querySelector('.page-editor-actions'));
@@ -180,6 +185,7 @@ export async function render(el) {
         root.setAttribute('aria-busy', String(busy || contentBusy));
         body.inert = busy;
         general.inert = seo.inert = busy || contentBusy;
+        languageControl.refresh(page.contentLanguage || page.language || 'en', busy || contentBusy);
     }
     function markDirty() {
         dirty = true;
@@ -191,7 +197,7 @@ export async function render(el) {
     }
     function resetFields() {
         const saved = {
-            title: page.trans_title || page.title || '', slug: page.slug || '', status: page.status || 'draft',
+            title: page.contentLanguage && !page.trans_lang ? '' : page.trans_title || page.title || '', slug: page.slug || '', status: page.status || 'draft',
             seoDesc: page.meta_desc || '', seoImage: page.seo_image || '', publishAt: asString(page.meta?.publish_at),
             seoTitle: page.seo_title || '', featuredImage: asString(page.meta?.featuredImage),
             tags: normalizeContentTags(page.meta?.tags).join(', ')
@@ -212,6 +218,29 @@ export async function render(el) {
         const actions = content.querySelector('.page-content-actions');
         contentActions.replaceChildren(...(actions ? [actions] : []));
     }
+    async function openLanguage(language) {
+        language = normalizePageLanguage(language);
+        if (busy || contentBusy || dirty)
+            throw new Error('PAGE_EDITOR_LANGUAGE_PENDING: Save or discard your changes before switching language.');
+        busy = true;
+        updateState();
+        try {
+            const translated = await loadPageEditorTranslation(emit, jwt, String(page.id), language, window.pageDataLoader);
+            // Do not mutate the cached projection for the previously selected locale.
+            page = translated;
+            Object.assign(draft, translated, { meta: { ...translated.meta } });
+            resetFields();
+            await mountContent();
+            const url = new URL(window.location.href);
+            url.searchParams.set('contentLang', language);
+            window.history.replaceState(window.history.state, '', url);
+            setFeedback(page.trans_lang ? `Editing ${language}.` : `No ${language} translation yet. Enter its title and content, then save the page.`);
+        }
+        finally {
+            busy = false;
+            updateState();
+        }
+    }
     async function savePage(propagate = false) {
         if (!root.isConnected || busy || contentBusy || !dirty)
             return;
@@ -227,14 +256,15 @@ export async function render(el) {
             const form = values();
             await savePageEditorPage(emit, jwt, draft, form);
             Object.assign(draft, {
-                title: form.title.trim(), trans_title: form.title.trim(), slug: form.slug.trim(), status: form.status,
+                title: page.contentLanguage && page.contentLanguage !== (page.language || 'en') ? page.title : form.title.trim(),
+                trans_title: form.title.trim(), trans_lang: page.contentLanguage || page.language || 'en', slug: form.slug.trim(), status: form.status,
                 meta_desc: form.seoDesc, seo_image: form.seoImage.trim(), seo_title: form.seoTitle?.trim() || '',
                 meta: { ...draft.meta, tags: normalizeContentTags(form.tags), publish_at: form.publishAt, featuredImage: form.featuredImage?.trim() || '' }
             });
             Object.assign(page, draft, { meta: { ...draft.meta } });
             dirty = false;
             clearPageEditorCache(window.pageDataLoader, page);
-            heading.textContent = page.title || 'Untitled page';
+            heading.textContent = page.trans_title || page.title || 'Untitled page';
             content.dispatchEvent(new Event('page-content-saved'));
             setFeedback('Page saved.');
         }
@@ -271,13 +301,17 @@ export async function render(el) {
     registerWorkspaceChanges(root, { isDirty: () => dirty, isBusy: () => busy || contentBusy });
     window.saveCurrentPage = savePage;
     await mountContent();
+    if (page.contentLanguage && !page.trans_lang)
+        setFeedback(`No ${page.contentLanguage} translation yet. Enter its title and content, then save the page.`);
     registerWorkspaceAgent({ root, id: 'page-editor', title: 'Page editor',
         read: () => ({ dirty, busy: busy || contentBusy, selection: page.id,
             error: feedback.getAttribute('role') === 'alert' ? feedback.textContent : null,
-            draft: values(), content: contentController?.read(),
-            attachment: { html: draft.html, meta: draft.meta }
+            draft: values(), language: page.contentLanguage || page.language || 'en', translationExists: Boolean(page.trans_lang), content: contentController?.read(),
+            attachment: { html: draft.html, css: draft.css, meta: draft.meta }
         }),
         actions: [
+            { action: 'page.openLanguage', label: 'Open page translation', params: [{ name: 'language', type: 'string', required: true }],
+                run: p => openLanguage(agentString(p, 'language')) },
             { action: 'page.setLayout', label: 'Stage page layout', acceptsDraft: true,
                 params: [{ name: 'mode', type: 'string', required: true }, { name: 'designId', type: 'string' }],
                 run: async (p) => {
@@ -289,6 +323,10 @@ export async function render(el) {
                 params: [{ name: 'html', type: 'string', required: true }],
                 run: async (p) => { if (!contentController || typeof p.html !== 'string')
                     throw new Error('PAGE_CONTENT_HTML_REQUIRED'); await contentController.setHtml(p.html); } },
+            { action: 'page.setContentCss', label: 'Stage page content CSS', acceptsDraft: true,
+                params: [{ name: 'css', type: 'string', required: true }],
+                run: async (p) => { if (!contentController || typeof p.css !== 'string')
+                    throw new Error('PAGE_CONTENT_CSS_REQUIRED'); await contentController.setCss(p.css); } },
             { action: 'page.updateDraft', label: 'Update page fields', acceptsDraft: true,
                 params: [{ name: 'fields', type: 'object', required: true }],
                 run: p => patchAgentForm(root, p.fields, Array.from(fields.keys())) },

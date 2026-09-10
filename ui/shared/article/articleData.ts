@@ -1,6 +1,6 @@
 import { emitRuntimeAdmin } from '../api-client/runtimeFacade.js';
 import { ownPagePresentation, pageLayoutMeta, presentationMeta } from '../layout/pagePresentation.js';
-import { savePageEditorPage, type PageRecord } from '../page-editor/pageEditorData.js';
+import { savePageEditorPage, loadPageEditorTranslation, type PageRecord } from '../page-editor/pageEditorData.js';
 
 export const ARTICLE_FORMAT = 'article-v1';
 export type ArticlePage = PageRecord;
@@ -13,9 +13,12 @@ export function pageContentKind(page: ArticlePage): 'design' | 'html' | 'article
   return page.html?.trim() ? 'html' : 'empty';
 }
 
-export async function readArticlePage(id: string | number): Promise<ArticlePage> {
+export async function readArticlePage(id: string | number, language?: string): Promise<ArticlePage> {
   if (!window.meltdownEmit) throw new Error('ARTICLE_RUNTIME_UNAVAILABLE');
-  const page = await emitRuntimeAdmin<ArticlePage>(window.meltdownEmit, window.ADMIN_TOKEN, 'pages', 'get', { pageId: id });
+  const selectedLanguage = language || new URLSearchParams(window.location.search).get('contentLang') || undefined;
+  const page = selectedLanguage
+    ? await loadPageEditorTranslation(window.meltdownEmit, window.ADMIN_TOKEN, String(id), selectedLanguage)
+    : await emitRuntimeAdmin<ArticlePage>(window.meltdownEmit, window.ADMIN_TOKEN, 'pages', 'get', { pageId: id });
   if (!page || String(page.id) !== String(id)) throw new Error('ARTICLE_PAGE_NOT_FOUND');
   return { ...page, meta: presentationMeta(page) };
 }
@@ -35,7 +38,7 @@ async function saveDraft(page: ArticlePage): Promise<void> {
 }
 
 export async function saveArticle(base: ArticlePage, html: string): Promise<ArticlePage> {
-  const current = await readArticlePage(base.id!);
+  const current = await readArticlePage(base.id!, base.contentLanguage);
   if (contentFingerprint(current) !== contentFingerprint(base)) throw new Error('ARTICLE_CONTENT_CHANGED: Reload before saving; another editor changed this content.');
   if (!['article', 'empty'].includes(pageContentKind(current))) throw new Error('ARTICLE_FORMAT_CONFLICT: Existing HTML/design must not be converted implicitly.');
   const next = { ...current, html, meta: { ...current.meta, contentFormat: ARTICLE_FORMAT } };

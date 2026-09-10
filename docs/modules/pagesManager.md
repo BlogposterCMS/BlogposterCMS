@@ -1,5 +1,27 @@
 # Pages Manager
 
+## Editing translations
+
+Page Settings has a **Content language** control. Enter a language code (for
+example `en` or `zh-CN`) and choose **Open language**. It loads the selected
+translation through the existing Pages read contract. An absent translation
+starts with empty fields. Save or discard pending changes before switching;
+failed reads retain the current translation. The `contentLang` URL parameter
+preserves the selection on reload.
+
+Title, HTML, CSS and SEO text save to that translation only. The canonical page
+title and primary language remain unchanged when editing another locale. Address,
+publication, tags and Designer binding stay shared. The source accordion exposes
+the existing translated CSS field alongside HTML; these are one staged save,
+not a separate stylesheet or content authority.
+
+Agents use `page.openLanguage`, then existing draft/content actions and
+`page.save`; `page.setContentCss` stages the CSS field. The snapshot reports the
+active language and whether its translation exists. Existing Pages permissions
+and locale-aware Content Engine mirroring remain authoritative.
+
+Regression coverage: `pageEditorData`, `pageEditorWorkspace` and `articleEditor`.
+
 ## Page Settings: SEO and images
 
 The existing page editor (`/admin/pages/edit/:id`, available from the settings

@@ -51,6 +51,16 @@ export async function render(el, options = {}) {
     const actions = root.querySelector('.page-content-actions');
     const htmlInput = root.querySelector('.page-content-body textarea');
     htmlInput.value = page.html || '';
+    const cssLabel = document.createElement('label');
+    cssLabel.className = 'page-content-body';
+    cssLabel.textContent = 'Page content CSS';
+    const cssInput = document.createElement('textarea');
+    cssInput.rows = 6;
+    cssInput.setAttribute('aria-label', 'Page content CSS');
+    cssInput.value = page.css || '';
+    cssLabel.append(cssInput);
+    root.querySelector('.page-content-source').append(cssLabel);
+    cssInput.addEventListener('input', () => { page.css = cssInput.value; options.onChange?.(); });
     let busy = false;
     let designs = [];
     let files = [];
@@ -259,7 +269,8 @@ export async function render(el, options = {}) {
         attach: (kind, id) => attach(kind, id),
         detach: () => apply({ html: '', meta: detachHtmlMeta(page) }),
         setLayout: layout.set,
-        setHtml: html => apply({ html: sanitizeHtml(html), meta: detachHtmlMeta(page) })
+        setHtml: html => apply({ html: sanitizeHtml(html), meta: detachHtmlMeta(page) }),
+        setCss: async (css) => { page.css = css; cssInput.value = css; await apply({ html: page.html || '', meta: page.meta || {} }); }
     });
     // Preserve installed builder discovery and the canonical Design Studio route.
     function builderUrl(name) {

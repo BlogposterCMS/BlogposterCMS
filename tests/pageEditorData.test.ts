@@ -8,6 +8,8 @@ import {
   clearPageEditorCache,
   errorMessage,
   loadPageEditorPage,
+  loadPageEditorTranslation,
+  normalizePageLanguage,
 
   savePageEditorPage,
   toPage,
@@ -47,6 +49,46 @@ const values = {
 };
 
 describe('pageEditorData', () => {
+  it('reads one selected translation without changing the primary language', async () => {
+    const emit = jest.fn().mockResolvedValue({ ...page, trans_lang: 'zh', trans_title: '登录', html: '<p>中文</p>' });
+    const translated = await loadPageEditorTranslation(emit, 'test', 'page-1', ' ZH ');
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({ params: { pageId: 'page-1', language: 'zh' } }));
+    const payload = buildPageUpdatePayload('test', translated, { ...values, title: '更新', seoDesc: '说明' }) as any;
+    expect(payload.params).toMatchObject({ translations: [{ language: 'zh', title: '更新', html: '<p>中文</p>', metaDesc: '说明' }] });
+    expect(payload.params.title).toBeUndefined(); expect(payload.params.language).toBeUndefined();
+    expect(payload.params.translations).toHaveLength(1);
+    const clear = jest.fn(); clearPageEditorCache({ clear }, translated);
+    expect(clear).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({ params: { pageId: 'page-1', language: 'zh' } }));
+  });
+
+  it('selects a non-English primary translation and rejects unsafe locale inputs before transport', async () => {
+    const emit = jest.fn().mockResolvedValue({ ...page, language: 'de', trans_lang: null });
+    await expect(loadPageEditorTranslation(emit, 'test', 'page-1')).resolves.toMatchObject({ contentLanguage: 'de', language: 'de' });
+    expect(emit).toHaveBeenLastCalledWith('cmsAdminApiRequest', expect.objectContaining({ params: { pageId: 'page-1', language: 'de' } }));
+    emit.mockClear();
+    for (const value of ['../zh', '<script>', 'zh?x=1', 'a'.repeat(36)]) {
+      expect(() => normalizePageLanguage(value)).toThrow('PAGE_EDITOR_LANGUAGE_INVALID');
+      await expect(loadPageEditorTranslation(emit, 'test', 'page-1', value)).rejects.toThrow('PAGE_EDITOR_LANGUAGE_INVALID');
+    }
+    expect(emit).not.toHaveBeenCalled();
+    expect(normalizePageLanguage('zh-Hant')).toBe('zh-hant');
+  });
+
+  it('refreshes selected-locale cache before reading shared metadata', async () => {
+    const clear = jest.fn(); const load = jest.fn().mockImplementation(async () => {
+      expect(clear).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({ params: { pageId: 'page-1', language: 'zh' } }));
+      return page;
+    });
+    await loadPageEditorTranslation(undefined, null, 'page-1', 'zh', { clear, load });
+  });
+
+  it('reads Mongo nested translations without falling back to the primary text', async () => {
+    const emit = jest.fn().mockResolvedValue({ ...page, translation: { language: 'zh', title: '指南', html: '<p>中文</p>', css: 'p{}', meta_desc: '说明' } });
+    await expect(loadPageEditorTranslation(emit, 'test', 'page-1', 'zh')).resolves.toMatchObject({ language: 'en', contentLanguage: 'zh', trans_lang: 'zh', trans_title: '指南', html: '<p>中文</p>', css: 'p{}', meta_desc: '说明' });
+    emit.mockResolvedValue({ ...page, translation: null });
+    await expect(loadPageEditorTranslation(emit, 'test', 'page-1', 'zh')).resolves.toMatchObject({ trans_lang: null, trans_title: '', html: '', css: '' });
+  });
+
   it('loads the explicit SPA editor id instead of the initial shell page', async () => {
     const load = jest.fn().mockResolvedValue(page);
     const initial = Promise.resolve({ id: 'wrong-shell-page' });

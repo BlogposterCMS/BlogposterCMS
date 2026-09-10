@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.34] - 2026-09-10
+
+- Expose translated page title, content, CSS and SEO in the native Page Editor. Preserve the page's primary language, shared layout and other translations; protect unsaved changes during language selection and keep the active locale on reload. Add matching AgentManager actions through the existing Pages boundary.
+
 ## [0.10.33] - 2026-09-10
 
 - Keep isolated widgets alive when a browser hides/freezes a tab or delays its event loop. Resume heartbeat probes with a fresh response window, while retaining the ten-second foreground timeout and normal sandbox teardown.

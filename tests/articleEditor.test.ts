@@ -34,6 +34,15 @@ describe('Article content contract', () => {
     window.meltdownEmit = jest.fn().mockResolvedValue(page);
     await expect(saveArticle(page, '<p>Mine</p>')).rejects.toThrow('ARTICLE_FORMAT_CONFLICT');
   });
+  it('checks and saves the selected article translation while preserving its primary language', async () => {
+    const page = { id: 77, language: 'en', title: 'Docs', trans_title: '指南', trans_lang: 'zh', contentLanguage: 'zh', html: '<p>中文</p>', meta: { contentFormat: 'article-v1' } };
+    const emit = jest.fn().mockResolvedValue(page); window.meltdownEmit = emit;
+    await saveArticle(page, '<p>更新</p>');
+    expect(emit.mock.calls[0][1].params).toEqual({ pageId: '77', language: 'zh' });
+    const params = emit.mock.calls.find(([,p]) => p.action === 'update')![1].params;
+    expect(params).toMatchObject({ translations: [{ language: 'zh', title: '指南', html: '<p>更新</p>' }] });
+    expect(params.language).toBeUndefined(); expect(params.title).toBeUndefined();
+  });
   it('round trips rich content and stable block identifiers through HTML', () => {
     const content = '<h2 data-block-id="heading">Title</h2><p data-block-id="body"><strong>Hello</strong> world</p><ul><li><p>Item</p></li></ul><img src="/media/image.png" alt="A picture"><video src="/media/movie.mp4" controls></video>';
     const editor = new Editor({ extensions: articleExtensions(), content });

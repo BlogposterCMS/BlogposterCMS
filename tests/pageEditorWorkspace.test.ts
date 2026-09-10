@@ -48,7 +48,63 @@ describe('fixed Page Editor', () => {
     await render(host);
     await settle();
   });
-  afterEach(() => { document.body.replaceChildren(); });
+  afterEach(() => { document.body.replaceChildren(); window.history.replaceState(null, '', '/'); });
+
+  it('opens, edits and saves a second language with shared layout and locale-specific HTML/CSS/SEO', async () => {
+    const translations: Record<string, any> = {
+      en: { trans_lang: 'en', trans_title: 'Docs', html: '<p>English</p>', css: 'p{color:blue}', meta_desc: 'English description' },
+      zh: { trans_lang: null, trans_title: null, html: null, css: null, meta_desc: null }
+    };
+    emit.mockImplementation(async (_event, payload) => {
+      if (payload.resource === 'pages' && payload.action === 'get') return { ...page, ...translations[payload.params.language || 'en'] };
+      if (payload.resource === 'pages' && payload.action === 'update') {
+        const t = payload.params.translations[0];
+        translations[t.language] = { trans_lang: t.language, trans_title: t.title, html: t.html, css: t.css, meta_desc: t.metaDesc };
+      }
+      return {};
+    });
+    const switchTo = async (locale: string) => {
+      find<HTMLInputElement>('#page-content-language').value = locale;
+      [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Open language')!.click();
+      await settle(); await settle();
+    };
+    await switchTo('zh');
+    expect(page.title).toBe('Docs'); expect(page.contentLanguage).toBeUndefined();
+    expect(find<HTMLInputElement>('[name="title"]').value).toBe('');
+    expect(find('.page-editor-feedback').textContent).toContain('No zh translation yet');
+    expect(window.location.search).toBe('?contentLang=zh');
+    edit('title', '使用文档'); edit('seoDesc', '中文说明');
+    for (const [label, value] of [['Page content HTML', '<p>中文</p>'], ['Page content CSS', 'p{color:red}']]) {
+      const input = find<HTMLTextAreaElement>(`[aria-label="${label}"]`); input.value = value!;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    await switchTo('en');
+    expect(find('.page-editor-feedback').textContent).toContain('PAGE_EDITOR_LANGUAGE_PENDING');
+    expect(find<HTMLInputElement>('#page-content-language').value).toBe('zh');
+    expect(find<HTMLInputElement>('[name="title"]').value).toBe('使用文档');
+    await submit();
+    expect(writes()[0][1].params).toMatchObject({ meta: { keep: true }, translations: [{ language: 'zh', title: '使用文档', html: '<p>中文</p>', css: 'p{color:red}', metaDesc: '中文说明' }] });
+    expect(writes()[0][1].params.title).toBeUndefined(); expect(writes()[0][1].params.language).toBeUndefined();
+    await switchTo('en');
+    expect(find<HTMLInputElement>('[name="title"]').value).toBe('Docs');
+    expect(find<HTMLTextAreaElement>('[aria-label="Page content HTML"]').value).toBe('<p>English</p>');
+    await switchTo('zh');
+    expect(find<HTMLInputElement>('[name="title"]').value).toBe('使用文档');
+    expect(find<HTMLTextAreaElement>('[aria-label="Page content CSS"]').value).toBe('p{color:red}');
+    expect(translations.en.html).toBe('<p>English</p>');
+  });
+
+  it('keeps the existing language and content after a failed translation read', async () => {
+    const current = find<HTMLInputElement>('[name="title"]').value;
+    fail = 'pages.get';
+    find<HTMLInputElement>('#page-content-language').value = 'zh';
+    [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Open language')!.click();
+    await settle();
+    expect(find('.page-editor-feedback').getAttribute('role')).toBe('alert');
+    expect(find<HTMLInputElement>('[name="title"]').value).toBe(current);
+    expect(window.location.search).toBe('');
+    expect(writes()).toHaveLength(0);
+  });
 
   it('keeps drafts across tabs and one save footer outside the panels', () => {
     const tabs = [...host.querySelectorAll<HTMLButtonElement>('.page-editor-tabs [role="tab"]')];

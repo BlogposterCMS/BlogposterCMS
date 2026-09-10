@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Add reviewed widget service-configuration import in Settings and native design JSON import in the Design library. Preserve installer grants, create design copies as drafts, and retain the existing Settings/Designer permission boundaries.
+- Render isolated widgets in static Studio app documents using a fresh bridge-local CSP nonce when no server nonce exists; retain the opaque worker, inherited CSP and denied preview services.
+
 ## [0.10.30] - 2026-09-10
 
 - Keep Designer public-data controls and widgets on the same shared service transport without importing feature code into shared UI.

@@ -1,6 +1,7 @@
 import { registerWorkspaceAgent } from '../../../shared/agent/workspaceAgent.js';
 import { designUpdatedAt, designThumbnailUrl, designUrl, fetchDesignerLayouts, sortDesignsByRecent } from './designerLayoutsData.js';
 import { createHtmlImportControl } from './htmlImportControl.js';
+import { createDesignerImportControl } from './designerImportControl.js';
 export async function render(el) {
     const meltdownEmit = window.meltdownEmit;
     const jwt = window.ADMIN_TOKEN;
@@ -54,6 +55,7 @@ export async function render(el) {
     });
     titleBar.appendChild(title);
     titleBar.appendChild(createHtmlImportControl());
+    titleBar.appendChild(createDesignerImportControl());
     titleBar.appendChild(addBtn);
     card.appendChild(titleBar);
     const list = document.createElement('div');

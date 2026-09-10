@@ -1,8 +1,9 @@
 # Public widget services
 
-Community Widgets use the ordinary `widgets/<id>/widget.js` module and
-`widgetInfo.json` registration. Designer and public rendering share the module
-mount path. No page-specific inline bundle or global page DOM mutation is needed.
+Community Widgets use reviewed `widget.js` and `widgetInfo.json` packages with
+the isolated v2 worker contract. Designer and public rendering share the host
+renderer. See [community isolation](community-isolation.md); older same-document
+widgets must migrate before installation.
 
 ## Configuration and ownership
 
@@ -12,15 +13,24 @@ Manager (`settings.set` in the authenticated CMS admin facade, permission
 "draft": true, "operations": { "search": { "path": "/api/public/search",
 "method": "GET", "query": ["q"] } } } } }`.
 
+Settings > Widgets provides **Import service configuration** for that versioned
+JSON file (up to 128 KiB). Review each named API destination, session requirement,
+stream and query keys before saving. Imports accept only destination, draft and
+locale/theme descriptors; package receipts and approval fields are rejected.
+Unrelated widget entries and existing installer receipts/grants are preserved.
+The form uses `settings.get/set`, so `settings.core.view/edit` still apply.
+After configuration, use **Manage installed access** to grant the declared names;
+configuration alone does not grant access to an installed package.
+
 This setting is not widget metadata and is not included in public settings.
 `GET /api/public/widget-services/:widgetId` projects only validated, non-secret
 operation descriptors for that widget. Invalid configuration fails closed with
 `WIDGET_SERVICE_POLICY_UNAVAILABLE`. Missing widget configuration grants nothing.
 The projection never returns credentials, arbitrary extra fields or other widgets.
 
-## Browser contract
+## Host service contract
 
-`render(container, context)` receives `context.services` for community modules:
+The trusted host implements these named services behind the v2 worker bridge:
 
 - `request(name, { params, query, body }, signal)` uses the configured method and
   same-origin `/api/` path. Path parameters are bounded identifier segments.
@@ -45,9 +55,8 @@ Public modules never receive `jwt` or `emit` through the shared mount context.
 
 ## Security and limitations
 
-Services are a controlled integration API, **not a JavaScript sandbox**. Existing
-Community Widget static scanning remains unchanged; installed scripts still run
-in the browser realm. Review installed code. Backend endpoints remain solely
+Services are a controlled integration API; mandatory worker isolation is defined
+separately in the community isolation contract. Review installed code. Backend endpoints remain solely
 responsible for authentication, tenant/record authorization, CSRF, idempotency,
 rate limits and audit. A browser policy does not replace those checks.
 
@@ -62,11 +71,10 @@ Studio uses an opaque-origin iframe. Community previews receive ephemeral drafts
 and no network operations or host preferences. Exercise live service operations
 through the public preview; no iframe sandbox relaxation is needed.
 
-Container deployments must mount site-owned widget assets read-only at their
-registered `/app/widgets/<widget-id>` path from the separate customization
-repository. Copying a widget into a running image is not update-persistent. The
-CMS database retains registrations, page designs and Settings Manager policy in
-`/app/data`; image updates do not provide or publish private widget bundles.
+Install private packages through the reviewed ZIP installer and retain the
+deployment's widget volume and integrity receipts alongside `/app/data` backups.
+Do not mount private files into signed managed trees or edit integrity manifests.
+Image updates do not provide or publish private widget bundles or site content.
 
 ## UI-installed package grants
 
@@ -79,5 +87,5 @@ self-grant through widgetInfo.json. Legacy operator-only policies remain unchang
 Managed requests fetch current policy before dispatch. Managed streams and local
 draft/preference helpers refresh every five seconds and fail closed if that read
 fails; streams close when policy changes. Disposal cancels the refresh timer.
-Already dispatched backend requests cannot be revoked retrospectively. This is
-service API enforcement, not protection against malicious same-realm JavaScript.
+Already dispatched backend requests cannot be revoked retrospectively. Backend
+authorization remains required independently of worker isolation and host grants.

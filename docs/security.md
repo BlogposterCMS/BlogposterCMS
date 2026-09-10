@@ -473,3 +473,10 @@ conditions. Complete-value limits (32 levels, 16,384 values, 256 KiB string/key
 characters) replace silent truncation; dangerous prototype keys are excluded.
 Programmatic worker navigation additionally requires a recent trusted host UI
 gesture and a validated same-origin path. Preview denies navigation.
+
+Static AppLoader documents do not carry a server-generated script nonce. The
+trusted widget host creates a cryptographically random bridge-local nonce for
+its opaque iframe's restrictive srcdoc CSP in that case. Existing document
+nonces are reused when available; malformed values are rejected. Inherited
+parent CSP still applies, and no `unsafe-inline`, same-origin sandbox grant,
+credential forwarding or preview network permission is added.

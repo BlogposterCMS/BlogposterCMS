@@ -17,6 +17,8 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^\\./(widgetServiceConfiguration|widgetServiceConfigurationControl)\\.js$': '<rootDir>/ui/shared/module-access/$1.ts',
+    '^\\./(designerImportControl|designerImportData)\\.js$': '<rootDir>/ui/widgets/plainspace/admin/$1.ts',
     '^.*widget-ui/(.*)\\.js$': '<rootDir>/ui/shared/widget-ui/$1.ts',
     '^\\./containerInteractionModel\\.js$': '<rootDir>/ui/shared/layout/containerInteractionModel.ts',
     "^.*page-editor/pageEditorData\\.js$": "<rootDir>/ui/shared/page-editor/pageEditorData.ts",

@@ -8,6 +8,7 @@ import {
   sortDesignsByRecent
 } from './designerLayoutsData.js';
 import { createHtmlImportControl } from './htmlImportControl.js';
+import { createDesignerImportControl } from './designerImportControl.js';
 
 export async function render(el: HTMLElement | null): Promise<void> {
   const meltdownEmit = window.meltdownEmit;
@@ -66,6 +67,7 @@ export async function render(el: HTMLElement | null): Promise<void> {
 
   titleBar.appendChild(title);
   titleBar.appendChild(createHtmlImportControl());
+  titleBar.appendChild(createDesignerImportControl());
   titleBar.appendChild(addBtn);
   card.appendChild(titleBar);
 

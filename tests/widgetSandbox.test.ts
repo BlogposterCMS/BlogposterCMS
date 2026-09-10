@@ -1,5 +1,17 @@
 /** @jest-environment jsdom */
-import { buildWidgetView, sandboxDocument, widgetNavigationPath } from '../ui/widgets/rendering/widgetSandbox';
+import { buildWidgetView, sandboxDocument, widgetNavigationPath, widgetSandboxNonce } from '../ui/widgets/rendering/widgetSandbox';
+
+test('static app documents receive a fresh bridge-local nonce without weakening the CSP', () => {
+  const first = widgetSandboxNonce();
+  expect(first).toMatch(/^[a-f0-9]{48}$/);
+  expect(widgetSandboxNonce()).not.toBe(first);
+  const html = sandboxDocument(first);
+  expect(html).toContain(`script-src 'nonce-${first}' blob:`);
+  expect(html).not.toContain('unsafe-inline');
+  expect(html).not.toContain('allow-same-origin');
+  expect(widgetSandboxNonce('existingServerNonce')).toBe('existingServerNonce');
+  expect(() => widgetSandboxNonce('invalid"nonce')).toThrow('WIDGET_SANDBOX_NONCE_INVALID');
+});
 
 test('worker navigation requires a recent real gesture and remains on the current origin', () => {
   const origin = 'https://cms.example';

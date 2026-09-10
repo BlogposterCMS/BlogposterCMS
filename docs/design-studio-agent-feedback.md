@@ -610,3 +610,9 @@ See [Designer interactions](designer-interactions.md) for fields and limits.
 Container `minWidth` is exposed by the existing `container.settings.set` command
 and layout feedback. The Layout inspector also offers **Minimum width**, paired
 with the existing Auto height setting for wrapping row containers.
+
+Native design JSON import is a Design library owner action using `designer.save`.
+It creates a new draft; the resulting Studio document exposes the ordinary
+layout, widget, revision and draft feedback. A dedicated library import command
+is not exposed through AgentManager yet. Do not substitute arbitrary DOM scripts
+or a separate import/publishing authority for that missing adapter.

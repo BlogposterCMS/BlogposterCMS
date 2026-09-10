@@ -1,4 +1,5 @@
 import { emitRuntimeAdmin } from '../api-client/runtimeFacade.js';
+import { createWidgetServiceConfigurationControl } from './widgetServiceConfigurationControl.js';
 
 interface Access { service: string; name: string; reason: string; required?: boolean; available?: boolean; operation?: { path: string; method: string } }
 interface Package { widgetId: string; replacing?: boolean; label?: string; version?: string; developer?: string; description?: string; reviewedHash?: string; requestedAccess: Access[]; approvedAccess?: string[] }
@@ -80,6 +81,7 @@ export function addWidgetPackageControls(root: HTMLElement, refresh: () => Promi
     } catch (err) { status.textContent = err instanceof Error ? err.message : String(err); }
     finally { manage.disabled = false; }
   });
-  const accessActions = document.createElement('div'); accessActions.className = 'form-actions'; accessActions.append(manage);
+  const accessActions = document.createElement('div'); accessActions.className = 'form-actions';
+  accessActions.append(manage, createWidgetServiceConfigurationControl());
   header.after(accessActions); root.append(status);
 }

@@ -2,6 +2,19 @@ import { loadWidgetServices } from './widgetServices.js';
 import { createWidgetUi } from '../../shared/widget-ui/renderer.js';
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{0,59}$/;
 const mounted = new WeakMap();
+/** Static AppLoader documents have no server nonce. Their isolated srcdoc still
+ * needs a nonce for its own CSP; inherited parent CSP remains enforced by the browser.
+ * Reuse a supplied nonce when present, without adding unsafe-inline or relaxing sandbox flags.
+ */
+export function widgetSandboxNonce(existing) {
+    if (existing) {
+        if (!/^[A-Za-z0-9+/_=-]+$/.test(existing))
+            throw new Error('WIDGET_SANDBOX_NONCE_INVALID');
+        return existing;
+    }
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
 /** Navigation follows a real UI gesture and stays on this site; a timer cannot redirect visitors. */
 export function widgetNavigationPath(value, origin, gestureAt, preview = false) {
     if (preview || !gestureAt || Date.now() - gestureAt > 5000)
@@ -50,6 +63,7 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
     const parsed = new URL(codeUrl, document.baseURI);
     if (parsed.origin !== new URL(document.baseURI).origin || parsed.pathname !== `/widgets/${id}/widget.js`)
         throw new Error('WIDGET_SANDBOX_PATH_DENIED');
+    const nonce = widgetSandboxNonce(window.NONCE || document.querySelector('script[nonce]')?.nonce);
     const response = await fetch(parsed.pathname, { credentials: 'omit', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(5000) });
     if (!response.ok || response.headers.get('X-Blogposter-Widget-Contract') !== '2')
         throw new Error('WIDGET_SANDBOX_MIGRATION_REQUIRED');
@@ -204,11 +218,6 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
         if (!started)
             frame.contentWindow?.postMessage({ type: 'connect' }, '*', [channel.port2]);
     }, { once: true });
-    const nonce = window.NONCE || document.querySelector('script[nonce]')?.nonce;
-    if (!nonce || !/^[A-Za-z0-9+/_=-]+$/.test(nonce)) {
-        dispose();
-        throw new Error('WIDGET_SANDBOX_NONCE_REQUIRED');
-    }
     frame.srcdoc = sandboxDocument(nonce);
     container.replaceChildren(view, frame);
     observer.observe(document.body, { childList: true, subtree: true });

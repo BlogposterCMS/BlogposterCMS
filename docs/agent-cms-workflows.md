@@ -79,3 +79,14 @@ absent from generic field patching. Media uploads, menu creation/deletion, and
 library authoring continue through their existing owner interfaces; they have no
 new workspace command here. Add future adapters at those owners with tests,
 not a generic DOM writer or an alternative agent API.
+
+The Design library's **Import design JSON** accepts a portable
+`{ design, layout, widgets }` document (up to 1 MiB, 500 widget instances).
+Its review creates a new draft through `designer.save`; source IDs, owner,
+global/default status and publication flags are not imported. It cannot install
+widgets, import executable widget code, bind a page or publish automatically.
+Install required widget packages first, open the copied draft in Studio, then
+use the existing editing/save/publish and page-layout workflow. Existing designs
+and pages remain independent. The import has no new AgentManager command yet;
+its domain helper remains separate from the file picker, and Studio's existing
+agent adapter takes over after import.

@@ -1,4 +1,5 @@
 import { emitRuntimeAdmin } from '../api-client/runtimeFacade.js';
+import { createWidgetServiceConfigurationControl } from './widgetServiceConfigurationControl.js';
 function call(action, params = {}) {
     if (!window.meltdownEmit)
         throw new Error('WIDGET_PACKAGE_EMITTER_UNAVAILABLE');
@@ -111,7 +112,7 @@ export function addWidgetPackageControls(root, refresh) {
     });
     const accessActions = document.createElement('div');
     accessActions.className = 'form-actions';
-    accessActions.append(manage);
+    accessActions.append(manage, createWidgetServiceConfigurationControl());
     header.after(accessActions);
     root.append(status);
 }

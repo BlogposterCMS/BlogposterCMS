@@ -1,8 +1,14 @@
 /** @jest-environment jsdom */
 import { createWidgetServices, loadWidgetServices } from '../ui/widgets/rendering/widgetServices';
+import * as sharedServices from '../ui/shared/widget-ui/services';
 const { projectWidgetPolicy } = require('../mother/modules/runtimeManager/publicWidgetServices');
 const response = () => ({ ok: true, headers: { get: () => 'application/json' }, body: { getReader: () => { let read = false; return { read: async () => read ? { done: true } : (read = true, { done: false, value: new Uint8Array([123,125]) }) }; } } });
 beforeEach(() => { window.sessionStorage.clear(); (window as any).fetch = jest.fn(async () => response()); });
+
+test('widget compatibility exports preserve the canonical shared service implementation', () => {
+  expect(createWidgetServices).toBe(sharedServices.createWidgetServices);
+  expect(loadWidgetServices).toBe(sharedServices.loadWidgetServices);
+});
 
 test('an old widget cannot acquire a replacement package permissions', async () => {
   const previousTimeout = AbortSignal.timeout;

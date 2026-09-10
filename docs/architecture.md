@@ -4,6 +4,12 @@ BlogposterCMS is designed around a modular core that communicates exclusively vi
 
 ## Core vs Community Modules
 
+Designer public-data controls and widget rendering reuse
+`ui/shared/widget-ui/services.ts` for the existing bounded service transport.
+`ui/widgets/rendering/widgetServices.ts` remains a compatibility export; shared UI
+must not import from widget feature zones. Server-side grants and authorization
+remain authoritative.
+
 - **Core modules** ship with the CMS and live in `mother/modules`. They are loaded at server start and receive a high-trust token so they can perform privileged operations. Core bootstrap issues tokens per core module identity; new code should not reuse one module's token for another module's payload.
 - **Community modules** live under `modules/`. They are validated, health-checked in a short-lived runner process and started in a fresh runtime process if they pass. These modules run with lower trust tokens and are restricted to the permissions granted in their JWT.
 - Community modules do not receive the raw Express app or host objects. The module loader exposes `moduleHost` plus a scoped event bus through an IPC contract so static registration and event emission stay behind a stable process boundary. This is the migration seam for moving the core host from Node to Go later.

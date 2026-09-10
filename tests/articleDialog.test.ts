@@ -10,7 +10,8 @@ jest.mock('../ui/shared/dialogs/bpDialog', () => ({ bpDialog: { open: jest.fn() 
 beforeAll(() => {
   Object.defineProperties(Range.prototype, {
     getClientRects: { configurable: true, value: () => [] },
-    getBoundingClientRect: { configurable: true, value: () => new DOMRect() }
+    // Use jsdom's existing element geometry: older CI jsdom has no DOMRect global.
+    getBoundingClientRect: { configurable: true, value: () => document.body.getBoundingClientRect() }
   });
 });
 

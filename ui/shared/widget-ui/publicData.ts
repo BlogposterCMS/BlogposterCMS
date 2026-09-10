@@ -1,4 +1,4 @@
-import { createWidgetServices } from '../../widgets/rendering/widgetServices.js';
+import { createWidgetServices } from '/ui/shared/widget-ui/services.js';
 
 /** Fixed public module adapters reuse the same bounded transport as community widgets.
  * No configurable origin, credentials or admin-principal fallback is accepted here. */

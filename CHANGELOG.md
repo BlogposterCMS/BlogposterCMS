@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.30] - 2026-09-10
+
+- Keep Designer public-data controls and widgets on the same shared service transport without importing feature code into shared UI.
+
 - Preserve nested public widget translations and UI conditions within explicit metadata limits; keep closed interactive containers hidden under flow layout CSS.
 - Expose container minimum width for responsive rows, with saved Designer and agent parity.
 - Persist reviewed widget grants as JSON text and repair registered packages with missing files through the permission-checked ZIP installer.

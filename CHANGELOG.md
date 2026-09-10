@@ -1,8 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.10.26] - 2026-09-10
 
-- Provide an ACR overseas-builder transport for the already verified release image, preserving its packaged integrity inputs.
+- Build releases from source in ACR using the existing Dockerfile and verified signed release inputs.
+- Trigger ACR source builds only after signed release assets are available; retain independent module and widget updates.
 
 ## [0.10.25] - 2026-09-10
 

@@ -30,6 +30,7 @@
 !.release-integrity/runtime-integrity-trusted-root.jsonl
 !tools/
 !tools/verify-runtime-integrity-baseline.js
+!tools/prepare-runtime-integrity.js
 
 # Re-exclude mutable and secret-bearing files even inside an allowed directory.
 **/.env

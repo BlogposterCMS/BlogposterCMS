@@ -14,12 +14,6 @@ COPY . .
 RUN npm run build \
     && npm prune --omit=dev
 
-# Branch CI exercises the non-deployable build stage without release signing.
-# Only a tag release with externally signed inputs can produce the final image.
-FROM build AS verified-build
-RUN node tools/verify-runtime-integrity-baseline.js .release-integrity/runtime-integrity-manifest.json \
-    && rm -rf /app/.release-integrity /app/tools
-
 # The runtime and host updater deliberately use the same GitHub/Sigstore
 # verifier. Pin and checksum the public CLI binary; no private signing key is
 # ever copied into the image.
@@ -41,6 +35,17 @@ RUN apt-get update \
     && gh version \
     && rm -rf /var/lib/apt/lists/* /tmp/gh.tar.gz
 
+# ACR compiles the source using the same build stage as CI. It downloads only
+# the signed release inputs if CI did not supply them in the build context.
+FROM build AS integrity-inputs
+COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh
+RUN node tools/prepare-runtime-integrity.js
+
+# Signature verification cannot replace byte-for-byte build verification.
+FROM integrity-inputs AS verified-build
+RUN node tools/verify-runtime-integrity-baseline.js .release-integrity/runtime-integrity-manifest.json \
+    && rm -rf /app/.release-integrity /app/tools
+
 FROM ${NODE_IMAGE} AS runtime
 RUN apt-get update \
     && apt-get install --no-install-recommends -y bubblewrap util-linux \
@@ -55,9 +60,9 @@ WORKDIR /app
 # application user. Only explicit data directories become writable below.
 COPY --from=verified-build /app /app
 COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh
-COPY .release-integrity/runtime-integrity-manifest.json /app/.integrity/runtime-integrity-manifest.json
-COPY .release-integrity/runtime-integrity-manifest.bundle.json /app/.integrity/runtime-integrity-manifest.bundle.json
-COPY .release-integrity/runtime-integrity-trusted-root.jsonl /app/.integrity/runtime-integrity-trusted-root.jsonl
+COPY --from=integrity-inputs /app/.release-integrity/runtime-integrity-manifest.json /app/.integrity/runtime-integrity-manifest.json
+COPY --from=integrity-inputs /app/.release-integrity/runtime-integrity-manifest.bundle.json /app/.integrity/runtime-integrity-manifest.bundle.json
+COPY --from=integrity-inputs /app/.release-integrity/runtime-integrity-trusted-root.jsonl /app/.integrity/runtime-integrity-trusted-root.jsonl
 # Existing file-backed state follows the same persisted data volume as SQLite.
 # No customer database, secrets, media or install state enters the build context.
 RUN mkdir -p /app/data /app/library /app/logs /app/temp_uploads /app/modules /app/widgets \

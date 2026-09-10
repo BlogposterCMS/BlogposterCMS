@@ -1,5 +1,17 @@
 # Security Notes
 
+## ACR source builds
+
+The canonical Dockerfile accepts complete externally signed CI inputs or obtains
+the exact packaged release's manifest and detached bundle from the fixed official
+repository. Missing/partial inputs, wrong versions, invalid attestations and build
+hash mismatches stop the image build. Downloaded manifests cannot supply their own
+trust roots: the pinned gh verifier exports roots using its existing TUF policy.
+The same verifier checks repository, release workflow, tag and source commit.
+No signing key enters ACR and no local signature or unsigned baseline is generated.
+Runtime verification, module package signatures and the reviewed registry-mirror
+policy remain unchanged. See [core updates](core-updates.md).
+
 ## Signed core module updates
 
 Authentication routes distinguish CORE_MODULE_UPDATING from invalid credentials.

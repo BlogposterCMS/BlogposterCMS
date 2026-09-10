@@ -282,3 +282,18 @@ jobs:
           makeLatest: ${{ contains(github.ref_name, '-') && 'false' || 'true' }}
           body: ${{ env.notes }}
           artifacts: "./release-assets/*"
+
+      - name: Signal source builders after signed release assets are published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # ACR watches acr-v* instead of v*: raw tag pushes race the signing
+          # pipeline and cannot yet supply the externally signed build baseline.
+          REF="tags/acr-${GITHUB_REF_NAME}"
+          EXISTING="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/${REF}" --jq '.object.sha' 2>/dev/null || true)"
+          if [ -n "$EXISTING" ]; then
+            test "$EXISTING" = "$GITHUB_SHA" || { echo 'ACR_SOURCE_TAG_CONFLICT'; exit 1; }
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f "ref=refs/${REF}" -f "sha=${GITHUB_SHA}" > /dev/null
+          fi

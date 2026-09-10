@@ -210,27 +210,30 @@ Set an exact mirror reference including its digest, choose
 operator's external source-build verification; it does not claim GitHub's
 attestation applies to a separately rebuilt image.
 
-### ACR overseas-builder transfer
+### ACR source builds
 
-`deploy/acr-release/Dockerfile` imports the completed official release by its
-reviewed immutable digest. It does not compile the repository or regenerate its
-signed integrity inputs. A raw ACR source build of the root Dockerfile cannot
-replace the release pipeline because those external inputs are absent in Git.
+Use the root `Dockerfile`, context `/`, Linux amd64 and the existing source-code
+connection. The same build stages compile and prune the locked dependencies in
+GitHub CI and ACR. CI supplies its complete `.release-integrity` inputs; otherwise
+the builder downloads only the exact version's signed manifest and detached
+bundle. The pinned verifier obtains public trust roots through its own TUF
+policy. Wrong versions/signatures or different build output stop the build.
 
-For the operator-triggered transfer, use the published `codex/acr-release-mirror`
-branch, context `/deploy/acr-release`, filename `Dockerfile`, Linux amd64 and
-the exact reviewed version as the ACR tag (currently `0.10.25`). Keep overseas
-building enabled. Start once after the source release pipeline and detached
-manifest verification pass. Future transfers require reviewing and updating
-the pinned source digest and the destination tag first; this rule is not an
-automatic latest-release tracker.
+Configure the ACR tag rule as `^acr-v(?<imageTag>\d+\.\d+\.\d+)$` and the image
+tag as `${imageTag}`. Release CI creates the immutable `acr-vVERSION` source tag
+at the same source commit only after all signed release assets are published.
+Do not start on `v*` tags: those arrive before the signing pipeline completes.
+An existing promotion tag pointing at a different commit fails with
+`ACR_SOURCE_TAG_CONFLICT`. Retain the approved base-image mirror build parameter
+if needed and overseas building for external dependencies.
 
-Before deployment, compare the ACR image's filesystem layers and runtime config
-with the official image, run its offline integrity check, and pin the resulting
-ACR digest in the existing updater mirror configuration. Retain signed release
-metadata, normal backup, readiness and rollback checks. ACR may reserialize OCI
-metadata, so its manifest digest need not equal the source manifest digest.
-The transfer does not mirror module ZIPs or future update discovery metadata.
+After ACR succeeds, inspect its exact source commit, pin the resulting ACR image
+digest and run offline runtime integrity/readiness checks before deployment.
+Use the existing reviewed registry-mirror configuration with normal signed
+release metadata, backups and rollback. ACR's independently built OCI digest is
+expected to differ from GHCR; matching runtime files are enforced by the signed
+baseline. Module/widget updates remain separate signed packages. Their download
+URLs and update discovery are not mirrored by ACR source builds.
 
 ## Runtime self-verification
 

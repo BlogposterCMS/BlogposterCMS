@@ -4,12 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const read = name => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
 
-test('ACR transport cannot rebuild or modify the attested runtime', () => {
-  // Only inheriting an immutable official image keeps code and signed inputs together.
-  const instructions = read('deploy/acr-release/Dockerfile').split(/\r?\n/)
-    .map(line => line.trim()).filter(line => line && !line.startsWith('#'));
-  expect(instructions).toHaveLength(1);
-  expect(instructions[0]).toMatch(/^FROM ghcr\.io\/blogpostercms\/blogpostercms@sha256:[a-f0-9]{64}$/);
+test('ACR source trigger follows publication of signed release assets', () => {
+  const release = read('.github/workflows/release.yml');
+  const publication = release.indexOf('- name: Create GitHub Release');
+  const trigger = release.indexOf('- name: Signal source builders after signed release assets are published');
+  expect(publication).toBeGreaterThan(0);
+  expect(trigger).toBeGreaterThan(publication);
+  expect(release.slice(trigger)).toContain('REF="tags/acr-${GITHUB_REF_NAME}"');
+  expect(release.slice(trigger)).toContain('ACR_SOURCE_TAG_CONFLICT');
 });
 
 test('container keeps runtime, native modules and non-root persistent state together', () => {
@@ -64,9 +66,11 @@ test('build context excludes local secrets and site state by default', () => {
 
 test('release images require packaged trust roots and pass offline verification', () => {
   const rootAsset = 'runtime-integrity-trusted-root.jsonl';
-  expect(read('Dockerfile')).toContain('FROM build AS verified-build');
+  expect(read('Dockerfile')).toContain('FROM build AS integrity-inputs');
+  expect(read('Dockerfile')).toContain('RUN node tools/prepare-runtime-integrity.js');
+  expect(read('Dockerfile')).toContain('FROM integrity-inputs AS verified-build');
   expect(read('Dockerfile')).toContain('COPY --from=verified-build /app /app');
-  expect(read('Dockerfile')).toContain(`COPY .release-integrity/${rootAsset} /app/.integrity/${rootAsset}`);
+  expect(read('Dockerfile')).toContain(`COPY --from=integrity-inputs /app/.release-integrity/${rootAsset} /app/.integrity/${rootAsset}`);
   expect(read('.dockerignore')).toContain(`!.release-integrity/${rootAsset}`);
   const release = read('.github/workflows/release.yml');
   expect(release).toContain(`gh attestation trusted-root > ${rootAsset}`);

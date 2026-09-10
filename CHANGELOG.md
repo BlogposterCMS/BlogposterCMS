@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## [0.10.32] - 2026-09-10
+
+- Synchronize generated backend search contracts with the native tag filters.
 - Add native article tags, Page Manager tag filtering and agent draft/filter actions. Reuse `meta.tags` across Pages, Content Engine, public search and Designer data bindings, with exact all-tag filtering before pagination and bounded Unicode validation.
 - Preserve all saved translations on page metadata edits and derive language-specific public article/search projections from one canonical entry. Respect the requested locale in initial public HTML and widget bootstrap; retain publication and permission boundaries.
 

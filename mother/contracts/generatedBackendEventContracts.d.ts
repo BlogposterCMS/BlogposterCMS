@@ -3697,6 +3697,8 @@ export interface SearchDocumentsPayload {
   "query"?: JsonValue;
   "skipJWT"?: boolean;
   "status"?: JsonValue;
+  "tag"?: JsonValue;
+  "tags"?: JsonValue;
   "visibility"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
 }

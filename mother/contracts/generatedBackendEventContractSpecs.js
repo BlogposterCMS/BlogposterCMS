@@ -22361,6 +22361,12 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
         "status": {
           "type": "json"
         },
+        "tag": {
+          "type": "json"
+        },
+        "tags": {
+          "type": "json"
+        },
         "visibility": {
           "type": "json"
         }

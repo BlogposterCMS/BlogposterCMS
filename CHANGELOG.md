@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Correct the ACR promotion-tag lookup after release publication; missing tags can be created and lookup failures stop safely.
+
 ## [0.10.28] - 2026-09-10
 
 - Supply the existing verifier stage's public HTTPS CA bundle when an ACR source build retrieves its signature trust roots.
@@ -32,8 +36,6 @@
 
 - Resume verified image-download chunks with visible progress; cancel only before the backup/install commit gate.
 - Include the portable image and downloader in signed release/installer assets; retain installed release notes without a network check.
-
-## [Unreleased]
 
 ## [0.10.21] - 2026-09-09
 

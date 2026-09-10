@@ -290,7 +290,9 @@ jobs:
           # ACR watches acr-v* instead of v*: raw tag pushes race the signing
           # pipeline and cannot yet supply the externally signed build baseline.
           REF="tags/acr-${GITHUB_REF_NAME}"
-          EXISTING="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/${REF}" --jq '.object.sha' 2>/dev/null || true)"
+          # A missing exact ref returns a 404 JSON body on stdout. Matching refs
+          # return an empty successful list instead; transport errors stay fatal.
+          EXISTING="$(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/${REF}" --jq ".[] | select(.ref == \"refs/${REF}\") | .object.sha")"
           if [ -n "$EXISTING" ]; then
             test "$EXISTING" = "$GITHUB_SHA" || { echo 'ACR_SOURCE_TAG_CONFLICT'; exit 1; }
           else

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const read = name => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
 
 test('ACR source trigger follows publication of signed release assets', () => {
@@ -12,6 +13,40 @@ test('ACR source trigger follows publication of signed release assets', () => {
   expect(trigger).toBeGreaterThan(publication);
   expect(release.slice(trigger)).toContain('REF="tags/acr-${GITHUB_REF_NAME}"');
   expect(release.slice(trigger)).toContain('ACR_SOURCE_TAG_CONFLICT');
+});
+
+test.each([
+  ['missing', 0, true],
+  ['same', 0, false],
+  ['conflict', 1, false],
+  ['lookup-failure', 7, false]
+])('ACR promotion shell handles %s without moving an existing tag', (scenario, status, createsTag) => {
+  // Execute the actual final workflow shell block. Only gh transport is replaced.
+  const step = read('.github/workflows/release.yml').split('      - name: Signal source builders after signed release assets are published')[1];
+  const script = step.split('        run: |')[1].split(/\r?\n/).map(line => line.replace(/^          /, '')).join('\n');
+  const fixture = [
+    'set -e',
+    'GITHUB_REF_NAME=v0.10.28 GITHUB_REPOSITORY=BlogposterCMS/BlogposterCMS GITHUB_SHA=expected-commit',
+    'gh() {',
+    '  if [[ "$2" == --method ]]; then',
+    '    [[ "$*" == *"ref=refs/tags/acr-v0.10.28"* && "$*" == *"sha=expected-commit"* ]] || return 98',
+    '    echo ACR_TAG_CREATED >&2; return 0',
+    '  fi',
+    // Reproduce gh's non-empty stdout on an unsuccessful exact-ref lookup.
+    '  [[ "$2" == */git/matching-refs/tags/acr-v0.10.28 ]] || { echo \'{"message":"Not Found"}\'; return 1; }',
+    `  case '${scenario}' in`,
+    '    missing) return 0 ;;',
+    '    same) echo expected-commit ;;',
+    '    conflict) echo different-commit ;;',
+    '    lookup-failure) echo \'{"message":"Unavailable"}\'; return 7 ;;',
+    '  esac',
+    '}',
+    script
+  ].join('\n');
+  const result = spawnSync('bash', ['-s'], { input: fixture, encoding: 'utf8' });
+  expect(result.status).toBe(status);
+  expect(result.stderr.includes('ACR_TAG_CREATED')).toBe(createsTag);
+  expect(result.stdout.includes('ACR_SOURCE_TAG_CONFLICT')).toBe(scenario === 'conflict');
 });
 
 test('container keeps runtime, native modules and non-root persistent state together', () => {

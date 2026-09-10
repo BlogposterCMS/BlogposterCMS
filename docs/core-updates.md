@@ -229,6 +229,11 @@ An existing promotion tag pointing at a different commit fails with
 `ACR_SOURCE_TAG_CONFLICT`. Retain the approved base-image mirror build parameter
 if needed and overseas building for external dependencies.
 
+If only the promotion step fails after all release assets and image checks
+succeed, publish the missing `acr-vVERSION` tag at that exact release commit.
+Verify an existing tag's commit first; never move it or rebuild the release
+just to recover the source-builder signal.
+
 After ACR succeeds, inspect its exact source commit, pin the resulting ACR image
 digest and run offline runtime integrity/readiness checks before deployment.
 Use the existing reviewed registry-mirror configuration with normal signed

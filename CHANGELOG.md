@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.10.27] - 2026-09-10
+
+- Align container integrity regression coverage with the shared verified-input stage used by CI and ACR source builds.
+
 ## [0.10.26] - 2026-09-10
 
 - Build releases from source in ACR using the existing Dockerfile and verified signed release inputs.

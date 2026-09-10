@@ -229,7 +229,10 @@ test('production image pins the shared GitHub attestation verifier', () => {
   expect(dockerfile).toContain('ARG GH_VERSION=2.96.0');
   expect(dockerfile).toContain('sha256sum -c -');
   expect(dockerfile).toContain('COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh');
-  expect(dockerfile).toContain('COPY .release-integrity/runtime-integrity-manifest.json /app/.integrity/');
+  // Both CI and ACR must package all inputs from the verified preparation stage.
+  for (const asset of ['runtime-integrity-manifest.json', 'runtime-integrity-manifest.bundle.json', 'runtime-integrity-trusted-root.jsonl']) {
+    expect(dockerfile).toContain(`COPY --from=integrity-inputs /app/.release-integrity/${asset} /app/.integrity/${asset}`);
+  }
   expect(dockerfile).toContain('verify-runtime-integrity-baseline.js');
   expect(dockerfile).not.toContain('COPY --from=build --chown=node:node /app /app');
   expect(dockerfile).toContain('BLOGPOSTER_RUNTIME_INTEGRITY=required');

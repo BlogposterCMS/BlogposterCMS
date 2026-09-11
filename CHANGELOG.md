@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Bundle the three existing core public loaders and their lazy widget layout dependencies into release-owned browser chunks. Keep community loader discovery, HTML-only startup, public facade permissions and rendering contracts unchanged.
+
 ## [0.10.38] - 2026-09-11
 
 - Replace native editor icon titles with compact themed tooltips on mouse hover and keyboard focus. Reuse the shared Popover portal and viewport positioning, explain disabled controls, preserve open pickers, and let Escape dismiss the hint without closing its editor.

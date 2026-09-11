@@ -1,5 +1,59 @@
 # Public startup performance
 
+## Bundled core loader startup, 2026-09-11
+
+The first response already contains the real layout containers and article slot.
+Navigation widgets still need their JavaScript runtime. A structural page loaded
+69 static ESM dependencies (413,595 source bytes) after discovering the widget
+loader, producing several sequential network discovery steps before mounting any
+widget. Inline navigation items did not require a separate navigation-tree query.
+
+The three existing core public loaders now enter the existing Webpack build as
+literal lazy imports. Structural/grid/scheduler imports remain lazy but can be
+bundled as well. Their registration, public facade, HTML adoption and widget
+rendering contracts are unchanged. Community loader paths and selected native
+widget generation URLs remain runtime-resolved. Prototype-named sources cannot
+select a core importer. This is a host browser update, not a new renderer or a
+change to the published design/content model.
+
+### Controlled browser comparison
+
+The local-only harness held one published native documentation response in RAM,
+with a text header, three navigation widgets and an HTML article slot. It served
+the same local assets with no-store and a fixed 180 ms delay per static response;
+read-only public facade requests used the real origin. There was no bandwidth
+throttle. Three reloads used the original build, followed by comparison runs with
+the isolated entry build and then three with the final all-entry build. The table
+uses only the original and final all-entry runs. Default desktop viewport width
+was 1686 CSS px. A 30 ms observer measured DOM availability, not FCP or LCP.
+
+| Metric | Original, three runs | Final full build, three runs | Median |
+| --- | --- | --- | --- |
+| Article DOM detected, ms | 241 / 237 / 237 | 296 / 266 / 281 | 237 to 281 |
+| Sidebar menu mounted, ms | 5179 / 4828 / 5260 | 3822 / 4314 / 3754 | 5179 to 3822; 26% lower |
+| All widgets ready, ms | 5457 / 5047 / 5540 | 4655 / 4606 / 4210 | 5457 to 4606; 16% lower |
+| JavaScript requests | 85 / 85 / 85 | 28 / 28 / 28 | 67% fewer |
+
+The article's early availability is retained; this does not establish an earlier
+first paint. Real facade latency varied between runs. The harness excluded
+non-facade favicon/font-loader events in both variants; the actual color/font
+package, registry and widget-default facade reads remained enabled. It held no
+CMS authentication and did not mutate production data. This isolates dependency
+delivery rather than measuring production TTFB, cache behavior or every shell
+helper. The local harness and raw reports remain ignored, outside the release.
+
+The optimized menu rendered with its original layout and expandable submenus.
+Mobile collapse opened correctly, and final-build desktop checks found no chunk
+load error or material horizontal overflow. TypeScript compilation and 118
+focused tests passed. The all-entry Webpack build passed with the existing large
+article/source editor warnings; all related chunks/maps must ship together.
+Designer source-map review found unchanged product source, with shared modules
+repartitioned into the generated async chunks.
+
+No signed release or live installation was performed for this correction. The
+menu still waits for presentation data and widget defaults; this improvement does
+not make the complete navigation available in the first HTML response.
+
 ## HTML attachment delivery, 2026-09-07
 
 HTML pages now use bootstrap version 2: only the first HTML attachment already
@@ -163,11 +217,15 @@ Site-specific observations and content belong outside this generic repository.
    read concurrency, parallel presentation/page discovery, direct core loader
    paths, no fabricated HTML layout reference, and deferred canvas imports.
    Keep mutation ordering and all public facade permission checks intact.
-2. Reduce the native ESM dependency depth. Small forwarding files are cheap in
-   source code but each unbundled import level adds another network round trip.
-   Evaluate bundling each public loader's implementation while retaining its
-   existing module-owned URL and `registerLoaders` contract. This requires a
-   reviewed build, static mount and release-integrity plan; it is not implemented.
+2. The three release-owned core public loaders now use explicit lazy bundle
+   imports from `publicLoaderImporter`; their existing `registerLoaders` contract
+   remains unchanged. Widget structure, grid and scheduling dependencies are
+   lazy bundle chunks, and the HTML-only return still precedes canvas imports.
+   Community modules retain allowlisted runtime path discovery, and signed live
+   preview keeps its separate runtime import. Release-integrity and live behavior
+   still require verification with the rebuilt public bundle. Core public-loader
+   routes are currently host-pinned; native bundled widget entries stay on their
+   runtime URLs so selected widget generations continue to apply.
 3. The initial published response is now implemented without a new cache. Any
    future HTML caching must account for publication, revisions, languages and
    per-response nonce/token data. Do not introduce a parallel content server or

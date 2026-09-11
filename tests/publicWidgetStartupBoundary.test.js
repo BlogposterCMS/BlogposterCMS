@@ -39,6 +39,17 @@ test('complete HTML renders without fetching canvas or admin dependency modules'
   expect(document.getElementById('bp-grid')).toBeNull();
 });
 
+test('widget canvas dependencies remain lazy bundle edges after the HTML-only return', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../mother/modules/widgetManager/publicLoader.ts'), 'utf8');
+  const htmlOnlyReturn = source.indexOf("if ((layout.items || []).length === 0 && (hasHtmlPage || ctx.expectsPageContent))");
+  const canvasImport = source.indexOf("import('/ui/shared/grid/canvasGrid.js')");
+
+  expect(htmlOnlyReturn).toBeGreaterThan(-1);
+  expect(canvasImport).toBeGreaterThan(htmlOnlyReturn);
+  expect(source).not.toContain("import(/* webpackIgnore: true */ '/ui/runtime/main/runtimeDesignDocument.js')");
+  expect(source).not.toContain("import(/* webpackIgnore: true */ '/ui/shared/grid/canvasGrid.js')");
+});
+
 test('a required canvas import failure reports a searchable error before mounting', async () => {
   const runtime = loadWithoutCanvas();
   await expect(runtime.loadWidgets({}, {

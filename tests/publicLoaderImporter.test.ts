@@ -1,6 +1,7 @@
 import * as LR from '../ui/runtime/envelope/loaderRegistry';
 import { loadPublicRuntimeLoaders, tryImportPublicLoader } from '../ui/runtime/publicLoaderImporter';
 import type { RuntimeEnvelope } from '../ui/runtime/envelope/orchestrator';
+import path from 'path';
 
 const mockPagesRegisterLoaders = jest.fn((register: typeof LR.register) => {
   register('mock:pagesManager', jest.fn());
@@ -10,13 +11,13 @@ const mockMotherWidgetRegisterLoaders = jest.fn((register: typeof LR.register) =
   register('mock:widgetManager', jest.fn());
 });
 
-jest.mock('/mother/modules/pagesManager/publicLoader.js', () => ({
+jest.doMock(path.resolve(__dirname, '../mother/modules/pagesManager/publicLoader.js'), () => ({
   registerLoaders: mockPagesRegisterLoaders
-}), { virtual: true });
+}));
 
-jest.mock('/mother/modules/widgetManager/publicLoader.js', () => ({
+jest.doMock(path.resolve(__dirname, '../mother/modules/widgetManager/publicLoader.js'), () => ({
   registerLoaders: mockMotherWidgetRegisterLoaders
-}), { virtual: true });
+}));
 
 describe('publicLoaderImporter', () => {
   afterEach(() => {
@@ -54,13 +55,25 @@ describe('publicLoaderImporter', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('warns when no allowed public loader can be imported', async () => {
+  it('keeps community loaders on the allowlisted runtime path and warns when unavailable', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     await expect(tryImportPublicLoader('databaseManager')).resolves.toBe(false);
 
+    expect(mockPagesRegisterLoaders).not.toHaveBeenCalled();
+    expect(mockMotherWidgetRegisterLoaders).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith(
       'No publicLoader found for "databaseManager" in /modules/databaseManager/publicLoader.js'
+    );
+  });
+
+  it.each(['constructor', 'toString'])('does not treat inherited object key %s as a core loader', async source => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(tryImportPublicLoader(source)).resolves.toBe(false);
+
+    expect(warn).toHaveBeenCalledWith(
+      `No publicLoader found for "${source}" in /modules/${source}/publicLoader.js`
     );
   });
 });

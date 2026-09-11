@@ -236,9 +236,9 @@ async function loadWidgets(
     // and public facade, not a second public composition implementation.
     const [{ renderRuntimeDesignDocument, getRuntimeDesignDocument, getRuntimeDesignContentMount },
       { normalizeRuntimeDesignWidget }, { hydratePublicWidgets }, registry] = await Promise.all([
-      import(/* webpackIgnore: true */ '/ui/runtime/main/runtimeDesignDocument.js'),
-      import(/* webpackIgnore: true */ '/ui/runtime/main/runtimeDesignLayouts.js'),
-      import(/* webpackIgnore: true */ '/ui/runtime/main/publicWidgetScheduling.js'),
+      import('/ui/runtime/main/runtimeDesignDocument.js'),
+      import('/ui/runtime/main/runtimeDesignLayouts.js'),
+      import('/ui/runtime/main/publicWidgetScheduling.js'),
       emitPublicRuntime<PublicWidgetDefinition[]>(ctx, 'widgets', 'list')
     ]);
     root.querySelector('#bp-grid[data-bp-initial-layout="true"]')?.remove();
@@ -300,9 +300,9 @@ async function loadWidgets(
   // dependency graph. Import concrete shared helpers instead of the runtime
   // barrel, whose re-exports also pull admin surfaces into public page startup.
   const runtimeReady = Promise.all([
-    import(/* webpackIgnore: true */ '/ui/shared/grid/canvasGrid.js'),
-    import(/* webpackIgnore: true */ '/ui/widgets/options/widgetOptions.js'),
-    import(/* webpackIgnore: true */ '/ui/runtime/main/publicWidgetScheduling.js')
+    import('/ui/shared/grid/canvasGrid.js'),
+    import('/ui/widgets/options/widgetOptions.js'),
+    import('/ui/runtime/main/publicWidgetScheduling.js')
   ]).catch(error => {
     throw new Error('WIDGET_PUBLIC_RUNTIME_IMPORT_FAILED: Unable to load canvas dependencies.', { cause: error });
   });

@@ -1288,6 +1288,7 @@ export interface DesignerGetDesignPayload {
   "id"?: JsonValue;
   "isExternalRequest"?: boolean;
   "jwt"?: null | string;
+  "language"?: JsonValue;
   "moduleName": string;
   "moduleType"?: null | string;
   "nonce"?: JsonValue;

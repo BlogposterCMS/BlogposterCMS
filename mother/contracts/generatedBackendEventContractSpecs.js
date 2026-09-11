@@ -7808,6 +7808,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
             }
           ]
         },
+        "language": {
+          "type": "json"
+        },
         "moduleName": {
           "type": "string",
           "minLength": 1

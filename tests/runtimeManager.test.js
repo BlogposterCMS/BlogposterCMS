@@ -725,7 +725,7 @@ test('runtime public facade dispatches only public runtime reads through core co
   assert.strictEqual(designLayout.data.items[0].privateToken, undefined);
   const designLayoutPayload = routed.find(entry => entry.eventName === 'designer.getLayout').payload;
   assert.strictEqual(designLayoutPayload.jwt, 'runtime-core-token');
-  assert.deepStrictEqual(Object.keys(designLayoutPayload).sort(), ['jwt', 'layoutRef', 'moduleName', 'moduleType'].sort());
+  assert.deepStrictEqual(Object.keys(designLayoutPayload).sort(), ['jwt', 'language', 'layoutRef', 'moduleName', 'moduleType'].sort());
 
   const draftDesign = await call('designer', 'get', { id: 'draft-design' });
   assert.strictEqual(draftDesign.eventName, 'designer.getDesign');

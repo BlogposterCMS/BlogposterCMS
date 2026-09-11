@@ -1302,6 +1302,8 @@ describe('UI architecture boundaries', () => {
     const allowedFiles = new Set([
       'ui/shared/article/articleLoader.ts',
       'ui/shared/article/articleLoader.js',
+      'ui/shared/code/sourceEditorLoader.ts',
+      'ui/shared/code/sourceEditorLoader.js',
       'ui/runtime/main/adminWidgetSurfaces.ts',
       'ui/runtime/main/adminWidgetSurfaces.js',
       'ui/runtime/publicLoaderImporter.ts',

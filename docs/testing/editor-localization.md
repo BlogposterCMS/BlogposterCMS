@@ -34,7 +34,7 @@ commands run through the authenticated facade, including stale-revision rejectio
 Desktop 1440 px and narrow 390 px dialogs remain within the viewport, with light
 and dark source colors. The source editor is a lazy 487 KiB bundle; Webpack keeps
 its size advisory, alongside the existing article-editor advisory. Formatter
-plugins load only when formatting is requested.
+formatters load only when formatting is requested.
 
 Classification: material backend extension in existing Pages/Designer authorities;
 Zero-Node neutral. No new service, database, content authority or schema migration.

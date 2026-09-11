@@ -316,31 +316,42 @@ function verifyAttestation({ manifestPath, bundlePath, trustedRootPath, expected
 function fetchHttpsFile(url, destination, options = {}) {
   const maxBytes = options.maxBytes || MAX_ARTIFACT_BYTES;
   const redirectsRemaining = options.redirectsRemaining ?? 5;
+  const timeoutMs = options.timeoutMs || 30000;
   const parsedUrl = new URL(url);
   if (parsedUrl.protocol !== 'https:') {
     return Promise.reject(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_PROTOCOL_DENIED', 'Integrity artifacts require HTTPS.'));
   }
 
   return new Promise((resolve, reject) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_TIMEOUT', 'Integrity artifact download timed out.'));
+    }, timeoutMs);
+    const finish = callback => value => {
+      clearTimeout(timer);
+      callback(value);
+    };
     const request = https.get(parsedUrl, {
-      headers: { 'User-Agent': 'BlogposterCMS-Runtime-Integrity/1' }
+      headers: { 'User-Agent': 'BlogposterCMS-Runtime-Integrity/1' },
+      signal: controller.signal
     }, response => {
       if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
         response.resume();
         if (redirectsRemaining <= 0) {
-          reject(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_REDIRECT_LIMIT', 'Integrity artifact exceeded the redirect limit.'));
+          finish(reject)(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_REDIRECT_LIMIT', 'Integrity artifact exceeded the redirect limit.'));
           return;
         }
         const redirected = new URL(response.headers.location, parsedUrl);
         fetchHttpsFile(redirected.toString(), destination, {
           maxBytes,
-          redirectsRemaining: redirectsRemaining - 1
-        }).then(resolve, reject);
+          redirectsRemaining: redirectsRemaining - 1,
+          timeoutMs
+        }).then(finish(resolve), finish(reject));
         return;
       }
       if (response.statusCode !== 200) {
         response.resume();
-        reject(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_FAILED', `Integrity artifact returned HTTP ${response.statusCode}.`));
+        finish(reject)(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_FAILED', `Integrity artifact returned HTTP ${response.statusCode}.`));
         return;
       }
       const chunks = [];
@@ -356,18 +367,27 @@ function fetchHttpsFile(url, destination, options = {}) {
       response.on('end', () => {
         try {
           fs.writeFileSync(destination, Buffer.concat(chunks), { flag: 'wx', mode: 0o600 });
-          resolve(destination);
+          finish(resolve)(destination);
         } catch (err) {
-          reject(createIntegrityError('RUNTIME_INTEGRITY_ARTIFACT_WRITE_FAILED', `Cannot stage integrity artifact: ${err.message}`));
+          finish(reject)(createIntegrityError('RUNTIME_INTEGRITY_ARTIFACT_WRITE_FAILED', `Cannot stage integrity artifact: ${err.message}`));
         }
       });
     });
-    request.setTimeout(30000, () => {
+    request.setTimeout(timeoutMs, () => {
       request.destroy(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_TIMEOUT', 'Integrity artifact download timed out.'));
     });
-    request.on('error', err => reject(err.code?.startsWith?.('RUNTIME_INTEGRITY_')
-      ? err
-      : createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_FAILED', `Integrity artifact download failed: ${err.message}`)));
+    request.on('error', err => {
+      if (err.code?.startsWith?.('RUNTIME_INTEGRITY_')) {
+        finish(reject)(err);
+        return;
+      }
+      if (err.name === 'AbortError') {
+        finish(reject)(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_TIMEOUT', 'Integrity artifact download timed out.'));
+        return;
+      }
+      finish(reject)(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_FAILED', `Integrity artifact download failed: ${err.message}`));
+    });
+    request.on('abort', () => finish(reject)(createIntegrityError('RUNTIME_INTEGRITY_DOWNLOAD_TIMEOUT', 'Integrity artifact download timed out.')));
   });
 }
 

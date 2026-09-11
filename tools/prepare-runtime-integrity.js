@@ -46,8 +46,11 @@ async function prepareRuntimeIntegrity({
   try {
     if (!supplied) {
       const urls = defaultArtifactUrls(version);
-      await fetchFile(urls.manifestUrl, path.join(staging, ASSETS[0]), { maxBytes: 16 * 1024 * 1024 });
-      await fetchFile(urls.bundleUrl, path.join(staging, ASSETS[1]), { maxBytes: 1024 * 1024 });
+      console.log(`[RUNTIME_INTEGRITY_BUILD_FETCH] ${ASSETS[0]}`);
+      await fetchFile(urls.manifestUrl, path.join(staging, ASSETS[0]), { maxBytes: 16 * 1024 * 1024, timeoutMs: 30000 });
+      console.log(`[RUNTIME_INTEGRITY_BUILD_FETCH] ${ASSETS[1]}`);
+      await fetchFile(urls.bundleUrl, path.join(staging, ASSETS[1]), { maxBytes: 1024 * 1024, timeoutMs: 30000 });
+      console.log('[RUNTIME_INTEGRITY_BUILD_TRUST_ROOT] gh attestation trusted-root');
       const roots = runner('gh', ['attestation', 'trusted-root'], {
         encoding: 'utf8', timeout: 30000, maxBuffer: 1024 * 1024, windowsHide: true,
         env: { ...process.env, GH_PROMPT_DISABLED: '1' }
@@ -63,6 +66,7 @@ async function prepareRuntimeIntegrity({
     if (manifest.version !== version) {
       fail('RUNTIME_INTEGRITY_BUILD_VERSION_MISMATCH', 'Signed inputs do not match the packaged version.');
     }
+    console.log('[RUNTIME_INTEGRITY_BUILD_VERIFY] gh attestation verify');
     verify({
       manifestPath,
       bundlePath: path.join(staging, ASSETS[1]),

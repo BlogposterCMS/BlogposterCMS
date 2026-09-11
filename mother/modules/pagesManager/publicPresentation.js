@@ -69,19 +69,23 @@ function hasPageContentHost(tree) {
   return tree.isDynamicHost === true || (tree.children || []).some(hasPageContentHost);
 }
 
-// First-response articles sit outside the app scope until the saved layout is
-// ready. Give that temporary position readable defaults without hiding content
-// on slow/failed JavaScript or overriding the authored design after adoption.
+// Typography follows the article when the client adopts it into a content host.
+// Only outer spacing belongs to its temporary first-response position. Zero
+// specificity lets authored article/theme rules override these readable defaults.
 const INITIAL_ARTICLE_CSS = `
 :where(body > #bp-initial-html) {
   box-sizing:border-box;max-width:76rem;margin:0 auto;padding:32px 24px;
+}
+:where(.bp-page-html) {
   font:16px/1.7 var(--font-body,ui-sans-serif,system-ui,sans-serif);
   overflow-wrap:anywhere;
 }
-:where(body > #bp-initial-html) :where(h1,h2,h3) {line-height:1.25}
-:where(body > #bp-initial-html) :where(img,video) {max-width:100%;height:auto}
-:where(body > #bp-initial-html) :where(pre) {overflow:auto}
-:where(body > #bp-initial-html) :where(aside a) {display:block}
+:where(.bp-page-html) :where(h1,h2,h3) {line-height:1.25}
+:where(.bp-page-html) :where(p,ul,ol) {margin-block:0 1.25em}
+:where(.bp-page-html) :where(li + li) {margin-block-start:.65em}
+:where(.bp-page-html) :where(img,video) {max-width:100%;height:auto}
+:where(.bp-page-html) :where(pre) {overflow:auto}
+:where(.bp-page-html) :where(aside a) {display:block}
 `;
 
 /** Resolve only published public facade data; widgets still fetch their own data. */

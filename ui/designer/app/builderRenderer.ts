@@ -48,7 +48,7 @@ import { emitAdminFacade } from './runtime/runtimeFacade.js';
 import { createContainerInteractionInspector } from './widgets/containerInteractionInspector.js';
 import { readContainerSettings } from '../../shared/layout/layoutDom.js';
 import { createNavigationInspector } from './widgets/navigationInspector.js';
-import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
+import { navigationSettings, applyNavigationSource } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
 import { widgetSettings } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
 import { initTextPanel } from './managers/textPanelManager';
 import { getWidgetIcon } from './renderer/renderUtils.js';
@@ -1163,10 +1163,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       throw new Error('DESIGNER_NAVIGATION_SETTINGS_INVALID: Use the selected widget settings.');
     }
     const next = navigationSettings(el.dataset.widgetId, { ...current, ...patch });
-    code.meta = { ...(code.meta || {}), ...next };
-    // Choosing a managed source explicitly replaces legacy inline overrides.
-    if ('locationKey' in patch) Object.assign(code.meta, { items: [], links: [] });
-    if ('source' in patch) Object.assign(code.meta, { items: [], trail: [] });
+    code.meta = applyNavigationSource({ ...(code.meta || {}), ...next }, patch);
     void renderWidget(el, widgetDef, ensureCodeMap());
     gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
     if (state.designId && state.autosaveEnabled) scheduleAutosave();

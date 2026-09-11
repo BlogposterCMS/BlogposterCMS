@@ -35,6 +35,24 @@ export function navigationSettings(widgetId: string, raw: LooseRecord = {}): Loo
   };
 }
 
+/** A deliberate source change must also replace localized inline link overrides. */
+export function applyNavigationSource(meta: LooseRecord, patch: LooseRecord): LooseRecord {
+  const source = 'locationKey' in patch ? 'locationKey' : 'source' in patch ? 'source' : null;
+  if (!source) return meta;
+  const overrides = source === 'locationKey'
+    ? { locationKey: meta.locationKey, items: [], links: [] }
+    : { source: meta.source, items: [], trail: [] };
+  const translations = meta.translations;
+  return {
+    ...meta, ...overrides,
+    ...(translations && typeof translations === 'object' && !Array.isArray(translations) ? {
+      translations: Object.fromEntries(Object.entries(translations).map(([locale, value]) => [locale,
+        value && typeof value === 'object' && !Array.isArray(value) ? { ...value, ...overrides } : value
+      ]))
+    } : {})
+  };
+}
+
 export function applyNavigationStyle(el: HTMLElement, settings: LooseRecord): void {
   el.style.fontSize = `${settings.fontSize}px`;
   el.style.setProperty('--bp-nav-gap', `${settings.gap}px`);

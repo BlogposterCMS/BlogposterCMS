@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.10.35] - 2026-09-11
+
+- Preserve public article typography when the Designer adopts the server-rendered article into its content area. Keep initial outer spacing separate and allow authored page CSS to override the defaults.
+- Preserve saved flex ratios for flowing article containers so sidebar/article layouts do not unexpectedly wrap after loading.
+- Clear stale localized inline navigation items when selecting a managed navigation source in the Designer inspector or AgentManager.
+
 ## [0.10.34] - 2026-09-10
 
 - Expose translated page title, content, CSS and SEO in the native Page Editor. Preserve the page's primary language, shared layout and other translations; protect unsaved changes during language selection and keep the active locale on reload. Add matching AgentManager actions through the existing Pages boundary.

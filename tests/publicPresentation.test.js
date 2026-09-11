@@ -89,6 +89,25 @@ test('the Docs example ships its article typography before any layout widget scr
   expect(result.body).not.toContain('createElement');
 });
 
+test('article typography still matches after adoption while temporary outer spacing does not', async () => {
+  const { JSDOM } = require('jsdom');
+  const result = await loadPublicPresentation(jest.fn().mockResolvedValue(envelope()), 'guide', 'en');
+  const dom = new JSDOM(`<html><head>${result.head}</head><body>${result.body}<main id="outlet"></main></body></html>`);
+  const document = dom.window.document;
+  const article = document.querySelector('.bp-page-html');
+  const rules = Array.from(document.styleSheets).flatMap(sheet => Array.from(sheet.cssRules));
+  const typography = rules.find(rule => rule.style?.getPropertyValue('font').includes('system-ui'));
+  const outerSpacing = rules.find(rule => rule.style?.getPropertyValue('padding') === '32px 24px');
+  expect(article.matches(typography.selectorText)).toBe(true);
+  expect(article.matches(outerSpacing.selectorText)).toBe(true);
+  document.getElementById('outlet').append(article);
+  expect(article.matches(typography.selectorText)).toBe(true);
+  expect(article.matches(outerSpacing.selectorText)).toBe(false);
+  // The author's own stylesheet remains later in the same cascade.
+  expect(result.head.indexOf('main { color: red; }')).toBeGreaterThan(result.head.indexOf(typography.selectorText));
+  dom.window.close();
+});
+
 test('public facade rejection fails closed before any initial HTML is produced', async () => {
   await expect(loadPublicPresentation(jest.fn().mockRejectedValue(new Error('Page not found')), 'draft', 'en'))
     .rejects.toThrow('Page not found');

@@ -5,6 +5,8 @@ import { renderRuntimeCanvasWidget } from '../ui/runtime/main/runtimeWidgetMount
 import { loadWidgets } from '../mother/modules/widgetManager/publicLoader';
 import { loadHtml } from '../mother/modules/pagesManager/publicLoader';
 import { loadDesign } from '../mother/modules/designerManager/publicLoader';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 jest.mock('/ui/runtime/main/script-utils.js', () => ({ executeJs: jest.fn() }), { virtual: true });
 jest.mock('../ui/runtime/main/canvasGrid', () => ({
@@ -14,6 +16,28 @@ jest.mock('../ui/runtime/main/canvasGrid', () => ({
 jest.mock('../ui/runtime/main/runtimeWidgetMounting', () => ({
   renderRuntimeCanvasWidget: jest.fn().mockResolvedValue(undefined)
 }));
+
+test('flowing articles retain the saved split ratio instead of a content-sized flex basis', () => {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(path.resolve(__dirname, '../public/assets/css/runtime.css'), 'utf8');
+  document.head.append(style);
+  document.body.innerHTML = '<div class="runtime-layout-container" data-page-content-flow="true" style="flex:3 1 0px;height:240px"></div>';
+  const articleHost = document.body.firstElementChild as HTMLElement;
+  // jsdom does not apply stylesheet !important over inline declarations like a
+  // browser. Also check the matching cascade so the regression fails there.
+  const forcedFlexRules = Array.from(style.sheet!.cssRules).filter(rule => {
+    const candidate = rule as CSSStyleRule;
+    return candidate.selectorText && articleHost.matches(candidate.selectorText)
+      && ['flex', 'flex-grow', 'flex-shrink', 'flex-basis'].some(property =>
+        candidate.style.getPropertyPriority(property) === 'important');
+  });
+  expect(forcedFlexRules).toHaveLength(0);
+  const computed = getComputedStyle(articleHost);
+  expect(computed.flexGrow).toBe('3');
+  expect(computed.flexShrink).toBe('1');
+  expect(computed.flexBasis).toBe('0px');
+  style.remove();
+});
 
 test('public composition keeps header, article and footer hosts and registry inline code', async () => {
   document.body.innerHTML = '<div id="app"><div id="bp-initial-html"><h1>Article</h1></div></div>';

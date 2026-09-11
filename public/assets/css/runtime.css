@@ -87,7 +87,8 @@ html[data-designer-live-preview='true'] body::-webkit-scrollbar {
    pixel heights for placement, which must not constrain this content path. */
 .runtime-layout-container[data-page-content-flow='true'] {
   height: auto !important;
-  flex: 1 0 auto !important;
+  /* Preserve the saved split ratio and shrinking. A content-sized flex basis
+     forced long articles onto a new row beside an otherwise valid sidebar. */
 }
 
 /* A page design occupies the explicit outlet without inheriting a fixed canvas width. */

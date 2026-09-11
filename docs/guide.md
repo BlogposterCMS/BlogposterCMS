@@ -4,6 +4,16 @@ This guide describes how to operate BlogposterCMS once the server is running. It
 
 ## Accessing the Dashboard
 
+### Public article loading
+
+Public articles are readable in the first server response. When a saved Designer
+layout loads, the runtime adopts that same article into its page-content area.
+Article typography follows `.bp-page-html` throughout this transition; initial
+outer spacing applies only before adoption. Authored page CSS can override these
+low-specificity defaults. Flow content keeps the Designer's saved flex ratios
+and responsive wrapping. Check the finished layout after loading and after a
+reload, rather than accepting the first response alone.
+
 1. Start the server using `npm start`.
 2. Open `http://localhost:3000/` in your browser.
 3. The admin interface lives under `/admin`.

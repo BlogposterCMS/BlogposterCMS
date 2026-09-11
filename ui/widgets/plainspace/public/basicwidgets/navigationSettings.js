@@ -33,6 +33,24 @@ export function navigationSettings(widgetId, raw = {}) {
         radius: number('radius', 0, 24, 8)
     };
 }
+/** A deliberate source change must also replace localized inline link overrides. */
+export function applyNavigationSource(meta, patch) {
+    const source = 'locationKey' in patch ? 'locationKey' : 'source' in patch ? 'source' : null;
+    if (!source)
+        return meta;
+    const overrides = source === 'locationKey'
+        ? { locationKey: meta.locationKey, items: [], links: [] }
+        : { source: meta.source, items: [], trail: [] };
+    const translations = meta.translations;
+    return {
+        ...meta, ...overrides,
+        ...(translations && typeof translations === 'object' && !Array.isArray(translations) ? {
+            translations: Object.fromEntries(Object.entries(translations).map(([locale, value]) => [locale,
+                value && typeof value === 'object' && !Array.isArray(value) ? { ...value, ...overrides } : value
+            ]))
+        } : {})
+    };
+}
 export function applyNavigationStyle(el, settings) {
     el.style.fontSize = `${settings.fontSize}px`;
     el.style.setProperty('--bp-nav-gap', `${settings.gap}px`);

@@ -2,7 +2,8 @@
 import { render as renderMenu } from '../ui/widgets/plainspace/public/basicwidgets/navigationMenuWidget';
 import { render as renderBreadcrumb } from '../ui/widgets/plainspace/public/basicwidgets/breadcrumbWidget';
 import { loadBreadcrumbPages } from '../ui/widgets/plainspace/public/basicwidgets/breadcrumbData';
-import { navigationSettings } from '../ui/widgets/plainspace/public/basicwidgets/navigationSettings';
+import { navigationSettings, applyNavigationSource } from '../ui/widgets/plainspace/public/basicwidgets/navigationSettings';
+import { widgetSettings } from '../ui/shared/design-system/publicWidgetHelpers';
 import { createNavigationInspector } from '../ui/designer/app/widgets/navigationInspector';
 
 const items = [{label:'Docs',href:'/docs',children:[{label:'Getting started',href:'/docs/start'}]}];
@@ -105,6 +106,22 @@ describe('authored navigation', () => {
 
   it('bounds visual settings without accepting arbitrary CSS', () => {
     expect(navigationSettings('navigationMenu',{gap:'999',fontSize:0,radius:-3,appearance:'url(evil)'})).toMatchObject({gap:48,fontSize:11,radius:0,appearance:'soft'});
+  });
+
+  it('replaces localized inline links only after an explicit managed-source selection', () => {
+    const original = { locationKey:'guides', items, translations: {
+      en:{items, mobileLabel:'Chapters'}, zh:{items, mobileLabel:'章节',locationKey:'old-source'}
+    } };
+    expect(applyNavigationSource(original,{fontSize:16})).toBe(original);
+    const selected = applyNavigationSource(original,{locationKey:'guides'});
+    for (const locale of ['en','zh']) {
+      history.replaceState({},'',`/docs?lang=${locale}`);
+      const settings = widgetSettings({instanceMetadata:selected});
+      expect(settings.items).toEqual([]);
+      expect(settings.locationKey).toBe('guides');
+      expect(settings.mobileLabel).toBe(locale==='en'?'Chapters':'章节');
+    }
+    expect(original.translations.zh.items).toBe(items);
   });
 
   it('shows source and appearance controls backed by the same selected instance', async () => {

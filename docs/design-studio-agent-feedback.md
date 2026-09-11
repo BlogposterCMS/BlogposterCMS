@@ -147,6 +147,12 @@ Menu/Breadcrumb placements expose flat `navigation` settings, `sourceOwner` and
 Content inspector. Menu-link authoring remains in Navigation Studio; no second
 Designer menu store is introduced. See [navigation authoring](designer-navigation.md).
 
+An explicit navigation source change clears stale inline items in both the base
+metadata and saved locale overrides. Locale-specific labels and appearance are
+preserved. `navigation.configure` and the Content inspector share this behavior;
+style-only edits do not change the source. Re-read the saved instance snapshot
+after changing a source, including its locale overrides.
+
 The shared handoff state is `state.collaboration`: actual draft dirty state,
 save/publication busy and error state, current document, selection and
 `stateRevision`. All domain writes require that revision as `expectedRevision`;

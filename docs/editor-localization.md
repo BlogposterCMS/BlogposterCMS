@@ -73,6 +73,14 @@ and CSS source views. The local CodeMirror bundle loads only for source editing;
 it does not enlarge the initial CMS or public-page entry graph. Source is text,
 never executed. The same Pages draft/attachment owner remains authoritative.
 
+Document toolbar, language and Design Studio icons use explicit `data-bp-tooltip`
+hints through the existing shared Popover portal, not browser `title` attributes
+or generated accessibility-label text. Hover opens after 220 ms; keyboard focus
+opens immediately. Hints remain hoverable, follow viewport positioning and dark
+mode, and explain disabled controls. Click or Escape dismisses the hint without
+closing its editor or replacing an open picker. Editor teardown cancels pending
+hints. Accessible action names and AgentManager availability remain unchanged.
+
 The editor provides line numbers, syntax highlighting, folding, Find and Wrap
 lines. **Format** runs the bundled Prettier HTML/CSS parser only on request. It
 changes the current draft as one undoable edit; Ctrl/Cmd+Z reverts it. Opening,

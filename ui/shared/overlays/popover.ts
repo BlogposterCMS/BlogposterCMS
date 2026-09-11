@@ -178,6 +178,8 @@ export function openPopover(anchor: HTMLElement, options: BpPopoverOptions): BpP
   function onKeyDown(event: KeyboardEvent) {
     if (event.key !== 'Escape' || options.dismissible === false) return;
     event.preventDefault();
+    // Escape dismisses the innermost overlay, not its containing editor dialog.
+    event.stopPropagation();
     close();
     if (options.role !== 'tooltip') anchor.focus();
   }

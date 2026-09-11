@@ -1,4 +1,5 @@
 import { articleTitle, type ArticlePage } from './articleData.js';
+import { mountTooltips } from '../overlays/tooltip.js';
 
 export type ContentEditorOptions = { language?: string; openDesign?: (page: ArticlePage) => Promise<void> };
 
@@ -10,8 +11,9 @@ export function contentEditorHeader(page: ArticlePage, changed: () => void, open
   // Enter edits no content and must not submit the enclosing modal's Close action.
   title.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); title.blur(); } });
   const studio = document.createElement('button'); studio.type = 'button'; studio.className = 'icon-button article-editor__studio';
-  studio.title = 'Open in Design Studio'; studio.setAttribute('aria-label', studio.title);
+  studio.dataset.bpTooltip = 'Open in Design Studio'; studio.setAttribute('aria-label', studio.dataset.bpTooltip);
   studio.innerHTML = '<img src="/assets/icons/brush.svg" width="18" height="18" alt="">';
   studio.addEventListener('click', openDesign);
-  return { title, studio };
+  const tooltip = mountTooltips(studio);
+  return { title, studio, destroy: () => tooltip.stop() };
 }

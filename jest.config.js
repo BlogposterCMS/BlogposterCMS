@@ -65,6 +65,7 @@ module.exports = {
     '^.*(?:/|\\./)(componentDefinitions|componentRenderer)\\.js$': '<rootDir>/ui/shared/design-system/$1.ts',
     '^.*(?:/|\\./)customSelect\\.js$': '<rootDir>/ui/shared/controls/customSelect.ts',
     '^.*(?:/|\\./)popover\\.js$': '<rootDir>/ui/shared/overlays/popover.ts',
+    '^.*(?:/|\\./)tooltip\\.js$': '<rootDir>/ui/shared/overlays/tooltip.ts',
     '^.*(?:/|\\./)sitePresetsPanel\\.js$': '<rootDir>/ui/shared/presets/sitePresetsPanel.js',
     '^.*(?:/|\\./)colorLibrary\\.js$': '<rootDir>/ui/shared/colors/colorLibrary.ts',
     '^.*(?:/|\\./)fontPackages\\.js$': '<rootDir>/ui/shared/fonts/fontPackages.ts',

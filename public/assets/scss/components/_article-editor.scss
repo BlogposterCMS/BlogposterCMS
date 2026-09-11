@@ -46,8 +46,8 @@
 .article-editor__document .selectedCell { background: var(--studio-surface-muted); }
 .article-editor__footer { display: flex; align-items: center; gap: 8px; }
 .bp-dialog-root .article-editor__footer .button[hidden] { display: none; }
-/* The toolbar has native titles. Global floating labels on the textbox and
-   toolbar would create invisible horizontal overflow inside the dialog. */
+/* Controls use the shared tooltip portal. Legacy pseudo labels on the textbox
+   and toolbar would create duplicate hints and horizontal overflow. */
 .bp-dialog:has(.article-editor) [aria-label]::after, .bp-dialog:has(.article-editor) [title]::after { content: none; display: none; }
 .article-editor__status { font-size: 13px; margin: 8px 0; }
 .article-editor__status[role='alert'] { color: var(--color-error); }

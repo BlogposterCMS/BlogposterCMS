@@ -1,4 +1,5 @@
 import { articleTitle } from './articleData.js';
+import { mountTooltips } from '../overlays/tooltip.js';
 /** Shared document chrome; title input changes only this editor's draft. */
 export function contentEditorHeader(page, changed, openDesign) {
     const title = document.createElement('input');
@@ -17,9 +18,10 @@ export function contentEditorHeader(page, changed, openDesign) {
     const studio = document.createElement('button');
     studio.type = 'button';
     studio.className = 'icon-button article-editor__studio';
-    studio.title = 'Open in Design Studio';
-    studio.setAttribute('aria-label', studio.title);
+    studio.dataset.bpTooltip = 'Open in Design Studio';
+    studio.setAttribute('aria-label', studio.dataset.bpTooltip);
     studio.innerHTML = '<img src="/assets/icons/brush.svg" width="18" height="18" alt="">';
     studio.addEventListener('click', openDesign);
-    return { title, studio };
+    const tooltip = mountTooltips(studio);
+    return { title, studio, destroy: () => tooltip.stop() };
 }

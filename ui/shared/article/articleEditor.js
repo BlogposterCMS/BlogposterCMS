@@ -1,6 +1,7 @@
 import { Editor } from '@tiptap/core';
 import { bpDialog } from '../dialogs/bpDialog.js';
 import { openPopover } from '../overlays/popover.js';
+import { mountTooltips } from '../overlays/tooltip.js';
 import { registerWorkspaceAgent } from '../agent/workspaceAgent.js';
 import { registerWorkspaceChanges } from '../navigation/workspaceChanges.js';
 import { articleExtensions, cleanArticleHtml, safeArticleUrl, validateArticleDocument } from './articleSchema.js';
@@ -94,7 +95,7 @@ async function runDialog(pageId, onSaved, options, navigation) {
                 control.className = 'article-editor__block-language button ghost sm';
                 control.innerHTML = '<img src="/assets/icons/languages.svg" width="16" height="16" alt="">';
                 control.append(document.createTextNode('Use source block'));
-                control.title = `Keep this block unchanged in ${activeLanguage}`;
+                control.dataset.bpTooltip = `Keep this block unchanged in ${activeLanguage}`;
                 control.addEventListener('click', () => { if (!busy)
                     markTranslated(blockId); });
                 return control;
@@ -111,7 +112,7 @@ async function runDialog(pageId, onSaved, options, navigation) {
         const control = document.createElement('button');
         control.type = 'button';
         control.className = 'icon-button';
-        control.title = label;
+        control.dataset.bpTooltip = label;
         control.setAttribute('aria-label', label);
         control.innerHTML = `<img src="/assets/icons/${icon}.svg" width="18" height="18" alt="">`;
         control.addEventListener('click', () => { if (!busy && articleCommandAvailable(editor, label))
@@ -315,6 +316,7 @@ async function runDialog(pageId, onSaved, options, navigation) {
         resolve();
     else
         setTimeout(attach, 10); }; attach(); });
+    const tooltips = mountTooltips(body);
     linkFeedback = mountLinkFeedback(body, { collect: () => [
             ...(linkInput?.isConnected ? [{ id: 'link-entry', href: linkInput.value, anchor: linkInput }] : []),
             ...Array.from(canvas.querySelectorAll('a[href]')).map((anchor, index) => ({
@@ -393,6 +395,8 @@ async function runDialog(pageId, onSaved, options, navigation) {
         await dialog;
     }
     finally {
+        tooltips.stop();
+        header.destroy();
         activePopover?.close();
         languageControl.close();
         languageControls.forEach(control => control.close());

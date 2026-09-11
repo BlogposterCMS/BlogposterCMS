@@ -8,6 +8,7 @@ import { articleTitle, readArticlePage, pageContentKind, saveHtmlContent } from 
 import { contentEditorHeader } from './contentEditorHeader.js';
 import { ensureContentDesign, pageDesignEditorUrl } from './pageEditorMode.js';
 import { loadSourceEditor } from '../code/sourceEditorLoader.js';
+import { mountTooltips } from '../overlays/tooltip.js';
 /** Lossless authoring fallback for existing HTML attachments, using the same modal and Pages save owner. */
 export async function openHtmlContentEditor(pageId, onSaved, options = {}) {
     let language = options.language;
@@ -54,7 +55,7 @@ async function openSourceDialog(pageId, onSaved, options) {
     toolbar.setAttribute('aria-label', 'Source editor tools');
     const button = (text) => { const item = document.createElement('button'); item.type = 'button'; item.className = 'button ghost sm'; item.textContent = text; toolbar.append(item); return item; };
     const htmlTab = button('HTML'), cssTab = button('CSS'), wrap = button('Wrap lines'), find = button('Find'), format = button('Format');
-    format.title = 'Format the current draft (undo with Ctrl/Cmd+Z)';
+    format.dataset.bpTooltip = 'Format the current draft (undo with Ctrl/Cmd+Z)';
     htmlTab.addEventListener('click', () => setSourceView('html'));
     cssTab.addEventListener('click', () => setSourceView('css'));
     wrap.addEventListener('click', () => setSourceView(sourceMode, !wrapping));
@@ -215,6 +216,7 @@ async function openSourceDialog(pageId, onSaved, options) {
             return true;
         } });
     await new Promise(resolve => { const attach = () => body.isConnected ? resolve() : setTimeout(attach, 10); attach(); });
+    const tooltips = mountTooltips(body);
     const links = mountLinkFeedback(body, { collect: () => htmlSourceLinks(html, editors.html?.element || html) });
     const unregister = registerWorkspaceChanges(body, { isDirty: () => dirty, isBusy: () => busy || formatting });
     const agent = registerWorkspaceAgent({ root: body, id: `html-content-${pageId}`, title: 'HTML content editor',
@@ -282,6 +284,8 @@ async function openSourceDialog(pageId, onSaved, options) {
     }
     finally {
         stopped = true;
+        tooltips.stop();
+        header.destroy();
         Object.values(editors).forEach(editor => editor.destroy());
         language.close();
         links.stop();

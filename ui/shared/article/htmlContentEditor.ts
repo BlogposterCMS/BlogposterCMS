@@ -8,6 +8,7 @@ import { articleTitle, readArticlePage, pageContentKind, saveHtmlContent } from 
 import { contentEditorHeader, type ContentEditorOptions } from './contentEditorHeader.js';
 import { ensureContentDesign, pageDesignEditorUrl } from './pageEditorMode.js';
 import { loadSourceEditor } from '../code/sourceEditorLoader.js';
+import { mountTooltips } from '../overlays/tooltip.js';
 import type { createSourceEditor } from '../code/sourceEditor.js';
 
 /** Lossless authoring fallback for existing HTML attachments, using the same modal and Pages save owner. */
@@ -37,7 +38,7 @@ async function openSourceDialog(pageId: string | number, onSaved: (() => void | 
   const toolbar = document.createElement('div'); toolbar.className = 'article-editor__source-toolbar'; toolbar.setAttribute('role', 'toolbar'); toolbar.setAttribute('aria-label', 'Source editor tools');
   const button = (text: string) => { const item = document.createElement('button'); item.type = 'button'; item.className = 'button ghost sm'; item.textContent = text; toolbar.append(item); return item; };
   const htmlTab = button('HTML'), cssTab = button('CSS'), wrap = button('Wrap lines'), find = button('Find'), format = button('Format');
-  format.title = 'Format the current draft (undo with Ctrl/Cmd+Z)';
+  format.dataset.bpTooltip = 'Format the current draft (undo with Ctrl/Cmd+Z)';
   htmlTab.addEventListener('click', () => setSourceView('html'));
   cssTab.addEventListener('click', () => setSourceView('css'));
   wrap.addEventListener('click', () => setSourceView(sourceMode, !wrapping));
@@ -118,6 +119,7 @@ async function openSourceDialog(pageId: string | number, onSaved: (() => void | 
       return true;
     } });
   await new Promise<void>(resolve => { const attach = () => body.isConnected ? resolve() : setTimeout(attach, 10); attach(); });
+  const tooltips = mountTooltips(body);
   const links = mountLinkFeedback(body, { collect: () => htmlSourceLinks(html, editors.html?.element || html) });
   const unregister = registerWorkspaceChanges(body, { isDirty: () => dirty, isBusy: () => busy || formatting });
   const agent = registerWorkspaceAgent({ root: body, id: `html-content-${pageId}`, title: 'HTML content editor',
@@ -161,7 +163,7 @@ async function openSourceDialog(pageId: string | number, onSaved: (() => void | 
     html.hidden = css.hidden = false; update();
     message('SOURCE_EDITOR_LOAD_FAILED: Code tools could not load. Plain source editing remains available.', true);
   });
-  try { await dialog; } finally { stopped = true; Object.values(editors).forEach(editor => editor.destroy()); language.close(); links.stop(); agent.stop(); unregister(); }
+  try { await dialog; } finally { stopped = true; tooltips.stop(); header.destroy(); Object.values(editors).forEach(editor => editor.destroy()); language.close(); links.stop(); agent.stop(); unregister(); }
   if (saved) await onSaved?.();
   if (studioUrl) window.location.assign(studioUrl);
   return nextLanguage;

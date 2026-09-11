@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Replace native editor icon titles with compact themed tooltips on mouse hover and keyboard focus. Reuse the shared Popover portal and viewport positioning, explain disabled controls, preserve open pickers, and let Escape dismiss the hint without closing its editor.
+
 - Replace the imported-HTML modal's plain source presentation with a lazily loaded HTML/CSS code editor: syntax colors, line numbers, folding, search, line wrapping and explicit undoable formatting. Preserve source on open, attachments, locale drafts and the native Pages save boundary; expose view/format actions through AgentManager and retain visible plain editing on load failure.
 
 - Centralized content-language choices in General Settings for Article, Page Editor, Studio and agents; replaced free-form locale entry with dropdowns and distinguished source-block acceptance from document language switching. Article toolbar actions now reflect schema, selection and undo/redo availability.

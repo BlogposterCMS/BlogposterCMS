@@ -1,6 +1,7 @@
 import { Editor, type JSONContent } from '@tiptap/core';
 import { bpDialog } from '../dialogs/bpDialog.js';
 import { openPopover } from '../overlays/popover.js';
+import { mountTooltips } from '../overlays/tooltip.js';
 import { registerWorkspaceAgent } from '../agent/workspaceAgent.js';
 import { registerWorkspaceChanges } from '../navigation/workspaceChanges.js';
 import { articleExtensions, cleanArticleHtml, safeArticleUrl, validateArticleDocument } from './articleSchema.js';
@@ -62,7 +63,7 @@ async function runDialog(pageId: string | number, onSaved: (() => void | Promise
   const editor = new Editor({ element: canvas, extensions: [...articleExtensions(), articleLocaleDecorations(node => Boolean(locale?.isFallback(node)), locale ? blockId => {
     const control = document.createElement('button'); control.type = 'button'; control.className = 'article-editor__block-language button ghost sm';
     control.innerHTML = '<img src="/assets/icons/languages.svg" width="16" height="16" alt="">';
-    control.append(document.createTextNode('Use source block')); control.title = `Keep this block unchanged in ${activeLanguage}`;
+    control.append(document.createTextNode('Use source block')); control.dataset.bpTooltip = `Keep this block unchanged in ${activeLanguage}`;
     control.addEventListener('click', () => { if (!busy) markTranslated(blockId); });
     return control;
   } : undefined)], content: locale?.document || cleanArticleHtml(page.html || '<p></p>'),
@@ -75,7 +76,7 @@ async function runDialog(pageId: string | number, onSaved: (() => void | Promise
   editor.on('create', () => { initial = editor.getHTML(); syncDirty(); });
   editor.on('update', syncDirty);
   function button(label: string, icon: string, action: () => void) {
-    const control = document.createElement('button'); control.type = 'button'; control.className = 'icon-button'; control.title = label; control.setAttribute('aria-label', label);
+    const control = document.createElement('button'); control.type = 'button'; control.className = 'icon-button'; control.dataset.bpTooltip = label; control.setAttribute('aria-label', label);
     control.innerHTML = `<img src="/assets/icons/${icon}.svg" width="18" height="18" alt="">`;
     control.addEventListener('click', () => { if (!busy && articleCommandAvailable(editor, label)) action(); }); toolbar.append(control); return control;
   }
@@ -191,6 +192,7 @@ async function runDialog(pageId: string | number, onSaved: (() => void | Promise
   });
   // bpDialog mounts in its queue; attach the existing agent contract once connected.
   await new Promise<void>(resolve => { const attach = () => { if (body.isConnected) resolve(); else setTimeout(attach, 10); }; attach(); });
+  const tooltips = mountTooltips(body);
   linkFeedback = mountLinkFeedback(body, { collect: () => [
     ...(linkInput?.isConnected ? [{ id: 'link-entry', href: linkInput.value, anchor: linkInput }] : []),
     ...Array.from(canvas.querySelectorAll<HTMLAnchorElement>('a[href]')).map((anchor, index) => ({
@@ -237,7 +239,7 @@ async function runDialog(pageId: string | number, onSaved: (() => void | Promise
   ] });
   update(); editor.commands.focus();
   if (navigation.blockId) { try { editor.commands.setTextSelection(blockRange(navigation.blockId).from + 1); } catch { /* A removed source block has no selection in the target. */ } }
-  try { await dialog; } finally { activePopover?.close(); languageControl.close(); languageControls.forEach(control => control.close()); linkFeedback?.stop(); agent.stop(); unregister(); editor.destroy(); }
+  try { await dialog; } finally { tooltips.stop(); header.destroy(); activePopover?.close(); languageControl.close(); languageControls.forEach(control => control.close()); linkFeedback?.stop(); agent.stop(); unregister(); editor.destroy(); }
   if (saved) await onSaved?.();
   if (nextStudioUrl) window.location.assign(nextStudioUrl);
   return nextLanguage;

@@ -527,6 +527,28 @@ body.grid-mode .bounding-box.disabled {
   transform: translateY(0) scale(1);
 }
 
+.bp-popover.bp-tooltip {
+  min-width: 0;
+  width: max-content;
+  max-width: min(300px, 100vw - 24px);
+  padding: 7px 10px;
+  border-radius: 10px;
+  box-shadow: var(--studio-shadow-control);
+}
+
+.bp-tooltip .bp-popover__message {
+  padding: 0;
+  color: var(--studio-text);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+[data-bp-tooltip]::after {
+  content: none !important;
+  display: none !important;
+}
+
 .bp-popover.is-leaving {
   opacity: 0;
   transform: translateY(-4px) scale(0.98);
@@ -1031,8 +1053,8 @@ textarea.bp-dialog__input {
   display: none;
 }
 
-/* The toolbar has native titles. Global floating labels on the textbox and
-   toolbar would create invisible horizontal overflow inside the dialog. */
+/* Controls use the shared tooltip portal. Legacy pseudo labels on the textbox
+   and toolbar would create duplicate hints and horizontal overflow. */
 .bp-dialog:has(.article-editor) [aria-label]::after, .bp-dialog:has(.article-editor) [title]::after {
   content: none;
   display: none;

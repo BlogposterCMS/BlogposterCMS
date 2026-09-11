@@ -42,6 +42,11 @@
   transform: translateY(0) scale(1);
 }
 
+// Explicit control hints use the same portal and palette without the menu-sized minimum.
+.bp-popover.bp-tooltip { min-width: 0; width: max-content; max-width: min(300px, calc(100vw - 24px)); padding: 7px 10px; border-radius: 10px; box-shadow: var(--studio-shadow-control); }
+.bp-tooltip .bp-popover__message { padding: 0; color: var(--studio-text); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+[data-bp-tooltip]::after { content: none !important; display: none !important; }
+
 .bp-popover.is-leaving {
   opacity: 0;
   transform: translateY(-4px) scale(0.98);

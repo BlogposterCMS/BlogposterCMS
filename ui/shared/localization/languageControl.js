@@ -1,4 +1,5 @@
 import { openPopover } from '../overlays/popover.js';
+import { mountTooltips } from '../overlays/tooltip.js';
 import { normalizePageLanguage } from '../page-editor/pageEditorData.js';
 import { loadContentLanguages } from './contentLanguages.js';
 import { contentLanguageLabel } from './contentLanguageConfig.js';
@@ -9,8 +10,9 @@ export function createContentLanguageControl(current, source, open, actions = []
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'icon-button content-language-control';
-    button.title = 'Content language';
+    button.dataset.bpTooltip = 'Content language';
     button.setAttribute('aria-label', 'Content language');
+    const tooltip = mountTooltips(button);
     button.innerHTML = '<img src="/assets/icons/languages.svg" width="18" height="18" alt="">';
     const value = document.createElement('span');
     value.textContent = current();
@@ -77,5 +79,5 @@ export function createContentLanguageControl(current, source, open, actions = []
             void activate();
         } });
     });
-    return { button, refresh: () => { value.textContent = current(); }, close: () => popover?.close() };
+    return { button, refresh: () => { value.textContent = current(); }, close: () => { tooltip.stop(); popover?.close(); } };
 }

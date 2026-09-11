@@ -1,5 +1,18 @@
 # Content editor and locale release checks
 
+## Styled editor tooltips
+
+Classification: small maintenance; Zero-Node neutral. Presentation and overlay
+dismissal only; no content, permissions or agent command boundary changes.
+
+- [x] Focus/hover hints use the shared portal and accessible descriptions without native titles.
+- [x] Disabled controls explain availability; moving onto a hint keeps it open.
+- [x] Escape dismisses the hint while preserving the editor and keyboard focus.
+- [x] Hover preserves open language pickers; teardown cancels pending hints.
+- [x] Local real article editor: header/toolbar, 390 px edges, light/dark and reopen.
+- [x] Twelve focused regression tests, lint and browser build pass.
+- [ ] Production CMS update and verification remain deferred.
+
 ## HTML/CSS source presentation
 
 Classification: small maintenance; Zero-Node neutral. No backend, storage,

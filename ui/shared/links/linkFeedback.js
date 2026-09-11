@@ -160,9 +160,9 @@ export function mountLinkFeedback(root, options) {
     return controller;
 }
 /** Read HTML as an inert template; no source attributes or attached assets are changed. */
-export function htmlSourceLinks(input) {
+export function htmlSourceLinks(input, anchor = input) {
     const template = document.createElement('template');
     template.innerHTML = input.value.slice(0, 2000000);
     return Array.from(template.content.querySelectorAll('a[href]')).slice(0, 41)
-        .map((link, index) => ({ id: `html-link-${index}`, href: link.getAttribute('href') || '', anchor: input }));
+        .map((link, index) => ({ id: `html-link-${index}`, href: link.getAttribute('href') || '', anchor }));
 }

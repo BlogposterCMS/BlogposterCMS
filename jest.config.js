@@ -17,6 +17,7 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^.*(?:/|\\./)(sourceEditor|sourceEditorLoader)\\.js$': '<rootDir>/ui/shared/code/$1.ts',
     '^.*(?:/|\\./)(contentLanguages|contentLanguageConfig|languageControl)\\.js$': '<rootDir>/ui/shared/localization/$1.ts',
     '^\\./contentLanguageSettings\\.js$': '<rootDir>/ui/widgets/plainspace/admin/settings/contentLanguageSettings.ts',
     '^\\./articleToolbarState\\.js$': '<rootDir>/ui/shared/article/articleToolbarState.ts',

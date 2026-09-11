@@ -68,6 +68,28 @@ Pages/Designer permissions, sanitizers and version checks.
 
 ## Agent parity
 
+Imported HTML opens the existing full-height content modal with separate HTML
+and CSS source views. The local CodeMirror bundle loads only for source editing;
+it does not enlarge the initial CMS or public-page entry graph. Source is text,
+never executed. The same Pages draft/attachment owner remains authoritative.
+
+The editor provides line numbers, syntax highlighting, folding, Find and Wrap
+lines. **Format** runs the bundled Prettier HTML/CSS parser only on request. It
+changes the current draft as one undoable edit; Ctrl/Cmd+Z reverts it. Opening,
+switching views or changing line wrapping does not format or save content.
+HTML uses strict whitespace sensitivity and leaves embedded scripts/styles
+untouched. Authors should review the draft before saving; malformed input, a
+stale edit or an oversized formatting request leaves the source unchanged.
+Formatting is bounded to 1 MB. A failed enhancement leaves the native source
+fields available and reports `SOURCE_EDITOR_LOAD_FAILED`.
+
+HTML agent snapshots additionally expose `sourceEditor` (mode, wrapping,
+enhancement and formatting availability). `content.sourceView` selects HTML/CSS;
+`content.formatSource` applies the same draft-only formatter as the visible
+button. Existing `content.edit` and `content.save` remain the content owners.
+Link feedback reads the same HTML and anchors its warnings to the visible editor,
+without inserting warning markup into the source.
+
 Article snapshots expose `contentLanguage`, `sourceLanguage`, `availableLanguages`,
 toolbar availability, `translationExists`
 and each stable block's `translationStatus`. Actions include

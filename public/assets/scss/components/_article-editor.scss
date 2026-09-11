@@ -1,11 +1,11 @@
 // Article writing uses the shared dialog shell with a document-sized body.
-.bp-dialog-root:has(.article-editor) { padding: 16px; align-items: center; }
+.bp-dialog-root:has(.article-editor) { padding: 16px; align-items: center; grid-template-columns: minmax(0, 1fr); }
 .bp-dialog:has(.article-editor) { width: min(1100px, 100%); height: calc(100dvh - 32px); max-height: none; max-width: none; box-sizing: border-box; gap: 12px; }
 .bp-dialog:has(.article-editor) .bp-dialog__header { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
 .bp-dialog:has(.article-editor) .bp-dialog__title { flex: 1; min-width: 0; }
-.bp-dialog:has(.article-editor) .bp-dialog__body { flex: 1; min-height: 0; overflow: hidden; gap: 0; }
+.bp-dialog:has(.article-editor) .bp-dialog__body { flex: 1; min-width: 0; min-height: 0; overflow: hidden; gap: 0; }
 .bp-dialog:has(.article-editor) .bp-dialog__message:empty { display: none; }
-.bp-dialog:has(.article-editor) .bp-dialog__custom-body { display: flex; flex: 1; min-height: 0; }
+.bp-dialog:has(.article-editor) .bp-dialog__custom-body { display: flex; flex: 1; min-width: 0; min-height: 0; }
 .article-editor { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
 .article-editor__title { width: 100%; min-width: 0; padding: 6px 0; border: 0; border-bottom: 1px solid transparent; background: transparent; color: inherit; font: inherit; }
 .article-editor__title:focus { outline: none; border-bottom-color: var(--studio-border); }
@@ -28,6 +28,13 @@
 .article-editor__source { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 8px; }
 .article-editor__source textarea { flex: 1; min-height: 0; width: 100%; resize: none; font: 14px/1.5 monospace; }
 .article-editor__source [hidden] { display: none; }
+.article-editor__source-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 0 0 12px; }
+.article-editor__source-toolbar .button { width: auto; min-width: 0; padding-inline: 12px; }
+.article-editor__source-toolbar button[aria-pressed='true'] { background: var(--studio-surface-muted); font-weight: 650; }
+.article-editor__source-toolbar button:disabled { opacity: .4; cursor: not-allowed; }
+.article-editor__code-pane { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--studio-border); border-radius: 10px; }
+.article-editor__code-pane > .cm-editor { flex: 1; width: 100%; min-width: 0; min-height: 0; }
+.article-editor__code-pane > textarea { border: 0; border-radius: 0; }
 .article-editor__document :is(p,h1,h2,h3,ul,ol,blockquote,pre,table) { margin: 0 0 16px; }
 .article-editor__document ul { list-style: disc; padding-left: 24px; }
 .article-editor__document ol { list-style: decimal; padding-left: 24px; }

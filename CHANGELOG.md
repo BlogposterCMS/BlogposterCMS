@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Replace the imported-HTML modal's plain source presentation with a lazily loaded HTML/CSS code editor: syntax colors, line numbers, folding, search, line wrapping and explicit undoable formatting. Preserve source on open, attachments, locale drafts and the native Pages save boundary; expose view/format actions through AgentManager and retain visible plain editing on load failure.
+
 - Centralized content-language choices in General Settings for Article, Page Editor, Studio and agents; replaced free-form locale entry with dropdowns and distinguished source-block acceptance from document language switching. Article toolbar actions now reflect schema, selection and undo/redo availability.
 
 - Add content-language controls to document and Designer editing, including gray source fallback and matching AgentManager actions. Save language-specific widget/layout changes as sparse versioned overrides, including separate responsive rules, with regional inheritance and an explicit reset to inherited design.

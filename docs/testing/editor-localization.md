@@ -1,5 +1,28 @@
 # Content editor and locale release checks
 
+## HTML/CSS source presentation
+
+Classification: small maintenance; Zero-Node neutral. No backend, storage,
+authorization or content-publication boundary changed.
+
+- [x] Open imported HTML without changing its bytes, title, attachments or language.
+- [x] Check syntax colors, line numbers, fold controls, Find and line wrapping.
+- [x] Switch HTML/CSS, format only the active draft, undo, save and reopen.
+- [x] Match AgentManager view/format/edit/save behavior and retain link feedback.
+- [x] Invalid, stale and oversized formatting leaves the current source unchanged.
+- [x] Verify the plain editing fallback when the local code bundle cannot load.
+- [x] Verify local desktop/narrow layout, browser build and focused tests.
+- [ ] Production CMS update (separate from source publication).
+
+Local verification: 18 focused tests pass and the browser build succeeds. Native
+Pages editing covers format/undo, search, wrapping, HTML/CSS, save and reopen;
+existing source and asset references remain intact. AgentManager view/edit/format
+commands run through the authenticated facade, including stale-revision rejection.
+Desktop 1440 px and narrow 390 px dialogs remain within the viewport, with light
+and dark source colors. The source editor is a lazy 487 KiB bundle; Webpack keeps
+its size advisory, alongside the existing article-editor advisory. Formatter
+plugins load only when formatting is requested.
+
 Classification: material backend extension in existing Pages/Designer authorities;
 Zero-Node neutral. No new service, database, content authority or schema migration.
 

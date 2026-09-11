@@ -62,4 +62,6 @@ test('HTML source feedback reads links without executing or rewriting attached c
   const before = input.value;
   expect(htmlSourceLinks(input)).toEqual([{ id: 'html-link-0', href: '/guide?lang=en', anchor: input }]);
   expect(input.value).toBe(before);
+  const editorSurface = document.createElement('div');
+  expect(htmlSourceLinks(input, editorSurface)[0].anchor).toBe(editorSurface);
 });

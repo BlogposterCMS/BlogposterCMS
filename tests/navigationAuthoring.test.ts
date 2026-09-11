@@ -24,6 +24,20 @@ describe('authored navigation', () => {
     expect(list.hidden).toBe(true); expect(document.activeElement).toBe(toggle);
   });
 
+  it('stretches vertical rows and keeps nested links at regular weight', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    await renderMenu(host, {instanceMetadata:{items,orientation:'vertical'}});
+    const css = Array.from(host.querySelectorAll('style')).map(style => style.textContent || '').join('\n');
+    const nestedCurrent = host.querySelector<HTMLAnchorElement>('ul ul a[aria-current="page"]');
+
+    expect(css).toContain('grid-template-columns: minmax(0, 1fr)');
+    expect(css).toContain('.bp-navigation-widget--vertical .bp-navigation-widget__row { min-width:0; width:100%; }');
+    expect(css).toContain('.bp-navigation-widget--vertical ul ul a[aria-current=\'page\'] { font-weight:400; }');
+    expect(nestedCurrent?.textContent).toBe('Getting started');
+    expect(getComputedStyle(nestedCurrent!).fontWeight).toBe('400');
+  });
+
   it('uses unique disclosure ids and controls mobile state without replacing links', async () => {
     const host = document.createElement('div');
     await renderMenu(host,{instanceMetadata:{items:[...items,...items],mobileLabel:'Chapters'}});

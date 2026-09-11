@@ -1,5 +1,9 @@
 # Menu changelog
 
+## Unreleased
+
+- Stretch vertical menu rows to the full available width for trailing submenu controls, and render nested article links at regular weight including the current nested item.
+
 ## [0.10.21] - 2026-09-09
 
 - Publish a compatible signed generation for selected batch updates and cold-start acceptance on the 0.10.20 baseline.

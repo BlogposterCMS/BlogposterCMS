@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Stretch vertical navigation rows across the available sidebar width so submenu chevrons align at the far edge, and keep nested article links at regular weight while preserving the active-row treatment.
+
 - Bundle the three existing core public loaders and their lazy widget layout dependencies into release-owned browser chunks. Keep community loader discovery, HTML-only startup, public facade permissions and rendering contracts unchanged.
 
 ## [0.10.38] - 2026-09-11

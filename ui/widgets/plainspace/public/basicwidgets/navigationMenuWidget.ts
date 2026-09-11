@@ -75,6 +75,9 @@ function navigationStyle(): HTMLStyleElement {
 .bp-navigation-widget--vertical ul {
   display: grid;
   align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
 }
 @media (max-width: 767px) {
   .bp-navigation-widget__item--mobile-hidden {
@@ -90,6 +93,8 @@ function navigationStyle(): HTMLStyleElement {
 .bp-navigation-widget > ul { justify-content:var(--bp-nav-align); gap:var(--bp-nav-gap); }
 .bp-navigation-widget a { font-size:inherit; font-weight:500; padding:7px 10px; border-radius:var(--bp-nav-radius); }
 .bp-navigation-widget a[aria-current='page'] { font-weight:650; }
+.bp-navigation-widget--vertical ul ul a,
+.bp-navigation-widget--vertical ul ul a[aria-current='page'] { font-weight:400; }
 .bp-navigation-widget[data-appearance='soft'] a:hover,
 .bp-navigation-widget[data-appearance='soft'] a[aria-current='page'] { background:var(--studio-surface-muted,#f4f4f5); }
 .bp-navigation-widget[data-appearance='underline'] a[aria-current='page'] { text-decoration:underline; text-underline-offset:7px; }
@@ -101,7 +106,9 @@ function navigationStyle(): HTMLStyleElement {
 .bp-navigation-widget [hidden] { display:none!important; }
 .bp-navigation-widget--horizontal ul ul[data-disclosure] { position:absolute; z-index:20; left:0; top:100%; min-width:210px; max-width:min(340px,90vw); padding:8px; border:1px solid var(--studio-border,#ddd); border-radius:var(--bp-nav-radius); background:var(--studio-surface-solid,#fff); box-shadow:var(--studio-shadow-soft); }
 .bp-navigation-widget--vertical > ul { gap:var(--bp-nav-gap); }
-.bp-navigation-widget--vertical .bp-navigation-widget__row>a { flex:1; }
+.bp-navigation-widget--vertical li,
+.bp-navigation-widget--vertical .bp-navigation-widget__row { min-width:0; width:100%; }
+.bp-navigation-widget--vertical .bp-navigation-widget__row>a { flex:1; min-width:0; overflow-wrap:anywhere; }
 .bp-navigation-widget__mobile-toggle { display:none; }
 @media(max-width:767px) {
   .bp-navigation-widget[data-mobile-collapse='true'] > .bp-navigation-widget__mobile-toggle { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; }

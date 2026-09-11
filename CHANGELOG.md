@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- Centralized content-language choices in General Settings for Article, Page Editor, Studio and agents; replaced free-form locale entry with dropdowns and distinguished source-block acceptance from document language switching. Article toolbar actions now reflect schema, selection and undo/redo availability.
+
+- Add content-language controls to document and Designer editing, including gray source fallback and matching AgentManager actions. Save language-specific widget/layout changes as sparse versioned overrides, including separate responsive rules, with regional inheritance and an explicit reset to inherited design.
+
+- Open the page brush in the matching content editor or Design Studio. Document modals use the available viewport height, allow inline title edits and provide an icon to switch editors. Returning from Studio warns before detaching only that page's design association; the saved design, content and media remain available.
+- Expose inline title edits and editor switching through the existing AgentManager revision/draft/confirmation guards. Preserve translated titles and explicit SEO overrides; page titles remain the default public browser/SEO title.
+- Check internal link targets while editing articles, HTML source and native Designer widgets. Show transient popovers and persistent highlights, with identical structured AgentManager feedback, without changing source HTML or blocking saves.
+- Deliver the saved Designer container hierarchy and available article content in the first public response. Adopt those same containers during widget startup, including nested page designs and reusable sections, while retaining article and media DOM identity.
+- Share the normalized v1 container/style projection between initial HTML, runtime and Studio controls. Existing designs gain the structure-first path on update without rewriting design records, IDs, attachment assignments or media.
+
 ## [0.10.35] - 2026-09-11
 
 - Preserve public article typography when the Designer adopts the server-rendered article into its content area. Keep initial outer spacing separate and allow authored page CSS to override the defaults.

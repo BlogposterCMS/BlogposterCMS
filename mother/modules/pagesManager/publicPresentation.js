@@ -1,6 +1,7 @@
 'use strict';
 
 const sanitizeHtml = require('sanitize-html');
+const { resolvePublicDesigns, renderPublicDesignStructure } = require('./publicDesignStructure');
 const { normalizeLayoutTree } = require('../../../ui/shared/layout/layoutDocument.js');
 // Node 24 consumes the same DOM-free presentation helpers as browser ESM.
 const { sanitizeCss } = require('../../../ui/shared/sanitize/sanitizer.js');
@@ -100,7 +101,7 @@ async function loadPublicPresentation(requestPublic, slug, language) {
   let layout = null;
   if (layoutRef) {
     try {
-      layout = await requestPublic('designer', 'getLayout', { layoutRef });
+      layout = await requestPublic('designer', 'getLayout', { layoutRef, language });
     } catch (error) {
       // Preserve the existing HTML fallback when a referenced design is gone.
       console.warn('PUBLIC_PRESENTATION_LAYOUT_FAILED: Using the existing page fallback.', error.message);
@@ -122,7 +123,18 @@ async function loadPublicPresentation(requestPublic, slug, language) {
   if (renderHtml) {
     head += `<style id="bp-initial-page-css">${INITIAL_ARTICLE_CSS}${safeCss(inline.css)}</style>`;
     body = `<div id="bp-initial-html" class="bp-page-html">${sanitizePublicHtml(inline.html)}</div>`;
-  } else if (hasLayout) {
+  }
+  let designSnapshots;
+  if (layout?.document?.layoutTree) {
+    designSnapshots = await resolvePublicDesigns(requestPublic, layout, design?.descriptor?.contentLayoutRef, language);
+    const structure = renderPublicDesignStructure(layout, designSnapshots, { article: body,
+      contentLayoutRef: design?.descriptor?.contentLayoutRef });
+    // The first response owns the real containers. Article content already lives
+    // in its final slot; widgets attach there without rebuilding the document.
+    body = `<div id="bp-grid" data-bp-initial-structure="1" style="${styleAttribute({ background: safeCss(layout.styles?.background || '') })}">${structure.body}</div>`
+      + (structure.articleInserted ? '' : body);
+    if (!styles.includes('/assets/css/runtime.css')) head = '<link rel="stylesheet" href="/assets/css/runtime.css">' + head;
+  } else if (!renderHtml && hasLayout) {
     head += `<style id="${PUBLIC_CANVAS_STYLE_ID}">${PUBLIC_CANVAS_CSS}</style>`;
     const items = layout.items.map((item, index) =>
       `<div class="canvas-item" data-bp-initial-item="${index}" aria-busy="true" style="${styleAttribute(publicItemStyle(item))}"><div class="widget-placeholder" role="status">Loading</div></div>`
@@ -146,7 +158,8 @@ async function loadPublicPresentation(requestPublic, slug, language) {
     head, body,
     bootstrap: {
       version: renderHtml ? 2 : 1, slug, language, envelope: bootstrapEnvelope,
-      layout, layoutResolved: true, htmlRendered: renderHtml
+      layout, layoutResolved: true, htmlRendered: renderHtml,
+      ...(designSnapshots ? { designSnapshots } : {})
     }
   };
 }

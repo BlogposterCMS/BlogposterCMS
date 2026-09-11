@@ -102,7 +102,7 @@ export async function fetchRuntimeDesign(emit, designId, lane) {
     const eventName = lane === 'admin' ? 'cmsAdminApiRequest' : 'cmsPublicRuntimeRequest';
     const payload = lane === 'admin'
         ? cmsAdminPayload('designer', 'get', { id: designId, lane })
-        : cmsPublicRuntimePayload('designer', 'get', { id: designId, lane });
+        : cmsPublicRuntimePayload('designer', 'get', { id: designId, lane, language: new URLSearchParams(location.search).get('lang') || document.documentElement.lang || 'en' });
     return unwrapData(await emit(eventName, payload));
 }
 export async function saveRuntimeLayoutForViewport(emit, pageId, lane, layout, viewport = 'desktop') {

@@ -2,6 +2,16 @@ const assert = require('assert');
 
 const registry = require('../mother/modules/runtimeManager/facades/registry');
 
+test('authors can read public language settings while private reads and writes retain their permissions', () => {
+  const domain = require('../mother/modules/runtimeManager/facades/domains/platform');
+  expect(domain.adminActions.settings.public).toEqual(domain.publicActions.settings.public);
+  expect(domain.adminActions.settings.get.permission).toBe('settings.core.view');
+  expect(domain.adminActions.settings.set.permission).toBe('settings.core.edit');
+  const { PUBLIC_SETTING_KEYS } = require('../mother/modules/settingsManager')._internals;
+  expect(PUBLIC_SETTING_KEYS).toContain('WEBSITE_CONTENT_LANGUAGES');
+  expect(PUBLIC_SETTING_KEYS).not.toContain('SMTP_PASSWORD');
+});
+
 const expectedResources = Object.freeze({
   content: ['comments', 'content', 'contentTypes', 'exporters', 'importers', 'media', 'metadata', 'preview', 'search', 'workflow'],
   presentation: ['colors', 'designer', 'fontPackages', 'fonts', 'navigation', 'pages', 'plainSpace', 'redirects', 'seo', 'sitePresets', 'translations', 'widgets'],

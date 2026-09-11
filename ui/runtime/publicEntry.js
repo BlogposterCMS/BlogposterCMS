@@ -94,6 +94,7 @@ export async function bootPublicRuntime() {
         env: 'csr',
         initialLayoutResolved: bootstrap?.layoutResolved === true,
         initialLayout: bootstrap?.layout,
+        initialDesignSnapshots: bootstrap?.designSnapshots,
         initialHtml: bootstrap?.htmlRendered ? document.getElementById('bp-initial-html') : null
     };
     await orchestrate(envelope, ctx);

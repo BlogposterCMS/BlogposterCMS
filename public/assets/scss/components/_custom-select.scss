@@ -24,6 +24,8 @@
 }
 
 .custom-select .display {
+  // The control also runs in sandboxed apps without the admin's global reset.
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -101,6 +103,7 @@
 }
 
 .custom-select .options {
+  box-sizing: border-box;
   position: absolute;
   z-index: 1000;
   top: calc(100% + 8px);

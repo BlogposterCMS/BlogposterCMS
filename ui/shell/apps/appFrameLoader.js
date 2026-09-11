@@ -1,3 +1,4 @@
+import { setAppViewLanguage } from './appViewState.js';
 import { APP_BRIDGE_BATCH_REQUEST, APP_BRIDGE_REQUEST, APP_BRIDGE_RESPONSE, dispatchAppLifecycleMessage, dispatchAppRuntimeBatch, dispatchAppRuntimeRequest } from './appFrameLoaderData.js';
 const csrfMeta = document.querySelector('meta[name="csrf-token"]');
 const adminMeta = document.querySelector('meta[name="admin-token"]');
@@ -137,6 +138,8 @@ function writeAppPreference(payload) {
     }
 }
 async function runParentLocalEvent(eventName, payload) {
+    if (eventName === 'appView.setLanguage')
+        return setAppViewLanguage(payload);
     if (eventName === APP_PREFERENCE_EVENT_GET) {
         return readAppPreference(payload);
     }

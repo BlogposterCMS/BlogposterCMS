@@ -130,7 +130,10 @@ export async function mountRuntimeGridWidgets({
     reflowItem.__runtimeLayoutItem = item;
     reflowItem.__runtimeWidgetDefinition = def;
 
-    gridEl.appendChild(wrapper);
+    const initial = Array.from(gridEl.children).find(child => child instanceof HTMLElement
+      && child.dataset.bpInitialWidget === String(item.id));
+    if (initial) initial.replaceWith(wrapper);
+    else gridEl.appendChild(wrapper);
     grid?.makeWidget?.(wrapper);
     pending.push({ wrapper, item, def, placeholder });
   }

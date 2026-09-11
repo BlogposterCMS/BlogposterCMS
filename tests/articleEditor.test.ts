@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import { Editor } from '@tiptap/core';
 import { articleExtensions, cleanArticleHtml, validateArticleDocument } from '../ui/shared/article/articleSchema';
-import { pageContentKind, saveArticle, createPageDesign } from '../ui/shared/article/articleData';
+import { pageContentKind, saveArticle, createPageDesign, saveHtmlContent } from '../ui/shared/article/articleData';
 
 describe('Article content contract', () => {
   it('distinguishes articles from existing HTML and empty pages', () => {
@@ -54,6 +54,23 @@ describe('Article content contract', () => {
     expect(html).toContain('<video');
     validateArticleDocument(reopened.getJSON());
     editor.destroy(); reopened.destroy();
+  });
+  it('saves an inline title in its selected translation without replacing a custom SEO title or attachments', async () => {
+    const page = { id: 77, language: 'en', contentLanguage: 'zh', title: 'Guide', trans_title: '指南', html: '<p>中文</p>', seo_title: '自定义搜索标题', css: '.image{width:50%}', meta: { contentFormat: 'article-v1', attachments: ['keep'] } };
+    const emit = jest.fn().mockResolvedValue(page); window.meltdownEmit = emit;
+    const saved = await saveArticle(page, page.html, '新指南');
+    const params = emit.mock.calls.find(([, p]) => p.action === 'update')![1].params;
+    expect(params.title).toBeUndefined();
+    expect(params.translations[0]).toMatchObject({ language: 'zh', title: '新指南', seoTitle: '自定义搜索标题', css: page.css });
+    expect(params.meta.attachments).toEqual(['keep']); expect(saved.title).toBe('Guide'); expect(saved.trans_title).toBe('新指南');
+  });
+  it('rejects concurrent title edits and preserves exact imported markup and source-file metadata', async () => {
+    const page = { id: 77, title: 'Original', trans_title: 'Original', html: '<figure><img src="/media/original.png"><figcaption>Keep</figcaption></figure>', css: '.original{color:red}', meta: { htmlFileName: 'original.html', attachments: ['original'] } };
+    const emit = jest.fn().mockResolvedValue(page); window.meltdownEmit = emit;
+    await saveHtmlContent(page, page.html, page.css, 'New title');
+    expect(emit.mock.calls.find(([, p]) => p.action === 'update')![1].params).toMatchObject({ title: 'New title', translations: [{ html: page.html, css: page.css, seoTitle: '' }], meta: page.meta });
+    emit.mockResolvedValue({ ...page, trans_title: 'Someone else' });
+    await expect(saveHtmlContent(page, page.html, page.css, 'Mine')).rejects.toThrow('ARTICLE_TITLE_CHANGED');
   });
   it('rejects executable URLs and strips active pasted HTML', () => {
     expect(cleanArticleHtml('<script>alert(1)</script><p onclick="bad()">Text</p><img src="javascript:bad()">')).toBe('<p>Text</p><img>');

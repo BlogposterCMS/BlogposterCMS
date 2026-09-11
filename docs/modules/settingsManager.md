@@ -2,6 +2,13 @@
 
 ## Boundaries
 
+Website content-language choices are configured in General Settings and stored
+atomically as `WEBSITE_CONTENT_LANGUAGES` (`version`, `primaryLanguage`, `languages`).
+Settings validates canonical codes, a maximum of 60 choices and inclusion of the
+primary locale. Its public allowlist exposes this non-secret catalog to authors;
+all changes retain the existing settings edit permission and agent form contract.
+See [localized authoring](../editor-localization.md).
+
 Settings Manager owns durable key/value settings as a core module. Public reads
 are restricted to an allowlist, and secret or operational settings are never
 returned through public runtime contracts. Apps, widgets and community modules

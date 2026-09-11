@@ -1,5 +1,6 @@
 import { createBrandingFields } from './brandingFields.js';
 import { createAnalyticsSettings } from './analyticsSettings.js';
+import { createContentLanguageSettings } from './contentLanguageSettings.js';
 import { createImageField } from '../../../../shared/media/imageField.js';
 import {
   errorMessage,
@@ -381,8 +382,14 @@ async function renderGeneral(ctx: RenderCtx) {
   const privacySave = document.createElement('button'); privacySave.type = 'button'; privacySave.className = 'button primary'; privacySave.textContent = 'Save privacy & analytics';
   shell.bindSave(privacySave, Object.values(privacyEditor.fields), privacyEditor.save, 'Privacy & analytics saved.', { id: 'privacy', fields: privacyEditor.fields });
   privacy.append(privacyEditor.root, createFormActions(privacySave));
+  const languages = tabs.addTab('Content languages');
+  const languageEditor = await createContentLanguageSettings(ctx.meltdownEmit, ctx.jwt);
+  const languageSave = document.createElement('button'); languageSave.type = 'button'; languageSave.className = 'button primary'; languageSave.textContent = 'Save content languages';
+  shell.bindSave(languageSave, Object.values(languageEditor.fields), languageEditor.save, 'Content languages saved.', { id: 'contentLanguages', fields: languageEditor.fields });
+  languages.append(languageEditor.root, createFormActions(languageSave));
   if (new URLSearchParams(window.location.search).get('tab') === 'storage') tabs.select(1);
   if (new URLSearchParams(window.location.search).get('tab') === 'privacy') tabs.select(2);
+  if (new URLSearchParams(window.location.search).get('tab') === 'languages') tabs.select(3);
   shell.mount(ctx.el);
 }
 

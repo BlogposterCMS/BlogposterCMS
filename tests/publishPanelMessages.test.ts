@@ -357,7 +357,7 @@ describe('publish panel messaging', () => {
     await flushPromises();
     await flushPromises();
 
-    expect(saveDesign).toHaveBeenCalled();
+    expect(saveDesign).toHaveBeenCalledWith(expect.objectContaining({ isDraft: false }));
     expect(mockPageService.update).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'page-1' }),
       expect.objectContaining({

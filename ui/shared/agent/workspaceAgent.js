@@ -10,6 +10,11 @@ export async function emitWorkspaceAgent(event, payload) {
     const action = actions[event];
     if (!action || !window.meltdownEmit)
         throw new Error('CMS_AGENT_TRANSPORT_UNAVAILABLE');
+    const app = window.__BLOGPOSTER_APP_INIT_TOKENS__;
+    // Embedded workspaces use the app's existing declared AgentManager channel.
+    // The admin-host facade deliberately accepts only plainspace workspaces.
+    if (app?.appBridge)
+        return window.meltdownEmit(event, payload);
     return emitRuntimeAdmin(window.meltdownEmit, window.ADMIN_TOKEN, 'agentSurface', action, payload);
 }
 /** Read the real owner's state at execution time, not the last published copy.
@@ -98,13 +103,19 @@ export function registerWorkspaceAgent(options) {
     const unregisterChanges = registerWorkspaceChanges(root, { isDirty: () => false, isBusy: () => guard.isExecuting() || awaitingAck });
     const client = createAgentSurfaceClient({
         emit: emitWorkspaceAgent,
-        appName: 'plainspace', surfaceId, surfaceType: 'cms-workspace', title: options.title,
+        // A document opened inside a core app stays on that app's existing bridge.
+        // The parent server still validates appContext and permissions authoritatively.
+        appName: String(window.__BLOGPOSTER_APP_INIT_TOKENS__?.appName || 'plainspace'),
+        surfaceId, surfaceType: 'cms-workspace', title: options.title,
         buildSnapshot: () => {
             if (!root.isConnected)
                 stop();
+            const bounds = root.getBoundingClientRect();
             return {
                 status: closed ? 'closed' : 'active', route: window.location.pathname,
-                summary: { workspaceId: options.id }, state: guard.snapshot(),
+                summary: { workspaceId: options.id }, state: { ...guard.snapshot(),
+                    view: { visible: root.checkVisibility?.() ?? Boolean(bounds.width && bounds.height),
+                        x: Math.round(bounds.x), y: Math.round(bounds.y), width: Math.round(bounds.width), height: Math.round(bounds.height) } },
                 selection: options.read().selection,
                 actions: closed ? [] : workspaceActionCatalog(options.actions)
             };

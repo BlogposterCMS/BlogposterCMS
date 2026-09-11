@@ -3,6 +3,8 @@
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+const { projectLocalizedDesign } = require('../../../ui/shared/localization/designLocaleModel.js');
+const { sanitizeDesignLocalizations } = require('./designerLocaleSanitizer.js');
 const { extractDesignDocument } = require('../../../ui/shared/layout/layoutDocument.js');
 
 const path = require("path");
@@ -218,8 +220,9 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType, isModuleUpdat
         const now = new Date().toISOString();
 
         const clamp = n => Math.min(100, Math.max(0, Number(n) || 0));
+        const cleanWidgetRecords = records => {
         const cleanWidgets = [];
-        for (const w of Array.isArray(widgets) ? widgets : []) {
+        for (const w of Array.isArray(records) ? records : []) {
           const instanceId = String(w.id || "").trim();
           const widgetId = String(w.widgetId || "").trim();
           if (!instanceId || !widgetId) continue;
@@ -256,6 +259,10 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType, isModuleUpdat
           });
         }
 
+        return cleanWidgets;
+        };
+        const cleanWidgets = cleanWidgetRecords(widgets);
+        const localizedLayout = sanitizeDesignLocalizations(layout, design, widgets, cleanWidgetRecords, sanitizeColor, sanitizeUrl);
         const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, {
               jwt,
               moduleName: MODULE_NAME,
@@ -280,7 +287,7 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType, isModuleUpdat
                     now,
                   },
                   widgets: cleanWidgets,
-                  layout,
+                  layout: localizedLayout,
                 },
               ],
             });
@@ -302,7 +309,7 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType, isModuleUpdat
               operation: "DESIGNER_GET_DESIGN",
               params: [payload],
             });
-        if (typeof callback === "function") callback(null, res);
+        if (typeof callback === "function") callback(null, payload.language ? projectLocalizedDesign(res, payload.language) : res);
       } catch (err) {
         if (typeof callback === "function") callback(err);
       }
@@ -337,6 +344,7 @@ async function initialize({ motherEmitter, jwt, nonce, moduleType, isModuleUpdat
             moduleType,
             nonce,
             id: designId,
+            language: payload.language || 'en',
           }).then(res => {
   if (!res) return cb(new Error("Design not found"));
   const clamp = n => Math.min(100, Math.max(0, Number(n) || 0));

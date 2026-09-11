@@ -88,7 +88,7 @@ export async function loadHtml(descriptor = {}, ctx) {
         document.head.appendChild(style);
     }
     const root = contentHost || document.getElementById('app') || document.body;
-    if (adopted && contentHost)
+    if (adopted && contentHost && initialHtml.parentElement !== contentHost)
         contentHost.append(initialHtml);
     if (html && !adopted) {
         if (!sanitizeHtml || sanitizerUnavailable) {

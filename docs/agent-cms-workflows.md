@@ -92,6 +92,28 @@ its domain helper remains separate from the file picker, and Studio's existing
 agent adapter takes over after import.
 ## Article labels and shared guides
 
+The page brush opens content, while the gear opens Page Settings. Article content
+uses the shared document modal; imported HTML uses its source modal to preserve
+markup and file metadata. Both expose an inline page title and a Design Studio
+icon. `article.setTitle`, block actions and `article.save` share one document
+draft. `content.edit`/`content.save` serve existing HTML. Saving a selected locale
+does not overwrite the primary title or another language. Explicit SEO titles
+remain unchanged; the public SEO resolver derives its fallback from the page
+title and optional site title template. Design names are internal library labels.
+
+`article.openDesign` and `content.openDesign` save pending content, then open a
+design with a real page-content host. From a page-bound Studio context,
+`page.openDocument` warns that the page will stop using its design. It requires
+confirmation and a saved, idle design. Only the page association changes; widgets
+remain in the saved design library and are not flattened into article text.
+The document modal's Studio icon can reattach that same design. Agent commands
+use the same actions and require fresh revisions, draft review and `confirm=true`
+where the catalog specifies it. Layout assignment is shared between translations.
+
+See [Link target feedback](link-target-feedback.md) for immediate destination
+warnings and identical agent snapshots. Public availability and a completed
+AgentManager command acknowledgment are separate from deployment verification.
+
 Read the current page snapshot, use `page.updateDraft` with the `tags` field,
 then the existing save action. Native API clients can set `meta.tags` through
 `pages.update`; preserve other metadata from the current record. The Page Manager

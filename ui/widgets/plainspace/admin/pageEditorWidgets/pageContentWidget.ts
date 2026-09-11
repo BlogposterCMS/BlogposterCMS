@@ -2,6 +2,7 @@ import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
 import { sanitizeHtml } from '../../../../shared/sanitize/sanitizer.js';
 import { mountPageLayoutControl } from './pageLayoutControl.js';
 import type { PageLayoutMode } from '../../../../shared/layout/pagePresentation.js';
+import { mountLinkFeedback, htmlSourceLinks } from '../../../../shared/links/linkFeedback.js';
 import {
   attachHtmlMeta, clearPageContentCache,
   detachHtmlMeta, errorMessage, fetchBuilderApps, fetchHtmlFile, fetchPublishedDesigns,
@@ -73,6 +74,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
   const actions = root.querySelector<HTMLElement>('.page-content-actions')!;
   const htmlInput = root.querySelector<HTMLTextAreaElement>('.page-content-body textarea')!;
   htmlInput.value = page.html || '';
+  const linkFeedback = mountLinkFeedback(root, { collect: () => htmlSourceLinks(htmlInput) });
   const cssLabel = document.createElement('label'); cssLabel.className = 'page-content-body'; cssLabel.textContent = 'Page content CSS';
   const cssInput = document.createElement('textarea'); cssInput.rows = 6; cssInput.setAttribute('aria-label', 'Page content CSS');
   cssInput.value = page.css || ''; cssLabel.append(cssInput); root.querySelector('.page-content-source')!.append(cssLabel);
@@ -121,6 +123,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
     page.html = values.html;
     page.meta = values.meta;
     htmlInput.value = page.html;
+    linkFeedback.schedule();
     options.onChange?.();
     message(options.onChange ? 'Content changed. Save the page to apply it.' : 'Content saved.');
     renderSelected();
@@ -264,6 +267,7 @@ export async function render(el: HTMLElement | null, options: PageContentOptions
   void loadLibrary().then(focusEntry);
   options.onController?.({
     read: () => ({ loading, busy, libraryFailed, error: feedback.dataset.errorCode ? feedback.textContent : null,
+      linkFeedback: linkFeedback.read(),
       selected: { designId: page.meta?.designId || null, htmlFileName: page.meta?.htmlFileName || null }, layout: layout.read(),
       designs: designs.map(({ id, title }) => ({ id, title })), files }),
     // The caller supplies the common revision/draft/confirmation guard.

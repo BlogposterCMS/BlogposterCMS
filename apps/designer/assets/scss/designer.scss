@@ -5,6 +5,9 @@
 @use '../../../../public/assets/scss/fonts';
 @use '../../../../public/assets/scss/components/grid-mode';
 @use '../../../../public/assets/scss/components/sidebar-bubble';
+@use '../../../../public/assets/scss/components/popover';
+@use '../../../../public/assets/scss/components/dashboard-dialog';
+@use '../../../../public/assets/scss/components/article-editor';
 @use 'publish-panel';
 @use 'variables';
 @use 'header';
@@ -26,7 +29,7 @@
 @use 'scene-builder';
 
 // Shared UI components are scoped to chrome, never the authored canvas.
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   @include button-tokens.defaults;
   @include meta.load-css('../../../../public/assets/scss/components/custom-select');
   @include meta.load-css('../../../../public/assets/scss/components/buttons');

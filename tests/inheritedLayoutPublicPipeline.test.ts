@@ -7,6 +7,7 @@ import { loadHtml } from '../mother/modules/pagesManager/publicLoader';
 import { loadDesign } from '../mother/modules/designerManager/publicLoader';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { loadPublicPresentation } from '../mother/modules/pagesManager/publicPresentation';
 
 jest.mock('/ui/runtime/main/script-utils.js', () => ({ executeJs: jest.fn() }), { virtual: true });
 jest.mock('../ui/runtime/main/canvasGrid', () => ({
@@ -120,4 +121,42 @@ test('adopts the first-response article before a slow header widget finishes', a
     expect(document.querySelectorAll('h1')).toHaveLength(1);
     expect(article?.isConnected).toBe(true);
   } finally { release(); await rendered; }
+});
+
+test('the public adapter adopts the complete first-response layout without replacing containers or refetching nested designs', async () => {
+  const articleHtml = '<article><h1>Stable article</h1><img src="/media/original.png"></article>';
+  const descriptor = { layoutRef: 'layout:main@v1', contentLayoutRef: 'layout:page@v1', requiresContentSlot: true, hasPageContent: true };
+  const envelope = { attachments: [
+    { type: 'design', descriptor },
+    { type: 'html', descriptor: { contentSlot: true, inline: { html: articleHtml } } }
+  ] };
+  const layout = (id: string, tree: any, items: any[] = []) => ({ layoutRef: `layout:${id}@v1`, document: { layoutTree: tree }, items });
+  const main = layout('main', { type: 'split', nodeId: 'root', settings: { mode: 'stack' }, children: [
+    { type: 'leaf', nodeId: 'header', settings: { mode: 'stack' } },
+    { type: 'leaf', nodeId: 'outlet', isDynamicHost: true, settings: { mode: 'stack' } },
+    { type: 'leaf', nodeId: 'footer', designRef: 'footer-design' }
+  ] }, [{ instanceId: 'heading', widgetId: 'text', metadata: { workareaId: 'header' } }]);
+  const page = layout('page', { type: 'leaf', nodeId: 'article-slot', isDynamicHost: true, settings: { mode: 'stack' } });
+  const footer = layout('footer-design', { type: 'leaf', nodeId: 'footer-slot', isDynamicHost: true });
+  const source = jest.fn(async (resource, _action, params) => resource === 'pages' ? envelope
+    : params.layoutRef === descriptor.layoutRef ? main : params.layoutRef.includes('footer-design') ? footer : page);
+  const initial = await loadPublicPresentation(source, 'guide', 'en');
+  document.body.innerHTML = initial.body;
+  const containers = Array.from(document.querySelectorAll('.runtime-layout-container'));
+  const article = document.querySelector<HTMLElement>('#bp-initial-html')!;
+  const originalParent = article.parentElement;
+  expect(originalParent?.dataset.nodeId).toBe('article-slot');
+  const emit = jest.fn().mockResolvedValue({ resource: 'widgets', action: 'list', data: [{ widgetId: 'text' }] });
+  const ctx: any = { meltdownEmit: emit, publicToken: 'public-only', initialHtml: article,
+    initialLayoutResolved: true, initialLayout: initial.bootstrap.layout, initialDesignSnapshots: initial.bootstrap.designSnapshots };
+  await loadDesign(descriptor, ctx);
+  await loadWidgets({}, ctx);
+  await loadHtml({ contentSlot: true, inline: { html: articleHtml } }, ctx);
+  expect(Array.from(document.querySelectorAll('.runtime-layout-container'))).toEqual(containers);
+  expect(article.parentElement).toBe(originalParent);
+  expect(document.querySelectorAll('#bp-initial-html')).toHaveLength(1);
+  expect(document.querySelectorAll('[data-bp-initial-widget]')).toHaveLength(0);
+  expect(document.querySelectorAll('[data-instance-id="heading"]')).toHaveLength(1);
+  expect(document.querySelector('img')?.getAttribute('src')).toBe('/media/original.png');
+  expect(emit.mock.calls.every(([, payload]) => payload.resource === 'widgets')).toBe(true);
 });

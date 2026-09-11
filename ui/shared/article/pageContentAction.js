@@ -3,6 +3,7 @@ import { ownPagePresentation } from '../layout/pagePresentation.js';
 import { openPopover } from '../overlays/popover.js';
 import { openArticle } from './articleLoader.js';
 import { bpDialog } from '../dialogs/bpDialog.js';
+import { pageDesignEditorUrl } from './pageEditorMode.js';
 /** Read the actual page before routing; list rows may omit HTML or inherit a design. */
 export function bindPageContentAction(anchor, pageId, adminBase, onSaved) {
     let busy = false;
@@ -22,11 +23,14 @@ export function bindPageContentAction(anchor, pageId, adminBase, onSaved) {
             }
             if (kind === 'design') {
                 const id = ownPagePresentation(page)?.designId;
-                window.location.assign(id ? `${adminBase}/studio/design/${encodeURIComponent(id)}` : `${adminBase}/pages/edit/${pageId}#page-design`);
+                if (!id)
+                    throw new Error('PAGE_LEGACY_LAYOUT_UNSUPPORTED: This legacy template has no Design Studio document.');
+                window.location.assign(pageDesignEditorUrl(pageId, id, page.contentLanguage, adminBase));
                 return;
             }
             if (kind === 'html') {
-                window.location.assign(`${adminBase}/pages/edit/${pageId}#page-html`);
+                const { openHtmlContentEditor } = await import('./htmlContentEditor.js');
+                await openHtmlContentEditor(pageId, onSaved);
                 return;
             }
             const menu = document.createElement('div');

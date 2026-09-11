@@ -123,7 +123,13 @@ function runDomDialog(options) {
         title.id = titleId;
         title.className = 'bp-dialog__title';
         title.textContent = dialogTitle(kind, options.title);
+        if (options.titleContent) {
+            title.setAttribute('aria-label', dialogTitle(kind, options.title));
+            title.replaceChildren(options.titleContent);
+        }
         header.appendChild(title);
+        if (options.headerContent)
+            header.appendChild(options.headerContent);
         const body = document.createElement('div');
         body.className = 'bp-dialog__body';
         const message = document.createElement('p');

@@ -21,7 +21,7 @@ function firstString(source, keys, fallback = '') {
 /** Public page language selects explicit per-widget copy, with base settings as fallback. */
 export function widgetLocale() {
     const language = new URL(location.href).searchParams.get('lang') || document.documentElement.lang || 'en';
-    return language.toLowerCase().split('-')[0] || 'en';
+    return language.toLowerCase() || 'en';
 }
 export function widgetSettings(context = {}, defaults = {}) {
     const registry = isRecord(context.metadata) ? context.metadata : {};
@@ -34,7 +34,8 @@ export function widgetSettings(context = {}, defaults = {}) {
         ...recordAt(instance, 'settings'),
         ...instance
     };
-    return { ...settings, ...recordAt(recordAt(settings, 'translations'), widgetLocale()) };
+    const locale = widgetLocale();
+    return { ...settings, ...recordAt(recordAt(settings, 'translations'), locale.split('-')[0] || locale), ...recordAt(recordAt(settings, 'translations'), locale) };
 }
 export function readString(source, keys, fallback = '') {
     return firstString(source, keys, fallback);

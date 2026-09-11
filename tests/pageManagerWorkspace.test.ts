@@ -79,7 +79,7 @@ describe('Page Manager workspace', () => {
   });
 
   it('composes page counts, the hierarchy and one saved details form', () => {
-    expect(control<HTMLAnchorElement>('[aria-label="Site settings"]').getAttribute('href')).toBe('/admin/pages/edit/1');
+    expect(control<HTMLAnchorElement>('[aria-label="Page settings"]').getAttribute('href')).toBe('/admin/pages/edit/1');
     expect(control('.page-manager')).not.toBeNull();
     expect(control('.page-manager__filters').textContent).toContain('Published3');
     expect(host.querySelectorAll('form')).toHaveLength(1);
@@ -112,7 +112,7 @@ describe('Page Manager workspace', () => {
     expect(control<HTMLInputElement>('[name="title"]').value).toBe('Updated docs');
     expect(control<HTMLButtonElement>('[type="submit"]').disabled).toBe(true);
     expect(calls('update')).toHaveLength(1);
-    expect(control('[aria-label="Site settings"]').textContent).toBe('');
+    expect(control('[aria-label="Page settings"]').textContent).toBe('');
   });
 
   it('imports the optional example, selects its draft and opens its shared design from the result', async () => {
@@ -334,7 +334,7 @@ describe('Page Manager workspace', () => {
     await click('[data-page-row-id="page-list-4-3"] .page-manager__select');
     expect(document.activeElement).not.toBe(control('[name="title"]'));
     expect(host.querySelector('.page-manager__identity-line .page-manager__status')).not.toBeNull();
-    expect(host.querySelector('.page-manager__hover-actions [aria-label="Site settings"]')).not.toBeNull();
+    expect(host.querySelector('.page-manager__hover-actions [aria-label="Page settings"]')).not.toBeNull();
     expect(host.querySelector('.page-manager__hover-actions [aria-label="More page actions"]')?.previousElementSibling?.getAttribute('aria-label')).toBe('Add subpage');
     expect(host.querySelector('.page-manager__details [aria-label="More page actions"]')?.previousElementSibling?.getAttribute('data-action')).toBe('child');
   });

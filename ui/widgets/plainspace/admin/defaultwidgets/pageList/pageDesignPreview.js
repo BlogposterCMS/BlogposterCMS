@@ -10,7 +10,7 @@ export function renderPageDesignPreview(host, source, designs, adminBase, pageId
     actions.className = 'page-manager__actions';
     const edit = document.createElement('a');
     edit.className = 'button primary sm';
-    edit.textContent = id ? 'Edit design' : 'Design page';
+    edit.textContent = 'Edit content';
     edit.href = id ? `${adminBase}/studio/design/${encodeURIComponent(id)}` : `${editorUrl}#page-design`;
     if (pageId != null)
         bindPageContentAction(edit, pageId, adminBase, onSaved);
@@ -24,8 +24,8 @@ export function renderPageDesignPreview(host, source, designs, adminBase, pageId
     const settings = document.createElement('a');
     settings.className = 'icon-button';
     settings.href = editorUrl;
-    settings.setAttribute('aria-label', 'Site settings');
-    settings.title = 'Site settings';
+    settings.setAttribute('aria-label', 'Page settings');
+    settings.title = 'Page settings';
     const settingsIcon = document.createElement('img');
     settingsIcon.src = '/assets/icons/settings.svg';
     settingsIcon.alt = '';

@@ -486,6 +486,565 @@ body.grid-mode .bounding-box.disabled {
     margin: 4px 0;
   }
 }
+.bp-popover-layer {
+  --bp-layer-popover: 5300;
+  position: fixed;
+  inset: 0;
+  z-index: 5300;
+  pointer-events: none;
+}
+
+.bp-popover {
+  position: fixed;
+  display: grid;
+  gap: 10px;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(360px, 100vw - 24px);
+  max-height: min(420px, 100vh - 24px);
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-lift);
+  opacity: 0;
+  pointer-events: auto;
+  transform: translateY(-5px) scale(0.98);
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-enter);
+}
+
+/* A popover's accessible name labels the region; it must not become a second
+   visual tooltip through the legacy global aria-label helper. */
+.bp-popover[aria-label]::after {
+  content: none;
+  display: none;
+}
+
+.bp-popover.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.bp-popover.is-leaving {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+
+.bp-popover__message {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--studio-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.bp-popover__menu {
+  display: grid;
+  gap: 4px;
+}
+
+.bp-popover__item {
+  text-decoration: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--studio-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.bp-popover__item:hover,
+.bp-popover__item:focus-visible {
+  background: var(--studio-surface-muted);
+  box-shadow: none;
+  outline: none;
+}
+
+.bp-popover__item img {
+  width: 17px;
+  height: 17px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-popover {
+    transition: none;
+    transform: none;
+  }
+}
+/* =============================================================================
+   components/_dashboard-dialog.scss - Shared dashboard modal and prompts
+   ============================================================================= */
+.bp-dialog-root {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 4vw, 48px);
+  background: color-mix(in srgb, var(--studio-canvas) 72%, transparent);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.bp-dialog-root.is-open {
+  opacity: 1;
+}
+
+.bp-dialog {
+  width: min(520px, 100%);
+  max-height: min(680px, 100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  background: var(--studio-surface);
+  color: var(--studio-text);
+  box-shadow: var(--studio-shadow-lift);
+  backdrop-filter: blur(20px);
+  transform: translateY(8px) scale(0.98);
+  transition: transform var(--motion-duration-base) var(--motion-ease-enter), opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.bp-dialog-root.is-open .bp-dialog {
+  transform: translateY(0) scale(1);
+}
+
+.bp-dialog__header,
+.bp-dialog__body,
+.bp-dialog__actions {
+  min-width: 0;
+}
+
+.bp-dialog__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: var(--studio-text);
+}
+
+.bp-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+}
+
+.bp-dialog__message,
+.bp-dialog__custom-body p {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--studio-text-muted);
+}
+
+.bp-dialog__field {
+  display: grid;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--studio-text);
+}
+
+.bp-dialog__input {
+  width: 100%;
+  min-height: var(--studio-control-size);
+  padding: 0 14px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-field-radius);
+  background: var(--studio-surface-solid);
+  color: var(--studio-text);
+  font: inherit;
+  font-weight: 500;
+  transition: border-color var(--motion-duration-base) var(--motion-ease-standard), box-shadow var(--motion-duration-base) var(--motion-ease-standard), background var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+textarea.bp-dialog__input {
+  min-height: 112px;
+  padding: 12px 14px;
+  border-radius: var(--studio-radius-panel);
+  resize: vertical;
+}
+
+.bp-dialog__input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--user-color) 36%, var(--studio-border));
+  box-shadow: var(--studio-focus-ring);
+  background: var(--studio-surface-solid);
+}
+
+.bp-dialog__error {
+  margin: -4px 0 0;
+  color: var(--color-error);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bp-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bp-dialog__actions .button {
+  min-width: 104px;
+}
+
+@media (max-width: 560px) {
+  .bp-dialog-root {
+    align-items: end;
+    padding: 16px;
+  }
+  .bp-dialog {
+    width: 100%;
+    padding: 20px;
+  }
+  .bp-dialog__actions {
+    justify-content: stretch;
+  }
+  .bp-dialog__actions .button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-dialog-root,
+  .bp-dialog {
+    transition: none;
+  }
+  .bp-dialog {
+    transform: none;
+  }
+}
+.bp-dialog-root:has(.article-editor) {
+  padding: 16px;
+  align-items: center;
+}
+
+.bp-dialog:has(.article-editor) {
+  width: min(1100px, 100%);
+  height: calc(100dvh - 32px);
+  max-height: none;
+  max-width: none;
+  box-sizing: border-box;
+  gap: 12px;
+}
+
+.bp-dialog:has(.article-editor) .bp-dialog__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.bp-dialog:has(.article-editor) .bp-dialog__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.bp-dialog:has(.article-editor) .bp-dialog__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+.bp-dialog:has(.article-editor) .bp-dialog__message:empty {
+  display: none;
+}
+
+.bp-dialog:has(.article-editor) .bp-dialog__custom-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.article-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.article-editor__title {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.article-editor__title:focus {
+  outline: none;
+  border-bottom-color: var(--studio-border);
+}
+
+.article-editor__studio {
+  flex: 0 0 auto;
+}
+
+.article-editor__header-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.content-language-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding-inline: 8px;
+}
+
+.content-language-control span {
+  font-size: 12px;
+}
+
+.article-editor__source-language {
+  opacity: 0.5;
+}
+
+.article-editor__block-language {
+  float: right;
+  opacity: 1;
+  margin-inline-start: 8px;
+}
+
+.article-editor__toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--studio-surface-solid);
+  border-bottom: 1px solid var(--studio-border);
+}
+
+.bp-dialog-root .article-editor__toolbar .icon-button {
+  background: transparent;
+  box-shadow: none;
+}
+
+.bp-dialog-root .article-editor__toolbar .icon-button[aria-pressed=true] {
+  background: var(--studio-surface-muted);
+}
+
+.bp-dialog-root .article-editor__toolbar :is(button, select):disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.article-editor__block-language {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.content-language-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.article-editor__toolbar select {
+  height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+}
+
+.article-editor__document {
+  padding: 24px clamp(12px, 4vw, 60px);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.article-editor__document .tiptap {
+  outline: none;
+  min-height: 100%;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.article-editor__document .tiptap p {
+  color: inherit;
+  font: inherit;
+  line-height: 1.7;
+}
+
+.article-editor__source {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.article-editor__source textarea {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  resize: none;
+  font: 14px/1.5 monospace;
+}
+
+.article-editor__source [hidden] {
+  display: none;
+}
+
+.article-editor__document :is(p, h1, h2, h3, ul, ol, blockquote, pre, table) {
+  margin: 0 0 16px;
+}
+
+.article-editor__document ul {
+  list-style: disc;
+  padding-left: 24px;
+}
+
+.article-editor__document ol {
+  list-style: decimal;
+  padding-left: 24px;
+}
+
+.article-editor__document blockquote {
+  border-left: 3px solid var(--studio-border);
+  padding-left: 18px;
+}
+
+.article-editor__document pre {
+  background: var(--studio-surface-muted);
+  padding: 16px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+
+.article-editor__document :is(img, video) {
+  max-width: 100%;
+  max-height: 450px;
+}
+
+.article-editor__document table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.article-editor__document :is(td, th) {
+  border: 1px solid var(--studio-border);
+  padding: 8px;
+  min-width: 40px;
+}
+
+.article-editor__document .selectedCell {
+  background: var(--studio-surface-muted);
+}
+
+.article-editor__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bp-dialog-root .article-editor__footer .button[hidden] {
+  display: none;
+}
+
+/* The toolbar has native titles. Global floating labels on the textbox and
+   toolbar would create invisible horizontal overflow inside the dialog. */
+.bp-dialog:has(.article-editor) [aria-label]::after, .bp-dialog:has(.article-editor) [title]::after {
+  content: none;
+  display: none;
+}
+
+.article-editor__status {
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.article-editor__status[role=alert] {
+  color: var(--color-error);
+}
+
+.article-editor__link {
+  display: grid;
+  gap: 12px;
+  min-width: 240px;
+}
+
+.content-language-picker {
+  width: min(320px, 100vw - 46px);
+}
+
+.content-language-picker .form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.content-language-picker p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.content-language-picker p:empty {
+  display: none;
+}
+
+.widget-action-bar .designer-locale-selection {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 32px;
+  padding-inline: 6px;
+}
+
+.designer-locale-selection[hidden] {
+  display: none;
+}
+
+.designer-locale-source > .canvas-item-content {
+  opacity: 0.5;
+}
+
+.builder-header .header-actions .content-language-control {
+  width: auto;
+  min-width: 36px;
+  gap: 6px;
+  padding-inline: 8px;
+}
+
 /* Publish panel displayed as a right-side aside that pushes content */
 #publishPanel {
   flex-shrink: 0;
@@ -8106,7 +8665,7 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
     display: none;
   }
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   --btn-radius: var(--studio-radius-control);
   --btn-h: var(--studio-control-size);
   --btn-gap: 8px;
@@ -8114,10 +8673,10 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   --btn-hover-shadow: var(--studio-shadow-control);
   --btn-hover-delay: 80ms;
 }
-.designer-ui-controls .custom-select__native {
+.designer-ui-controls .custom-select__native, .bp-dialog-root .custom-select__native, .bp-popover-layer .custom-select__native {
   display: none !important;
 }
-.designer-ui-controls .custom-select {
+.designer-ui-controls .custom-select, .bp-dialog-root .custom-select, .bp-popover-layer .custom-select {
   --custom-select-control-h: var(--studio-control-size, 40px);
   --custom-select-radius: var(--studio-radius-control, 999px);
   --custom-select-source-width: auto;
@@ -8132,10 +8691,15 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
 }
 .designer-ui-controls .app-scope .field .custom-select,
 .designer-ui-controls .app-scope .form-field .custom-select,
-.designer-ui-controls .app-scope .custom-select[data-full-width=true] {
+.designer-ui-controls .app-scope .custom-select[data-full-width=true], .bp-dialog-root .app-scope .field .custom-select,
+.bp-dialog-root .app-scope .form-field .custom-select,
+.bp-dialog-root .app-scope .custom-select[data-full-width=true], .bp-popover-layer .app-scope .field .custom-select,
+.bp-popover-layer .app-scope .form-field .custom-select,
+.bp-popover-layer .app-scope .custom-select[data-full-width=true] {
   width: 100%;
 }
-.designer-ui-controls .custom-select .display {
+.designer-ui-controls .custom-select .display, .bp-dialog-root .custom-select .display, .bp-popover-layer .custom-select .display {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -8154,38 +8718,40 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   transition: border-color var(--motion-duration-base) var(--motion-ease-standard), box-shadow var(--motion-duration-base) var(--motion-ease-standard), transform var(--motion-duration-base) var(--motion-ease-standard), background-color var(--motion-duration-base) var(--motion-ease-standard);
 }
 .designer-ui-controls .custom-select .display:hover,
-.designer-ui-controls .custom-select.open .display {
+.designer-ui-controls .custom-select.open .display, .bp-dialog-root .custom-select .display:hover,
+.bp-dialog-root .custom-select.open .display, .bp-popover-layer .custom-select .display:hover,
+.bp-popover-layer .custom-select.open .display {
   background: var(--studio-surface-solid);
   border-color: var(--studio-border-strong);
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* The field already has a visible label. The global floating-label helper is
      intended for icon actions and would otherwise widen every select by the
      generated aria-label tooltip. */
 }
-.designer-ui-controls .custom-select .display[aria-label]::after {
+.designer-ui-controls .custom-select .display[aria-label]::after, .bp-dialog-root .custom-select .display[aria-label]::after, .bp-popover-layer .custom-select .display[aria-label]::after {
   content: none;
   display: none;
 }
-.designer-ui-controls .custom-select .display:focus-visible {
+.designer-ui-controls .custom-select .display:focus-visible, .bp-dialog-root .custom-select .display:focus-visible, .bp-popover-layer .custom-select .display:focus-visible {
   outline: none;
   border-color: transparent;
   box-shadow: var(--studio-focus-ring);
 }
-.designer-ui-controls .custom-select.is-disabled {
+.designer-ui-controls .custom-select.is-disabled, .bp-dialog-root .custom-select.is-disabled, .bp-popover-layer .custom-select.is-disabled {
   opacity: 0.6;
 }
-.designer-ui-controls .custom-select.is-disabled .display {
+.designer-ui-controls .custom-select.is-disabled .display, .bp-dialog-root .custom-select.is-disabled .display, .bp-popover-layer .custom-select.is-disabled .display {
   cursor: not-allowed;
   transform: none;
 }
-.designer-ui-controls .custom-select__value {
+.designer-ui-controls .custom-select__value, .bp-dialog-root .custom-select__value, .bp-popover-layer .custom-select__value {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.designer-ui-controls .custom-select__chevron {
+.designer-ui-controls .custom-select__chevron, .bp-dialog-root .custom-select__chevron, .bp-popover-layer .custom-select__chevron {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
@@ -8195,11 +8761,12 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   transform-origin: center;
   transition: opacity var(--motion-duration-base) var(--motion-ease-standard), transform var(--motion-duration-base) var(--motion-ease-standard);
 }
-.designer-ui-controls .custom-select.open .custom-select__chevron {
+.designer-ui-controls .custom-select.open .custom-select__chevron, .bp-dialog-root .custom-select.open .custom-select__chevron, .bp-popover-layer .custom-select.open .custom-select__chevron {
   opacity: 0.9;
   transform: rotate(180deg);
 }
-.designer-ui-controls .custom-select .options {
+.designer-ui-controls .custom-select .options, .bp-dialog-root .custom-select .options, .bp-popover-layer .custom-select .options {
+  box-sizing: border-box;
   position: absolute;
   z-index: 1000;
   top: calc(100% + 8px);
@@ -8221,12 +8788,12 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   transform-origin: top center;
   transition: opacity var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard);
 }
-.designer-ui-controls .custom-select.open .options {
+.designer-ui-controls .custom-select.open .options, .bp-dialog-root .custom-select.open .options, .bp-popover-layer .custom-select.open .options {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
 }
-.designer-ui-controls .custom-select .option {
+.designer-ui-controls .custom-select .option, .bp-dialog-root .custom-select .option, .bp-popover-layer .custom-select .option {
   display: flex;
   align-items: center;
   width: 100%;
@@ -8243,12 +8810,18 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
 }
 .designer-ui-controls .custom-select .option:hover,
 .designer-ui-controls .custom-select .option:focus-visible,
-.designer-ui-controls .custom-select .option[aria-selected=true] {
+.designer-ui-controls .custom-select .option[aria-selected=true], .bp-dialog-root .custom-select .option:hover,
+.bp-dialog-root .custom-select .option:focus-visible,
+.bp-dialog-root .custom-select .option[aria-selected=true], .bp-popover-layer .custom-select .option:hover,
+.bp-popover-layer .custom-select .option:focus-visible,
+.bp-popover-layer .custom-select .option[aria-selected=true] {
   outline: none;
   background: var(--studio-surface-muted);
 }
 .designer-ui-controls .custom-select .option:disabled,
-.designer-ui-controls .custom-select .option.disabled {
+.designer-ui-controls .custom-select .option.disabled, .bp-dialog-root .custom-select .option:disabled,
+.bp-dialog-root .custom-select .option.disabled, .bp-popover-layer .custom-select .option:disabled,
+.bp-popover-layer .custom-select .option.disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
@@ -8256,20 +8829,32 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   .designer-ui-controls .custom-select .display,
   .designer-ui-controls .custom-select__chevron,
   .designer-ui-controls .custom-select .options,
-  .designer-ui-controls .custom-select .option {
+  .designer-ui-controls .custom-select .option, .bp-dialog-root .custom-select .display,
+  .bp-dialog-root .custom-select__chevron,
+  .bp-dialog-root .custom-select .options,
+  .bp-dialog-root .custom-select .option, .bp-popover-layer .custom-select .display,
+  .bp-popover-layer .custom-select__chevron,
+  .bp-popover-layer .custom-select .options,
+  .bp-popover-layer .custom-select .option {
     transition: none;
   }
   .designer-ui-controls .custom-select .display:hover,
   .designer-ui-controls .custom-select.open .display,
   .designer-ui-controls .custom-select .options,
-  .designer-ui-controls .custom-select.open .options {
+  .designer-ui-controls .custom-select.open .options, .bp-dialog-root .custom-select .display:hover,
+  .bp-dialog-root .custom-select.open .display,
+  .bp-dialog-root .custom-select .options,
+  .bp-dialog-root .custom-select.open .options, .bp-popover-layer .custom-select .display:hover,
+  .bp-popover-layer .custom-select.open .display,
+  .bp-popover-layer .custom-select .options,
+  .bp-popover-layer .custom-select.open .options {
     transform: none;
   }
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* ===== Global Buttons ===== */
 }
-.designer-ui-controls :root {
+.designer-ui-controls :root, .bp-dialog-root :root, .bp-popover-layer :root {
   --btn-radius: var(--studio-radius-control);
   --btn-h: var(--studio-control-size);
   --btn-gap: 8px;
@@ -8277,10 +8862,10 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   --btn-hover-shadow: var(--studio-shadow-control);
   --btn-hover-delay: 80ms;
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Base */
 }
-.designer-ui-controls .app-scope .button {
+.designer-ui-controls .app-scope .button, .bp-dialog-root .app-scope .button, .bp-popover-layer .app-scope .button {
   --bg: var(--color-card);
   --fg: var(--color-text);
   display: inline-flex;
@@ -8301,121 +8886,137 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   transition: filter var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay), background var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay), color var(--motion-duration-slow) var(--motion-ease-standard) var(--btn-hover-delay);
 }
 .designer-ui-controls .app-scope .button:disabled,
-.designer-ui-controls .app-scope .button[aria-disabled=true] {
+.designer-ui-controls .app-scope .button[aria-disabled=true], .bp-dialog-root .app-scope .button:disabled,
+.bp-dialog-root .app-scope .button[aria-disabled=true], .bp-popover-layer .app-scope .button:disabled,
+.bp-popover-layer .app-scope .button[aria-disabled=true] {
   opacity: 0.6;
   filter: saturate(0.8) brightness(0.96);
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Focus */
 }
 .designer-ui-controls .app-scope .button:not(.text),
-.designer-ui-controls .app-scope .icon-button {
+.designer-ui-controls .app-scope .icon-button, .bp-dialog-root .app-scope .button:not(.text),
+.bp-dialog-root .app-scope .icon-button, .bp-popover-layer .app-scope .button:not(.text),
+.bp-popover-layer .app-scope .icon-button {
   text-decoration: none;
 }
-.designer-ui-controls .app-scope .button:focus-visible {
+.designer-ui-controls .app-scope .button:focus-visible, .bp-dialog-root .app-scope .button:focus-visible, .bp-popover-layer .app-scope .button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand) 45%, transparent);
   outline-offset: 2px;
 }
 .designer-ui-controls .app-scope .button.ghost:focus-visible,
-.designer-ui-controls .app-scope .button.outline:focus-visible {
+.designer-ui-controls .app-scope .button.outline:focus-visible, .bp-dialog-root .app-scope .button.ghost:focus-visible,
+.bp-dialog-root .app-scope .button.outline:focus-visible, .bp-popover-layer .app-scope .button.ghost:focus-visible,
+.bp-popover-layer .app-scope .button.outline:focus-visible {
   outline-color: color-mix(in srgb, var(--brand) 60%, transparent);
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Variants */
 }
-.designer-ui-controls .app-scope .button.primary {
+.designer-ui-controls .app-scope .button.primary, .bp-dialog-root .app-scope .button.primary, .bp-popover-layer .app-scope .button.primary {
   --bg: var(--color-primary);
   --fg: var(--color-primary-contrast);
   box-shadow: var(--btn-shadow);
 }
-.designer-ui-controls .app-scope .button.primary:disabled {
+.designer-ui-controls .app-scope .button.primary:disabled, .bp-dialog-root .app-scope .button.primary:disabled, .bp-popover-layer .app-scope .button.primary:disabled {
   filter: saturate(0.85) brightness(0.95);
   opacity: 0.75;
   box-shadow: none;
 }
-.designer-ui-controls .app-scope .button.ghost {
+.designer-ui-controls .app-scope .button.ghost, .bp-dialog-root .app-scope .button.ghost, .bp-popover-layer .app-scope .button.ghost {
   --bg: var(--studio-surface-solid);
   --fg: var(--studio-text);
   box-shadow: none;
 }
-.designer-ui-controls .app-scope .button.secondary {
+.designer-ui-controls .app-scope .button.secondary, .bp-dialog-root .app-scope .button.secondary, .bp-popover-layer .app-scope .button.secondary {
   --bg: var(--studio-surface-muted);
   --fg: var(--studio-text);
   box-shadow: inset 0 0 0 1px var(--studio-border);
 }
-.designer-ui-controls .app-scope .button.outline {
+.designer-ui-controls .app-scope .button.outline, .bp-dialog-root .app-scope .button.outline, .bp-popover-layer .app-scope .button.outline {
   --bg: transparent;
   --fg: var(--brand);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 45%, var(--studio-border));
 }
-.designer-ui-controls .app-scope .button.text {
+.designer-ui-controls .app-scope .button.text, .bp-dialog-root .app-scope .button.text, .bp-popover-layer .app-scope .button.text {
   --bg: transparent;
   --fg: var(--brand);
   height: auto;
   line-height: normal;
   padding: 4px 6px;
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Danger */
 }
-.designer-ui-controls .app-scope .button.danger {
+.designer-ui-controls .app-scope .button.danger, .bp-dialog-root .app-scope .button.danger, .bp-popover-layer .app-scope .button.danger {
   --bg: linear-gradient(180deg,#ff5a5a,#e33a3a);
   --fg:#fff;
   box-shadow: var(--btn-shadow);
 }
-.designer-ui-controls .app-scope .button.danger:not(:disabled):hover {
+.designer-ui-controls .app-scope .button.danger:not(:disabled):hover, .bp-dialog-root .app-scope .button.danger:not(:disabled):hover, .bp-popover-layer .app-scope .button.danger:not(:disabled):hover {
   filter: brightness(0.97) saturate(1.05);
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Hover micro-interaction: barely-there motion, no layout shift. */
 }
-.designer-ui-controls .app-scope .button:not(:disabled):hover {
+.designer-ui-controls .app-scope .button:not(:disabled):hover, .bp-dialog-root .app-scope .button:not(:disabled):hover, .bp-popover-layer .app-scope .button:not(:disabled):hover {
   filter: brightness(0.99) saturate(1.02);
   box-shadow: var(--btn-hover-shadow);
 }
-.designer-ui-controls .app-scope .button:not(:disabled):active {
+.designer-ui-controls .app-scope .button:not(:disabled):active, .bp-dialog-root .app-scope .button:not(:disabled):active, .bp-popover-layer .app-scope .button:not(:disabled):active {
   filter: brightness(0.97) saturate(1.01);
 }
 .designer-ui-controls .app-scope .button.ghost:not(:disabled):hover,
-.designer-ui-controls .app-scope .button.ghost:not(:disabled):active {
+.designer-ui-controls .app-scope .button.ghost:not(:disabled):active, .bp-dialog-root .app-scope .button.ghost:not(:disabled):hover,
+.bp-dialog-root .app-scope .button.ghost:not(:disabled):active, .bp-popover-layer .app-scope .button.ghost:not(:disabled):hover,
+.bp-popover-layer .app-scope .button.ghost:not(:disabled):active {
   box-shadow: none;
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Sizes */
 }
-.designer-ui-controls .app-scope .button.sm {
+.designer-ui-controls .app-scope .button.sm, .bp-dialog-root .app-scope .button.sm, .bp-popover-layer .app-scope .button.sm {
   --btn-h: 34px;
   padding: 0 12px;
   font-weight: 600;
 }
-.designer-ui-controls .app-scope .button.lg {
+.designer-ui-controls .app-scope .button.lg, .bp-dialog-root .app-scope .button.lg, .bp-popover-layer .app-scope .button.lg {
   --btn-h: 48px;
   padding: 0 20px;
 }
-.designer-ui-controls .app-scope .button.block {
+.designer-ui-controls .app-scope .button.block, .bp-dialog-root .app-scope .button.block, .bp-popover-layer .app-scope .button.block {
   width: 100%;
   min-width: 0;
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Icon support */
 }
-.designer-ui-controls .app-scope .button .icon {
+.designer-ui-controls .app-scope .button .icon, .bp-dialog-root .app-scope .button .icon, .bp-popover-layer .app-scope .button .icon {
   display: inline-flex;
   width: 1.1em;
   height: 1.1em;
   line-height: 0;
 }
 .designer-ui-controls .app-scope .button .icon + span,
-.designer-ui-controls .app-scope .button span + .icon {
+.designer-ui-controls .app-scope .button span + .icon, .bp-dialog-root .app-scope .button .icon + span,
+.bp-dialog-root .app-scope .button span + .icon, .bp-popover-layer .app-scope .button .icon + span,
+.bp-popover-layer .app-scope .button span + .icon {
   margin-left: 0;
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Compact icon actions reuse the floating language of the dashboard chrome. */
 }
 .designer-ui-controls .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle), .bp-dialog-root .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle), .bp-popover-layer .app-scope :where(.icon-button,
 .page-action-button,
 .page-list-home-button,
 .page-list-toggle) {
@@ -8437,11 +9038,23 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
 .designer-ui-controls .app-scope :where(.icon-button,
 .page-action-button,
 .page-list-home-button,
+.page-list-toggle):hover:not(:disabled), .bp-dialog-root .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle):hover:not(:disabled), .bp-popover-layer .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
 .page-list-toggle):hover:not(:disabled) {
   background: var(--studio-surface-muted);
   box-shadow: var(--studio-shadow-lift);
 }
 .designer-ui-controls .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle):focus-visible, .bp-dialog-root .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle):focus-visible, .bp-popover-layer .app-scope :where(.icon-button,
 .page-action-button,
 .page-list-home-button,
 .page-list-toggle):focus-visible {
@@ -8451,6 +9064,12 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
 .designer-ui-controls .app-scope :where(.icon-button,
 .page-action-button,
 .page-list-home-button,
+.page-list-toggle):disabled, .bp-dialog-root .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle):disabled, .bp-popover-layer .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
 .page-list-toggle):disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -8458,29 +9077,35 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
 .designer-ui-controls .app-scope :where(.icon-button,
 .page-action-button,
 .page-list-home-button,
+.page-list-toggle) img, .bp-dialog-root .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
+.page-list-toggle) img, .bp-popover-layer .app-scope :where(.icon-button,
+.page-action-button,
+.page-list-home-button,
 .page-list-toggle) img {
   display: block;
   width: 17px;
   height: 17px;
 }
-.designer-ui-controls .app-scope .icon-button.lg {
+.designer-ui-controls .app-scope .icon-button.lg, .bp-dialog-root .app-scope .icon-button.lg, .bp-popover-layer .app-scope .icon-button.lg {
   flex-basis: var(--studio-control-size);
   width: var(--studio-control-size);
   height: var(--studio-control-size);
 }
-.designer-ui-controls .app-scope .page-action-button.delete-page:hover:not(:disabled) {
+.designer-ui-controls .app-scope .page-action-button.delete-page:hover:not(:disabled), .bp-dialog-root .app-scope .page-action-button.delete-page:hover:not(:disabled), .bp-popover-layer .app-scope .page-action-button.delete-page:hover:not(:disabled) {
   color: var(--color-error);
   background: color-mix(in srgb, var(--color-error) 8%, var(--studio-surface-solid));
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Loading state */
 }
-.designer-ui-controls .app-scope .button.is-loading {
+.designer-ui-controls .app-scope .button.is-loading, .bp-dialog-root .app-scope .button.is-loading, .bp-popover-layer .app-scope .button.is-loading {
   pointer-events: none;
   position: relative;
   color: transparent;
 }
-.designer-ui-controls .app-scope .button.is-loading::after {
+.designer-ui-controls .app-scope .button.is-loading::after, .bp-dialog-root .app-scope .button.is-loading::after, .bp-popover-layer .app-scope .button.is-loading::after {
   content: "";
   position: absolute;
   width: 16px;
@@ -8495,49 +9120,49 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
     transform: rotate(360deg);
   }
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Button group */
 }
-.designer-ui-controls .app-scope .button-group {
+.designer-ui-controls .app-scope .button-group, .bp-dialog-root .app-scope .button-group, .bp-popover-layer .app-scope .button-group {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   align-items: center;
 }
-.designer-ui-controls {
+.designer-ui-controls, .bp-dialog-root, .bp-popover-layer {
   /* Reduced motion */
 }
 @media (prefers-reduced-motion: reduce) {
-  .designer-ui-controls .app-scope .button {
+  .designer-ui-controls .app-scope .button, .bp-dialog-root .app-scope .button, .bp-popover-layer .app-scope .button {
     transition: none;
   }
-  .designer-ui-controls .app-scope .button.is-loading::after {
+  .designer-ui-controls .app-scope .button.is-loading::after, .bp-dialog-root .app-scope .button.is-loading::after, .bp-popover-layer .app-scope .button.is-loading::after {
     animation: none;
   }
 }
-.designer-ui-controls .bp-tabs {
+.designer-ui-controls .bp-tabs, .bp-dialog-root .bp-tabs, .bp-popover-layer .bp-tabs {
   display: flex;
   align-items: center;
   gap: 8px;
   overflow-x: auto;
 }
-.designer-ui-controls .bp-tabs .button {
+.designer-ui-controls .bp-tabs .button, .bp-dialog-root .bp-tabs .button, .bp-popover-layer .bp-tabs .button {
   flex: 0 0 auto;
   min-width: 0;
 }
-.designer-ui-controls .bp-tabs .button.active {
+.designer-ui-controls .bp-tabs .button.active, .bp-dialog-root .bp-tabs .button.active, .bp-popover-layer .bp-tabs .button.active {
   background: var(--studio-surface-muted);
   box-shadow: var(--studio-shadow-control);
 }
-.designer-ui-controls .bp-tab-panel:focus {
+.designer-ui-controls .bp-tab-panel:focus, .bp-dialog-root .bp-tab-panel:focus, .bp-popover-layer .bp-tab-panel:focus {
   outline: none;
 }
-.designer-ui-controls .bp-tabs.bp-tabs--underline {
+.designer-ui-controls .bp-tabs.bp-tabs--underline, .bp-dialog-root .bp-tabs.bp-tabs--underline, .bp-popover-layer .bp-tabs.bp-tabs--underline {
   gap: 20px;
   padding: 0 2px;
   border-bottom: 1px solid var(--studio-border);
 }
-.designer-ui-controls .bp-tabs.bp-tabs--underline > .button {
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button, .bp-dialog-root .bp-tabs.bp-tabs--underline > .button, .bp-popover-layer .bp-tabs.bp-tabs--underline > .button {
   margin: 0;
   padding: 12px 2px;
   border: 0;
@@ -8549,48 +9174,50 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   white-space: nowrap;
   transform: none;
 }
-.designer-ui-controls .bp-tabs.bp-tabs--underline > .button:hover {
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button:hover, .bp-dialog-root .bp-tabs.bp-tabs--underline > .button:hover, .bp-popover-layer .bp-tabs.bp-tabs--underline > .button:hover {
   color: var(--studio-text);
   background: transparent;
   box-shadow: none;
   transform: none;
 }
-.designer-ui-controls .bp-tabs.bp-tabs--underline > .button.active {
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button.active, .bp-dialog-root .bp-tabs.bp-tabs--underline > .button.active, .bp-popover-layer .bp-tabs.bp-tabs--underline > .button.active {
   color: var(--studio-text);
   border-bottom-color: currentColor;
 }
-.designer-ui-controls .bp-tabs.bp-tabs--underline > .button:focus-visible {
+.designer-ui-controls .bp-tabs.bp-tabs--underline > .button:focus-visible, .bp-dialog-root .bp-tabs.bp-tabs--underline > .button:focus-visible, .bp-popover-layer .bp-tabs.bp-tabs--underline > .button:focus-visible {
   outline: 2px solid var(--studio-text);
   outline-offset: -3px;
   box-shadow: none;
 }
-.designer-ui-controls .bp-card {
+.designer-ui-controls .bp-card, .bp-dialog-root .bp-card, .bp-popover-layer .bp-card {
   padding: 18px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-panel);
   background: var(--studio-surface-solid);
   box-shadow: var(--studio-shadow-soft);
 }
-.designer-ui-controls .bp-table-wrap {
+.designer-ui-controls .bp-table-wrap, .bp-dialog-root .bp-table-wrap, .bp-popover-layer .bp-table-wrap {
   max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-panel);
 }
-.designer-ui-controls .bp-table {
+.designer-ui-controls .bp-table, .bp-dialog-root .bp-table, .bp-popover-layer .bp-table {
   width: 100%;
   border-collapse: collapse;
   color: var(--studio-text);
   font-size: 0.86rem;
 }
 .designer-ui-controls .bp-table th,
-.designer-ui-controls .bp-table td {
+.designer-ui-controls .bp-table td, .bp-dialog-root .bp-table th,
+.bp-dialog-root .bp-table td, .bp-popover-layer .bp-table th,
+.bp-popover-layer .bp-table td {
   padding: 11px 13px;
   border-bottom: 1px solid var(--studio-border);
   text-align: left;
   white-space: nowrap;
 }
-.designer-ui-controls .bp-table th {
+.designer-ui-controls .bp-table th, .bp-dialog-root .bp-table th, .bp-popover-layer .bp-table th {
   background: var(--studio-surface-muted);
   color: var(--studio-text-muted);
   font-size: 0.76rem;
@@ -8598,18 +9225,18 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
-.designer-ui-controls .bp-table tbody tr:last-child td {
+.designer-ui-controls .bp-table tbody tr:last-child td, .bp-dialog-root .bp-table tbody tr:last-child td, .bp-popover-layer .bp-table tbody tr:last-child td {
   border-bottom: 0;
 }
-.designer-ui-controls .bp-table tbody tr:hover {
+.designer-ui-controls .bp-table tbody tr:hover, .bp-dialog-root .bp-table tbody tr:hover, .bp-popover-layer .bp-table tbody tr:hover {
   background: color-mix(in srgb, var(--user-color) 4%, transparent);
 }
-.designer-ui-controls .bp-pagination {
+.designer-ui-controls .bp-pagination, .bp-dialog-root .bp-pagination, .bp-popover-layer .bp-pagination {
   display: flex;
   align-items: center;
   gap: 7px;
 }
-.designer-ui-controls .bp-pagination button {
+.designer-ui-controls .bp-pagination button, .bp-dialog-root .bp-pagination button, .bp-popover-layer .bp-pagination button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8623,14 +9250,14 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   box-shadow: var(--studio-shadow-control);
   cursor: pointer;
 }
-.designer-ui-controls .bp-pagination button[aria-current=page] {
+.designer-ui-controls .bp-pagination button[aria-current=page], .bp-dialog-root .bp-pagination button[aria-current=page], .bp-popover-layer .bp-pagination button[aria-current=page] {
   background: var(--user-color);
   color: var(--color-primary-contrast);
 }
-.designer-ui-controls .bp-pagination button:focus-visible {
+.designer-ui-controls .bp-pagination button:focus-visible, .bp-dialog-root .bp-pagination button:focus-visible, .bp-popover-layer .bp-pagination button:focus-visible {
   box-shadow: var(--studio-focus-ring), var(--studio-shadow-control);
 }
-.designer-ui-controls input[type=checkbox] {
+.designer-ui-controls input[type=checkbox], .bp-dialog-root input[type=checkbox], .bp-popover-layer input[type=checkbox] {
   width: 16px;
   height: 16px;
   border: 1px solid var(--studio-border-strong);
@@ -8642,11 +9269,11 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   position: relative;
   flex: 0 0 16px;
 }
-.designer-ui-controls input[type=checkbox]:checked {
+.designer-ui-controls input[type=checkbox]:checked, .bp-dialog-root input[type=checkbox]:checked, .bp-popover-layer input[type=checkbox]:checked {
   background: var(--user-color, #007bff);
   border-color: var(--user-color, #007bff);
 }
-.designer-ui-controls input[type=checkbox]:checked::after {
+.designer-ui-controls input[type=checkbox]:checked::after, .bp-dialog-root input[type=checkbox]:checked::after, .bp-popover-layer input[type=checkbox]:checked::after {
   content: "✓";
   position: absolute;
   top: 50%;
@@ -8656,37 +9283,37 @@ body.builder-mode .builder-footer .layout-bar.has-motion-timeline {
   font-size: 10px;
   font-weight: bold;
 }
-.designer-ui-controls input[type=checkbox]:hover {
+.designer-ui-controls input[type=checkbox]:hover, .bp-dialog-root input[type=checkbox]:hover, .bp-popover-layer input[type=checkbox]:hover {
   border-color: var(--user-color, #007bff);
 }
-.designer-ui-controls .custom-select {
+.designer-ui-controls .custom-select, .bp-dialog-root .custom-select, .bp-popover-layer .custom-select {
   width: 100%;
   min-width: 0;
   --custom-select-control-h: 34px;
 }
-.designer-ui-controls .scene-field-grid .custom-select {
+.designer-ui-controls .scene-field-grid .custom-select, .bp-dialog-root .scene-field-grid .custom-select, .bp-popover-layer .scene-field-grid .custom-select {
   min-width: 0;
 }
-.designer-ui-controls .bp-tabs {
+.designer-ui-controls .bp-tabs, .bp-dialog-root .bp-tabs, .bp-popover-layer .bp-tabs {
   gap: 4px;
   overflow: visible;
 }
-.designer-ui-controls .bp-tabs .button {
+.designer-ui-controls .bp-tabs .button, .bp-dialog-root .bp-tabs .button, .bp-popover-layer .bp-tabs .button {
   flex: 1;
   padding-inline: 6px;
 }
-.designer-ui-controls .scene-inspector-modebar {
+.designer-ui-controls .scene-inspector-modebar, .bp-dialog-root .scene-inspector-modebar, .bp-popover-layer .scene-inspector-modebar {
   display: flex;
   height: auto;
   padding: 0;
   background: transparent;
 }
-.designer-ui-controls .bp-tab-panel {
+.designer-ui-controls .bp-tab-panel, .bp-dialog-root .bp-tab-panel, .bp-popover-layer .bp-tab-panel {
   padding: 0;
   margin: 0;
   border: 0;
 }
-.designer-ui-controls [data-inspector-panel][hidden], .designer-ui-controls .bp-tab-panel[hidden], .designer-ui-controls label[hidden] {
+.designer-ui-controls [data-inspector-panel][hidden], .designer-ui-controls .bp-tab-panel[hidden], .designer-ui-controls label[hidden], .bp-dialog-root [data-inspector-panel][hidden], .bp-dialog-root .bp-tab-panel[hidden], .bp-dialog-root label[hidden], .bp-popover-layer [data-inspector-panel][hidden], .bp-popover-layer .bp-tab-panel[hidden], .bp-popover-layer label[hidden] {
   display: none;
 }
 

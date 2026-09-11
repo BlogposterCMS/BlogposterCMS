@@ -11,6 +11,16 @@ test('CMS hosts use only the existing admin facade for surface delivery', async 
   delete window.meltdownEmit;
 });
 
+test('embedded documents keep the declared app AgentManager channel without borrowing the admin host facade', async () => {
+  (window as any).__BLOGPOSTER_APP_INIT_TOKENS__ = { appBridge: true, appName: 'designer' };
+  window.meltdownEmit = jest.fn().mockResolvedValue([]);
+  const payload = { appName: 'designer', surfaceId: 'cms.article.test' };
+  await emitWorkspaceAgent('agent.pollSurfaceCommands', payload);
+  expect(window.meltdownEmit).toHaveBeenCalledWith('agent.pollSurfaceCommands', payload);
+  await expect(emitWorkspaceAgent('agent.enqueueSurfaceCommand', {})).rejects.toThrow('CMS_AGENT_TRANSPORT_UNAVAILABLE');
+  delete (window as any).__BLOGPOSTER_APP_INIT_TOKENS__;
+});
+
 test('human edits invalidate commands and drafts require an explicit handoff', async () => {
   const state = { dirty: false, busy: false, title: 'Original' };
   const guard = createWorkspaceCommandGuard(() => state);

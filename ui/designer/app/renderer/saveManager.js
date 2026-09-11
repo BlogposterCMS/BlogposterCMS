@@ -1,3 +1,4 @@
+import { prepareDesignerLocaleSave } from '../localization/designerLocale.js';
 import { capturePreview as defaultCapturePreview } from './capturePreview.js';
 import { designerState } from '../managers/designerState.js';
 import { serializeLayout } from './layoutSerialize.js';
@@ -73,6 +74,7 @@ export function createSaveManager(state, ctx) {
     updateAllWidgetContents,
     ownerId,
     pageId,
+    isDraft,
     isLayout = false,
     isGlobal = false
   }) {
@@ -129,7 +131,7 @@ export function createSaveManager(state, ctx) {
         mediaId,
         mediaUrl
       } : null;
-      const res = await emitAdminFacade(window.meltdownEmit, 'designer', 'save', {
+      const localized = prepareDesignerLocaleSave({
         design: {
           id: state.designId,
           title: name,
@@ -140,12 +142,15 @@ export function createSaveManager(state, ctx) {
           bgMediaId: bg ? bg.mediaId : '',
           bgMediaUrl: bg ? bg.mediaUrl : '',
           version: state.designVersion,
+          ...(typeof isDraft === 'boolean' ? { isDraft } : {}),
           isLayout,
           isGlobal
         },
         widgets: layout,
         layout: layoutPayload
-      }, 20000);
+      });
+      const res = await emitAdminFacade(window.meltdownEmit, 'designer', 'save', localized.payload, 20000);
+      localized.commit();
       if (res && (typeof res.id === 'string' || typeof res.id === 'number')) {
         state.designId = res.id;
       }

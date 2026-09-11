@@ -457,7 +457,7 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[], options: Pa
     if (previewHost && selectedPage) renderPageDesignPreview(previewHost,
       pagePresentationFromList(selectedPage, pages, mainDesign), designLibrary,
       `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, selectedPage.id, true,
-      () => details.querySelector<HTMLButtonElement>('[data-action="delete"]')?.click());
+      () => details.querySelector<HTMLButtonElement>('[data-action="delete"]')?.click(), refresh);
     if (subpageAction) previewHost?.querySelector('[aria-label="More page actions"]')?.before(subpageAction);
     const context = requireElement<HTMLElement>(root, '.page-manager__layout-context');
     const active = pages.filter(page => page.status !== 'deleted');
@@ -767,7 +767,7 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[], options: Pa
         }
         const designActions = document.createElement('div');
         renderPageDesignPreview(designActions, pagePresentationFromList(row.page, pages, mainDesign), designLibrary,
-          `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, id, true, () => void invoke('delete'));
+          `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, id, true, () => void invoke('delete'), refresh);
         hoverActions.append(designActions);
         // Keep visual and keyboard order aligned; overflow remains last.
         const overflow = designActions.querySelector('[aria-label="More page actions"]')!;
@@ -857,7 +857,7 @@ export function renderPageList(el: HTMLElement, pages: PageRecord[], options: Pa
       previewHost.dataset.pageDesignPreview = '';
       details.querySelector('.page-manager__details-heading')?.after(previewHost);
       renderPageDesignPreview(previewHost, pagePresentationFromList(page, pages, mainDesign), designLibrary, adminBase, page.id, true,
-        () => details.querySelector<HTMLButtonElement>('[data-action="delete"]')?.click());
+        () => details.querySelector<HTMLButtonElement>('[data-action="delete"]')?.click(), refresh);
     }
     if (!creating) {
       const inlineForm = requireElement<HTMLFormElement>(details, 'form');

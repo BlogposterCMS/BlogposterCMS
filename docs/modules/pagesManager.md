@@ -285,3 +285,9 @@ shortcode language or an arbitrary page lookup. Only children already selected
 by the existing public attached-content contract are mounted there. Legacy HTML
 without a marker keeps its previous fallback placement and receives a warning
 when used as an attached-content parent. The HTML source editor shows the snippet.
+
+
+The page brush now uses the matching document/source editor or Studio. Document
+modals expose inline title editing, language selection and safe editor handoffs.
+See [localized authoring](../editor-localization.md) for source fallback, block
+progress, title precedence and matching agent actions.

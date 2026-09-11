@@ -15,11 +15,13 @@ const { hasPermission } = require('../userManagement/permissionUtils');
 const { SITE_MAIN_DESIGN_SETTING, mainDesignId } = require('../../../ui/shared/layout/pagePresentation.js');
 const { pageContentHostIds } = require('../../../ui/shared/layout/layoutDocument.js');
 const { SETTING_KEY: ANALYTICS_CONFIG_KEY, normalizeConfig: normalizeAnalyticsConfig } = require('../analyticsManager/consent');
+const { CONTENT_LANGUAGES_SETTING, contentLanguageConfig } = require('../../../ui/shared/localization/contentLanguageConfig.js');
 
 const MODULE_NAME = 'settingsManager';
 const MODULE_TYPE = 'core';
 
 const PUBLIC_SETTING_KEYS = Object.freeze([
+  CONTENT_LANGUAGES_SETTING,
   ANALYTICS_CONFIG_KEY,
   'FIRST_INSTALL_DONE',
   'ALLOW_REGISTRATION',
@@ -136,6 +138,7 @@ async function listStoredSettings(motherEmitter, jwt, options = {}) {
 }
 
 async function setStoredSetting(motherEmitter, jwt, key, value) {
+  if (key === CONTENT_LANGUAGES_SETTING) value = JSON.stringify(contentLanguageConfig(value));
   if (key === ANALYTICS_CONFIG_KEY) value = JSON.stringify(normalizeAnalyticsConfig(value, true));
   if (key === SITE_MAIN_DESIGN_SETTING) {
     value = mainDesignId(value);

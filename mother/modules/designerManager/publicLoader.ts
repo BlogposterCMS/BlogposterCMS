@@ -71,7 +71,7 @@ async function loadDesign(
 
   // HTML-only pages still need runtime CSS, but own no Designer layout.
   const layout = ctx?.initialLayoutResolved ? ctx.initialLayout as PublicLayout | null : layoutRef ? await emitPublicRuntime<PublicLayout | null>(ctx, 'designer', 'getLayout', {
-    layoutRef
+    layoutRef, language: new URLSearchParams(location.search).get('lang') || document.documentElement.lang || 'en'
   }).catch(error => {
     console.warn('[DesignerPublicLoader:LAYOUT_LOAD_FAILED] Falling back to an empty layout.', error);
     return null;

@@ -206,7 +206,7 @@ describe('designer live preview frame', () => {
     panel.dataset.fitMode = 'fit';
     const frame = document.createElement('iframe');
     frame.id = 'designerLivePreviewFrame';
-    frame.src = '/coming-soon?designer-live-preview=1';
+    frame.src = '/coming-soon?designer-live-preview=1&lang=en';
     panel.appendChild(frame);
     document.body.dataset.livePreviewOpen = 'true';
     document.body.appendChild(panel);
@@ -220,7 +220,7 @@ describe('designer live preview frame', () => {
       layoutHeight: 720,
       displayScale: 0.8,
       fitMode: 'fit',
-      frameUrl: '/coming-soon?designer-live-preview=1',
+      frameUrl: '/coming-soon?designer-live-preview=1&lang=en',
       runtime: 'public'
     });
   });
@@ -248,15 +248,15 @@ describe('designer live preview frame', () => {
   it('builds live preview frame URLs from public page slugs', () => {
     window.PAGE_SLUG = 'coming-soon';
 
-    expect(buildLivePreviewFrameUrl()).toBe('/coming-soon?designer-live-preview=1');
-    expect(buildLivePreviewFrameUrl('/Products/Big Launch/')).toBe('/products/big-launch?designer-live-preview=1');
+    expect(buildLivePreviewFrameUrl()).toBe('/coming-soon?designer-live-preview=1&lang=en');
+    expect(buildLivePreviewFrameUrl('/Products/Big Launch/')).toBe('/products/big-launch?designer-live-preview=1&lang=en');
   });
 
   it('forwards the signed Designer origin token without exposing another credential', () => {
     window.history.replaceState(null, '', '/apps/designer?originToken=signed.token&adminToken=secret');
 
     expect(buildLivePreviewFrameUrl('home')).toBe(
-      '/home?designer-live-preview=1&originToken=signed.token'
+      '/home?designer-live-preview=1&lang=en&originToken=signed.token'
     );
   });
 

@@ -217,6 +217,25 @@ When publishing to an existing page, its current metadata is preserved and the d
 Publishing first saves your current design, then creates the page if necessary and attaches the design with both the compatible `layoutTemplate` reference and the saved `designId` when available. After publishing, the builder congratulates you and offers to open the page in a new tab.
 Click **Publish** again or use the panel's close button to dismiss it.
 
+### First public response and existing designs
+
+The public renderer projects the saved Designer containers into its first HTML
+response, with layout CSS and available article content already inside the
+document's explicit page-content host. The browser adopts those containers;
+widget data and interactive behavior load through the existing public facade.
+Reusable designs and an optional page design retain their own content ownership.
+
+Existing v1 designs are normalized at read time on update. No database rewrite,
+new content-host inference or attachment migration is needed: container IDs,
+design references, translations, media and page attachments remain unchanged.
+Use Auto/Row/Grid around flowing articles and set the intended content host in
+Studio. Workarea selection does not assign page-content ownership. Authored
+minimum/explicit heights reserve dynamic areas; unknown widget content can still
+change its own height when it arrives. HTML-only and legacy flat layouts retain
+their existing fallback path.
+
+See [structure-first verification](testing/structure-first-renderer.md).
+
 ### Widget CSS Layers
 
 Each widget is rendered inside a Shadow DOM to isolate its styles. The public

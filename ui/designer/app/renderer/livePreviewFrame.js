@@ -62,6 +62,7 @@ export function buildLivePreviewFrameUrl(slug = '') {
         : '/';
     const url = new URL(path, window.location.origin);
     url.searchParams.set(DESIGNER_LIVE_PREVIEW_QUERY, '1');
+    url.searchParams.set('lang', document.documentElement.lang || 'en');
     const originToken = new URLSearchParams(window.location.search).get('originToken');
     if (originToken)
         url.searchParams.set('originToken', originToken);

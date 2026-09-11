@@ -4,23 +4,42 @@ import { openPopover } from '../overlays/popover.js';
 import { registerWorkspaceAgent } from '../agent/workspaceAgent.js';
 import { registerWorkspaceChanges } from '../navigation/workspaceChanges.js';
 import { articleExtensions, cleanArticleHtml, safeArticleUrl, validateArticleDocument } from './articleSchema.js';
-import { readArticlePage, pageContentKind, saveArticle } from './articleData.js';
+import { articleTitle, readArticlePage, pageContentKind, saveArticle } from './articleData.js';
+import { mountLinkFeedback } from '../links/linkFeedback.js';
+import { contentEditorHeader } from './contentEditorHeader.js';
+import { ensureContentDesign, pageDesignEditorUrl } from './pageEditorMode.js';
+import { createContentLanguageControl } from '../localization/languageControl.js';
+import { normalizePageLanguage } from '../page-editor/pageEditorData.js';
+import { createArticleLocale } from './articleLocale.js';
+import { articleLocaleDecorations } from './articleLocaleDecorations.js';
+import { articleCommandAvailable, mountArticleToolbarState } from './articleToolbarState.js';
+import { assertContentLanguage, availableContentLanguages } from '../localization/contentLanguages.js';
 let opened = false;
-export async function openArticleEditor(pageId, onSaved) {
+export async function openArticleEditor(pageId, onSaved, options = {}) {
     if (opened)
         return;
     opened = true;
     try {
-        await runDialog(pageId, onSaved);
+        let language = options.language;
+        const navigation = { blockId: '' };
+        do {
+            language = await runDialog(pageId, onSaved, { ...options, language }, navigation);
+        } while (language);
     }
     finally {
         opened = false;
     }
 }
-async function runDialog(pageId, onSaved) {
-    let page = await readArticlePage(pageId);
+async function runDialog(pageId, onSaved, options, navigation) {
+    let page = await readArticlePage(pageId, options.language);
     if (!['empty', 'article'].includes(pageContentKind(page)))
         throw new Error('ARTICLE_FORMAT_CONFLICT: Open the existing HTML or design editor.');
+    const sourceLanguage = page.language || 'en';
+    const activeLanguage = page.contentLanguage || sourceLanguage;
+    const sourcePage = activeLanguage === sourceLanguage ? page : await readArticlePage(pageId, sourceLanguage);
+    const savedProgress = page.meta?.articleTranslations?.[activeLanguage];
+    const asDocument = (html) => { const temporary = new Editor({ extensions: articleExtensions(), content: cleanArticleHtml(html || '<p></p>') }); const result = temporary.getJSON(); temporary.destroy(); return result; };
+    const locale = activeLanguage === sourceLanguage ? undefined : createArticleLocale(asDocument(sourcePage.html || ''), page.trans_lang ? asDocument(page.html || '') : null, savedProgress);
     const body = document.createElement('div');
     body.className = 'article-editor';
     const toolbar = document.createElement('div');
@@ -46,17 +65,48 @@ async function runDialog(pageId, onSaved) {
     save.className = 'button primary';
     save.textContent = 'Save article';
     footer.append(discard, save);
-    let dirty = false, busy = false, allowClose = false, saved = false;
+    let dirty = false, busy = false, allowClose = false, saved = false, studioRequested = false;
+    let nextStudioUrl = '', nextLanguage;
     const message = (text, error = false) => { status.textContent = text; status.setAttribute('role', error ? 'alert' : 'status'); };
-    const update = () => { save.disabled = busy || !dirty; discard.disabled = busy; canvas.inert = toolbar.inert = busy; };
-    const editor = new Editor({ element: canvas, extensions: articleExtensions(), content: cleanArticleHtml(page.html || '<p></p>'),
+    const header = contentEditorHeader(page, () => syncDirty(), () => { void switchToStudio().then(close).catch(error => message(error.message, true)); });
+    const sourceTitle = articleTitle(sourcePage);
+    if (locale && (!page.trans_lang || savedProgress?.titleTranslated === false))
+        header.title.value = sourceTitle;
+    let initialTitle = header.title.value;
+    let progressChanged = false;
+    const languageControls = [];
+    const languageControl = createContentLanguageControl(() => activeLanguage, () => sourceLanguage, async (language) => { await openLanguage(language); if (nextLanguage)
+        close(); });
+    let toolbarState;
+    const headerActions = document.createElement('div');
+    headerActions.className = 'article-editor__header-actions';
+    headerActions.append(languageControl.button, header.studio);
+    const update = () => {
+        save.disabled = busy || !dirty;
+        discard.disabled = header.studio.disabled = header.title.disabled = languageControl.button.disabled = busy;
+        canvas.inert = toolbar.inert = busy;
+        toolbarState?.refresh();
+        header.title.classList.toggle('article-editor__source-language', Boolean(locale && (!page.trans_lang || savedProgress?.titleTranslated === false) && header.title.value === sourceTitle));
+    };
+    const editor = new Editor({ element: canvas, extensions: [...articleExtensions(), articleLocaleDecorations(node => Boolean(locale?.isFallback(node)), locale ? blockId => {
+                const control = document.createElement('button');
+                control.type = 'button';
+                control.className = 'article-editor__block-language button ghost sm';
+                control.innerHTML = '<img src="/assets/icons/languages.svg" width="16" height="16" alt="">';
+                control.append(document.createTextNode('Use source block'));
+                control.title = `Keep this block unchanged in ${activeLanguage}`;
+                control.addEventListener('click', () => { if (!busy)
+                    markTranslated(blockId); });
+                return control;
+            } : undefined)], content: locale?.document || cleanArticleHtml(page.html || '<p></p>'),
         editorProps: { attributes: { role: 'textbox', 'aria-label': 'Article content', 'aria-multiline': 'true' }, transformPastedHTML: cleanArticleHtml },
         onUpdate: () => { dirty = true; message('Unsaved changes'); update(); }
     });
     let initial = editor.getHTML();
     // UniqueID normalizes older/empty documents once without creating a user draft.
-    editor.on('create', () => { initial = editor.getHTML(); dirty = false; message(''); update(); });
-    editor.on('update', () => { dirty = editor.getHTML() !== initial; update(); });
+    function syncDirty() { dirty = progressChanged || editor.getHTML() !== initial || header.title.value !== initialTitle; message(dirty ? 'Unsaved changes' : locale ? `Editing ${activeLanguage}. Gray blocks are untranslated ${sourceLanguage} source content.` : ''); update(); }
+    editor.on('create', () => { initial = editor.getHTML(); syncDirty(); });
+    editor.on('update', syncDirty);
     function button(label, icon, action) {
         const control = document.createElement('button');
         control.type = 'button';
@@ -64,7 +114,7 @@ async function runDialog(pageId, onSaved) {
         control.title = label;
         control.setAttribute('aria-label', label);
         control.innerHTML = `<img src="/assets/icons/${icon}.svg" width="18" height="18" alt="">`;
-        control.addEventListener('click', () => { if (!busy)
+        control.addEventListener('click', () => { if (!busy && articleCommandAvailable(editor, label))
             action(); });
         toolbar.append(control);
         return control;
@@ -90,6 +140,8 @@ async function runDialog(pageId, onSaved) {
         block.value = editor.isActive('heading') ? String(editor.getAttributes('heading').level) : 'p';
     });
     let activePopover;
+    let linkInput;
+    let linkFeedback;
     const link = button('Edit link', 'link', () => {
         const fields = document.createElement('div');
         fields.className = 'article-editor__link';
@@ -104,6 +156,8 @@ async function runDialog(pageId, onSaved) {
         apply.textContent = 'Apply';
         fields.append(input, apply);
         activePopover = openPopover(link, { content: fields, ariaLabel: 'Edit link' });
+        linkInput = input;
+        linkFeedback?.watchInput(input);
         apply.addEventListener('click', () => {
             if (input.value && !safeArticleUrl(input.value, true)) {
                 message('ARTICLE_LINK_INVALID: Enter a valid link.', true);
@@ -114,6 +168,7 @@ async function runDialog(pageId, onSaved) {
             else
                 editor.chain().focus().unsetLink().run();
             activePopover?.close();
+            linkFeedback?.schedule();
         });
     });
     async function insertMedia(kind) {
@@ -173,12 +228,15 @@ async function runDialog(pageId, onSaved) {
             item.type = 'button';
             item.className = 'bp-popover__item';
             item.textContent = label;
-            item.addEventListener('click', () => { action(); activePopover?.close(); });
+            item.disabled = busy || !articleCommandAvailable(editor, label);
+            item.addEventListener('click', () => { if (busy || !articleCommandAvailable(editor, label))
+                return; action(); activePopover?.close(); });
             menu.append(item);
         }
     });
     button('Undo', 'undo-2', () => { editor.chain().focus().undo().run(); });
     button('Redo', 'redo-2', () => { editor.chain().focus().redo().run(); });
+    toolbarState = mountArticleToolbarState(editor, toolbar, () => busy);
     const close = () => { allowClose = true; body.closest('.bp-dialog')?.querySelector('[data-action="cancel"]')?.click(); };
     async function persist() {
         if (busy)
@@ -188,7 +246,9 @@ async function runDialog(pageId, onSaved) {
         message('Saving…');
         try {
             validateArticleDocument(editor.getJSON());
-            page = await saveArticle(page, editor.getHTML());
+            page = await saveArticle(page, editor.getHTML(), header.title.value, locale?.progress(editor.getJSON(), sourceLanguage, Boolean(savedProgress?.titleTranslated || header.title.value !== sourceTitle)));
+            header.title.value = articleTitle(page);
+            initialTitle = header.title.value;
             initial = editor.getHTML();
             dirty = false;
             saved = true;
@@ -203,6 +263,37 @@ async function runDialog(pageId, onSaved) {
             update();
         }
     }
+    async function openLanguage(value) {
+        const language = normalizePageLanguage(value);
+        if (language === activeLanguage)
+            return;
+        if (dirty || busy)
+            throw new Error('ARTICLE_LANGUAGE_DRAFT: Save or discard changes before switching language.');
+        await assertContentLanguage(language, [sourceLanguage, activeLanguage, ...Object.keys(page.meta?.articleTranslations || {})]);
+        // A failed read leaves the current editor intact. No primary text is copied into storage here.
+        await readArticlePage(pageId, language);
+        nextLanguage = language;
+    }
+    async function switchToStudio() {
+        if (busy)
+            throw new Error('ARTICLE_BUSY');
+        if (dirty)
+            await persist();
+        busy = true;
+        update();
+        try {
+            if (options.openDesign)
+                await options.openDesign(page);
+            else
+                nextStudioUrl = pageDesignEditorUrl(pageId, await ensureContentDesign(page), page.contentLanguage, `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`);
+            studioRequested = true;
+            return { url: nextStudioUrl || undefined };
+        }
+        finally {
+            busy = false;
+            update();
+        }
+    }
     save.addEventListener('click', () => { void persist().then(close).catch(() => { }); });
     discard.addEventListener('click', close);
     // Enter belongs to the document, not the enclosing global dialog form.
@@ -211,7 +302,7 @@ async function runDialog(pageId, onSaved) {
         event.preventDefault();
         save.click();
     } });
-    const dialog = bpDialog.open({ title: `Article · ${page.title || 'Untitled'}`, body, kind: 'modal', actions: [{ id: 'cancel', label: 'Close', variant: 'ghost' }], footerContent: footer,
+    const dialog = bpDialog.open({ title: `Article · ${articleTitle(page) || 'Untitled'}`, titleContent: header.title, headerContent: headerActions, body, kind: 'modal', actions: [{ id: 'cancel', label: 'Close', variant: 'ghost' }], footerContent: footer,
         beforeClose: () => { if (busy)
             return false; if (dirty && !allowClose) {
             discard.hidden = false;
@@ -224,9 +315,26 @@ async function runDialog(pageId, onSaved) {
         resolve();
     else
         setTimeout(attach, 10); }; attach(); });
+    linkFeedback = mountLinkFeedback(body, { collect: () => [
+            ...(linkInput?.isConnected ? [{ id: 'link-entry', href: linkInput.value, anchor: linkInput }] : []),
+            ...Array.from(canvas.querySelectorAll('a[href]')).map((anchor, index) => ({
+                id: `${anchor.closest('[block-id]')?.getAttribute('block-id') || 'article'}:link-${index}`,
+                href: anchor.getAttribute('href') || '', anchor
+            }))
+        ] });
+    editor.on('update', () => linkFeedback?.schedule());
     const unregister = registerWorkspaceChanges(body, { isDirty: () => dirty, isBusy: () => busy });
     const blocks = () => { const result = []; editor.state.doc.descendants(node => { if (node.attrs['block-id'])
-        result.push({ id: node.attrs['block-id'], type: node.type.name, text: node.textContent, node: node.toJSON() }); }); return result; };
+        result.push({ id: node.attrs['block-id'], type: node.type.name, text: node.textContent, node: node.toJSON(), translationStatus: locale?.isFallback(node.toJSON()) ? 'source-fallback' : 'authored' }); }); return result; };
+    function markTranslated(id) {
+        blockRange(id);
+        if (!locale)
+            return;
+        locale.markTranslated(id);
+        progressChanged = true;
+        editor.view.dispatch(editor.state.tr);
+        syncDirty();
+    }
     function blockRange(id) {
         let range;
         editor.state.doc.descendants((node, pos) => { if (!range && node.attrs['block-id'] === id) {
@@ -250,7 +358,18 @@ async function runDialog(pageId, onSaved) {
             throw new Error('ARTICLE_BLOCK_INVALID');
         }
     }
-    const agent = registerWorkspaceAgent({ root: body, id: `article-${pageId}`, title: 'Article editor', read: () => ({ dirty, busy, selection: pageId, document: editor.getJSON(), blocks: blocks(), error: status.getAttribute('role') === 'alert' ? status.textContent : null }), actions: [
+    const agent = registerWorkspaceAgent({ root: body, id: `article-${pageId}`, title: 'Article editor', read: () => ({ dirty, busy, selection: pageId, title: header.title.value, contentLanguage: activeLanguage, sourceLanguage, availableLanguages: availableContentLanguages(), toolbar: toolbarState?.read(), translationExists: Boolean(page.trans_lang), seoTitleOverride: page.seo_title || '', document: editor.getJSON(), blocks: blocks(), linkFeedback: linkFeedback?.read(), error: status.getAttribute('role') === 'alert' ? status.textContent : null }),
+        onCommandSettled: (_command, acknowledged) => { if (acknowledged && (studioRequested || nextLanguage))
+            close(); }, actions: [
+            { action: 'article.openLanguage', label: 'Open content language', params: [{ name: 'language', type: 'string', required: true }], run: params => openLanguage(String(params.language || '')) },
+            { action: 'article.useSourceBlock', label: 'Use source block in this language', acceptsDraft: true, params: [{ name: 'id', type: 'string', required: true }], run: params => markTranslated(String(params.id || '')) },
+            { action: 'article.setTitle', label: 'Edit page title', acceptsDraft: true, params: [{ name: 'title', type: 'string', required: true }], run: params => {
+                    if (typeof params.title !== 'string' || !params.title.trim() || params.title.length > 240)
+                        throw new Error('ARTICLE_TITLE_INVALID');
+                    header.title.value = params.title;
+                    syncDirty();
+                } },
+            { action: 'article.openDesign', label: 'Save changes and open in Design Studio', acceptsDraft: true, confirm: true, run: switchToStudio },
             { action: 'article.replaceBlock', label: 'Replace article block', acceptsDraft: true, params: [{ name: 'id', type: 'string', required: true }, { name: 'node', type: 'object', required: true }], run: params => {
                     validateBlock(params.node);
                     const replacement = { ...params.node, attrs: { ...params.node.attrs, 'block-id': params.id } };
@@ -264,15 +383,27 @@ async function runDialog(pageId, onSaved) {
         ] });
     update();
     editor.commands.focus();
+    if (navigation.blockId) {
+        try {
+            editor.commands.setTextSelection(blockRange(navigation.blockId).from + 1);
+        }
+        catch { /* A removed source block has no selection in the target. */ }
+    }
     try {
         await dialog;
     }
     finally {
         activePopover?.close();
+        languageControl.close();
+        languageControls.forEach(control => control.close());
+        linkFeedback?.stop();
         agent.stop();
         unregister();
         editor.destroy();
     }
     if (saved)
         await onSaved?.();
+    if (nextStudioUrl)
+        window.location.assign(nextStudioUrl);
+    return nextLanguage;
 }

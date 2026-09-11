@@ -1,9 +1,11 @@
 // @ts-nocheck
+import { mountDesignerLocaleControls } from '../localization/designerLocaleControls.js';
 import { initPublishPanel } from './publishPanel';
 import { initHeaderControls } from './headerControls.js';
 import { createLogger } from '../utils/logger';
 import { fetchPartial } from '../fetchPartial.js';
 import { sanitizeHtml } from '/ui/shared/sanitize/sanitizer.js';
+import { mountPageContentSwitch } from './pageContentSwitch.js';
 const headerLogger = createLogger('builder:header');
 const HEADER_HEIGHT_VAR = '--builder-header-height';
 const DEFAULT_HEADER_HEIGHT = 64;
@@ -297,6 +299,8 @@ export function createBuilderHeader({ initialLayoutName, layoutNameParam, pageDa
                 });
             }
             const headerActions = topBar.querySelector('.header-actions') || topBar;
+            mountDesignerLocaleControls(topBar);
+            mountPageContentSwitch(topBar, () => String(state.designId || document.body.dataset.designId || ''));
             const saveBtn = topBar.querySelector('#saveLayoutBtn');
             const previewBtn = topBar.querySelector('#previewLayoutBtn');
             const publishBtn = topBar.querySelector('#publishLayoutBtn');

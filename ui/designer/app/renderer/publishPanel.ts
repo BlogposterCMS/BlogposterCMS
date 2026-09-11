@@ -237,6 +237,7 @@ export function initPublishPanel({
         const name = nameInput.value.trim();
         const saveResult = await saveDesign({
           name,
+          isDraft: requestedDraft === undefined ? draftCb.checked : requestedDraft,
           gridEl,
           layoutRoot,
           getCurrentLayoutForLayer,

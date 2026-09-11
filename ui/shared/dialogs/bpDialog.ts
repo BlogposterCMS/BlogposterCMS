@@ -24,6 +24,9 @@ export interface BpDialogOpenOptions {
   actions?: BpDialogAction[];
   /** Domain-owned controls can share the standard footer without a second dialog. */
   footerContent?: Node;
+  /** Editors may supply an inline title and a small action without replacing dialog behavior. */
+  titleContent?: Node;
+  headerContent?: Node;
   prompt?: BpDialogPromptOptions;
   dismissable?: boolean;
   /** Forms can keep the dialog open while saving or until an explicit discard. */
@@ -188,7 +191,12 @@ function runDomDialog(options: BpDialogOpenOptions): Promise<BpDialogResult> {
     title.id = titleId;
     title.className = 'bp-dialog__title';
     title.textContent = dialogTitle(kind, options.title);
+    if (options.titleContent) {
+      title.setAttribute('aria-label', dialogTitle(kind, options.title));
+      title.replaceChildren(options.titleContent);
+    }
     header.appendChild(title);
+    if (options.headerContent) header.appendChild(options.headerContent);
 
     const body = document.createElement('div');
     body.className = 'bp-dialog__body';

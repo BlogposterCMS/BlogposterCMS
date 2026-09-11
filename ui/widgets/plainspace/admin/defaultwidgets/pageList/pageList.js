@@ -397,7 +397,7 @@ export function renderPageList(el, pages, options = {}) {
         const subpageAction = previewHost?.querySelector('[data-action="child"]');
         const selectedPage = pages.find(page => normalizePageId(page.id) === selectedId);
         if (previewHost && selectedPage)
-            renderPageDesignPreview(previewHost, pagePresentationFromList(selectedPage, pages, mainDesign), designLibrary, `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, selectedPage.id, true, () => details.querySelector('[data-action="delete"]')?.click());
+            renderPageDesignPreview(previewHost, pagePresentationFromList(selectedPage, pages, mainDesign), designLibrary, `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, selectedPage.id, true, () => details.querySelector('[data-action="delete"]')?.click(), refresh);
         if (subpageAction)
             previewHost?.querySelector('[aria-label="More page actions"]')?.before(subpageAction);
         const context = requireElement(root, '.page-manager__layout-context');
@@ -737,7 +737,7 @@ export function renderPageList(el, pages, options = {}) {
                         hoverActions.append(button);
                 }
                 const designActions = document.createElement('div');
-                renderPageDesignPreview(designActions, pagePresentationFromList(row.page, pages, mainDesign), designLibrary, `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, id, true, () => void invoke('delete'));
+                renderPageDesignPreview(designActions, pagePresentationFromList(row.page, pages, mainDesign), designLibrary, `/${(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/g, '')}`, id, true, () => void invoke('delete'), refresh);
                 hoverActions.append(designActions);
                 // Keep visual and keyboard order aligned; overflow remains last.
                 const overflow = designActions.querySelector('[aria-label="More page actions"]');
@@ -839,7 +839,7 @@ export function renderPageList(el, pages, options = {}) {
             const previewHost = document.createElement('div');
             previewHost.dataset.pageDesignPreview = '';
             details.querySelector('.page-manager__details-heading')?.after(previewHost);
-            renderPageDesignPreview(previewHost, pagePresentationFromList(page, pages, mainDesign), designLibrary, adminBase, page.id, true, () => details.querySelector('[data-action="delete"]')?.click());
+            renderPageDesignPreview(previewHost, pagePresentationFromList(page, pages, mainDesign), designLibrary, adminBase, page.id, true, () => details.querySelector('[data-action="delete"]')?.click(), refresh);
         }
         if (!creating) {
             const inlineForm = requireElement(details, 'form');

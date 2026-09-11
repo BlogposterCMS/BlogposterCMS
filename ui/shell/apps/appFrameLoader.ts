@@ -1,3 +1,4 @@
+import { setAppViewLanguage } from './appViewState.js';
 import {
   APP_BRIDGE_BATCH_REQUEST,
   APP_BRIDGE_REQUEST,
@@ -159,6 +160,7 @@ function writeAppPreference(payload: unknown): { stored: true } {
 }
 
 async function runParentLocalEvent(eventName: string, payload: unknown): Promise<unknown> {
+  if (eventName === 'appView.setLanguage') return setAppViewLanguage(payload);
   if (eventName === APP_PREFERENCE_EVENT_GET) {
     return readAppPreference(payload);
   }

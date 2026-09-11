@@ -217,13 +217,14 @@ function preparePublicParams({ resource, action, params }) {
     const id = String(safe.id || '').trim();
     if (!id) throw new Error('Public design id is required.');
     safe.id = id;
+    safe.language = typeof safe.language === 'string' && /^[a-z]{2,8}(?:-[a-z0-9]{1,8})*$/i.test(safe.language) && safe.language.length <= 35 ? safe.language.toLowerCase() : 'en';
   }
   if (resource === 'designer' && action === 'getLayout') {
     const layoutRef = String(safe.layoutRef || '').trim();
     if (!/^layout:[A-Za-z0-9_.:-]+(?:@[^/\s]+)?$/.test(layoutRef)) {
       throw new Error('[runtimeManager:PUBLIC_DESIGN_LAYOUT_REF_REQUIRED] Public design layoutRef is required.');
     }
-    return { layoutRef };
+    return { layoutRef, language: typeof safe.language === 'string' && /^[a-z]{2,8}(?:-[a-z0-9]{1,8})*$/i.test(safe.language) && safe.language.length <= 35 ? safe.language.toLowerCase() : 'en' };
   }
 
   return safe;

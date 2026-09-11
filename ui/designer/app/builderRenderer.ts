@@ -34,6 +34,7 @@ import {
 import { hideBuilderPanel, showBuilderPanel } from './managers/panelManager.js';
 import { attachEditButton, attachRemoveButton, attachLockOnClick, attachOptionsMenu, renderWidget } from './managers/widgetManager.js';
 import { designerState } from './managers/designerState.js';
+import { hydrateDesignerLocale, captureDesignerLocaleBaseline } from './localization/designerLocale.js';
 import { deserializeLayout, serializeLayout } from './renderer/layoutSerialize.js';
 import { initLayoutMode, populateWidgetsPanel, startLayoutMode, stopLayoutMode } from './renderer/layoutMode.js';
 import { attachContainerBar } from './ux/containerActionBar.js';
@@ -3299,6 +3300,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       loadedDesign = await emitAdminFacade(meltdownEmit, 'designer', 'get', {
         id: state.designId
       });
+      loadedDesign = hydrateDesignerLocale(loadedDesign);
       if (loadedDesign?.design && typeof loadedDesign.design === 'object') {
         window.INITIAL_DESIGN = loadedDesign.design;
         if (!state.designVersion && loadedDesign.design.version !== undefined) {
@@ -5778,6 +5780,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     });
   };
 
+  captureDesignerLocaleBaseline(serializeLayout(layoutRoot), getCurrentLayoutForLayer(gridEl, activeLayer, ensureCodeMap()));
   const headerController = createBuilderHeader({
     initialLayoutName: layoutName,
     layoutNameParam,

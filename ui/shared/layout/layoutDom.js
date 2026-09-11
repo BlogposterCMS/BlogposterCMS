@@ -1,5 +1,6 @@
 import { normalizeLayoutContainerSettings, normalizeLayoutNodePlacement, normalizeLayoutTree } from './layoutDocument.js';
 import { hasStyleSourceSettings, normalizeStyleSourceSettings } from './styleSource.js';
+import { describeLayoutTree, layoutContainerStyle } from './layoutTreePresentation.js';
 const DEFAULT_LABELS = {
     splitHint: 'Click to add container',
     workareaLabel: 'Design area'
@@ -181,72 +182,13 @@ function applyContainerSettingsToElement(el) {
     const settings = readContainerSettings(el);
     if (settings.mode)
         el.dataset.layoutMode = settings.mode;
-    if (el.dataset.split === 'true') {
-        // A split node is the persisted recursive Container shape. Its authored
-        // placement mode, rather than the legacy split orientation, owns how its
-        // direct Container and widget children flow.
-        el.style.alignItems = settings.align || 'stretch';
-        if (settings.mode === 'grid') {
-            el.style.display = 'grid';
-            el.style.removeProperty('flex-direction');
-        }
-        else if (settings.mode === 'free') {
-            el.style.display = 'block';
-            el.style.removeProperty('flex-direction');
-        }
-        else {
-            el.style.display = 'flex';
-            el.style.flexDirection = settings.mode === 'row' ? 'row' : 'column';
-        }
+    // Editor changes and public first paint use the same typed CSS projection.
+    for (const [key, value] of Object.entries(layoutContainerStyle(settings, el.dataset.split === 'true'))) {
+        if (value)
+            el.style.setProperty(key, value);
+        else
+            el.style.removeProperty(key);
     }
-    if (settings.gap)
-        el.style.gap = settings.gap;
-    else
-        el.style.removeProperty('gap');
-    if (settings.padding)
-        el.style.padding = settings.padding;
-    else
-        el.style.removeProperty('padding');
-    if (settings.columns)
-        el.style.setProperty('--layout-columns', String(settings.columns));
-    else
-        el.style.removeProperty('--layout-columns');
-    if (settings.align)
-        el.style.setProperty('--layout-align', settings.align);
-    else
-        el.style.removeProperty('--layout-align');
-    if (settings.background)
-        el.style.background = settings.background;
-    else
-        el.style.removeProperty('background');
-    // Apply on the actual Container, not its widget content or editor outline.
-    // Explicit values override editor decoration and round-trip via settings.
-    for (const key of ['borderWidth', 'borderStyle', 'borderColor', 'borderRadius', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth']) {
-        el.style[key] = settings[key] || (key.endsWith('Width') ? settings.borderWidth || (settings.borderStyle ? '0px' : '') : '');
-    }
-    // A minimum width lets existing row wrapping protect authored content.
-    if (settings.minWidth)
-        el.style.minWidth = settings.minWidth;
-    else
-        el.style.removeProperty('min-width');
-    if (settings.maxWidth)
-        el.style.maxWidth = settings.maxWidth;
-    else
-        el.style.removeProperty('max-width');
-    if (settings.minHeight)
-        el.style.minHeight = settings.minHeight;
-    else
-        el.style.removeProperty('min-height');
-    // CanvasGrid can write inline dimensions later; presentation rules consume
-    // this property to retain the document's explicit height across rebuilds.
-    if (settings.height)
-        el.style.setProperty('--layout-height', settings.height);
-    else
-        el.style.removeProperty('--layout-height');
-    if (settings.overflow)
-        el.style.overflow = settings.overflow;
-    else
-        el.style.removeProperty('overflow');
 }
 function serializableSettings(el) {
     const settings = readContainerSettings(el);
@@ -682,68 +624,33 @@ export function duplicateContainer(source, { linked = false, layoutRoot = null, 
     notifyAfterChange(onAfterChange, { layoutRoot: root });
     return clone;
 }
-export function renderLayoutTree(tree, mountEl) {
-    const node = normalizeLayoutTree(tree);
+export function renderLayoutTree(tree, mountEl, adopt = false) {
+    const node = describeLayoutTree(tree);
     const map = new Map();
     if (!mountEl || !node)
         return map;
-    mountEl.replaceChildren();
+    if (!adopt)
+        mountEl.replaceChildren();
     const walk = (current, parent) => {
-        const el = document.createElement('div');
-        el.className = 'layout-container runtime-layout-container';
-        el.style.flex = '1 1 0';
-        if (current.nodeId != null) {
-            el.dataset.nodeId = String(current.nodeId);
-            map.set(String(current.nodeId), el);
+        const existing = adopt ? Array.from(parent.children).find(child => child instanceof HTMLElement && child.dataset.bpLayoutPath === current.attributes['data-bp-layout-path']) : undefined;
+        if (adopt && (!existing || existing.dataset.nodeId !== current.attributes['data-node-id'])) {
+            throw new Error('RUNTIME_INITIAL_STRUCTURE_MISMATCH: The saved container is missing from the response.');
         }
-        if (current.isDynamicHost)
-            el.dataset.dynamicHost = 'true';
-        if (current.workarea) {
-            el.dataset.workarea = 'true';
+        const el = existing || document.createElement('div');
+        if (!existing) {
+            for (const [key, value] of Object.entries(current.attributes))
+                el.setAttribute(key, value);
+            for (const [key, value] of Object.entries(current.style))
+                if (value)
+                    el.style.setProperty(key, value);
+            parent.appendChild(el);
         }
-        if (current.type === 'split') {
-            el.dataset.split = 'true';
-            const orientation = current.orientation === 'horizontal' ? 'horizontal' : 'vertical';
-            el.dataset.orientation = orientation;
-            el.style.display = 'flex';
-            el.style.flexDirection = flexDirectionFor(orientation);
-            writeContainerSettings(el, {
-                mode: current.settings?.mode || modeForOrientation(orientation),
-                ...current.settings
-            });
-            writeStyleSourceSettings(el, current.styleSource || {});
-            const sizes = Array.isArray(current.sizes) ? current.sizes : [];
-            current.children.forEach((child, index) => {
-                const childEl = walk(child, el);
-                const size = sizes[index];
-                // Stacked sections use content height; legacy proportional splits retain their ratios.
-                if (current.settings?.mode === 'stack')
-                    childEl.style.flex = '0 0 auto';
-                else if (Number.isFinite(size))
-                    childEl.style.flex = `${size} 1 0`;
-            });
-        }
-        else if (current.designRef) {
-            el.dataset.designRef = current.designRef;
-            writeContainerSettings(el, {
-                mode: current.settings?.mode || 'free',
-                ...current.settings
-            });
-        }
-        else {
-            writeContainerSettings(el, {
-                mode: current.settings?.mode || 'free',
-                ...current.settings
-            });
-        }
-        writeSection(el, current.section);
-        writeNodePlacement(el, current.placement);
-        writeStyleSourceSettings(el, current.styleSource || {});
-        parent.appendChild(el);
+        if (current.node.nodeId)
+            map.set(current.node.nodeId, el);
+        current.children.forEach(child => walk(child, el));
         return el;
     };
     walk(node, mountEl);
-    applyContainerStyleSources(mountEl);
     return map;
 }
 export function createLeaf(options = {}) {

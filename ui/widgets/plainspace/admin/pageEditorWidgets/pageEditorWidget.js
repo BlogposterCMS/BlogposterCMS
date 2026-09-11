@@ -4,6 +4,7 @@ import enhanceSelects from '../../../../shared/controls/customSelect.js';
 import { createImageField } from '../../../../shared/media/imageField.js';
 import { createFormField } from '../../../../shared/forms/formField.js';
 import { mountPageLanguageControl } from '../../../../shared/page-editor/pageEditorLanguage.js';
+import { assertContentLanguage, availableContentLanguages } from '../../../../shared/localization/contentLanguages.js';
 import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
 import { registerWorkspaceChanges } from '../../../../shared/navigation/workspaceChanges.js';
 import { render as renderContent } from './pageContentWidget.js';
@@ -225,6 +226,7 @@ export async function render(el) {
         busy = true;
         updateState();
         try {
+            await assertContentLanguage(language, [page.language || 'en', page.contentLanguage || page.language || 'en']);
             const translated = await loadPageEditorTranslation(emit, jwt, String(page.id), language, window.pageDataLoader);
             // Do not mutate the cached projection for the previously selected locale.
             page = translated;
@@ -306,7 +308,7 @@ export async function render(el) {
     registerWorkspaceAgent({ root, id: 'page-editor', title: 'Page editor',
         read: () => ({ dirty, busy: busy || contentBusy, selection: page.id,
             error: feedback.getAttribute('role') === 'alert' ? feedback.textContent : null,
-            draft: values(), language: page.contentLanguage || page.language || 'en', translationExists: Boolean(page.trans_lang), content: contentController?.read(),
+            draft: values(), language: page.contentLanguage || page.language || 'en', availableLanguages: availableContentLanguages(), translationExists: Boolean(page.trans_lang), content: contentController?.read(),
             attachment: { html: draft.html, css: draft.css, meta: draft.meta }
         }),
         actions: [

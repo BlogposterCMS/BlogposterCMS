@@ -38,3 +38,9 @@ Authored widget markup preserves scoped classes, ids, data/ARIA hooks and safe
 form/select/contenteditable controls through save. Inline event handlers, scripts,
 frames and form destinations remain excluded. Imported HTML keeps the existing
 restricted generated-class policy. Community widget capability rules are unchanged.
+
+
+Localized designs retain one versioned record. `layout.localizations` stores
+sparse locale overrides; public get/getLayout resolves one selected language
+and keeps publication checks in Runtime Manager. Locale widget content passes
+the same save sanitizer as the base. See [localized authoring](../editor-localization.md).

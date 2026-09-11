@@ -10,6 +10,20 @@ function emitAsync(emitter, eventName, payload) {
   });
 }
 
+test('content language settings reject malformed values before writing and require existing edit permission', async () => {
+  const emitter = new EventEmitter(); setupSettingsListeners(emitter);
+  const writes = [];
+  emitter.on('dbUpdate', (payload, cb) => { writes.push(payload.data); cb(null, { ok: true }); });
+  const payload = { jwt: 'test', moduleName: 'settingsManager', moduleType: 'core', key: 'WEBSITE_CONTENT_LANGUAGES', decodedJWT: { permissions: { settings: { core: { edit: true } } } } };
+  expect((await emitAsync(emitter, 'setSetting', { ...payload, value: '{broken' })).err).toBeTruthy();
+  expect(writes).toHaveLength(0);
+  const value = JSON.stringify({ version: 1, primaryLanguage: 'en', languages: ['en', 'zh-CN'] });
+  expect((await emitAsync(emitter, 'setSetting', { ...payload, value, decodedJWT: { permissions: {} } })).err).toBeTruthy();
+  expect(writes).toHaveLength(0);
+  expect((await emitAsync(emitter, 'setSetting', { ...payload, value })).err).toBeNull();
+  expect(JSON.parse(writes[0].value).languages).toEqual(['en', 'zh-cn']);
+});
+
 test('settings manager exposes option, list, bulk and delete events', async () => {
   const emitter = new EventEmitter();
   setupSettingsListeners(emitter);

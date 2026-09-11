@@ -47,7 +47,9 @@ export function openPopover(anchor, options) {
     const panel = document.createElement('section');
     const panelId = nextPopoverId();
     panel.id = panelId;
-    panel.className = 'bp-popover';
+    // Like the dialog panel, the portal's content owns its shared control styles,
+    // including when Studio scopes its UI kit beneath the portal layer.
+    panel.className = 'bp-popover app-scope';
     panel.style.cssText = 'position:fixed;pointer-events:auto;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto';
     panel.dataset.placement = options.placement ?? 'bottom-start';
     panel.setAttribute('role', options.role ?? 'dialog');

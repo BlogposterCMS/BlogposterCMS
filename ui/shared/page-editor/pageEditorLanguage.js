@@ -1,15 +1,14 @@
 import { createFormField } from '../forms/formField.js';
 import { normalizePageLanguage } from './pageEditorData.js';
+import { loadContentLanguages } from '../localization/contentLanguages.js';
+import { contentLanguageLabel } from '../localization/contentLanguageConfig.js';
 export function mountPageLanguageControl(host, open, report) {
     let activeLanguage = '';
     const row = document.createElement('div');
     row.className = 'page-content-actions';
-    const input = document.createElement('input');
-    input.type = 'text';
+    const input = document.createElement('select');
     input.id = 'page-content-language';
-    input.maxLength = 35;
-    input.autocomplete = 'off';
-    input.placeholder = 'en';
+    let loading = true, busy = false;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button secondary sm';
@@ -18,7 +17,7 @@ export function mountPageLanguageControl(host, open, report) {
     host.append(row);
     const hint = document.createElement('p');
     hint.id = 'page-content-language-hint';
-    hint.textContent = 'Language code, for example en or zh-CN. Save or discard changes before switching. Layout, address and tags are shared.';
+    hint.textContent = 'Available languages come from General Settings. Save or discard changes before switching. Layout, address and tags are shared.';
     input.setAttribute('aria-describedby', hint.id);
     host.append(hint);
     const activate = async () => {
@@ -32,9 +31,18 @@ export function mountPageLanguageControl(host, open, report) {
         }
     };
     button.addEventListener('click', () => { void activate(); });
+    const refresh = (language, nextBusy) => {
+        activeLanguage = language;
+        busy = nextBusy;
+        if (language && ![...input.options].some(option => option.value === language))
+            input.add(new Option(`${contentLanguageLabel(language)} (existing content)`, language));
+        input.value = language;
+        input.disabled = button.disabled = busy || loading;
+    };
+    void loadContentLanguages().then(config => { input.replaceChildren(...config.languages.map(language => new Option(contentLanguageLabel(language), language))); loading = false; refresh(activeLanguage, busy); }).catch(error => report(error.message));
     input.addEventListener('keydown', event => { if (event.key === 'Enter') {
         event.preventDefault();
         void activate();
     } });
-    return { refresh(language, busy) { activeLanguage = input.value = language; input.disabled = button.disabled = busy; } };
+    return { refresh };
 }

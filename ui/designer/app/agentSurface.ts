@@ -1,3 +1,4 @@
+import { designerLocaleState, designerLocaleActions, requestDesignerLanguage, finishDesignerLanguageSwitch, resetDesignerLocale } from './localization/designerLocale.js';
 import {
   createAgentControlClient,
   createAgentSurfaceClient,
@@ -49,6 +50,8 @@ import {
 import { getBuilderViewportState } from './renderer/viewportState.js';
 import { readDesignerDraftInputs } from './renderer/draftInputs.js';
 import { readContainerSettings } from '../../shared/layout/layoutDom.js';
+import { startDesignerLinkFeedback, designerLinkFeedbackState } from './links/designerLinkFeedback.js';
+import { documentEditorModeState, documentEditorModeAction, openDocumentMode } from './renderer/pageContentSwitch.js';
 import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
 import {
   normalizeResponsivePlacementContract,
@@ -1655,6 +1658,9 @@ export async function buildDesignerAgentSnapshot(
       feedbackWarningCount: feedbackWarnings
     },
     state: {
+      linkFeedback: designerLinkFeedbackState(),
+      documentEditor: documentEditorModeState(),
+      localization: designerLocaleState(),
       activeSceneId,
       activeSceneTitle,
       designId: document.body.dataset.designId || null,
@@ -1958,12 +1964,12 @@ const designerCommandGuard = createWorkspaceCommandGuard(() => {
 export const designerHandoffState = () => designerCommandGuard.snapshot();
 
 function designerActions() {
-  return DESIGNER_AGENT_ACTIONS.map(action => ({
+  return [...DESIGNER_AGENT_ACTIONS, ...designerLocaleActions, ...(documentEditorModeState().pageId ? [documentEditorModeAction] : [])].map(action => ({
     ...action,
     action: String(action.action),
     readOnly: action.action === 'surface.refresh' || String(action.action).endsWith('.refresh') || action.action === 'sitePresets.export' || action.action === 'sitePresets.component',
     acceptsDraft: true,
-    confirm: action.action === 'design.publish' || String(action.action).endsWith('.delete'),
+    confirm: action.action === 'locale.reset' || action.action === 'design.publish' || action.action === 'page.openDocument' || String(action.action).endsWith('.delete'),
     run: (params: Record<string, unknown>) => dispatchDesignerAgentCommand({ action: action.action, params })
   }));
 }
@@ -1986,6 +1992,9 @@ export async function handleDesignerAgentCommand(command: AgentSurfaceCommand): 
 }
 
 async function dispatchDesignerAgentCommand(command: AgentSurfaceCommand): Promise<Record<string, unknown>> {
+  if (commandAction(command) === 'locale.reset') return { handled: true, ...await resetDesignerLocale() };
+  if (commandAction(command) === 'locale.open') return { handled: true, ...await requestDesignerLanguage(command.params?.language) };
+  if (commandAction(command) === 'page.openDocument') return { handled: true, ...await openDocumentMode() };
   const commandPort = window.blogposterDesignerCommands;
   if (commandPort && typeof commandPort.execute === 'function') {
     const result = await commandPort.execute(command);
@@ -2006,6 +2015,7 @@ async function dispatchDesignerAgentCommand(command: AgentSurfaceCommand): Promi
 export function startDesignerAgentSurface(): AgentSurfaceClient | null {
   if (typeof window === 'undefined') return null;
   const root = document.getElementById('builderRow') || document.body;
+  startDesignerLinkFeedback(root);
   registerWorkspaceChanges(root, {
     isDirty: () => designerHandoffState().dirty,
     isBusy: () => designerHandoffState().busy
@@ -2019,6 +2029,7 @@ export function startDesignerAgentSurface(): AgentSurfaceClient | null {
     snapshotIntervalMs: 3000,
     pollIntervalMs: 1400,
     buildSnapshot: buildDesignerAgentSnapshot,
+    onCommandSettled: (_command, acknowledged) => { if (acknowledged) finishDesignerLanguageSwitch(); },
     handleCommand: handleDesignerAgentCommand
   });
   const control = createAgentControlClient({

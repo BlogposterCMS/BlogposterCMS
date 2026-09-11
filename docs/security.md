@@ -1,5 +1,12 @@
 # Security Notes
 
+Content-language configuration uses one validated Settings value with at most
+60 canonical locale codes and a required primary choice. Existing Settings edit
+permission protects writes, including agent writes. The admin `settings.public`
+read uses the same public-key allowlist as the public facade; reading non-secret
+language choices does not grant private Settings reads or writes. The catalog
+is an authoring choice list, not a content-access or commerce-market permission.
+
 ## ACR source builds
 
 The canonical Dockerfile accepts complete externally signed CI inputs or obtains
@@ -185,6 +192,13 @@ published-data checks. No registration ACK, permission grant or alternate API
 has been introduced. Deploy the updated browser bundles with the facade change.
 
 ## Initial public presentation
+
+The structure-first response resolves embedded/page design snapshots through the
+same published-only facade, deduplicated per response and bounded to 64 reads and
+16 reference levels. It executes no widget code server-side. The browser reuses
+those route/language-scoped snapshots rather than requesting a potentially newer
+design during adoption. Missing/denied references expose no draft content.
+Read-time v1 compatibility performs no writes to designs or attachments.
 
 The public page route resolves pages, envelopes and linked layouts through
 `cmsPublicRuntimeRequest` using a validated public principal. Publication/lane
@@ -489,3 +503,19 @@ bound SQL/JSON membership or MongoDB `$all`, with publication/visibility enforce
 before pagination. Localized article projections retain the canonical status and
 identity; a missing locale is not replaced with another language's article.
 Search mirrors remain repairable derived state, not an authorization authority.
+
+
+## Localized Designer and document editing
+
+Locale overrides are bounded to 60 variants, 2 MB and validated delta depth/key
+limits. Prototype keys are rejected. Resolved widget HTML/CSS passes the existing
+Designer save sanitizer for every variant; page translations retain the Pages
+sanitizer and permissions. Public requests enforce publication before returning
+only their selected layout and widgets. Main design, page identity and attachments
+are not rewritten by opening a locale.
+
+The existing trusted-frame AppLoader message guard now accepts a local
+`appView.setLanguage` operation. It validates a bounded language code and only
+replaces that query parameter on the current shell URL; arbitrary origins, paths,
+query keys or navigation targets are not accepted. Sandboxed documents use
+absolute same-host module URLs and stay on the owning app AgentManager surface.

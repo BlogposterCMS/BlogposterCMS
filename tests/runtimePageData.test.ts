@@ -169,7 +169,7 @@ describe('runtimePageData', () => {
       moduleType: 'core',
       resource: 'designer',
       action: 'get',
-      params: { id: 'design-1', lane: 'public' }
+      params: { id: 'design-1', lane: 'public', language: 'en' }
     });
     expect(emit).toHaveBeenNthCalledWith(2, 'cmsAdminApiRequest', {
       jwt: 'admin-token',

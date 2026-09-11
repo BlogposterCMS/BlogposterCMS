@@ -1,6 +1,7 @@
 import { emitRuntimeAdmin } from '../api-client/runtimeFacade.js';
 import { ownPagePresentation, pageLayoutMeta, presentationMeta } from '../layout/pagePresentation.js';
 import { savePageEditorPage, loadPageEditorTranslation, type PageRecord } from '../page-editor/pageEditorData.js';
+import type { ArticleLocaleProgress } from './articleLocale.js';
 
 export const ARTICLE_FORMAT = 'article-v1';
 export type ArticlePage = PageRecord;
@@ -16,18 +17,16 @@ export function pageContentKind(page: ArticlePage): 'design' | 'html' | 'article
 export async function readArticlePage(id: string | number, language?: string): Promise<ArticlePage> {
   if (!window.meltdownEmit) throw new Error('ARTICLE_RUNTIME_UNAVAILABLE');
   const selectedLanguage = language || new URLSearchParams(window.location.search).get('contentLang') || undefined;
-  const page = selectedLanguage
-    ? await loadPageEditorTranslation(window.meltdownEmit, window.ADMIN_TOKEN, String(id), selectedLanguage)
-    : await emitRuntimeAdmin<ArticlePage>(window.meltdownEmit, window.ADMIN_TOKEN, 'pages', 'get', { pageId: id });
+  const page = await loadPageEditorTranslation(window.meltdownEmit, window.ADMIN_TOKEN, String(id), selectedLanguage);
   if (!page || String(page.id) !== String(id)) throw new Error('ARTICLE_PAGE_NOT_FOUND');
   return { ...page, meta: presentationMeta(page) };
 }
 
 function contentFingerprint(page: ArticlePage): string {
-  return JSON.stringify([page.html || '', page.meta?.contentFormat, page.meta?.htmlFileName, ownPagePresentation(page)]);
+  return JSON.stringify([page.html || '', page.css || '', page.meta?.contentFormat, page.meta?.htmlFileName, ownPagePresentation(page)]);
 }
 
-async function saveDraft(page: ArticlePage): Promise<void> {
+export async function saveContentPageDraft(page: ArticlePage): Promise<void> {
   // Reuse the page editor payload so SEO, publication and layout fields survive.
   await savePageEditorPage(window.meltdownEmit, window.ADMIN_TOKEN, page, {
     title: page.trans_title || page.title || '', slug: page.slug || '', status: page.status || 'draft',
@@ -37,13 +36,35 @@ async function saveDraft(page: ArticlePage): Promise<void> {
   window.pageDataLoader?.clear?.();
 }
 
-export async function saveArticle(base: ArticlePage, html: string): Promise<ArticlePage> {
+export function articleTitle(page: ArticlePage): string { return page.trans_title ?? page.title ?? ''; }
+
+function withTitle(current: ArticlePage, base: ArticlePage, title?: string): ArticlePage {
+  if (title === undefined || title === articleTitle(base)) return current;
+  if (articleTitle(current) !== articleTitle(base)) throw new Error('ARTICLE_TITLE_CHANGED: Reload before saving; another editor changed the title.');
+  if (!title.trim() || title.trim().length > 240) throw new Error('ARTICLE_TITLE_INVALID: Enter a title between 1 and 240 characters.');
+  // Preserve explicit SEO overrides; the public resolver derives its fallback from this title.
+  return { ...current, trans_title: title.trim(), ...(!current.contentLanguage || current.contentLanguage === current.language ? { title: title.trim() } : {}) };
+}
+
+export async function saveArticle(base: ArticlePage, html: string, title?: string, progress?: ArticleLocaleProgress): Promise<ArticlePage> {
   const current = await readArticlePage(base.id!, base.contentLanguage);
   if (contentFingerprint(current) !== contentFingerprint(base)) throw new Error('ARTICLE_CONTENT_CHANGED: Reload before saving; another editor changed this content.');
   if (!['article', 'empty'].includes(pageContentKind(current))) throw new Error('ARTICLE_FORMAT_CONFLICT: Existing HTML/design must not be converted implicitly.');
-  const next = { ...current, html, meta: { ...current.meta, contentFormat: ARTICLE_FORMAT } };
-  await saveDraft(next);
-  return next;
+  const locale = current.contentLanguage || current.language || 'en';
+  const next = { ...withTitle(current, base, title), html, meta: { ...current.meta, contentFormat: ARTICLE_FORMAT,
+    ...(progress ? { articleTranslations: { ...current.meta?.articleTranslations as object, [locale]: progress } } : {}) } };
+  await saveContentPageDraft(next);
+  return { ...next, trans_lang: next.contentLanguage || next.language || 'en' };
+}
+
+/** Existing imported HTML has its own source editor; never feed arbitrary layouts through a rich-text schema. */
+export async function saveHtmlContent(base: ArticlePage, html: string, css: string, title: string): Promise<ArticlePage> {
+  const current = await readArticlePage(base.id!, base.contentLanguage);
+  if (contentFingerprint(current) !== contentFingerprint(base)) throw new Error('ARTICLE_CONTENT_CHANGED: Reload before saving; another editor changed this content.');
+  if (pageContentKind(current) !== 'html') throw new Error('ARTICLE_FORMAT_CONFLICT: Reopen the current content editor.');
+  const next = { ...withTitle(current, base, title), html, css };
+  await saveContentPageDraft(next);
+  return { ...next, trans_lang: next.contentLanguage || next.language || 'en' };
 }
 
 export async function createPageDesign(base: ArticlePage): Promise<string> {
@@ -56,6 +77,6 @@ export async function createPageDesign(base: ArticlePage): Promise<string> {
   if (saved?.id == null) throw new Error('PAGE_DESIGN_CREATE_FAILED');
   const latest = await readArticlePage(base.id!);
   if (pageContentKind(latest) !== 'empty') throw new Error('PAGE_CONTENT_CHANGED: Design saved in Design Studio but not attached.');
-  await saveDraft({ ...latest, meta: pageLayoutMeta(latest, 'composed', String(saved.id), current.title) });
+  await saveContentPageDraft({ ...latest, meta: pageLayoutMeta(latest, 'composed', String(saved.id), current.title) });
   return String(saved.id);
 }

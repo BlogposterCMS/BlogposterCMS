@@ -599,6 +599,25 @@ preview service requests stay unavailable. See [migration](community-isolation.m
 
 ## Container events and data
 
+`state.linkFeedback` describes the same immediate destination checks visible on
+native widget links and link fields. See [Link target feedback](link-target-feedback.md).
+Page-bound Studio sessions also expose `state.documentEditor` and the confirmed
+`page.openDocument` action. The context carries a page id and content language;
+Pages rechecks the current design association and permissions before any write.
+The existing command guard owns revision, draft, busy and confirmation checks.
+
+These bounded adapter hooks stay in the existing large agent surface and header
+files; link checking, modal editing and page-mode policy live in cohesive modules.
+No second agent transport, persistence owner or Designer command port is added.
+
+Public first paint and Studio's container controls now share the normalized v1
+container/style projection. Existing `layoutTree`, placement, `styleSource` and
+content-host feedback describe the structure shipped in the first response too;
+no separate loading-design model or migration action exists. Read-time
+compatibility preserves saved IDs and attachment ownership. Explicit content
+hosts remain distinct from the selected workarea. Missing nested references
+retain the existing public permission boundary and cannot expose draft designs.
+
 Use `container.settings.set` with `settings.interaction` to configure the same
 rules as the Behavior inspector. `null` restores a static container. The rule
 is part of the saved layout document and `feedback.layoutTree.nodes[].settings`.
@@ -622,3 +641,13 @@ It creates a new draft; the resulting Studio document exposes the ordinary
 layout, widget, revision and draft feedback. A dedicated library import command
 is not exposed through AgentManager yet. Do not substitute arbitrary DOM scripts
 or a separate import/publishing authority for that missing adapter.
+
+
+## Locale editing and content handoffs
+
+`state.localization` reports active/main language, saved override availability
+and per-widget source fallback. `locale.open` updates the editor context after
+acknowledgement; existing layout/widget/viewport commands then target that locale.
+`locale.reset` requires confirmation and saves through the same optimistic version.
+`page.openDocument` loads its editor asset before changing the page association.
+See [localized authoring](editor-localization.md) for the full contract.

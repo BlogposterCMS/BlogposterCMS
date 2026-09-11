@@ -369,6 +369,13 @@ function createAdminShellRoutes({
     if (appName === 'designer' && designId) {
       queryParams.set('designId', designId);
       if (designVersion) queryParams.set('designVersion', designVersion);
+      // Editor context only. Page ownership and permissions are rechecked by Pages on each action.
+      const contentPageId = String(req.query.contentPageId || '');
+      const contentLang = String(req.query.contentLang || '');
+      const designLang = String(req.query.lang || '');
+      if (/^[a-z]{2,8}(?:-[a-z0-9]{1,8})*$/i.test(designLang) && designLang.length <= 35) queryParams.set('lang', designLang);
+      if (/^[A-Za-z0-9_-]{1,80}$/.test(contentPageId)) queryParams.set('contentPageId', contentPageId);
+      if (/^[a-z]{2,8}(?:-[a-z0-9]{1,8})*$/i.test(contentLang) && contentLang.length <= 35) queryParams.set('contentLang', contentLang);
     } else if (pageId) {
       queryParams.set('pageId', pageId);
     }

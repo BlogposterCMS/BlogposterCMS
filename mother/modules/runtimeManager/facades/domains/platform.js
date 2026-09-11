@@ -24,7 +24,8 @@ const adminActions = Object.freeze({
   settings: Object.freeze({
     list: { eventName: BACKEND_EVENTS.LIST_SETTINGS, moduleName: 'settingsManager', permission: 'settings.core.view' },
     get: { eventName: BACKEND_EVENTS.GET_SETTING, moduleName: 'settingsManager', permission: 'settings.core.view' },
-    public: { eventName: BACKEND_EVENTS.GET_PUBLIC_SETTINGS, moduleName: 'settingsManager', permission: 'settings.core.view' },
+    // This handler enforces the existing public key allowlist. Authors need no settings-management permission to read it.
+    public: { eventName: BACKEND_EVENTS.GET_PUBLIC_SETTINGS, moduleName: 'settingsManager' },
     cmsMode: { eventName: BACKEND_EVENTS.GET_CMS_MODE, moduleName: 'settingsManager', permission: 'settings.core.view' },
     setCmsMode: { eventName: BACKEND_EVENTS.SET_CMS_MODE, moduleName: 'settingsManager', permission: 'settings.core.edit' },
     set: { eventName: BACKEND_EVENTS.SET_SETTING, moduleName: 'settingsManager', permission: 'settings.core.edit' },

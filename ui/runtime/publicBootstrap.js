@@ -10,7 +10,7 @@ export function readPublicBootstrap() {
         || (value.version === 2 && (!value.htmlRendered || !document.getElementById('bp-initial-html')))) {
         console.warn('PUBLIC_BOOTSTRAP_INVALID: Falling back to client page discovery.');
         // Never leave the previous response's owned DOM beside a fresh CSR render.
-        document.querySelectorAll('#bp-initial-html, #bp-grid[data-bp-initial-layout="true"], #bp-initial-page-css')
+        document.querySelectorAll('#bp-initial-html, #bp-grid[data-bp-initial-layout="true"], #bp-grid[data-bp-initial-structure], #bp-initial-page-css')
             .forEach(element => element.remove());
         delete document.documentElement.dataset.bpPublicLayoutReady;
         return null;

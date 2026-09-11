@@ -42,3 +42,13 @@ test('compact handoffs without their DOM fall back to canonical CSR discovery', 
   (window as any).BP_PUBLIC_BOOTSTRAP = { version: 2, pathname: '/page', slug: 'page', language: 'en', htmlRendered: true, envelope: { attachments: [] } };
   expect(readPublicBootstrap()).toBeNull();
 });
+
+test('a stale structured response removes only its owned shell and preserves unrelated attachments', () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  window.history.replaceState({}, '', '/new');
+  document.body.innerHTML = '<div id="bp-grid" data-bp-initial-structure="1"><div id="bp-initial-html">Old</div></div><img id="attachment" src="/media/original.png">';
+  (window as any).BP_PUBLIC_BOOTSTRAP = { version: 2, pathname: '/old', slug: 'old', language: 'en', htmlRendered: true, envelope: { attachments: [] } };
+  expect(readPublicBootstrap()).toBeNull();
+  expect(document.getElementById('bp-grid')).toBeNull();
+  expect(document.getElementById('attachment')).not.toBeNull();
+});

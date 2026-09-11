@@ -29,7 +29,7 @@ async function loadDesign(descriptor = {}, ctx) {
     css.forEach(href => preloadLink(href, 'stylesheet'));
     // HTML-only pages still need runtime CSS, but own no Designer layout.
     const layout = ctx?.initialLayoutResolved ? ctx.initialLayout : layoutRef ? await emitPublicRuntime(ctx, 'designer', 'getLayout', {
-        layoutRef
+        layoutRef, language: new URLSearchParams(location.search).get('lang') || document.documentElement.lang || 'en'
     }).catch(error => {
         console.warn('[DesignerPublicLoader:LAYOUT_LOAD_FAILED] Falling back to an empty layout.', error);
         return null;

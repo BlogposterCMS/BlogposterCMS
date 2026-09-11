@@ -139,7 +139,7 @@ export async function loadHtml(
   }
 
   const root = contentHost || document.getElementById('app') || document.body;
-  if (adopted && contentHost) contentHost.append(initialHtml);
+  if (adopted && contentHost && initialHtml.parentElement !== contentHost) contentHost.append(initialHtml);
 
   if (html && !adopted) {
     if (!sanitizeHtml || sanitizerUnavailable) {

@@ -1,4 +1,6 @@
 .bp-popover-layer {
+  // The shared portal's inline positioning consumes this token, including inside document modals.
+  --bp-layer-popover: 5300;
   position: fixed;
   inset: 0;
   z-index: 5300;

@@ -138,11 +138,12 @@ async function loadWidgets(descriptor = {}, ctx = {}) {
             emitPublicRuntime(ctx, 'widgets', 'list')
         ]);
         root.querySelector('#bp-grid[data-bp-initial-layout="true"]')?.remove();
-        const shell = document.createElement('div');
+        const shell = root.querySelector('#bp-grid[data-bp-initial-structure="1"]') || document.createElement('div');
         shell.id = 'bp-grid';
         if (layout.styles?.background)
             shell.style.background = layout.styles.background;
-        root.append(shell);
+        if (!shell.isConnected)
+            root.append(shell);
         const byId = new Map(registry.map(def => [String(def.widgetId), def]));
         const placements = (layout.items || []).map(item => {
             const fallback = parseWidgetCode(byId.get(String(item.widgetId))?.content);
@@ -153,6 +154,12 @@ async function loadWidgets(descriptor = {}, ctx = {}) {
         const publicEmit = async (event, payload = {}) => {
             if (event !== RUNTIME_PUBLIC_REQUEST_EVENT)
                 throw new Error('WIDGET_PUBLIC_EVENT_DENIED: Only the public facade is available.');
+            const params = payload.params;
+            if (payload.resource === 'designer' && payload.action === 'get' && params?.id
+                && ctx.initialDesignSnapshots && Object.hasOwn(ctx.initialDesignSnapshots, params.id)) {
+                const snapshot = ctx.initialDesignSnapshots[params.id];
+                return (snapshot ? { design: { layout: snapshot.document?.layoutTree, bg_color: snapshot.styles?.background }, widgets: snapshot.items } : null);
+            }
             return ctx.meltdownEmit(event, { ...payload, jwt: ctx.publicToken });
         };
         const publicHydrationJobs = [];

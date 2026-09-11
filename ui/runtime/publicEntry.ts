@@ -113,6 +113,7 @@ export async function bootPublicRuntime(): Promise<void> {
     env: 'csr',
     initialLayoutResolved: bootstrap?.layoutResolved === true,
     initialLayout: bootstrap?.layout,
+    initialDesignSnapshots: bootstrap?.designSnapshots,
     initialHtml: bootstrap?.htmlRendered ? document.getElementById('bp-initial-html') : null
   } as const;
   await orchestrate(envelope, ctx);

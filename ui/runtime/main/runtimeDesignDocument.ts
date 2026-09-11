@@ -187,10 +187,12 @@ export async function renderRuntimeDesignDocument(
   if (!target || !tree) return false;
   composedContentHosts.delete(target);
 
-  const shell = window.document.createElement('div');
+  const initialShell = Array.from(target.children).find(child => child instanceof HTMLElement
+    && child.dataset.bpLayoutDocument === '1') as HTMLElement | undefined;
+  const shell = initialShell || window.document.createElement('div');
   shell.className = 'runtime-design-document';
-  const idMap = renderLayoutTree(tree, shell);
-  target.appendChild(shell);
+  const idMap = renderLayoutTree(tree, shell, Boolean(initialShell));
+  if (!initialShell) target.appendChild(shell);
 
   const fallbackWorkareaId = primaryWorkareaId(tree);
   const leaves = collectLeaves(tree);
@@ -216,7 +218,7 @@ export async function renderRuntimeDesignDocument(
   // inner page design receives it later; reusable footer slots must not adopt it.
   if (!options.contentDesignId && options.initialPageHtml?.isConnected) {
     const contentHost = getRuntimeDesignContentMount(target);
-    if (contentHost.dataset.dynamicHost === 'true') contentHost.append(options.initialPageHtml);
+    if (contentHost.dataset.dynamicHost === 'true' && options.initialPageHtml.parentElement !== contentHost) contentHost.append(options.initialPageHtml);
   }
 
   for (const leaf of leaves) {
@@ -253,9 +255,11 @@ export async function renderRuntimeDesignDocument(
     if (!options.emit) throw new Error('RUNTIME_PAGE_DESIGN_EMITTER_MISSING: Cannot load the page design.');
     const response = await fetchRuntimeDesign(options.emit, options.contentDesignId, lane);
     if (!response) throw new Error('RUNTIME_PAGE_DESIGN_UNAVAILABLE: The page design is unavailable.');
-    const pageDesign = window.document.createElement('div');
+    const initialPageDesign = Array.from(host.children).find(child => child instanceof HTMLElement
+      && child.classList.contains('runtime-page-design')) as HTMLElement | undefined;
+    const pageDesign = initialPageDesign || window.document.createElement('div');
     pageDesign.className = 'runtime-page-design';
-    host.append(pageDesign);
+    if (!initialPageDesign) host.append(pageDesign);
     applyRuntimeDesignStyles(pageDesign, response.design);
     const rendered = await renderRuntimeDesignDocument(pageDesign, getRuntimeDesignDocument({ ...response, placements: getRuntimeDesignLayout(response) }), allWidgets, lane, {
       emit: options.emit, widgetEmit: options.widgetEmit, designPath: [...designPath, options.contentDesignId],

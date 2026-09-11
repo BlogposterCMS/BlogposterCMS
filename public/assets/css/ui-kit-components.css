@@ -557,6 +557,7 @@ textarea):focus {
   width: 100%;
 }
 .bp-ui-kit-surface .custom-select .display {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -621,6 +622,7 @@ textarea):focus {
   transform: rotate(180deg);
 }
 .bp-ui-kit-surface .custom-select .options {
+  box-sizing: border-box;
   position: absolute;
   z-index: 1000;
   top: calc(100% + 8px);
@@ -688,6 +690,7 @@ textarea):focus {
   }
 }
 .bp-ui-kit-surface .bp-popover-layer {
+  --bp-layer-popover: 5300;
   position: fixed;
   inset: 0;
   z-index: 5300;

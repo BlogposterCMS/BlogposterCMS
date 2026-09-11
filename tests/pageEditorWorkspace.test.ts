@@ -32,6 +32,7 @@ describe('fixed Page Editor', () => {
     emit = jest.fn(async (_event, payload) => {
       const action = `${payload.resource}.${payload.action}`;
       if (action === fail) throw new Error('offline');
+      if (action === 'settings.public') return { WEBSITE_CONTENT_LANGUAGES: JSON.stringify({ version: 1, primaryLanguage: 'en', languages: ['en', 'zh'] }) };
       if (action === 'designer.list') return { designs: [{ id: 'design:one', title: 'Landing' }] };
       if (action === 'media.listLocalFolder') return { files: ['sample.html'] };
       if (action === 'apps.builderList') return { apps: [{ name: 'designer' }] };
@@ -56,6 +57,7 @@ describe('fixed Page Editor', () => {
       zh: { trans_lang: null, trans_title: null, html: null, css: null, meta_desc: null }
     };
     emit.mockImplementation(async (_event, payload) => {
+      if (payload.resource === 'settings' && payload.action === 'public') return { WEBSITE_CONTENT_LANGUAGES: JSON.stringify({ version: 1, primaryLanguage: 'en', languages: ['en', 'zh'] }) };
       if (payload.resource === 'pages' && payload.action === 'get') return { ...page, ...translations[payload.params.language || 'en'] };
       if (payload.resource === 'pages' && payload.action === 'update') {
         const t = payload.params.translations[0];

@@ -1,6 +1,7 @@
 import { bpDialog } from '../../../../shared/dialogs/bpDialog.js';
 import { sanitizeHtml } from '../../../../shared/sanitize/sanitizer.js';
 import { mountPageLayoutControl } from './pageLayoutControl.js';
+import { mountLinkFeedback, htmlSourceLinks } from '../../../../shared/links/linkFeedback.js';
 import { attachHtmlMeta, clearPageContentCache, detachHtmlMeta, errorMessage, fetchBuilderApps, fetchHtmlFile, fetchPublishedDesigns, listHtmlFiles, savePageContent, toPage, uploadHtmlFile } from './pageContentData.js';
 export async function render(el, options = {}) {
     if (!el)
@@ -51,6 +52,7 @@ export async function render(el, options = {}) {
     const actions = root.querySelector('.page-content-actions');
     const htmlInput = root.querySelector('.page-content-body textarea');
     htmlInput.value = page.html || '';
+    const linkFeedback = mountLinkFeedback(root, { collect: () => htmlSourceLinks(htmlInput) });
     const cssLabel = document.createElement('label');
     cssLabel.className = 'page-content-body';
     cssLabel.textContent = 'Page content CSS';
@@ -111,6 +113,7 @@ export async function render(el, options = {}) {
         page.html = values.html;
         page.meta = values.meta;
         htmlInput.value = page.html;
+        linkFeedback.schedule();
         options.onChange?.();
         message(options.onChange ? 'Content changed. Save the page to apply it.' : 'Content saved.');
         renderSelected();
@@ -263,6 +266,7 @@ export async function render(el, options = {}) {
     void loadLibrary().then(focusEntry);
     options.onController?.({
         read: () => ({ loading, busy, libraryFailed, error: feedback.dataset.errorCode ? feedback.textContent : null,
+            linkFeedback: linkFeedback.read(),
             selected: { designId: page.meta?.designId || null, htmlFileName: page.meta?.htmlFileName || null }, layout: layout.read(),
             designs: designs.map(({ id, title }) => ({ id, title })), files }),
         // The caller supplies the common revision/draft/confirmation guard.

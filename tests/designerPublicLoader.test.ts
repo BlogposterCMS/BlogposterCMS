@@ -48,7 +48,7 @@ describe('designer public loader', () => {
       resource: 'designer',
       action: 'getLayout',
       params: {
-        layoutRef: 'layout:landing@v1',
+        layoutRef: 'layout:landing@v1', language: 'en',
       },
     });
     expect(ctx.activeLayout).toBe(layout);

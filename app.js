@@ -11,6 +11,10 @@ try {
 
 const path = require('path');
 const { verifyRuntimeIntegrity } = require('./mother/security/runtimeIntegrity');
+const { createShutdownController } = require('./mother/server/lifecycle/shutdown');
+
+const shutdownController = createShutdownController();
+shutdownController.installProcessHandlers();
 
 async function startBlogposter() {
   // This gate intentionally runs before loading the event bus or any module.
@@ -18,38 +22,12 @@ async function startBlogposter() {
   await verifyRuntimeIntegrity({ rootDir: __dirname });
 
   const { installDevFileLogger } = require('./mother/utils/devFileLogger');
-  const { motherEmitter, meltdownForModule } = require('./mother/emitters/motherEmitter');
-  const moduleNameFromStack = require('./mother/utils/moduleNameFromStack');
+  const { motherEmitter } = require('./mother/emitters/motherEmitter');
   const {
     ensureRequiredEnv,
     loadSecretsOverrides
   } = require('./mother/server/config/environment');
   const { createBlogposterApp } = require('./mother/server/createBlogposterApp');
-  const { attachShutdownHandlers } = require('./mother/server/lifecycle/shutdown');
-
-  function handleGlobalError(err) {
-    console.error('[GLOBAL] Unhandled error =>', err);
-
-    const moduleName = moduleNameFromStack(err.stack || '');
-    if (moduleName) {
-      meltdownForModule(err.message, moduleName, motherEmitter);
-    }
-  }
-
-  process.on('uncaughtException', handleGlobalError);
-  process.on('unhandledRejection', reason => {
-    let err;
-    if (reason instanceof Error) {
-      err = reason;
-    } else if (reason && typeof reason === 'object' && reason.stack) {
-      err = new Error(String(reason.message || reason.toString()));
-      err.stack = reason.stack;
-    } else {
-      err = new Error(String(reason));
-    }
-    handleGlobalError(err);
-  });
-
   ensureRequiredEnv(process.env);
   loadSecretsOverrides({ rootDir: __dirname });
 
@@ -63,13 +41,11 @@ async function startBlogposter() {
   const server = app.listen(port, () => {
     console.log(`[SERVER] BlogPosterCMS is listening on http://localhost:${port}/`);
   });
-  server.once('close', closeDevelopmentServices);
-  attachShutdownHandlers(server);
+  shutdownController.attachServer(server, { onClose: closeDevelopmentServices });
 }
 
-startBlogposter().catch(err => {
-  console.error('[SERVER INIT] Startup failed:', err);
-  process.exit(1);
+startBlogposter().catch(() => {
+  shutdownController.requestShutdown('STARTUP_FAILURE', 1);
 });
 
 module.exports = {

@@ -102,8 +102,7 @@ function createPublicPageRoutes({
               moduleType: 'core'
             });
       } catch (tokenErr) {
-        console.error('[SERVER] Failed to obtain public token ->', tokenErr);
-        return res.status(500).send('Server misconfiguration');
+        return next(tokenErr);
       }
 
       const requestPublic = async (resource, action, params = {}) => {
@@ -212,7 +211,6 @@ function createPublicPageRoutes({
       }
       res.send(html);
     } catch (err) {
-      console.error('[SERVER] /* render error ->', err);
       next(err);
     }
   });

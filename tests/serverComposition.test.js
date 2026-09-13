@@ -15,7 +15,7 @@ test('app.js stays a thin startup composition root', () => {
   expect(appSource).toContain('process.loadEnvFile()');
   expect(appSource).toContain('await verifyRuntimeIntegrity');
   expect(appSource).toContain('createBlogposterApp');
-  expect(appSource).toContain('attachShutdownHandlers');
+  expect(appSource).toContain('createShutdownController');
   expect(appSource).not.toContain("require('express')");
   expect(appSource).not.toMatch(/\bapp\.(?:get|post|delete|use)\(/);
   expect(appSource).not.toContain('mother/modules/');

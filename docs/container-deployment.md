@@ -91,6 +91,14 @@ probes share one check and results are cached for at most one second. `/health/l
 only proves that the HTTP process responds. Readiness does not prove every widget,
 external integration, media asset or browser rendering path works. Docker marking
 a container unhealthy does not itself restart or repair it.
+
+Uncaught exceptions and unhandled rejections now stop HTTP acceptance and exit
+nonzero through the bounded shutdown controller. SIGTERM/SIGINT drain normally;
+failed cleanup or the eight-second deadline exits nonzero. The deadline leaves
+margin before Docker's default ten-second stop grace. The existing
+`restart: unless-stopped` policy can restart an unexpectedly exited container;
+operator stops remain stops. This is crash recovery, not automatic recovery from
+an unhealthy-but-running container or whole-host failure.
 Before a public cutover, verify the real HTTPS origin, login, an authorized
 content save/read/reload, nested public pages, and public media. Back up both
 volumes and secrets, restore to an isolated instance, and verify the same paths.

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Contain public maintenance lookup failures in the HTTP error path, return non-cacheable bounded failure responses and avoid unnecessary maintenance-page queries during normal traffic. Bound graceful shutdown and exit unhealthy processes on uncaught exceptions or unhandled rejections so the container supervisor can recover them.
+
 - Renew host-owned core module credentials before expiry, including captured credentials in long-running public handlers, background jobs and lifecycle-managed service emitters. Preserve visitor/session authorization and fail closed on issuance errors. Make container readiness exercise the public runtime and page storage instead of returning unconditional success.
 
 - Stretch vertical navigation rows across the available sidebar width so submenu chevrons align at the far edge, and keep nested article links at regular weight while preserving the active-row treatment.

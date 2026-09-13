@@ -25,6 +25,7 @@ const { createPublicReadiness } = require('./health/publicReadiness');
 const { createMaintenanceMiddleware } = require('./http/maintenanceMiddleware');
 const { createMeltdownRouter } = require('./http/meltdownRouter');
 const { createPublicPageRoutes } = require('./http/publicPageRoutes');
+const { publicRequestError } = require('./http/publicRequestError');
 const { mountSecurityMiddleware } = require('./http/securityMiddleware');
 const { mountStaticAssetRoutes } = require('./http/staticAssets');
 const { mountDevReloadRoutes } = require('./development/devReload');
@@ -169,6 +170,8 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     getCachedCoreToken,
     motherEmitter
   });
+
+  app.use(publicRequestError);
 
   return {
     app,

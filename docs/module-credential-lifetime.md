@@ -57,3 +57,33 @@ drain/disposal and bounded readiness failure. The local CMS was also exercised
 with `JWT_EXPIRY_HIGH=10s`: Docs, Help and readiness continued responding after
 multiple lifetimes, including opening and reloading a Docs article in the browser.
 This local test is not evidence that a production image has been updated.
+
+## Additional failure containment
+
+The public maintenance middleware previously awaited credential acquisition
+outside an Express 4 rejection handler and treated failed setting reads as
+disabled maintenance. It now forwards failures to the HTTP error boundary.
+Unavailable dependencies receive a non-cacheable 503 with a stable response
+code, while unexpected request errors receive 500 without internal error data.
+A later healthy request can succeed without restarting the process. Normal
+requests read only the maintenance flag; the target page is read only when needed.
+
+Unhandled process errors are different from handled HTTP failures. Continuing
+after an uncaught error can leave modules deactivated and the host partially
+functional. The process shutdown path must stop accepting work, bound cleanup
+and exit nonzero; the existing container restart policy then provides recovery.
+Routine dependency errors must not trigger that fatal path.
+
+Real child-process HTTP tests exercise uncaught exceptions, unhandled rejections,
+held connections, stuck/rejected cleanup, repeated signals, fatal escalation and
+pre-server errors. Cleanup has an eight-second production deadline and does not
+load modules after an integrity-gate failure. A full local CMS start/read/shutdown
+smoke also confirms Docs and Help remain readable and normal shutdown exits zero.
+
+This protection is not high availability. An event-loop deadlock cannot execute
+an in-process shutdown deadline; Docker's unhealthy state alone does not restart
+it. Host-level health recovery, alert delivery and whole-host failover remain
+separate operational requirements. No such host change is installed by this fix.
+The current SQLite deployment requires one replica; do not add a second writer
+against the same SQLite volume. A redundant deployment needs an explicit data
+and traffic failover design, consistent backups and a tested restore.

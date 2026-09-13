@@ -16,7 +16,7 @@ async function withServer(router, callback) {
 }
 
 test('health routes expose bounded liveness and readiness metadata', async () => {
-  await withServer(createHealthRoutes({ version: '1.2.3' }), async origin => {
+  await withServer(createHealthRoutes({ version: '1.2.3', readiness: () => ({ ready: true }) }), async origin => {
     const live = await fetch(`${origin}/health/live`);
     const ready = await fetch(`${origin}/health/ready`);
 
@@ -29,6 +29,13 @@ test('health routes expose bounded liveness and readiness metadata', async () =>
       code: 'BLOGPOSTER_READY', status: 'ready', version: '1.2.3'
     });
     expect(ready.headers.get('cache-control')).toBe('no-store');
+  });
+});
+
+test('an unconfigured readiness check fails closed while liveness remains available', async () => {
+  await withServer(createHealthRoutes({ version: '1.2.3' }), async origin => {
+    expect((await fetch(`${origin}/health/live`)).status).toBe(200);
+    expect((await fetch(`${origin}/health/ready`)).status).toBe(503);
   });
 });
 

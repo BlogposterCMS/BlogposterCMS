@@ -165,6 +165,245 @@ test('authenticated emission uses the original emitter method and receiver', () 
   expect(scope.emitter.emit('allowed', { jwt: 'opaque-token' })).toBe(true);
 });
 
+test('refreshes only the captured host credential without mutating caller payloads', () => {
+  const emitter = new EventEmitter();
+  const credentialProvider = {
+    currentToken: () => 'renewed-core-token',
+    getToken: jest.fn()
+  };
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider,
+    capturedTokens: ['bootstrap-core-token']
+  });
+  scope.activate();
+  const seen = [];
+  emitter.on('dispatch', payload => seen.push(payload));
+  const bootstrapPayload = { jwt: 'bootstrap-core-token', moduleName: 'runtimeManager' };
+  const forwardedPublicPayload = { jwt: 'fresh-public-token', moduleName: 'runtimeManager' };
+  const forwardedUserPayload = { jwt: 'fresh-user-token', moduleName: 'runtimeManager' };
+  const bootstrapAliasPayload = { jwtToken: 'bootstrap-core-token', moduleName: 'runtimeManager' };
+
+  scope.emitter.emit('dispatch', bootstrapPayload);
+  scope.emitter.emit('dispatch', forwardedPublicPayload);
+  scope.emitter.emit('dispatch', forwardedUserPayload);
+  scope.emitter.emit('dispatch', bootstrapAliasPayload);
+
+  expect(seen).toEqual([
+    { jwt: 'renewed-core-token', moduleName: 'runtimeManager' },
+    forwardedPublicPayload,
+    forwardedUserPayload,
+    { jwtToken: 'renewed-core-token', moduleName: 'runtimeManager' }
+  ]);
+  expect(bootstrapPayload.jwt).toBe('bootstrap-core-token');
+  expect(bootstrapAliasPayload.jwtToken).toBe('bootstrap-core-token');
+  expect(credentialProvider.getToken).not.toHaveBeenCalled();
+});
+
+test('issuance failure calls back without dispatching the protected action', async () => {
+  const emitter = new EventEmitter();
+  const issuanceError = Object.assign(new Error('renewal unavailable'), {
+    code: 'CORE_MODULE_CREDENTIAL_ISSUANCE_FAILED'
+  });
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider: {
+      currentToken: () => null,
+      getToken: async () => { throw issuanceError; }
+    },
+    capturedTokens: ['bootstrap-core-token']
+  });
+  scope.activate();
+  const handler = jest.fn();
+  emitter.on('protected', handler);
+
+  let callbackError;
+  const completed = new Promise(resolve => {
+    expect(scope.emitter.emit('protected', { jwt: 'bootstrap-core-token' }, error => {
+      callbackError = error;
+      resolve();
+    })).toBe(true);
+  });
+  await completed;
+
+  expect(callbackError).toBe(issuanceError);
+  expect(handler).not.toHaveBeenCalled();
+  expect(scope.snapshot().pending).toBe(0);
+});
+
+test('disposing during credential renewal cancels the deferred dispatch', async () => {
+  const emitter = new EventEmitter();
+  let release;
+  const renewal = new Promise(resolve => { release = resolve; });
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider: {
+      currentToken: () => null,
+      getToken: () => renewal
+    },
+    capturedTokens: ['bootstrap-core-token']
+  });
+  scope.activate();
+  const handler = jest.fn();
+  const callback = jest.fn();
+  emitter.on('protected', handler);
+  scope.emitter.emit('protected', { jwt: 'bootstrap-core-token' }, callback);
+
+  expect(scope.snapshot().pending).toBe(1);
+  await scope.dispose();
+  release('renewed-core-token');
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(callback.mock.calls[0][0]).toMatchObject({ code: 'CORE_MODULE_SCOPE_CLOSED' });
+  expect(handler).not.toHaveBeenCalled();
+});
+
+test('draining waits for credential renewal and its admitted dispatch', async () => {
+  const emitter = new EventEmitter();
+  let release;
+  const renewal = new Promise(resolve => { release = resolve; });
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider: {
+      currentToken: () => null,
+      getToken: () => renewal
+    },
+    capturedTokens: ['bootstrap-core-token']
+  });
+  scope.activate();
+  let reply;
+  let markDispatched;
+  const dispatched = new Promise(resolve => { markDispatched = resolve; });
+  const handler = jest.fn((_payload, callback) => {
+    reply = callback;
+    markDispatched();
+  });
+  emitter.on('protected', handler);
+  const callback = jest.fn();
+  scope.emitter.emit('protected', { jwt: 'bootstrap-core-token' }, callback);
+
+  const draining = scope.drain();
+  expect(scope.snapshot()).toMatchObject({ state: 'draining', pending: 1 });
+  release('renewed-core-token');
+  await dispatched;
+
+  expect(handler).toHaveBeenCalledWith({ jwt: 'renewed-core-token' }, expect.any(Function));
+  expect(scope.snapshot().pending).toBe(1);
+  reply(null, 'completed');
+  await draining;
+  reply(null, 'duplicate');
+  expect(callback).toHaveBeenCalledWith(null, 'completed');
+  expect(callback).toHaveBeenCalledTimes(1);
+  expect(scope.snapshot().pending).toBe(0);
+});
+
+test('disposal refuses a renewed dispatch until its callback completes', async () => {
+  const emitter = new EventEmitter();
+  let release;
+  const renewal = new Promise(resolve => { release = resolve; });
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider: {
+      currentToken: () => null,
+      getToken: () => renewal
+    },
+    capturedTokens: ['bootstrap-core-token']
+  });
+  scope.activate();
+  let reply;
+  let markDispatched;
+  const dispatched = new Promise(resolve => { markDispatched = resolve; });
+  emitter.on('protected', (_payload, callback) => {
+    reply = callback;
+    markDispatched();
+  });
+  scope.emitter.emit('protected', { jwt: 'bootstrap-core-token' }, jest.fn());
+  release('renewed-core-token');
+  await dispatched;
+
+  await expect(scope.dispose()).rejects.toMatchObject({ code: 'CORE_MODULE_STILL_BUSY' });
+  reply(null, 'completed');
+  await scope.dispose();
+});
+
+test('a synchronous downstream throw after renewal returns through the callback', async () => {
+  const emitter = new EventEmitter();
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider: {
+      currentToken: () => null,
+      getToken: async () => 'renewed-core-token'
+    },
+    capturedTokens: ['bootstrap-core-token']
+  });
+  scope.activate();
+  const downstreamError = new Error('fixture downstream failure');
+  emitter.on('protected', () => { throw downstreamError; });
+  const callback = jest.fn();
+
+  scope.emitter.emit('protected', { jwt: 'bootstrap-core-token' }, callback);
+  await scope.drain();
+
+  expect(callback).toHaveBeenCalledWith(downstreamError);
+  expect(scope.snapshot().pending).toBe(0);
+});
+
+test('fire-and-forget renewal failures emit only a credential-safe warning', async () => {
+  const emitter = new EventEmitter();
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider: {
+      currentToken: () => null,
+      getToken: async () => { throw new Error('sensitive provider detail'); }
+    },
+    capturedTokens: ['bootstrap-core-token']
+  });
+  scope.activate();
+  emitter.on('protected', jest.fn());
+  const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+  scope.emitter.emit('protected', { jwt: 'bootstrap-core-token' });
+  await scope.drain();
+
+  expect(warning).toHaveBeenCalledWith('[CORE_MODULE_DEFERRED_DISPATCH_FAILED]', 'runtimeManager');
+  expect(JSON.stringify(warning.mock.calls)).not.toContain('sensitive provider detail');
+  warning.mockRestore();
+});
+
+test('real MotherEmitter rejects an expired bootstrap token and accepts its renewed replacement', async () => {
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'core-lifecycle-mother-emitter-test';
+  process.env.TOKEN_SALT_HIGH = process.env.TOKEN_SALT_HIGH || '';
+  const jwt = require('jsonwebtoken');
+  const singleton = require('../mother/emitters/motherEmitter').motherEmitter;
+  const emitter = new singleton.constructor();
+  const secret = emitter.combineSecretWithSalt(process.env.JWT_SECRET, 'high');
+  const expired = jwt.sign({ moduleName: 'runtimeManager', trustLevel: 'high' }, secret, { expiresIn: -1 });
+  const renewed = jwt.sign({ moduleName: 'runtimeManager', trustLevel: 'high' }, secret, { expiresIn: 60 });
+  const protectedHandler = jest.fn((_payload, callback) => callback(null, 'accepted'));
+  emitter.on('credentialLifecycleProtected', protectedHandler);
+
+  const rejected = jest.fn();
+  expect(emitter.emit('credentialLifecycleProtected', {
+    jwt: expired,
+    moduleName: 'runtimeManager',
+    moduleType: 'core'
+  }, rejected)).toBe(false);
+  expect(rejected.mock.calls[0][0]).toMatchObject({ code: 'AUTH_TOKEN_EXPIRED' });
+
+  const scope = createCoreModuleScope(emitter, 'runtimeManager', {
+    credentialProvider: {
+      currentToken: () => renewed,
+      getToken: jest.fn()
+    },
+    capturedTokens: [expired]
+  });
+  scope.activate();
+  const originalPayload = { jwt: expired, moduleName: 'runtimeManager', moduleType: 'core' };
+  await expect(new Promise((resolve, reject) => {
+    scope.emitter.emit('credentialLifecycleProtected', originalPayload, (error, value) => {
+      if (error) reject(error);
+      else resolve(value);
+    });
+  })).resolves.toBe('accepted');
+  expect(originalPayload).toEqual({ jwt: expired, moduleName: 'runtimeManager', moduleType: 'core' });
+  expect(protectedHandler).toHaveBeenCalledTimes(1);
+  await scope.dispose();
+});
+
 function versionedModule(version, cleanup = () => {}) {
   return {
     lifecycleVersion: 1,
@@ -191,6 +430,45 @@ test('a module changes version without restarting unrelated handlers or the host
   expect(unrelated).toHaveBeenCalledTimes(1);
   expect(emitter.listenerCount('read')).toBe(1);
   expect(result.restartedHost).toBe(false);
+});
+
+test('a retained host service emitter follows the active generation credential scope', async () => {
+  const emitter = new EventEmitter();
+  let currentToken = 'initial-core-token';
+  const provider = {
+    currentToken: () => currentToken,
+    getToken: jest.fn()
+  };
+  const manager = createCoreModuleLifecycle(emitter, {
+    credentialProviderForModule: () => provider
+  });
+  let retainedEmitter;
+  let retainedJwt;
+  const implementation = {
+    lifecycleVersion: 1,
+    initialize({ motherEmitter, serviceEmitter, jwt }) {
+      retainedEmitter ||= serviceEmitter;
+      retainedJwt ||= jwt;
+      motherEmitter.on('serviceLookup', (_payload, callback) => {
+        retainedEmitter.emit('serviceRequest', {
+          jwt: retainedJwt,
+          moduleName: 'geoipManager',
+          moduleType: 'core'
+        }, callback);
+      });
+    }
+  };
+  emitter.on('serviceRequest', (payload, callback) => callback(null, payload.jwt));
+  await manager.start('geoipManager', implementation, {
+    jwt: 'initial-core-token',
+    serviceEmitter: emitter
+  });
+
+  currentToken = 'renewed-core-token';
+  await manager.replace('geoipManager', implementation, { healthCheck: async () => {} });
+  await expect(new Promise((resolve, reject) => {
+    emitter.emit('serviceLookup', {}, (error, token) => error ? reject(error) : resolve(token));
+  })).resolves.toBe('renewed-core-token');
 });
 
 test('failed readiness restores old closures and never exposes the candidate', async () => {

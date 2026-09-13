@@ -8,7 +8,11 @@ function lifecycleError(code, moduleName) {
 }
 
 /** Own registrations without replacing the authenticated MotherEmitter. */
-function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } = {}) {
+function createCoreModuleScope(motherEmitter, moduleName, {
+  deferred = false,
+  credentialProvider = null,
+  capturedTokens = []
+} = {}) {
   const registrations = [];
   const pending = new Set();
   const cleanups = [];
@@ -16,6 +20,101 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
   const continuations = new AsyncLocalStorage();
   let state = deferred ? 'preparing' : 'initializing';
   let facade;
+  const ownedTokens = new Set(capturedTokens.filter(token => typeof token === 'string' && token));
+
+  function reportDeferredCallbackError() {
+    // A callback throw cannot propagate to the original emit frame after an
+    // asynchronous renewal. Keep it handled without logging credentials or
+    // provider error details.
+    console.error('[CORE_MODULE_DEFERRED_CALLBACK_FAILED]', moduleName);
+  }
+
+  function reportDeferredDispatchError() {
+    console.warn('[CORE_MODULE_DEFERRED_DISPATCH_FAILED]', moduleName);
+  }
+
+  function refreshedPayload(payload, token) {
+    if (!payload || typeof payload !== 'object') return payload;
+    let changed = false;
+    const next = { ...payload };
+    for (const key of ['jwt', 'jwtToken']) {
+      if (ownedTokens.has(payload[key])) {
+        next[key] = token;
+        changed = true;
+      }
+    }
+    return changed ? next : payload;
+  }
+
+  function emitWithCurrentCredential(args) {
+    const payload = args[1];
+    const hasOwnedCredential = payload && typeof payload === 'object' &&
+      ['jwt', 'jwtToken'].some(key => ownedTokens.has(payload[key]));
+    if (!credentialProvider || !hasOwnedCredential) return motherEmitter.emit(...args);
+
+    const currentToken = credentialProvider.currentToken();
+    if (currentToken) {
+      const dispatched = [...args];
+      dispatched[1] = refreshedPayload(payload, currentToken);
+      return motherEmitter.emit(...dispatched);
+    }
+
+    const callbackIndex = args.findIndex(value => typeof value === 'function');
+    const callback = callbackIndex >= 0 ? args[callbackIndex] : null;
+    const operation = { kind: 'credential-renewal', cancelled: false, finished: false };
+    const finish = () => {
+      if (operation.finished) return;
+      operation.finished = true;
+      pending.delete(operation);
+    };
+    const reply = (...values) => {
+      try { return callback?.(...values); }
+      catch { reportDeferredCallbackError(); }
+    };
+    const fail = error => {
+      if (operation.finished) return;
+      if (!callback) reportDeferredDispatchError();
+      try { reply(error); } finally { finish(); }
+    };
+    operation.cancel = () => {
+      operation.cancelled = true;
+      fail(lifecycleError('CORE_MODULE_SCOPE_CLOSED', moduleName));
+    };
+    pending.add(operation);
+    Promise.resolve().then(() => credentialProvider.getToken()).then(token => {
+      if (operation.cancelled || state === 'disposed' || state === 'suspended') {
+        operation.cancel();
+        return;
+      }
+      const dispatched = [...args];
+      dispatched[1] = refreshedPayload(payload, token);
+      if (callbackIndex >= 0) {
+        dispatched[callbackIndex] = (...values) => {
+          if (operation.finished) return;
+          try { return reply(...values); } finally { finish(); }
+        };
+      }
+      try {
+        operation.kind = 'credential-dispatch';
+        const emitted = motherEmitter.emit(...dispatched);
+        if (emitted === false && !operation.finished) {
+          fail(lifecycleError('CORE_MODULE_DISPATCH_REJECTED', moduleName));
+        } else if (callbackIndex < 0) {
+          finish();
+        }
+      } catch (error) {
+        fail(error);
+      }
+    }, fail).catch(() => {
+      // Every expected branch is handled above. This final guard prevents a
+      // deferred callback implementation from creating an unhandled rejection.
+      reportDeferredCallbackError();
+      finish();
+    });
+    // Deferred dispatch is accepted into the lifecycle even though MotherEmitter
+    // will perform the authoritative authentication after renewal completes.
+    return true;
+  }
 
   function stopIntervals() {
     for (const interval of intervals) {
@@ -111,7 +210,7 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
   const methods = {
     emit: (...args) => {
       if (state === 'disposed' || state === 'suspended') throw lifecycleError('CORE_MODULE_SCOPE_CLOSED', moduleName);
-      return motherEmitter.emit(...args);
+      return emitWithCurrentCredential(args);
     },
     on: (event, listener) => register(event, listener),
     addListener: (event, listener) => register(event, listener),
@@ -200,8 +299,12 @@ function createCoreModuleScope(motherEmitter, moduleName, { deferred = false } =
       }
     },
     async dispose() {
-      if (pending.size) throw lifecycleError('CORE_MODULE_STILL_BUSY', moduleName);
+      const renewalOperations = [...pending].filter(operation => operation.kind === 'credential-renewal');
+      if (pending.size !== renewalOperations.length) throw lifecycleError('CORE_MODULE_STILL_BUSY', moduleName);
       state = 'disposed';
+      for (const operation of renewalOperations) {
+        operation.cancel();
+      }
       stopIntervals();
       methods.removeAllListeners();
       const errors = [];

@@ -21,6 +21,7 @@ const { createAppManagementRoutes } = require('./http/appManagementRoutes');
 const { createAuthRoutes } = require('./http/authRoutes');
 const { createInstallRoutes } = require('./http/installRoutes');
 const { createHealthRoutes } = require('./http/healthRoutes');
+const { createPublicReadiness } = require('./health/publicReadiness');
 const { createMaintenanceMiddleware } = require('./http/maintenanceMiddleware');
 const { createMeltdownRouter } = require('./http/meltdownRouter');
 const { createPublicPageRoutes } = require('./http/publicPageRoutes');
@@ -58,7 +59,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   });
   // Local container probes must remain reachable before HTTPS enforcement. The
   // route exposes only bounded product/version readiness metadata.
-  app.use(createHealthRoutes({ version: productVersion }));
+  app.use(createHealthRoutes({ version: productVersion, readiness: createPublicReadiness({ motherEmitter }) }));
   const staticPaths = mountStaticAssetRoutes(app, {
     devReloadEnabled,
     injectDevReload,

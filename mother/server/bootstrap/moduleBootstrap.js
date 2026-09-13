@@ -8,6 +8,8 @@ const path = require('path');
 const { abortConfigError } = require('../config/environment');
 const { coreModulesForApp } = require('./coreModules');
 const { createCoreModuleLifecycle } = require('./coreModuleLifecycle');
+const { createCoreModuleScope } = require('./coreModuleScope');
+const { createCoreModuleCredentialProvider } = require('./coreModuleCredentials');
 const { loadCoreModuleCode } = require('./coreModuleCode');
 const { createCoreModuleStore } = require('../../modules/updater/coreModuleStore');
 const { runModuleWorker } = require('../../modules/updater/coreModuleWorker');
@@ -66,7 +68,18 @@ async function bootstrapCoreModules({
   tokenSalts,
   jwtExpiryConfig
 }) {
-  const coreModuleLifecycle = createCoreModuleLifecycle(motherEmitter);
+  const getCoreModuleToken = createCoreModuleTokenFactory({ motherEmitter, authModuleSecret });
+  const coreCredentialProviders = new Map();
+  function credentialProviderForModule(moduleName) {
+    if (!coreCredentialProviders.has(moduleName)) {
+      coreCredentialProviders.set(moduleName, createCoreModuleCredentialProvider({
+        moduleName,
+        issueToken: getCoreModuleToken
+      }));
+    }
+    return coreCredentialProviders.get(moduleName);
+  }
+  const coreModuleLifecycle = createCoreModuleLifecycle(motherEmitter, { credentialProviderForModule });
   app.locals = app.locals || {};
   app.locals.coreModuleLifecycle = coreModuleLifecycle;
   const moduleStore = createCoreModuleStore({ rootDir });
@@ -114,16 +127,11 @@ async function bootstrapCoreModules({
     });
   console.log('[SERVER INIT] Auth module loaded.');
 
-  const getCoreModuleToken = createCoreModuleTokenFactory({ motherEmitter, authModuleSecret });
   console.log('[SERVER INIT] Requesting DB-manager token...');
-  const dbManagerToken = await getCoreModuleToken('databaseManager');
-  const coreTokenCache = new Map([['databaseManager', dbManagerToken]]);
+  await credentialProviderForModule('databaseManager').getToken();
 
   async function getCachedCoreToken(moduleName) {
-    if (!coreTokenCache.has(moduleName)) {
-      coreTokenCache.set(moduleName, await getCoreModuleToken(moduleName));
-    }
-    return coreTokenCache.get(moduleName);
+    return credentialProviderForModule(moduleName).getToken();
   }
   console.log('[SERVER INIT] dbManagerToken obtained.');
 
@@ -158,10 +166,16 @@ async function bootstrapCoreModules({
   try {
     console.log('[SERVER INIT] Loading optional moduleLoader...');
     const loader = require(path.join(rootDir, 'mother', 'modules', 'moduleLoader', 'index.js'));
+    const moduleLoaderToken = await getCachedCoreToken('moduleLoader');
+    const moduleLoaderScope = createCoreModuleScope(motherEmitter, 'moduleLoader', {
+      credentialProvider: credentialProviderForModule('moduleLoader'),
+      capturedTokens: [moduleLoaderToken]
+    });
+    moduleLoaderScope.activate();
     await loader.loadAllModules({
-      emitter: motherEmitter,
+      emitter: moduleLoaderScope.emitter,
       app,
-      jwt: await getCachedCoreToken('moduleLoader')
+      jwt: moduleLoaderToken
     });
     console.log('[SERVER INIT] moduleLoader done.');
   } catch (err) {

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Renew host-owned core module credentials before expiry, including captured credentials in long-running public handlers, background jobs and lifecycle-managed service emitters. Preserve visitor/session authorization and fail closed on issuance errors. Make container readiness exercise the public runtime and page storage instead of returning unconditional success.
+
 - Stretch vertical navigation rows across the available sidebar width so submenu chevrons align at the far edge, and keep nested article links at regular weight while preserving the active-row treatment.
 
 - Bundle the three existing core public loaders and their lazy widget layout dependencies into release-owned browser chunks. Keep community loader discovery, HTML-only startup, public facade permissions and rendering contracts unchanged.

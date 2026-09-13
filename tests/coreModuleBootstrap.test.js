@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 
 const mockStart = jest.fn(async () => {});
 const mockState = jest.fn(() => ({ active: 'a'.repeat(64) }));
@@ -26,7 +27,10 @@ jest.mock('../mother/server/bootstrap/coreModules', () => ({
 jest.mock('../mother/server/bootstrap/coreModuleCode', () => ({ loadCoreModuleCode: () => ({}) }));
 jest.mock('../mother/contracts/backendEventContracts', () => ({
   ...jest.requireActual('../mother/contracts/backendEventContracts'),
-  requestBackendEvent: async () => 'test-token'
+  requestBackendEvent: async (_emitter, _event, payload) => jwt.sign({
+    moduleName: payload.signAsModule,
+    trustLevel: 'high'
+  }, 'core-module-bootstrap-test', { expiresIn: '1h' })
 }));
 jest.mock('../mother/modules/moduleLoader/index', () => ({ loadAllModules: async () => {} }));
 const { bootstrapCoreModules } = require('../mother/server/bootstrap/moduleBootstrap');

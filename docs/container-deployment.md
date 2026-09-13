@@ -83,8 +83,14 @@ the private database volume and media volume separate.
 
 ## Verification and rollback gates
 
-The image healthcheck proves the listener is available after module bootstrap;
-an HTTP-to-HTTPS redirect is an expected result. It is **not** database readiness.
+The image healthcheck calls `/health/ready` locally before HTTPS enforcement.
+Readiness obtains a public credential and reads the start page through the public
+Runtime Manager facade and page storage. An empty site is valid; an authorization,
+dispatch, storage error or timeout returns 503 with a bounded error code. Concurrent
+probes share one check and results are cached for at most one second. `/health/live`
+only proves that the HTTP process responds. Readiness does not prove every widget,
+external integration, media asset or browser rendering path works. Docker marking
+a container unhealthy does not itself restart or repair it.
 Before a public cutover, verify the real HTTPS origin, login, an authorized
 content save/read/reload, nested public pages, and public media. Back up both
 volumes and secrets, restore to an isolated instance, and verify the same paths.

@@ -2,7 +2,7 @@
 
 const express = require('express');
 
-function createHealthRoutes({ version, readiness = () => ({ ready: true }) } = {}) {
+function createHealthRoutes({ version, readiness = () => ({ ready: false }) } = {}) {
   const router = express.Router();
   const productVersion = String(version || '').trim() || 'unknown';
 

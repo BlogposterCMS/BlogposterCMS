@@ -4,18 +4,44 @@ const { createCoreModuleScope, lifecycleError } = require('./coreModuleScope');
 const { createCoreModuleHttpScope } = require('./coreModuleHttpScope');
 
 /** Host-owned lifecycle; package trust must be checked before invoking replace. */
-function createCoreModuleLifecycle(motherEmitter) {
+function createCoreModuleLifecycle(motherEmitter, { credentialProviderForModule = () => null } = {}) {
   const modules = new Map();
   const busy = new Set();
 
-  async function initialize(moduleName, implementation, context, deferred = false) {
+  async function initialize(moduleName, implementation, context, deferred = false, emitterController = null) {
     if (typeof implementation?.initialize !== 'function') throw lifecycleError('CORE_MODULE_ENTRY_INVALID', moduleName);
-    const scope = createCoreModuleScope(motherEmitter, moduleName, { deferred });
+    const scope = createCoreModuleScope(motherEmitter, moduleName, {
+      deferred,
+      credentialProvider: credentialProviderForModule(moduleName),
+      capturedTokens: [context.jwt, context.jwtToken]
+    });
+    const controller = emitterController || { scope };
+    const stableEmitter = controller.emitter || new Proxy(motherEmitter, {
+      get(target, key) {
+        const activeEmitter = controller.scope?.emitter || target;
+        const value = Reflect.get(activeEmitter, key, activeEmitter);
+        return typeof value === 'function' ? value.bind(activeEmitter) : value;
+      }
+    });
+    controller.emitter = stableEmitter;
     const http = implementation.httpLifecycleVersion === 1 ? createCoreModuleHttpScope(scope) : null;
     try {
-      await implementation.initialize({ ...context, ...(http ? { app: http.app } : {}), motherEmitter: scope.emitter, lifecycle: scope, isModuleUpdate: deferred });
+      const initializedContext = {
+        ...context,
+        ...(http ? { app: http.app } : {}),
+        motherEmitter: scope.emitter,
+        lifecycle: scope,
+        isModuleUpdate: deferred
+      };
+      // These host-owned emitters intentionally survive module-generation
+      // replacement. Keep their identity stable while routing through the
+      // lifecycle's current authenticated facade.
+      for (const key of ['serviceEmitter', 'strategyEmitter']) {
+        if (context[key] === motherEmitter) initializedContext[key] = stableEmitter;
+      }
+      await implementation.initialize(initializedContext);
       if (!deferred) scope.activate();
-      return { scope, implementation, context, http };
+      return { scope, implementation, context, http, emitterController: controller };
     } catch (error) {
       try { await scope.dispose(); } catch (cleanupError) {
         throw Object.assign(new AggregateError([error, cleanupError], `CORE_MODULE_INIT_CLEANUP_FAILED: ${moduleName}`), {
@@ -60,7 +86,7 @@ function createCoreModuleLifecycle(motherEmitter) {
           next = await initialize(moduleName, implementation, {
             ...current.context, moduleGeneration: generation || current.context.moduleGeneration,
             browserDirectory
-          }, true);
+          }, true, current.emitterController);
           // A host-compatible replacement retains its registered event surface.
           // This also catches initializers that swallow a setup error.
           const previousEvents = current.scope.eventNames();
@@ -92,6 +118,7 @@ function createCoreModuleLifecycle(motherEmitter) {
         // No await between removing the old gates and exposing the candidate.
         current.scope.suspend();
         next.scope.activate();
+        current.emitterController.scope = next.scope;
         modules.set(moduleName, next);
         try { await current.scope.dispose(); } catch (error) {
           next.recoveryRequired = true;

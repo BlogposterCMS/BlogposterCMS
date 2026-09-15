@@ -37,10 +37,10 @@ RUN apt-get update \
 
 # ACR compiles the source using the same build stage as CI. It downloads only
 # the signed release inputs if CI did not supply them in the build context.
-FROM build AS integrity-inputs
-COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh
-# The slim base has no OS CA bundle; gh needs HTTPS trust for its TUF refresh.
-COPY --from=github-cli /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+FROM github-cli AS integrity-inputs
+WORKDIR /app
+# Reuse curl, its libraries and the OS CA store only in the verification stage.
+COPY --from=build /app /app
 RUN node tools/prepare-runtime-integrity.js
 
 # Signature verification cannot replace byte-for-byte build verification.

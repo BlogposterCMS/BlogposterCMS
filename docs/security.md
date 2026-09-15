@@ -19,6 +19,13 @@ No signing key enters ACR and no local signature or unsigned baseline is generat
 Runtime verification, module package signatures and the reviewed registry-mirror
 policy remain unchanged. See [core updates](core-updates.md).
 
+Build metadata transport reuses the verifier stage's curl and CA store, accepts
+only exact official release metadata URLs and HTTPS redirects, and bounds time,
+redirect count and bytes. It retries a timeout once with a fresh response buffer.
+Files are created exclusively only after a complete transfer; curl diagnostics
+are not logged because redirect URLs may contain temporary signatures. Download
+success never replaces the existing attestation and build-baseline checks.
+
 ## Signed core module updates
 
 Authentication routes distinguish CORE_MODULE_UPDATING from invalid credentials.

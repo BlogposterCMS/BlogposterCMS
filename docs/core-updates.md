@@ -218,8 +218,11 @@ GitHub CI and ACR. CI supplies its complete `.release-integrity` inputs; otherwi
 the builder downloads only the exact version's signed manifest and detached
 bundle. The pinned verifier obtains public trust roots through its own TUF
 policy. Wrong versions/signatures or different build output stop the build.
-The preparation stage reuses the verifier stage's OS CA bundle for HTTPS trust
-because the slim Node base does not include one.
+The preparation stage inherits the verifier stage's curl, libraries and OS CA
+store. Metadata downloads use HTTPS-only redirects (at most five), a 10-second
+connection limit and a 60-second transfer limit with one retry only on timeout.
+Manifest/bundle limits remain 16 MiB/1 MiB; partial responses are never published.
+This build-only transport does not alter runtime downloads or signature policy.
 After verification, the three public signature inputs receive mode `0644` so
 the final non-root runtime can read downloaded inputs as well as CI inputs.
 

@@ -31,6 +31,7 @@
 !tools/
 !tools/verify-runtime-integrity-baseline.js
 !tools/prepare-runtime-integrity.js
+!tools/fetch-build-integrity.js
 
 # Re-exclude mutable and secret-bearing files even inside an allowed directory.
 **/.env

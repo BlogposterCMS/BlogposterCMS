@@ -5,10 +5,10 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const {
   defaultArtifactUrls,
-  fetchHttpsFile,
   parseRuntimeIntegrityManifest,
   verifyAttestation
 } = require('../mother/security/runtimeIntegrity');
+const { fetchBuildIntegrity } = require('./fetch-build-integrity');
 
 const ASSETS = [
   'runtime-integrity-manifest.json',
@@ -24,7 +24,7 @@ function fail(code, message) {
 
 async function prepareRuntimeIntegrity({
   rootDir,
-  fetchFile = fetchHttpsFile,
+  fetchFile = fetchBuildIntegrity,
   verify = verifyAttestation,
   runner = spawnSync
 }) {
@@ -47,9 +47,9 @@ async function prepareRuntimeIntegrity({
     if (!supplied) {
       const urls = defaultArtifactUrls(version);
       console.log(`[RUNTIME_INTEGRITY_BUILD_FETCH] ${ASSETS[0]}`);
-      await fetchFile(urls.manifestUrl, path.join(staging, ASSETS[0]), { maxBytes: 16 * 1024 * 1024, timeoutMs: 30000 });
+      await fetchFile(urls.manifestUrl, path.join(staging, ASSETS[0]), { maxBytes: 16 * 1024 * 1024, timeoutMs: 60000 });
       console.log(`[RUNTIME_INTEGRITY_BUILD_FETCH] ${ASSETS[1]}`);
-      await fetchFile(urls.bundleUrl, path.join(staging, ASSETS[1]), { maxBytes: 1024 * 1024, timeoutMs: 30000 });
+      await fetchFile(urls.bundleUrl, path.join(staging, ASSETS[1]), { maxBytes: 1024 * 1024, timeoutMs: 60000 });
       console.log('[RUNTIME_INTEGRITY_BUILD_TRUST_ROOT] gh attestation trusted-root');
       const roots = runner('gh', ['attestation', 'trusted-root'], {
         encoding: 'utf8', timeout: 30000, maxBuffer: 1024 * 1024, windowsHide: true,

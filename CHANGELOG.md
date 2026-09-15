@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.40] - 2026-09-15
+
+- Use the existing verifier-stage curl transport for ACR signed build metadata, with HTTPS-only redirects, bounded size/time and one timeout retry. Preserve attestation, exact-version and byte-for-byte build verification; production remains pull-only.
+
 ## [0.10.39] - 2026-09-15
 
 - Contain public maintenance lookup failures in the HTTP error path, return non-cacheable bounded failure responses and avoid unnecessary maintenance-page queries during normal traffic. Bound graceful shutdown and exit unhealthy processes on uncaught exceptions or unhandled rejections so the container supervisor can recover them.

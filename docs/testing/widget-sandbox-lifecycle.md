@@ -16,6 +16,12 @@ new probe window after visibility/resume or a delayed host event loop. A normall
 scheduled foreground worker still fails after ten seconds without a response.
 Browser scheduling and resource exhaustion remain outside a hard time guarantee.
 
+The isolated iframe is anchored directly under the current document body rather
+than inside the movable widget view. Synchronous connected reparenting therefore
+keeps the worker alive. Removing a previously connected host or replacing its
+mounted view disposes the renderer, streams, services, heartbeat, ports and frame.
+A host may still complete startup while detached and attach afterward.
+
 ## Automated checks
 
 Run:
@@ -25,14 +31,14 @@ npm run build:browser
 npx jest --runInBand --runTestsByPath tests/widgetHeartbeat.test.ts tests/widgetSandboxLifecycle.test.ts tests/widgetSandbox.test.ts tests/widgetSandboxStreams.test.js tests/widgetSandboxAssets.test.js tests/runtimeWidgetRenderer.test.ts tests/widgetManagerPublicLoader.test.ts
 ```
 
-- [x] TypeScript browser compilation, the full asset build and 37 tests across
-  seven suites passed. The build retains the existing article-editor size warnings.
+- [x] TypeScript browser compilation and 40 tests across seven suites passed.
 - [x] Healthy replies, initial hidden mount, hidden/visible, freeze/resume and
   a single delayed host callback retain the widget.
 - [x] Foreground nonresponse and nonresponse after resume still time out.
 - [x] Wall-clock jumps do not alter the heartbeat deadline.
-- [x] The real mount retains its iframe/view across visibility transitions;
-  disconnect and timeout still close ports and dispose services/listeners.
+- [x] The real mount retains its iframe/view across visibility transitions and
+  connected host moves; disconnect, mounted-view replacement and timeout close
+  ports and dispose services/listeners. Readiness preserves the timeout code.
 - [x] Existing CSP, source delivery, stream and runtime adapter checks pass.
 
 ## Browser and release checks

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Keep isolated widget workers alive when their rendered host moves between
+  connected layout parents, while retaining cleanup after host removal or view
+  replacement and preserving the original readiness failure code.
+
 ## [0.10.40] - 2026-09-15
 
 - Use the existing verifier-stage curl transport for ACR signed build metadata, with HTTPS-only redirects, bounded size/time and one timeout retry. Preserve attestation, exact-version and byte-for-byte build verification; production remains pull-only.

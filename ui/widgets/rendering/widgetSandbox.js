@@ -92,24 +92,29 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
     let resolveReady, rejectReady;
     const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     const fail = (code) => {
-        dispose();
+        if (disposed)
+            return;
         const alert = document.createElement('p');
         alert.setAttribute('role', 'alert');
         alert.dataset.errorCode = code;
         alert.textContent = code;
+        dispose(new Error(code));
         container.replaceChildren(alert);
-        rejectReady(new Error(code));
     };
     // Public documents can finish asynchronous widget loading before the shell is attached.
     let wasConnected = container.isConnected;
     const observer = new MutationObserver(() => {
-        if (container.isConnected)
+        if (container.isConnected) {
             wasConnected = true;
-        else if (wasConnected)
+            if (!container.contains(view))
+                dispose();
+        }
+        else if (wasConnected || !container.contains(view))
             dispose();
     });
     const heartbeat = createWidgetHeartbeat(() => channel.port1.postMessage({ type: 'ping' }), () => fail('WIDGET_SANDBOX_TIMEOUT'));
-    function dispose() {
+    const onPageHide = () => dispose();
+    function dispose(reason = new Error('WIDGET_SANDBOX_DISPOSED')) {
         if (disposed)
             return;
         disposed = true;
@@ -122,8 +127,10 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
         channel.port1.close();
         channel.port2.close();
         frame.remove();
-        window.removeEventListener('pagehide', dispose);
-        rejectReady(new Error('WIDGET_SANDBOX_DISPOSED'));
+        window.removeEventListener('pagehide', onPageHide);
+        if (mounted.get(container) === dispose)
+            mounted.delete(container);
+        rejectReady(reason);
     }
     mounted.set(container, dispose);
     channel.port1.onmessage = async (event) => {
@@ -216,8 +223,11 @@ export async function mountSandboxWidget(container, id, codeUrl, context) {
             frame.contentWindow?.postMessage({ type: 'connect' }, '*', [channel.port2]);
     }, { once: true });
     frame.srcdoc = sandboxDocument(nonce);
-    container.replaceChildren(view, frame);
+    container.replaceChildren(view);
     observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener('pagehide', dispose, { once: true });
+    observer.observe(container, { childList: true });
+    // Keep execution outside the movable view so appendChild reparenting cannot destroy the worker iframe.
+    document.body.append(frame);
+    window.addEventListener('pagehide', onPageHide, { once: true });
     return ready;
 }

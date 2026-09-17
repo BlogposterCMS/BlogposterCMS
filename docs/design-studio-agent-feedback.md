@@ -595,6 +595,11 @@ The existing snapshot reports `DESIGNER_AGENT_FEEDBACK_WIDGET_SANDBOX_BLOCKED`
 with the widget ID and runtime error code when an isolated widget cannot render.
 Saved placements are preserved. The v2 worker receives no Designer credentials;
 preview service requests stay unavailable. See [migration](community-isolation.md).
+The shared hidden isolation frame stays under the preview document body while its
+widget view moves between connected canvas parents. Host removal or replacement
+runs the shared cleanup. Actual sandbox failures retain the existing
+`DESIGNER_AGENT_FEEDBACK_WIDGET_SANDBOX_BLOCKED` warning channel; no
+Designer-only worker or feedback contract is added.
 
 
 ## Container events and data

@@ -53,8 +53,10 @@ async function mount() {
 
 test('the mounted sandbox retains its iframe and view while hidden, then accepts replies', async () => {
   await mount();
-  const frame = container.querySelector('iframe')!;
+  const frame = document.body.querySelector('iframe')!;
   const view = container.firstElementChild;
+  expect(frame.parentElement).toBe(document.body);
+  expect(container.querySelector('iframe')).toBeNull();
   expect(frame.getAttribute('sandbox')).toBe('allow-scripts');
   hidden = true; document.dispatchEvent(new Event('visibilitychange'));
   jest.advanceTimersByTime(120000);
@@ -62,7 +64,7 @@ test('the mounted sandbox retains its iframe and view while hidden, then accepts
   await channel.port1.onmessage!({ data: { type: 'pong' } });
   jest.advanceTimersByTime(8000);
   expect(container.querySelector('[data-error-code]')).toBeNull();
-  expect(container.querySelector('iframe')).toBe(frame);
+  expect(document.body.querySelector('iframe')).toBe(frame);
   expect(container.firstElementChild).toBe(view);
   expect(disposeServices).not.toHaveBeenCalled();
   container.remove(); await Promise.resolve();
@@ -75,7 +77,57 @@ test('a genuinely unresponsive foreground worker is removed through the existing
   await mount();
   jest.advanceTimersByTime(10000);
   expect(container.querySelector('[role="alert"]')?.getAttribute('data-error-code')).toBe('WIDGET_SANDBOX_TIMEOUT');
-  expect(container.querySelector('iframe')).toBeNull();
+  expect(document.body.querySelector('iframe')).toBeNull();
   expect(disposeServices).toHaveBeenCalledTimes(1);
   expect(channel.port1.close).toHaveBeenCalledTimes(1);
+});
+
+test('connected host reparenting preserves the stable frame and worker lifecycle', async () => {
+  await mount();
+  const frame = document.body.querySelector('iframe')!;
+  const view = container.firstElementChild;
+  const nextParent = document.body.appendChild(document.createElement('section'));
+
+  nextParent.appendChild(container);
+  await Promise.resolve();
+
+  expect(container.isConnected).toBe(true);
+  expect(container.firstElementChild).toBe(view);
+  expect(document.body.querySelector('iframe')).toBe(frame);
+  expect(disposeServices).not.toHaveBeenCalled();
+
+  container.remove(); await Promise.resolve();
+  expect(disposeServices).toHaveBeenCalledTimes(1);
+  expect(frame.isConnected).toBe(false);
+  nextParent.remove();
+});
+
+test('detached startup remains valid and replacing the mounted view disposes resources', async () => {
+  container.remove();
+  await mount();
+  const frame = document.body.querySelector('iframe')!;
+  expect(frame.isConnected).toBe(true);
+  expect(disposeServices).not.toHaveBeenCalled();
+
+  document.body.append(container);
+  container.replaceChildren(document.createElement('span'));
+  await Promise.resolve();
+
+  expect(disposeServices).toHaveBeenCalledTimes(1);
+  expect(frame.isConnected).toBe(false);
+  expect(channel.port1.close).toHaveBeenCalledTimes(1);
+  expect(jest.getTimerCount()).toBe(0);
+});
+
+test('readiness rejects with the original timeout code before the first view', async () => {
+  const ready = mountSandboxWidget(container, 'fixture', '/widgets/fixture/widget.js', {});
+  const rejection = expect(ready).rejects.toThrow('WIDGET_SANDBOX_TIMEOUT');
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+  await channel.port1.onmessage!({ data: { type: 'connected' } });
+
+  jest.advanceTimersByTime(10000);
+  await rejection;
+  expect(container.querySelector('[role="alert"]')?.getAttribute('data-error-code')).toBe('WIDGET_SANDBOX_TIMEOUT');
+  expect(disposeServices).toHaveBeenCalledTimes(1);
+  expect(document.body.querySelector('iframe')).toBeNull();
 });

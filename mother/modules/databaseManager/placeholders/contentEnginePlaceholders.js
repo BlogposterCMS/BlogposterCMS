@@ -285,8 +285,8 @@ async function handleContentEngineSqlite(db, operation, params = {}) {
 
     case 'RESOLVE_CONTENT_PERMALINK':
       return normalizeSqlRows(await db.get(
-        'SELECT * FROM contentEngine_content_entries WHERE permalink = ? AND deleted_at IS NULL',
-        [p.permalink]
+        'SELECT * FROM contentEngine_content_entries WHERE permalink = ? AND language = ? AND deleted_at IS NULL',
+        [p.permalink, p.language || 'en']
       ))[0] || null;
 
     case 'LIST_CONTENT_ENTRIES': {
@@ -608,8 +608,8 @@ async function handleContentEnginePostgres(client, operation, params = {}) {
 
     case 'RESOLVE_CONTENT_PERMALINK': {
       const { rows } = await client.query(
-        'SELECT * FROM contentengine.content_entries WHERE permalink = $1 AND deleted_at IS NULL',
-        [p.permalink]
+        'SELECT * FROM contentengine.content_entries WHERE permalink = $1 AND language = $2 AND deleted_at IS NULL',
+        [p.permalink, p.language || 'en']
       );
       return rows[0] || null;
     }
@@ -951,6 +951,7 @@ async function handleContentEngineMongo(db, operation, params = {}) {
     case 'RESOLVE_CONTENT_PERMALINK':
       return mongoDoc(await db.collection('content_entries').findOne({
         permalink: p.permalink,
+        language: p.language || 'en',
         deleted_at: null
       }));
 

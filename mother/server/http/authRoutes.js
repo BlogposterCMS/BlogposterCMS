@@ -2,6 +2,7 @@
 
 const { respondIfModuleUpdating } = require('../../utils/coreModuleAvailability');
 
+
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');

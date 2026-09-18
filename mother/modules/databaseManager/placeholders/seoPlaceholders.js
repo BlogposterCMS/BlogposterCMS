@@ -17,6 +17,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -253,7 +258,7 @@ async function handleSeoMongo(db, operation, params = {}) {
 
     case 'UPSERT_SEO_META':
       await db.collection('seo_meta').updateOne(
-        { target_type: p.targetType, target_key: p.targetKey },
+        { target_type: mongoLiteral(p.targetType), target_key: mongoLiteral(p.targetKey) },
         {
           $set: {
             target_type: p.targetType,
@@ -275,13 +280,13 @@ async function handleSeoMongo(db, operation, params = {}) {
         },
         { upsert: true }
       );
-      return mongoDoc(await db.collection('seo_meta').findOne({ target_type: p.targetType, target_key: p.targetKey }));
+      return mongoDoc(await db.collection('seo_meta').findOne({ target_type: mongoLiteral(p.targetType), target_key: mongoLiteral(p.targetKey) }));
 
     case 'GET_SEO_META':
-      return mongoDoc(await db.collection('seo_meta').findOne({ target_type: p.targetType, target_key: p.targetKey }));
+      return mongoDoc(await db.collection('seo_meta').findOne({ target_type: mongoLiteral(p.targetType), target_key: mongoLiteral(p.targetKey) }));
 
     case 'LIST_SEO_META': {
-      const query = p.targetType ? { target_type: p.targetType } : {};
+      const query = p.targetType ? { target_type: mongoLiteral(p.targetType) } : {};
       return (await db.collection('seo_meta')
         .find(query)
         .sort({ updated_at: -1 })
@@ -291,7 +296,7 @@ async function handleSeoMongo(db, operation, params = {}) {
     }
 
     case 'DELETE_SEO_META':
-      await db.collection('seo_meta').deleteOne({ target_type: p.targetType, target_key: p.targetKey });
+      await db.collection('seo_meta').deleteOne({ target_type: mongoLiteral(p.targetType), target_key: mongoLiteral(p.targetKey) });
       return { done: true, targetType: p.targetType, targetKey: p.targetKey };
 
     default:

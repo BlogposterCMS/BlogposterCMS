@@ -125,7 +125,7 @@ function createAuthRoutes({
 
   // Reserve CMS authentication for the admin namespace. Public /login pages and
   // site-owned redirect rules must continue through the public runtime.
-  router.get('/admin/login', csrfProtection, async (req, res) => {
+  router.get('/admin/login', loginLimiter, csrfProtection, async (req, res) => {
     try {
       if (await needsInitialSetup()) {
         return res.redirect('/install');

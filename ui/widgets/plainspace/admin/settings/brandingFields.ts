@@ -20,7 +20,12 @@ export function createBrandingFields(values: { logoUrl: string; logoDarkUrl: str
     const choose = document.createElement('button'); choose.type = 'button'; choose.className = 'button ghost sm';
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button';
     remove.setAttribute('aria-label', `Remove ${label}`); remove.title = `Remove ${label}`;
-    remove.innerHTML = '<img src="/assets/icons/trash-2.svg" alt="" width="16" height="16">';
+    const removeIcon = document.createElement('img');
+    removeIcon.src = '/assets/icons/trash-2.svg';
+    removeIcon.alt = '';
+    removeIcon.width = 16;
+    removeIcon.height = 16;
+    remove.append(removeIcon);
     const update = () => {
       const own = input.value.trim();
       const source = own || (key === 'logoDarkUrl' ? (fields.logoUrl?.value.trim() || '') : '');

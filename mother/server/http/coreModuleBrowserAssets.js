@@ -26,6 +26,9 @@ function versionHtml(html, moduleName, generationId) {
 }
 
 function checkedFile(root, relative) {
+  if (typeof relative !== 'string' || path.isAbsolute(relative) || relative.split(/[\\/]/).some(part => part === '..' || part === '')) {
+    throw Object.assign(new Error('CORE_MODULE_BROWSER_PATH_DENIED'), { code: 'CORE_MODULE_BROWSER_PATH_DENIED' });
+  }
   const filename = path.resolve(root, relative);
   const normalizedRoot = fs.realpathSync(root);
   const actual = fs.realpathSync(filename);
@@ -108,7 +111,8 @@ function mountCoreModuleBrowserAssets(app, { rootDir, inspect = runModuleWorker 
         // Shared ES modules keep their canonical URL and singleton identity.
         // Only the selected package's own assets use generation URLs.
         res.set('Cache-Control', 'no-store');
-        return res.redirect(307, `/${filename.replace(/^public\//, '')}`);
+        const publicPath = filename.replace(/^public\//, '').split('/').map(segment => encodeURIComponent(segment)).join('/');
+        return res.redirect(307, `/${publicPath}`);
       }
       const assetRoot = owned ? path.join(selection.moduleDir, BROWSER_PREFIX) :
         path.join(rootDir, filename.startsWith('public/build/') ? 'public/build' : 'ui');

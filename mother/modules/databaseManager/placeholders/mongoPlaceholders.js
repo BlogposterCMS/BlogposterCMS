@@ -48,6 +48,11 @@ function escapeRegex(value = '') {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function parseObjectId(id) {
   // Shared SQL handlers must not load the MongoDB driver.
   const { ObjectId } = require('mongodb');
@@ -887,7 +892,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       const lane = p.lane || 'all';
       const limit = parseInt(p.limit, 10) || 20;
 
-      const regex = new RegExp(q, 'i');
+      const regex = new RegExp(escapeRegex(q), 'i');
       const filter = lane === 'all' ?
             { $or: [{ title: regex }, { slug: regex }] } :
             { lane, $or: [{ title: regex }, { slug: regex }] };
@@ -972,7 +977,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
       const { moduleName } = p;
       const doc = await db.collection('module_registry').findOne({
-        module_name: moduleName
+        module_name: mongoLiteral(moduleName)
       });
       return doc ? [doc] : [];
     }
@@ -1027,7 +1032,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         infoObj = {};
       }
       await db.collection('app_registry').updateOne(
-        { app_name: appName },
+        { app_name: mongoLiteral(appName) },
         {
           $set: {
             is_active: !!isActive,
@@ -1043,7 +1048,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'SELECT_APP_BY_NAME': {
       const p = Array.isArray(params) ? (params[0] || {}) : (params || {});
       const { appName } = p;
-      const doc = await db.collection('app_registry').findOne({ app_name: appName });
+      const doc = await db.collection('app_registry').findOne({ app_name: mongoLiteral(appName) });
       return doc ? [doc] : [];
     }
 
@@ -1124,7 +1129,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         const data = params[0] || {};
         const { locationId } = data;
 
-        const doc = await db.collection('server_locations').findOne({ id: locationId });
+        const doc = await db.collection('server_locations').findOne({ id: mongoLiteral(locationId) });
         return doc ? [doc] : [];
     }
 
@@ -1136,7 +1141,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'SERVERMANAGER_DELETE_LOCATION': {
         const data = params[0] || {};
         const { locationId } = data;
-        await db.collection('server_locations').deleteOne({ id: locationId });
+        await db.collection('server_locations').deleteOne({ id: mongoLiteral(locationId) });
         return { done: true };
     }
 
@@ -1144,7 +1149,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         const data = params[0] || {};
         const { locationId, newName, newIp, newNotes } = data;
         await db.collection('server_locations').updateOne(
-        { id: locationId },
+        { id: mongoLiteral(locationId) },
         {
             $set: {
             server_name: newName,
@@ -1189,8 +1194,8 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         const data = params[0] || {};
         const { filterCategory, filterFileType } = data;
         let query = {};
-        if (filterCategory) query.category  = filterCategory;
-        if (filterFileType) query.file_type = filterFileType;
+        if (filterCategory) query.category  = mongoLiteral(filterCategory);
+        if (filterFileType) query.file_type = mongoLiteral(filterFileType);
         const allFiles = await db.collection('media_files')
         .find(query)
         .sort({ id: -1 })
@@ -1202,7 +1207,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         const data = params[0] || {};
         const { fileId } = data;
         // IDs are stored as plain strings matching the hex ObjectId
-        await db.collection('media_files').deleteOne({ id: fileId });
+        await db.collection('media_files').deleteOne({ id: mongoLiteral(fileId) });
         return { done: true };
     }
     
@@ -1210,7 +1215,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         const data = params[0] || {};
         const { fileId, newCategory, newNotes, newFolder } = data;
         await db.collection('media_files').updateOne(
-        { id: fileId },
+        { id: mongoLiteral(fileId) },
         {
             $set: {
             category  : newCategory,
@@ -1259,7 +1264,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     const { shortToken, userId } = dataObj;
     // Either delete or set is_public=false
     await db.collection('shared_links').updateOne(
-        { short_token: shortToken, created_by: userId },
+        { short_token: mongoLiteral(shortToken), created_by: mongoLiteral(userId) },
         { $set: { is_public: false } }
     );
     return { done: true };
@@ -1268,7 +1273,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'GET_SHARE_LINK': {
     const dataObj = params[0] || {};
     const { shortToken } = dataObj;
-    const doc = await db.collection('shared_links').findOne({ short_token: shortToken });
+    const doc = await db.collection('shared_links').findOne({ short_token: mongoLiteral(shortToken) });
     return doc ? [doc] : [];
     }
     
@@ -1345,7 +1350,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     const query = {};
     if (widgetType) {
-        query.widget_type = widgetType;
+        query.widget_type = mongoLiteral(widgetType);
     }
 
     const docs = await db.collection('widgetmanager_widgets')
@@ -1367,7 +1372,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     } = data;
 
     await db.collection('widgetmanager_widgets').updateOne(
-        { widget_id: widgetId, widget_type: widgetType },
+        { widget_id: mongoLiteral(widgetId), widget_type: mongoLiteral(widgetType) },
         {
         $set: {
             label: newLabel ?? undefined,
@@ -1386,8 +1391,8 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     const { widgetId, widgetType } = data;
 
     await db.collection('widgetmanager_widgets').deleteOne({
-        widget_id: widgetId,
-        widget_type: widgetType
+        widget_id: mongoLiteral(widgetId),
+        widget_type: mongoLiteral(widgetType)
     });
     return { done: true };
     }
@@ -1397,7 +1402,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     const data = params[0] || {};
     const { widgetId, newLabel, newContent, newCategory, newOrder } = data;
     await db.collection('widgets_public').updateOne(
-        { widget_id: widgetId },
+        { widget_id: mongoLiteral(widgetId) },
         {
           $set: {
             label: newLabel ?? undefined,
@@ -1415,7 +1420,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     const data = params[0] || {};
     const { widgetId, newLabel, newContent, newCategory, newOrder } = data;
     await db.collection('widgets_admin').updateOne(
-        { widget_id: widgetId },
+        { widget_id: mongoLiteral(widgetId) },
         {
           $set: {
             label: newLabel ?? undefined,
@@ -1431,13 +1436,13 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     case 'DELETE_WIDGET_PUBLIC': {
     const { widgetId } = params[0] || {};
-    await db.collection('widgets_public').deleteOne({ widget_id: widgetId });
+    await db.collection('widgets_public').deleteOne({ widget_id: mongoLiteral(widgetId) });
     return { done: true };
     }
 
     case 'DELETE_WIDGET_ADMIN': {
     const { widgetId } = params[0] || {};
-    await db.collection('widgets_admin').deleteOne({ widget_id: widgetId });
+    await db.collection('widgets_admin').deleteOne({ widget_id: mongoLiteral(widgetId) });
     return { done: true };
     }
 
@@ -1472,7 +1477,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'UPSERT_PLAINSPACE_LAYOUT': {
     const d = params[0] || {};
     await db.collection('plainspace_layouts').updateOne(
-        { page_id: d.pageId, lane: d.lane, viewport: d.viewport },
+        { page_id: mongoLiteral(d.pageId), lane: mongoLiteral(d.lane), viewport: mongoLiteral(d.viewport) },
         {
           $set: {
             layout_json: d.layoutArr || [],
@@ -1487,7 +1492,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'UPSERT_PLAINSPACE_LAYOUT_TEMPLATE': {
     const d = params[0] || {};
     await db.collection('plainspace_layout_templates').updateOne(
-        { name: d.name },
+        { name: mongoLiteral(d.name) },
         {
           $set: {
             lane: d.lane,
@@ -1510,14 +1515,14 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     case 'GET_PLAINSPACE_LAYOUT_TEMPLATE': {
     const d = params[0] || {};
-    const doc = await db.collection('plainspace_layout_templates').findOne({ name: d.name });
+    const doc = await db.collection('plainspace_layout_templates').findOne({ name: mongoLiteral(d.name) });
     return doc ? [doc] : [];
     }
 
     case 'GET_PLAINSPACE_LAYOUT_TEMPLATE_NAMES': {
     const d = params[0] || {};
     const docs = await db.collection('plainspace_layout_templates')
-        .find({ lane: d.lane })
+        .find({ lane: mongoLiteral(d.lane) })
         .project({ name: 1, preview_path: 1, is_global: 1, updated_at: 1, _id: 0 })
         .sort({ updated_at: -1 })
         .toArray();
@@ -1527,7 +1532,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'UPSERT_PLAINSPACE_PUBLISHED_DESIGN': {
       const d = params[0] || {};
       await db.collection('plainspace_published_designs').updateOne(
-        { name: d.name },
+        { name: mongoLiteral(d.name) },
         {
           $set: {
             path: d.path,
@@ -1542,7 +1547,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     case 'GET_PLAINSPACE_PUBLISHED_DESIGN': {
       const d = params[0] || {};
-      const doc = await db.collection('plainspace_published_designs').findOne({ name: d.name });
+      const doc = await db.collection('plainspace_published_designs').findOne({ name: mongoLiteral(d.name) });
       return doc ? [doc] : [];
     }
 
@@ -1554,22 +1559,22 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'SET_GLOBAL_LAYOUT_TEMPLATE': {
     const d = params[0] || {};
     await db.collection('plainspace_layout_templates').updateMany({}, { $set: { is_global: false } });
-    await db.collection('plainspace_layout_templates').updateOne({ name: d.name }, { $set: { is_global: true } });
+    await db.collection('plainspace_layout_templates').updateOne({ name: mongoLiteral(d.name) }, { $set: { is_global: true } });
     return { success: true };
     }
 
     case 'DELETE_LAYOUT_TEMPLATE': {
     const d = params[0] || {};
-    await db.collection('plainspace_layout_templates').deleteOne({ name: d.name });
+    await db.collection('plainspace_layout_templates').deleteOne({ name: mongoLiteral(d.name) });
     return { success: true };
     }
 
     case 'GET_PLAINSPACE_LAYOUT': {
     const d = params[0] || {};
     const doc = await db.collection('plainspace_layouts').findOne({
-        page_id: d.pageId,
-        lane: d.lane,
-        viewport: d.viewport
+        page_id: mongoLiteral(d.pageId),
+        lane: mongoLiteral(d.lane),
+        viewport: mongoLiteral(d.viewport)
     });
     return doc ? [doc] : [];
     }
@@ -1577,7 +1582,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'GET_ALL_PLAINSPACE_LAYOUTS': {
     const d = params[0] || {};
     const docs = await db.collection('plainspace_layouts')
-        .find({ page_id: d.pageId, lane: d.lane })
+        .find({ page_id: mongoLiteral(d.pageId), lane: mongoLiteral(d.lane) })
         .sort({ viewport: 1 })
         .toArray();
     return docs;
@@ -1593,7 +1598,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'UPSERT_WIDGET_INSTANCE': {
     const d = params[0] || {};
     await db.collection('plainspace_widget_instances').updateOne(
-        { instance_id: d.instanceId },
+        { instance_id: mongoLiteral(d.instanceId) },
         { $set: { content: d.content, updated_at: new Date().toISOString() } },
         { upsert: true }
     );
@@ -1602,7 +1607,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     case 'GET_WIDGET_INSTANCE': {
     const d = params[0] || {};
-    const doc = await db.collection('plainspace_widget_instances').findOne({ instance_id: d.instanceId });
+    const doc = await db.collection('plainspace_widget_instances').findOne({ instance_id: mongoLiteral(d.instanceId) });
     return doc ? [doc] : [];
     }
 

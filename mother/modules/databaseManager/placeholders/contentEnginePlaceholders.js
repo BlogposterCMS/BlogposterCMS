@@ -30,6 +30,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback) {
   const actual = typeof value === 'undefined' ? fallback : value;
   return JSON.stringify(actual ?? fallback);
@@ -950,16 +955,16 @@ async function handleContentEngineMongo(db, operation, params = {}) {
 
     case 'RESOLVE_CONTENT_PERMALINK':
       return mongoDoc(await db.collection('content_entries').findOne({
-        permalink: p.permalink,
-        language: p.language || 'en',
+        permalink: mongoLiteral(p.permalink),
+        language: mongoLiteral(p.language || 'en'),
         deleted_at: null
       }));
 
     case 'LIST_CONTENT_ENTRIES': {
       const query = { deleted_at: null };
-      if (p.contentTypeKey) query.content_type_key = p.contentTypeKey;
-      if (p.status) query.status = p.status;
-      if (p.language) query.language = p.language;
+      if (p.contentTypeKey) query.content_type_key = mongoLiteral(p.contentTypeKey);
+      if (p.status) query.status = mongoLiteral(p.status);
+      if (p.language) query.language = mongoLiteral(p.language);
       return (await db.collection('content_entries')
         .find(query)
         .sort({ updated_at: -1 })
@@ -970,8 +975,8 @@ async function handleContentEngineMongo(db, operation, params = {}) {
 
     case 'LIST_TRASHED_CONTENT_ENTRIES': {
       const query = { deleted_at: { $ne: null } };
-      if (p.contentTypeKey) query.content_type_key = p.contentTypeKey;
-      if (p.language) query.language = p.language;
+      if (p.contentTypeKey) query.content_type_key = mongoLiteral(p.contentTypeKey);
+      if (p.language) query.language = mongoLiteral(p.language);
       return (await db.collection('content_entries')
         .find(query)
         .sort({ deleted_at: -1, updated_at: -1 })

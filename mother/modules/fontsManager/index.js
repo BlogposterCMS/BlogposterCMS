@@ -83,11 +83,11 @@ module.exports = {
       try {
         if (provider.isEnabled && typeof provider.initFunction === 'function') {
           pending = Promise.resolve(provider.initFunction()).catch(err => {
-            console.warn(`[FONTS MANAGER] Provider init failed => ${providerName}`, err?.message || err);
+            console.warn('[FONTS MANAGER] Provider init failed', providerName, err?.message || err);
           });
         }
       } catch (e) {
-        console.warn(`[FONTS MANAGER] Provider init threw => ${providerName}`, e?.message || e);
+        console.warn('[FONTS MANAGER] Provider init threw', providerName, e?.message || e);
       }
       cb(null, { success: true });
       // Preserve the immediate UI acknowledgement while the lifecycle still

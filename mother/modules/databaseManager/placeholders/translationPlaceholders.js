@@ -21,6 +21,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify(value ?? fallback);
 }
@@ -445,7 +450,7 @@ async function handleTranslationMongo(db, operation, params = {}) {
 
     case 'UPSERT_TRANSLATED_TEXT':
       await db.collection('translation_texts').updateOne(
-        { object_id: String(p.objectId), field_name: p.fieldName, language_code: p.languageCode },
+        { object_id: mongoLiteral(String(p.objectId)), field_name: mongoLiteral(p.fieldName), language_code: mongoLiteral(p.languageCode) },
         {
           $set: {
             object_id: String(p.objectId),
@@ -461,17 +466,17 @@ async function handleTranslationMongo(db, operation, params = {}) {
         { upsert: true }
       );
       return mongoDoc(await db.collection('translation_texts').findOne({
-        object_id: String(p.objectId),
-        field_name: p.fieldName,
-        language_code: p.languageCode
+        object_id: mongoLiteral(String(p.objectId)),
+        field_name: mongoLiteral(p.fieldName),
+        language_code: mongoLiteral(p.languageCode)
       }));
 
     case 'GET_TRANSLATED_TEXT':
       if (p.textId) return mongoDoc(await db.collection('translation_texts').findOne(mongoIdQuery(p.textId)));
       return mongoDoc(await db.collection('translation_texts').findOne({
-        object_id: String(p.objectId),
-        field_name: p.fieldName,
-        language_code: p.languageCode
+        object_id: mongoLiteral(String(p.objectId)),
+        field_name: mongoLiteral(p.fieldName),
+        language_code: mongoLiteral(p.languageCode)
       }));
 
     case 'UPDATE_TRANSLATED_TEXT': {
@@ -485,7 +490,7 @@ async function handleTranslationMongo(db, operation, params = {}) {
       };
       const query = p.textId
         ? mongoIdQuery(p.textId)
-        : { object_id: String(p.objectId), field_name: p.fieldName, language_code: p.languageCode };
+        : { object_id: mongoLiteral(String(p.objectId)), field_name: mongoLiteral(p.fieldName), language_code: mongoLiteral(p.languageCode) };
       await db.collection('translation_texts').updateOne(query, update);
       return mongoDoc(await db.collection('translation_texts').findOne(query));
     }
@@ -493,9 +498,9 @@ async function handleTranslationMongo(db, operation, params = {}) {
     case 'LIST_TRANSLATED_TEXTS': {
       const query = {};
       if (p.objectId) query.object_id = String(p.objectId);
-      if (p.fieldName) query.field_name = p.fieldName;
-      if (p.languageCode) query.language_code = p.languageCode;
-      if (p.status) query.status = p.status;
+      if (p.fieldName) query.field_name = mongoLiteral(p.fieldName);
+      if (p.languageCode) query.language_code = mongoLiteral(p.languageCode);
+      if (p.status) query.status = mongoLiteral(p.status);
       return (await db.collection('translation_texts')
         .find(query)
         .sort({ updated_at: -1 })
@@ -510,15 +515,15 @@ async function handleTranslationMongo(db, operation, params = {}) {
         return { done: true, textId: p.textId };
       }
       await db.collection('translation_texts').deleteOne({
-        object_id: String(p.objectId),
-        field_name: p.fieldName,
-        language_code: p.languageCode
+        object_id: mongoLiteral(String(p.objectId)),
+        field_name: mongoLiteral(p.fieldName),
+        language_code: mongoLiteral(p.languageCode)
       });
       return { done: true };
 
     case 'UPSERT_TRANSLATION_LANGUAGE':
       await db.collection('translation_languages').updateOne(
-        { language_code: p.languageCode },
+        { language_code: mongoLiteral(p.languageCode) },
         {
           $set: {
             language_code: p.languageCode,
@@ -532,10 +537,10 @@ async function handleTranslationMongo(db, operation, params = {}) {
         },
         { upsert: true }
       );
-      return mongoDoc(await db.collection('translation_languages').findOne({ language_code: p.languageCode }));
+      return mongoDoc(await db.collection('translation_languages').findOne({ language_code: mongoLiteral(p.languageCode) }));
 
     case 'GET_TRANSLATION_LANGUAGE':
-      return mongoDoc(await db.collection('translation_languages').findOne({ language_code: p.languageCode }));
+      return mongoDoc(await db.collection('translation_languages').findOne({ language_code: mongoLiteral(p.languageCode) }));
 
     case 'LIST_TRANSLATION_LANGUAGES': {
       const query = {};
@@ -549,7 +554,7 @@ async function handleTranslationMongo(db, operation, params = {}) {
     }
 
     case 'DELETE_TRANSLATION_LANGUAGE':
-      await db.collection('translation_languages').deleteOne({ language_code: p.languageCode });
+      await db.collection('translation_languages').deleteOne({ language_code: mongoLiteral(p.languageCode) });
       return { done: true, languageCode: p.languageCode };
 
     default:

@@ -88,7 +88,10 @@ function registerPerformDbOperationEvent(motherEmitter) {
     } catch (err) {
       // An error occurred either during parameter validation or DB execution
       if (timeout) clearTimeout(timeout); // Ensure timeout is cleared on error too
-      console.error(`[DB MANAGER] Error performing db operation for module "${payload?.moduleName || 'unknown'}":`, sanitize(err.message));
+      console.error('[DB MANAGER] Error performing db operation', {
+        moduleName: sanitize(payload?.moduleName || 'unknown'),
+        error: sanitize(err.message)
+      });
       
       // A stale Designer save must still fail, without disabling all design reads.
       const expectedConflict = payload?.moduleName === 'designerManager'

@@ -82,17 +82,17 @@ export async function mountWidgetModule(
   try {
     mod = await loadWidgetModule(def.codeUrl);
   } catch (err) {
-    console.error(`[Widget ${def.id}] WIDGET_RUNTIME_IMPORT_FAILED import error:`, err);
+    console.error('[Widget runtime] WIDGET_RUNTIME_IMPORT_FAILED import error:', def.id, err);
     renderRuntimeWidgetError(container, {
       code: 'WIDGET_RUNTIME_IMPORT_FAILED',
       title: 'Widget module could not load.',
-      detail: `${def.codeUrl}: ${toRuntimeErrorMessage(err)}`
+      detail: `Widget ${def.id} failed to load: ${toRuntimeErrorMessage(err)}`
     });
     return;
   }
 
   if (!mod) {
-    console.warn(`[Widget ${def.id}] WIDGET_RUNTIME_BLOCKED_CODE_URL blocked widget import path:`, def.codeUrl);
+    console.warn('[Widget runtime] WIDGET_RUNTIME_BLOCKED_CODE_URL blocked widget import path:', def.id, def.codeUrl);
     renderRuntimeWidgetError(container, {
       code: 'WIDGET_RUNTIME_BLOCKED_CODE_URL',
       title: 'Widget module path is blocked.',
@@ -102,7 +102,7 @@ export async function mountWidgetModule(
   }
 
   if (typeof mod.render !== 'function') {
-    console.error(`[Widget ${def.id}] WIDGET_RUNTIME_MISSING_RENDER render export missing:`, def.codeUrl);
+    console.error('[Widget runtime] WIDGET_RUNTIME_MISSING_RENDER render export missing:', def.id, def.codeUrl);
     renderRuntimeWidgetError(container, {
       code: 'WIDGET_RUNTIME_MISSING_RENDER',
       title: 'Widget module has no renderer.',
@@ -115,11 +115,11 @@ export async function mountWidgetModule(
     const context = createContext();
     await mod.render(container, context);
   } catch (err) {
-    console.error(`[Widget ${def.id}] WIDGET_RUNTIME_RENDER_FAILED render error:`, err);
+    console.error('[Widget runtime] WIDGET_RUNTIME_RENDER_FAILED render error:', def.id, err);
     renderRuntimeWidgetError(container, {
       code: 'WIDGET_RUNTIME_RENDER_FAILED',
       title: 'Widget render failed.',
-      detail: `${def.codeUrl}: ${toRuntimeErrorMessage(err)}`
+      detail: `Widget ${def.id} failed to render: ${toRuntimeErrorMessage(err)}`
     });
   }
 }

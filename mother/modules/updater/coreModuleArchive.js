@@ -16,6 +16,9 @@ function extractModuleArchive(buffer, moduleName, destination) {
   const indexed = new Map();
   let expandedSize = 0;
   for (const entry of entries) {
+    if (path.isAbsolute(entry.entryName) || entry.entryName.split(/[\\/]/).some(part => !part || part === '..' || part === '.')) {
+      throw packageError('CORE_MODULE_ARCHIVE_INVALID');
+    }
     if (((Number(entry.header.attr) >>> 16) & 0o170000) === 0o120000 ||
         !Number.isSafeInteger(entry.header.size) || entry.header.size < 0 ||
         (expandedSize += entry.header.size) > 80 * 1024 * 1024 ||

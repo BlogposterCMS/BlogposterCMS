@@ -105,6 +105,7 @@ function normalizePath(value = '/') {
 function normalizeRegexSource(value = '') {
   const source = normalizeText(value, 1000);
   if (!source) throw new Error('Regex redirect source is required.');
+  if (source.length > 500 || /\([^)]{200,}\)/.test(source)) throw new Error('Redirect regex is too complex.');
   try {
     // Validate only. The compiled expression is created during resolution.
     new RegExp(source);

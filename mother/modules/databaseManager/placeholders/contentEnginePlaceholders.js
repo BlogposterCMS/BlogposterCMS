@@ -30,6 +30,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback) {
   const actual = typeof value === 'undefined' ? fallback : value;
   return JSON.stringify(actual ?? fallback);
@@ -285,8 +290,8 @@ async function handleContentEngineSqlite(db, operation, params = {}) {
 
     case 'RESOLVE_CONTENT_PERMALINK':
       return normalizeSqlRows(await db.get(
-        'SELECT * FROM contentEngine_content_entries WHERE permalink = ? AND deleted_at IS NULL',
-        [p.permalink]
+        'SELECT * FROM contentEngine_content_entries WHERE permalink = ? AND language = ? AND deleted_at IS NULL',
+        [p.permalink, p.language || 'en']
       ))[0] || null;
 
     case 'LIST_CONTENT_ENTRIES': {
@@ -608,8 +613,8 @@ async function handleContentEnginePostgres(client, operation, params = {}) {
 
     case 'RESOLVE_CONTENT_PERMALINK': {
       const { rows } = await client.query(
-        'SELECT * FROM contentengine.content_entries WHERE permalink = $1 AND deleted_at IS NULL',
-        [p.permalink]
+        'SELECT * FROM contentengine.content_entries WHERE permalink = $1 AND language = $2 AND deleted_at IS NULL',
+        [p.permalink, p.language || 'en']
       );
       return rows[0] || null;
     }
@@ -950,15 +955,16 @@ async function handleContentEngineMongo(db, operation, params = {}) {
 
     case 'RESOLVE_CONTENT_PERMALINK':
       return mongoDoc(await db.collection('content_entries').findOne({
-        permalink: p.permalink,
+        permalink: mongoLiteral(p.permalink),
+        language: mongoLiteral(p.language || 'en'),
         deleted_at: null
       }));
 
     case 'LIST_CONTENT_ENTRIES': {
       const query = { deleted_at: null };
-      if (p.contentTypeKey) query.content_type_key = p.contentTypeKey;
-      if (p.status) query.status = p.status;
-      if (p.language) query.language = p.language;
+      if (p.contentTypeKey) query.content_type_key = mongoLiteral(p.contentTypeKey);
+      if (p.status) query.status = mongoLiteral(p.status);
+      if (p.language) query.language = mongoLiteral(p.language);
       return (await db.collection('content_entries')
         .find(query)
         .sort({ updated_at: -1 })
@@ -969,8 +975,8 @@ async function handleContentEngineMongo(db, operation, params = {}) {
 
     case 'LIST_TRASHED_CONTENT_ENTRIES': {
       const query = { deleted_at: { $ne: null } };
-      if (p.contentTypeKey) query.content_type_key = p.contentTypeKey;
-      if (p.language) query.language = p.language;
+      if (p.contentTypeKey) query.content_type_key = mongoLiteral(p.contentTypeKey);
+      if (p.language) query.language = mongoLiteral(p.language);
       return (await db.collection('content_entries')
         .find(query)
         .sort({ deleted_at: -1, updated_at: -1 })

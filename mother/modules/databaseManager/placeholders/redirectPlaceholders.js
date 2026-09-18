@@ -20,6 +20,13 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+// Keep request-derived Mongo filters scalar. Mongo operators supplied as an
+// object must never become part of a filter value.
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -475,7 +482,7 @@ async function handleRedirectMongo(db, operation, params = {}) {
 
     case 'UPSERT_REDIRECT_RULE':
       await db.collection('redirect_rules').updateOne(
-        { from_path: p.fromPath, language: p.language || '' },
+        { from_path: mongoLiteral(p.fromPath), language: mongoLiteral(p.language || '') },
         {
           $set: {
             from_path: p.fromPath,
@@ -499,7 +506,7 @@ async function handleRedirectMongo(db, operation, params = {}) {
         },
         { upsert: true }
       );
-      return mongoDoc(await db.collection('redirect_rules').findOne({ from_path: p.fromPath, language: p.language || '' }));
+      return mongoDoc(await db.collection('redirect_rules').findOne({ from_path: mongoLiteral(p.fromPath), language: mongoLiteral(p.language || '') }));
 
     case 'GET_REDIRECT_RULE':
       if (p.id) {
@@ -510,8 +517,8 @@ async function handleRedirectMongo(db, operation, params = {}) {
     case 'LIST_REDIRECT_RULES': {
       const query = {};
       if (typeof p.active === 'boolean') query.active = p.active;
-      if (p.language) query.language = p.language;
-      if (p.matchType) query.match_type = p.matchType;
+      if (p.language) query.language = mongoLiteral(p.language);
+      if (p.matchType) query.match_type = mongoLiteral(p.matchType);
       return (await db.collection('redirect_rules')
         .find(query)
         .sort({ priority: -1, updated_at: -1, _id: -1 })
@@ -525,7 +532,7 @@ async function handleRedirectMongo(db, operation, params = {}) {
         await db.collection('redirect_rules').deleteOne(mongoIdQuery(p.id));
         return { done: true, id: p.id };
       }
-      await db.collection('redirect_rules').deleteOne({ from_path: p.fromPath, language: p.language || '' });
+      await db.collection('redirect_rules').deleteOne({ from_path: mongoLiteral(p.fromPath), language: mongoLiteral(p.language || '') });
       return { done: true, fromPath: p.fromPath, language: p.language || '' };
 
     case 'RESOLVE_REDIRECT': {
@@ -571,7 +578,7 @@ async function handleRedirectMongo(db, operation, params = {}) {
     case 'LIST_REDIRECT_HITS': {
       const query = {};
       if (p.ruleId) query.rule_id = p.ruleId;
-      if (p.fromPath) query.from_path = p.fromPath;
+      if (p.fromPath) query.from_path = mongoLiteral(p.fromPath);
       return (await db.collection('redirect_hits')
         .find(query)
         .sort({ created_at: -1, _id: -1 })

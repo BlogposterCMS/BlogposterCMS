@@ -788,7 +788,8 @@ function waitForCommandFinal(appName, surfaceId, commandId, options = {}) {
 }
 
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  const boundedMs = Math.min(Math.max(Number(ms) || 0, 0), MAX_OBSERVE_DELAY_MS);
+  return new Promise(resolve => setTimeout(resolve, boundedMs));
 }
 
 function snapshotRevision(snapshot) {

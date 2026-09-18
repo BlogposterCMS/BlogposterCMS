@@ -25,6 +25,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -633,7 +638,7 @@ async function handleWorkflowMongo(db, operation, params = {}) {
       return { done: true };
 
     case 'ACQUIRE_CONTENT_LOCK': {
-      const query = { target_type: p.targetType, target_id: String(p.targetId) };
+      const query = { target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)) };
       const existing = await db.collection('content_locks').findOne(query);
       if (existing && isActiveLock(existing, p.now) && existing.owner_id !== String(p.ownerId) && !p.force) {
         return { ...mongoDoc(existing, 'lock'), locked: false };
@@ -655,7 +660,7 @@ async function handleWorkflowMongo(db, operation, params = {}) {
     }
 
     case 'REFRESH_CONTENT_LOCK': {
-      const query = { target_type: p.targetType, target_id: String(p.targetId) };
+      const query = { target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)) };
       const existing = await db.collection('content_locks').findOne(query);
       if (existing && existing.owner_id !== String(p.ownerId) && !p.force) {
         return { ...mongoDoc(existing, 'lock'), locked: false };
@@ -674,24 +679,26 @@ async function handleWorkflowMongo(db, operation, params = {}) {
     }
 
     case 'RELEASE_CONTENT_LOCK': {
-      const query = { target_type: p.targetType, target_id: String(p.targetId) };
-      if (!p.force && p.ownerId) query.owner_id = String(p.ownerId);
+      const query = { target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)) };
+      if (!p.force && p.ownerId) query.owner_id = mongoLiteral(String(p.ownerId));
       await db.collection('content_locks').deleteOne(query);
       return { done: true };
     }
 
     case 'GET_CONTENT_LOCK':
       return mongoDoc(await db.collection('content_locks').findOne({
-        target_type: p.targetType,
-        target_id: String(p.targetId),
+        target_type: mongoLiteral(p.targetType),
+        target_id: mongoLiteral(String(p.targetId)),
         expires_at: { $gt: p.now }
       }), 'lock');
 
     case 'UPSERT_CONTENT_AUTOSAVE': {
-      const query = { target_type: p.targetType, target_id: String(p.targetId), author_id: String(p.authorId) };
+      const query = { target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)), author_id: mongoLiteral(String(p.authorId)) };
       await db.collection('content_autosaves').updateOne(query, {
         $set: {
-          ...query,
+          target_type: p.targetType,
+          target_id: String(p.targetId),
+          author_id: String(p.authorId),
           title: p.title || '',
           excerpt: p.excerpt || '',
           content: p.content || {},
@@ -708,9 +715,9 @@ async function handleWorkflowMongo(db, operation, params = {}) {
       if (p.id) return mongoDoc(await db.collection('content_autosaves').findOne(mongoIdQuery(p.id)), 'autosave');
       return mongoDoc(await db.collection('content_autosaves').findOne(
         {
-          target_type: p.targetType,
-          target_id: String(p.targetId),
-          ...(p.authorId ? { author_id: String(p.authorId) } : {})
+          target_type: mongoLiteral(p.targetType),
+          target_id: mongoLiteral(String(p.targetId)),
+          ...(p.authorId ? { author_id: mongoLiteral(String(p.authorId)) } : {})
         },
         { sort: { updated_at: -1, _id: -1 } }
       ), 'autosave');
@@ -718,9 +725,9 @@ async function handleWorkflowMongo(db, operation, params = {}) {
     case 'LIST_CONTENT_AUTOSAVES':
       return (await db.collection('content_autosaves')
         .find({
-          target_type: p.targetType,
-          target_id: String(p.targetId),
-          ...(p.authorId ? { author_id: String(p.authorId) } : {})
+          target_type: mongoLiteral(p.targetType),
+          target_id: mongoLiteral(String(p.targetId)),
+          ...(p.authorId ? { author_id: mongoLiteral(String(p.authorId)) } : {})
         })
         .sort({ updated_at: -1, _id: -1 })
         .skip(Number(p.offset) || 0)
@@ -729,7 +736,7 @@ async function handleWorkflowMongo(db, operation, params = {}) {
 
     case 'DELETE_CONTENT_AUTOSAVE':
       if (p.id) await db.collection('content_autosaves').deleteOne(mongoIdQuery(p.id));
-      else await db.collection('content_autosaves').deleteOne({ target_type: p.targetType, target_id: String(p.targetId), author_id: String(p.authorId) });
+      else await db.collection('content_autosaves').deleteOne({ target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)), author_id: mongoLiteral(String(p.authorId)) });
       return { done: true };
 
     case 'UPSERT_CONTENT_REVIEW': {
@@ -754,7 +761,7 @@ async function handleWorkflowMongo(db, operation, params = {}) {
     case 'UPDATE_CONTENT_REVIEW_STATUS': {
       const query = p.id
         ? mongoIdQuery(p.id)
-        : { target_type: p.targetType, target_id: String(p.targetId), status: 'pending' };
+        : { target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)), status: 'pending' };
       const current = await db.collection('content_reviews').findOne(query, { sort: { updated_at: -1, _id: -1 } });
       if (!current) return null;
       await db.collection('content_reviews').updateOne({ _id: current._id }, {
@@ -772,15 +779,15 @@ async function handleWorkflowMongo(db, operation, params = {}) {
     case 'GET_CONTENT_REVIEW':
       if (p.id) return mongoDoc(await db.collection('content_reviews').findOne(mongoIdQuery(p.id)), 'review');
       return mongoDoc(await db.collection('content_reviews').findOne(
-        { target_type: p.targetType, target_id: String(p.targetId) },
+        { target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)) },
         { sort: { updated_at: -1, _id: -1 } }
       ), 'review');
 
     case 'LIST_CONTENT_REVIEWS':
       return (await db.collection('content_reviews')
         .find({
-          ...(p.status ? { status: p.status } : {}),
-          ...(p.targetType && p.targetId ? { target_type: p.targetType, target_id: String(p.targetId) } : {})
+          ...(p.status ? { status: mongoLiteral(p.status) } : {}),
+          ...(p.targetType && p.targetId ? { target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)) } : {})
         })
         .sort({ updated_at: -1, _id: -1 })
         .skip(Number(p.offset) || 0)

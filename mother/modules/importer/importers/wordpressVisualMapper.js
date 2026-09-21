@@ -1,5 +1,8 @@
 'use strict';
 
+const sanitizeHtml = require('sanitize-html');
+const { parseDocument, DomUtils } = require('htmlparser2');
+
 const BLOCK_PATTERN = /<nav\b[\s\S]*?<\/nav>|<(?:figure|picture)\b[\s\S]*?<\/(?:figure|picture)>|<img\b[^>]*>|<(?:a|button)\b[^>]*>[\s\S]*?<\/(?:a|button)>|<(?:h[1-6]|p|blockquote|ul|ol)\b[\s\S]*?<\/(?:h[1-6]|p|blockquote|ul|ol)>/gi;
 const BODY_PATTERN = /<body\b[^>]*>([\s\S]*?)<\/body>/i;
 const TAG_PATTERN = /<\/?[^>]+>/g;
@@ -7,8 +10,21 @@ const CLASS_PATTERN = /\bclass\s*=\s*["']([^"']+)["']/i;
 const HREF_PATTERN = /\bhref\s*=\s*["']([^"']+)["']/i;
 const SRC_PATTERN = /\bsrc\s*=\s*["']([^"']+)["']/i;
 const ALT_PATTERN = /\balt\s*=\s*["']([^"']*)["']/i;
-const UNSAFE_URL_PATTERN = /^(?:javascript|data|vbscript):/i;
 const MAX_WIDGETS = 24;
+const SAFE_URL_SCHEMES = new Set(['http', 'https', 'mailto', 'tel']);
+const WORDPRESS_STYLE_PROPERTIES = new Set(('color background-color border border-color border-radius border-style border-width '
+  + 'display font-family font-size font-style font-weight height line-height margin margin-bottom margin-left margin-right '
+  + 'margin-top max-height max-width min-height min-width opacity padding padding-bottom padding-left padding-right '
+  + 'padding-top text-align text-decoration text-transform width').split(' '));
+const WORDPRESS_ALLOWED_TAGS = sanitizeHtml.defaults.allowedTags.concat(['img', 'button', 'picture', 'source']);
+const WORDPRESS_ALLOWED_ATTRIBUTES = {
+  ...sanitizeHtml.defaults.allowedAttributes,
+  '*': ['class', 'id', 'title', 'role', 'data-*', 'aria-*', 'style'],
+  a: [...(sanitizeHtml.defaults.allowedAttributes.a || []), 'class', 'rel'],
+  button: ['class', 'type', 'disabled', 'name', 'value'],
+  img: sanitizeHtml.defaults.allowedAttributes.img,
+  source: ['src', 'srcset', 'type', 'media', 'sizes']
+};
 
 function clamp(value, min, max) {
   const number = Number(value);
@@ -17,13 +33,10 @@ function clamp(value, min, max) {
 }
 
 function decodeEntities(value = '') {
-  return String(value)
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/g, "'");
+  // Decode exactly one HTML parsing layer. Nested entity text remains text and
+  // cannot become an executable scheme after this value is escaped again.
+  const escapedMarkup = String(value).replace(/[<>"']/g, character => `&#${character.charCodeAt(0)};`);
+  return DomUtils.textContent(parseDocument(escapedMarkup, { decodeEntities: true }));
 }
 
 function stripTags(value = '') {
@@ -42,22 +55,73 @@ function safeAttribute(value = '') {
 
 function safeUrlAttribute(value = '', fallback = '') {
   const raw = decodeEntities(String(value || '')).trim();
-  if (!raw || UNSAFE_URL_PATTERN.test(raw) || raw.startsWith('//')) return fallback;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^(?:https?:|mailto:|tel:)/i.test(raw)) return fallback;
+  if (!raw || raw.startsWith('//')) return fallback;
+
+  const separator = raw.indexOf(':');
+  if (separator >= 0) {
+    let scheme = '';
+    for (let index = 0; index < separator; index += 1) {
+      const code = raw.charCodeAt(index);
+      const whitespace = code <= 0x20 || code === 0x7f || code === 0xa0
+        || code === 0x1680 || (code >= 0x2000 && code <= 0x200a)
+        || code === 0x2028 || code === 0x2029 || code === 0x202f
+        || code === 0x205f || code === 0x3000 || code === 0xfeff;
+      if (!whitespace) scheme += raw[index].toLowerCase();
+    }
+    const validScheme = scheme.length > 0
+      && scheme[0] >= 'a' && scheme[0] <= 'z'
+      && Array.from(scheme.slice(1)).every(character => (
+        (character >= 'a' && character <= 'z')
+        || (character >= '0' && character <= '9')
+        || character === '+' || character === '.' || character === '-'
+      ));
+    if (validScheme && !SAFE_URL_SCHEMES.has(scheme)) return fallback;
+  }
   return safeAttribute(raw);
 }
 
-function safeHtmlFragment(fragment = '') {
-  return String(fragment)
-    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
-    .replace(/\s+on[a-z]+\s*=\s*(['"]).*?\1/gi, '')
-    .replace(/\s+(?:href|src)\s*=\s*(['"])\s*(?:javascript|data|vbscript):[\s\S]*?\1/gi, '')
-    .trim();
+function safeInlineStyle(value = '') {
+  const declarations = [];
+  for (const part of String(value).split(';')) {
+    const separator = part.indexOf(':');
+    if (separator <= 0) continue;
+    const property = part.slice(0, separator).trim().toLowerCase();
+    const propertyValue = part.slice(separator + 1).trim();
+    const lowerValue = propertyValue.toLowerCase();
+    if (!WORDPRESS_STYLE_PROPERTIES.has(property) || !propertyValue || propertyValue.length > 2000) continue;
+    if (/[{}<>\\@\u0000-\u001f]/.test(propertyValue)
+      || lowerValue.includes('expression') || lowerValue.includes('url(')
+      || lowerValue.includes('javascript:') || lowerValue.includes('data:')
+      || lowerValue.includes('vbscript:') || lowerValue.includes('file:')
+      || lowerValue.includes('blob:')) continue;
+    declarations.push(`${property}:${propertyValue}`);
+  }
+  return declarations.join(';');
 }
 
-function firstAttr(fragment, pattern) {
+function safeHtmlFragment(fragment = '') {
+  return sanitizeHtml(String(fragment), {
+    allowedTags: WORDPRESS_ALLOWED_TAGS,
+    allowedAttributes: WORDPRESS_ALLOWED_ATTRIBUTES,
+    allowedSchemes: [...SAFE_URL_SCHEMES],
+    allowProtocolRelative: false,
+    transformTags: {
+      '*': (tagName, attributes) => {
+        const safe = { ...attributes };
+        if (safe.style) {
+          safe.style = safeInlineStyle(safe.style);
+          if (!safe.style) delete safe.style;
+        }
+        return { tagName, attribs: safe };
+      }
+    }
+  }).trim();
+}
+
+function firstAttr(fragment, pattern, decode = true) {
   const match = String(fragment || '').match(pattern);
-  return match ? decodeEntities(match[1]).trim() : '';
+  if (!match) return '';
+  return (decode ? decodeEntities(match[1]) : match[1]).trim();
 }
 
 function classList(fragment = '') {
@@ -138,9 +202,10 @@ function textWidget(fragment) {
 }
 
 function mediaWidget(fragment) {
-  const src = firstAttr(fragment, SRC_PATTERN);
+  const rawSrc = firstAttr(fragment, SRC_PATTERN, false);
+  const src = decodeEntities(rawSrc);
   const alt = firstAttr(fragment, ALT_PATTERN);
-  const safeSrc = safeUrlAttribute(src);
+  const safeSrc = safeUrlAttribute(rawSrc);
   return {
     widgetId: 'mediaBlock',
     code: {
@@ -158,12 +223,13 @@ function mediaWidget(fragment) {
 }
 
 function buttonWidget(fragment) {
-  const href = firstAttr(fragment, HREF_PATTERN) || '#';
+  const rawHref = firstAttr(fragment, HREF_PATTERN, false) || '#';
+  const href = decodeEntities(rawHref);
   const label = stripTags(fragment) || 'Link';
   return {
     widgetId: 'buttonLink',
     code: {
-      html: `<a class="bp-wp-import-button editable" href="${safeUrlAttribute(href, '#')}" role="button">${safeAttribute(label)}</a>`,
+      html: `<a class="bp-wp-import-button editable" href="${safeUrlAttribute(rawHref, '#')}" role="button">${safeAttribute(label)}</a>`,
       css: `
 .bp-wp-import-button {
   display: inline-flex;
@@ -311,7 +377,10 @@ function buildDesignerDraft({ title, slug, normalizedHtml = '', renderedHtml = '
 module.exports = {
   _internals: {
     classifyFragment,
+    decodeEntities,
     fragmentMatches,
+    safeHtmlFragment,
+    safeInlineStyle,
     safeUrlAttribute,
     stripTags
   },

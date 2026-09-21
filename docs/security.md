@@ -189,6 +189,14 @@ credentials or grant permissions: runtime context still excludes `ADMIN_TOKEN`
 from public widgets. Inline scripts retain the existing nonce-aware executor;
 the runtime retains its Shadow DOM isolation. No new trust flag or API is added.
 
+The browser sanitizer uses the pinned local DOMPurify ESM distribution. Build
+integrity checks bind that reviewed distribution, its matching declarations and
+licenses to SHA-256 hashes; browser code never loads sanitizer code from a CDN.
+DOMPurify removes active markup and executable URL schemes while the existing
+CSS sanitizer remains authoritative for retained `style` elements and
+attributes. Data/ARIA attributes, ordinary form controls and safe links remain
+available to trusted CMS rendering paths.
+
 ## Widget API metadata
 
 `metadata.apiActions` describes dependencies; it never grants runtime permissions.
@@ -501,6 +509,15 @@ its opaque iframe's restrictive srcdoc CSP in that case. Existing document
 nonces are reused when available; malformed values are rejected. Inherited
 parent CSP still applies, and no `unsafe-inline`, same-origin sandbox grant,
 credential forwarding or preview network permission is added.
+
+Designer Live Preview binds its message bridge to the exact embedding parent
+window. That sandboxed Designer parent reports a `null` origin, while the Public
+Preview itself may retain its normal runtime origin, so normal cross-window
+messages are filtered by exact `source` rather than origin. WordPress visual
+imports pass through the existing parser-based HTML sanitizer and conservative
+inline-CSS policy before widget construction, and
+imported links permit only relative URLs plus HTTP(S), mail and telephone schemes.
+
 ## Public editorial tags and locale projections
 
 `meta.tags` is explicitly public classification. Never store permissions, private

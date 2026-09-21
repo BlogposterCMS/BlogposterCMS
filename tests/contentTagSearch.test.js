@@ -87,4 +87,30 @@ test('Postgres binds tags as JSON and Mongo uses all-tag membership before pagin
   await handleSearchMongo({ collection: () => collection }, 'SEARCH_DOCUMENTS', { tags: ['academy', 'how-to'], limit: 1 });
   expect(collection.find).toHaveBeenCalledWith({ 'meta.tags': { $all: ['academy', 'how-to'] } });
   expect(cursor.limit).toHaveBeenCalledWith(1);
+
+  await handleSearchMongo({ collection: () => collection }, 'SEARCH_DOCUMENTS', { tags: [{ $elemMatch: { $ne: null } }] });
+  expect(collection.find).toHaveBeenLastCalledWith({ 'meta.tags': { $all: ['[object Object]'] } });
+});
+
+test('localized search cleanup binds SQL values and keeps Mongo filter values scalar', async () => {
+  const client = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+  await handleSearchPostgres(client, 'DELETE_SEARCH_DOCUMENT', {
+    sourceModule: 'contentEngine', sourceId: 'shared', entryId: 'shared'
+  });
+  const [sql, values] = client.query.mock.calls[0];
+  expect(sql).toContain('source_module = $1 AND (source_id = $2 OR entry_id = $3)');
+  expect(values).toEqual(['contentEngine', 'shared', 'shared']);
+
+  const deleteMany = jest.fn().mockResolvedValue({ deletedCount: 0 });
+  const operator = { $ne: null };
+  await handleSearchMongo({ collection: () => ({ deleteMany }) }, 'DELETE_SEARCH_DOCUMENT', {
+    sourceModule: operator, sourceId: operator, entryId: operator
+  });
+  expect(deleteMany).toHaveBeenCalledWith({
+    source_module: '[object Object]',
+    $or: [
+      { source_id: '[object Object]' },
+      { entry_id: '[object Object]' }
+    ]
+  });
 });

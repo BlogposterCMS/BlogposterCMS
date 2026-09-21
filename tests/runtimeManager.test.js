@@ -6,12 +6,21 @@ const axios = require('axios');
 const {
   _internals: {
     registerPublicRuntimeRoutes,
+    normalizePublicKey,
+    normalizePublicPath,
     runScheduledPublisherOnce,
     setupRuntimeEvents,
     shouldCheckRedirect,
     toPublicDesignerLayout
   }
 } = require('../mother/modules/runtimeManager');
+
+test('runtime public path and key normalization trims long boundaries linearly', () => {
+  assert.strictEqual(normalizePublicPath('////news//launch////'), '/news//launch');
+  assert.strictEqual(normalizePublicPath(`https://example.test/${'/'.repeat(100000)}news//launch${'/'.repeat(100000)}?draft=1`), '/news//launch');
+  assert.strictEqual(normalizePublicKey('---News--Launch---'), 'news--launch');
+  assert.strictEqual(normalizePublicKey(`${'-'.repeat(100000)}News--Launch${'-'.repeat(100000)}`), 'news--launch');
+});
 
 test('public shared layouts retain normalized content hosts but reject draft designs', () => {
   const layout = { layoutRef: 'layout:docs@v1', ownerId: 'private', document: { secret: 'private', layoutTree: {

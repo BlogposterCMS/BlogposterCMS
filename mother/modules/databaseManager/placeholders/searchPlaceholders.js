@@ -17,6 +17,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -48,6 +53,12 @@ function searchTokens(query = '') {
   return String(query || '').toLowerCase().split(/\s+/).map(t => t.trim()).filter(Boolean).slice(0, 8);
 }
 
+function searchTags(tags) {
+  return (Array.isArray(tags) ? tags : [])
+    .map(tag => String(tag))
+    .filter(Boolean);
+}
+
 function escapeRegex(value = '') {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -75,6 +86,11 @@ function sqliteWhere(p) {
     where.push('visibility = ?');
     values.push(p.visibility);
   }
+  // Exact membership is applied before LIMIT/OFFSET, never to a partial result page.
+  for (const tag of searchTags(p.tags)) {
+    where.push("EXISTS (SELECT 1 FROM json_each(searchManager_search_documents.meta, '$.tags') WHERE value = ?)");
+    values.push(tag);
+  }
   return { where: where.length ? where.join(' AND ') : '1 = 1', values };
 }
 
@@ -92,6 +108,8 @@ function postgresWhere(p) {
   if (p.language) where.push(`language = ${add(p.language)}`);
   if (p.status) where.push(`status = ${add(p.status)}`);
   if (p.visibility) where.push(`visibility = ${add(p.visibility)}`);
+  const tags = searchTags(p.tags);
+  if (tags.length) where.push(`meta @> ${add(JSON.stringify({ tags }))}::jsonb`);
   return { where: where.length ? where.join(' AND ') : '1 = 1', values, add };
 }
 
@@ -111,7 +129,7 @@ function mongoDoc(doc) {
 
 function mongoSourceQuery(p) {
   return {
-    source_module: p.sourceModule,
+    source_module: String(p.sourceModule ?? ''),
     source_id: String(p.sourceId)
   };
 }
@@ -208,8 +226,8 @@ async function handleSearchSqlite(db, operation, params = {}) {
 
     case 'DELETE_SEARCH_DOCUMENT':
       await db.run(
-        'DELETE FROM searchManager_search_documents WHERE source_module = ? AND source_id = ?',
-        [p.sourceModule, String(p.sourceId)]
+        'DELETE FROM searchManager_search_documents WHERE source_module = ? AND (source_id = ? OR entry_id = ?)',
+        [p.sourceModule, String(p.sourceId), p.entryId ? String(p.entryId) : null]
       );
       return { done: true, sourceModule: p.sourceModule, sourceId: String(p.sourceId) };
 
@@ -314,8 +332,8 @@ async function handleSearchPostgres(client, operation, params = {}) {
 
     case 'DELETE_SEARCH_DOCUMENT':
       await client.query(
-        'DELETE FROM searchManager.search_documents WHERE source_module = $1 AND source_id = $2',
-        [p.sourceModule, String(p.sourceId)]
+        'DELETE FROM searchManager.search_documents WHERE source_module = $1 AND (source_id = $2 OR entry_id = $3)',
+        [p.sourceModule, String(p.sourceId), p.entryId ? String(p.entryId) : null]
       );
       return { done: true, sourceModule: p.sourceModule, sourceId: String(p.sourceId) };
 
@@ -378,10 +396,12 @@ async function handleSearchMongo(db, operation, params = {}) {
       if (tokens.length) {
         query.$and = tokens.map(token => ({ search_text: { $regex: escapeRegex(token), $options: 'i' } }));
       }
-      if (p.contentTypeKey) query.content_type_key = p.contentTypeKey;
-      if (p.language) query.language = p.language;
-      if (p.status) query.status = p.status;
-      if (p.visibility) query.visibility = p.visibility;
+      if (p.contentTypeKey) query.content_type_key = mongoLiteral(p.contentTypeKey);
+      if (p.language) query.language = mongoLiteral(p.language);
+      if (p.status) query.status = mongoLiteral(p.status);
+      if (p.visibility) query.visibility = mongoLiteral(p.visibility);
+      const tags = searchTags(p.tags);
+      if (tags.length) query['meta.tags'] = { $all: tags };
       return (await db.collection('search_documents')
         .find(query)
         .sort({ indexed_at: -1, _id: -1 })
@@ -391,7 +411,17 @@ async function handleSearchMongo(db, operation, params = {}) {
     }
 
     case 'DELETE_SEARCH_DOCUMENT':
-      await db.collection('search_documents').deleteOne(mongoSourceQuery(p));
+      if (p.entryId) {
+        await db.collection('search_documents').deleteMany({
+          source_module: String(p.sourceModule ?? ''),
+          $or: [
+            { source_id: String(p.sourceId) },
+            { entry_id: String(p.entryId) }
+          ]
+        });
+      } else {
+        await db.collection('search_documents').deleteOne(mongoSourceQuery(p));
+      }
       return { done: true, sourceModule: p.sourceModule, sourceId: String(p.sourceId) };
 
     default:

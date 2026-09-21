@@ -19,6 +19,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -379,12 +384,12 @@ async function handleCommentsMongo(db, operation, params = {}) {
     case 'LIST_COMMENTS_FOR_ENTRY': {
       const query = { deleted_at: null };
       if (p.entryId) {
-        query.entry_id = String(p.entryId);
+        query.entry_id = mongoLiteral(String(p.entryId));
       } else {
-        query.source_module = p.sourceModule;
-        query.source_id = String(p.sourceId);
+        query.source_module = mongoLiteral(p.sourceModule);
+        query.source_id = mongoLiteral(String(p.sourceId));
       }
-      if (p.status) query.status = p.status;
+      if (p.status) query.status = mongoLiteral(p.status);
       return (await db.collection('comments')
         .find(query)
         .sort({ created_at: 1, _id: 1 })

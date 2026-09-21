@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+- Replace the shared browser HTML filter with a pinned, locally vendored
+  DOMPurify build while retaining the existing CSS policy and safe CMS markup.
+
+- Run CodeQL independently of test results so security alerts stay current;
+  resolve shared content helpers consistently in Windows test harnesses.
+
+- Bind sandboxed Designer Live Preview messages to their exact parent window,
+  replace vulnerable boundary-trimming and Bearer parsing expressions with
+  linear parsing, and sanitize WordPress import fragments with the existing
+  parser-based HTML/CSS policy.
+
+- Bind caller-controlled MongoDB placeholder filter values as scalar literals
+  across content, comments, media, metadata, navigation, redirects, search,
+  settings and pages while preserving existing domain operators and stored data.
+
+- Restore exact all-tag search filtering before pagination and cleanup of stale
+  localized search documents across SQLite, PostgreSQL and MongoDB.
+
+- Upgrade `adm-zip` to 0.6.1 so malformed archives are size-bounded and
+  extraction cannot write through destination symlinks.
+
 - Keep isolated widget workers alive when their rendered host moves between
   connected layout parents, while retaining cleanup after host removal or view
   replacement and preserving the original readiness failure code.

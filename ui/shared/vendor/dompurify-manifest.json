@@ -1,0 +1,28 @@
+{
+  "name": "DOMPurify",
+  "version": "3.4.15",
+  "package": "https://registry.npmjs.org/dompurify/-/dompurify-3.4.15.tgz",
+  "packageIntegrity": "sha512-EUBjM+B+lkDE41iE82DDSCfkoPGfXx8IxFxPMjNzm/Uk4xDet77rTN9wqlxlVg71kK7XGuUMv6wUxJUwwv+Xyw==",
+  "files": [
+    {
+      "path": "ui/shared/vendor/dompurify-3.4.15/purify.es.js",
+      "sha256": "e7d8182ea0aae9daa46c3294a486067b3f4461bd18f8ca76e499c623e9bda6e3",
+      "source": "package/dist/purify.es.mjs"
+    },
+    {
+      "path": "ui/shared/vendor/dompurify-3.4.15/purify.es.d.ts",
+      "sha256": "7bf9dfae5bc22dd61f74de59b4de707c4d8f1537c944168064b6c70652df549f",
+      "source": "package/dist/purify.es.d.mts"
+    },
+    {
+      "path": "ui/shared/vendor/dompurify-3.4.15/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source": "package/LICENSE"
+    },
+    {
+      "path": "ui/shared/vendor/dompurify-3.4.15/LICENSE-MPL",
+      "sha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+      "source": "package/LICENSE-MPL"
+    }
+  ]
+}

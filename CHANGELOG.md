@@ -10,6 +10,10 @@
   linear parsing, and sanitize WordPress import fragments with the existing
   parser-based HTML/CSS policy.
 
+- Bind caller-controlled MongoDB placeholder filter values as scalar literals
+  across content, comments, media, metadata, navigation, redirects, search,
+  settings and pages while preserving existing domain operators and stored data.
+
 - Restore exact all-tag search filtering before pagination and cleanup of stale
   localized search documents across SQLite, PostgreSQL and MongoDB.
 

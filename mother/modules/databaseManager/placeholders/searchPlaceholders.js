@@ -17,6 +17,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -391,10 +396,10 @@ async function handleSearchMongo(db, operation, params = {}) {
       if (tokens.length) {
         query.$and = tokens.map(token => ({ search_text: { $regex: escapeRegex(token), $options: 'i' } }));
       }
-      if (p.contentTypeKey) query.content_type_key = p.contentTypeKey;
-      if (p.language) query.language = p.language;
-      if (p.status) query.status = p.status;
-      if (p.visibility) query.visibility = p.visibility;
+      if (p.contentTypeKey) query.content_type_key = mongoLiteral(p.contentTypeKey);
+      if (p.language) query.language = mongoLiteral(p.language);
+      if (p.status) query.status = mongoLiteral(p.status);
+      if (p.visibility) query.visibility = mongoLiteral(p.visibility);
       const tags = searchTags(p.tags);
       if (tags.length) query['meta.tags'] = { $all: tags };
       return (await db.collection('search_documents')

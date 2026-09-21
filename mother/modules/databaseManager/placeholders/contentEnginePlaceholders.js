@@ -30,9 +30,13 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
-function mongoLiteral(value, fallback = '') {
+function mongoScalar(value, fallback = '') {
   const scalar = value == null ? fallback : value;
-  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+  return (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar);
+}
+
+function mongoLiteral(value, fallback = '') {
+  return { $eq: mongoScalar(value, fallback) };
 }
 
 function jsonString(value, fallback) {
@@ -78,7 +82,10 @@ function mongoDoc(doc) {
 
 function mongoIdValues(value) {
   if (value == null) return [];
-  const values = [value];
+  const scalar = (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+    ? value
+    : String(value);
+  const values = [scalar];
   const asString = String(value);
   if (asString && !values.some(item => String(item) === asString)) values.push(asString);
   const asObjectId = toObjectId(value);
@@ -811,7 +818,7 @@ async function handleContentEngineMongo(db, operation, params = {}) {
 
     case 'UPSERT_CONTENT_TYPE':
       await db.collection('content_types').updateOne(
-        { key: p.key },
+        { key: mongoLiteral(p.key) },
         {
           $set: {
             key: p.key,
@@ -826,10 +833,10 @@ async function handleContentEngineMongo(db, operation, params = {}) {
         },
         { upsert: true }
       );
-      return mongoDoc(await db.collection('content_types').findOne({ key: p.key }));
+      return mongoDoc(await db.collection('content_types').findOne({ key: mongoLiteral(p.key) }));
 
     case 'GET_CONTENT_TYPE':
-      return mongoDoc(await db.collection('content_types').findOne({ key: p.key }));
+      return mongoDoc(await db.collection('content_types').findOne({ key: mongoLiteral(p.key) }));
 
     case 'LIST_CONTENT_TYPES':
       return (await db.collection('content_types').find({}).sort({ label: 1 }).toArray()).map(mongoDoc);
@@ -925,18 +932,18 @@ async function handleContentEngineMongo(db, operation, params = {}) {
 
     case 'GET_CONTENT_ENTRY_BY_SOURCE':
       return mongoDoc(await db.collection('content_entries').findOne({
-        source_module: p.sourceModule,
-        source_id: String(p.sourceId),
+        source_module: mongoLiteral(p.sourceModule),
+        source_id: mongoLiteral(String(p.sourceId)),
         deleted_at: null
       }));
 
     case 'FIND_CONTENT_ENTRY_CONFLICT': {
       const clauses = [
-        { permalink: p.permalink },
+        { permalink: mongoLiteral(p.permalink) },
         {
-          content_type_key: p.contentTypeKey,
-          slug: p.slug,
-          language: p.language || 'en'
+          content_type_key: mongoLiteral(p.contentTypeKey),
+          slug: mongoLiteral(p.slug),
+          language: mongoLiteral(p.language || 'en')
         }
       ];
       const excludeValues = mongoIdValues(p.entryId);
@@ -989,10 +996,10 @@ async function handleContentEngineMongo(db, operation, params = {}) {
       const query = {
         deleted_at: null,
         status: 'scheduled',
-        published_at: { $ne: null, $lte: p.dueBefore || new Date().toISOString() }
+        published_at: { $ne: null, $lte: mongoScalar(p.dueBefore || new Date().toISOString()) }
       };
-      if (p.contentTypeKey) query.content_type_key = p.contentTypeKey;
-      if (p.language) query.language = p.language;
+      if (p.contentTypeKey) query.content_type_key = mongoLiteral(p.contentTypeKey);
+      if (p.language) query.language = mongoLiteral(p.language);
       return (await db.collection('content_entries')
         .find(query)
         .sort({ published_at: 1, updated_at: 1 })

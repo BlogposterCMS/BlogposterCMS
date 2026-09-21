@@ -58,6 +58,9 @@ jobs:
   codeql_analysis:
     # Keep security results current even when an unrelated test fails.
     runs-on: ubuntu-latest
+    env:
+      # Existing alerts must be verified as well as newly changed lines.
+      CODEQL_ACTION_DIFF_INFORMED_QUERIES: 'false'
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js

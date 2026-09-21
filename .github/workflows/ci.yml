@@ -56,7 +56,7 @@ jobs:
         run: npm test -- --runInBand --testPathIgnorePatterns 'tests/(moduleProcessRuntime|moduleRegistryEventsActivation)\.test\.js$'
 
   codeql_analysis:
-    needs: lint_and_test
+    # Keep security results current even when an unrelated test fails.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

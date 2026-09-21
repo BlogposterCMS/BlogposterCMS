@@ -231,11 +231,23 @@ export async function renderLivePreviewPayload(payload: DesignerLivePreviewPaylo
   }
 }
 
+export function isTrustedLivePreviewMessageSource(
+  source: MessageEventSource | null,
+  trustedParent: Window = window.parent
+): boolean {
+  return trustedParent !== window && source === trustedParent;
+}
+
 export function bootLivePreviewRuntime(): void {
   if (livePreviewRuntimeBooted) return;
   livePreviewRuntimeBooted = true;
+  const trustedParent = window.parent;
 
   window.addEventListener('message', event => {
+    // The embedding Designer parent has an opaque (`null`) sandbox origin, so
+    // event.origin cannot identify it. Bind normal cross-window messages to
+    // the exact parent WindowProxy instead.
+    if (!isTrustedLivePreviewMessageSource(event.source, trustedParent)) return;
     const message = isRecord(event.data) ? event.data : {};
     if (handleRuntimeResponse(message)) return;
     if (message.type !== DESIGNER_LIVE_PREVIEW_RENDER || !isRecord(message.payload)) return;

@@ -8,9 +8,13 @@ const agentAccess = require('../mother/modules/agentAccess');
 const agentManager = require('../mother/modules/agentManager');
 const {
   createAgentAccessAdminRouter,
-  createAgentAccessPublicRouter
+  createAgentAccessPublicRouter,
+  _internals: agentAccessHttpInternals
 } = require('../mother/modules/agentAccess/httpApi');
-const { createAgentApiRouter } = require('../mother/modules/agentManager/httpApi');
+const {
+  createAgentApiRouter,
+  _internals: agentManagerHttpInternals
+} = require('../mother/modules/agentManager/httpApi');
 
 class TestEmitter extends EventEmitter {
   registerModuleType() {}
@@ -101,6 +105,56 @@ function restoreEnv(name, value) {
     process.env[name] = value;
   }
 }
+
+test('agent HTTP bearer parsing handles long whitespace without changing cookie fallback', () => {
+  const whitespace = ' '.repeat(100000);
+  const bearerRequest = {
+    get: () => `bEaReR${whitespace}admin-token`,
+    cookies: { admin_jwt: 'cookie-token' }
+  };
+  const fallbackRequest = {
+    get: () => 'Basic basic-token',
+    cookies: { admin_jwt: 'cookie-token' }
+  };
+  const malformedBearerRequest = {
+    get: () => `Bearer${whitespace}admin token`,
+    cookies: { admin_jwt: 'cookie-token' }
+  };
+
+  assert.strictEqual(agentAccessHttpInternals.extractJwt(bearerRequest), 'admin-token');
+  assert.strictEqual(agentManagerHttpInternals.extractJwt(bearerRequest), 'admin-token');
+  assert.strictEqual(agentAccessHttpInternals.extractJwt(fallbackRequest), 'cookie-token');
+  assert.strictEqual(agentManagerHttpInternals.extractJwt(fallbackRequest), 'cookie-token');
+  assert.strictEqual(agentAccessHttpInternals.extractJwt(malformedBearerRequest), 'admin token');
+  assert.strictEqual(agentManagerHttpInternals.extractJwt(malformedBearerRequest), 'admin token');
+});
+
+test('explicit malformed bearer credentials cannot fall back to a valid admin cookie', async () => {
+  const { server, baseUrl } = await startServer();
+  const headers = {
+    Authorization: 'Bearer admin token',
+    Cookie: 'admin_jwt=admin-token'
+  };
+  try {
+    const accessDenied = await axios.get(`${baseUrl}/admin/api/agent-access/codes`, { headers })
+      .catch(error => error.response);
+    const managerDenied = await axios.get(`${baseUrl}/admin/api/agent/definition`, { headers })
+      .catch(error => error.response);
+    assert.strictEqual(accessDenied.status, 401);
+    assert.strictEqual(managerDenied.status, 401);
+
+    const validBearer = await axios.get(`${baseUrl}/admin/api/agent/definition`, {
+      headers: { Authorization: 'Bearer admin-token' }
+    });
+    const validCookie = await axios.get(`${baseUrl}/admin/api/agent/definition`, {
+      headers: { Cookie: 'admin_jwt=admin-token' }
+    });
+    assert.strictEqual(validBearer.status, 200);
+    assert.strictEqual(validCookie.status, 200);
+  } finally {
+    server.close();
+  }
+});
 
 test('agent access http flow creates a one-time code and uses the bearer token on AgentManager', async () => {
   const { server, baseUrl, issuedPermissions } = await startServer();

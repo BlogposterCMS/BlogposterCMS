@@ -501,6 +501,15 @@ its opaque iframe's restrictive srcdoc CSP in that case. Existing document
 nonces are reused when available; malformed values are rejected. Inherited
 parent CSP still applies, and no `unsafe-inline`, same-origin sandbox grant,
 credential forwarding or preview network permission is added.
+
+Designer Live Preview binds its message bridge to the exact embedding parent
+window. That sandboxed Designer parent reports a `null` origin, while the Public
+Preview itself may retain its normal runtime origin, so normal cross-window
+messages are filtered by exact `source` rather than origin. WordPress visual
+imports pass through the existing parser-based HTML sanitizer and conservative
+inline-CSS policy before widget construction, and
+imported links permit only relative URLs plus HTTP(S), mail and telephone schemes.
+
 ## Public editorial tags and locale projections
 
 `meta.tags` is explicitly public classification. Never store permissions, private

@@ -5,6 +5,11 @@
 - Run CodeQL independently of test results so security alerts stay current;
   resolve shared content helpers consistently in Windows test harnesses.
 
+- Bind sandboxed Designer Live Preview messages to their exact parent window,
+  replace vulnerable boundary-trimming and Bearer parsing expressions with
+  linear parsing, and sanitize WordPress import fragments with the existing
+  parser-based HTML/CSS policy.
+
 - Restore exact all-tag search filtering before pagination and cleanup of stale
   localized search documents across SQLite, PostgreSQL and MongoDB.
 

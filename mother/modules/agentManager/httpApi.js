@@ -290,8 +290,17 @@ function refreshPayload(body = {}) {
 }
 
 function extractJwt(req) {
-  const bearer = String(req.get('authorization') || '').match(/^Bearer\s+(.+)$/i);
-  return bearer?.[1] || req.cookies?.admin_jwt || null;
+  const authorization = String(req.get('authorization') || '');
+  if (authorization.length > 6 && authorization.slice(0, 6).toLowerCase() === 'bearer') {
+    let index = 6;
+    if (authorization[index] === ' ' || authorization[index] === '\t') {
+      while (authorization[index] === ' ' || authorization[index] === '\t') index += 1;
+      // An explicit Bearer credential always wins over the cookie, including
+      // malformed values that validation must reject fail closed.
+      return authorization.slice(index) || null;
+    }
+  }
+  return req.cookies?.admin_jwt || null;
 }
 
 function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
@@ -559,6 +568,7 @@ function createAgentApiRouter({ motherEmitter, validateAdminToken } = {}) {
 module.exports = {
   createAgentApiRouter,
   _internals: {
+    extractJwt,
     commandPayload,
     eventStatus,
     activityOptions,

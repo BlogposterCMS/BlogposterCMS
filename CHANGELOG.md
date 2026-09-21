@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Replace the shared browser HTML filter with a pinned, locally vendored
+  DOMPurify build while retaining the existing CSS policy and safe CMS markup.
+
 - Run CodeQL independently of test results so security alerts stay current;
   resolve shared content helpers consistently in Windows test harnesses.
 

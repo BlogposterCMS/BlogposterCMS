@@ -1,26 +1,30 @@
+import DOMPurify, { type Config } from '../vendor/dompurify-3.4.15/purify.es.js';
+
+const HTML_SANITIZE_CONFIG: Config = {
+  ADD_ATTR: ['target'],
+  ALLOW_ARIA_ATTR: true,
+  ALLOW_DATA_ATTR: true,
+  FORCE_BODY: true,
+  FORBID_ATTR: ['srcdoc'],
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
+  RETURN_TRUSTED_TYPE: false,
+};
+
+DOMPurify.addHook('uponSanitizeElement', (currentNode, hookEvent) => {
+  if (hookEvent.tagName === 'style') {
+    currentNode.textContent = sanitizeCss(currentNode.textContent ?? '');
+  }
+});
+
+DOMPurify.addHook('uponSanitizeAttribute', (_currentNode, hookEvent) => {
+  if (hookEvent.attrName !== 'style') return;
+  const sanitized = sanitizeCss(hookEvent.attrValue, true);
+  hookEvent.attrValue = sanitized;
+  hookEvent.keepAttr = sanitized.length > 0;
+});
+
 export function sanitizeHtml(html: string): string {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  div.querySelectorAll('script').forEach(el => el.remove());
-  div.querySelectorAll('style').forEach(el => {
-    el.textContent = sanitizeCss(el.textContent);
-  });
-  div.querySelectorAll('*').forEach(el => {
-    Array.from(el.attributes).forEach(attr => {
-      const name = attr.name.toLowerCase();
-      if (name.startsWith('on')) {
-        el.removeAttribute(attr.name);
-      } else if (name === 'style') {
-        const sanitized = sanitizeCss(attr.value, true);
-        if (sanitized) {
-          el.setAttribute('style', sanitized);
-        } else {
-          el.removeAttribute('style');
-        }
-      }
-    });
-  });
-  return div.innerHTML;
+  return DOMPurify.sanitize(html, HTML_SANITIZE_CONFIG) as string;
 }
 
 export function sanitizeCss(css: string, inline = false): string {

@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - Add administrator password recovery under `/admin`: registered administrator emails receive a one-hour, single-use reset link through the configured SMTP integration. Show clear confirmation, expired-link and delivery-configuration states; keep public site routes untouched.
+- Raise the locked `adm-zip` minimum to 0.6.1 so the required high-severity audit gate passes with the published security fixes.
 
 - Keep isolated widget workers alive when their rendered host moves between
   connected layout parents, while retaining cleanup after host removal or view

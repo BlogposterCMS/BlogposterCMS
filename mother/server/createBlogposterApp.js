@@ -19,6 +19,7 @@ const { createAdminShellRoutes } = require('./http/adminShellRoutes');
 const { mountAgentApiRoutes } = require('./http/agentApiRoutes');
 const { createAppManagementRoutes } = require('./http/appManagementRoutes');
 const { createAuthRoutes } = require('./http/authRoutes');
+const { createPasswordRecoveryService } = require('../modules/userManagement/passwordRecoveryService');
 const { createInstallRoutes } = require('./http/installRoutes');
 const { createHealthRoutes } = require('./http/healthRoutes');
 const { createPublicReadiness } = require('./health/publicReadiness');
@@ -106,6 +107,13 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     maybeIssueDevAdminSession: authContext.maybeIssueDevAdminSession,
     motherEmitter,
     needsInitialSetup: installationStatus.needsInitialSetup,
+    passwordRecovery: createPasswordRecoveryService({
+      motherEmitter,
+      getUserManagementToken: () => getCachedCoreToken('userManagement'),
+      secret: tokenConfig.jwtSecret,
+      publicUrl: process.env.PUBLIC_URL || 'http://localhost:3000',
+      isProduction
+    }),
     publicPath: staticPaths.publicPath,
     validateAdminToken: authContext.validateAdminToken
   }));

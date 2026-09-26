@@ -77,3 +77,9 @@ All payloads must include a valid JWT and the correct `moduleName`/`moduleType`.
 
 ## Adding Login Strategies
 See [Adding OAuth and Custom Login Strategies](../how_login_strategies_work.md) for a step‑by‑step guide on implementing new strategies and keeping secrets safe.
+
+## Administrator password recovery
+
+`/admin/login` links to `/admin/forgot-password`. The request form requires the administrator's registered email. Configure `PUBLIC_URL` to the site's HTTPS origin and activate the existing SMTP integration in Notification Manager before using recovery in production. If SMTP is unavailable, the form identifies the operator action without revealing account details.
+
+The email contains a link to `/admin/reset-password` valid for one hour. A successful change uses the existing salted bcrypt password format, increments `token_version` to invalidate older sessions, and returns to the login page. The link stops working once the password changes. Unknown and non-admin email addresses receive the same confirmation as an eligible account. The routes use the login rate limit and CSRF protection; reset pages are never cached.

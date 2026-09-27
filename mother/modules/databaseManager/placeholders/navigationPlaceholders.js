@@ -24,6 +24,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -99,8 +104,8 @@ function mongoIdQuery(id) {
 
 function mongoMenuQuery(p) {
   if (p.menuId) return mongoIdQuery(p.menuId);
-  if (p.locationKey) return { location_key: p.locationKey };
-  return { key: p.key };
+  if (p.locationKey) return { location_key: mongoLiteral(p.locationKey) };
+  return { key: mongoLiteral(p.key) };
 }
 
 function mongoItemDoc(p, id = new ObjectId()) {
@@ -493,21 +498,21 @@ async function handleNavigationMongo(db, operation, params = {}) {
 
     case 'UPSERT_NAVIGATION_LOCATION':
       await db.collection('navigation_locations').updateOne(
-        { key: p.key },
+        { key: mongoLiteral(p.key) },
         {
           $set: { key: p.key, label: p.label, description: p.description || '', updated_at: new Date() },
           $setOnInsert: { created_at: new Date() }
         },
         { upsert: true }
       );
-      return mongoDoc(await db.collection('navigation_locations').findOne({ key: p.key }));
+      return mongoDoc(await db.collection('navigation_locations').findOne({ key: mongoLiteral(p.key) }));
 
     case 'LIST_NAVIGATION_LOCATIONS':
       return (await db.collection('navigation_locations').find({}).sort({ key: 1 }).toArray()).map(mongoDoc);
 
     case 'UPSERT_NAVIGATION_MENU':
       await db.collection('navigation_menus').updateOne(
-        { key: p.key },
+        { key: mongoLiteral(p.key) },
         {
           $set: {
             key: p.key,
@@ -520,13 +525,13 @@ async function handleNavigationMongo(db, operation, params = {}) {
         },
         { upsert: true }
       );
-      return mongoDoc(await db.collection('navigation_menus').findOne({ key: p.key }));
+      return mongoDoc(await db.collection('navigation_menus').findOne({ key: mongoLiteral(p.key) }));
 
     case 'GET_NAVIGATION_MENU':
       return mongoDoc(await db.collection('navigation_menus').findOne(mongoMenuQuery(p), { sort: { _id: 1 } }));
 
     case 'LIST_NAVIGATION_MENUS': {
-      const query = p.locationKey ? { location_key: p.locationKey } : {};
+      const query = p.locationKey ? { location_key: mongoLiteral(p.locationKey) } : {};
       return (await db.collection('navigation_menus').find(query).sort({ key: 1 }).toArray()).map(mongoDoc);
     }
 
@@ -538,7 +543,7 @@ async function handleNavigationMongo(db, operation, params = {}) {
 
     case 'SET_NAVIGATION_MENU_ITEMS': {
       await db.collection('navigation_items').updateMany(
-        { menu_id: String(p.menuId), deleted_at: null },
+        { menu_id: mongoLiteral(String(p.menuId)), deleted_at: null },
         { $set: { deleted_at: new Date(), updated_at: new Date() } }
       );
       const docs = (Array.isArray(p.items) ? p.items : []).map(item => mongoItemDoc({ ...item, menuId: p.menuId }));
@@ -550,8 +555,8 @@ async function handleNavigationMongo(db, operation, params = {}) {
       return mongoDoc(await db.collection('navigation_items').findOne({ ...mongoIdQuery(p.itemId), deleted_at: null }));
 
     case 'LIST_NAVIGATION_MENU_ITEMS': {
-      const query = { menu_id: String(p.menuId), deleted_at: null };
-      if (p.status) query.status = p.status;
+      const query = { menu_id: mongoLiteral(String(p.menuId)), deleted_at: null };
+      if (p.status) query.status = mongoLiteral(p.status);
       return (await db.collection('navigation_items')
         .find(query)
         .sort({ position: 1, _id: 1 })

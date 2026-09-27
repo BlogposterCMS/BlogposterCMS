@@ -3,13 +3,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
+const manifests = [
+  require('../ui/shared/vendor/echarts-manifest.json'),
+  require('../ui/shared/vendor/dompurify-manifest.json'),
+];
 function verifyBytes(bytes, expected, label) {
   const actual = crypto.createHash('sha256').update(bytes).digest('hex');
   if (actual !== expected) throw new Error(`VENDOR_INTEGRITY_MISMATCH: ${label}`);
 }
 if (require.main === module) {
-  const manifest = require('../ui/shared/vendor/echarts-manifest.json');
-  for (const file of manifest.files) verifyBytes(fs.readFileSync(path.join(root, file.path)), file.sha256, file.path);
-  console.log(`Vendor integrity verified: ${manifest.name} ${manifest.version}`);
+  for (const manifest of manifests) {
+    for (const file of manifest.files) verifyBytes(fs.readFileSync(path.join(root, file.path)), file.sha256, file.path);
+    console.log(`Vendor integrity verified: ${manifest.name} ${manifest.version}`);
+  }
 }
 module.exports = { verifyBytes };

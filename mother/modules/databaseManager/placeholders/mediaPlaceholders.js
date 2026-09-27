@@ -27,6 +27,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = {}) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -854,8 +859,8 @@ async function handleMediaMongo(db, operation, params = {}) {
 
     case 'MEDIA_LIST_FILES': {
       const query = {};
-      if (p.filterCategory) query.category = p.filterCategory;
-      if (p.filterFileType) query.file_type = p.filterFileType;
+      if (p.filterCategory) query.category = mongoLiteral(p.filterCategory);
+      if (p.filterFileType) query.file_type = mongoLiteral(p.filterFileType);
       return await db.collection('media_files').find(query).sort({ created_at: -1 }).toArray();
     }
 
@@ -880,8 +885,8 @@ async function handleMediaMongo(db, operation, params = {}) {
     case 'UPSERT_MEDIA_ATTACHMENT': {
       if (!p.id && p.sourceModule && p.sourceId) {
         const existing = await db.collection('media_attachments').findOne({
-          source_module: p.sourceModule,
-          source_id: p.sourceId
+          source_module: mongoLiteral(p.sourceModule),
+          source_id: mongoLiteral(p.sourceId)
         });
         if (existing) {
           return await handleMediaMongo(db, 'UPSERT_MEDIA_ATTACHMENT', {
@@ -893,7 +898,10 @@ async function handleMediaMongo(db, operation, params = {}) {
 
       let query = null;
       if (p.id) query = mongoIdQuery(p.id);
-      else if (p.sourceModule && p.sourceId) query = { source_module: p.sourceModule, source_id: p.sourceId };
+      else if (p.sourceModule && p.sourceId) query = {
+        source_module: mongoLiteral(p.sourceModule),
+        source_id: mongoLiteral(p.sourceId)
+      };
       else query = { _id: new ObjectId() };
       const id = query._id || new ObjectId();
       const update = {
@@ -951,18 +959,21 @@ async function handleMediaMongo(db, operation, params = {}) {
     case 'GET_MEDIA_ATTACHMENT':
       if (p.id) return mongoDoc(await db.collection('media_attachments').findOne(mongoIdQuery(p.id)));
       if (p.sourceModule && p.sourceId) {
-        return mongoDoc(await db.collection('media_attachments').findOne({ source_module: p.sourceModule, source_id: p.sourceId }));
+        return mongoDoc(await db.collection('media_attachments').findOne({
+          source_module: mongoLiteral(p.sourceModule),
+          source_id: mongoLiteral(p.sourceId)
+        }));
       }
       return null;
 
     case 'LIST_MEDIA_ATTACHMENTS': {
       const query = {};
-      if (p.category) query.category = p.category;
-      if (p.fileType) query.file_type = p.fileType;
-      if (p.mimeType) query.mime_type = p.mimeType;
-      if (p.status) query.status = p.status;
-      if (p.visibility) query.visibility = p.visibility;
-      if (p.folder) query.folder = p.folder;
+      if (p.category) query.category = mongoLiteral(p.category);
+      if (p.fileType) query.file_type = mongoLiteral(p.fileType);
+      if (p.mimeType) query.mime_type = mongoLiteral(p.mimeType);
+      if (p.status) query.status = mongoLiteral(p.status);
+      if (p.visibility) query.visibility = mongoLiteral(p.visibility);
+      if (p.folder) query.folder = mongoLiteral(p.folder);
       if (p.query) {
         const regex = new RegExp(String(p.query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
         query.$or = [{ file_name: regex }, { title: regex }, { alt_text: regex }, { caption: regex }];
@@ -983,7 +994,7 @@ async function handleMediaMongo(db, operation, params = {}) {
 
     case 'UPSERT_MEDIA_VARIANT':
       await db.collection('media_variants').updateOne(
-        { attachment_id: String(p.attachmentId), variant_key: p.variantKey },
+        { attachment_id: mongoLiteral(String(p.attachmentId)), variant_key: mongoLiteral(p.variantKey) },
         {
           $set: {
             attachment_id: String(p.attachmentId),
@@ -1004,25 +1015,31 @@ async function handleMediaMongo(db, operation, params = {}) {
         },
         { upsert: true }
       );
-      return mongoVariantDoc(await db.collection('media_variants').findOne({ attachment_id: String(p.attachmentId), variant_key: p.variantKey }));
+      return mongoVariantDoc(await db.collection('media_variants').findOne({
+        attachment_id: mongoLiteral(String(p.attachmentId)),
+        variant_key: mongoLiteral(p.variantKey)
+      }));
 
     case 'LIST_MEDIA_VARIANTS':
       return (await db.collection('media_variants')
-        .find({ attachment_id: String(p.attachmentId) })
+        .find({ attachment_id: mongoLiteral(String(p.attachmentId)) })
         .sort({ variant_key: 1 })
         .toArray()).map(mongoVariantDoc);
 
     case 'DELETE_MEDIA_VARIANT':
-      await db.collection('media_variants').deleteOne({ attachment_id: String(p.attachmentId), variant_key: p.variantKey });
+      await db.collection('media_variants').deleteOne({
+        attachment_id: mongoLiteral(String(p.attachmentId)),
+        variant_key: mongoLiteral(p.variantKey)
+      });
       return { done: true, attachmentId: String(p.attachmentId), variantKey: p.variantKey };
 
     case 'LINK_MEDIA_ATTACHMENT':
       await db.collection('media_relations').updateOne(
         {
-          attachment_id: String(p.attachmentId),
-          target_type: p.targetType,
-          target_id: String(p.targetId),
-          role: p.role || 'inline'
+          attachment_id: mongoLiteral(String(p.attachmentId)),
+          target_type: mongoLiteral(p.targetType),
+          target_id: mongoLiteral(String(p.targetId)),
+          role: mongoLiteral(p.role || 'inline')
         },
         {
           $set: {
@@ -1044,24 +1061,24 @@ async function handleMediaMongo(db, operation, params = {}) {
         { upsert: true }
       );
       return mongoRelationDoc(await db.collection('media_relations').findOne({
-        attachment_id: String(p.attachmentId),
-        target_type: p.targetType,
-        target_id: String(p.targetId),
-        role: p.role || 'inline'
+        attachment_id: mongoLiteral(String(p.attachmentId)),
+        target_type: mongoLiteral(p.targetType),
+        target_id: mongoLiteral(String(p.targetId)),
+        role: mongoLiteral(p.role || 'inline')
       }));
 
     case 'UNLINK_MEDIA_ATTACHMENT':
       await db.collection('media_relations').deleteOne({
-        attachment_id: String(p.attachmentId),
-        target_type: p.targetType,
-        target_id: String(p.targetId),
-        role: p.role || 'inline'
+        attachment_id: mongoLiteral(String(p.attachmentId)),
+        target_type: mongoLiteral(p.targetType),
+        target_id: mongoLiteral(String(p.targetId)),
+        role: mongoLiteral(p.role || 'inline')
       });
       return { done: true };
 
     case 'LIST_MEDIA_FOR_CONTENT': {
       const relations = await db.collection('media_relations')
-        .find({ target_type: p.targetType, target_id: String(p.targetId) })
+        .find({ target_type: mongoLiteral(p.targetType), target_id: mongoLiteral(String(p.targetId)) })
         .sort({ sort_order: 1 })
         .toArray();
       const out = [];
@@ -1076,7 +1093,7 @@ async function handleMediaMongo(db, operation, params = {}) {
 
     case 'LIST_CONTENT_FOR_MEDIA':
       return (await db.collection('media_relations')
-        .find({ attachment_id: String(p.attachmentId) })
+        .find({ attachment_id: mongoLiteral(String(p.attachmentId)) })
         .sort({ target_type: 1, target_id: 1 })
         .toArray()).map(mongoRelationDoc);
 

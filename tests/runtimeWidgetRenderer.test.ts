@@ -102,7 +102,8 @@ describe('runtimeWidgetRenderer', () => {
     );
 
     expect(warn).toHaveBeenCalledWith(
-      '[Widget badWidget] WIDGET_RUNTIME_BLOCKED_CODE_URL blocked widget import path:',
+      '[Widget runtime] WIDGET_RUNTIME_BLOCKED_CODE_URL blocked widget import path:',
+      'badWidget',
       'https://evil.example/widget.js'
     );
     expect(wrapper.shadowRoot?.querySelector('.widget-runtime-message')?.textContent)

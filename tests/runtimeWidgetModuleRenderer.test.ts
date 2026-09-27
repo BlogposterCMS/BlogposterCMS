@@ -67,7 +67,8 @@ describe('runtimeWidgetModuleRenderer', () => {
 
     expect(loadWidgetModule).toHaveBeenCalledWith('https://evil.example/widget.js');
     expect(warn).toHaveBeenCalledWith(
-      '[Widget badWidget] WIDGET_RUNTIME_BLOCKED_CODE_URL blocked widget import path:',
+      '[Widget runtime] WIDGET_RUNTIME_BLOCKED_CODE_URL blocked widget import path:',
+      'badWidget',
       'https://evil.example/widget.js'
     );
     expect(createRuntimeWidgetContext).not.toHaveBeenCalled();
@@ -111,7 +112,8 @@ describe('runtimeWidgetModuleRenderer', () => {
     );
 
     expect(consoleError).toHaveBeenCalledWith(
-      '[Widget missingRender] WIDGET_RUNTIME_MISSING_RENDER render export missing:',
+      '[Widget runtime] WIDGET_RUNTIME_MISSING_RENDER render export missing:',
+      'missingRender',
       '/ui/widgets/plainspace/public/test.js'
     );
     expect(createRuntimeWidgetContext).not.toHaveBeenCalled();
@@ -132,7 +134,8 @@ describe('runtimeWidgetModuleRenderer', () => {
     );
 
     expect(consoleError).toHaveBeenCalledWith(
-      '[Widget brokenWidget] WIDGET_RUNTIME_IMPORT_FAILED import error:',
+      '[Widget runtime] WIDGET_RUNTIME_IMPORT_FAILED import error:',
+      'brokenWidget',
       error
     );
     expectRuntimeError(container, 'WIDGET_RUNTIME_IMPORT_FAILED');
@@ -154,7 +157,8 @@ describe('runtimeWidgetModuleRenderer', () => {
 
     expect(render).toHaveBeenCalledWith(container, context);
     expect(consoleError).toHaveBeenCalledWith(
-      '[Widget renderBroken] WIDGET_RUNTIME_RENDER_FAILED render error:',
+      '[Widget runtime] WIDGET_RUNTIME_RENDER_FAILED render error:',
+      'renderBroken',
       error
     );
     expectRuntimeError(container, 'WIDGET_RUNTIME_RENDER_FAILED');

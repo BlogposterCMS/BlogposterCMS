@@ -50,8 +50,12 @@ test('SELECT_MODULE_BY_NAME extracts moduleName from params array and object', a
   assert.deepStrictEqual(await runPostgres(arrayParams), ['testMod']);
   assert.deepStrictEqual(await runPostgres(objectParams), ['testMod']);
 
-  assert.deepStrictEqual(await runMongo(arrayParams), { module_name: 'testMod' });
-  assert.deepStrictEqual(await runMongo(objectParams), { module_name: 'testMod' });
+  assert.deepStrictEqual(await runMongo(arrayParams), { module_name: { $eq: 'testMod' } });
+  assert.deepStrictEqual(await runMongo(objectParams), { module_name: { $eq: 'testMod' } });
+  assert.deepStrictEqual(
+    await runMongo({ moduleName: { $ne: null } }),
+    { module_name: { $eq: '[object Object]' } }
+  );
 
   assert.deepStrictEqual(await runSqlite(arrayParams), ['testMod']);
   assert.deepStrictEqual(await runSqlite(objectParams), ['testMod']);

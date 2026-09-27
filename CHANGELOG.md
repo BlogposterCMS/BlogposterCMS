@@ -2,8 +2,31 @@
 
 ## [Unreleased]
 
-- Add administrator password recovery under `/admin`: registered administrator emails receive a one-hour, single-use reset link through the configured SMTP integration. Show clear confirmation, expired-link and delivery-configuration states; keep public site routes untouched.
-- Raise the locked `adm-zip` minimum to 0.6.1 so the required high-severity audit gate passes with the published security fixes.
+- Add administrator password recovery under `/admin`: registered administrator
+  emails receive a one-hour reset link through configured SMTP, with clear
+  confirmation and error states while public site routes remain untouched.
+
+- Replace the shared browser HTML filter with a pinned, locally vendored
+  DOMPurify build while retaining the existing CSS policy and safe CMS markup.
+
+- Run CodeQL independently of test results so security alerts stay current;
+  resolve shared content helpers consistently in Windows test harnesses.
+
+- Bind sandboxed Designer Live Preview messages to their exact parent window,
+  replace vulnerable boundary-trimming and Bearer parsing expressions with
+  linear parsing, and sanitize WordPress import fragments with the existing
+  parser-based HTML/CSS policy.
+
+- Bind caller-controlled MongoDB placeholder filter values as scalar literals
+  across content, comments, media, metadata, navigation, redirects, search,
+  settings and pages while preserving existing domain operators and stored data.
+
+- Restore exact all-tag search filtering before pagination and cleanup of stale
+  localized search documents across SQLite, PostgreSQL and MongoDB.
+
+- Upgrade `adm-zip` to 0.6.1 so malformed archives are size-bounded and
+  extraction cannot write through destination symlinks and the required audit
+  gate passes.
 
 - Keep isolated widget workers alive when their rendered host moves between
   connected layout parents, while retaining cleanup after host removal or view

@@ -48,9 +48,13 @@ function escapeRegex(value = '') {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function mongoLiteral(value, fallback = '') {
+function mongoScalar(value, fallback = '') {
   const scalar = value == null ? fallback : value;
-  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+  return (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar);
+}
+
+function mongoLiteral(value, fallback = '') {
+  return { $eq: mongoScalar(value, fallback) };
 }
 
 function parseObjectId(id) {
@@ -266,7 +270,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     case 'GET_SETTING': {
     const theKey = params && params[0];
     if (!theKey) return [];
-    const doc = await db.collection('cms_settings').findOne({ key: theKey });
+    const doc = await db.collection('cms_settings').findOne({ key: mongoLiteral(theKey) });
     return doc ? [doc] : [];
     }
 
@@ -274,7 +278,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
     const settingKey = params && params[0];
     const settingVal = params && params[1];
     await db.collection('cms_settings').updateOne(
-        { key: settingKey },
+        { key: mongoScalar(settingKey) },
         {
         $set: {
             value: settingVal,
@@ -291,7 +295,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     case 'LIST_SETTINGS': {
     const options = Array.isArray(params) ? (params[0] || {}) : (params || {});
-    const keys = Array.isArray(options.keys) ? options.keys.filter(Boolean) : [];
+    const keys = Array.isArray(options.keys) ? options.keys.map(key => mongoScalar(key)).filter(Boolean) : [];
     const prefix = options.prefix || '';
     const query = {};
     if (keys.length) query.key = { $in: keys };
@@ -302,7 +306,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
 
     case 'DELETE_SETTING': {
     const settingKey = Array.isArray(params) ? params[0] : params?.key;
-    await db.collection('cms_settings').deleteOne({ key: settingKey });
+    await db.collection('cms_settings').deleteOne({ key: mongoLiteral(settingKey) });
     return { done: true, key: settingKey };
     }
 
@@ -650,7 +654,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       const translation = await db.collection('page_translations')
                                   .findOne({
                                     page_id : page._id,
-                                    language: lang
+                                    language: mongoLiteral(lang)
                                   });
 
       const parent = page.parent_id
@@ -675,13 +679,13 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       const lang = params[2] || 'en';
 
       const page = await db.collection('pages')
-                           .findOne({ slug, lane });
+                           .findOne({ slug: mongoLiteral(slug), lane: mongoLiteral(lane) });
       if (!page) return null;
   
       const translation = await db.collection('page_translations')
                                   .findOne({
                                     page_id : page._id,
-                                    language: lang
+                                    language: mongoLiteral(lang)
                                   });
 
       const parent = page.parent_id
@@ -742,7 +746,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
         await db.collection('page_translations').updateOne(
           {
             page_id : idObj,
-            language: t.language
+            language: mongoScalar(t.language)
           },
           {
             $set: {
@@ -895,7 +899,7 @@ async function handleBuiltInPlaceholderMongo(db, operation, params) {
       const regex = new RegExp(escapeRegex(q), 'i');
       const filter = lane === 'all' ?
             { $or: [{ title: regex }, { slug: regex }] } :
-            { lane, $or: [{ title: regex }, { slug: regex }] };
+            { lane: mongoLiteral(lane), $or: [{ title: regex }, { slug: regex }] };
 
       const pages = await db.collection('pages')
                             .find(filter)

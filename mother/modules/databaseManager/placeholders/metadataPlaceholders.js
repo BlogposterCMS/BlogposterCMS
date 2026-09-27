@@ -21,6 +21,11 @@ function paramsObject(params) {
   return Array.isArray(params) ? (params[0] || {}) : (params || {});
 }
 
+function mongoLiteral(value, fallback = '') {
+  const scalar = value == null ? fallback : value;
+  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+}
+
 function jsonString(value, fallback = null) {
   return JSON.stringify((typeof value === 'undefined' ? fallback : value) ?? fallback);
 }
@@ -479,7 +484,7 @@ async function handleMetadataMongo(db, operation, params = {}) {
 
     case 'UPSERT_META_FIELD':
       await db.collection('metadata_fields').updateOne(
-        { target_type: p.targetType, meta_key: p.metaKey },
+        { target_type: mongoLiteral(p.targetType), meta_key: mongoLiteral(p.metaKey) },
         {
           $set: {
             target_type: p.targetType,
@@ -502,15 +507,21 @@ async function handleMetadataMongo(db, operation, params = {}) {
         },
         { upsert: true }
       );
-      return mongoFieldDoc(await db.collection('metadata_fields').findOne({ target_type: p.targetType, meta_key: p.metaKey }));
+      return mongoFieldDoc(await db.collection('metadata_fields').findOne({
+        target_type: mongoLiteral(p.targetType),
+        meta_key: mongoLiteral(p.metaKey)
+      }));
 
     case 'GET_META_FIELD':
-      return mongoFieldDoc(await db.collection('metadata_fields').findOne({ target_type: p.targetType, meta_key: p.metaKey }));
+      return mongoFieldDoc(await db.collection('metadata_fields').findOne({
+        target_type: mongoLiteral(p.targetType),
+        meta_key: mongoLiteral(p.metaKey)
+      }));
 
     case 'LIST_META_FIELDS': {
       const query = {};
-      if (p.targetType) query.target_type = p.targetType;
-      if (typeof p.public === 'boolean') query.public = p.public;
+      if (p.targetType) query.target_type = mongoLiteral(p.targetType);
+      if (typeof p.public === 'boolean') query.public = mongoLiteral(p.public);
       return (await db.collection('metadata_fields')
         .find(query)
         .sort({ target_type: 1, meta_key: 1 })
@@ -520,16 +531,19 @@ async function handleMetadataMongo(db, operation, params = {}) {
     }
 
     case 'DELETE_META_FIELD':
-      await db.collection('metadata_fields').deleteOne({ target_type: p.targetType, meta_key: p.metaKey });
+      await db.collection('metadata_fields').deleteOne({
+        target_type: mongoLiteral(p.targetType),
+        meta_key: mongoLiteral(p.metaKey)
+      });
       return { done: true, targetType: p.targetType, metaKey: p.metaKey };
 
     case 'UPSERT_METADATA_VALUE':
       await db.collection('metadata_values').updateOne(
         {
-          target_type: p.targetType,
-          target_id: String(p.targetId),
-          meta_key: p.metaKey,
-          language: p.language || ''
+          target_type: mongoLiteral(p.targetType),
+          target_id: mongoLiteral(String(p.targetId)),
+          meta_key: mongoLiteral(p.metaKey),
+          language: mongoLiteral(p.language || '')
         },
         {
           $set: {
@@ -553,20 +567,20 @@ async function handleMetadataMongo(db, operation, params = {}) {
         { upsert: true }
       );
       return mongoValueDoc(await db.collection('metadata_values').findOne({
-        target_type: p.targetType,
-        target_id: String(p.targetId),
-        meta_key: p.metaKey,
-        language: p.language || ''
+        target_type: mongoLiteral(p.targetType),
+        target_id: mongoLiteral(String(p.targetId)),
+        meta_key: mongoLiteral(p.metaKey),
+        language: mongoLiteral(p.language || '')
       }));
 
     case 'GET_METADATA_VALUES': {
       const query = {
-        target_type: p.targetType,
-        target_id: String(p.targetId)
+        target_type: mongoLiteral(p.targetType),
+        target_id: mongoLiteral(String(p.targetId))
       };
-      if (p.metaKey) query.meta_key = p.metaKey;
-      if (p.language) query.language = p.language;
-      if (p.visibility) query.visibility = p.visibility;
+      if (p.metaKey) query.meta_key = mongoLiteral(p.metaKey);
+      if (p.language) query.language = mongoLiteral(p.language);
+      if (p.visibility) query.visibility = mongoLiteral(p.visibility);
       return (await db.collection('metadata_values')
         .find(query)
         .sort({ meta_key: 1, language: 1, _id: 1 })
@@ -577,20 +591,20 @@ async function handleMetadataMongo(db, operation, params = {}) {
 
     case 'DELETE_METADATA_VALUE': {
       const query = {
-        target_type: p.targetType,
-        target_id: String(p.targetId)
+        target_type: mongoLiteral(p.targetType),
+        target_id: mongoLiteral(String(p.targetId))
       };
-      if (p.metaKey) query.meta_key = p.metaKey;
-      if (p.language) query.language = p.language;
-      if (p.visibility) query.visibility = p.visibility;
+      if (p.metaKey) query.meta_key = mongoLiteral(p.metaKey);
+      if (p.language) query.language = mongoLiteral(p.language);
+      if (p.visibility) query.visibility = mongoLiteral(p.visibility);
       await db.collection('metadata_values').deleteMany(query);
       return { done: true };
     }
 
     case 'DELETE_METADATA_FOR_TARGET':
       await db.collection('metadata_values').deleteMany({
-        target_type: p.targetType,
-        target_id: String(p.targetId)
+        target_type: mongoLiteral(p.targetType),
+        target_id: mongoLiteral(String(p.targetId))
       });
       return { done: true, targetType: p.targetType, targetId: String(p.targetId) };
 

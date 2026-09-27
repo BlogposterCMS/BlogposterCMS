@@ -22,9 +22,13 @@ function paramsObject(params) {
 
 // Keep request-derived Mongo filters scalar. Mongo operators supplied as an
 // object must never become part of a filter value.
-function mongoLiteral(value, fallback = '') {
+function mongoScalar(value, fallback = '') {
   const scalar = value == null ? fallback : value;
-  return { $eq: (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar) };
+  return (typeof scalar === 'string' || typeof scalar === 'number' || typeof scalar === 'boolean') ? scalar : String(scalar);
+}
+
+function mongoLiteral(value, fallback = '') {
+  return { $eq: mongoScalar(value, fallback) };
 }
 
 function jsonString(value, fallback = {}) {
@@ -512,7 +516,10 @@ async function handleRedirectMongo(db, operation, params = {}) {
       if (p.id) {
         return mongoDoc(await db.collection('redirect_rules').findOne(mongoIdQuery(p.id)));
       }
-      return mongoDoc(await db.collection('redirect_rules').findOne({ from_path: p.fromPath, language: p.language || '' }));
+      return mongoDoc(await db.collection('redirect_rules').findOne({
+        from_path: mongoLiteral(p.fromPath),
+        language: mongoLiteral(p.language || '')
+      }));
 
     case 'LIST_REDIRECT_RULES': {
       const query = {};
@@ -538,9 +545,9 @@ async function handleRedirectMongo(db, operation, params = {}) {
     case 'RESOLVE_REDIRECT': {
       const and = [
         { active: true },
-        p.language ? { language: { $in: ['', p.language] } } : { language: '' },
-        { $or: [{ start_at: null }, { start_at: '' }, { start_at: { $lte: p.now } }] },
-        { $or: [{ end_at: null }, { end_at: '' }, { end_at: { $gt: p.now } }] }
+        p.language ? { language: { $in: ['', mongoScalar(p.language)] } } : { language: '' },
+        { $or: [{ start_at: null }, { start_at: '' }, { start_at: { $lte: mongoScalar(p.now) } }] },
+        { $or: [{ end_at: null }, { end_at: '' }, { end_at: { $gt: mongoScalar(p.now) } }] }
       ];
       const rows = await db.collection('redirect_rules')
         .find({ $and: and })
@@ -577,7 +584,7 @@ async function handleRedirectMongo(db, operation, params = {}) {
 
     case 'LIST_REDIRECT_HITS': {
       const query = {};
-      if (p.ruleId) query.rule_id = p.ruleId;
+      if (p.ruleId) query.rule_id = mongoLiteral(p.ruleId);
       if (p.fromPath) query.from_path = mongoLiteral(p.fromPath);
       return (await db.collection('redirect_hits')
         .find(query)

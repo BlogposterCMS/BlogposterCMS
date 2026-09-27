@@ -469,6 +469,11 @@ verified even when the outer preview reports ready.
 Live Preview does not consume `BP_PUBLIC_BOOTSTRAP`; its parent-bridge payload
 and existing agentSurface remain authoritative. Server and browser share public
 canvas geometry, so this startup change does not add a Designer-only API.
+The embedding Designer parent has the sandboxed opaque (`null`) origin; the
+Public Preview document itself may retain its normal runtime origin. Render and
+runtime-response messages are accepted only when their `source` is that exact
+parent window. Normal cross-window messages from siblings, openers, null sources,
+or a top-level preview are ignored.
 
 Controllers can inspect Design Studio through `/admin/api/agent` surface
 context endpoints or through the app-published snapshot carried by the

@@ -37,6 +37,7 @@ test('SMTP integration uses the installed Nodemailer transport', async () => {
     host: 'smtp.example.test',
     port: 587,
     secure: false,
+    requireTLS: false,
     auth: {
       user: 'sender@example.test',
       pass: 'secret'
@@ -48,6 +49,16 @@ test('SMTP integration uses the installed Nodemailer transport', async () => {
     subject: '[INFO] Notification',
     text: 'Build completed\nTime: 2026-07-25T08:00:00.000Z'
   });
+});
+
+test('SMTP recovery delivery requires STARTTLS', async () => {
+  const createTransport = jest.fn(() => ({ sendMail: jest.fn() }));
+  jest.doMock('nodemailer', () => ({ createTransport }));
+
+  const smtp = require('../mother/modules/notificationManager/integrations/smtp');
+  await smtp.initialize({ host: 'smtp.example.test', port: 587, secure: false, requireTLS: true, user: 'sender@example.test', pass: 'secret' });
+
+  expect(createTransport).toHaveBeenCalledWith(expect.objectContaining({ requireTLS: true }));
 });
 
 test('SMTP integration skips notifications without a recipient', async () => {

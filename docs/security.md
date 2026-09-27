@@ -1,5 +1,9 @@
 # Security Notes
 
+## Administrator password recovery
+
+Password recovery stays in the `/admin` namespace. The host uses the existing User Management database events and configured Notification Manager SMTP integration. It sends only to the registered email of a user with the admin role. Responses do not disclose whether an address belongs to an administrator. Reset links use a fixed `PUBLIC_URL` origin, expire after one hour, and are signed against the current password hash with the host JWT secret. A compare-and-update on the stored hash prevents concurrent or replayed use, while `token_version` invalidates existing sessions. Recovery pages use CSRF protection, the login rate limit, no-store caching and no-referrer policy. No reset token is logged or sent to other notification integrations.
+
 Content-language configuration uses one validated Settings value with at most
 60 canonical locale codes and a required primary choice. Existing Settings edit
 permission protects writes, including agent writes. The admin `settings.public`

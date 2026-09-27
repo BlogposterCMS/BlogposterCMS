@@ -49,6 +49,7 @@ test('login route keeps dev autologin redirects scoped to admin paths', () => {
 
 test('CMS login uses the admin namespace and leaves public login to the site', async () => {
   const app = express();
+  app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
   const csrfProtection = (req, _res, next) => {
     req.csrfToken = () => 'test-csrf-token';
@@ -61,6 +62,11 @@ test('CMS login uses the admin namespace and leaves public login to the site', a
     isProduction: true,
     loginLimiter: (_req, _res, next) => next(),
     needsInitialSetup: async () => false,
+    passwordRecovery: {
+      requestReset: async email => { if (email === 'bad@example.test') throw Object.assign(new Error('Email delivery unavailable'), { code: 'ADMIN_RESET_MAIL_UNAVAILABLE' }); },
+      verifyToken: async token => { if (token !== 'valid-token') throw Object.assign(new Error('Invalid reset link'), { code: 'ADMIN_RESET_INVALID' }); },
+      resetPassword: async (token, password) => { if (token !== 'valid-token' || password !== 'NewPassword123') throw Object.assign(new Error('Invalid reset link'), { code: 'ADMIN_RESET_INVALID' }); }
+    },
     publicPath: path.join(__dirname, '..', 'public'),
     validateAdminToken: async token => {
       if (token !== 'valid-test-token') throw new Error('TEST_INVALID_TOKEN');
@@ -86,7 +92,32 @@ test('CMS login uses the admin namespace and leaves public login to the site', a
     assert.strictEqual(adminLogin.status, 200);
     assert(adminLogin.data.includes('/build/login.js'));
     assert(adminLogin.data.includes('test-csrf-token'));
+    assert(adminLogin.data.includes('href="/admin/forgot-password"'));
     assert(adminLogin.headers['cache-control'].includes('no-store'));
+
+    const requestPage = await client.get('/admin/forgot-password');
+    assert.strictEqual(requestPage.status, 200);
+    assert(requestPage.data.includes('Administrator email'));
+    assert(requestPage.headers['cache-control'].includes('no-store'));
+    const requested = await client.post('/admin/forgot-password', new URLSearchParams({ email: 'admin@example.test' }));
+    assert.strictEqual(requested.status, 303);
+    assert.strictEqual(requested.headers.location, '/admin/forgot-password?sent=1');
+    const reloaded = await client.get(requested.headers.location);
+    assert(reloaded.data.includes('If this is an administrator account'));
+    const unavailable = await client.post('/admin/forgot-password', new URLSearchParams({ email: 'bad@example.test' }));
+    assert.strictEqual(unavailable.status, 503);
+    assert(unavailable.data.includes('Email delivery unavailable'));
+    const invalidLink = await client.get('/admin/reset-password?token=bad');
+    assert.strictEqual(invalidLink.status, 400);
+    assert(invalidLink.data.includes('Request a new link'));
+    const validLink = await client.get('/admin/reset-password?token=valid-token');
+    assert.strictEqual(validLink.status, 200);
+    assert(validLink.data.includes('New password'));
+    const reset = await client.post('/admin/reset-password', new URLSearchParams({ token: 'valid-token', newPassword: 'NewPassword123' }));
+    assert.strictEqual(reset.status, 303);
+    assert.strictEqual(reset.headers.location, '/admin/login?reset=success');
+    const loginAfterReset = await client.get(reset.headers.location);
+    assert(loginAfterReset.data.includes('Your password has been reset'));
 
     const authenticated = await client.get('/admin/login', {
       headers: { Cookie: 'admin_jwt=valid-test-token' }

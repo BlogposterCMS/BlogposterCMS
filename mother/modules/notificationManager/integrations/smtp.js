@@ -15,6 +15,7 @@ module.exports = {
       host: config.host,
       port: config.port,
       secure: config.secure,
+      requireTLS: config.requireTLS === true,
       auth: {
         user: config.user,
         pass: config.pass

@@ -10,21 +10,31 @@ const HTML_SANITIZE_CONFIG: Config = {
   RETURN_TRUSTED_TYPE: false,
 };
 
-DOMPurify.addHook('uponSanitizeElement', (currentNode, hookEvent) => {
-  if (hookEvent.tagName === 'style') {
-    currentNode.textContent = sanitizeCss(currentNode.textContent ?? '');
-  }
-});
+let hooksInstalled = false;
 
-DOMPurify.addHook('uponSanitizeAttribute', (_currentNode, hookEvent) => {
-  if (hookEvent.attrName !== 'style') return;
-  const sanitized = sanitizeCss(hookEvent.attrValue, true);
-  hookEvent.attrValue = sanitized;
-  hookEvent.keepAttr = sanitized.length > 0;
-});
+function configuredPurifier() {
+  if (!DOMPurify.isSupported || typeof DOMPurify.addHook !== 'function') {
+    throw new Error('CMS_HTML_SANITIZER_UNAVAILABLE');
+  }
+  if (!hooksInstalled) {
+    DOMPurify.addHook('uponSanitizeElement', (currentNode, hookEvent) => {
+      if (hookEvent.tagName === 'style') {
+        currentNode.textContent = sanitizeCss(currentNode.textContent ?? '');
+      }
+    });
+    DOMPurify.addHook('uponSanitizeAttribute', (_currentNode, hookEvent) => {
+      if (hookEvent.attrName !== 'style') return;
+      const sanitized = sanitizeCss(hookEvent.attrValue, true);
+      hookEvent.attrValue = sanitized;
+      hookEvent.keepAttr = sanitized.length > 0;
+    });
+    hooksInstalled = true;
+  }
+  return DOMPurify;
+}
 
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, HTML_SANITIZE_CONFIG) as string;
+  return configuredPurifier().sanitize(html, HTML_SANITIZE_CONFIG) as string;
 }
 
 export function sanitizeCss(css: string, inline = false): string {

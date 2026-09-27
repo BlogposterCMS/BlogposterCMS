@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Add administrator password recovery under `/admin`: registered administrator
+  emails receive a one-hour reset link through configured SMTP, with clear
+  confirmation and error states while public site routes remain untouched.
+
 - Replace the shared browser HTML filter with a pinned, locally vendored
   DOMPurify build while retaining the existing CSS policy and safe CMS markup.
 
@@ -21,7 +25,8 @@
   localized search documents across SQLite, PostgreSQL and MongoDB.
 
 - Upgrade `adm-zip` to 0.6.1 so malformed archives are size-bounded and
-  extraction cannot write through destination symlinks.
+  extraction cannot write through destination symlinks and the required audit
+  gate passes.
 
 - Keep isolated widget workers alive when their rendered host moves between
   connected layout parents, while retaining cleanup after host removal or view

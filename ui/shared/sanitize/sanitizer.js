@@ -8,20 +8,30 @@ const HTML_SANITIZE_CONFIG = {
     FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
     RETURN_TRUSTED_TYPE: false,
 };
-DOMPurify.addHook('uponSanitizeElement', (currentNode, hookEvent) => {
-    if (hookEvent.tagName === 'style') {
-        currentNode.textContent = sanitizeCss(currentNode.textContent ?? '');
+let hooksInstalled = false;
+function configuredPurifier() {
+    if (!DOMPurify.isSupported || typeof DOMPurify.addHook !== 'function') {
+        throw new Error('CMS_HTML_SANITIZER_UNAVAILABLE');
     }
-});
-DOMPurify.addHook('uponSanitizeAttribute', (_currentNode, hookEvent) => {
-    if (hookEvent.attrName !== 'style')
-        return;
-    const sanitized = sanitizeCss(hookEvent.attrValue, true);
-    hookEvent.attrValue = sanitized;
-    hookEvent.keepAttr = sanitized.length > 0;
-});
+    if (!hooksInstalled) {
+        DOMPurify.addHook('uponSanitizeElement', (currentNode, hookEvent) => {
+            if (hookEvent.tagName === 'style') {
+                currentNode.textContent = sanitizeCss(currentNode.textContent ?? '');
+            }
+        });
+        DOMPurify.addHook('uponSanitizeAttribute', (_currentNode, hookEvent) => {
+            if (hookEvent.attrName !== 'style')
+                return;
+            const sanitized = sanitizeCss(hookEvent.attrValue, true);
+            hookEvent.attrValue = sanitized;
+            hookEvent.keepAttr = sanitized.length > 0;
+        });
+        hooksInstalled = true;
+    }
+    return DOMPurify;
+}
 export function sanitizeHtml(html) {
-    return DOMPurify.sanitize(html, HTML_SANITIZE_CONFIG);
+    return configuredPurifier().sanitize(html, HTML_SANITIZE_CONFIG);
 }
 export function sanitizeCss(css, inline = false) {
     const expr = /expression/i;

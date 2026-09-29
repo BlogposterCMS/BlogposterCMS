@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.42] - 2026-09-29
+
+- Update the locked `undici` dependency to 6.29.0 to clear the high-severity vulnerability audit blocking the Analytics recovery release. This release includes the 0.10.41 changes, whose source tag did not pass the release gate.
+
 ## [0.10.41] - 2026-09-29
 
 - Keep Analytics event contracts registered after transient SQLite writer contention or a database-operation timeout. Report the failed operation to Analytics for its bounded retry queue; continue deactivating the module on fatal storage errors.

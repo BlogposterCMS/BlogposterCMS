@@ -23,6 +23,18 @@ const { assertPerformDbOperationAllowed } = require('./databaseEventBoundary');
 const RAW_TIMEOUT = Number(process.env.DB_OP_TIMEOUT_MS || 5000);
 const TIMEOUT_DURATION = RAW_TIMEOUT === 0 ? null : RAW_TIMEOUT;
 
+function shouldDeactivateAfterDbError(payload, error) {
+  if (!payload?.moduleName) return false;
+  if (payload.moduleName === 'designerManager'
+    && payload.operation === 'DESIGNER_SAVE_DESIGN'
+    && error?.code === 'DESIGNER_VERSION_CONFLICT') return false;
+  // Analytics owns a bounded retry queue. SQLite writer contention is an
+  // infrastructure failure, not a reason to remove its summary listener.
+  if (payload.moduleName === 'analyticsManager'
+    && ['SQLITE_BUSY', 'SQLITE_LOCKED'].includes(error?.code)) return false;
+  return true;
+}
+
 /**
  * Registers the listener for the 'performDbOperation' meltdown event.
  * * @param {MotherEmitter} motherEmitter The central event emitter instance.
@@ -37,7 +49,7 @@ function registerPerformDbOperationEvent(motherEmitter) {
     const timeout = TIMEOUT_DURATION === null ? null : setTimeout(() => {
       const errorMsg = `Timeout while performing db operation for module "${payload?.moduleName || 'unknown'}".`;
       console.error(`[DB MANAGER] ${errorMsg}`);
-      if (payload?.moduleName) {
+      if (payload?.moduleName && payload.moduleName !== 'analyticsManager') {
         deactivateModuleRuntime(motherEmitter, payload.moduleName, errorMsg);
       }
       callback(new Error(errorMsg));
@@ -93,11 +105,7 @@ function registerPerformDbOperationEvent(motherEmitter) {
         error: sanitize(err.message)
       });
       
-      // A stale Designer save must still fail, without disabling all design reads.
-      const expectedConflict = payload?.moduleName === 'designerManager'
-        && payload?.operation === 'DESIGNER_SAVE_DESIGN'
-        && err.code === 'DESIGNER_VERSION_CONFLICT';
-      if (payload?.moduleName && !expectedConflict) {
+      if (shouldDeactivateAfterDbError(payload, err)) {
         deactivateModuleRuntime(motherEmitter, payload.moduleName, err.message);
       }
 

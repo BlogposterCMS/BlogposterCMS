@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.41] - 2026-09-29
+
+- Keep Analytics event contracts registered after transient SQLite writer contention or a database-operation timeout. Report the failed operation to Analytics for its bounded retry queue; continue deactivating the module on fatal storage errors.
+
 - Add administrator password recovery under `/admin`: registered administrator
   emails receive a one-hour reset link through configured SMTP, with clear
   confirmation and error states while public site routes remain untouched.

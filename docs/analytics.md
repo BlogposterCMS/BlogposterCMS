@@ -122,6 +122,10 @@ SQLite, PostgreSQL and MongoDB. Records use a versioned JSON envelope; retry IDs
 make partially completed batches idempotent. A maximum of 2,000 records waits
 in memory, flushed every five seconds or before a report. A hard crash can lose
 that pending window. Queue drops and storage errors are visible in summaries.
+Transient SQLite `BUSY`/`LOCKED` errors and database-operation timeouts return
+an error to this bounded queue without removing Analytics event contracts from
+the running module. Fatal storage errors still deactivate the module. This
+keeps `analytics.summary` available for a later retry after writer contention.
 Raw records expire after 60 days; time filters are rolling 1, 7 and 30 days with
 an equal previous period and UTC daily groups. Reports read at most 100,001
 records and explicitly flag truncation rather than claiming complete totals.

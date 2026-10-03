@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Reduce dashboard startup waterfalls with bounded parallel reads, ordered write
+  barriers and a short-lived, credential-scoped presentation cache. Load Settings
+  and the media picker only when needed. Version shell assets and async chunks
+  for safe browser caching; prioritize visible gallery images and retain supplied
+  image dimensions without changing authored layouts.
+
 ## [0.10.42] - 2026-09-29
 
 - Update the locked `undici` dependency to 6.29.0 to clear the high-severity vulnerability audit blocking the Analytics recovery release. This release includes the 0.10.41 changes, whose source tag did not pass the release gate.

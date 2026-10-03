@@ -1,5 +1,44 @@
 # Public startup performance
 
+## Dashboard and shared delivery, 2026-10-03
+
+The existing Meltdown client runs up to four explicitly allowlisted admin reads
+concurrently. Unknown actions remain ordered commands: earlier reads complete
+before a command starts, and later reads wait for it. Explicit throttle settings
+retain serial pacing. This is scheduling only; server facade authorization is
+unchanged. The existing public read queue and batch transport remain separate.
+
+Widget registries and public-settings responses are deduplicated for at most
+30 seconds in the client instance (64 entries, including pending reads). Keys
+include request payload, credentials, CSRF token and timeout. Results are cloned;
+failures are evicted. Commands invalidate before enqueue; batch requests invalidate
+at start and completion. Other-tab/server changes become visible at expiry or
+document reload. Page content, user data and permission responses are not cached.
+
+Colors, fonts and page discovery overlap; shell partials, widget registry and
+global layout load together. Settings code is imported only for Settings routes;
+the existing media-picker function loads its UI on first use. Public bootstrap
+adoption and viewport-first widget scheduling remain in use. Galleries retain
+native lazy loading for offscreen images/hidden slides, load visible images
+eagerly and retain positive intrinsic dimensions supplied in media metadata.
+Original image files are not resized or recompressed by this change.
+
+Admin/public shells reference local JS/CSS/font/SVG assets with a content version.
+Only matching versions and content-hashed host async chunks receive one-year immutable
+caching. Unversioned/stale URLs revalidate; development disables immutable headers.
+Designer chunks retain their existing signed-package filenames and generation
+URLs. HTML with tokens stays `no-store`. Deploy rebuilt entries and hashed chunks
+together. As before, open tabs may need a reload after a deployment removes old
+async chunks; long browser caching does not retain files on the server.
+
+Validation uses focused tests and a local Chromium fixture with real browser
+modules and 150 ms simulated API responses. It verifies concurrent reads, cache
+reuse, post-save freshness, deferred Settings loading and image scheduling.
+The real dashboard renderer also reaches ready state, preserves its content
+header during navigation and opens/closes the deferred media picker against
+fixture responses, including at a 390 px viewport.
+Fixture timings are not authenticated dashboard or production page-load metrics.
+
 ## Bundled core loader startup, 2026-09-11
 
 The first response already contains the real layout containers and article slot.

@@ -9,6 +9,84 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 describe('meltdown client', () => {
+  const read = (resource = 'pages', action = 'getBySlug') => ({
+    moduleName: 'runtimeManager', moduleType: 'core', resource, action, jwt: 'admin'
+  });
+
+  it('runs four known admin reads concurrently and fences saves and subsequent reads', async () => {
+    const pending: Array<(response: Response) => void> = [];
+    const fetchMock = jest.fn((_url: unknown, _options: any) => new Promise<Response>(resolve => pending.push(resolve)));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const before = Array.from({ length: 5 }, () => client.emit('cmsAdminApiRequest', read()));
+    const save = client.emit('cmsAdminApiRequest', read('pages', 'update'));
+    const after = client.emit('cmsAdminApiRequest', read());
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    pending[0]!(jsonResponse({ data: 'first' }));
+    await before[0];
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    pending.slice(1, 5).forEach(resolve => resolve(jsonResponse({ data: 'before' })));
+    await Promise.all(before);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(JSON.parse(fetchMock.mock.calls[5]![1]!.body).payload.action).toBe('update');
+    pending[5]!(jsonResponse({ data: 'saved' }));
+    await save;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+    pending[6]!(jsonResponse({ data: 'after' }));
+    await after;
+  });
+
+  it('deduplicates presentation reads, isolates returned objects and expires after 30 seconds', async () => {
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(1_000);
+    try {
+      const fetchMock = jest.fn().mockImplementation(() => Promise.resolve(jsonResponse({ data: { widgets: ['one'] } })));
+      const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+      const payload = read('plainSpace', 'widgetRegistry');
+      const [a, b] = await Promise.all([
+        client.emit<any>('cmsAdminApiRequest', payload), client.emit<any>('cmsAdminApiRequest', payload)
+      ]);
+      a.widgets.push('changed');
+      expect(b.widgets).toEqual(['one']);
+      await client.emit('cmsAdminApiRequest', payload);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      clock.mockReturnValue(31_001);
+      await client.emit('cmsAdminApiRequest', payload);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally { clock.mockRestore(); }
+  });
+
+  it('invalidates presentation reads on commands, retries failures and separates credentials', async () => {
+    const fetchMock = jest.fn().mockImplementation(() => Promise.resolve(jsonResponse({ data: 'ok' })));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const payload = read('plainSpace', 'widgetRegistry');
+    await client.emit('cmsAdminApiRequest', payload);
+    await client.emit('cmsAdminApiRequest', { ...payload, jwt: 'other-user' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await client.emit('cmsAdminApiRequest', read('widgets', 'update'));
+    fetchMock.mockRejectedValueOnce(new Error('offline'));
+    await expect(client.emit('cmsAdminApiRequest', payload)).rejects.toThrow('offline');
+    await client.emit('cmsAdminApiRequest', payload);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('never reuses an in-flight pre-save snapshot for a post-save read', async () => {
+    let release!: (response: Response) => void;
+    const fetchMock = jest.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { release = resolve; }))
+      .mockImplementation(() => Promise.resolve(jsonResponse({ data: 'new' })));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const payload = read('plainSpace', 'widgetRegistry');
+    const old = client.emit('cmsAdminApiRequest', payload);
+    const save = client.emit('cmsAdminApiRequest', read('widgets', 'update'));
+    const fresh = client.emit('cmsAdminApiRequest', payload);
+    release(jsonResponse({ data: 'old' }));
+    expect(await old).toBe('old');
+    await save;
+    expect(await fresh).toBe('new');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('drains ordered admin requests without idle timers, including after a failure', async () => {
     jest.useFakeTimers();
     try {

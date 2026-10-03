@@ -3,6 +3,8 @@ import { renderRuntimePage } from '../ui/runtime/main/pageRenderer';
 import { fetchRuntimePageBySlug, loadRuntimeGlobalLayout } from '../ui/runtime/main/runtimePageData';
 import { renderAdminRuntimeGrid } from '../ui/runtime/main/runtimeAdminGrid';
 import { renderPublicRuntimePageContent } from '../ui/runtime/main/runtimePageComposition';
+import { hydrateRuntimeShellPartials } from '../ui/runtime/main/runtimeShellPartials';
+import { fetchRuntimeWidgetRegistry } from '../ui/runtime/main/runtimePageData';
 
 jest.mock('../ui/runtime/main/widgetRuntimeGateway', () => ({ renderAdminSettingsSurface: jest.fn().mockResolvedValue(false) }));
 jest.mock('../ui/shared/dialogs/bpDialog', () => ({ bpDialog: { alert: jest.fn() } }));
@@ -29,6 +31,25 @@ describe('shared runtime startup layout reads', () => {
     document.body.innerHTML = '<main id="content"></main>';
     window.meltdownEmit = jest.fn();
     jest.mocked(loadRuntimeGlobalLayout).mockResolvedValue([{ id: 'global-slot' }]);
+  });
+
+  it('starts page discovery while presentation is pending and registry reads while shell HTML is pending', async () => {
+    let ready!: () => void;
+    let shellReady!: () => void;
+    const presentation = new Promise<void>(resolve => { ready = resolve; });
+    jest.mocked(fetchRuntimePageBySlug).mockResolvedValue({ id: 'home', meta: {} });
+    jest.mocked(hydrateRuntimeShellPartials).mockImplementationOnce(() => new Promise<void>(resolve => { shellReady = resolve; }));
+    const rendering = renderRuntimePage({ lane: 'admin', slug: 'home', debug: false }, 'full', presentation);
+    expect(fetchRuntimePageBySlug).toHaveBeenCalled();
+    expect(renderAdminRuntimeGrid).not.toHaveBeenCalled();
+    ready();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchRuntimeWidgetRegistry).toHaveBeenCalled();
+    expect(loadRuntimeGlobalLayout).toHaveBeenCalled();
+    expect(renderAdminRuntimeGrid).not.toHaveBeenCalled();
+    shellReady();
+    await rendering;
+    expect(renderAdminRuntimeGrid).toHaveBeenCalled();
   });
 
   it.each(['full', 'content-only'] as const)('skips unused global slots for fixed admin pages during %s rendering', async mode => {

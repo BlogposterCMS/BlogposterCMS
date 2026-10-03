@@ -199,7 +199,9 @@ export function normalizeMediaItems(items) {
             position: firstString(item, ['position', 'imagePosition']),
             objectPosition: firstString(item, ['objectPosition']),
             focalX: typeof focalX === 'string' || typeof focalX === 'number' ? focalX : undefined,
-            focalY: typeof focalY === 'string' || typeof focalY === 'number' ? focalY : undefined
+            focalY: typeof focalY === 'string' || typeof focalY === 'number' ? focalY : undefined,
+            width: Number.isInteger(item.width) && Number(item.width) > 0 ? Number(item.width) : undefined,
+            height: Number.isInteger(item.height) && Number(item.height) > 0 ? Number(item.height) : undefined
         };
     })
         .filter((item) => Boolean(item?.src));

@@ -17,6 +17,7 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^\\./runtimeReadPolicy\\.js$': '<rootDir>/ui/shared/api-client/runtimeReadPolicy.ts',
     '^.*shared[\\\\/]content[\\\\/]contentTags\\.js$': '<rootDir>/ui/shared/content/contentTags.ts',
     '^.*shared[\\\\/]localization[\\\\/]contentLanguageConfig\\.js$': '<rootDir>/ui/shared/localization/contentLanguageConfig.ts',
     '^.*(?:/|\\./)(sourceEditor|sourceEditorLoader)\\.js$': '<rootDir>/ui/shared/code/$1.ts',

@@ -1,3 +1,4 @@
+import { isConcurrentAdminRead, isReusableRuntimeRead } from './runtimeReadPolicy.js';
 const DEFAULT_TIMEOUT = 10000;
 // Awaiting each response already serializes commands. A fixed idle gap adds
 // latency to every admin page without providing an ordering guarantee.
@@ -64,7 +65,10 @@ export function createMeltdownClient(options = {}) {
     const requestQueue = [];
     const publicQueue = [];
     let publicActive = 0;
-    let busy = false;
+    let commandActive = false;
+    let adminReadsActive = 0;
+    const readCache = new Map();
+    function invalidateReads() { readCache.clear(); }
     // Only the read-only public facade bypasses ordered command delivery.
     // Bound concurrency so background fonts cannot serialize page discovery.
     function processPublicQueue() {
@@ -108,33 +112,52 @@ export function createMeltdownClient(options = {}) {
         return json.data;
     }
     function processQueue() {
-        if (busy || requestQueue.length === 0)
+        if (commandActive)
             return;
-        busy = true;
-        const item = requestQueue.shift();
-        if (!item) {
-            busy = false;
-            return;
-        }
-        send(item.eventName, item.payload, item.timeout)
-            .then(item.resolve)
-            .catch(item.reject)
-            .finally(() => {
-            const continueQueue = () => {
-                busy = false;
-                processQueue();
-            };
-            // Preserve explicit pacing for callers that request it; normal startup
-            // proceeds immediately after success or failure, still one at a time.
-            if (throttleDelay > 0)
-                setTimeout(continueQueue, throttleDelay);
+        while (requestQueue.length && adminReadsActive < 4) {
+            const next = requestQueue[0];
+            const concurrent = throttleDelay <= 0 && isConcurrentAdminRead(next.eventName, next.payload);
+            // A command is a fence: finish earlier reads, then the command, before
+            // starting later reads. Reads never jump over a queued save/delete.
+            if (!concurrent && adminReadsActive > 0)
+                return;
+            const item = requestQueue.shift();
+            if (concurrent)
+                adminReadsActive += 1;
             else
-                continueQueue();
-        });
+                commandActive = true;
+            send(item.eventName, item.payload, item.timeout)
+                .then(item.resolve, item.reject)
+                .finally(() => {
+                const continueQueue = () => {
+                    if (concurrent)
+                        adminReadsActive -= 1;
+                    else
+                        commandActive = false;
+                    processQueue();
+                };
+                if (throttleDelay > 0)
+                    setTimeout(continueQueue, throttleDelay);
+                else
+                    continueQueue();
+            });
+            if (!concurrent)
+                return;
+        }
     }
     return {
         emit(eventName, payload = {}, timeout = DEFAULT_TIMEOUT) {
-            return new Promise((resolve, reject) => {
+            const reusable = isReusableRuntimeRead(eventName, payload);
+            const key = reusable ? JSON.stringify([
+                eventName, payload, tokenProvider.getPublicToken(), tokenProvider.getCsrfToken(), timeout
+            ]) : '';
+            const cached = readCache.get(key);
+            if (cached && cached.expires > Date.now()) {
+                return cached.value.then(value => structuredClone(value));
+            }
+            if (eventName !== 'cmsPublicRuntimeRequest' && !isConcurrentAdminRead(eventName, payload))
+                invalidateReads();
+            const pending = new Promise((resolve, reject) => {
                 // Local dialogs can issue their own backend requests while awaiting a
                 // selection. Holding the transport queue for the dialog would deadlock.
                 try {
@@ -156,10 +179,21 @@ export function createMeltdownClient(options = {}) {
                 requestQueue.push({ eventName, payload, timeout, resolve, reject });
                 processQueue();
             });
+            if (!reusable)
+                return pending;
+            if (readCache.size >= 64)
+                readCache.delete(readCache.keys().next().value);
+            const entry = { expires: Date.now() + 30_000, value: pending };
+            readCache.set(key, entry);
+            // Remove failures without deleting a newer request after invalidation.
+            void pending.catch(() => { if (readCache.get(key) === entry)
+                readCache.delete(key); });
+            return pending.then(value => structuredClone(value));
         },
         async emitBatch(events = [], jwt = null, timeout = DEFAULT_TIMEOUT) {
             if (!Array.isArray(events) || events.length === 0)
                 return [];
+            invalidateReads();
             const headers = {
                 'Content-Type': 'application/json'
             };
@@ -182,7 +216,7 @@ export function createMeltdownClient(options = {}) {
                 credentials: 'same-origin',
                 headers,
                 body: JSON.stringify({ events })
-            }, timeout);
+            }, timeout).finally(invalidateReads);
             const json = await parseJsonResponse(resp, '[MELTDOWN][IN][BATCH]', debug());
             return (Array.isArray(json.results) ? json.results : []);
         }

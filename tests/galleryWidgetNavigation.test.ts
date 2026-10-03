@@ -4,6 +4,26 @@ import { render } from '../ui/widgets/plainspace/public/basicwidgets/galleryWidg
 describe('gallery navigation', () => {
   const items = [{ src: '/a.jpg' }, { src: '/b.jpg' }, { src: '/c.jpg' }];
 
+  it('loads visible images eagerly, keeps hidden slides lazy and reserves supplied dimensions', () => {
+    const bounds = jest.spyOn(HTMLImageElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 100, height: 100, top: 0, left: 0, right: 100, bottom: 100, x: 0, y: 0, toJSON() {}
+    });
+    try {
+      const host = document.createElement('div');
+      render(host, { instanceMetadata: { mode: 'carousel', items: [
+        { src: '/a.jpg', width: 800, height: 600 }, { src: '/b.jpg' }
+      ] } });
+      const images = host.querySelectorAll('img');
+      expect(images[0]!.loading).toBe('eager');
+      expect(images[1]!.loading).toBe('lazy');
+      expect(images[0]!.width).toBe(800);
+      expect(images[0]!.height).toBe(600);
+      bounds.mockReturnValue({ width: 100, height: 100, top: 5000, left: 0, right: 100, bottom: 5100, x: 0, y: 5000, toJSON() {} });
+      render(host, { instanceMetadata: { items } });
+      expect(Array.from(host.querySelectorAll('img')).every(image => image.loading === 'lazy')).toBe(true);
+    } finally { bounds.mockRestore(); }
+  });
+
   it('clips slides without clipping controls and disables unavailable directions', () => {
     const host = document.createElement('div');
     render(host, { instanceMetadata: { items, mode: 'carousel', loop: false } });

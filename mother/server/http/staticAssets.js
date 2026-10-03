@@ -4,6 +4,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const compression = require('compression');
+const { setVersionedAssetHeaders } = require('./assetVersions');
 const {
   VALID_RUNTIME_MODULE,
   makeFixedTsHandler,
@@ -165,6 +166,9 @@ function mountStaticAssetRoutes(app, {
   const guardAppStaticRoot = makeStaticRealpathGuard(appStaticPath, 'apps');
   const guardMediaStaticRoot = makeStaticRealpathGuard(mediaPublicPath, 'media');
   const guardWidgetStaticRoot = makeStaticRealpathGuard(widgetsPath, 'widgets');
+  const versionedAssetOptions = {
+    setHeaders: devReloadEnabled ? () => {} : setVersionedAssetHeaders
+  };
 
   // Compress only successful public text assets, never HTML carrying tokens,
   // JSON APIs, errors or byte ranges. The established static guards still run.
@@ -188,7 +192,17 @@ function mountStaticAssetRoutes(app, {
   mountModulePublicLoaderRoutes(app, { rootDir, modulePublicLoaderRoot });
 
   app.use('/admin/assets', blockBrowserSourceFiles, express.static(path.join(publicPath, 'assets')));
-  app.use('/build', setStaticCorsHeaders, express.static(buildPath));
+  app.use('/build', setStaticCorsHeaders, express.static(buildPath, {
+    setHeaders(res, filePath) {
+      // Only content-addressed async chunks survive releases unchanged. Named
+      // entry files must continue to revalidate; query strings are not hashes.
+      if (!devReloadEnabled && /\.[a-f0-9]{16}\.js$/i.test(path.basename(filePath))) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (!devReloadEnabled) {
+        setVersionedAssetHeaders(res, filePath);
+      }
+    }
+  }));
   app.use('/ui', setStaticCorsHeaders, blockBrowserSourceFiles, express.static(path.join(rootDir, 'ui')));
   app.get('/apps/designer/origin-public-key.json', (req, res) => {
     const publicKeyPem = securityConfig.postMessage?.originToken?.publicKey;
@@ -250,13 +264,13 @@ function mountStaticAssetRoutes(app, {
     }
   });
 
-  app.use('/assets', setStaticCorsHeaders, blockBrowserSourceFiles, express.static(assetsPath));
+  app.use('/assets', setStaticCorsHeaders, blockBrowserSourceFiles, express.static(assetsPath, versionedAssetOptions));
   // Only files already placed below the Media Manager's public boundary are
   // addressable here. The realpath and filename guards keep traversal,
   // symlink escapes, source files and secret-shaped files fail-closed.
   app.use('/media', setStaticCorsHeaders, guardMediaStaticRoot, blockBrowserSourceFiles, express.static(mediaPublicPath));
   app.use('/favicon.ico', express.static(path.join(publicPath, 'favicon.ico')));
-  app.use('/fonts', setStaticCorsHeaders, express.static(path.join(publicPath, 'fonts')));
+  app.use('/fonts', setStaticCorsHeaders, express.static(path.join(publicPath, 'fonts'), versionedAssetOptions));
 
   return {
     assetsPath,

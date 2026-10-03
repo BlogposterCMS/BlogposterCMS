@@ -88,10 +88,22 @@ prevention. Existing packages and data are retained on incompatible upgrades.
 
 ## Public static compression and HTML handoff
 
+Trusted admin/public shell asset references carry content hashes. Static routes
+grant immutable caching only to verified file versions or content-hashed build
+chunks; dynamic HTML/tokens, APIs, unversioned assets and stale versions do not
+gain that policy. Development disables immutable caching. The bounded digest
+memo is refreshed when file metadata changes and does not resolve client paths.
+
+The browser's bounded 30-second presentation cache is credential/CSRF scoped and
+contains only widget registries and public settings, never page/user/permission
+records. Commands and batches invalidate it. The admin read allowlist affects
+queue scheduling only; all HTTP requests retain authentication, CSRF and facade
+permission checks. Unknown actions stay ordered and do not bypass write fences.
+
 Only successful public CSS, JavaScript and SVG responses are eligible for the
 standard compression middleware. Dynamic HTML with nonce/token data, JSON APIs,
 errors, binary downloads and Range requests are excluded. Existing media realpath
-and source-file guards remain authoritative; no new file route/cache is added.
+and source-file guards remain authoritative; no new file route is added.
 The middleware retains Accept-Encoding negotiation and no-transform handling.
 
 Bootstrap version 2 references only the sanitized initial HTML node for that

@@ -12,6 +12,9 @@ const ADMIN_DASHBOARD_CONTROLS_PATH = '/ui/widgets/panel/widgetControls.js';
 let dashboardControlsModulePromise: Promise<DashboardControlsModule> | null = null;
 
 export async function renderAdminSettingsSurface(el: HTMLElement, page: unknown): Promise<boolean> {
+  // Match the Settings owner's route guard before downloading its editor graph.
+  const slug = (page as { slug?: unknown } | null)?.slug;
+  if (String(slug || '').split('/').filter(Boolean)[0] !== 'settings') return false;
   const mod = await import(
     /* webpackIgnore: true */ ADMIN_SETTINGS_SURFACE_PATH
   ) as SettingsSurfaceModule;

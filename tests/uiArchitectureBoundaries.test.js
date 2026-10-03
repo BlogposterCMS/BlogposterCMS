@@ -2303,7 +2303,7 @@ describe('UI architecture boundaries', () => {
     expect(rendererSource).not.toContain('sanitizeHtml(');
     expect(rendererSource).not.toContain('top-header-loaded');
     expect(rendererSource).not.toContain('sidebarPartial');
-    expect(rendererSource).toContain('hydrateRuntimeShellPartials(config)');
+    expect(rendererSource).toContain('hydrateRuntimeShellPartials(config, { mode })');
     expect(pageShellSource).toContain('export function ensureLayout');
     expect(pageShellSource).toContain('export function clearContentKeepHeader');
     expect(pageShellSource).not.toContain('export async function fetchPartialSafe');

@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { versionShellAssets } = require('./assetVersions');
 const { verifyOriginToken } = require('../security/originToken');
 const { loadPublicPresentation, escapeHtml, scriptJson } = require('../../modules/pagesManager/publicPresentation');
 const { renderPublicSeoHead } = require('../../modules/seoManager/publicHead');
@@ -153,6 +154,7 @@ function createPublicPageRoutes({
         : await loadPublicPresentation(requestPublic, slugToUse, language);
 
       let html = await fs.promises.readFile(pageHtmlPath, 'utf8');
+      html = versionShellAssets(html, path.dirname(pageHtmlPath));
       html = html.replace(/(<html\b[^>]*\blang=")[^"]*(")/i, `$1${language}$2`);
       if (presentation) {
         presentation.bootstrap.pathname = req.path;
@@ -169,7 +171,7 @@ function createPublicPageRoutes({
       }
       if (renderMode === 'server') {
         html = html.replace(
-          /<script type="module" src="\/build\/pageRenderer.js"><\/script>\s*/i,
+          /<script type="module" src="\/build\/pageRenderer\.js(?:\?v=[a-f0-9]{16})?"><\/script>\s*/i,
           ''
         );
       }

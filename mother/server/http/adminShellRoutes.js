@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { versionShellAssets } = require('./assetVersions');
 const { hasPermission } = require('../../modules/userManagement/permissionUtils');
 const { createOriginToken } = require('../security/originToken');
 
@@ -46,6 +47,7 @@ function prepareAdminShellHtml({
   }
 
   const csrfSafe = escapeHtml(csrfToken);
+  html = versionShellAssets(html, publicPath);
   const headInjection = `
       <meta name="csrf-token" content="${csrfSafe}">
       <script nonce="${nonce}">

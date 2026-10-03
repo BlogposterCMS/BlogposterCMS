@@ -661,3 +661,9 @@ acknowledgement; existing layout/widget/viewport commands then target that local
 `locale.reset` requires confirmation and saves through the same optimistic version.
 `page.openDocument` loads its editor asset before changing the page association.
 See [localized authoring](editor-localization.md) for the full contract.
+
+Gallery previews use the shared renderer's native image scheduling: visible
+images load eagerly, hidden carousel slides and offscreen images remain lazy.
+Positive width/height values in existing image metadata reserve intrinsic image
+geometry; saved widget placement, layout-tree bounds and agent actions retain
+their existing meaning. No separate preview loader or feedback API is introduced.

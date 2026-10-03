@@ -1,4 +1,4 @@
-import DOMPurify from '../vendor/dompurify-3.4.15/purify.es.js';
+import DOMPurify from '../vendor/dompurify-3.4.16/purify.es.js';
 const HTML_SANITIZE_CONFIG = {
     ADD_ATTR: ['target'],
     ALLOW_ARIA_ATTR: true,

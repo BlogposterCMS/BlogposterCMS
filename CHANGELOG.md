@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Update Nodemailer to 10.0.14, DOMPurify (including the pinned browser vendor) to
+  3.4.16, and locked brace-expansion/fast-uri versions to resolve published
+  dependency vulnerabilities. Cover SMTP TLS-name isolation and deeply nested
+  recipients with regression tests. The development dependency `braces` remains
+  affected by GHSA-vfj7-8cjw-p6xm; release audit gates remain enforced.
+
 - Reduce dashboard startup waterfalls with bounded parallel reads, ordered write
   barriers and a short-lived, credential-scoped presentation cache. Load Settings
   and the media picker only when needed. Version shell assets and async chunks

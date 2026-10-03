@@ -11,6 +11,41 @@ test('SMTP runtime dependency is installed and exposes a transport factory', () 
   expect(typeof nodemailer.createTransport).toBe('function');
 });
 
+test('shared DNS cache preserves each transport TLS server name', async () => {
+  const shared = require('nodemailer/lib/shared');
+  const host = 'smtp-cache.example.test';
+  shared.dnsCache.set(host, {
+    value: { addresses: ['192.0.2.10'], servername: 'other-tenant.example.test' },
+    expires: Date.now() + 60000
+  });
+  try {
+    for (const servername of ['tenant-a.example.test', 'tenant-b.example.test']) {
+      const resolved = await new Promise((resolve, reject) => {
+        shared.resolveHostname({ host, servername }, (err, value) => err ? reject(err) : resolve(value));
+      });
+      expect(resolved.servername).toBe(servername);
+      expect(resolved.cached).toBe(true);
+    }
+  } finally {
+    shared.dnsCache.delete(host);
+  }
+});
+
+test('real mail composer handles deeply nested recipient arrays without stack exhaustion', async () => {
+  const nodemailer = require('nodemailer');
+  const transport = nodemailer.createTransport({ jsonTransport: true });
+  let recipient = { name: 'Recipient', address: 'recipient@example.test' };
+  for (let i = 0; i < 15000; i++) recipient = [recipient];
+  const result = await transport.sendMail({
+    from: 'sender@example.test', to: recipient, subject: 'Test', text: 'Body'
+  });
+  expect(result.envelope).toEqual({ from: 'sender@example.test', to: ['recipient@example.test'] });
+  const ordinary = await transport.sendMail({
+    from: 'sender@example.test', to: '"Doe, Jane" <jane@example.test>', subject: 'Test', text: 'Body'
+  });
+  expect(ordinary.envelope.to).toEqual(['jane@example.test']);
+});
+
 test('SMTP integration uses the installed Nodemailer transport', async () => {
   const sendMail = jest.fn().mockResolvedValue({ messageId: 'message-1' });
   const createTransport = jest.fn(() => ({ sendMail }));

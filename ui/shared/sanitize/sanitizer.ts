@@ -1,4 +1,4 @@
-import DOMPurify, { type Config } from '../vendor/dompurify-3.4.15/purify.es.js';
+import DOMPurify, { type Config } from '../vendor/dompurify-3.4.16/purify.es.js';
 
 const HTML_SANITIZE_CONFIG: Config = {
   ADD_ATTR: ['target'],

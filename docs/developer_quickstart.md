@@ -59,7 +59,7 @@ First follow the [Installation](installation.md) guide if you have not yet set u
    npm run dev
    ```
 
-   It runs Nodemon, Sass watch and the production-compatible browser-bundle
+   It runs the server watcher, Sass watch and the production-compatible browser-bundle
    watcher together, so generated build files keep the same names and format as
    `npm run build`. The
    existing development banner also connects the dashboard and sandboxed app
@@ -68,7 +68,7 @@ First follow the [Installation](installation.md) guide if you have not yet set u
    TypeScript events are intentionally ignored until Sass or Webpack has
    produced the browser-served output, preventing reloads against stale files.
    Set `BLOGPOSTER_DEV_RELOAD=false` to disable the reload stream, or use
-   `npm run dev:server` to run Nodemon alone.
+   `npm run dev:server` to run the server watcher alone.
 
 4. **Run tests**
    ```bash
@@ -88,3 +88,17 @@ First follow the [Installation](installation.md) guide if you have not yet set u
    - Check `npm audit` regularly to catch vulnerable dependencies.
    - We recommend using `eslint` (not included by default) to maintain
      consistent style.
+
+## Server watching
+
+`npm run dev:server` starts `tools/dev-server.js`. The coordinated `npm run dev`
+uses the same server watcher alongside Sass and Webpack. It retains the watched
+paths, extensions and generated-file exclusions in `nodemon.json` (the historical
+configuration filename); Nodemon is no longer installed. Source changes restart
+the server after the previous process exits. Crashes wait for the next source
+change; watcher errors stop the runner with a nonzero exit code.
+
+Jest 30 retains the existing JSDOM 20.0.3 test model through a scoped package
+override. Updating the runner removes vulnerable glob dependencies without
+changing DOM/CSS serialization assumptions. Review a future DOM-engine upgrade
+separately; keep existing layout assertions intact.

@@ -269,7 +269,7 @@ module.exports = {
     '^/ui/(.*)$': '<rootDir>/ui/$1',
     '^/apps/(.*)$': '<rootDir>/apps/$1',
   },
-  // Node 24 supports require(ESM); Jest 29's VM needs the sanitizer's small
+  // Node 24 supports require(ESM); the Jest VM needs the sanitizer's small
   // parser graph transformed to CommonJS. All other dependencies stay untouched.
   transformIgnorePatterns: ['/node_modules/(?!@tiptap/extension-unique-id/|uuid/|htmlparser2/|domhandler/|domutils/|domelementtype/|dom-serializer/|entities/|launder/)'],
 };

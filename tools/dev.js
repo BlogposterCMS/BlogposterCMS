@@ -40,7 +40,9 @@ function stopChildren() {
 }
 
 function startProcess(label, packageName, args) {
-  const binPath = resolvePackageBin(packageName);
+  const binPath = packageName === null
+    ? path.join(__dirname, 'dev-server.js')
+    : resolvePackageBin(packageName);
   const child = spawn(process.execPath, [binPath, ...args], {
     cwd: rootDir,
     env: {
@@ -83,4 +85,4 @@ startProcess('styles', 'sass', [
 // Keep the watch output byte-compatible with the checked-in production build.
 // Development-mode chunk names would continuously dirty and delete build files.
 startProcess('browser', 'webpack-cli', ['--watch', '--mode', 'production']);
-startProcess('server', 'nodemon', ['app.js']);
+startProcess('server', null, []);

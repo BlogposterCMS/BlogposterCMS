@@ -1,5 +1,11 @@
 # Design Studio Agent Feedback
 
+Large feedback requests use gzip on the existing Meltdown HTTP endpoint when the
+browser supports `CompressionStream`. The structured feedback, actions, bounds and
+visual metadata remain complete. Auth, CSRF and command ordering remain unchanged;
+the existing server parser applies its body limit after decompression. Browsers
+without compression support retain the JSON transport.
+
 Preview capture uses the same patched local library in bundled Studio assets and
 direct browser modules. Textarea values remain literal text in captured DOM/SVG;
 markup-looking source cannot create new capture elements. Existing preview

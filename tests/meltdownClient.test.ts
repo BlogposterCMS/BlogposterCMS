@@ -1,5 +1,8 @@
 import { createMeltdownClient } from '../ui/shared/api-client/meltdownClient';
 import { dispatchAppRuntimeRequest } from '../ui/shell/apps/appFrameLoaderData';
+import { gunzipSync } from 'node:zlib';
+import express from 'express';
+import bodyParser from 'body-parser';
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -10,6 +13,42 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 describe('meltdown client', () => {
+  it('compresses a large real bridge envelope without changing auth, CSRF or snapshot content', async () => {
+    const snapshot = { appName: 'designer', state: { layout: '布局 '.repeat(30000) } };
+    const fetchMock = jest.fn(async (_url: unknown, init: RequestInit) => {
+      expect(init.credentials).toBe('same-origin');
+      expect(init.headers).toMatchObject({ 'X-Public-Token': 'admin', 'X-CSRF-Token': 'csrf',
+        'Content-Type': 'application/json', 'Content-Encoding': 'gzip' });
+      const compressed = Buffer.from(init.body as ArrayBuffer);
+      expect(compressed.length).toBeLessThan(3000);
+      const decoded = JSON.parse(gunzipSync(compressed).toString('utf8'));
+      expect(decoded.payload.jwt).toBeUndefined();
+      expect(decoded.payload.data).toEqual({ eventName: 'agent.publishSurfaceSnapshot', payload: snapshot });
+      return jsonResponse({ data: { data: 'accepted' } });
+    });
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch,
+      tokenProvider: { getPublicToken: () => null, getCsrfToken: () => 'csrf' } });
+    expect(await dispatchAppRuntimeRequest(client.emit, 'admin', 'designer', 'agent.publishSurfaceSnapshot', snapshot)).toBe('accepted');
+  });
+
+  it('uses the existing JSON parser decoded-body limit for compressed requests', async () => {
+    const app = express();
+    app.use(bodyParser.json({ limit: '32kb' }));
+    const handler = jest.fn((_req, res) => res.json({ data: 'accepted' }));
+    app.post('/api/meltdown', handler);
+    app.use((error: any, _req: any, res: any, _next: any) => res.status(error.status).json({ error: error.type }));
+    const server = app.listen(0, '127.0.0.1');
+    await new Promise<void>(resolve => server.once('listening', resolve));
+    try {
+      const port = (server.address() as import('node:net').AddressInfo).port;
+      const client = createMeltdownClient({ endpoint: `http://127.0.0.1:${port}/api/meltdown` });
+      await expect(client.emit('dispatchAppEvent', { data: 'x'.repeat(100000) })).rejects.toThrow('entity.too.large');
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  });
+
   it('schedules real AppLoader read envelopes concurrently without bypassing save fences', async () => {
     const pending: Array<(response: Response) => void> = [];
     const fetchMock = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));

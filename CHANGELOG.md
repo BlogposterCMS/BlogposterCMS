@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.47] - 2026-10-07
+
+- Compress large Meltdown request bodies through the existing gzip-capable JSON boundary so structured Designer agent snapshots do not block publication reads on slow uplinks; retain authorization, ordered commands and decoded-body limits.
+
 ## [0.10.46] - 2026-10-07
 
 - Apply bounded read scheduling inside the existing AppLoader single-request bridge; preserve write/batch/lifecycle fences and authorization.

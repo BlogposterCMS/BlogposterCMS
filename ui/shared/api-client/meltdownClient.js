@@ -102,11 +102,23 @@ export function createMeltdownClient(options = {}) {
                 body: { eventName, payload: bodyPayload }
             });
         }
+        let body = JSON.stringify({ eventName, payload: bodyPayload });
+        // Large structured Studio snapshots otherwise occupy the ordered command
+        // fence for the entire upload. The existing JSON parser already inflates
+        // gzip under its decoded-body limit; keep the same endpoint and contracts.
+        if (body.length >= 64 * 1024 && typeof CompressionStream === 'function') {
+            const source = new Blob([body]);
+            const compressed = await new Response(source.stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+            if (compressed.byteLength < source.size) {
+                body = compressed;
+                headers['Content-Encoding'] = 'gzip';
+            }
+        }
         const resp = await fetchWithTimeout(fetchImpl, endpoint, {
             method: 'POST',
             credentials: 'same-origin',
             headers,
-            body: JSON.stringify({ eventName, payload: bodyPayload })
+            body
         }, timeout);
         const json = await parseJsonResponse(resp, '[MELTDOWN][IN]', debug());
         return json.data;

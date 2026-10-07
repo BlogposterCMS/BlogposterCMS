@@ -13,6 +13,46 @@ describe('meltdown client', () => {
     moduleName: 'runtimeManager', moduleType: 'core', resource, action, jwt: 'admin'
   });
 
+  it.each([
+    [['designer', 'list'], ['navigation', 'locations'], ['navigation', 'menus'], ['designer', 'getLayout']],
+    [['content', 'get'], ['contentTypes', 'list'], ['media', 'listLocalFolder'], ['media', 'listForContent']],
+    [['users', 'get'], ['roles', 'list'], ['permissions', 'list'], ['users', 'access']],
+    [['fonts', 'listProviders'], ['fonts', 'list'], ['sitePresets', 'list'], ['auth', 'loginStrategies']]
+  ])('overlaps workspace reads %j, fences mutations and fetches private data fresh', async (...actions) => {
+    const pending: Array<(response: Response) => void> = [];
+    const fetchMock = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const reads = actions.map(([resource, action]) => client.emit('cmsAdminApiRequest', read(resource, action)));
+    const save = client.emit('cmsAdminApiRequest', read('designer', 'save'));
+    const fresh = client.emit('cmsAdminApiRequest', read(...actions[0] as [string, string]));
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    pending.slice(0, 4).forEach(resolve => resolve(jsonResponse({ data: 'before' })));
+    await Promise.all(reads);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    pending[4]!(jsonResponse({ data: 'saved' })); await save;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    pending[5]!(jsonResponse({ data: 'fresh' })); expect(await fresh).toBe('fresh');
+    const again = client.emit('cmsAdminApiRequest', read(...actions[0] as [string, string]));
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+    pending[6]!(jsonResponse({ data: 'latest' })); expect(await again).toBe('latest');
+  });
+
+  it('keeps stateful summaries and unknown actions ordered despite read-like names', async () => {
+    let release!: (response: Response) => void;
+    const fetchMock = jest.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { release = resolve; }))
+      .mockResolvedValue(jsonResponse({ data: 'ok' }));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const calls = [client.emit('cmsAdminApiRequest', read('analytics', 'summary')),
+      client.emit('cmsAdminApiRequest', read('unknown', 'get')),
+      client.emit('cmsAdminApiRequest', read('media', 'list'))];
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    release(jsonResponse({ data: 'summary' }));
+    await Promise.all(calls);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('overlaps private Settings and inventory reads while fencing settings saves and source checks', async () => {
     const pending: Array<(response: Response) => void> = [];
     const fetchMock = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));

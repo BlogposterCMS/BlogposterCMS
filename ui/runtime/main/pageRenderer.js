@@ -17,38 +17,51 @@ async function renderRuntimePageContent(context, mode = 'full', presentationRead
     ensureGlobalStyle(lane);
     if (debug)
         console.debug('[Renderer] boot', { slug, lane, mode });
-    const [page] = await Promise.all([
-        fetchRuntimePageBySlug(meltdownEmit, slug, lane),
+    // Discover page-dependent assets as soon as the page is known. Presentation
+    // defaults still gate rendering, but must not delay independent asset reads.
+    const [prepared] = await Promise.all([
+        (async () => {
+            const page = await fetchRuntimePageBySlug(meltdownEmit, slug, lane);
+            if (!page)
+                return null;
+            const config = resolveRuntimeShellConfig(page, page.meta || {}, context);
+            const widgetLane = resolveRuntimeWidgetLane(lane, config);
+            const [allWidgets, globalLayout] = await Promise.all([
+                fetchRuntimeWidgetRegistry(meltdownEmit, lane, widgetLane),
+                lane === 'admin' && page.meta?.dashboardLayout === 'fixed'
+                    ? Promise.resolve([])
+                    : loadRuntimeGlobalLayout(meltdownEmit, lane).catch(err => {
+                        console.warn('[Renderer] failed to load global layout', err);
+                        return [];
+                    }),
+                (async () => {
+                    // Do not mutate the shell after a failed presentation bootstrap.
+                    await presentationReady;
+                    ensureLayout(config.layout || {}, lane);
+                    await hydrateRuntimeShellPartials(config, { mode });
+                })()
+            ]);
+            const contentEl = document.getElementById('content');
+            if (!contentEl)
+                return { page, missingContent: true };
+            return { page, config, contentEl, allWidgets, globalLayout };
+        })(),
         applyRuntimeGlobalBackground(lane, meltdownEmit),
         presentationReady
     ]);
-    if (debug)
-        console.debug('[Renderer] page', page);
-    if (!page) {
+    if (!prepared) {
         if (lane === 'admin')
             throw new Error('ADMIN_SHELL_PAGE_NOT_FOUND');
         await bpDialog.alert('Page not found');
         return;
     }
-    const config = resolveRuntimeShellConfig(page, page.meta || {}, context);
-    applyRuntimePageTitle(page, lane);
-    ensureLayout(config.layout || {}, lane);
-    const contentEl = document.getElementById('content');
-    if (!contentEl)
+    if ('missingContent' in prepared)
         return;
+    const { page, config, contentEl, allWidgets, globalLayout } = prepared;
+    if (debug)
+        console.debug('[Renderer] page', page);
+    applyRuntimePageTitle(page, lane);
     contentEl.dataset.dashboardLayout = lane === 'admin' && config.dashboardLayout === 'fixed' ? 'fixed' : 'custom';
-    const widgetLane = resolveRuntimeWidgetLane(lane, config);
-    // Shell HTML, registry and inherited slots have no dependencies on each other.
-    const [allWidgets, globalLayout] = await Promise.all([
-        fetchRuntimeWidgetRegistry(meltdownEmit, lane, widgetLane),
-        lane === 'admin' && page.meta?.dashboardLayout === 'fixed'
-            ? Promise.resolve([])
-            : loadRuntimeGlobalLayout(meltdownEmit, lane).catch(err => {
-                console.warn('[Renderer] failed to load global layout', err);
-                return [];
-            }),
-        hydrateRuntimeShellPartials(config, { mode })
-    ]);
     if (debug)
         console.debug('[Renderer] widgets', allWidgets);
     exposeRuntimeWidgetRegistry(allWidgets);

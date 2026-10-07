@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Extend bounded concurrent reads to content, media, Designer, navigation, users/access and font/preset inventories; keep writes, source checks and stateful analytics summaries ordered and private responses uncached.
+- Start page-dependent asset discovery while design defaults load in both admin and public runtimes; retain presentation readiness before widget rendering and overlap Navigation Studio inventory reads.
+
 - Load independent General settings sections together while retaining the complete-form load and retry boundary.
 
 - Harden PostgreSQL lifecycle/custom-field DDL, aggregate HTTP request limits,

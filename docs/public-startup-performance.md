@@ -8,6 +8,18 @@ before a command starts, and later reads wait for it. Explicit throttle settings
 retain serial pacing. This is scheduling only; server facade authorization is
 unchanged. The existing public read queue and batch transport remain separate.
 
+The explicit read list also covers content/revisions, media metadata and local
+folder listings, Designer documents/layouts, navigation inventories/trees,
+user/role/permission records and font/preset inventories. Private responses stay
+uncached. Analytics summaries remain ordered because they flush collected data;
+source checks, lock operations, imports, exports and unknown actions also retain
+command fences. No operation is classified by its name alone.
+
+Once page discovery completes, registry and inherited layout reads can start
+while shared colors/fonts are still pending. Shell mutations and widget rendering
+still wait for presentation defaults in both lanes, preserving linked styles
+and the presentation failure boundary.
+
 Widget registries and public-settings responses are deduplicated for at most
 30 seconds in the client instance (64 entries, including pending reads). Keys
 include request payload, credentials, CSRF token and timeout. Results are cloned;

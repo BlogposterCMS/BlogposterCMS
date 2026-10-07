@@ -9,7 +9,18 @@ const ADMIN_READS: Record<string, readonly string[]> = {
   fontPackages: ['list'],
   settings: ['public', 'get', 'list', 'cmsMode'],
   modules: ['registry', 'system', 'activeStaticFrontends'],
-  apps: ['list', 'get', 'builderList']
+  apps: ['list', 'get', 'builderList'],
+  designer: ['get', 'list', 'getLayout', 'layouts'],
+  navigation: ['locations', 'menus', 'getMenu', 'tree'],
+  content: ['list', 'get', 'revisions', 'revision', 'scheduled', 'trashed'],
+  contentTypes: ['list', 'get'],
+  media: ['list', 'get', 'listVariants', 'listForContent', 'listContent', 'listLocalFolder'],
+  users: ['list', 'me', 'get', 'getByUsername', 'count', 'access'],
+  roles: ['list'],
+  permissions: ['list'],
+  auth: ['loginStrategies'],
+  fonts: ['listProviders', 'list'],
+  sitePresets: ['list']
 };
 
 export function isConcurrentAdminRead(eventName: string, payload: MeltdownPayload): boolean {

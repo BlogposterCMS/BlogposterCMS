@@ -70,6 +70,24 @@ describe('Navigation Studio editing flows', () => {
     await render(host);
   });
 
+  it('starts location and menu discovery together before ensuring defaults', async () => {
+    const implementation = emit.getMockImplementation()!;
+    const pending = new Map<string, (value: unknown) => void>();
+    emit.mockImplementation((event, payload) => {
+      if (['locations', 'menus'].includes(payload.action) && !pending.has(payload.action)) {
+        return new Promise(resolve => { pending.set(payload.action, resolve); });
+      }
+      return implementation(event, payload);
+    });
+    const rendering = render(host);
+    await settle();
+    expect([...pending.keys()]).toEqual(['locations', 'menus']);
+    pending.get('locations')!(NAVIGATION_STUDIO_DEFAULT_LOCATIONS);
+    pending.get('menus')!(NAVIGATION_STUDIO_DEFAULT_MENUS);
+    await rendering;
+    expect(control<HTMLSelectElement>('[data-menu-select]').value).toBe('header-main');
+  });
+
   it('starts with the primary menu, a closed picker and link details before preview', () => {
     expect(control<HTMLSelectElement>('[data-menu-select]').value).toBe('header-main');
     expect(control('[data-add-panel]').hidden).toBe(true);

@@ -250,8 +250,10 @@ async function reloadTree(): Promise<void> {
 
 async function reloadSnapshot(): Promise<void> {
   const { meltdownEmit, jwt } = getRuntime();
-  let locations = await fetchNavigationLocations(meltdownEmit, jwt);
-  let menus = await fetchNavigationMenus(meltdownEmit, jwt);
+  let [locations, menus] = await Promise.all([
+    fetchNavigationLocations(meltdownEmit, jwt),
+    fetchNavigationMenus(meltdownEmit, jwt)
+  ]);
   await ensureNavigationStudioDefaults(meltdownEmit, jwt, locations, menus);
   [locations, menus, state.pages, state.designs] = await Promise.all([
     fetchNavigationLocations(meltdownEmit, jwt),

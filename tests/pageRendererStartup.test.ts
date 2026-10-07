@@ -33,23 +33,29 @@ describe('shared runtime startup layout reads', () => {
     jest.mocked(loadRuntimeGlobalLayout).mockResolvedValue([{ id: 'global-slot' }]);
   });
 
-  it('starts page discovery while presentation is pending and registry reads while shell HTML is pending', async () => {
+  it.each(['admin', 'public'] as const)('loads %s page assets while presentation and shell HTML are pending', async lane => {
     let ready!: () => void;
     let shellReady!: () => void;
     const presentation = new Promise<void>(resolve => { ready = resolve; });
     jest.mocked(fetchRuntimePageBySlug).mockResolvedValue({ id: 'home', meta: {} });
     jest.mocked(hydrateRuntimeShellPartials).mockImplementationOnce(() => new Promise<void>(resolve => { shellReady = resolve; }));
-    const rendering = renderRuntimePage({ lane: 'admin', slug: 'home', debug: false }, 'full', presentation);
+    const rendering = renderRuntimePage({ lane, slug: 'home', debug: false }, 'full', presentation);
     expect(fetchRuntimePageBySlug).toHaveBeenCalled();
     expect(renderAdminRuntimeGrid).not.toHaveBeenCalled();
-    ready();
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(fetchRuntimeWidgetRegistry).toHaveBeenCalled();
     expect(loadRuntimeGlobalLayout).toHaveBeenCalled();
     expect(renderAdminRuntimeGrid).not.toHaveBeenCalled();
+    expect(renderPublicRuntimePageContent).not.toHaveBeenCalled();
+    expect(hydrateRuntimeShellPartials).not.toHaveBeenCalled();
+    ready();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(hydrateRuntimeShellPartials).toHaveBeenCalled();
+    expect(renderAdminRuntimeGrid).not.toHaveBeenCalled();
+    expect(renderPublicRuntimePageContent).not.toHaveBeenCalled();
     shellReady();
     await rendering;
-    expect(renderAdminRuntimeGrid).toHaveBeenCalled();
+    expect(lane === 'admin' ? renderAdminRuntimeGrid : renderPublicRuntimePageContent).toHaveBeenCalled();
   });
 
   it.each(['full', 'content-only'] as const)('skips unused global slots for fixed admin pages during %s rendering', async mode => {
@@ -94,5 +100,15 @@ describe('shared runtime startup layout reads', () => {
     await expect(renderRuntimePage({ lane: 'admin', slug: 'home', debug: false }, 'content-only')).rejects.toThrow('offline');
     expect(document.getElementById('content')?.dataset.adminLoading).toBe('error');
     expect(document.querySelector('#content .admin-shell-error')?.textContent).toContain('Try again');
+  });
+
+  it('retains the presentation failure boundary after page assets have loaded', async () => {
+    jest.mocked(fetchRuntimePageBySlug).mockResolvedValue({ id: 'home', meta: {} });
+    await expect(renderRuntimePage({ lane: 'admin', slug: 'home', debug: false }, 'full',
+      Promise.reject(new Error('presentation offline')))).rejects.toThrow('presentation offline');
+    expect(renderAdminRuntimeGrid).not.toHaveBeenCalled();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(hydrateRuntimeShellPartials).not.toHaveBeenCalled();
+    expect(document.getElementById('content')?.dataset.adminLoading).toBe('error');
   });
 });

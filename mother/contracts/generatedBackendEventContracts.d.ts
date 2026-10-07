@@ -1982,6 +1982,7 @@ export interface GetNavigationTreePayload {
   "moduleName": string;
   "moduleType"?: null | string;
   "skipJWT"?: boolean;
+  "source"?: JsonValue;
   "status"?: JsonValue;
   readonly [key: string]: BackendPayloadValue;
 }

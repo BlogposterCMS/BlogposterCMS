@@ -12146,6 +12146,9 @@ const GENERATED_BACKEND_EVENT_CONTRACT_SPECS = deepFreeze({
         "skipJWT": {
           "type": "boolean"
         },
+        "source": {
+          "type": "json"
+        },
         "status": {
           "type": "json"
         }

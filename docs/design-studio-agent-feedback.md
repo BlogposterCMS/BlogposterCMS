@@ -1,5 +1,10 @@
 # Design Studio Agent Feedback
 
+Preview capture uses the same patched local library in bundled Studio assets and
+direct browser modules. Textarea values remain literal text in captured DOM/SVG;
+markup-looking source cannot create new capture elements. Existing preview
+metadata and capture/structural-fallback feedback remain on `agentSurface`.
+
 Menu/Breadcrumb feedback resolves the active locale through the same widget settings
 as the inspector and renderer. `navigation.configure` supports Menu `source: pages`
 with `parentId` and `maxDepth`; feedback retains these fields under `navigation`.

@@ -13,6 +13,36 @@ describe('meltdown client', () => {
     moduleName: 'runtimeManager', moduleType: 'core', resource, action, jwt: 'admin'
   });
 
+  it('overlaps private Settings and inventory reads while fencing settings saves and source checks', async () => {
+    const pending: Array<(response: Response) => void> = [];
+    const fetchMock = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const reads = [client.emit('cmsAdminApiRequest', read('settings', 'get')),
+      client.emit('cmsAdminApiRequest', read('modules', 'registry')),
+      client.emit('cmsAdminApiRequest', read('modules', 'system')),
+      client.emit('cmsAdminApiRequest', read('apps', 'list'))];
+    const save = client.emit('cmsAdminApiRequest', read('settings', 'set'));
+    const check = client.emit('cmsAdminApiRequest', read('modules', 'checkUpdates'));
+    const fresh = client.emit('cmsAdminApiRequest', read('settings', 'get'));
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    pending.slice(0, 4).forEach(resolve => resolve(jsonResponse({ data: 'before' })));
+    await Promise.all(reads);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    pending[4]!(jsonResponse({ data: 'saved' })); await save;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    pending[5]!(jsonResponse({ data: 'checked' })); await check;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+    pending[6]!(jsonResponse({ data: 'after' }));
+    expect(await fresh).toBe('after');
+    // A repeated private setting read must issue a new authorized request.
+    const again = client.emit('cmsAdminApiRequest', read('settings', 'get'));
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+    pending[7]!(jsonResponse({ data: 'latest' })); expect(await again).toBe('latest');
+  });
+
   it('runs four known admin reads concurrently and fences saves and subsequent reads', async () => {
     const pending: Array<(response: Response) => void> = [];
     const fetchMock = jest.fn((_url: unknown, _options: any) => new Promise<Response>(resolve => pending.push(resolve)));

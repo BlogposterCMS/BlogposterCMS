@@ -7,7 +7,9 @@ const ADMIN_READS: Record<string, readonly string[]> = {
   plainSpace: ['widgetRegistry', 'globalLayoutTemplate', 'layoutTemplate', 'layoutForViewport'],
   colors: ['list'],
   fontPackages: ['list'],
-  settings: ['public']
+  settings: ['public', 'get', 'list', 'cmsMode'],
+  modules: ['registry', 'system', 'activeStaticFrontends'],
+  apps: ['list', 'get', 'builderList']
 };
 
 export function isConcurrentAdminRead(eventName: string, payload: MeltdownPayload): boolean {

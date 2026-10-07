@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.45] - 2026-10-07
+
 - Bundle the lazy Designer live-preview runtime through the existing public entry to remove its unbundled JavaScript dependency waterfall; retain preview authorization and expose delivery in agent feedback.
 
 - Extend bounded concurrent reads to content, media, Designer, navigation, users/access and font/preset inventories; keep writes, source checks and stateful analytics summaries ordered and private responses uncached.

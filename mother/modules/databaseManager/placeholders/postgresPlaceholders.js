@@ -791,7 +791,9 @@ switch (operation) {
         SELECT DISTINCT p.id,
                         COALESCE(p.title, t.title, '') AS title,
                         p.slug,
-                        p.lane
+                        p.lane,
+                        p.weight AS __sort_weight,
+                        p.created_at AS __sort_created_at
           FROM pagesManager.pages p
           LEFT JOIN pagesManager.page_translations t ON p.id = t.page_id
          WHERE ($2 = 'all' OR p.lane = $2)
@@ -804,7 +806,9 @@ switch (operation) {
          LIMIT $3;
       `, [q, lane, limit]);
 
-      return rows;
+      // PostgreSQL requires DISTINCT ordering columns in the projection.
+      // Keep those internal columns out of the public search DTO.
+      return rows.map(({ __sort_weight, __sort_created_at, ...page }) => page);
     }
 
     /* ---------- DELETE_PAGE ---------- */

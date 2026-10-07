@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Fix PostgreSQL page search ordering with DISTINCT while preserving the search response fields.
+- Update locked compression, proxy-addr and source-map-js patches to resolve the high/critical dependency audit failures.
 - Add revision-guarded CSS-only updates through the existing Pages owner, preserving copy, metadata, SEO and publication fields.
 - Add automatic Menu navigation from published public Pages under a selected parent, with locale-specific Navigation title and page-title fallback.
 - Keep Designer navigation edits effective in the selected locale after render/save, preserve other locales, and expose source-request failures with a retry action.

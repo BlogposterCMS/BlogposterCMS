@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [Unreleased]
 
 - Harden PostgreSQL lifecycle/custom-field DDL, aggregate HTTP request limits,
   password-reset verification and cookie-authenticated single/batch Meltdown CSRF.
@@ -9,8 +9,6 @@
   content as literal text in DOM captures. Use the patched local capture library
   in bundled and direct browser paths. Remove the vulnerable sprintf-js test
   dependency through the compatible YAML loader. Add focused security regressions.
-
-## [Unreleased]
 
 ## [0.10.44] - 2026-10-07
 

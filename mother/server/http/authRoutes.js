@@ -211,7 +211,7 @@ function createAuthRoutes({
     }
   });
 
-  router.get('/admin/logout', loginLimiter, (_req, res) => {
+  router.get('/admin/logout', (_req, res) => {
     res.clearCookie('admin_jwt', {
       path: sanitizeCookiePath('/'),
       httpOnly: true,

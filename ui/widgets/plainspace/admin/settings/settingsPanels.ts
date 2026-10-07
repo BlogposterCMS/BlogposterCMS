@@ -356,7 +356,13 @@ async function renderGeneral(ctx: RenderCtx) {
   titleInput.type = 'text';
   const descInput = document.createElement('textarea');
 
-  const generalSettings = await fetchGeneralSettings(ctx.meltdownEmit, ctx.jwt);
+  // These sections have independent reads; keep one load boundary so failures
+  // never expose an editable form populated with incomplete defaults.
+  const [generalSettings, privacyEditor, languageEditor] = await Promise.all([
+    fetchGeneralSettings(ctx.meltdownEmit, ctx.jwt),
+    createAnalyticsSettings(ctx.meltdownEmit, ctx.jwt),
+    createContentLanguageSettings(ctx.meltdownEmit, ctx.jwt)
+  ]);
 
   titleInput.value = generalSettings.siteTitle;
   descInput.value = generalSettings.siteDescription;
@@ -378,12 +384,10 @@ async function renderGeneral(ctx: RenderCtx) {
   storage = tabs.addTab('Storage');
   storage.classList.add('settings-section--form');
   const privacy = tabs.addTab('Privacy & analytics');
-  const privacyEditor = await createAnalyticsSettings(ctx.meltdownEmit, ctx.jwt);
   const privacySave = document.createElement('button'); privacySave.type = 'button'; privacySave.className = 'button primary'; privacySave.textContent = 'Save privacy & analytics';
   shell.bindSave(privacySave, Object.values(privacyEditor.fields), privacyEditor.save, 'Privacy & analytics saved.', { id: 'privacy', fields: privacyEditor.fields });
   privacy.append(privacyEditor.root, createFormActions(privacySave));
   const languages = tabs.addTab('Content languages');
-  const languageEditor = await createContentLanguageSettings(ctx.meltdownEmit, ctx.jwt);
   const languageSave = document.createElement('button'); languageSave.type = 'button'; languageSave.className = 'button primary'; languageSave.textContent = 'Save content languages';
   shell.bindSave(languageSave, Object.values(languageEditor.fields), languageEditor.save, 'Content languages saved.', { id: 'contentLanguages', fields: languageEditor.fields });
   languages.append(languageEditor.root, createFormActions(languageSave));

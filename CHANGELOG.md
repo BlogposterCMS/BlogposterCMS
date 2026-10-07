@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Load independent General settings sections together while retaining the complete-form load and retry boundary.
+
 - Harden PostgreSQL lifecycle/custom-field DDL, aggregate HTTP request limits,
   password-reset verification and cookie-authenticated single/batch Meltdown CSRF.
   Reject non-string font-provider aliases, make page-CSS SQL statements explicit,

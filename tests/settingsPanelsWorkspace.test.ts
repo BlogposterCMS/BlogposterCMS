@@ -42,6 +42,21 @@ describe('Settings workspace save and recovery', () => {
     document.body.replaceChildren();
   });
 
+  it('starts all General section reads together and mounts only complete settings', async () => {
+    const pending: Array<(value: unknown) => void> = [];
+    emit.mockImplementation(() => new Promise(resolve => { pending.push(resolve); }));
+    const rendering = renderSettingsSurface(host, { slug: 'settings/general' });
+    await settle();
+    expect(emit.mock.calls.some(([, payload]) => payload.params?.key === 'WEBSITE_ANALYTICS_CONFIG')).toBe(true);
+    expect(emit.mock.calls.some(([, payload]) => payload.action === 'public')).toBe(true);
+    expect(host.querySelector('input')).toBeNull();
+    pending.forEach(resolve => resolve(''));
+    expect(await rendering).toBe(true);
+    expect(button('Save general settings')).toBeTruthy();
+    expect(button('Save privacy & analytics')).toBeTruthy();
+    expect(button('Save content languages')).toBeTruthy();
+  });
+
   it('opens General from the Settings entry instead of an empty customizable dashboard', async () => {
     expect(await renderSettingsSurface(host, { slug: 'settings' })).toBe(true);
     expect(host.textContent).toContain('General Settings');

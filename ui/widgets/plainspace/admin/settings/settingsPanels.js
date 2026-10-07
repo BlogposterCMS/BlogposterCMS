@@ -266,7 +266,13 @@ async function renderGeneral(ctx) {
     const titleInput = document.createElement('input');
     titleInput.type = 'text';
     const descInput = document.createElement('textarea');
-    const generalSettings = await fetchGeneralSettings(ctx.meltdownEmit, ctx.jwt);
+    // These sections have independent reads; keep one load boundary so failures
+    // never expose an editable form populated with incomplete defaults.
+    const [generalSettings, privacyEditor, languageEditor] = await Promise.all([
+        fetchGeneralSettings(ctx.meltdownEmit, ctx.jwt),
+        createAnalyticsSettings(ctx.meltdownEmit, ctx.jwt),
+        createContentLanguageSettings(ctx.meltdownEmit, ctx.jwt)
+    ]);
     titleInput.value = generalSettings.siteTitle;
     descInput.value = generalSettings.siteDescription;
     const save = document.createElement('button');
@@ -281,7 +287,6 @@ async function renderGeneral(ctx) {
     storage = tabs.addTab('Storage');
     storage.classList.add('settings-section--form');
     const privacy = tabs.addTab('Privacy & analytics');
-    const privacyEditor = await createAnalyticsSettings(ctx.meltdownEmit, ctx.jwt);
     const privacySave = document.createElement('button');
     privacySave.type = 'button';
     privacySave.className = 'button primary';
@@ -289,7 +294,6 @@ async function renderGeneral(ctx) {
     shell.bindSave(privacySave, Object.values(privacyEditor.fields), privacyEditor.save, 'Privacy & analytics saved.', { id: 'privacy', fields: privacyEditor.fields });
     privacy.append(privacyEditor.root, createFormActions(privacySave));
     const languages = tabs.addTab('Content languages');
-    const languageEditor = await createContentLanguageSettings(ctx.meltdownEmit, ctx.jwt);
     const languageSave = document.createElement('button');
     languageSave.type = 'button';
     languageSave.className = 'button primary';

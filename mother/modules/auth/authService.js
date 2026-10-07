@@ -365,7 +365,7 @@ function setupEventListeners({ motherEmitter, JWT_SECRET }) {
 
     const finalSecret = combineSecretWithSalt(JWT_SECRET, decodedUnverified.trustLevel);
     try {
-      const decodedVerified = jwt.verify(tokenToValidate, finalSecret);
+      const decodedVerified = jwt.verify(tokenToValidate, finalSecret, { algorithms: ['HS256'] });
 
       // oh dear, did we revoke it?
       if (decodedVerified.jti && revokedTokens.has(decodedVerified.jti)) {

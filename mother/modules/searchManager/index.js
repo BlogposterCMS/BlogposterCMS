@@ -10,6 +10,7 @@ const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const { normalizeContentTags, normalizeTaggedMeta } = require('../../../ui/shared/content/contentTags.js');
 const { contentLocales } = require('../contentEngine/contentLocales');
+const { htmlText: stripHtml } = require('../../utils/htmlText');
 const {
   ensureSearchDatabase,
   ensureSearchSchema,
@@ -62,14 +63,6 @@ function normalizeVisibility(value = 'public') {
   return VALID_VISIBILITY.has(visibility) ? visibility : 'public';
 }
 
-function stripHtml(value = '') {
-  return String(value || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function sanitizeMetaValue(value, depth = 0) {
   if (depth > META_MAX_DEPTH) return null;

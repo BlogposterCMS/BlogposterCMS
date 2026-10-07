@@ -15,6 +15,7 @@
  */
 
 const notificationEmitter = require('../../../emitters/notificationEmitter');
+const { identifier, columnType } = require('../helpers/postgresSql');
 const {
   handleContentEngineSqlite,
   isContentEnginePlaceholder
@@ -168,12 +169,13 @@ async function handleBuiltInPlaceholderSqlite(db, operation, params) {
     }
 
     case 'ADD_USER_FIELD': {
-      const fieldName = (params?.fieldName ?? 'extra_field').replace(/[^a-zA-Z0-9_]/g, '');
-      const fieldType = params?.fieldType ?? 'TEXT';
+      const fieldName = params?.fieldName ?? 'extra_field';
+      const quotedField = identifier(fieldName);
+      const fieldType = columnType(params?.fieldType ?? 'TEXT');
       const info = await db.all(`PRAGMA table_info(usermanagement_users);`);
       const exists = info.some(col => col.name === fieldName);
       if (!exists) {
-        await db.run(`ALTER TABLE usermanagement_users ADD COLUMN "${fieldName}" ${fieldType};`);
+        await db.run(`ALTER TABLE usermanagement_users ADD COLUMN ${quotedField} ${fieldType};`);
       }
       return { done: true };
     }

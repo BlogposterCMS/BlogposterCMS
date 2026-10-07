@@ -9,6 +9,7 @@ const { adminPool } = require('../helpers/adminPool');
 const { generateUserAndPass } = require('../helpers/cryptoHelpers');
 const { pgHost, pgPort, pgMainDb, pgMainUser, pgMainPass } = require('../config/databaseConfig');
 const { handlePlaceholder } = require('../placeholders/handlePlaceholder');
+const { identifier, literal } = require('../helpers/postgresSql');
 
 // --- NEW: notificationEmitter for typed notifications! ---
 const notificationEmitter = require('../../../emitters/notificationEmitter');
@@ -34,7 +35,7 @@ async function createOrFixPostgresDatabaseForOwnModule(moduleName) {
     // Check existence
     const exists = await checkIfDbExists(dbName);
     if (!exists) {
-      await adminPool.query(`CREATE DATABASE "${dbName}"`);
+      await adminPool.query(`CREATE DATABASE ${identifier(dbName)}`);
       notificationEmitter.notify({
         moduleName: 'databaseManager',
         notificationType: 'system',
@@ -54,7 +55,7 @@ async function createOrFixPostgresDatabaseForOwnModule(moduleName) {
     if (moduleName.toLowerCase() !== 'databasemanager') {
       const userExists = await checkIfUserExists(dbUser);
       if (!userExists) {
-        await adminPool.query(`CREATE USER "${dbUser}" WITH ENCRYPTED PASSWORD '${dbPassword}';`);
+        await adminPool.query(`CREATE USER ${identifier(dbUser)} WITH ENCRYPTED PASSWORD ${literal(dbPassword)};`);
         notificationEmitter.notify({
           moduleName: 'databaseManager',
           notificationType: 'system',
@@ -63,10 +64,10 @@ async function createOrFixPostgresDatabaseForOwnModule(moduleName) {
         });
       }
       await adminPool.query(`
-        ALTER DATABASE "${dbName}" OWNER TO "${dbUser}";
-        GRANT CREATE ON DATABASE "${dbName}" TO "${dbUser}";
-        GRANT TEMPORARY ON DATABASE "${dbName}" TO "${dbUser}";
-        GRANT ALL PRIVILEGES ON DATABASE "${dbName}" TO "${dbUser}";
+        ALTER DATABASE ${identifier(dbName)} OWNER TO ${identifier(dbUser)};
+        GRANT CREATE ON DATABASE ${identifier(dbName)} TO ${identifier(dbUser)};
+        GRANT TEMPORARY ON DATABASE ${identifier(dbName)} TO ${identifier(dbUser)};
+        GRANT ALL PRIVILEGES ON DATABASE ${identifier(dbName)} TO ${identifier(dbUser)};
       `);
     }
   } catch (err) {
@@ -98,7 +99,7 @@ async function createOrFixSchemaInMainDb(moduleName) {
     const client = await adminPool.connect();
     const dbExistsRes = await client.query('SELECT 1 FROM pg_database WHERE datname = $1;', [pgMainDb]);
     if (dbExistsRes.rows.length === 0) {
-      await client.query(`CREATE DATABASE "${pgMainDb}"`);
+      await client.query(`CREATE DATABASE ${identifier(pgMainDb)}`);
       notificationEmitter.notify({
         moduleName: 'databaseManager',
         notificationType: 'system',
@@ -125,7 +126,7 @@ async function createOrFixSchemaInMainDb(moduleName) {
       [schemaName]
     );
     if (schemaExistsRes.rows.length === 0) {
-      await mainClient.query(`CREATE SCHEMA "${schemaName}";`);
+      await mainClient.query(`CREATE SCHEMA ${identifier(schemaName)};`);
       notificationEmitter.notify({
         moduleName: 'databaseManager',
         notificationType: 'info',
@@ -141,7 +142,7 @@ async function createOrFixSchemaInMainDb(moduleName) {
       });
     }
 
-    await mainClient.query(`ALTER SCHEMA "${schemaName}" OWNER TO "${pgMainUser}";`);
+    await mainClient.query(`ALTER SCHEMA ${identifier(schemaName)} OWNER TO ${identifier(pgMainUser)};`);
     await mainClient.release();
     await mainPool.end();
   } catch (err) {

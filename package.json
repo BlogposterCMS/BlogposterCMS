@@ -73,6 +73,9 @@
     "prettier": "3.9.6"
   },
   "overrides": {
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "4.3.2"
+    },
     "express": {
       "qs": "6.16.0"
     },

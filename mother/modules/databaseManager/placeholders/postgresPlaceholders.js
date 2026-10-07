@@ -6,6 +6,7 @@
 /* It also provides a function to handle custom placeholders defined in other modules.
 */
 const notificationEmitter = require('../../../emitters/notificationEmitter');
+const { identifier, columnType } = require('../helpers/postgresSql');
 const {
   handleContentEnginePostgres,
   isContentEnginePlaceholder
@@ -164,11 +165,11 @@ switch (operation) {
       case 'ADD_USER_FIELD': {
         // expects params.fieldName, params.fieldType
         const fieldName = params.fieldName || 'extra_field';
-        const fieldType = params.fieldType || 'VARCHAR(255)';
+        const fieldType = columnType(params.fieldType || 'VARCHAR(255)');
       
         await client.query(`
           ALTER TABLE usermanagement.users
-          ADD COLUMN IF NOT EXISTS "${fieldName}" ${fieldType};
+          ADD COLUMN IF NOT EXISTS ${identifier(fieldName)} ${fieldType};
         `);
       
         return { done: true };
@@ -832,7 +833,7 @@ switch (operation) {
       // Expects params[0] = the moduleName or schema name to drop
       const moduleName = params[0];
       // Drop the schema entirely, cascading all tables, etc.
-      await client.query(`DROP SCHEMA IF EXISTS "${moduleName}" CASCADE;`);
+      await client.query(`DROP SCHEMA IF EXISTS ${identifier(moduleName)} CASCADE;`);
       return { done: true };
     }
   

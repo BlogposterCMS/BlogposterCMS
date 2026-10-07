@@ -27,7 +27,7 @@ const { createMaintenanceMiddleware } = require('./http/maintenanceMiddleware');
 const { createMeltdownRouter } = require('./http/meltdownRouter');
 const { createPublicPageRoutes } = require('./http/publicPageRoutes');
 const { publicRequestError } = require('./http/publicRequestError');
-const { mountSecurityMiddleware } = require('./http/securityMiddleware');
+const { mountSecurityMiddleware, mountRequestLimits } = require('./http/securityMiddleware');
 const { mountStaticAssetRoutes } = require('./http/staticAssets');
 const { mountDevReloadRoutes } = require('./development/devReload');
 const {
@@ -62,6 +62,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   // Local container probes must remain reachable before HTTPS enforcement. The
   // route exposes only bounded product/version readiness metadata.
   app.use(createHealthRoutes({ version: productVersion, readiness: createPublicReadiness({ motherEmitter }) }));
+  mountRequestLimits(app);
   const staticPaths = mountStaticAssetRoutes(app, {
     devReloadEnabled,
     injectDevReload,
@@ -93,6 +94,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   });
 
   app.use(createMeltdownRouter({
+    csrfProtection,
     motherEmitter,
     validateAdminToken: authContext.validateAdminToken,
     isHttpAdminPrincipal: authContext.isHttpAdminPrincipal,

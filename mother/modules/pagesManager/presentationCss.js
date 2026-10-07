@@ -25,7 +25,6 @@ async function patchPresentationCss(db, dialect, p) {
   let row;
   let collection;
   let id;
-  const table = dialect === 'postgres' ? 'pagesManager.page_translations' : 'pagesManager_page_translations';
   if (dialect === 'mongo') {
     const { ObjectId } = require('mongodb');
     if (!ObjectId.isValid(String(p.pageId))) throw cssError('PAGE_CSS_PATCH_ID_INVALID');
@@ -33,9 +32,9 @@ async function patchPresentationCss(db, dialect, p) {
     collection = db.collection('page_translations');
     row = await collection.findOne({ page_id: id, language: p.language });
   } else if (dialect === 'postgres') {
-    row = (await db.query(`SELECT css FROM ${table} WHERE page_id=$1 AND language=$2`, [p.pageId, p.language])).rows[0];
+    row = (await db.query('SELECT css FROM pagesManager.page_translations WHERE page_id=$1 AND language=$2', [p.pageId, p.language])).rows[0];
   } else {
-    row = await db.get(`SELECT css FROM ${table} WHERE page_id=? AND language=?`, [p.pageId, p.language]);
+    row = await db.get('SELECT css FROM pagesManager_page_translations WHERE page_id=? AND language=?', [p.pageId, p.language]);
   }
   if (!row) throw cssError('PAGE_CSS_PATCH_TRANSLATION_NOT_FOUND');
   const previous = row.css || '';
@@ -47,9 +46,9 @@ async function patchPresentationCss(db, dialect, p) {
     matched = (await collection.updateOne({ page_id: id, language: p.language,
       css: previous === '' ? { $in: ['', null] } : previous }, { $set: { css: p.css } })).matchedCount;
   } else if (dialect === 'postgres') {
-    matched = (await db.query(`UPDATE ${table} SET css=$1 WHERE page_id=$2 AND language=$3 AND COALESCE(css,'')=$4`, [p.css, p.pageId, p.language, previous])).rowCount;
+    matched = (await db.query("UPDATE pagesManager.page_translations SET css=$1 WHERE page_id=$2 AND language=$3 AND COALESCE(css,'')=$4", [p.css, p.pageId, p.language, previous])).rowCount;
   } else {
-    matched = (await db.run(`UPDATE ${table} SET css=? WHERE page_id=? AND language=? AND COALESCE(css,'')=?`, [p.css, p.pageId, p.language, previous])).changes;
+    matched = (await db.run("UPDATE pagesManager_page_translations SET css=? WHERE page_id=? AND language=? AND COALESCE(css,'')=?", [p.css, p.pageId, p.language, previous])).changes;
   }
   if (matched !== 1) throw cssError('PAGE_CSS_PATCH_VERSION_CONFLICT');
   return { pageId: p.pageId, language: p.language, css: p.css, revision: presentationCssRevision(p.pageId, p.language, p.css) };

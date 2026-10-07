@@ -373,7 +373,7 @@ function X(t, e, n) {
         H(t, e, ":after", n)
     }(t, e, n),
     function(t, e) {
-        D(t, HTMLTextAreaElement) && (e.innerHTML = t.value),
+        D(t, HTMLTextAreaElement) && (e.textContent = t.value),
         D(t, HTMLInputElement) && e.setAttribute("value", t.value)
     }(t, e),
     function(t, e) {

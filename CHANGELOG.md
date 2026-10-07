@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- Harden PostgreSQL lifecycle/custom-field DDL, aggregate HTTP request limits,
+  password-reset verification and cookie-authenticated single/batch Meltdown CSRF.
+  Reject non-string font-provider aliases, make page-CSS SQL statements explicit,
+  check archive output containment, parse search text as HTML and retain textarea
+  content as literal text in DOM captures. Use the patched local capture library
+  in bundled and direct browser paths. Remove the vulnerable sprintf-js test
+  dependency through the compatible YAML loader. Add focused security regressions.
+
 ## [0.10.44] - 2026-10-07
 
 - Run independent Settings, module inventory and app inventory reads in the bounded admin read queue; preserve command fences and avoid caching private settings.

@@ -36,12 +36,20 @@ function respondWithEventError(res, error, contract) {
 }
 
 function createMeltdownRouter({
+  csrfProtection,
   motherEmitter,
   validateAdminToken,
   isHttpAdminPrincipal,
   isProduction
 }) {
   const router = express.Router();
+  // Explicit header tokens are not ambient browser credentials. Cookie-backed
+  // requests must prove CSRF possession before single or batch dispatch.
+  router.use(['/api/meltdown', '/api/meltdown/batch'], (req, res, next) => {
+    if (!req.cookies?.admin_jwt || req.get('X-Public-Token')) return next();
+    if (typeof csrfProtection !== 'function') return res.status(403).json({ error: 'HTTP_CSRF_PROTECTION_UNAVAILABLE' });
+    return csrfProtection(req, res, next);
+  });
 
   router.post('/api/meltdown', async (req, res) => {
     const { eventName, payload = {} } = req.body || {};

@@ -25,6 +25,7 @@ test('server composition keeps static, security, bootstrap and route order expli
   const composition = source('mother/server/createBlogposterApp.js');
   const orderedMarkers = [
     'createHealthRoutes({',
+    'mountRequestLimits(app)',
     'mountStaticAssetRoutes(app',
     'mountSecurityMiddleware(app',
     'bootstrapCoreModules({',

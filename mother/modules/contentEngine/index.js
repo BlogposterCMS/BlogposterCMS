@@ -1,4 +1,5 @@
 'use strict';
+const { htmlText: stripHtml } = require('../../utils/htmlText');
 
 const { normalizeContentTags, normalizeTaggedMeta } = require('../../../ui/shared/content/contentTags.js');
 const { localizedContent, contentLocales } = require('./contentLocales');
@@ -226,14 +227,6 @@ async function emitOptional(motherEmitter, eventName, payload) {
   }
 }
 
-function stripHtml(value = '') {
-  return String(value || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function contentToSearchBody(content = {}) {
   if (typeof content === 'string') return stripHtml(content);

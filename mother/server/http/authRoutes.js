@@ -126,7 +126,7 @@ function createAuthRoutes({
     }
   });
 
-  router.get('/admin/reset-password', csrfProtection, async (req, res) => {
+  router.get('/admin/reset-password', loginLimiter, csrfProtection, async (req, res) => {
     const token = typeof req.query?.token === 'string' ? req.query.token : '';
     try {
       await passwordRecovery.verifyToken(token);

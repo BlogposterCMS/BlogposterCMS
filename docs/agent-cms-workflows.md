@@ -9,6 +9,56 @@ not proof of a completed command.
 
 ## Read, edit, review, save
 
+### Targeted page presentation CSS
+
+The existing Runtime Manager `pages.update` action accepts `params.pageId` and
+`params.presentationCss = { language, css, expectedRevision }`, requiring
+`pages.update` permission. Read the exact target translation first. Its revision
+is the lowercase SHA-256 of UTF-8 `JSON.stringify([String(pageId), language, css || ''])`.
+Do not combine this patch with title, translations, meta, SEO or publication fields.
+Only the existing translation's CSS column is compared and changed atomically;
+missing translations and stale CSS return `PAGE_CSS_PATCH_TRANSLATION_NOT_FOUND`
+and `PAGE_CSS_PATCH_VERSION_CONFLICT`. Read again before resolving a conflict.
+There is no multi-page transaction. ContentEngine follows the existing Pages mirror;
+`PAGE_CSS_PATCH_MIRROR_*` means Pages CSS was saved but canonical reconciliation
+failed, so read/reconcile before retrying rather than treating the request as unwritten.
+
+### Existing designs and Pages navigation
+
+Open the intended existing design with `cms.openDesign`, rediscover the Designer
+surface, then use its edit actions and `design.save`. The native owner retains the
+loaded design id/version and rejects `DESIGNER_VERSION_CONFLICT`; reload and review
+instead of substituting another design's version. JSON Import creates a draft copy,
+not a replacement for an existing id. The existing authenticated `designer.get` /
+`designer.save` facade supports native design/layout/complete-widget payloads with
+the target's current `design.id` and `design.version`; saving requires `builder.publish`.
+GET widget storage rows must be normalized through the existing Designer loader,
+not blindly submitted as save widgets. No separate per-session CLI is shipped.
+
+Menu settings now accept `source: 'pages'` and `parentId`, plus `maxDepth` (1–4).
+Designer offers Source/Parent page controls; `navigation.configure` uses the same
+settings. Pages supplies published public descendants only, ordered by weight/id;
+hidden branches and missing secondary translations are omitted. Links retain `lang`
+and the existing renderer marks the current page. Page Editor's optional Navigation
+title is stored in `meta.navigationTitles[locale]` (120 characters), falling back to
+the translated page title. Managed menus retain `navigation.manage`; choosing a
+source never bypasses permissions. Public results are bounded to 2048 source rows
+and 256 projected descendants.
+
+Source failures expose their existing request error and an explicit retry without
+discarding the design draft. The signed origin token is checked at app bootstrap;
+subsequent requests use the parent AppLoader bridge's current authenticated context.
+Its five-minute bootstrap validity is not an ongoing save-session expiry. Do not
+extend or bypass auth protections to mask a source/save failure.
+
+Designer publication rejects failed page lookups with
+`DESIGNER_PUBLISH_PAGE_LOOKUP_FAILED`; it must not reinterpret a failed lookup as
+an absent page. To release an imported design without touching a page, use the
+existing authenticated `designer.save` native payload with its own current
+id/version and `design.isDraft: false`, preserving its complete current widgets,
+layout and other design metadata. This is distinct from Publish to page, which
+attaches a design to a page and changes that page's publication state.
+
 1. Discover a fresh, active surface on the intended route and read its action
    catalog. CMS ids are `cms.<workspace>.<instance>` under `plainspace`; Design
    Studio uses the established `designer/studio.designer` surface.

@@ -1038,7 +1038,9 @@ async function renderPublicNavigation(motherEmitter, jwt, req, res) {
       moduleName: 'navigationManager',
       moduleType: 'core',
       locationKey,
-      status: 'active'
+      status: 'active',
+      ...(req.query?.source === 'pages' ? { source: 'pages', parentId: req.query.parentId,
+        language: languageFromRequest(req, 'en'), maxDepth: req.query.maxDepth } : {})
     });
 
     res.set('Cache-Control', 'public, max-age=60');

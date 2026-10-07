@@ -26,3 +26,20 @@ test.each([
   expect(result).toBe(error);
   expect(deactivateModuleRuntime).toHaveBeenCalledTimes(deactivate ? 1 : 0);
 });
+
+test.each([
+  ['PAGE_CSS_PATCH_VERSION_CONFLICT', 'PATCH_PAGE_PRESENTATION_CSS', false],
+  ['PAGE_CSS_PATCH_TRANSLATION_NOT_FOUND', 'PATCH_PAGE_PRESENTATION_CSS', false],
+  ['SQLITE_CORRUPT', 'PATCH_PAGE_PRESENTATION_CSS', true],
+  ['PAGE_CSS_PATCH_VERSION_CONFLICT', 'GET_PAGE_BY_ID', true]
+])('Pages CSS error %s for %s preserves only expected patch rejections', async (code, operation, deactivate) => {
+  jest.clearAllMocks();
+  const error = Object.assign(new Error(code), { code });
+  getEngine.mockReturnValue({ performSqliteOperation: jest.fn().mockRejectedValue(error) });
+  const emitter = new EventEmitter();
+  emitter._moduleTypes = { pagesManager: 'core' };
+  registerPerformDbOperationEvent(emitter);
+  const result = await new Promise(resolve => emitter.emit('performDbOperation', { moduleName: 'pagesManager', operation, params: [] }, err => resolve(err)));
+  expect(result).toBe(error);
+  expect(deactivateModuleRuntime).toHaveBeenCalledTimes(deactivate ? 1 : 0);
+});

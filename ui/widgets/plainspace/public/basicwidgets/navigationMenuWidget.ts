@@ -6,7 +6,9 @@ import {
   renderWidgetMessage,
   sharedStyle,
   widgetSettings,
+  widgetLocale,
   type NavigationItem,
+  type LooseRecord,
   type PublicWidgetContext
 } from './publicWidgetHelpers.js';
 import { applyNavigationStyle, isCurrentNavigationLink, navigationSettings } from './navigationSettings.js';
@@ -210,17 +212,19 @@ function renderList(items: NavigationItem[], maxDepth: number, expanded: boolean
   return list;
 }
 
-async function loadNavigationItems(locationKey: string): Promise<NavigationItem[]> {
+async function loadNavigationItems(locationKey: string, settings: LooseRecord = {}, language = 'en'): Promise<NavigationItem[]> {
+  const params = settings.source === 'pages' ? { source: 'pages', parentId: settings.parentId, language, maxDepth: settings.maxDepth } : {};
   if (document.body.classList.contains('builder-mode') && typeof window.meltdownEmit === 'function') {
     // The sandboxed Studio already owns an authenticated AppLoader bridge.
     // Preview active managed links through that bridge, not a blocked iframe fetch.
-    const payload = await emitRuntimeAdmin<any>(window.meltdownEmit, window.ADMIN_TOKEN, 'navigation', 'tree', { locationKey, status: 'active' });
+    const payload = await emitRuntimeAdmin<any>(window.meltdownEmit, window.ADMIN_TOKEN, 'navigation', 'tree', { locationKey, status: 'active', ...params });
     return normalizeNavigationItems(Array.isArray(payload?.tree) ? payload.tree : []);
   }
   if (typeof fetch !== 'function') {
     throw new Error('BP_WIDGET_NAVIGATION_FETCH_UNAVAILABLE');
   }
-  const response = await fetch(`/api/public/navigation/${encodeURIComponent(locationKey)}`, {
+  const query = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString();
+  const response = await fetch(`/api/public/navigation/${encodeURIComponent(locationKey)}${query ? `?${query}` : ''}`, {
     headers: { Accept: 'application/json' }
   });
   if (!response.ok) {
@@ -241,12 +245,13 @@ export async function render(el: HTMLElement | null, ctx: PublicWidgetContext = 
   renderRequests.set(el, request);
   const raw = widgetSettings(ctx);
   const settings = { ...raw, ...navigationSettings('navigationMenu', raw) };
-  const fallbackItems = normalizeNavigationItems(readArray(settings, ['items', 'links']));
+  const fallbackItems = settings.source === 'pages' ? [] : normalizeNavigationItems(readArray(settings, ['items', 'links']));
   let items = fallbackItems;
 
   if (!items.length) {
     try {
-      items = await loadNavigationItems(readString(settings, ['locationKey', 'location'], 'primary'));
+      items = await loadNavigationItems(readString(settings, ['locationKey', 'location'], 'primary'), settings,
+        readString(ctx, ['language'], widgetLocale()));
     } catch (err) {
       if (renderRequests.get(el) !== request) return;
       renderWidgetMessage(

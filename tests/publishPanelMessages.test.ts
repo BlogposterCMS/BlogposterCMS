@@ -100,6 +100,19 @@ function flushPromises() {
 }
 
 describe('publish panel messaging', () => {
+  test('a failed existing-page lookup never authorizes page creation or design publication', async () => {
+    const saveDesign = jest.fn();
+    const meltdown = jest.fn(async (_event, payload) => {
+      if (payload.resource === 'pages' && payload.action === 'search') throw new Error('Bridge denied');
+      return [];
+    });
+    const { controller } = createBasicContext({ meltdown, saveDesign });
+    await expect(controller.publish({ slug: 'docs' })).rejects.toThrow('DESIGNER_PUBLISH_PAGE_LOOKUP_FAILED: Bridge denied');
+    expect(mockPageService.create).not.toHaveBeenCalled();
+    expect(mockPageService.update).not.toHaveBeenCalled();
+    expect(saveDesign).not.toHaveBeenCalled();
+    expect(controller.snapshot().error).toContain('DESIGNER_PUBLISH_PAGE_LOOKUP_FAILED');
+  });
   test('direct commands await publication, preserve draft status, and return the actual target', async () => {
     const { controller } = createBasicContext();
     await expect(controller.publish({ slug: 'agent-draft', draft: true })).resolves.toMatchObject({

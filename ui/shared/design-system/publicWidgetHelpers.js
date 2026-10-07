@@ -20,7 +20,8 @@ function firstString(source, keys, fallback = '') {
 }
 /** Public page language selects explicit per-widget copy, with base settings as fallback. */
 export function widgetLocale() {
-    const language = new URL(location.href).searchParams.get('lang') || document.documentElement.lang || 'en';
+    const query = new URL(location.href).searchParams;
+    const language = query.get('lang') || query.get('contentLang') || document.documentElement.lang || 'en';
     return language.toLowerCase() || 'en';
 }
 export function widgetSettings(context = {}, defaults = {}) {

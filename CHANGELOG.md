@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Add revision-guarded CSS-only updates through the existing Pages owner, preserving copy, metadata, SEO and publication fields.
+- Add automatic Menu navigation from published public Pages under a selected parent, with locale-specific Navigation title and page-title fallback.
+- Keep Designer navigation edits effective in the selected locale after render/save, preserve other locales, and expose source-request failures with a retry action.
+- Reject Designer publication when page lookup fails instead of treating the failure as permission to create a new page.
+
 - Combine selected-element actions and contextual text formatting in one Design Studio toolbar; keep Duplicate in the existing More menu on narrow screens.
 
 ## [0.10.43] - 2026-10-04

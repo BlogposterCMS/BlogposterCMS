@@ -169,7 +169,7 @@ function buildPageContentEntryPayload({
   };
 }
 
-async function mirrorPageToContentEngine(motherEmitter, pageData) {
+async function mirrorPageToContentEngine(motherEmitter, pageData, cssPatch = null) {
   if (!hasContentEngineMirrorListeners(motherEmitter)) {
     return { skipped: true };
   }
@@ -196,6 +196,21 @@ async function mirrorPageToContentEngine(motherEmitter, pageData) {
 
   // Keep one canonical entry and revision history for the page and its translations.
   const entryPayload = buildPageContentEntryPayload(pageData);
+  if (cssPatch && sourceLookup.result?.id) {
+    const current = sourceLookup.result;
+    const content = typeof current.content === 'string' ? JSON.parse(current.content) : current.content || {};
+    const translations = Array.isArray(content.translations) ? content.translations : [];
+    if (current.language !== cssPatch.language && !translations.some(translation => translation.language === cssPatch.language)) {
+      throw new Error('PAGE_CSS_PATCH_MIRROR_TRANSLATION_MISSING: CSS saved; reconcile the canonical translation before retrying.');
+    }
+    // A presentation patch must not republish or replace canonical copy/SEO/meta.
+    return emitOptional(motherEmitter, BACKEND_EVENTS.UPDATE_CONTENT_ENTRY, {
+      jwt: pageData.jwt, moduleName: 'contentEngine', moduleType: 'core', entryId: current.id,
+      content: { ...content, ...(current.language === cssPatch.language ? { css: cssPatch.css } : {}),
+        translations: translations.map(translation => translation.language === cssPatch.language
+          ? { ...translation, css: cssPatch.css } : translation) }
+    });
+  }
   return emitOptional(motherEmitter, sourceLookup.result?.id ? BACKEND_EVENTS.UPDATE_CONTENT_ENTRY : BACKEND_EVENTS.CREATE_CONTENT_ENTRY,
     { ...entryPayload, ...(sourceLookup.result?.id ? { entryId: sourceLookup.result.id } : {}) });
 }

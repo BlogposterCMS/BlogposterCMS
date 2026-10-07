@@ -37,6 +37,7 @@ export interface PageRecord {
 export interface PageEditorFormValues {
   title: string;
   seoDesc: string;
+  navigationTitle?: string;
   status: string;
   slug: string;
   publishAt: string;
@@ -116,6 +117,10 @@ export function buildPageUpdatePayload(
     }],
     meta: {
       ...(page.meta || {}),
+      ...(values.navigationTitle !== undefined ? { navigationTitles: {
+        ...(page.meta?.navigationTitles && typeof page.meta.navigationTitles === 'object' ? page.meta.navigationTitles : {}),
+        [page.contentLanguage || page.language || 'en']: values.navigationTitle.trim().slice(0, 120)
+      } } : {}),
       ...(values.tags !== undefined ? { tags: normalizeContentTags(values.tags) } : {}),
       // Presentation is edited by the existing Content/Designer attachment flow.
       // Saving SEO fields must not invent or overwrite a template assignment.

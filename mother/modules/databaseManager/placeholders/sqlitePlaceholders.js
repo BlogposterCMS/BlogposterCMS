@@ -57,6 +57,9 @@ const {
 } = require('./translationPlaceholders');
 
 async function handleBuiltInPlaceholderSqlite(db, operation, params) {
+  if (operation === 'PATCH_PAGE_PRESENTATION_CSS') {
+    return require('../../pagesManager/presentationCss').patchPresentationCss(db, 'sqlite', params);
+  }
   // Ensure FK support – harmless if run repeatedly
   await db.run('PRAGMA foreign_keys = ON;');
 

@@ -308,6 +308,10 @@ function setupNavigationEvents(motherEmitter) {
     const callback = onceCallback(originalCb);
     try {
       assertCorePayload(payload, BACKEND_EVENTS.GET_NAVIGATION_TREE);
+      if (payload.source === 'pages') {
+        callback(null, await require('./pageNavigation').pageNavigationTree(motherEmitter, payload.jwt, payload));
+        return;
+      }
       if (!canManage(payload) && payload.status && payload.status !== 'active') {
         throw new Error('Forbidden - missing permission: navigation.manage');
       }

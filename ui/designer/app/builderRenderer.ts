@@ -49,7 +49,7 @@ import { emitAdminFacade } from './runtime/runtimeFacade.js';
 import { createContainerInteractionInspector } from './widgets/containerInteractionInspector.js';
 import { readContainerSettings } from '../../shared/layout/layoutDom.js';
 import { createNavigationInspector } from './widgets/navigationInspector.js';
-import { navigationSettings, applyNavigationSource } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
+import { navigationSettings, applyNavigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
 import { widgetSettings } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
 import { initTextPanel } from './managers/textPanelManager';
 import { getWidgetIcon } from './renderer/renderUtils.js';
@@ -306,6 +306,11 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
         metadata: getWidgetInstanceCode(el, false)?.meta || {}, defaults: definition?.metadata?.defaults || {} };
     },
     apply: patch => applyNavigationPatch(state.activeWidgetEl, patch),
+    loadPages: async () => {
+      const result = await emitAdminFacade(meltdownEmit, 'pages', 'list', {});
+      const pages = Array.isArray(result) ? result : result?.pages || [];
+      return pages.filter(page => page.status === 'published' && (page.lane || 'public') === 'public' && !page.is_deleted);
+    },
     loadLocations: async () => {
       const result = await emitAdminFacade(meltdownEmit, 'navigation', 'locations', {});
       return Array.isArray(result) ? result : result?.locations || [];
@@ -1164,7 +1169,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
       throw new Error('DESIGNER_NAVIGATION_SETTINGS_INVALID: Use the selected widget settings.');
     }
     const next = navigationSettings(el.dataset.widgetId, { ...current, ...patch });
-    code.meta = applyNavigationSource({ ...(code.meta || {}), ...next }, patch);
+    code.meta = applyNavigationSettings(code.meta || {}, next, patch);
     void renderWidget(el, widgetDef, ensureCodeMap());
     gridEl?.__grid?.emitChange?.(el, { contentOnly: true });
     if (state.designId && state.autosaveEnabled) scheduleAutosave();

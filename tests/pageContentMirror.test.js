@@ -8,6 +8,17 @@ const {
   trashPageContentEntry
 } = require('../mother/modules/pagesManager/contentEngineAdapter');
 
+test('CSS-only mirror updates content CSS without resending publication, HTML, metadata or SEO fields', async () => {
+  const emitter = new EventEmitter();
+  const content = { html: '<p>Canonical</p>', css: '.old{}', translations: [{ language: 'en', html: '<p>EN</p>', css: '.old{}' }, { language: 'de', html: '<p>DE</p>', css: '.de{}' }] };
+  emitter.on('getContentEntryBySource', (_p, cb) => cb(null, { id: 22, language: 'en', content, publishedAt: '2026-01-01', meta: { keep: true } }));
+  let written;
+  emitter.on('updateContentEntry', (p, cb) => { written = p; cb(null, { id: 22 }); });
+  await mirrorPageToContentEngine(emitter, { jwt: 't', pageId: 7, title: 'Stale', slug: 'guide' }, { language: 'en', css: '.new{}' });
+  expect(Object.keys(written).sort()).toEqual(['jwt', 'moduleName', 'moduleType', 'entryId', 'content'].sort());
+  expect(written.content).toEqual({ ...content, css: '.new{}', translations: content.translations.map(t => t.language === 'en' ? { ...t, css: '.new{}' } : t) });
+});
+
 test('locale mirrors retain one canonical identity with all translations and shared tags', async () => {
   const emitter = new EventEmitter(); const written = [];
   emitter.on('getContentEntryBySource', (p, cb) => cb(null, p.sourceId === '7' ? {id:22,language:'en'} : null));

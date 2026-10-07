@@ -170,7 +170,12 @@ export function initPublishPanel({
       infoEl.setAttribute('tabindex', '-1');
     }
 
-    slugInput.addEventListener('input', onSlugInput);
+    slugInput.addEventListener('input', () => {
+      void onSlugInput().catch(err => {
+        clearInfo();
+        showWarning(`Page lookup failed: ${err?.message || err}`, { focusEl: slugInput });
+      });
+    });
     suggestionsEl.addEventListener('click', onSuggestionsClick);
     draftCb.addEventListener('change', onDraftToggle);
     publishBtn.addEventListener('click', togglePanel);
@@ -321,7 +326,7 @@ export function initPublishPanel({
       return pagesRaw.filter(p => p.lane === 'public');
     } catch (err) {
       publishLogger.warn('searchPages failed', err);
-      return [];
+      throw new Error(`DESIGNER_PUBLISH_PAGE_LOOKUP_FAILED: ${err?.message || err}`);
     }
   }
 

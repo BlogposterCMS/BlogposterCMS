@@ -53,6 +53,7 @@ import { readContainerSettings } from '../../shared/layout/layoutDom.js';
 import { startDesignerLinkFeedback, designerLinkFeedbackState } from './links/designerLinkFeedback.js';
 import { documentEditorModeState, documentEditorModeAction, openDocumentMode } from './renderer/pageContentSwitch.js';
 import { navigationSettings } from '../../widgets/plainspace/public/basicwidgets/navigationSettings.js';
+import { widgetSettings } from '../../widgets/plainspace/public/basicwidgets/publicWidgetHelpers.js';
 import {
   normalizeResponsivePlacementContract,
   resolveResponsivePlacementGeometry,
@@ -71,7 +72,7 @@ const EFFECT_LABELS: Record<string, string> = {
 const DESIGNER_AGENT_ACTIONS = Object.freeze([
   {
     action: 'navigation.configure', label: 'Configure menu or breadcrumb', category: 'element',
-    description: 'Updates the selected Menu or Breadcrumb through its existing widget settings and save flow.',
+    description: 'Updates the selected Menu or Breadcrumb through its existing locale-aware settings and versioned save flow. Menu source pages uses parentId and published public descendants.',
     requiresSelection: true,
     params: [{ name: 'id', type: 'string', required: false }, { name: 'settings', type: 'object', required: true }]
   },
@@ -901,7 +902,7 @@ function widgetPlacementFeedback(): Record<string, unknown>[] {
       htmlImport: htmlImportFeedback(el),
       navigation: ['navigationMenu', 'breadcrumb'].includes(el.dataset.widgetId || '') ? {
         // Keep settings flat so AgentManager's bounded feedback depth retains values.
-        ...navigationSettings(el.dataset.widgetId || '', { ...(saved?.code?.meta?.settings || {}), ...(saved?.code?.meta || {}) }),
+        ...navigationSettings(el.dataset.widgetId || '', widgetSettings({ instanceMetadata: saved?.code?.meta || {} })),
         sourceOwner: el.dataset.widgetId === 'navigationMenu' ? 'navigationManager' : 'pagesManager',
         customItems: Array.isArray(saved?.code?.meta?.items) && saved.code.meta.items.length > 0
       } : null,

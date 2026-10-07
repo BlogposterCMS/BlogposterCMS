@@ -121,6 +121,9 @@ export async function render(el) {
         fields.set(name, control);
     }
     field('title', 'Title');
+    field('navigationTitle', 'Navigation title');
+    fields.get('navigationTitle').maxLength = 120;
+    fields.get('navigationTitle').setAttribute('placeholder', 'Page title');
     field('slug', 'Slug');
     field('status', 'Status', 'select');
     field('publishAt', 'Publish at', 'datetime-local');
@@ -198,6 +201,7 @@ export async function render(el) {
     }
     function resetFields() {
         const saved = {
+            navigationTitle: asString(page.meta?.navigationTitles?.[page.contentLanguage || page.language || 'en']),
             title: page.contentLanguage && !page.trans_lang ? '' : page.trans_title || page.title || '', slug: page.slug || '', status: page.status || 'draft',
             seoDesc: page.meta_desc || '', seoImage: page.seo_image || '', publishAt: asString(page.meta?.publish_at),
             seoTitle: page.seo_title || '', featuredImage: asString(page.meta?.featuredImage),
@@ -261,7 +265,9 @@ export async function render(el) {
                 title: page.contentLanguage && page.contentLanguage !== (page.language || 'en') ? page.title : form.title.trim(),
                 trans_title: form.title.trim(), trans_lang: page.contentLanguage || page.language || 'en', slug: form.slug.trim(), status: form.status,
                 meta_desc: form.seoDesc, seo_image: form.seoImage.trim(), seo_title: form.seoTitle?.trim() || '',
-                meta: { ...draft.meta, tags: normalizeContentTags(form.tags), publish_at: form.publishAt, featuredImage: form.featuredImage?.trim() || '' }
+                meta: { ...draft.meta, navigationTitles: { ...(draft.meta?.navigationTitles || {}),
+                        [page.contentLanguage || page.language || 'en']: form.navigationTitle?.trim() || '' },
+                    tags: normalizeContentTags(form.tags), publish_at: form.publishAt, featuredImage: form.featuredImage?.trim() || '' }
             });
             Object.assign(page, draft, { meta: { ...draft.meta } });
             dirty = false;

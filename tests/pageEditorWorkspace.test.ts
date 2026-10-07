@@ -9,6 +9,15 @@ jest.mock('../ui/shared/dialogs/bpDialog', () => ({ bpDialog: {
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('fixed Page Editor', () => {
+  it('saves the visible localized navigation title and retains it after reload', async () => {
+    edit('navigationTitle', 'Short docs');
+    await submit();
+    expect(writes().at(-1)?.[1].params.meta.navigationTitles).toEqual({ en: 'Short docs' });
+    expect(page.meta.navigationTitles).toEqual({ en: 'Short docs' });
+    await render(host);
+    expect(find<HTMLInputElement>('[name="navigationTitle"]').value).toBe('Short docs');
+    expect(find<HTMLInputElement>('[name="navigationTitle"]').maxLength).toBe(120);
+  });
   let host: HTMLElement;
   let page: any;
   let emit: jest.Mock;

@@ -2,13 +2,41 @@
 import { render as renderMenu } from '../ui/widgets/plainspace/public/basicwidgets/navigationMenuWidget';
 import { render as renderBreadcrumb } from '../ui/widgets/plainspace/public/basicwidgets/breadcrumbWidget';
 import { loadBreadcrumbPages } from '../ui/widgets/plainspace/public/basicwidgets/breadcrumbData';
-import { navigationSettings, applyNavigationSource } from '../ui/widgets/plainspace/public/basicwidgets/navigationSettings';
+import { navigationSettings, applyNavigationSource, applyNavigationSettings } from '../ui/widgets/plainspace/public/basicwidgets/navigationSettings';
 import { widgetSettings } from '../ui/shared/design-system/publicWidgetHelpers';
 import { createNavigationInspector } from '../ui/designer/app/widgets/navigationInspector';
 
 const items = [{label:'Docs',href:'/docs',children:[{label:'Getting started',href:'/docs/start'}]}];
 
 describe('authored navigation', () => {
+  it('shows Pages parent choices and preserves a failed source lookup with an explicit retry', async () => {
+    const inspector = document.createElement('aside'); document.body.append(inspector);
+    let selection: any = { widgetId: 'navigationMenu', instanceId: 'menu-pages', metadata: { source: 'pages', parentId: '1' } };
+    const locations = jest.fn().mockRejectedValueOnce(new Error('Forbidden: navigation.manage')).mockResolvedValue([{ key: 'primary', label: 'Main' }]);
+    const panel = createNavigationInspector(inspector, { read: () => selection, apply: jest.fn(),
+      loadPages: async () => [{ id: 1, title: 'Docs' }], loadLocations: locations });
+    panel.sync(); await Promise.resolve();
+    expect(inspector.querySelector<HTMLSelectElement>('[data-navigation-field="parentId"]')?.selectedOptions[0]?.text).toBe('Docs');
+    selection = { ...selection, metadata: { source: 'menu' } };
+    panel.sync(); await Promise.resolve(); await Promise.resolve();
+    expect(inspector.textContent).toContain('Forbidden: navigation.manage');
+    expect(selection.metadata).toEqual({ source: 'menu' });
+    Array.from(inspector.querySelectorAll('button')).find(button => button.textContent === 'Retry menu sources')!.click();
+    await Promise.resolve();
+    expect(inspector.textContent).not.toContain('DESIGNER_NAVIGATION_LOCATIONS_FAILED');
+    expect(locations).toHaveBeenCalledTimes(2);
+  });
+  it('keeps changed settings after render and serialized save/reload in the active locale', () => {
+    history.replaceState({}, '', '/docs?lang=en-gb');
+    const original = { gap: 8, submenu: 'disclosure', translations: { en: { gap: 8, submenu: 'disclosure' }, zh: { gap: 20, mobileLabel: '章节' } } };
+    const patch = { gap: 4, submenu: 'expanded' };
+    const next = navigationSettings('navigationMenu', { ...widgetSettings({ instanceMetadata: original }), ...patch });
+    const saved = JSON.parse(JSON.stringify(applyNavigationSettings(original, next, patch)));
+    expect(widgetSettings({ instanceMetadata: saved })).toMatchObject(patch);
+    expect(saved.translations.zh).toEqual(original.translations.zh);
+    history.replaceState({}, '', '/docs?lang=zh');
+    expect(widgetSettings({ instanceMetadata: saved }).gap).toBe(20);
+  });
   beforeEach(() => { document.body.replaceChildren(); document.body.className=''; history.replaceState({}, '', '/docs/start'); delete window.PUBLIC_TOKEN; });
 
   it('keeps page links separate from keyboard-operable submenu buttons', async () => {

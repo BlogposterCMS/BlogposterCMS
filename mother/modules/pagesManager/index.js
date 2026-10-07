@@ -2,6 +2,7 @@
 
 const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 const { normalizeTaggedMeta } = require('../../../ui/shared/content/contentTags.js');
+const { validateNavigationTitles } = require('./navigationTitle');
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 const { ownPagePresentation, resolvePagePresentation, validatePageDesignMode, pageLayoutMode, SITE_MAIN_DESIGN_SETTING } = require('../../../ui/shared/layout/pagePresentation.js');
@@ -315,7 +316,7 @@ function setupPagesManagerEvents(motherEmitter) {
       return callback(new Error('Forbidden – missing permission: pages.create'));
     }
     let meta;
-    try { meta = normalizeTaggedMeta(rawMeta); validatePageDesignMode({ meta }); } catch (error) { return callback(error); }
+    try { meta = normalizeTaggedMeta(rawMeta); validatePageDesignMode({ meta }); validateNavigationTitles(meta); } catch (error) { return callback(error); }
   
     const mainTitle = rawTitle.trim() || (translations[0]?.title ?? '').trim();
     if (!mainTitle) {
@@ -792,6 +793,27 @@ function setupPagesManagerEvents(motherEmitter) {
   // ─────────────────────────────────────────────────────────────────
   motherEmitter.on(BACKEND_EVENTS.UPDATE_PAGE, (payload, originalCb) => {
     const callback = onceCallback(originalCb);
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'presentationCss')) {
+      Promise.resolve().then(async () => {
+        const params = require('./presentationCss').validateCssPatch(payload);
+        const result = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+          jwt: payload.jwt, moduleName: 'pagesManager', moduleType: 'core', table: '__rawSQL__',
+          data: { rawSQL: 'PATCH_PAGE_PRESENTATION_CSS', params }
+        });
+        if (hasContentEngineMirrorListeners(motherEmitter)) {
+          const row = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+            jwt: payload.jwt, moduleName: 'pagesManager', moduleType: 'core', table: '__rawSQL__',
+            data: { rawSQL: 'GET_PAGE_BY_ID', 0: params.pageId, 1: params.language, 2: true }
+          });
+          const pageData = buildPageDataFromPageRow(payload.jwt, row);
+          if (!pageData) throw new Error('PAGE_CSS_PATCH_MIRROR_READ_FAILED: CSS saved; reload the page before retrying.');
+          const mirror = await mirrorPageToContentEngine(motherEmitter, pageData, params);
+          if (mirror?.err || mirror?.skipped) throw new Error('PAGE_CSS_PATCH_MIRROR_FAILED: CSS saved; reload and reconcile the existing content mirror.');
+        }
+        callback(null, result);
+      }).catch(callback);
+      return;
+    }
     try {
       const {
         jwt,
@@ -842,7 +864,7 @@ function setupPagesManagerEvents(motherEmitter) {
       if (decodedJWT && !hasPermission(decodedJWT, 'pages.update')) {
         return callback(new Error('Forbidden – missing permission: pages.update'));
       }
-      if (hasMeta) validatePageDesignMode({ meta });
+      if (hasMeta) { validatePageDesignMode({ meta }); validateNavigationTitles(meta); }
 
       const to = setTimeout(() => {
         callback(new Error('Timeout while updating page.'));

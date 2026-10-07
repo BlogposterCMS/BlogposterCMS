@@ -57,26 +57,60 @@ export function createNavigationInspector(inspector, options) {
         heading.textContent = selection.widgetId === 'breadcrumb' ? 'Breadcrumb' : 'Menu';
         group.appendChild(heading);
         if (selection.widgetId === 'navigationMenu') {
-            const location = field('Menu source', 'locationKey', settings.locationKey, [[String(settings.locationKey), String(settings.locationKey)]]);
-            const locationInstance = selectedId;
-            // Reading the registry never changes the selection or its saved assignment.
-            options.loadLocations().then(locations => {
-                if (!location.isConnected || selectedId !== locationInstance)
-                    return;
-                for (const item of locations)
-                    if (item.key && !Array.from(location.options).some(option => option.value === item.key)) {
-                        location.add(new Option(item.label || item.key, item.key));
-                    }
-                for (const option of Array.from(location.options))
-                    option.text = locations.find(item => item.key === option.value)?.label || option.text;
-            }).catch(() => {
-                if (!location.isConnected)
-                    return;
-                const warning = document.createElement('small');
-                warning.setAttribute('role', 'status');
-                warning.textContent = 'Menu sources unavailable. DESIGNER_NAVIGATION_LOCATIONS_FAILED';
-                group.appendChild(warning);
-            });
+            field('Source', 'source', settings.source, [['menu', 'Managed menu'], ['pages', 'Pages']]);
+            if (settings.source === 'pages') {
+                const parent = field('Parent page', 'parentId', settings.parentId, [['', 'Choose parent page'],
+                    ...(settings.parentId ? [[String(settings.parentId), String(settings.parentId)]] : [])]);
+                const currentSelection = selectedId;
+                options.loadPages?.().then(pages => {
+                    if (!parent.isConnected || selectedId !== currentSelection)
+                        return;
+                    for (const page of pages)
+                        if (page.id != null) {
+                            const id = String(page.id);
+                            const existing = Array.from(parent.options).find(option => option.value === id);
+                            if (existing)
+                                existing.textContent = page.title || id;
+                            else
+                                parent.add(new Option(page.title || id, id));
+                        }
+                    parent.value = String(settings.parentId || '');
+                }).catch(error => {
+                    if (!parent.isConnected)
+                        return;
+                    const warning = document.createElement('small');
+                    warning.setAttribute('role', 'alert');
+                    warning.textContent = `Page sources unavailable. NAVIGATION_PAGES_CHOICES_FAILED: ${error instanceof Error ? error.message : 'Request failed'}`;
+                    group.appendChild(warning);
+                });
+            }
+            else {
+                const location = field('Menu source', 'locationKey', settings.locationKey, [[String(settings.locationKey), String(settings.locationKey)]]);
+                const locationInstance = selectedId;
+                // Reading the registry never changes the selection or its saved assignment.
+                options.loadLocations().then(locations => {
+                    if (!location.isConnected || selectedId !== locationInstance)
+                        return;
+                    for (const item of locations)
+                        if (item.key && !Array.from(location.options).some(option => option.value === item.key)) {
+                            location.add(new Option(item.label || item.key, item.key));
+                        }
+                    for (const option of Array.from(location.options))
+                        option.text = locations.find(item => item.key === option.value)?.label || option.text;
+                }).catch(error => {
+                    if (!location.isConnected)
+                        return;
+                    const warning = document.createElement('small');
+                    warning.setAttribute('role', 'status');
+                    warning.textContent = `Menu sources unavailable. DESIGNER_NAVIGATION_LOCATIONS_FAILED: ${error instanceof Error ? error.message : 'Request failed'}`;
+                    group.appendChild(warning);
+                    const retry = document.createElement('button');
+                    retry.type = 'button';
+                    retry.textContent = 'Retry menu sources';
+                    retry.addEventListener('click', sync);
+                    group.appendChild(retry);
+                });
+            }
             const manage = document.createElement('a');
             manage.href = `/${String(window.ADMIN_BASE || 'admin').replace(/^\/+|\/+$/gu, '')}/content/menu`;
             manage.target = '_blank';

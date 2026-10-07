@@ -50,6 +50,9 @@ const {
     POSTGRES switch
     ================================================================================= */
 async function handleBuiltInPlaceholderPostgres(client, operation, params) {
+  if (operation === 'PATCH_PAGE_PRESENTATION_CSS') {
+    return require('../../pagesManager/presentationCss').patchPresentationCss(client, 'postgres', params);
+  }
 if (isContentEnginePlaceholder(operation)) {
     return handleContentEnginePostgres(client, operation, params);
 }

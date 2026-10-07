@@ -1,4 +1,17 @@
-import { readBoolean, readNumber, readString, type LooseRecord } from './publicWidgetHelpers.js';
+import { readBoolean, readNumber, readString, widgetLocale, type LooseRecord } from './publicWidgetHelpers.js';
+
+/** Keep changed settings effective in the edited locale without rewriting other locales. */
+export function applyNavigationSettings(meta: LooseRecord, next: LooseRecord, patch: LooseRecord): LooseRecord {
+  const translations = meta.translations;
+  const locale = widgetLocale();
+  const localized = translations && typeof translations === 'object' && !Array.isArray(translations)
+    ? translations as LooseRecord : {};
+  const current = localized[locale];
+  const changed = Object.fromEntries(Object.keys(patch).map(key => [key, next[key]]));
+  return applyNavigationSource({ ...meta, ...next, translations: { ...localized,
+    [locale]: { ...(current && typeof current === 'object' && !Array.isArray(current) ? current : {}), ...changed }
+  } }, patch);
+}
 
 /** Shared instance settings for the public renderer, Studio inspector and agents. */
 export function navigationSettings(widgetId: string, raw: LooseRecord = {}): LooseRecord {
@@ -24,6 +37,8 @@ export function navigationSettings(widgetId: string, raw: LooseRecord = {}): Loo
   };
   return {
     ...common,
+    source: choice('source', ['menu', 'pages'], 'menu'),
+    parentId: readString(raw, ['parentId'], '').slice(0, 100),
     locationKey: readString(raw, ['locationKey', 'location'], 'primary').slice(0, 100),
     orientation: choice('orientation', ['horizontal', 'vertical'], 'horizontal'),
     appearance: choice('appearance', ['plain', 'soft', 'underline'], 'soft'),
@@ -37,11 +52,11 @@ export function navigationSettings(widgetId: string, raw: LooseRecord = {}): Loo
 
 /** A deliberate source change must also replace localized inline link overrides. */
 export function applyNavigationSource(meta: LooseRecord, patch: LooseRecord): LooseRecord {
-  const source = 'locationKey' in patch ? 'locationKey' : 'source' in patch ? 'source' : null;
+  const source = 'locationKey' in patch ? 'locationKey' : 'source' in patch ? 'source' : 'parentId' in patch ? 'source' : null;
   if (!source) return meta;
   const overrides = source === 'locationKey'
     ? { locationKey: meta.locationKey, items: [], links: [] }
-    : { source: meta.source, items: [], trail: [] };
+    : { source: meta.source, parentId: meta.parentId, items: [], links: [], trail: [] };
   const translations = meta.translations;
   return {
     ...meta, ...overrides,

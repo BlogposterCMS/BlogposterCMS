@@ -81,6 +81,9 @@ async function createIndexWithRetry(collection, spec, options = {}, retries = 1)
 
 
 async function handleBuiltInPlaceholderMongo(db, operation, params) {
+  if (operation === 'PATCH_PAGE_PRESENTATION_CSS') {
+    return require('../../pagesManager/presentationCss').patchPresentationCss(db, 'mongo', params);
+  }
   // Shared SQL handlers must not load the MongoDB driver.
   const { ObjectId } = require('mongodb');
   if (isContentEnginePlaceholder(operation)) {

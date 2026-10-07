@@ -25,6 +25,8 @@ const TIMEOUT_DURATION = RAW_TIMEOUT === 0 ? null : RAW_TIMEOUT;
 
 function shouldDeactivateAfterDbError(payload, error) {
   if (!payload?.moduleName) return false;
+  if (payload.moduleName === 'pagesManager' && payload.operation === 'PATCH_PAGE_PRESENTATION_CSS'
+    && ['PAGE_CSS_PATCH_VERSION_CONFLICT', 'PAGE_CSS_PATCH_TRANSLATION_NOT_FOUND'].includes(error?.code)) return false;
   if (payload.moduleName === 'designerManager'
     && payload.operation === 'DESIGNER_SAVE_DESIGN'
     && error?.code === 'DESIGNER_VERSION_CONFLICT') return false;

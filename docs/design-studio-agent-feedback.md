@@ -1,5 +1,13 @@
 # Design Studio Agent Feedback
 
+Menu/Breadcrumb feedback resolves the active locale through the same widget settings
+as the inspector and renderer. `navigation.configure` supports Menu `source: pages`
+with `parentId` and `maxDepth`; feedback retains these fields under `navigation`.
+Only published public descendants enter this projection. Source changes replace
+localized inline-link overrides; visual changes update the active locale without
+rewriting unrelated locales. Source lookup errors retain the draft and display the
+underlying request diagnostic, with an explicit menu-source retry.
+
 The existing feedback snapshot includes `browserGeneration`: the immutable
 Designer asset generation hash, or `null` for bundled host assets. This identifies
 the code used by an open Studio document after a module update without exposing

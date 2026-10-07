@@ -13,6 +13,30 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 describe('meltdown client', () => {
+  it('signals dispatch only after the command fence clears and removes expired queued writes', async () => {
+    jest.useFakeTimers();
+    try {
+      let release!: (response: Response) => void;
+      const fetchMock = jest.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { release = resolve; }))
+        .mockResolvedValue(jsonResponse({ data: 'ok' }));
+      const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+      const fence = client.emit('save', {});
+      const onDispatch = jest.fn();
+      const expired = expect(client.emit('delete', {}, undefined, { queueTimeout: 1000, onDispatch })).rejects.toThrow('MELTDOWN_REQUEST_QUEUE_TIMEOUT');
+      await jest.advanceTimersByTimeAsync(1000);
+      await expired;
+      expect(onDispatch).not.toHaveBeenCalled();
+      const readStarted = jest.fn();
+      const read = client.emit('cmsAdminApiRequest', { moduleName: 'runtimeManager', moduleType: 'core', resource: 'pages', action: 'getBySlug' }, undefined,
+        { queueTimeout: 30000, onDispatch: readStarted });
+      expect(readStarted).not.toHaveBeenCalled();
+      release(jsonResponse({ data: 'saved' }));
+      await fence; await read;
+      expect(readStarted).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls.map(call => JSON.parse(call[1].body).eventName)).toEqual(['save', 'cmsAdminApiRequest']);
+    } finally { jest.useRealTimers(); }
+  });
   it('compresses a large real bridge envelope without changing auth, CSRF or snapshot content', async () => {
     const snapshot = { appName: 'designer', state: { layout: '布局 '.repeat(30000) } };
     const fetchMock = jest.fn(async (_url: unknown, init: RequestInit) => {

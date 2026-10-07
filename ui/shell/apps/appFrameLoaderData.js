@@ -1,6 +1,7 @@
 export const APP_BRIDGE_REQUEST = 'cms-app-runtime-request';
 export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-runtime-batch-request';
 export const APP_BRIDGE_RESPONSE = 'cms-app-runtime-response';
+export const APP_BRIDGE_STARTED = 'cms-app-runtime-started';
 const APP_LOADER_MODULE = {
     moduleName: 'appLoader',
     moduleType: 'core'
@@ -21,13 +22,13 @@ export function unwrapAppEventResult(result) {
         ? result.data
         : result;
 }
-export async function dispatchAppRuntimeRequest(emit, jwt, appName, eventName, payload) {
+export async function dispatchAppRuntimeRequest(emit, jwt, appName, eventName, payload, dispatch) {
     const meltdownEmit = requireEmitter(emit);
     const safeEventName = eventName.trim();
     if (!safeEventName) {
         throw new Error('SHELL_APP_FRAME_EVENT_NAME_MISSING: Missing bridge eventName');
     }
-    const result = await meltdownEmit('dispatchAppEvent', {
+    const envelope = {
         jwt,
         ...APP_LOADER_MODULE,
         appName,
@@ -36,7 +37,10 @@ export async function dispatchAppRuntimeRequest(emit, jwt, appName, eventName, p
             eventName: safeEventName,
             payload: objectPayload(payload)
         }
-    });
+    };
+    const result = dispatch
+        ? await meltdownEmit('dispatchAppEvent', envelope, undefined, dispatch)
+        : await meltdownEmit('dispatchAppEvent', envelope);
     return unwrapAppEventResult(result);
 }
 export async function dispatchAppRuntimeBatch(emit, jwt, appName, events) {

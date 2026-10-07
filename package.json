@@ -1,6 +1,6 @@
 {
   "name": "blogposter_cms",
-  "version": "0.10.47",
+  "version": "0.10.48",
   "main": "app.js",
   "engines": {
     "node": ">=24.0.0"

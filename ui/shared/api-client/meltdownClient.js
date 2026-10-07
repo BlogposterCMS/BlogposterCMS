@@ -74,6 +74,8 @@ export function createMeltdownClient(options = {}) {
     function processPublicQueue() {
         while (publicActive < 4 && publicQueue.length > 0) {
             const item = publicQueue.shift();
+            clearTimeout(item.queueTimer);
+            item.dispatch?.onDispatch?.();
             publicActive += 1;
             send(item.eventName, item.payload, item.timeout)
                 .then(item.resolve, item.reject)
@@ -134,6 +136,8 @@ export function createMeltdownClient(options = {}) {
             if (!concurrent && adminReadsActive > 0)
                 return;
             const item = requestQueue.shift();
+            clearTimeout(item.queueTimer);
+            item.dispatch?.onDispatch?.();
             if (concurrent)
                 adminReadsActive += 1;
             else
@@ -158,7 +162,7 @@ export function createMeltdownClient(options = {}) {
         }
     }
     return {
-        emit(eventName, payload = {}, timeout = DEFAULT_TIMEOUT) {
+        emit(eventName, payload = {}, timeout = DEFAULT_TIMEOUT, dispatch) {
             const reusable = isReusableRuntimeRead(eventName, payload);
             const key = reusable ? JSON.stringify([
                 eventName, payload, tokenProvider.getPublicToken(), tokenProvider.getCsrfToken(), timeout
@@ -183,12 +187,23 @@ export function createMeltdownClient(options = {}) {
                     reject(error);
                     return;
                 }
+                const queue = eventName === 'cmsPublicRuntimeRequest' ? publicQueue : requestQueue;
+                const item = { eventName, payload, timeout, resolve, reject, dispatch };
+                if (dispatch?.queueTimeout && dispatch.queueTimeout > 0) {
+                    item.queueTimer = setTimeout(() => {
+                        const index = queue.indexOf(item);
+                        if (index < 0)
+                            return;
+                        // An expired queued write must never execute after its caller failed.
+                        queue.splice(index, 1);
+                        reject(new Error('MELTDOWN_REQUEST_QUEUE_TIMEOUT: Request was not dispatched before the queue deadline.'));
+                    }, dispatch.queueTimeout);
+                }
+                queue.push(item);
                 if (eventName === 'cmsPublicRuntimeRequest') {
-                    publicQueue.push({ eventName, payload, timeout, resolve, reject });
                     processPublicQueue();
                     return;
                 }
-                requestQueue.push({ eventName, payload, timeout, resolve, reject });
                 processQueue();
             });
             if (!reusable)

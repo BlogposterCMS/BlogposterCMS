@@ -117,7 +117,11 @@ describe('appFrameLoader postMessage security', () => {
         eventName: 'designer.getDesign',
         payload: { id: 'design-1' }
       }
-    }));
+    }), undefined, expect.objectContaining({ queueTimeout: 30000, onDispatch: expect.any(Function) }));
+    window.meltdownEmit.mock.calls[0][3].onDispatch();
+    expect(frame.contentWindow.postMessage).toHaveBeenCalledWith({
+      type: 'cms-app-runtime-started', requestId: 17
+    }, '*');
     expect(frame.contentWindow.postMessage).toHaveBeenCalledWith({
       type: 'cms-app-runtime-response',
       requestId: 17,

@@ -3,6 +3,7 @@ import {
   APP_BRIDGE_BATCH_REQUEST,
   APP_BRIDGE_REQUEST,
   APP_BRIDGE_RESPONSE,
+  APP_BRIDGE_STARTED,
   dispatchAppLifecycleMessage,
   dispatchAppRuntimeBatch,
   dispatchAppRuntimeRequest,
@@ -182,7 +183,7 @@ async function runParentLocalEvent(eventName: string, payload: unknown): Promise
   return undefined;
 }
 
-async function dispatchAppBridgeRequest(msg: AppFrameMessage): Promise<unknown> {
+async function dispatchAppBridgeRequest(msg: AppFrameMessage, responseTarget: string): Promise<unknown> {
   const eventName = String(msg.eventName || '').trim();
 
   const localResult = await runParentLocalEvent(eventName, msg.payload);
@@ -190,7 +191,10 @@ async function dispatchAppBridgeRequest(msg: AppFrameMessage): Promise<unknown> 
     return localResult;
   }
 
-  return dispatchAppRuntimeRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload);
+  return dispatchAppRuntimeRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload, {
+    queueTimeout: 30000,
+    onDispatch: () => postFrameMessage({ type: APP_BRIDGE_STARTED, requestId: msg.requestId }, responseTarget)
+  });
 }
 
 async function dispatchAppBridgeBatch(msg: AppFrameMessage): Promise<unknown> {
@@ -205,7 +209,7 @@ async function handleBridgeMessage(msg: AppFrameMessage, responseTarget: string)
   try {
     const data = msg.type === APP_BRIDGE_BATCH_REQUEST
       ? await dispatchAppBridgeBatch(msg)
-      : await dispatchAppBridgeRequest(msg);
+      : await dispatchAppBridgeRequest(msg, responseTarget);
     postFrameMessage({ type: APP_BRIDGE_RESPONSE, requestId, ok: true, data }, responseTarget);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

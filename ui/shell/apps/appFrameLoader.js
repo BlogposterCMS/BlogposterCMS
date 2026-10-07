@@ -1,5 +1,5 @@
 import { setAppViewLanguage } from './appViewState.js';
-import { APP_BRIDGE_BATCH_REQUEST, APP_BRIDGE_REQUEST, APP_BRIDGE_RESPONSE, dispatchAppLifecycleMessage, dispatchAppRuntimeBatch, dispatchAppRuntimeRequest } from './appFrameLoaderData.js';
+import { APP_BRIDGE_BATCH_REQUEST, APP_BRIDGE_REQUEST, APP_BRIDGE_RESPONSE, APP_BRIDGE_STARTED, dispatchAppLifecycleMessage, dispatchAppRuntimeBatch, dispatchAppRuntimeRequest } from './appFrameLoaderData.js';
 const csrfMeta = document.querySelector('meta[name="csrf-token"]');
 const adminMeta = document.querySelector('meta[name="admin-token"]');
 const appMeta = document.querySelector('meta[name="app-name"]');
@@ -158,13 +158,16 @@ async function runParentLocalEvent(eventName, payload) {
     }
     return undefined;
 }
-async function dispatchAppBridgeRequest(msg) {
+async function dispatchAppBridgeRequest(msg, responseTarget) {
     const eventName = String(msg.eventName || '').trim();
     const localResult = await runParentLocalEvent(eventName, msg.payload);
     if (typeof localResult !== 'undefined') {
         return localResult;
     }
-    return dispatchAppRuntimeRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload);
+    return dispatchAppRuntimeRequest(window.meltdownEmit, window.ADMIN_TOKEN, appName, eventName, msg.payload, {
+        queueTimeout: 30000,
+        onDispatch: () => postFrameMessage({ type: APP_BRIDGE_STARTED, requestId: msg.requestId }, responseTarget)
+    });
 }
 async function dispatchAppBridgeBatch(msg) {
     return dispatchAppRuntimeBatch(window.meltdownEmit, window.ADMIN_TOKEN, appName, msg.events);
@@ -177,7 +180,7 @@ async function handleBridgeMessage(msg, responseTarget) {
     try {
         const data = msg.type === APP_BRIDGE_BATCH_REQUEST
             ? await dispatchAppBridgeBatch(msg)
-            : await dispatchAppBridgeRequest(msg);
+            : await dispatchAppBridgeRequest(msg, responseTarget);
         postFrameMessage({ type: APP_BRIDGE_RESPONSE, requestId, ok: true, data }, responseTarget);
     }
     catch (err) {

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.10.48] - 2026-10-07
+
+- Start single iframe request response deadlines when the trusted host dequeues the request; bound queue waits and remove expired queued commands so Designer publication reads do not falsely time out behind background feedback uploads.
+
 ## [0.10.47] - 2026-10-07
 
 - Compress large Meltdown request bodies through the existing gzip-capable JSON boundary so structured Designer agent snapshots do not block publication reads on slow uplinks; retain authorization, ordered commands and decoded-body limits.

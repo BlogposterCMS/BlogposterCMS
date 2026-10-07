@@ -5,6 +5,7 @@
 import {
   APP_BRIDGE_REQUEST,
   APP_BRIDGE_RESPONSE,
+  APP_BRIDGE_STARTED,
   _resetAppBridgeForTests,
   installAppBridge
 } from '../ui/shared/apps/appBridge';
@@ -48,6 +49,40 @@ describe('shared app bridge', () => {
       value: originalParent
     });
     window.fetch = originalFetch as typeof window.fetch;
+  });
+
+  test('starts the response deadline after trusted dequeue; duplicate and foreign start messages cannot extend it', async () => {
+    jest.useFakeTimers();
+    try {
+      const parentWindow = { postMessage: jest.fn() } as unknown as Window;
+      Object.defineProperty(window, 'parent', { configurable: true, value: parentWindow });
+      installAppBridge();
+      dispatchParentMessage(parentWindow, { type: 'init-tokens', appBridge: true, appName: 'designer' });
+      const pending = window.meltdownEmit!('cmsAdminApiRequest', { resource: 'pages', action: 'getBySlug' });
+      const rejected = expect(pending).rejects.toThrow('App bridge request timed out');
+      const requestId = (parentWindow.postMessage as jest.Mock).mock.calls[0][0].requestId;
+      await jest.advanceTimersByTimeAsync(12000);
+      dispatchParentMessage(parentWindow, { type: APP_BRIDGE_STARTED, requestId });
+      await jest.advanceTimersByTimeAsync(9000);
+      dispatchParentMessage(parentWindow, { type: APP_BRIDGE_STARTED, requestId });
+      window.dispatchEvent(new MessageEvent('message', { source: {} as Window, origin: 'https://evil.example',
+        data: { type: APP_BRIDGE_STARTED, requestId } }));
+      await jest.advanceTimersByTimeAsync(1001);
+      await rejected;
+    } finally { jest.useRealTimers(); }
+  });
+
+  test('bounds waiting for an absent host start acknowledgement', async () => {
+    jest.useFakeTimers();
+    try {
+      const parentWindow = { postMessage: jest.fn() } as unknown as Window;
+      Object.defineProperty(window, 'parent', { configurable: true, value: parentWindow });
+      installAppBridge();
+      dispatchParentMessage(parentWindow, { type: 'init-tokens', appBridge: true, appName: 'designer' });
+      const rejected = expect(window.meltdownEmit!('cmsAdminApiRequest', {})).rejects.toThrow('App bridge request timed out');
+      await jest.advanceTimersByTimeAsync(35000);
+      await rejected;
+    } finally { jest.useRealTimers(); }
   });
 
   test('installs the generic bridge and auto-starts an opt-in agent surface', async () => {

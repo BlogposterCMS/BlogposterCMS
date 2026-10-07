@@ -2,6 +2,7 @@ import { startDomAgentSurface } from '../agent/agentSurfaceClient';
 export const APP_BRIDGE_REQUEST = 'cms-app-runtime-request';
 export const APP_BRIDGE_BATCH_REQUEST = 'cms-app-runtime-batch-request';
 export const APP_BRIDGE_RESPONSE = 'cms-app-runtime-response';
+export const APP_BRIDGE_STARTED = 'cms-app-runtime-started';
 const DEFAULT_TIMEOUT = 10000;
 const state = {
     ready: false,
@@ -112,8 +113,8 @@ function request(type, body, timeout = DEFAULT_TIMEOUT) {
         const timer = window.setTimeout(() => {
             state.pending.delete(requestId);
             reject(new Error('App bridge request timed out'));
-        }, timeout || DEFAULT_TIMEOUT);
-        state.pending.set(requestId, { resolve, reject, timer });
+        }, type === APP_BRIDGE_REQUEST ? 35000 : timeout || DEFAULT_TIMEOUT);
+        state.pending.set(requestId, { resolve, reject, timer, timeout: timeout || DEFAULT_TIMEOUT, started: false });
         window.parent.postMessage(message, state.parentTargetOrigin);
     });
 }
@@ -195,6 +196,20 @@ function handleResponseMessage(message) {
         entry.reject(new Error(message.error || 'App bridge request failed'));
     }
 }
+function handleStartedMessage(message) {
+    const requestId = message.requestId || '';
+    const entry = state.pending.get(requestId);
+    if (!entry || entry.started)
+        return;
+    // This acknowledgement comes only from the trusted parent after dequeue.
+    // Duplicate messages cannot extend the bounded HTTP-response deadline.
+    entry.started = true;
+    window.clearTimeout(entry.timer);
+    entry.timer = window.setTimeout(() => {
+        state.pending.delete(requestId);
+        entry.reject(new Error('App bridge request timed out'));
+    }, entry.timeout);
+}
 export function installAppBridge() {
     installFetchCompatibility();
     window.addEventListener('message', (event) => {
@@ -205,7 +220,10 @@ export function installAppBridge() {
             handleInitMessage(message, event);
             return;
         }
-        if (message.type === APP_BRIDGE_RESPONSE) {
+        if (message.type === APP_BRIDGE_STARTED) {
+            handleStartedMessage(message);
+        }
+        else if (message.type === APP_BRIDGE_RESPONSE) {
             handleResponseMessage(message);
         }
     });

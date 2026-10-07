@@ -25,6 +25,23 @@ describe('Settings workspace save and recovery', () => {
   });
   afterEach(() => document.body.replaceChildren());
 
+  it('mounts Updates without awaiting source discovery and retains a visible failure', async () => {
+    let release!: (value: unknown) => void;
+    emit.mockImplementation(async (_event, payload) => {
+      if (payload.resource === 'coreUpdates') return new Promise(resolve => { release = resolve; });
+      throw new Error('source offline');
+    });
+    expect(await renderSettingsSurface(host, { slug: 'settings/updates' })).toBe(true);
+    expect(host.textContent).toContain('Update Center');
+    expect(host.querySelector('.settings-loading')).toBeNull();
+    expect(host.querySelector('button[aria-label="Check all updates"]')).toBeTruthy();
+    release({ configured: false, phase: 'idle', moduleUpdates: [] });
+    await settle(); await settle();
+    expect(host.textContent).toContain('UPDATE_CENTER_LOAD_FAILED: source offline');
+    expect(host.querySelector<HTMLButtonElement>('button[aria-label="Check all updates"]')!.disabled).toBe(false);
+    document.body.replaceChildren();
+  });
+
   it('opens General from the Settings entry instead of an empty customizable dashboard', async () => {
     expect(await renderSettingsSurface(host, { slug: 'settings' })).toBe(true);
     expect(host.textContent).toContain('General Settings');

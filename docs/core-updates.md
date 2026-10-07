@@ -203,6 +203,12 @@ not replace those application-level acceptance checks.
 
 ## Trusted registry mirrors
 
+Update Center mounting does not await external module-source discovery. Pending
+checks retain their panel status; failures remain visible and can be retried.
+Settings and inventory reads share the bounded four-request admin read queue;
+update checks, installations and settings writes retain command ordering.
+Private settings are never stored in the presentation read cache.
+
 Installations that cannot pull GHCR may use an independently reviewed mirror.
 Set an exact mirror reference including its digest, choose
 `BLOGPOSTER_ATTESTATION_MODE=registry-digest`, and constrain it with

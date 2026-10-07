@@ -612,9 +612,20 @@ async function renderUpdates(ctx) {
     });
     modulesPanel.append(rowsMount);
     shell.mount(ctx.el);
-    checkCore = await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt, true, widgetsPanel, toolbar);
-    await renderUpdateRows(rowsMount, shell.status, ctx);
-    refresh.disabled = false;
+    // External source discovery must not hold the page renderer's loading state.
+    // Keep its existing command ordering and report failures inside this panel.
+    void (async () => {
+        try {
+            checkCore = await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt, true, widgetsPanel, toolbar);
+            await renderUpdateRows(rowsMount, shell.status, ctx);
+        }
+        catch (err) {
+            shell.status.textContent = `UPDATE_CENTER_LOAD_FAILED: ${errorMessage(err)}`;
+        }
+        finally {
+            refresh.disabled = false;
+        }
+    })();
 }
 async function renderUsersAccess(ctx) {
     const shell = createShell('Users & access', 'Manage people, permission groups, sign-in methods and access for agents.');

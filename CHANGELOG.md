@@ -12,6 +12,10 @@
 
 ## [Unreleased]
 
+## [0.10.44] - 2026-10-07
+
+- Run independent Settings, module inventory and app inventory reads in the bounded admin read queue; preserve command fences and avoid caching private settings.
+- Let the Update Center finish mounting before external module-source checks complete; retain visible check errors and retry controls.
 - Fix PostgreSQL page search ordering with DISTINCT while preserving the search response fields.
 - Update locked compression, proxy-addr and source-map-js patches to resolve the high/critical dependency audit failures.
 - Add revision-guarded CSS-only updates through the existing Pages owner, preserving copy, metadata, SEO and publication fields.

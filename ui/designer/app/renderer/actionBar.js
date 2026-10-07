@@ -40,6 +40,9 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
 
   function refreshPosition(el = state.activeWidgetEl) {
     if (!el || actionBar.style.display === 'none') return;
+    // Reuse the text editor's DOM and handlers inside the selection owner.
+    const textToolbar = document.querySelector('.text-block-editor-toolbar');
+    if (textToolbar && textToolbar.parentElement !== actionBar) actionBar.appendChild(textToolbar);
     const rect = el.getBoundingClientRect();
     const barWidth = actionBar.offsetWidth || 0;
     const barHeight = actionBar.offsetHeight || 0;
@@ -55,30 +58,12 @@ export function createActionBar(selectWidget, grid, state, scheduleAutosave) {
     if (barWidth > 0) {
       left = Math.max(viewportLeft, Math.min(left, viewportRight - barWidth));
     }
-    const textToolbar = document.querySelector('.text-block-editor-toolbar');
-    if (textToolbar && barWidth > 0 && barHeight > 0) {
-      const textToolbarRect = textToolbar.getBoundingClientRect();
-      const textToolbarVisible = textToolbarRect.width > 0 && textToolbarRect.height > 0;
-      const actionBarRect = {
-        left: left - window.scrollX,
-        right: left - window.scrollX + barWidth,
-        top: top - window.scrollY,
-        bottom: top - window.scrollY + barHeight
-      };
-      const overlapsTextToolbar = textToolbarVisible && (
-        actionBarRect.left < textToolbarRect.right &&
-        actionBarRect.right > textToolbarRect.left &&
-        actionBarRect.top < textToolbarRect.bottom &&
-        actionBarRect.bottom > textToolbarRect.top
-      );
-      if (overlapsTextToolbar) {
-        top = rect.bottom + window.scrollY + gap;
-      }
-    }
     actionBar.style.top = `${top}px`;
     actionBar.style.left = `${left}px`;
     actionBar.style.visibility = '';
   }
+
+  actionBar.addEventListener('text-toolbar-resize', () => refreshPosition());
 
   function select(el) {
     if (!el) return;

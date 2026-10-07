@@ -504,6 +504,11 @@ viewport feedback remain unchanged. Tab buttons use that nested scope
 for shared button styles. Legacy widget-corner resize/menu triggers are hidden;
 the existing selected-element action bar, inspector and agent actions remain
 the interaction surfaces. This does not change selection or placement contracts.
+The selection toolbar owns the existing text-formatting controls as an inline,
+scrollable group when a text widget is selected. `contracts.unifiedSelectionTextToolbar`
+reports this shared surface. On narrow screens Duplicate remains in the existing
+More menu. Selection changes retain the original editor and command handlers.
+
 The selection toolbar Duplicate action invokes the same command as the widget
 options menu; it does not introduce a second clone or persistence implementation.
 Double-clicking an inactive-layer widget calls the existing layer switch, then

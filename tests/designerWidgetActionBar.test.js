@@ -180,7 +180,7 @@ describe('designer widget action bar', () => {
     expect(widget.classList.contains('selected')).toBe(true);
   });
 
-  it('moves below the selected element when the text toolbar occupies the same space', () => {
+  it('merges the existing text controls and preserves their handlers in one selection toolbar', () => {
     const textToolbar = document.createElement('div');
     textToolbar.className = 'text-block-editor-toolbar show';
     textToolbar.getBoundingClientRect = () => ({
@@ -195,6 +195,10 @@ describe('designer widget action bar', () => {
       toJSON: () => ({})
     });
     document.body.appendChild(textToolbar);
+    const command = document.createElement('button');
+    const format = jest.fn();
+    command.addEventListener('click', format);
+    textToolbar.appendChild(command);
 
     const widget = document.createElement('div');
     widget.className = 'canvas-item';
@@ -228,6 +232,13 @@ describe('designer widget action bar', () => {
 
     select(widget);
 
-    expect(actionBar.style.top).toBe('188px');
+    expect(actionBar.style.top).toBe('48px');
+    expect(textToolbar.parentElement).toBe(actionBar);
+    expect(document.querySelectorAll('.text-block-editor-toolbar')).toHaveLength(1);
+    command.click();
+    expect(format).toHaveBeenCalledTimes(1);
+    Object.defineProperty(actionBar, 'offsetHeight', { configurable: true, value: 60 });
+    actionBar.dispatchEvent(new Event('text-toolbar-resize'));
+    expect(actionBar.style.top).toBe('32px');
   });
 });

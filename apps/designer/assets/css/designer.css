@@ -3076,11 +3076,12 @@ body.builder-mode .canvas-item:hover {
   gap: 4px;
   padding: 6px;
   max-width: calc(100vw - 16px);
+  box-sizing: border-box;
   z-index: 1000;
   backdrop-filter: blur(10px);
   animation: actionBarSlideIn 0.2s ease;
 }
-.widget-action-bar button {
+.widget-action-bar > button {
   width: 32px;
   height: 32px;
   background: transparent;
@@ -3094,39 +3095,39 @@ body.builder-mode .canvas-item:hover {
   color: var(--color-text, #333);
   position: relative;
 }
-.widget-action-bar button:hover {
+.widget-action-bar > button:hover {
   background: rgba(0, 0, 0, 0.08);
   transform: scale(1.1);
 }
-.widget-action-bar button:active {
+.widget-action-bar > button:active {
   transform: scale(0.9);
 }
-.widget-action-bar button.action-lock:hover {
+.widget-action-bar > button.action-lock:hover {
   background: #f59e0b;
   color: white;
 }
-.widget-action-bar button.action-lock.locked {
+.widget-action-bar > button.action-lock.locked {
   background: #f59e0b;
   color: white;
 }
-.widget-action-bar button.action-duplicate:hover {
+.widget-action-bar > button.action-duplicate:hover {
   background: #10b981;
   color: white;
 }
-.widget-action-bar button.action-delete:hover {
+.widget-action-bar > button.action-delete:hover {
   background: #ef4444;
   color: white;
 }
-.widget-action-bar button.action-menu:hover {
+.widget-action-bar > button.action-menu:hover {
   background: #6366f1;
   color: white;
 }
-.widget-action-bar button svg, .widget-action-bar button img {
+.widget-action-bar > button svg, .widget-action-bar > button img {
   width: 16px;
   height: 16px;
   transition: all 0.2s ease;
 }
-.widget-action-bar button::after {
+.widget-action-bar > button::after {
   content: attr(data-tooltip);
   position: absolute;
   bottom: 100%;
@@ -3143,8 +3144,33 @@ body.builder-mode .canvas-item:hover {
   transition: opacity 0.2s ease;
   z-index: 200;
 }
-.widget-action-bar button:hover::after {
+.widget-action-bar > button:hover::after {
   opacity: 1;
+}
+.widget-action-bar > .text-block-editor-toolbar {
+  position: static;
+  transform: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: none;
+  padding: 0 0 0 8px;
+  border: 0;
+  border-left: 1px solid var(--designer-border);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+}
+.widget-action-bar > .text-block-editor-toolbar > * {
+  flex-shrink: 0;
+}
+.widget-action-bar > button, .widget-action-bar > .scene-stage-hud {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .widget-action-bar > .action-duplicate {
+    display: none;
+  }
 }
 .widget-action-bar.top {
   transform: translateY(-100%) translateY(-8px);

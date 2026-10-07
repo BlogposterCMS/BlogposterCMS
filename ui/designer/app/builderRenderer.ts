@@ -3974,8 +3974,7 @@ export async function initBuilder(sidebarEl, contentEl, pageId = null, startLaye
     setActiveElement(editable);
     if (editable) showToolbar();
     else hideToolbar();
-    // The text formatting toolbar is fixed below the header. Reposition once
-    // it is visible so the merged selection bar never renders on top of it.
+    // Text controls share the selection bar; measure after they become visible.
     refreshActionBarPosition(el);
     builderLogger.debug('selectWidget', { widgetId: el?.id, editableId: editable?.id });
   }

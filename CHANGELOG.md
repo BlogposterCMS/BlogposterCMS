@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Combine selected-element actions and contextual text formatting in one Design Studio toolbar; keep Duplicate in the existing More menu on narrow screens.
+
 ## [0.10.43] - 2026-10-04
 
 - Update Nodemailer to 10.0.14, DOMPurify (including the pinned browser vendor) to

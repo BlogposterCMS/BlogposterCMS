@@ -10,11 +10,12 @@
   gap: 4px;
   padding: 6px;
   max-width: calc(100vw - 16px);
+  box-sizing: border-box;
   z-index: 1000;
   backdrop-filter: blur(10px);
   animation: actionBarSlideIn 0.2s ease;
 
-  button {
+  > button {
     width: 32px;
     height: 32px;
     background: transparent;
@@ -102,6 +103,29 @@
     &:hover::after {
       opacity: 1;
     }
+  }
+
+  > .text-block-editor-toolbar {
+    position: static;
+    transform: none;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: none;
+    padding: 0 0 0 8px;
+    border: 0;
+    border-left: 1px solid var(--designer-border);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    backdrop-filter: none;
+    > * { flex-shrink: 0; }
+  }
+
+  > button, > .scene-stage-hud { flex-shrink: 0; }
+
+  @media (max-width: 600px) {
+    // The existing More menu already owns the Duplicate command.
+    > .action-duplicate { display: none; }
   }
 
   // Positioning variants

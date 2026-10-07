@@ -1169,6 +1169,7 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
             activeSectionBoundaries: true,
             activeSectionBoundaryTransition: true,
             sectionToolbarInsetPlacement: true,
+            unifiedSelectionTextToolbar: true,
             sectionResizeZoomInvariant: true,
             placementModeIndependentWidgetSelection: true,
             singleDocumentLayoutEditing: true,

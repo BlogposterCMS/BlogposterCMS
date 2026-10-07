@@ -1308,7 +1308,7 @@ function buildDesignerAgentFeedback(
     editingScope: document.getElementById('layoutRoot')?.dataset.editingScope || 'design',
     hoveredContainerId: document.querySelector<HTMLElement>('#layoutRoot .layout-container--hovered')?.dataset.nodeId || null,
     contentHostNodeId: document.querySelector<HTMLElement>('#layoutRoot [data-dynamic-host="true"]')?.dataset.nodeId || null,
-    livePreview: livePreviewFeedbackState(),
+    livePreview: { ...livePreviewFeedbackState(), runtimeDelivery: 'core-lazy-import' },
     publishing: publishingFeedbackState(),
     visual: visualFeedbackState(visual),
     warnings

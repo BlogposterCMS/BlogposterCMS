@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Bundle the lazy Designer live-preview runtime through the existing public entry to remove its unbundled JavaScript dependency waterfall; retain preview authorization and expose delivery in agent feedback.
+
 - Extend bounded concurrent reads to content, media, Designer, navigation, users/access and font/preset inventories; keep writes, source checks and stateful analytics summaries ordered and private responses uncached.
 - Start page-dependent asset discovery while design defaults load in both admin and public runtimes; retain presentation readiness before widget rendering and overlap Navigation Studio inventory reads.
 

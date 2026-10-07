@@ -7,9 +7,10 @@ const CORE_PUBLIC_LOADER_IMPORTERS = {
     pagesManager: () => import('../../mother/modules/pagesManager/publicLoader.js'),
     widgetManager: () => import('../../mother/modules/widgetManager/publicLoader.js')
 };
-const DESIGNER_LIVE_PREVIEW_RUNTIME_PATH = '/ui/designer/app/renderer/livePreviewRuntime.js';
 export async function importDesignerLivePreviewRuntime() {
-    await import(/* webpackIgnore: true */ DESIGNER_LIVE_PREVIEW_RUNTIME_PATH);
+    // This release-owned runtime shares public renderer dependencies. Bundle its
+    // lazy edge so preview startup does not discover an unbundled ESM tree.
+    await import('../designer/app/renderer/livePreviewRuntime.js');
 }
 export async function tryImportPublicLoader(src) {
     const paths = getPublicLoaderPaths(src);

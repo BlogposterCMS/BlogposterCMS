@@ -287,7 +287,8 @@ describe('designer live preview frame', () => {
     );
     expect(publicEntrySource).not.toContain('webpackIgnore: true');
     expect(importerSource).toContain('export async function importDesignerLivePreviewRuntime');
-    expect(importerSource).toContain('import(/* webpackIgnore: true */ DESIGNER_LIVE_PREVIEW_RUNTIME_PATH)');
+    expect(importerSource).toContain("import('../designer/app/renderer/livePreviewRuntime.js')");
+    expect(importerSource).not.toContain('DESIGNER_LIVE_PREVIEW_RUNTIME_PATH');
     expect(runtimeSource).toContain('renderPublicRuntimePageContent');
     expect(runtimeSource).toContain('previewRuntimeDataEmit');
     expect(runtimeSource).toContain("previewRuntimeEmit('cmsAdminApiRequest'");

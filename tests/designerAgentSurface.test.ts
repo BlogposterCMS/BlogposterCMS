@@ -69,7 +69,7 @@ test('designer uses the central agent manager instead of a private agent API', (
   expect(agentSurfaceSource).toContain('objectSnapLiveMagnet');
   expect(agentSurfaceSource).toContain('livePreviewFeedbackState');
   expect(agentSurfaceSource).toContain('runtimeLivePreview');
-  expect(agentSurfaceSource).toContain('livePreview: livePreviewFeedbackState()');
+  expect(agentSurfaceSource).toContain("livePreview: { ...livePreviewFeedbackState(), runtimeDelivery: 'core-lazy-import' }");
   expect(agentSurfaceSource).toContain('function motionTimelineFeedbackState');
   expect(agentSurfaceSource).toContain('motionTimeline: motionTimelineFeedbackState()');
   expect(agentSurfaceSource).toContain('contextualMotionTimeline: true');

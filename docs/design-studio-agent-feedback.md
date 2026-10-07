@@ -240,7 +240,10 @@ The feedback block is versioned and should expose:
 - `livePreview`: whether the public-page Runtime preview frame is open, which
   viewport it renders, its exact layout width/height, its separate visual fit
   scale/mode, its frame URL, searchable error code/message and whether it is
-  loading, ready or in an error state.
+  loading, ready or in an error state. `runtimeDelivery: core-lazy-import` records
+  the existing public renderer's lazy core-module delivery. Release builds bundle
+  this preview dependency instead of loading its transitive ESM files separately;
+  parent-source validation, origin-token checks and runtime requests are unchanged.
 - `motionTimeline`: whether the contextual motion-preview timeline exists and
   is visible, the selected widget instance it describes, its current progress
   and the number of rendered Sticky/Pinned/effect lanes. Footer zoom is not

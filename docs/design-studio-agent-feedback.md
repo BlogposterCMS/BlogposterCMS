@@ -244,6 +244,11 @@ The feedback block is versioned and should expose:
   the existing public renderer's lazy core-module delivery. Release builds bundle
   this preview dependency instead of loading its transitive ESM files separately;
   parent-source validation, origin-token checks and runtime requests are unchanged.
+  Native publication resolves the exact public slug before creating a page;
+  failed target reads surface `DESIGNER_PUBLISH_PAGE_LOOKUP_FAILED` or
+  `DESIGNER_PUBLISH_PAGE_LOAD_FAILED` through the existing publishing snapshot.
+  AppLoader single-request reads use the host's bounded read queue; saves,
+  batches and lifecycle commands retain ordering and the existing authorization.
 - `motionTimeline`: whether the contextual motion-preview timeline exists and
   is visible, the selected widget instance it describes, its current progress
   and the number of rendered Sticky/Pinned/effect lanes. Footer zoom is not

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.10.46] - 2026-10-07
+
+- Apply bounded read scheduling inside the existing AppLoader single-request bridge; preserve write/batch/lifecycle fences and authorization.
+- Resolve Designer publication targets by exact public slug instead of limited suggestions; fail closed on target-read errors and preserve existing article HTML/CSS.
+
 ## [0.10.45] - 2026-10-07
 
 - Bundle the lazy Designer live-preview runtime through the existing public entry to remove its unbundled JavaScript dependency waterfall; retain preview authorization and expose delivery in agent feedback.

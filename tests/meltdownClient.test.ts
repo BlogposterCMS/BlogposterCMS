@@ -1,4 +1,5 @@
 import { createMeltdownClient } from '../ui/shared/api-client/meltdownClient';
+import { dispatchAppRuntimeRequest } from '../ui/shell/apps/appFrameLoaderData';
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -9,6 +10,25 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 describe('meltdown client', () => {
+  it('schedules real AppLoader read envelopes concurrently without bypassing save fences', async () => {
+    const pending: Array<(response: Response) => void> = [];
+    const fetchMock = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));
+    const client = createMeltdownClient({ fetchImpl: fetchMock as typeof fetch });
+    const emit = (resource: string, action: string) => dispatchAppRuntimeRequest(client.emit, 'admin', 'designer',
+      'cmsAdminApiRequest', { moduleName: 'runtimeManager', moduleType: 'core', resource, action });
+    const reads = [emit('pages', 'get'), emit('pages', 'getBySlug'), emit('navigation', 'locations'), emit('designer', 'list')];
+    const save = emit('designer', 'save');
+    const fresh = emit('pages', 'get');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    pending.slice(0, 4).forEach(resolve => resolve(jsonResponse({ data: { data: 'before' } })));
+    expect(await Promise.all(reads)).toEqual(['before', 'before', 'before', 'before']);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    pending[4]!(jsonResponse({ data: { data: 'saved' } })); await save;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    pending[5]!(jsonResponse({ data: { data: 'fresh' } })); expect(await fresh).toBe('fresh');
+  });
   const read = (resource = 'pages', action = 'getBySlug') => ({
     moduleName: 'runtimeManager', moduleType: 'core', resource, action, jwt: 'admin'
   });

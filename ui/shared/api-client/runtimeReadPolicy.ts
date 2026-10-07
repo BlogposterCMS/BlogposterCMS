@@ -24,6 +24,16 @@ const ADMIN_READS: Record<string, readonly string[]> = {
 };
 
 export function isConcurrentAdminRead(eventName: string, payload: MeltdownPayload): boolean {
+  // AppLoader still owns authorization and dispatch. Inspect only its existing
+  // single-request envelope for scheduling; batches/lifecycle events stay fenced.
+  if (eventName === 'dispatchAppEvent' && payload.moduleName === 'appLoader'
+    && payload.moduleType === 'core' && payload.event === 'cms-app-runtime-request') {
+    const data = payload.data as Record<string, unknown> | undefined;
+    const nested = data?.payload;
+    if (data?.eventName !== 'cmsAdminApiRequest' && data?.eventName !== 'cmsPublicRuntimeRequest') return false;
+    return Boolean(nested && typeof nested === 'object' && !Array.isArray(nested)
+      && isConcurrentAdminRead('cmsAdminApiRequest', nested as MeltdownPayload));
+  }
   return eventName === 'cmsAdminApiRequest'
     && payload.moduleName === 'runtimeManager' && payload.moduleType === 'core'
     && Object.prototype.hasOwnProperty.call(ADMIN_READS, String(payload.resource))

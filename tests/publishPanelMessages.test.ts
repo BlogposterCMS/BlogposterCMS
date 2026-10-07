@@ -73,7 +73,7 @@ function createBasicContext(options: { meltdown?: jest.Mock; saveDesign?: jest.M
   const gridEl = document.createElement('div');
   const layoutRoot = document.createElement('div');
 
-  (window as any).meltdownEmit = options.meltdown ?? jest.fn(() => Promise.resolve([]));
+  (window as any).meltdownEmit = options.meltdown ?? jest.fn((_event, payload) => Promise.resolve(payload.action === 'getBySlug' ? null : []));
   (window as any).ADMIN_TOKEN = 'token';
 
   const controller = initPublishPanel({
@@ -100,10 +100,29 @@ function flushPromises() {
 }
 
 describe('publish panel messaging', () => {
+  test('publishes to the exact existing page even when search only returns child pages', async () => {
+    const existing = { id: 24, slug: 'docs', lane: 'public', status: 'published',
+      html: 'Keep article', css: 'Keep CSS', meta: { designId: '5', navigationTitles: { en: 'Docs' } } };
+    const meltdown = jest.fn(async (_event, payload) => {
+      if (payload.resource !== 'pages') return [];
+      if (payload.action === 'getBySlug') return existing;
+      if (payload.action === 'search') return [{ id: 25, slug: 'docs/start', lane: 'public' }];
+      throw new Error('Unexpected page request');
+    });
+    const saveDesign = jest.fn(async () => ({ id: 8 }));
+    const { controller } = createBasicContext({ meltdown, saveDesign });
+    await expect(controller.publish({ slug: 'docs' })).resolves.toMatchObject({ pageId: 24, published: true });
+    expect(mockPageService.create).not.toHaveBeenCalled();
+    expect(mockPageService.update).toHaveBeenCalledWith(existing, expect.objectContaining({
+      meta: expect.objectContaining({ designId: '8', navigationTitles: { en: 'Docs' } })
+    }));
+    expect(mockPageService.update.mock.calls[0][1]).not.toHaveProperty('html');
+    expect(mockPageService.update.mock.calls[0][1]).not.toHaveProperty('css');
+  });
   test('a failed existing-page lookup never authorizes page creation or design publication', async () => {
     const saveDesign = jest.fn();
     const meltdown = jest.fn(async (_event, payload) => {
-      if (payload.resource === 'pages' && payload.action === 'search') throw new Error('Bridge denied');
+      if (payload.resource === 'pages' && payload.action === 'getBySlug') throw new Error('Bridge denied');
       return [];
     });
     const { controller } = createBasicContext({ meltdown, saveDesign });

@@ -145,7 +145,13 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
                 showWarning(`Page lookup failed: ${err?.message || err}`, { focusEl: slugInput });
             });
         });
-        suggestionsEl.addEventListener('click', onSuggestionsClick);
+        suggestionsEl.addEventListener('click', event => {
+            void onSuggestionsClick(event).catch(err => {
+                selectedPage = null;
+                clearInfo();
+                showWarning(`Page lookup failed: ${err?.message || err}`, { focusEl: slugInput });
+            });
+        });
         draftCb.addEventListener('change', onDraftToggle);
         publishBtn.addEventListener('click', togglePanel);
         closeBtn.addEventListener('click', hidePublishPanel);
@@ -183,17 +189,10 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
             clearInfo();
             try {
                 if (!selectedPage) {
-                    const pages = await lookupPages(slug);
-                    const existing = pages.find(p => p.slug === slug);
+                    // Suggestions are limited search results, never an existence check.
+                    const existing = await getPageBySlug(slug);
                     if (existing) {
-                        const full = await getPageById(existing.id);
-                        if (!full) {
-                            showWarning('Failed to load existing page data. Please try again.', {
-                                focusEl: slugInput
-                            });
-                            throw new Error('DESIGNER_PUBLISH_PAGE_LOAD_FAILED');
-                        }
-                        selectedPage = full;
+                        selectedPage = existing;
                         draftCb.checked = selectedPage.status !== 'published';
                     }
                     else {
@@ -311,7 +310,22 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
         }
         catch (err) {
             publishLogger.warn('getPageById failed', err);
-            return null;
+            throw new Error(`DESIGNER_PUBLISH_PAGE_LOAD_FAILED: ${err?.message || err}`);
+        }
+    }
+    async function getPageBySlug(slug) {
+        try {
+            const res = await emitAdminFacade(meltdownEmit, 'pages', 'getBySlug', { slug, lane: 'public' });
+            const page = res?.data ?? res;
+            if (!page)
+                return null;
+            if (page.lane !== 'public' || page.slug !== slug || page.id == null) {
+                throw new Error('DESIGNER_PUBLISH_PAGE_TARGET_INVALID');
+            }
+            return page;
+        }
+        catch (err) {
+            throw new Error(`DESIGNER_PUBLISH_PAGE_LOOKUP_FAILED: ${err?.message || err}`);
         }
     }
     function currentDesignName() {
@@ -449,19 +463,24 @@ export function initPublishPanel({ publishBtn, nameInput, gridEl, layoutRoot, up
         }
         if (!q)
             return;
-        const pages = await lookupPages(q);
+        const [pages, exactPage] = await Promise.all([lookupPages(q), getPageBySlug(q)]);
+        if (sanitizeSlug(slugInput.value.trim()) !== q)
+            return;
+        if (!exactPage && pages.some(page => page.slug === q)) {
+            clearInfo();
+            showWarning('Failed to load page data. Please try again.', { focusEl: slugInput });
+            return;
+        }
         const suggestions = pages
             .map(p => `<div class="publish-suggestion" data-id="${p.id}" data-slug="${escapeHtml(p.slug)}">/${escapeHtml(p.slug)}</div>`)
             .join('');
-        const exists = pages.some(p => p.slug === q);
+        const exists = Boolean(exactPage);
         suggestionsEl.innerHTML = suggestions;
         if (suggestionsEl.innerHTML) {
             showSuggestions();
         }
         if (exists) {
-            const page = pages.find(p => p.slug === q);
-            const full = await getPageById(page.id);
-            selectedPage = full || null;
+            selectedPage = exactPage;
             if (!selectedPage) {
                 showWarning('Failed to load page data. Please try again.', { focusEl: slugInput });
                 return;

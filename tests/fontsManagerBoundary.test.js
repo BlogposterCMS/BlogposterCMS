@@ -30,6 +30,17 @@ afterEach(() => {
   delete global.fontsList;
 });
 
+test.each(['__proto__', 'constructor', ['__proto__'], { toString: () => '__proto__' }])('rejects provider prototype keys and non-string aliases: %p', async providerName => {
+  const emitter = initializeFontsManagerForTest();
+  const before = Object.getPrototypeOf(global.fontProviders);
+  const result = await emitAsync(emitter, 'registerFontProvider', {
+    jwt: 'fonts-manager-token', moduleName: 'fontsManager', moduleType: 'core',
+    fontsModuleSecret: 'test-fonts-secret', providerName, initFunction: () => {}
+  });
+  expect(result.err).toBeTruthy();
+  expect(Object.getPrototypeOf(global.fontProviders)).toBe(before);
+});
+
 test('fontsManager rejects unscoped or tokenless caller payloads', async () => {
   const emitter = initializeFontsManagerForTest();
   const wrongScope = {

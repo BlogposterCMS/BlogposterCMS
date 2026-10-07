@@ -40,7 +40,9 @@ function extractModuleArchive(buffer, moduleName, destination) {
     if ((expected && entry.header.size !== expected.size) || (!expected && entry.header.size > 8 * 1024 * 1024)) throw packageError('CORE_MODULE_ARCHIVE_INVALID');
     const data = entry.getData();
     if (data.length !== entry.header.size) throw packageError('CORE_MODULE_ARCHIVE_INVALID');
-    const filename = path.join(destination, entry.entryName);
+    const filename = path.resolve(destination, entry.entryName);
+    const relative = path.relative(path.resolve(destination), filename);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw packageError('CORE_MODULE_ARCHIVE_INVALID');
     fs.mkdirSync(path.dirname(filename), { recursive: true, mode: 0o700 });
     fs.writeFileSync(filename, data, { flag: 'wx', mode: 0o600 });
   }

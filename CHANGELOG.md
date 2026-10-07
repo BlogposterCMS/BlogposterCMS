@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Harden PostgreSQL lifecycle/custom-field DDL, aggregate HTTP request limits,
+  password-reset verification and cookie-authenticated single/batch Meltdown CSRF.
+  Reject non-string font-provider aliases, make page-CSS SQL statements explicit,
+  check archive output containment, parse search text as HTML and retain textarea
+  content as literal text in DOM captures. Use the patched local capture library
+  in bundled and direct browser paths. Remove the vulnerable sprintf-js test
+  dependency through the compatible YAML loader. Add focused security regressions.
+
 ## [Unreleased]
 
 - Fix PostgreSQL page search ordering with DISTINCT while preserving the search response fields.

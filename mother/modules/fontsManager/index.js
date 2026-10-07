@@ -73,7 +73,7 @@ module.exports = {
         return cb(err);
       }
       const { providerName, enabled } = payload;
-      if (!providerName || !Object.prototype.hasOwnProperty.call(global.fontProviders, providerName)) {
+      if (typeof providerName !== 'string' || !providerName || !Object.prototype.hasOwnProperty.call(global.fontProviders, providerName)) {
         return cb(new Error('Provider not found.'));
       }
       const provider = global.fontProviders[providerName];
@@ -107,7 +107,7 @@ module.exports = {
       } catch (err) {
         return cb(err);
       }
-      if (!providerName || typeof initFunction !== 'function') {
+      if (typeof providerName !== 'string' || !providerName || typeof initFunction !== 'function') {
         return cb(new Error('Invalid registerFontProvider payload.'));
       }
       const disallowed = ['__proto__','prototype','constructor'];

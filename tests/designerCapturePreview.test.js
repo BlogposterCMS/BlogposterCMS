@@ -5,7 +5,7 @@
 describe('designer preview capture', () => {
   test('section capture does not abort on unrelated unreadable stylesheets', async () => {
     const toPng = jest.fn().mockResolvedValue('data:image/png;base64,section');
-    jest.doMock('html-to-image', () => ({ toPng }));
+    jest.doMock('../ui/shared/vendor/html-to-img.js', () => ({ toPng }));
     Object.defineProperty(document, 'styleSheets', { configurable: true, value: [{ get cssRules() { throw new Error('cross origin'); } }] });
     const grid = document.createElement('div');
     const { capturePreview } = await import('../ui/designer/app/renderer/capturePreview.js');
@@ -59,7 +59,7 @@ describe('designer preview capture', () => {
 
   test('captures the visible viewport region for thumbnail previews', async () => {
     const toPng = jest.fn(() => Promise.resolve('data:image/png;base64,thumb'));
-    jest.doMock('html-to-image', () => ({ toPng }));
+    jest.doMock('../ui/shared/vendor/html-to-img.js', () => ({ toPng }));
     Object.defineProperty(document, 'styleSheets', {
       configurable: true,
       value: []

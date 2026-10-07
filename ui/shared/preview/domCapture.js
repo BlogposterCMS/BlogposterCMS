@@ -6,17 +6,12 @@ const DEFAULT_VIEWPORT_THUMBNAIL_MAX_HEIGHT = 540;
 async function loadToPng() {
   if (_toPng) return _toPng;
   try {
-    const mod = await import('html-to-image');
+    // Use the same audited local bytes in bundled and direct-module execution.
+    const mod = await import('../vendor/html-to-img.js');
     _toPng = mod.toPng;
   } catch (err) {
-    console.warn('[Designer] Failed to load html-to-image from package', err);
-    try {
-      const mod = await import('/ui/shared/vendor/html-to-img.js');
-      _toPng = mod.toPng;
-    } catch (err2) {
-      console.warn('[Designer] html-to-image unavailable', err2);
-      _toPng = async () => '';
-    }
+    console.warn('[Designer] html-to-image unavailable', err);
+    _toPng = async () => '';
   }
   return _toPng;
 }

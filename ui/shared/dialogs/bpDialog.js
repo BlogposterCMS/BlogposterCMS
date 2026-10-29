@@ -168,6 +168,8 @@ function runDomDialog(options) {
         footer.className = 'bp-dialog__actions';
         let settled = false;
         const closeWith = (result) => {
+            if (options.beforeClose && !options.beforeClose())
+                return;
             if (settled)
                 return;
             settled = true;
@@ -214,6 +216,8 @@ function runDomDialog(options) {
             });
             footer.appendChild(button);
         });
+        if (options.footerContent)
+            footer.appendChild(options.footerContent);
         function onRootClick(event) {
             if (event.target === root && options.dismissable !== false) {
                 closeWith({ action: 'cancel', value: null });

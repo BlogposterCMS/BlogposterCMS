@@ -12,13 +12,16 @@ import { createDebouncedEmitter } from './runtimeWidgetEvents.js';
 import { applyRuntimePageTitle, exposeRuntimeWidgetRegistry, resolveRuntimePageContext } from './runtimePageContext.js';
 const emitDebounced = createDebouncedEmitter(100);
 let unbindAdminNavigation = null;
-async function renderRuntimePageContent(context, mode = 'full') {
+async function renderRuntimePageContent(context, mode = 'full', presentationReady = Promise.resolve()) {
     const { slug, lane, debug } = context;
     ensureGlobalStyle(lane);
-    await applyRuntimeGlobalBackground(lane, meltdownEmit);
     if (debug)
         console.debug('[Renderer] boot', { slug, lane, mode });
-    const page = await fetchRuntimePageBySlug(meltdownEmit, slug, lane);
+    const [page] = await Promise.all([
+        fetchRuntimePageBySlug(meltdownEmit, slug, lane),
+        applyRuntimeGlobalBackground(lane, meltdownEmit),
+        presentationReady
+    ]);
     if (debug)
         console.debug('[Renderer] page', page);
     if (!page) {
@@ -34,28 +37,21 @@ async function renderRuntimePageContent(context, mode = 'full') {
     if (!contentEl)
         return;
     contentEl.dataset.dashboardLayout = lane === 'admin' && config.dashboardLayout === 'fixed' ? 'fixed' : 'custom';
-    if (mode === 'content-only') {
-        await hydrateRuntimeShellPartials(config, { mode: 'content-only' });
-    }
-    else {
-        await hydrateRuntimeShellPartials(config);
-    }
     const widgetLane = resolveRuntimeWidgetLane(lane, config);
-    const allWidgets = await fetchRuntimeWidgetRegistry(meltdownEmit, lane, widgetLane);
+    // Shell HTML, registry and inherited slots have no dependencies on each other.
+    const [allWidgets, globalLayout] = await Promise.all([
+        fetchRuntimeWidgetRegistry(meltdownEmit, lane, widgetLane),
+        lane === 'admin' && page.meta?.dashboardLayout === 'fixed'
+            ? Promise.resolve([])
+            : loadRuntimeGlobalLayout(meltdownEmit, lane).catch(err => {
+                console.warn('[Renderer] failed to load global layout', err);
+                return [];
+            }),
+        hydrateRuntimeShellPartials(config, { mode })
+    ]);
     if (debug)
         console.debug('[Renderer] widgets', allWidgets);
     exposeRuntimeWidgetRegistry(allWidgets);
-    let globalLayout = [];
-    // Fixed admin pages compose their own widgets and the grid ignores global
-    // slots. Keep inherited layout reads for editable dashboards and websites.
-    if (!(lane === 'admin' && page.meta?.dashboardLayout === 'fixed')) {
-        try {
-            globalLayout = await loadRuntimeGlobalLayout(meltdownEmit, lane);
-        }
-        catch (err) {
-            console.warn('[Renderer] failed to load global layout', err);
-        }
-    }
     if (lane !== 'admin') {
         await renderPublicRuntimePageContent({
             page,
@@ -85,13 +81,13 @@ async function renderRuntimePageContent(context, mode = 'full') {
         debug
     });
 }
-export async function renderRuntimePage(context, mode = 'full') {
+export async function renderRuntimePage(context, mode = 'full', presentationReady = Promise.resolve()) {
     const content = context.lane === 'admin' ? document.getElementById('content') : null;
     // Start before page discovery, not after the same slow request chain.
     if (content)
         beginAdminRegion(content);
     try {
-        await renderRuntimePageContent(context, mode);
+        await renderRuntimePageContent(context, mode, presentationReady);
         if (content)
             finishAdminRegion(content);
     }
@@ -104,10 +100,10 @@ export async function renderRuntimePage(context, mode = 'full') {
 export async function bootPageRenderer() {
     try {
         const context = resolveRuntimePageContext();
-        if (typeof window.meltdownEmit === 'function') {
-            await initializeRuntimeDesignDefaults(window.meltdownEmit, context.lane);
-        }
-        await renderRuntimePage(context);
+        const presentationReady = typeof window.meltdownEmit === 'function'
+            ? initializeRuntimeDesignDefaults(window.meltdownEmit, context.lane)
+            : Promise.resolve();
+        await renderRuntimePage(context, 'full', presentationReady);
         if (context.lane === 'admin' && !unbindAdminNavigation) {
             unbindAdminNavigation = bindAdminContentNavigation({
                 render: async (request) => {

@@ -28,7 +28,7 @@ const { DEFAULT_WIDGETS }   = require('./config/defaultWidgets');
 const { getSetting, setSetting } = require('./settingHelpers');
 const { onceCallback }      = require('../../emitters/motherEmitter');
 
-const CMS_ROOT = path.resolve(__dirname, '../../..');
+const CMS_ROOT = require('./hostRoot');
 const DEFAULT_WIDGET_BY_ID = new Map(DEFAULT_WIDGETS.map(widget => [widget.widgetId, widget]));
 const DEFAULT_WIDGET_DESIGN_CONTRACT = Object.freeze({
   version: 1,
@@ -182,7 +182,7 @@ function formatRegistryWidgets(widgetRows = [], lane, options = {}) {
 }
 
 async function seedFromModules(motherEmitter, jwt) {
-  const modulesDir = path.resolve(__dirname, '../../../modules');
+  const modulesDir = path.join(CMS_ROOT, 'modules');
   if (!fs.existsSync(modulesDir)) return;
 
   const dirs = fs.readdirSync(modulesDir, { withFileTypes: true });
@@ -212,7 +212,14 @@ async function seedFromModules(motherEmitter, jwt) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      jwt, moduleName: MODULE, moduleType: MODULE_TYPE, table: '__rawSQL__',
+      data: { rawSQL: 'GET_PLAINSPACE_LAYOUT', params: [{ pageId: 'module-health-check', lane: 'public', viewport: 'desktop' }] }
+    });
+  },
+  async initialize({ motherEmitter, isCore, jwt, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[plainSpace] Must be loaded as a core module.');
     }
@@ -233,133 +240,137 @@ module.exports = {
       // 1) Register meltdown events early so seeding can use them
       registerPlainSpaceEvents(motherEmitter);
 
-      // 2) Ensure DB tables required for layouts and widgets
-      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
-        jwt,
-        moduleName: MODULE,
-        moduleType: 'core',
-        table: '__rawSQL__',
-        data: { rawSQL: 'INIT_PLAINSPACE_LAYOUTS' }
-      }).then(() => {
-        console.log('[plainSpace] "plainspace.layouts" table creation ensured.');
-      }).catch(err => {
-        console.error('[plainSpace] Could not create "plainspace.layouts" table:', err.message);
-      });
-
-      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
-        jwt,
-        moduleName: MODULE,
-        moduleType: 'core',
-        table: '__rawSQL__',
-        data: { rawSQL: 'INIT_PLAINSPACE_LAYOUT_TEMPLATES' }
-      }).then(() => {
-        console.log('[plainSpace] "plainspace.layout_templates" table creation ensured.');
-      }).catch(err => {
-        console.error('[plainSpace] Could not create "plainspace.layout_templates" table:', err.message);
-      });
-
-      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
-        jwt,
-        moduleName: MODULE,
-        moduleType: 'core',
-        table: '__rawSQL__',
-        data: { rawSQL: 'INIT_PLAINSPACE_PUBLISHED_DESIGNS' }
-      }).then(() => {
-        console.log('[plainSpace] "plainspace.published_designs" table creation ensured.');
-      }).catch(err => {
-        console.error('[plainSpace] Could not create "plainspace.published_designs" table:', err.message);
-      });
-
-      // Ensure a global layout exists
-      try {
-        const globalRes = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_GLOBAL_LAYOUT_TEMPLATE, {
+      // Schema, seeding and public tokens belong to host startup only.
+      if (!isModuleUpdate) {
+        // 2) Ensure DB tables required for layouts and widgets
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: MODULE,
-          moduleType: 'core'
+          moduleType: 'core',
+          table: '__rawSQL__',
+          data: { rawSQL: 'INIT_PLAINSPACE_LAYOUTS' }
+        }).then(() => {
+          console.log('[plainSpace] "plainspace.layouts" table creation ensured.');
+        }).catch(err => {
+          console.error('[plainSpace] Could not create "plainspace.layouts" table:', err.message);
         });
-        if (!globalRes?.name) {
-          const name = 'global-layout';
-          await meltdownEmit(motherEmitter, BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE, {
+
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+          jwt,
+          moduleName: MODULE,
+          moduleType: 'core',
+          table: '__rawSQL__',
+          data: { rawSQL: 'INIT_PLAINSPACE_LAYOUT_TEMPLATES' }
+        }).then(() => {
+          console.log('[plainSpace] "plainspace.layout_templates" table creation ensured.');
+        }).catch(err => {
+          console.error('[plainSpace] Could not create "plainspace.layout_templates" table:', err.message);
+        });
+
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+          jwt,
+          moduleName: MODULE,
+          moduleType: 'core',
+          table: '__rawSQL__',
+          data: { rawSQL: 'INIT_PLAINSPACE_PUBLISHED_DESIGNS' }
+        }).then(() => {
+          console.log('[plainSpace] "plainspace.published_designs" table creation ensured.');
+        }).catch(err => {
+          console.error('[plainSpace] Could not create "plainspace.published_designs" table:', err.message);
+        });
+
+        // Ensure a global layout exists
+        try {
+          const globalRes = await meltdownEmit(motherEmitter, BACKEND_EVENTS.GET_GLOBAL_LAYOUT_TEMPLATE, {
             jwt,
             moduleName: MODULE,
-            moduleType: 'core',
-            name,
-            lane: PUBLIC_LANE,
-            viewport: 'desktop',
-            layout: [],
-            previewPath: '',
-            isGlobal: true
+            moduleType: 'core'
           });
-          await meltdownEmit(motherEmitter, BACKEND_EVENTS.SET_GLOBAL_LAYOUT_TEMPLATE, {
-            jwt,
-            moduleName: MODULE,
-            moduleType: 'core',
-            name
-          });
-          console.log('[plainSpace] Default global layout created.');
-        }
-      } catch (err) {
-        console.error('[plainSpace] Failed to ensure global layout:', err.message);
-      }
-
-      await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
-        jwt,
-        moduleName: MODULE,
-        moduleType: 'core',
-        table: '__rawSQL__',
-        data: { rawSQL: 'INIT_PLAINSPACE_WIDGET_INSTANCES' }
-      }).then(() => {
-        console.log('[plainSpace] "plainspace.widget_instances" table creation ensured.');
-      }).catch(err => {
-        console.error('[plainSpace] Could not create "plainspace.widget_instances" table:', err.message);
-      });
-
-      // 3) Check if PLAINSPACE_SEEDED is already 'true'
-      const seededVal = await getSetting(motherEmitter, jwt, 'PLAINSPACE_SEEDED');
-      if (seededVal === 'true') {
-        console.log('[plainSpace] Already seeded (PLAINSPACE_SEEDED=true). Checking for missing admin pages and widgets...');
-        // Ensure registry rows exist before page layouts reference widgets.
-        for (const widgetData of DEFAULT_WIDGETS) {
-          const { options = {}, ...data } = widgetData;
-          await seedAdminWidget(motherEmitter, jwt, data, options);
-        }
-        if (isCore && jwt) {
-          await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
-        }
-      } else {
-        console.log('[plainSpace] Not seeded => running seed steps...');
-
-        // A) Seed default widgets before pages so registry rows exist.
-        for (const widgetData of DEFAULT_WIDGETS) {
-          const { options = {}, ...data } = widgetData;
-          await seedAdminWidget(motherEmitter, jwt, data, options);
+          if (!globalRes?.name) {
+            const name = 'global-layout';
+            await meltdownEmit(motherEmitter, BACKEND_EVENTS.SAVE_LAYOUT_TEMPLATE, {
+              jwt,
+              moduleName: MODULE,
+              moduleType: 'core',
+              name,
+              lane: PUBLIC_LANE,
+              viewport: 'desktop',
+              layout: [],
+              previewPath: '',
+              isGlobal: true
+            });
+            await meltdownEmit(motherEmitter, BACKEND_EVENTS.SET_GLOBAL_LAYOUT_TEMPLATE, {
+              jwt,
+              moduleName: MODULE,
+              moduleType: 'core',
+              name
+            });
+            console.log('[plainSpace] Default global layout created.');
+          }
+        } catch (err) {
+          console.error('[plainSpace] Failed to ensure global layout:', err.message);
         }
 
-        // B) Seed admin pages from explicit page/widget slot contracts.
-        if (isCore && jwt) {
-          await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
-        }
-        console.log('[plainSpace] Admin pages & widgets have been seeded.');
-
-        // C) Mark as seeded
-        await setSetting(motherEmitter, jwt, 'PLAINSPACE_SEEDED', 'true');
-        console.log('[plainSpace] Set "PLAINSPACE_SEEDED"=true => no more seeds next time.');
-      }
-
-          // 3a) Seed admin assets from community modules
-      await seedFromModules(motherEmitter, jwt);
-
-      // 3) Issue a public token for front-end usage (why not?)
-      try {
-        const token = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN, {
-          purpose: 'plainspacePublic',
-          moduleName: 'auth'
+        await meltdownEmit(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+          jwt,
+          moduleName: MODULE,
+          moduleType: 'core',
+          table: '__rawSQL__',
+          data: { rawSQL: 'INIT_PLAINSPACE_WIDGET_INSTANCES' }
+        }).then(() => {
+          console.log('[plainSpace] "plainspace.widget_instances" table creation ensured.');
+        }).catch(err => {
+          console.error('[plainSpace] Could not create "plainspace.widget_instances" table:', err.message);
         });
-        if (!token) throw new Error('PLAINSPACE_PUBLIC_TOKEN_MISSING');
-        global.plainspacePublicToken = token;
-        console.log('[plainSpace] Public token for multi-viewport usage is ready ✔');
-      } catch (err) {
-        console.error('[plainSpace] Could not issue publicToken =>', err?.message);
+
+        // 3) Check if PLAINSPACE_SEEDED is already 'true'
+        const seededVal = await getSetting(motherEmitter, jwt, 'PLAINSPACE_SEEDED');
+        if (seededVal === 'true') {
+          console.log('[plainSpace] Already seeded (PLAINSPACE_SEEDED=true). Checking for missing admin pages and widgets...');
+          // Ensure registry rows exist before page layouts reference widgets.
+          for (const widgetData of DEFAULT_WIDGETS) {
+            const { options = {}, ...data } = widgetData;
+            await seedAdminWidget(motherEmitter, jwt, data, options);
+          }
+          if (isCore && jwt) {
+            await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
+          }
+        } else {
+          console.log('[plainSpace] Not seeded => running seed steps...');
+
+          // A) Seed default widgets before pages so registry rows exist.
+          for (const widgetData of DEFAULT_WIDGETS) {
+            const { options = {}, ...data } = widgetData;
+            await seedAdminWidget(motherEmitter, jwt, data, options);
+          }
+
+          // B) Seed admin pages from explicit page/widget slot contracts.
+          if (isCore && jwt) {
+            await seedAdminPages(motherEmitter, jwt, ADMIN_PAGES);
+          }
+          console.log('[plainSpace] Admin pages & widgets have been seeded.');
+
+          // C) Mark as seeded
+          await setSetting(motherEmitter, jwt, 'PLAINSPACE_SEEDED', 'true');
+          console.log('[plainSpace] Set "PLAINSPACE_SEEDED"=true => no more seeds next time.');
+        }
+
+            // 3a) Seed admin assets from community modules
+        await seedFromModules(motherEmitter, jwt);
+
+        // 3) Issue a public token for front-end usage (why not?)
+        try {
+          const token = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_PUBLIC_TOKEN, {
+            purpose: 'plainspacePublic',
+            moduleName: 'auth'
+          });
+          if (!token) throw new Error('PLAINSPACE_PUBLIC_TOKEN_MISSING');
+          global.plainspacePublicToken = token;
+          console.log('[plainSpace] Public token for multi-viewport usage is ready ✔');
+        } catch (err) {
+          console.error('[plainSpace] Could not issue publicToken =>', err?.message);
+        }
+
       }
 
       // 5) Listen for widget registry requests
@@ -404,6 +415,7 @@ module.exports = {
       console.log('[plainSpace] Initialization complete!');
     } catch (err) {
       console.error('[plainSpace] Initialization error:', err.message);
+      throw err;
     }
   }
 };

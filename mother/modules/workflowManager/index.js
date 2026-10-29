@@ -547,7 +547,13 @@ function setupWorkflowEvents(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  // Locks, reviews and autosaves retain their existing database authority.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await workflowDbSelect(motherEmitter, jwt, 'LIST_CONTENT_REVIEWS', { limit: 1, offset: 0 });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_WORKFLOW_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[WORKFLOW MANAGER] Must be loaded as a core module.');
     }
@@ -562,8 +568,10 @@ module.exports = {
     }
 
     console.log('[WORKFLOW MANAGER] Initializing Workflow Manager...');
-    await ensureWorkflowDatabase(motherEmitter, jwt, nonce);
-    await ensureWorkflowSchema(motherEmitter, jwt);
+    if (!isModuleUpdate) {
+      await ensureWorkflowDatabase(motherEmitter, jwt, nonce);
+      await ensureWorkflowSchema(motherEmitter, jwt);
+    }
     setupWorkflowEvents(motherEmitter);
     console.log('[WORKFLOW MANAGER] Initialized successfully.');
   },

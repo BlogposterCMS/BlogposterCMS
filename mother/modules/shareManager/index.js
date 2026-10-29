@@ -95,7 +95,14 @@ function normalizeExpiresAt(rawValue) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE,
+      table: '__rawSQL__', data: { rawSQL: 'GET_SHARE_LINK', shortToken: 'module-health-check' }
+    });
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[SHARE MANAGER] Must be loaded as a core module.');
     }
@@ -112,11 +119,11 @@ module.exports = {
     console.log('[SHARE MANAGER] Initializing ShareManager Module...');
 
     try {
-      // 1) Ensure shareManager DB or schema
-      await ensureShareManagerDatabase(motherEmitter, jwt, nonce);
-
-      // 2) Ensure schema & table/collection
-      await ensureShareTables(motherEmitter, jwt, nonce);
+      // Keep existing links and schema intact during handler replacement.
+      if (!isModuleUpdate) {
+        await ensureShareManagerDatabase(motherEmitter, jwt, nonce);
+        await ensureShareTables(motherEmitter, jwt, nonce);
+      }
 
       // 3) Register meltdown events for sharing logic
       setupShareEventListeners(motherEmitter);
@@ -124,6 +131,7 @@ module.exports = {
       console.log('[SHARE MANAGER] ShareManager Module initialized successfully.');
     } catch (err) {
       console.error('[SHARE MANAGER] Error initializing shareManager =>', err.message);
+      throw err;
     }
   }
 };
@@ -183,7 +191,7 @@ function setupShareEventListeners(motherEmitter) {
       }, TIMEOUT_DURATION);
 
       // meltdown => dbInsert => table='__rawSQL__', data.rawSQL='CREATE_SHARE_LINK'
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
           jwt,
           moduleName: 'shareManager',
           moduleType: 'core',
@@ -205,6 +213,7 @@ function setupShareEventListeners(motherEmitter) {
     result
   });
 }, err => {
+  clearTimeout(to);
   return callback(err);
 });
     } catch (ex) {
@@ -237,7 +246,7 @@ function setupShareEventListeners(motherEmitter) {
       }, TIMEOUT_DURATION);
 
       // meltdown => dbUpdate or dbDelete with placeholder
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: 'shareManager',
           moduleType: 'core',
@@ -255,6 +264,7 @@ function setupShareEventListeners(motherEmitter) {
     result
   });
 }, err => {
+  clearTimeout(to);
   return callback(err);
 });
     } catch (ex) {
@@ -278,7 +288,7 @@ function setupShareEventListeners(motherEmitter) {
       }, TIMEOUT_DURATION);
 
       // meltdown => dbSelect => table='__rawSQL__', data.rawSQL='GET_SHARE_LINK'
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'shareManager',
           moduleType: 'core',
@@ -298,6 +308,7 @@ function setupShareEventListeners(motherEmitter) {
   }
   callback(null, row);
 }, err => {
+  clearTimeout(to);
   return callback(err);
 });
     } catch (ex) {

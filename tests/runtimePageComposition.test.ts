@@ -35,6 +35,13 @@ jest.mock('../ui/runtime/main/runtimePageData', () => ({
 }));
 
 describe('runtimePageComposition', () => {
+  it('mounts attached children at an explicit HTML content marker', async () => {
+    const contentEl = document.createElement('main');
+    await renderPublicRuntimePageContent({ page: { id: 'html-parent', html: '<header>Header</header><div data-dynamic-host="true"></div><footer>Footer</footer>' }, contentEl, allWidgets: [], lane: 'public', emit: jest.fn() });
+    const slot = contentEl.querySelector('[data-dynamic-host="true"]');
+    expect(slot).not.toBeNull();
+    expect(renderAttachedRuntimeContent).toHaveBeenCalledWith(expect.objectContaining({ container: slot }));
+  });
   it('collects widgets across structural containers before public hydration begins', async () => {
     const target = document.createElement('main');
     document.body.append(target);

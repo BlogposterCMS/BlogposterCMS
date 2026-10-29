@@ -13,6 +13,7 @@ const { getDbType, moduleHasOwnDb } = require('../helpers/dbTypeHelpers');
 const notificationEmitter = require('../../../emitters/notificationEmitter');
 const {
   assertDatabaseControlEventAllowed,
+  repositoryRoot,
   resolveModuleFilePath
 } = require('./databaseEventBoundary');
 
@@ -26,7 +27,7 @@ function registerApplySchemaFileEvent(motherEmitter) {
       }
       assertDatabaseControlEventAllowed(motherEmitter, BACKEND_EVENTS.APPLY_SCHEMA_FILE, payload);
 
-      const repoRoot = path.resolve(__dirname, '../../../..');
+      const repoRoot = repositoryRoot;
       const resolved = resolveModuleFilePath(repoRoot, moduleName, filePath, BACKEND_EVENTS.APPLY_SCHEMA_FILE);
 
       const raw = fs.readFileSync(resolved, 'utf8');

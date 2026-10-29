@@ -59,7 +59,8 @@ export function toFolderListing(value) {
         ...(Array.isArray(candidate.details) ? { details: candidate.details.filter(item => item && typeof item === 'object' && typeof item.name === 'string').map(item => ({
                 name: item.name,
                 size: typeof item.size === 'number' && Number.isFinite(item.size) && item.size >= 0 ? item.size : null,
-                modifiedAt: typeof item.modifiedAt === 'string' ? item.modifiedAt : ''
+                modifiedAt: typeof item.modifiedAt === 'string' ? item.modifiedAt : '',
+                ...(typeof item.url === 'string' ? { url: item.url } : {})
             })) } : {})
     };
 }
@@ -102,6 +103,21 @@ export async function listMediaDownloads(emit, jwt) {
         category: 'download', status: 'active', visibility: 'public', limit: 50
     });
     return Array.isArray(result) ? result : [];
+}
+/** Page the existing media catalog; do not silently hide files after the first page. */
+export async function listMediaCatalog(emit, jwt) {
+    const rows = [];
+    for (let offset = 0; offset < 10000; offset += 200) {
+        const page = await emitRuntimeAdmin(requireEmitter(emit), jwt, 'media', 'list', {
+            status: 'active', visibility: 'public', limit: 200, offset
+        });
+        if (!Array.isArray(page))
+            throw new Error('MEDIA_EXPLORER_CATALOG_INVALID');
+        rows.push(...page);
+        if (page.length < 200)
+            return rows;
+    }
+    throw new Error('MEDIA_EXPLORER_CATALOG_LIMIT: Narrow the media catalog before browsing storage.');
 }
 export async function renameMediaItem(emit, jwt, currentPath, oldName, newName) {
     const meltdownEmit = requireEmitter(emit);

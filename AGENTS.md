@@ -23,6 +23,17 @@ instruction in a subdirectory says otherwise.
   formatting churn, or metadata changes.
 - Preserve user or collaborator changes already present in the worktree.
 
+## Network Delays And Usage Costs
+
+- Matteo reports that connectivity from the China production server to GitHub
+  can be poor at certain times of day. Treat this as a possible temporary network
+  condition, not automatically as an application defect.
+- After one short, targeted connectivity check, ask Matteo whether to wait or
+  continue before spending further time and usage on repeated retries, extended
+  diagnosis, DNS/proxy workarounds, or additional releases/deployments to work
+  around such delays. Prior deployment approval does not authorize an open-ended
+  troubleshooting loop. State the blocker briefly and preserve the healthy state.
+
 ## Concurrent Agent Coordination
 
 - When changing code, docs or tests, keep a local worklog in `.agent-worklog/`

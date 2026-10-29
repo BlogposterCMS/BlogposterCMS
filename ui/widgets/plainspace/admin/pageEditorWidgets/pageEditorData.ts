@@ -29,6 +29,8 @@ export interface PageEditorFormValues {
   slug: string;
   publishAt: string;
   seoImage: string;
+  seoTitle?: string;
+  featuredImage?: string;
 }
 
 interface PageDataLoaderLike {
@@ -86,14 +88,15 @@ export function buildPageUpdatePayload(
       html: page.html || '',
       css: page.css || '',
       metaDesc: seoDesc,
-      seoTitle: page.seo_title || '',
+      seoTitle: values.seoTitle?.trim() ?? page.seo_title ?? '',
       seoKeywords: page.seo_keywords || ''
     }],
     meta: {
       ...(page.meta || {}),
       // Presentation is edited by the existing Content/Designer attachment flow.
       // Saving SEO fields must not invent or overwrite a template assignment.
-      publish_at: publishAt
+      publish_at: publishAt,
+      featuredImage: values.featuredImage?.trim() ?? page.meta?.featuredImage ?? ''
     }
   });
 }

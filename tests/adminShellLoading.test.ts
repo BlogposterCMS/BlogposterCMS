@@ -16,6 +16,8 @@ describe('admin shell loading', () => {
       expect(region.querySelector('.bp-loader--skeleton [role="status"]') || region.querySelector('.bp-loader[role="status"]')).not.toBeNull();
       expect(region.querySelectorAll('.bp-loader__skeleton-line')).toHaveLength(3);
       expect(region.querySelector<HTMLAnchorElement>('.admin-shell-error a')?.target).toBe('_top');
+      expect(region.querySelector('.admin-shell-error')?.textContent).toContain('This section could not be loaded.');
+      expect(region.querySelector('.admin-shell-error a')?.textContent).toBe('Try again');
     }
     expect(html.indexOf('/ui/shell/entries/adminShellLoading.js')).toBeLessThan(html.indexOf('/build/pageRenderer.js'));
   });
@@ -32,7 +34,8 @@ describe('admin shell loading', () => {
     expect(content.dataset.adminLoading).toBe('error');
     expect(content.dataset.adminLoadingError).toBe('ADMIN_SHELL_LOAD_TIMEOUT');
     expect(content.getAttribute('aria-busy')).toBe('false');
-    expect(content.textContent).toContain('Erneut versuchen');
+    expect(content.textContent).toContain('Try again');
+    expect(content.textContent).toContain('This section could not be loaded.');
     expect(header.textContent).toBe('Ready header');
     expect(header.dataset.adminLoading).toBe('ready');
   });

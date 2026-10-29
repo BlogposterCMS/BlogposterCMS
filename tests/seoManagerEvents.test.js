@@ -160,3 +160,32 @@ test('seo internals normalize targets and merge metadata', () => {
   assert.strictEqual(_internals.baseUrl('javascript:alert(1)'), 'https://example.com');
   assert.strictEqual(_internals.baseUrl('https://example.test/blog/'), 'https://example.test/blog');
 });
+
+test('images inherit in order and a global noindex survives explicit page metadata', () => {
+  const defaults = { og_image: '/default.jpg', robots: 'noindex,follow', meta: { titleTemplate: '%title% | Site' } };
+  const content = { title: 'About', featuredImage: '/featured.jpg', ogImage: '/social.jpg', robots: 'index,follow' };
+  expect(_internals.mergeSeoMeta(defaults, content, null)).toMatchObject({ title: 'About | Site', ogImage: '/social.jpg', robots: 'noindex,follow' });
+  expect(_internals.mergeSeoMeta(defaults, { ...content, ogImage: '' }, {} ).ogImage).toBe('/featured.jpg');
+  expect(_internals.mergeSeoMeta(defaults, {}, {}).ogImage).toBe('/default.jpg');
+  expect(_internals.mergeSeoMeta(null, null, null).ogImage).toBe('');
+  expect(_internals.mergeSeoMeta(defaults, { ...content, seoTitle: 'Custom' }, {}).title).toBe('Custom');
+  expect(_internals.mergeSeoMeta(defaults, content, { title: 'Explicit', og_image: '/explicit.jpg', robots: 'nofollow' }))
+    .toMatchObject({ title: 'Explicit', ogImage: '/explicit.jpg', robots: 'noindex,nofollow' });
+  expect(_internals.contentEntrySeo({ content: { featuredImage: '/post.jpg' } }).featuredImage).toBe('/post.jpg');
+});
+
+test('saving form defaults preserves canonical, structured data and unrelated integration metadata', async () => {
+  const emitter = new EventEmitter(); setupSeoEvents(emitter);
+  emitter.on('dbSelect', (_payload, cb) => cb(null, [{ title: 'Site', canonical_url: 'https://site.test/',
+    structured_data: { '@type': 'WebSite' }, meta: { disallow: ['/admin'] } }]));
+  let stored;
+  emitter.on('dbUpdate', (payload, cb) => { stored = payload.data.params; cb(null, stored); });
+  const { err } = await emitAsync(emitter, 'setSeoDefaults', {
+    jwt: 't', moduleName: 'seoManager', moduleType: 'core', description: 'New description',
+    ogImage: '/default.jpg', robots: 'noindex,follow', meta: { titleTemplate: '%title% | Site', settingsVersion: 1 }
+  });
+  assert.ifError(err);
+  expect(stored).toMatchObject({ targetType: 'global', targetKey: 'default', title: 'Site',
+    canonicalUrl: 'https://site.test/', structuredData: { '@type': 'WebSite' }, ogImage: '/default.jpg',
+    meta: { disallow: ['/admin'], titleTemplate: '%title% | Site', settingsVersion: 1 } });
+});

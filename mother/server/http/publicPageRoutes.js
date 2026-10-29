@@ -8,11 +8,14 @@ const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { versionShellAssets } = require('./assetVersions');
 const { verifyOriginToken } = require('../security/originToken');
 const { loadPublicPresentation, escapeHtml, scriptJson } = require('../../modules/pagesManager/publicPresentation');
 const { renderPublicSeoHead } = require('../../modules/seoManager/publicHead');
 const analyticsCollector = require('../../modules/analyticsManager/collector');
 const { clientDimensions } = require('../../modules/analyticsManager/domain');
+const { SETTING_KEY, COOKIE_NAME, normalizeConfig, resolveConsent, browserId } = require('../../modules/analyticsManager/consent');
+const geoip = require('../../modules/geoipManager/service');
 
 function createPublicPageRoutes({
   injectDevReload = html => html,
@@ -21,7 +24,8 @@ function createPublicPageRoutes({
   renderMode,
   rootDir,
   sanitizeSlug,
-  securityConfig
+  securityConfig,
+  validateAdminToken
 }) {
   const router = express.Router();
   const pageHtmlPath = path.join(rootDir, 'public', 'index.html');
@@ -128,11 +132,28 @@ function createPublicPageRoutes({
       const slugToUse = slug || sanitizeSlug(page.slug);
       const nonce = crypto.randomBytes(16).toString('base64');
       const language = page.language || 'en';
+      // Settings is the single configuration authority; unavailable settings fail closed.
+      let analyticsConfig = normalizeConfig(null);
+      if (!livePreviewRequested) {
+        try { analyticsConfig = normalizeConfig((await requestPublic('settings', 'public', { keys: [SETTING_KEY] }))?.[SETTING_KEY]); }
+        catch { /* Page rendering remains available while optional analytics is disabled. */ }
+      }
+      const consent = resolveConsent(analyticsConfig, req.cookies?.[COOKIE_NAME], {
+        dnt: req.get('DNT') === '1', gpc: req.get('Sec-GPC') === '1'
+      });
+      let actor = 'anonymous';
+      if (consent.recognition && req.cookies?.admin_jwt && validateAdminToken) {
+        try {
+          const principal = await validateAdminToken(req.cookies.admin_jwt);
+          if (principal.isUser === true && !principal.isPublic && principal.userId != null) actor = String(principal.userId);
+        } catch { /* Invalid/expired credentials never establish an analytics identity. */ }
+      }
       // Signed Designer previews get their state from the existing parent bridge.
       const presentation = livePreviewRequested ? null
         : await loadPublicPresentation(requestPublic, slugToUse, language);
 
       let html = await fs.promises.readFile(pageHtmlPath, 'utf8');
+      html = versionShellAssets(html, path.dirname(pageHtmlPath));
       if (presentation) {
         presentation.bootstrap.pathname = req.path;
         html = html.replace('<html ', '<html data-bp-public-layout-ready="true" ');
@@ -148,7 +169,7 @@ function createPublicPageRoutes({
       }
       if (renderMode === 'server') {
         html = html.replace(
-          /<script type="module" src="\/build\/pageRenderer.js"><\/script>\s*/i,
+          /<script type="module" src="\/build\/pageRenderer\.js(?:\?v=[a-f0-9]{16})?"><\/script>\s*/i,
           ''
         );
       }
@@ -163,6 +184,9 @@ function createPublicPageRoutes({
       ${presentation ? `window.BP_PUBLIC_BOOTSTRAP = ${scriptJson(presentation.bootstrap)};` : ''}
     </script>`;
       html = html.replace('</head>', () => inject + '</head>');
+      if (!livePreviewRequested) {
+        html = html.replace('</body>', () => `<script nonce="${nonce}" type="module">import { mountConsent } from '/ui/shared/analytics/consent.js'; mountConsent(${scriptJson(analyticsConfig)});</script></body>`);
+      }
       html = injectDevReload(html);
 
       res.setHeader('Content-Security-Policy', `script-src 'self' blob: 'nonce-${nonce}';`);
@@ -170,10 +194,19 @@ function createPublicPageRoutes({
       res.setHeader('Cache-Control', 'no-store');
       // Count completed public HTML deliveries, not internal renderer reads or
       // signed previews. DNT/GPC opt-outs do not enter visitor analytics.
-      if (!livePreviewRequested && req.method === 'GET' && req.get('DNT') !== '1' && req.get('Sec-GPC') !== '1') {
-        res.once('finish', () => {
-          if (res.statusCode === 200) analyticsCollector.record({ kind: 'page', event: 'pageDelivered', page: String(pageId), outcome: 'success',
-            ...clientDimensions(req.get('user-agent'), req.get('referer')) });
+      if (!livePreviewRequested && req.method === 'GET' && consent.analytics) {
+        res.once('finish', async () => {
+          if (res.statusCode !== 200) return;
+          const deliveredAt = Date.now();
+          // Resolve after delivery so optional geolocation cannot delay the page.
+          // Express trust-proxy policy is authoritative; never parse forwarded headers here.
+          const location = consent.explicit ? await geoip.lookup(req.ip) : { status: 'GEOIP_CONSENT_REQUIRED' };
+          analyticsCollector.record({ kind: 'page', event: 'pageDelivered', page: String(pageId), outcome: 'success',
+            country: location.country, region: location.region, city: location.city, geoStatus: location.status,
+            title: page.title || slugToUse, path: `/${slugToUse}`, actor,
+            visitor: consent.recognition ? browserId(req.cookies?.bp_visitor) : '',
+            session: consent.recognition ? browserId(req.cookies?.bp_session) : '',
+            ...clientDimensions(req.get('user-agent'), req.get('referer')) }, deliveredAt);
         });
       }
       res.send(html);

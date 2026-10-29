@@ -186,27 +186,6 @@ async function syncProjectName() {
         delete projectName.dataset.loading;
     }
 }
-function bindUserProfileLink() {
-    const userLink = document.getElementById('user-link');
-    if (!(userLink instanceof HTMLAnchorElement))
-        return;
-    if (userLink.dataset.bound === 'true' || !window.ADMIN_TOKEN)
-        return;
-    userLink.dataset.bound = 'true';
-    try {
-        const [, payload] = window.ADMIN_TOKEN.split('.');
-        if (!payload)
-            return;
-        const decoded = JSON.parse(atob(payload));
-        const id = decoded.userId || decoded.sub;
-        if (id) {
-            userLink.href = `/admin/settings/users/edit/${id}`;
-        }
-    }
-    catch (error) {
-        console.error('[TopHeader] token parse failed', error);
-    }
-}
 function bindLogout() {
     const logoutIcon = document.getElementById('logout-icon');
     if (!(logoutIcon instanceof HTMLElement))
@@ -276,7 +255,6 @@ function markActiveSidebarLinks() {
 async function initTopHeader() {
     void syncProjectName();
     bindAccountMenu();
-    bindUserProfileLink();
     bindLogout();
     bindSearch();
     markActiveSidebarLinks();

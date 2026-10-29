@@ -101,11 +101,11 @@ export function mountPageLayoutControl(host: HTMLElement, options: {
   }
 
   function refresh(): void {
-    host.innerHTML = `<header class="content-title-bar"><div><h3>Page layout</h3><p>Use the website’s main design, add your own design inside it, or design this page independently.</p></div></header>
+    host.innerHTML = `<header class="content-title-bar"><div><h3>Page layout</h3><p>Choose how this page uses your website design.</p></div></header>
       <div class="page-layout-fields"><label><span>Layout</span><select aria-label="Page layout" data-layout-mode></select></label>
       <label data-design-field><span>Design</span><select aria-label="Layout design" data-layout-design></select></label></div>
       <p class="page-layout-source" data-layout-source role="status"></p>
-      <p class="page-layout-hint">Mark one container as “Page content area” in each design. The main design loads this page’s design or content there; an own design loads the content below in its own area.</p>`;
+      <details class="page-layout-help"><summary>How layouts work</summary><p class="page-layout-hint">Mark one container as “Page content area” in each design. The main design loads this page’s design or content there; an own design loads the content below in its own area.</p></details>`;
     const mode = host.querySelector<HTMLSelectElement>('[data-layout-mode]')!;
     const select = host.querySelector<HTMLSelectElement>('[data-layout-design]')!;
     const modes = [['main', 'Main design · Content page'], ['composed', 'Own design inside main design'], ['design', 'Own design only']];

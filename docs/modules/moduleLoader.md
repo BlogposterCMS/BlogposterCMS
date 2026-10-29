@@ -6,17 +6,15 @@ then started in a fresh runtime runner process if the health check succeeds.
 Community module code is never required into the CMS host process.
 
 The runner boundary is intentionally process-based and language-neutral. The
-CMS host owns the event bus, static mounts, tokens, permissions and database
+CMS host owns the event bus, tokens, permissions and database
 contracts; the module process can only ask for those capabilities through the
 IPC protocol behind `moduleHost` and `eventBus`. This is the migration path for
 moving the host from Node to Go later.
 
-During runner execution `process.env` is minimal. A module only receives
-service-specific environment values when it declares the matching service in
-`apiDefinition.json`: `openai` maps to `OPENAI_API_KEY`, `grok` to
-`GROK_API_KEY`, `xai` to `XAI_API_KEY`, `brave` to `BRAVE_API_KEY` and `news`
-to `NEWS_MODEL`. Windows process basics such as `SystemRoot`, `WINDIR`, `TEMP`
-and `TMP` may also be passed so the child process can start.
+Runner execution requires the [mandatory Linux sandbox](../community-isolation.md).
+No provider credentials enter process.env. apiDefinition.json never authorizes
+secret delivery. Windows/macOS hosts have no unsandboxed fallback. Modules are
+backend-only; UI belongs to the isolated widget contract.
 
 ## Startup
 
@@ -47,11 +45,9 @@ and `TMP` may also be passed so the child process can start.
   `moduleInfo.requestedAccess` and an administrator approved the exact action
   during install or activation. The permanent grant is stored as trusted
   registry data, not read from the module folder. At runtime, unapproved core
-  calls open a one-time admin prompt for that exact call. Protected user, role,
-  permission, module, settings, auth and app-management events cannot become
-  permanent grants; they require one-time approval by an admin with
-  `modules.manageAccess` and the target permission. Raw database, token, HTTP
-  and consent-management events remain hard-denied.
+  calls fail closed. The runtime rechecks current registry grants on each call;
+  one-time prompts and old in-memory grants are no longer authorization paths.
+  Protected system-management, raw database, token and HTTP events stay denied.
 - Blocks sensitive read/query events such as users, roles, permissions, global
   settings, module/app registries, login strategies, importers and exporters.
   Community modules should use public runtime contracts or module-owned data
@@ -67,18 +63,8 @@ and `TMP` may also be passed so the child process can start.
   `moduleType: "core"` through the payload. Host-marked
   `moduleHost.storage` requests are the supported write path for module-owned
   data.
-- Static asset registration is bounded by both URL and filesystem checks:
-  mount paths always stay under `/modules/<moduleName>`, traversal segments are
-  rejected, the target directory must exist, real paths must remain inside the
-  module folder and dotfiles are ignored by the static server. The static
-  middleware also refuses raw TypeScript, `.env*`, package manifests and
-  dependency lockfiles before Express can serve them. Community modules may
-  pass only inert cache/index/extension options; callback options such as
-  `setHeaders` are refused so module code never receives host Express objects.
-- Static module frontends declare `staticFrontend: true` and are mounted
-  through the same static asset checks as `moduleHost.registerStaticAssets()`:
-  module names are sanitized, the module folder shape is revalidated, and
-  `frontend/` must resolve inside the module folder.
+- Rejects module UI publication with `E_MODULE_UI_DENIED`, including former
+  `staticFrontend` declarations and `moduleHost.registerStaticAssets` calls.
 - Core-owned services such as Designer Manager are initialized from `mother/`
   and are not treated as community modules.
 - Core-owned module names are shared ownership policy. They cannot be installed,
@@ -90,12 +76,8 @@ and `TMP` may also be passed so the child process can start.
   belong under `apps/`, widgets belong under `widgets/`, and each module folder
   owns exactly one module manifest even if somebody copies files directly into
   `modules/`.
-- Resolves declared static files from `data/module-overrides/<moduleName>`
-  before falling back to the reviewed module folder. `staticFrontend: true`
-  implicitly permits `frontend/`; other static roots must be declared through
-  `moduleInfo.overridablePaths`. Backend entry files, manifests, package manager
-  files, host folders and symlinks remain blocked with searchable
-  `E_MODULE_MODIFICATION_*` or `E_MODULE_OVERRIDE_*` errors.
+- Retains existing override files as operator data; former static overrides are
+  not executed or served. Migrate UI customization into the widget package.
 - Updates installed community modules from an explicit `trustedUpdateSource`
   in the registry metadata. The updater fetches GitHub release assets through
   the Module Loader, requires a matching ZIP plus SHA-256 sidecar, optionally
@@ -176,17 +158,9 @@ and sends an internally marked CRUD request to the Database Manager. The facade
 does not grant access to core CMS tables; those still require documented core
 contracts.
 
-`moduleHost.registerStaticAssets({ dir, mountPath, options })` is the supported
-way to publish module-owned static files. Because it crosses process IPC it is
-asynchronous; modules should `await` the returned promise when they need the
-mount result. Event emission and listener registration are also IPC-backed, so
-new modules should treat host-facing calls as asynchronous even when the facade
-keeps EventEmitter-style callbacks for convenience.
-
-Direct Express access is not available to community modules. The
-`ALLOW_COMMUNITY_APP_ACCESS` environment variable is ignored if present; use
-`moduleHost.registerStaticAssets()` for module-owned assets or a core module
-contract for backend behavior.
+Host-facing calls are asynchronous. Direct Express access and static asset
+registration are unavailable; `ALLOW_COMMUNITY_APP_ACCESS` cannot enable them.
+Use Widget Manager for UI and documented core contracts for backend behavior.
 
 ## Boundaries
 
@@ -199,11 +173,10 @@ The intended add-on vocabulary is strict:
 Widgets and apps should query the CMS through public APIs, shared UI clients or
 the `runtimeManager` admin facade instead of reaching into server internals.
 
-The process runner is a host-process boundary, not a complete OS sandbox. It
-keeps untrusted code out of the CMS process, prevents direct access to host
-objects and prepares the module API for a future Go host. Real Marketplace
-hardening should still add OS-level restrictions such as a dedicated user,
-container, microVM, filesystem policy and network policy around the runner.
+The runner uses read-only code mounts, private Linux namespaces and seccomp.
+See [deployment prerequisites and limits](../community-isolation.md). Startup,
+health checks and activation use the same isolation; no legacy process fallback
+exists. Keep the kernel and runtime patched.
 
 If a module folder lacks `index.js`, the loader emits a system-level error
 notification and disables the module so it cannot be activated accidentally.
@@ -226,8 +199,8 @@ exactly one `moduleInfo.json`. A community module manifest cannot claim
 `moduleType: "core"` or app/widget identity. Core-owned names such as
 `designer` cannot be installed as community modules.
 
-Optional files such as `apiDefinition.json` or a `frontend/` folder may be
-included. Module ZIPs and unpacked module folders cannot contain app manifests
+Optional backend files and `apiDefinition.json` may be included. A former
+`frontend/` folder is retained as bytes only and is never served. Module ZIPs and unpacked module folders cannot contain app manifests
 (`app.json`), widget manifests (`widgetInfo.json`), nested module manifests,
 top-level host folders such as `apps/`, `widgets/`, `ui/`, `mother/` or
 `public/`, `node_modules`, package manifests/lockfiles, `.env*`, `.npmrc`,
@@ -241,39 +214,13 @@ manifest, shows declared module permissions and requested core-event access,
 and sends only explicitly approved events as registry grants. Installing a
 module with no approved requested access still registers the module's own
 permission keys. The health check still fails closed for unapproved core
-events, while later runtime attempts use the one-time admin approval queue.
-Always review third-party code before installing it, and add OS/container
-isolation before treating Marketplace code as fully untrusted production input.
+events, and later runtime attempts also fail closed. Review third-party code
+and validate the mandatory sandbox before deployment.
 
 ## Module Updates
 
-Managed module code is updated through the same validation path as ZIP
-installation. Local user-owned overrides live separately under
-`data/module-overrides/<moduleName>` and are not touched by the updater.
-
-The override directory mirrors the module-relative path without changing the
-managed module. For example, this file:
-
-```text
-data/module-overrides/shopSync/frontend/theme.css
-```
-
-is served before `modules/shopSync/frontend/theme.css`, while any missing file
-falls back to the managed module. Static frontends opt into `frontend/`
-automatically. A module that registers another static directory must declare it:
-
-```json
-{
-  "moduleName": "shopSync",
-  "overridablePaths": ["frontend", "locales"]
-}
-```
-
-Declarations are relative directories only. Absolute paths, traversal,
-backend entry files, manifests, package-manager files, host folders and
-symlinks fail closed. Keep the override tree in a separate Git repository and
-mount only that directory at `/app/data/module-overrides`; never version the
-complete runtime `data/` directory.
+Managed code updates go through the installer and retain existing data/override
+files. Former static overrides are not served; migrate them to widget source.
 
 An installed module may declare or receive a registry-owned update source:
 
@@ -336,6 +283,6 @@ The supported UI ZIP path now uses strict manifest consent. See the
 and `approvedAccess`. `modules.setAccess` replaces the approved descriptors under
 `modules.manageAccess`. A grantor must hold the target action permission.
 `modules.installUpdate` also accepts the reviewed update hash for strict packages.
-Legacy one-time consent behavior above does not apply to UI-reviewed packages.
+All community execution uses the strict contract; no legacy consent fallback remains.
 These actions use the existing Runtime Manager facade and generated event catalog;
 a dedicated AgentManager upload/review interaction adapter is not yet supplied.

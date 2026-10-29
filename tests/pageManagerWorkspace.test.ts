@@ -10,7 +10,11 @@ jest.mock('../ui/shared/agent/workspaceAgent', () => {
 });
 
 jest.mock('../ui/shared/dialogs/bpDialog', () => ({ bpDialog: {
-  confirm: jest.fn().mockResolvedValue(false), alert: jest.fn(), prompt: jest.fn()
+  confirm: jest.fn().mockResolvedValue(false), alert: jest.fn(), prompt: jest.fn(),
+  open: jest.fn(options => {
+    document.getElementById('content')!.append(options.body);
+    return new Promise(() => {});
+  })
 } }));
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
@@ -66,13 +70,40 @@ describe('Page Manager workspace', () => {
   });
 
   it('composes page counts, the hierarchy and one saved details form', () => {
-    expect(control<HTMLAnchorElement>('[data-action="edit"]').getAttribute('href')).toBe('/admin/pages/edit/1');
+    expect(control<HTMLAnchorElement>('[aria-label="Site settings"]').getAttribute('href')).toBe('/admin/pages/edit/1');
     expect(control('.page-manager')).not.toBeNull();
     expect(control('.page-manager__filters').textContent).toContain('Published3');
     expect(host.querySelectorAll('form')).toHaveLength(1);
     expect(control<HTMLInputElement>('[name="title"]').value).toBe('Docs');
     expect(control('[type="submit"]').disabled).toBe(true);
     expect(host.querySelector('[contenteditable]')).toBeNull();
+  });
+
+  it('changes status through the shared popover and existing save action', async () => {
+    await click('.page-manager__details .page-manager__status');
+    const item = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')].find(b => b.textContent === 'Draft')!;
+    expect(item).toBeTruthy();
+    item.click();
+    await settle();
+    expect(calls('update').at(-1)?.[1].params.status).toBe('draft');
+  });
+
+  it('edits within the selected row, saves with Enter and cancels with Escape', async () => {
+    expect(control('.page-manager__form label .page-manager__status').textContent).toContain('published');
+    expect(control('[data-action="share"]').parentElement).toBe(control('[name="slug"]').parentElement);
+    expect(control('[data-action="view"]').parentElement).toBe(control('[name="slug"]').parentElement);
+    expect(control('.page-manager__details').parentElement?.dataset.pageId).toBe('1');
+    edit('title', 'Updated docs');
+    control('[name="title"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle();
+    expect(calls('update')).toHaveLength(1);
+    expect(pages[0].title).toBe('Updated docs');
+    edit('title', 'Discard me');
+    control('[name="title"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(control<HTMLInputElement>('[name="title"]').value).toBe('Updated docs');
+    expect(control<HTMLButtonElement>('[type="submit"]').disabled).toBe(true);
+    expect(calls('update')).toHaveLength(1);
+    expect(control('[aria-label="Site settings"]').textContent).toBe('');
   });
 
   it('imports the optional example, selects its draft and opens its shared design from the result', async () => {
@@ -284,16 +315,39 @@ describe('Page Manager workspace', () => {
     renderPageList(target, pages);
     await createNewPage();
     await settle();
-    expect(root.querySelector('h3')?.textContent).toBe('Add a page');
-    expect(root.activeElement?.getAttribute('name')).toBe('title');
+    expect(bpDialog.open).toHaveBeenCalledWith(expect.objectContaining({ title: 'Add page', dismissable: false }));
+    expect(document.querySelector('.page-manager--creation-dialog h3')?.textContent).toBe('Add a page');
+    expect(document.activeElement?.getAttribute('name')).toBe('title');
     expect(bpDialog.prompt).not.toHaveBeenCalled();
   });
 
-  it('moves focus to selected details and offers a return to the page search', async () => {
+  it('selects a row without focusing an editable field', async () => {
     await click('[data-page-row-id="page-list-4-3"] .page-manager__select');
-    expect(document.activeElement).toBe(control('h3'));
-    await click('[data-action="back"]');
-    expect(document.activeElement).toBe(control('[type="search"]'));
+    expect(document.activeElement).not.toBe(control('[name="title"]'));
+    expect(host.querySelector('.page-manager__identity-line .page-manager__status')).not.toBeNull();
+    expect(host.querySelector('.page-manager__hover-actions [aria-label="Site settings"]')).not.toBeNull();
+    expect(host.querySelector('.page-manager__hover-actions [aria-label="More page actions"]')?.previousElementSibling?.getAttribute('aria-label')).toBe('Add subpage');
+    expect(host.querySelector('.page-manager__details [aria-label="More page actions"]')?.previousElementSibling?.getAttribute('data-action')).toBe('child');
+  });
+  it('toggles a branch from its row without entering title editing', async () => {
+    const child = () => control<HTMLElement>('[data-page-id="2"]');
+    expect(child().hidden).toBe(true);
+    control<HTMLElement>('[data-page-id="1"] .page-manager__details').click();
+    await settle();
+    expect(child().hidden).toBe(false);
+    expect(document.activeElement).not.toBe(control('[name="title"]'));
+    control<HTMLElement>('[data-page-id="1"] .page-manager__details').click();
+    await settle();
+    expect(child().hidden).toBe(true);
+  });
+
+  it('requires the global confirmation for home changes and deletion', async () => {
+    await click('[data-page-row-id="page-list-4-3"] .page-manager__select');
+    await click('[data-action="home"]');
+    expect(bpDialog.confirm).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ title: 'Set home page' }));
+    expect(calls('setStart')).toHaveLength(0);
+    await click('[data-action="delete"]');
+    expect(bpDialog.confirm).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ title: 'Delete page' }));
+    expect(calls('delete')).toHaveLength(0);
   });
 });
-

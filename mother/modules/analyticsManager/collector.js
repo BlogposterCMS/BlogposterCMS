@@ -11,11 +11,11 @@ function isExcluded(input) { return input?.kind === 'system' && storageEvents.ha
 let queue = [];
 let enabled = false;
 let dropped = 0;
-function record(input) {
+function record(input, at = Date.now()) {
   if (!enabled || isExcluded(input)) return;
   try {
     if (queue.length >= 2000) { dropped++; return; }
-    queue.push(normalizeRecord(input));
+    queue.push(normalizeRecord(input, at));
   } catch { dropped++; }
 }
 function take() { const batch = queue; queue = []; return batch; }

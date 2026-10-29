@@ -50,6 +50,25 @@ describe('fixed Page Editor', () => {
   });
   afterEach(() => { document.body.replaceChildren(); });
 
+  it('keeps drafts across tabs and one save footer outside the panels', () => {
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('.page-editor-tabs [role="tab"]')];
+    expect(tabs.map(tab => tab.textContent)).toEqual(['Details', 'Layout & content', 'SEO & previews']);
+    edit('title', 'Pending title');
+    tabs[1]!.click();
+    expect(find('.page-editor-tab-actions').hidden).toBe(false);
+    expect(find('.page-editor-tab-actions [data-builder="designer"]').classList.contains('primary')).toBe(true);
+    expect(find('.page-editor-tab-actions [data-upload]').classList.contains('secondary')).toBe(true);
+    tabs[2]!.click();
+    expect(find('.page-editor-tab-actions').hidden).toBe(true);
+    expect(find<HTMLInputElement>('[name="title"]').value).toBe('Pending title');
+    expect(find('.page-editor-footer [data-save]')).toBeTruthy();
+    expect(find('.page-content-source').hasAttribute('open')).toBe(false);
+    expect(find('.page-content-library').hasAttribute('open')).toBe(false);
+    expect(find('.page-editor-seo-text [name="seoTitle"]')).toBeTruthy();
+    expect(find('.page-editor-seo-images .page-editor-image-preview')).toBeTruthy();
+    expect(host.querySelectorAll('.page-editor-body > [role="tabpanel"]:not([hidden])')).toHaveLength(1);
+  });
+
   it('stages metadata and content in one explicit save without changing the loaded record early', async () => {
     expect(host.querySelectorAll('form')).toHaveLength(1);
     expect(find('[data-save]').disabled).toBe(true);
@@ -76,6 +95,27 @@ describe('fixed Page Editor', () => {
     expect(find('.page-content-feedback').textContent).toBe('');
     expect(find<HTMLAnchorElement>('[data-builder="designer"]').getAttribute('href')).toBe('/admin/studio/design/design%3Aone');
     expect(await confirmWorkspaceNavigation()).toBe(true);
+  });
+
+  it('saves translated SEO title and both images through the page draft, then reloads and discards correctly', async () => {
+    edit('seoTitle', 'Sharing title');
+    edit('featuredImage', '/media/featured.jpg');
+    edit('seoImage', '/media/social.jpg');
+    expect(writes()).toHaveLength(0);
+    expect(page.meta.featuredImage).toBeUndefined();
+    await submit();
+    expect(writes()[0][1].params).toMatchObject({
+      seo_image: '/media/social.jpg', meta: { keep: true, featuredImage: '/media/featured.jpg' },
+      translations: [{ seoTitle: 'Sharing title' }]
+    });
+    await render(host);
+    expect(find<HTMLInputElement>('[name="seoTitle"]').value).toBe('Sharing title');
+    expect(find<HTMLInputElement>('[name="featuredImage"]').value).toBe('/media/featured.jpg');
+    edit('seoImage', '');
+    expect(find<HTMLImageElement>('img[alt="Link preview image preview"]').getAttribute('src')).toBe('/media/featured.jpg');
+    jest.mocked(bpDialog.confirm).mockResolvedValue(true);
+    find('[data-discard]').click(); await settle();
+    expect(find<HTMLInputElement>('[name="seoImage"]').value).toBe('/media/social.jpg');
   });
 
   it('retains both drafts on a failed save and can retry', async () => {

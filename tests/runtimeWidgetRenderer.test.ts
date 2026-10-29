@@ -5,6 +5,8 @@
 jest.mock('../ui/widgets/rendering/widgetServices', () => ({ loadWidgetServices: jest.fn(async () => ({ dispose: jest.fn() })) }));
 
 import { renderWidget } from '../ui/runtime/main/runtimeWidgetRenderer';
+import { mountSandboxWidget } from '../ui/widgets/rendering/widgetSandbox';
+jest.mock('../ui/widgets/rendering/widgetSandbox', () => ({ mountSandboxWidget: jest.fn(async () => {}) }));
 
 class CSSStyleSheetMock {
   cssText = '';
@@ -29,6 +31,7 @@ describe('runtimeWidgetRenderer', () => {
       value: []
     });
     jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -106,7 +109,7 @@ describe('runtimeWidgetRenderer', () => {
       .toContain('WIDGET_RUNTIME_BLOCKED_CODE_URL');
   });
 
-  it('keeps scene context without exposing admin credentials to community widgets', async () => {
+  it('routes scene context through the trusted sandbox adapter without direct community execution', async () => {
     const wrapper = makeWrapper();
     const render = jest.fn();
     window.ADMIN_TOKEN = 'admin-token';
@@ -121,12 +124,13 @@ describe('runtimeWidgetRenderer', () => {
       'admin'
     );
 
-    expect(render).toHaveBeenCalledWith(
+    expect(render).not.toHaveBeenCalled();
+    expect(mountSandboxWidget).toHaveBeenCalledWith(
       expect.any(HTMLElement),
+      'testWidget', moduleUrl,
       expect.objectContaining({
         id: 'instance-1',
         widgetId: 'testWidget',
-        services: expect.any(Object),
         scene: expect.objectContaining({
           behavior: 'sticky',
           sceneId: 'hero',
@@ -134,8 +138,10 @@ describe('runtimeWidgetRenderer', () => {
         })
       })
     );
-    expect(render.mock.calls[0][1]).not.toHaveProperty('jwt');
-    expect(render.mock.calls[0][1]).not.toHaveProperty('emit');
+    // The trusted adapter owns credentials; widgetSandbox tests verify that
+    // its worker-facing context omits them.
+    expect((mountSandboxWidget as jest.Mock).mock.calls[0][3].jwt).toBe('admin-token');
+    expect((mountSandboxWidget as jest.Mock).mock.calls[0][3]).not.toHaveProperty('emit');
   });
 
   it('renders module widgets when saved code contains only metadata', async () => {
@@ -152,8 +158,10 @@ describe('runtimeWidgetRenderer', () => {
       'public'
     );
 
-    expect(render).toHaveBeenCalledWith(
+    expect(render).not.toHaveBeenCalled();
+    expect(mountSandboxWidget).toHaveBeenCalledWith(
       expect.any(HTMLElement),
+      'mediaBlock', moduleUrl,
       expect.objectContaining({
         widgetId: 'mediaBlock',
         metadata: { label: 'Media' },

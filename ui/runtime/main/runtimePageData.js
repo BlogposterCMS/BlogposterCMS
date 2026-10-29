@@ -7,12 +7,11 @@ export async function initializeRuntimeDesignDefaults(emit, lane) {
     const token = normalizedLane === 'admin' ? window.ADMIN_TOKEN : window.PUBLIC_TOKEN;
     configureColorLibraryClient({ emit, token, lane: normalizedLane });
     configureFontPackagesClient({ emit, token, lane: normalizedLane });
-    await refreshColorLibrary().catch(error => {
-        console.warn('COLOR_LIBRARY_RUNTIME_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
-    });
-    await refreshFontPackages().catch(error => {
-        console.warn('FONT_PACKAGES_RUNTIME_LOAD_FAILED: Content will use its serialized or browser typography.', error);
-    });
+    await Promise.all([refreshColorLibrary().catch(error => {
+            console.warn('COLOR_LIBRARY_RUNTIME_LOAD_FAILED: Linked colors will use serialized fallbacks.', error);
+        }), refreshFontPackages().catch(error => {
+            console.warn('FONT_PACKAGES_RUNTIME_LOAD_FAILED: Content will use its serialized or browser typography.', error);
+        })]);
 }
 function cmsPublicRuntimePayload(resource, action, params = {}) {
     return {

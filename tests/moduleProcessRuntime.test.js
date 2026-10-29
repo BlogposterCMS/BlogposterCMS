@@ -74,7 +74,7 @@ function runtimeOptions({ root, indexJsPath }, overrides = {}) {
   };
 }
 
-test('module runtime env hides service secrets unless the module declares them', async () => {
+test('module runtime env hides service secrets even when the module declares them', async () => {
   await withEnv({
     OPENAI_API_KEY: 'secret-openai',
     BRAVE_API_KEY: 'secret-brave',
@@ -96,14 +96,14 @@ test('module runtime env hides service secrets unless the module declares them',
       'index.js': 'module.exports = { initialize() {} };'
     }, ({ root }) => {
       const env = buildModuleRuntimeEnv(root);
-      assert.strictEqual(env.OPENAI_API_KEY, 'secret-openai');
-      assert.strictEqual(env.BRAVE_API_KEY, 'secret-brave');
+      assert.strictEqual(env.OPENAI_API_KEY, undefined);
+      assert.strictEqual(env.BRAVE_API_KEY, undefined);
       assert.strictEqual(env.GROK_API_KEY, undefined);
     });
   });
 });
 
-test('process health check initializes a module through IPC without loading it into the host process', async () => {
+(process.platform === 'linux' ? test : test.skip)('process health check initializes a module through IPC without loading it into the host process', async () => {
   await withTempModule('healthModule', {
     'index.js': `
       module.exports = {
@@ -118,7 +118,7 @@ test('process health check initializes a module through IPC without loading it i
   });
 });
 
-test('process runtime acknowledges an unclaimed module ready signal during startup', async () => {
+(process.platform === 'linux' ? test : test.skip)('process runtime acknowledges an unclaimed module ready signal during startup', async () => {
   await withTempModule('readyModule', {
     'index.js': `
       module.exports = {
@@ -147,7 +147,7 @@ test('process runtime acknowledges an unclaimed module ready signal during start
   });
 });
 
-test('process runtime refuses raw Express access during health check', async () => {
+(process.platform === 'linux' ? test : test.skip)('process runtime refuses raw Express access during health check', async () => {
   await withTempModule('rawAppModule', {
     'index.js': `
       module.exports = {
@@ -164,7 +164,7 @@ test('process runtime refuses raw Express access during health check', async () 
   });
 });
 
-test('process runtime blocks direct system events at the host boundary', async () => {
+(process.platform === 'linux' ? test : test.skip)('process runtime blocks direct system events at the host boundary', async () => {
   await withTempModule('systemEventModule', {
     'index.js': `
       module.exports = {
@@ -176,12 +176,12 @@ test('process runtime blocks direct system events at the host boundary', async (
   }, async context => {
     await assert.rejects(
       () => runCommunityModuleHealthCheck(runtimeOptions(context)),
-      /system event|not allowed/
+      /E_MODULE_ACCESS_DENIED|system event|not allowed/
     );
   });
 });
 
-test('process runtime proxies module-owned listeners and callbacks over IPC', async () => {
+(process.platform === 'linux' ? test : test.skip)('process runtime proxies module-owned listeners and callbacks over IPC', async () => {
   await withTempModule('listenerModule', {
     'index.js': `
       module.exports = {
@@ -212,7 +212,7 @@ test('process runtime proxies module-owned listeners and callbacks over IPC', as
   });
 });
 
-test('process runtime proxies community storage calls over IPC', async () => {
+(process.platform === 'linux' ? test : test.skip)('process runtime proxies community storage calls over IPC', async () => {
   await withTempModule('storageModule', {
     'index.js': `
       module.exports = {
@@ -285,51 +285,13 @@ test('module loader rejects mixed app, widget and package-manager folders', asyn
   });
 });
 
-test('module loader serves module static frontends through bounded static asset rules', () => {
-  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-static-'));
-  const modulesRoot = path.join(tmpRoot, 'modules');
-  const moduleDir = path.join(modulesRoot, 'staticModule');
-  const frontendDir = path.join(moduleDir, 'frontend');
-  const mounts = [];
-  const app = {
-    use(mountPath, handler) {
-      mounts.push({ mountPath, handler });
-    }
-  };
-  fs.mkdirSync(frontendDir, { recursive: true });
-  fs.writeFileSync(path.join(moduleDir, 'index.js'), 'module.exports = { initialize() {} };');
-  fs.writeFileSync(path.join(moduleDir, 'moduleInfo.json'), JSON.stringify({
-    moduleName: 'staticModule',
-    version: '1.0.0',
-    developer: 'Test',
-    description: 'Frontend'
-  }));
-  fs.writeFileSync(path.join(frontendDir, 'view.html'), '<div>Frontend</div>');
-
-  try {
-    const result = _internals.serveStaticFrontend({
-      row: {
-        module_name: 'staticModule',
-        is_active: true,
-        moduleInfo: { staticFrontend: true }
-      },
-      folderNames: ['staticModule'],
-      modulesPath: modulesRoot,
-      app
-    });
-
-    assert.strictEqual(result.moduleName, 'staticModule');
-    assert.strictEqual(result.mountPath, '/modules/staticModule');
-    assert.strictEqual(result.dir, frontendDir);
-    assert.strictEqual(mounts.length, 1);
-    assert.strictEqual(mounts[0].mountPath, '/modules/staticModule');
-    assert.strictEqual(typeof mounts[0].handler, 'function');
-  } finally {
-    fs.rmSync(tmpRoot, { recursive: true, force: true });
-  }
+test('module loader blocks former static frontends without mounting files', () => {
+  const app = { use: jest.fn() };
+  expect(() => _internals.serveStaticFrontend({row:{module_name:'legacy',is_active:true,moduleInfo:{staticFrontend:true}},app})).toThrow('E_MODULE_UI_DENIED');
+  expect(app.use).not.toHaveBeenCalled();
 });
 
-test('dummy community module initializes through the process health-check runner', async () => {
+(process.platform === 'linux' ? test : test.skip)('dummy community module initializes through the process health-check runner', async () => {
   const modulePath = path.resolve(__dirname, '../modules/dummyModule/index.js');
   await runCommunityModuleHealthCheck({
     indexJsPath: modulePath,

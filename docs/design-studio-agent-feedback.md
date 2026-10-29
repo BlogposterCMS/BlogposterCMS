@@ -1,5 +1,11 @@
 # Design Studio Agent Feedback
 
+The existing feedback snapshot includes `browserGeneration`: the immutable
+Designer asset generation hash, or `null` for bundled host assets. This identifies
+the code used by an open Studio document after a module update without exposing
+launch tokens. The manifest launch URL and AgentManager/AppLoader channel remain
+unchanged; open documents adopt a new browser generation on reload.
+
 Container `settings.height` accepts `auto` or 1–10000px and is independent of
 `minHeight`, which still sets the lower bound. The inspector exposes Auto/Fixed
 height; shared presentation CSS retains the explicit value after CanvasGrid
@@ -487,6 +493,11 @@ viewport feedback remain unchanged. Tab buttons use that nested scope
 for shared button styles. Legacy widget-corner resize/menu triggers are hidden;
 the existing selected-element action bar, inspector and agent actions remain
 the interaction surfaces. This does not change selection or placement contracts.
+The selection toolbar owns the existing text-formatting controls as an inline,
+scrollable group when a text widget is selected. `contracts.unifiedSelectionTextToolbar`
+reports this shared surface. On narrow screens Duplicate remains in the existing
+More menu. Selection changes retain the original editor and command handlers.
+
 The selection toolbar Duplicate action invokes the same command as the widget
 options menu; it does not introduce a second clone or persistence implementation.
 Double-clicking an inactive-layer widget calls the existing layer switch, then
@@ -576,3 +587,20 @@ submit forms or invoke backend actions. A business-form binding adapter and
 editing an existing instance's component props are not yet exposed as agent
 command families; preserve the existing Forms/service permission boundaries when
 adding those adapters. Structural layout remains the Designer container model.
+
+## Community widget isolation
+
+The existing snapshot reports `DESIGNER_AGENT_FEEDBACK_WIDGET_SANDBOX_BLOCKED`
+with the widget ID and runtime error code when an isolated widget cannot render.
+Saved placements are preserved. The v2 worker receives no Designer credentials;
+preview service requests stay unavailable. See [migration](community-isolation.md).
+The shared hidden isolation frame survives ordinary connected canvas reparenting
+and is disposed when its widget host or mounted view is removed. This lifecycle
+does not change the existing `DESIGNER_AGENT_FEEDBACK_WIDGET_SANDBOX_BLOCKED`
+warning channel or add a Designer-only worker contract.
+
+Gallery previews use the shared renderer's native image scheduling: visible
+images load eagerly, hidden carousel slides and offscreen images remain lazy.
+Positive width/height values in existing image metadata reserve intrinsic image
+geometry; saved widget placement, layout-tree bounds and agent actions retain
+their existing meaning. No separate preview loader or feedback API is introduced.

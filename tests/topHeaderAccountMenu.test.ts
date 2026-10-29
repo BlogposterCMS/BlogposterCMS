@@ -21,7 +21,7 @@ function renderAccountMenu(): void {
           <div id="account-menu-dropdown" class="account-menu__dropdown" role="menu" hidden>
             <button id="theme-mode-toggle" class="account-menu__item" type="button" role="menuitem">Theme mode</button>
             <a href="/admin/settings" id="settings-link" class="account-menu__item" role="menuitem">Settings</a>
-            <a href="#" id="user-link" class="account-menu__item" role="menuitem">Profile</a>
+            <a href="/admin/profile" id="user-link" class="account-menu__item" role="menuitem">Profile</a>
             <button id="logout-icon" class="account-menu__item" type="button" role="menuitem">Log out</button>
           </div>
         </div>
@@ -53,6 +53,7 @@ describe('top header account menu', () => {
     expect(panel.hidden).toBe(true);
     expect(toggle.getAttribute('aria-haspopup')).toBe('menu');
     expect(items).toHaveLength(4);
+    expect(document.getElementById('user-link')?.getAttribute('href')).toBe('/admin/profile');
 
     click(toggle);
 

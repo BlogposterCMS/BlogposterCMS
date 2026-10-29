@@ -91,11 +91,10 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     container.classList.remove('hidden');
   }
 
-  function positionHueWrapper(target: Element): void {
-    const rect = target.getBoundingClientRect();
-    const contRect = container.getBoundingClientRect();
-    hueWrapper.style.left = rect.left - contRect.left + 'px';
-    hueWrapper.style.top = rect.bottom - contRect.top + 4 + 'px';
+  function positionHueWrapper(_target: Element): void {
+    // The editor stays in flow so it cannot overlap swatches or form actions.
+    hueWrapper.style.removeProperty('left');
+    hueWrapper.style.removeProperty('top');
   }
 
   function createCircle(c: string, editable = false): HTMLButtonElement | null {
@@ -104,6 +103,9 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     circle.type = 'button';
     circle.className = 'color-circle';
     circle.dataset.color = c;
+    circle.title = c;
+    circle.setAttribute('aria-label', `Select ${c}`);
+    circle.setAttribute('aria-pressed', String(c.toUpperCase() === selectedColor.toUpperCase()));
     circle.style.backgroundColor = c;
     if (c === selectedColor) circle.classList.add('active');
     circle.addEventListener('click', () => {
@@ -113,6 +115,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
       container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
       container.querySelectorAll('.saved-color-item').forEach(n => n.classList.remove('active'));
       circle.classList.add('active');
+      syncSelection();
       onSelect(selectedOutput, {
         value: selectedColor,
         output: selectedOutput,
@@ -164,8 +167,8 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     if (hidden.length) {
       const more = document.createElement('button');
       more.type = 'button';
-      more.className = 'show-more';
-      more.textContent = 'Mehr anzeigen';
+      more.className = 'show-more button ghost sm';
+      more.textContent = 'Show more';
       more.addEventListener('click', () => {
         hidden.forEach(c => {
           const circle = createCircle(c, editable);
@@ -268,6 +271,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'color-picker-close';
+  closeBtn.setAttribute('aria-label', 'Close custom color editor');
   closeBtn.innerHTML = '<img src="/assets/icons/x.svg" alt="close">';
   closeBtn.addEventListener('click', () => {
     hueWrapper.classList.add('hidden');
@@ -278,6 +282,9 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
 
   const colorArea = document.createElement('div');
   colorArea.className = 'cp-color-area';
+  colorArea.tabIndex = 0;
+  colorArea.setAttribute('role', 'group');
+  colorArea.setAttribute('aria-label', 'Saturation and brightness. Use arrow keys to adjust.');
   const colorCursor = document.createElement('div');
   colorCursor.className = 'cp-cursor';
   colorArea.appendChild(colorCursor);
@@ -289,6 +296,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   hueSlider.max = '360';
   hueSlider.value = '0';
   hueSlider.className = 'cp-hue';
+  hueSlider.setAttribute('aria-label', 'Hue');
   hueWrapper.appendChild(hueSlider);
 
   const alphaSlider = document.createElement('input');
@@ -297,6 +305,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   alphaSlider.max = '100';
   alphaSlider.value = '100';
   alphaSlider.className = 'cp-alpha';
+  alphaSlider.setAttribute('aria-label', 'Opacity');
   hueWrapper.appendChild(alphaSlider);
 
   const inputRow = document.createElement('div');
@@ -310,10 +319,13 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   const hexInput = document.createElement('input');
   hexInput.type = 'text';
   hexInput.className = 'cp-hex';
+  hexInput.setAttribute('aria-label', 'Hex color');
   inputRow.appendChild(hexInput);
   const dropper = document.createElement('button');
   dropper.type = 'button';
   dropper.className = 'cp-dropper';
+  dropper.setAttribute('aria-label', 'Pick a color from the screen');
+  dropper.hidden = !window.EyeDropper;
   dropper.innerHTML = '<img src="/assets/icons/pipette.svg" alt="pick">';
   dropper.addEventListener('click', async () => {
     const EyeDropperCtor = window.EyeDropper;
@@ -348,6 +360,8 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     if (editingCircle) {
       const prev = editingCircle.dataset.color ?? '';
       editingCircle.dataset.color = color;
+      editingCircle.title = color;
+      editingCircle.setAttribute('aria-label', `Select ${color}`);
       editingCircle.style.backgroundColor = color;
       editingCircle.classList.add('active');
       if (editingIndex !== null) {
@@ -361,6 +375,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
       const circle = recentSection.querySelector(`.color-circle[data-color="${color}"]`);
       if (circle) circle.classList.add('active');
     }
+    syncSelection();
     onSelect(selectedOutput, {
       value: selectedColor,
       output: selectedOutput,
@@ -426,6 +441,17 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     dragging = false;
     colorArea.releasePointerCapture(e.pointerId);
   });
+  colorArea.addEventListener('pointercancel', () => { dragging = false; });
+  colorArea.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const step = event.shiftKey ? 0.1 : 0.01;
+    if (event.key === 'ArrowLeft') sat = Math.max(0, sat - step);
+    if (event.key === 'ArrowRight') sat = Math.min(1, sat + step);
+    if (event.key === 'ArrowDown') val = Math.max(0, val - step);
+    if (event.key === 'ArrowUp') val = Math.min(1, val + step);
+    updateFromState();
+  });
 
   hexInput.addEventListener('input', () => {
     const valInput = sanitize(hexInput.value.trim());
@@ -433,6 +459,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   });
   hexInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
+      e.preventDefault(); e.stopPropagation();
       hueWrapper.classList.add('hidden');
       editingCircle = null;
       editingIndex = null;
@@ -444,13 +471,23 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   const search = document.createElement('input');
   search.type = 'text';
   search.className = 'color-search';
-  search.placeholder = 'Try "blue" or "#00c4cc"';
+  search.placeholder = 'Color name or hex, e.g. #00C4CC';
+  search.setAttribute('aria-label', 'Color value');
+  const inputError = document.createElement('p');
+  inputError.className = 'color-input-error'; inputError.setAttribute('role', 'alert'); inputError.hidden = true;
   const normalizeColor = (input: string): string | null => {
+    if (/^#[0-9a-f]{3,4}$/i.test(input)) return `#${input.slice(1).split('').map(char => char + char).join('')}`.toUpperCase();
+    const hex = sanitize(input);
+    if (hex) return hex.toUpperCase();
     const ctx = document.createElement('canvas').getContext('2d');
     if (!ctx) return null;
-    ctx.fillStyle = '#000';
+    // Invalid CSS leaves fillStyle unchanged. Two sentinels distinguish invalid
+    // text from an intentional black/white selection without inventing a color.
+    ctx.fillStyle = '#000000';
     ctx.fillStyle = input;
     const computed = ctx.fillStyle;
+    ctx.fillStyle = '#ffffff'; ctx.fillStyle = input;
+    if (ctx.fillStyle !== computed) return null;
     if (/^#[0-9a-fA-F]{6}$/.test(computed)) return computed.toUpperCase();
     const match = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d*(?:\.\d+)?))?\)$/);
     if (match) {
@@ -466,7 +503,11 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   };
   search.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
+      e.preventDefault(); e.stopPropagation();
       const col = normalizeColor(search.value.trim());
+      inputError.hidden = Boolean(col);
+      search.setAttribute('aria-invalid', String(!col));
+      inputError.textContent = col ? '' : 'COLOR_PICKER_VALUE_INVALID: Enter a valid color name or hex value.';
       if (col) {
         handleColorChange(col);
         hueWrapper.classList.add('hidden');
@@ -477,6 +518,17 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     }
   });
   container.appendChild(search);
+  container.append(inputError, hueWrapper);
+
+  function syncSelection(): void {
+    container.querySelectorAll<HTMLElement>('.color-circle:not(.add-custom)').forEach(button => {
+      const active = !selectedSavedColorId && button.dataset.color?.toUpperCase() === selectedColor.toUpperCase();
+      button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active));
+    });
+    container.querySelectorAll<HTMLElement>('.saved-color-item').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.colorId === selectedSavedColorId));
+    });
+  }
 
   const libraryWrapper = document.createElement('section');
   libraryWrapper.className = 'saved-color-library';
@@ -505,7 +557,8 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   libraryError.setAttribute('role', 'alert');
   libraryWrapper.appendChild(libraryError);
 
-  const libraryForm = document.createElement('form');
+  // The picker may live inside a settings form; never nest a second HTML form.
+  const libraryForm = document.createElement('div');
   libraryForm.className = 'saved-color-form hidden';
   const colorNameInput = document.createElement('input');
   colorNameInput.type = 'text';
@@ -521,7 +574,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   const formActions = document.createElement('div');
   formActions.className = 'saved-color-form__actions';
   const saveColorBtn = document.createElement('button');
-  saveColorBtn.type = 'submit';
+  saveColorBtn.type = 'button';
   saveColorBtn.className = 'saved-color-form__save';
   saveColorBtn.textContent = 'Save';
   const cancelColorBtn = document.createElement('button');
@@ -585,6 +638,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     container.querySelectorAll('.saved-color-item').forEach(node => {
       node.classList.toggle('active', (node as HTMLElement).dataset.colorId === color.id);
     });
+    syncSelection();
     onSelect(selectedOutput, {
       value: color.value,
       output: selectedOutput,
@@ -596,6 +650,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   }
 
   function renderSavedColors(): void {
+    libraryWrapper.hidden = !savedColors.length && !onCreateSavedColor && !onUpdateSavedColor && !onDeleteSavedColor;
     savedColorList.replaceChildren();
     if (!savedColors.length) {
       const empty = document.createElement('p');
@@ -674,8 +729,8 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
   });
   addSavedColorBtn.addEventListener('click', () => openLibraryForm());
   cancelColorBtn.addEventListener('click', closeLibraryForm);
-  libraryForm.addEventListener('submit', async event => {
-    event.preventDefault();
+  async function saveLibraryColor(event: Event): Promise<void> {
+    event.preventDefault(); event.stopPropagation();
     clearLibraryError();
     saveColorBtn.disabled = true;
     const input = {
@@ -704,6 +759,11 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     } finally {
       saveColorBtn.disabled = false;
     }
+  }
+  saveColorBtn.addEventListener('click', event => { void saveLibraryColor(event); });
+  libraryForm.addEventListener('submit', event => { void saveLibraryColor(event); });
+  libraryForm.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); saveColorBtn.click(); }
   });
 
   addSavedColorBtn.classList.toggle('hidden', !onCreateSavedColor);
@@ -736,8 +796,8 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
       if (!recentMoreBtn) {
         recentMoreBtn = document.createElement('button');
         recentMoreBtn.type = 'button';
-        recentMoreBtn.className = 'show-more';
-        recentMoreBtn.textContent = 'Mehr anzeigen';
+        recentMoreBtn.className = 'show-more button ghost sm';
+        recentMoreBtn.textContent = 'Show more';
         recentMoreBtn.addEventListener('click', () => {
           recentHidden.forEach(c => recentSection.appendChild(c));
           recentHidden.length = 0;
@@ -761,8 +821,10 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     addBtn.type = 'button';
     addBtn.className = 'color-circle add-custom';
     addBtn.textContent = '+';
+    addBtn.title = 'Custom color';
+    addBtn.setAttribute('aria-label', 'Custom color');
     addBtn.addEventListener('click', () => {
-      addRecentColor(selectedColor, { dedupe: false });
+      addRecentColor(selectedColor);
       editingCircle = recentSection.querySelector(`.color-circle[data-color="${selectedColor}"]`) as HTMLButtonElement | null;
       editingIndex = recentColors.indexOf(selectedColor);
       container.querySelectorAll('.color-circle').forEach(n => n.classList.remove('active'));
@@ -780,8 +842,8 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
       recentHidden.push(...recentColors.slice(18).map(c => createCircle(c, true)).filter((c): c is HTMLButtonElement => Boolean(c)));
       recentMoreBtn = document.createElement('button');
       recentMoreBtn.type = 'button';
-      recentMoreBtn.className = 'show-more';
-      recentMoreBtn.textContent = 'Mehr anzeigen';
+      recentMoreBtn.className = 'show-more button ghost sm';
+      recentMoreBtn.textContent = 'Show more';
       recentMoreBtn.addEventListener('click', () => {
         recentHidden.forEach(c => section.appendChild(c));
         recentHidden.length = 0;
@@ -795,7 +857,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     return section;
   })();
 
-  createSection(documentColors, 'Document colors');
+  let documentSection = createSection(documentColors, 'Document colors');
   createSection(customPresets, 'Quick colors');
   createSection(themeColors, 'Interface colors');
 
@@ -820,6 +882,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
       renderSavedColors();
     }
     addSavedColorBtn.classList.toggle('hidden', !onCreateSavedColor);
+    libraryWrapper.hidden = !savedColors.length && !onCreateSavedColor && !onUpdateSavedColor && !onDeleteSavedColor;
     if (newOpts.initialColor) {
       const linkedMatch = newOpts.initialColor.match(
         /^var\(\s*--bp-color-([a-z0-9-]+)\s*,\s*(#[0-9a-f]{6}(?:[0-9a-f]{2})?)\s*\)$/i
@@ -855,7 +918,9 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
     }
     if (newOpts.documentColors) {
       documentColors.splice(0, documentColors.length, ...newOpts.documentColors);
-      const docWrapper = container.querySelectorAll<HTMLElement>('.color-section')[1];
+      // Retain the actual section; positional indexing can overwrite Quick colors.
+      documentSection ||= createSection(documentColors, 'Document colors');
+      const docWrapper = documentSection;
       if (docWrapper) {
         docWrapper.innerHTML = '';
         newOpts.documentColors.forEach(c => {
@@ -864,6 +929,7 @@ export function createColorPicker(options: ColorPickerOptions = {}): ColorPicker
         });
       }
     }
+    syncSelection();
   }
 
   return {

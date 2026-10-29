@@ -7,6 +7,13 @@ const { requestBackendEvent } = require('../../contracts/backendEventContracts')
 const path = require('path');
 const { abortConfigError } = require('../config/environment');
 const { coreModulesForApp } = require('./coreModules');
+const { createCoreModuleLifecycle } = require('./coreModuleLifecycle');
+const { loadCoreModuleCode } = require('./coreModuleCode');
+const { createCoreModuleStore } = require('../../modules/updater/coreModuleStore');
+const { runModuleWorker } = require('../../modules/updater/coreModuleWorker');
+const { createCoreModuleUpdates } = require('../../modules/updater/coreModuleUpdates');
+const { MODULE_POLICY } = require('../../modules/updater/coreModulePackages');
+const { compareVersions } = require('../../modules/moduleLoader/moduleUpdateService');
 
 function createCoreModuleTokenFactory({ motherEmitter, authModuleSecret }) {
   return function getCoreModuleToken(moduleName) {
@@ -59,12 +66,47 @@ async function bootstrapCoreModules({
   tokenSalts,
   jwtExpiryConfig
 }) {
+  const coreModuleLifecycle = createCoreModuleLifecycle(motherEmitter);
+  app.locals = app.locals || {};
+  app.locals.coreModuleLifecycle = coreModuleLifecycle;
+  const moduleStore = createCoreModuleStore({ rootDir });
+  const coreModuleUpdates = createCoreModuleUpdates({ rootDir, lifecycle: coreModuleLifecycle });
+  const hostVersion = require(path.join(rootDir, 'package.json')).version;
+
+  async function selectedModule(moduleName, modulePath) {
+    let generation = null;
+    if (Object.prototype.hasOwnProperty.call(MODULE_POLICY, moduleName)) {
+      try {
+        const selected = moduleStore.state(moduleName);
+        // Reuse the verified worker boundary during cold starts too. Hashing and
+        // attestation must not starve database callbacks of already started modules.
+        if (selected.active) generation = await runModuleWorker({
+          rootDir, operation: 'inspect', moduleName, generationId: selected.active
+        });
+      }
+      catch (error) {
+        if (error.code !== 'CORE_MODULE_HOST_INCOMPATIBLE') throw error;
+        console.warn(`[CORE_MODULE_OVERRIDE_HOST_CHANGED] ${moduleName}; using bundled module.`);
+      }
+      if (generation && compareVersions(generation.manifest.version, hostVersion) <= 0) generation = null;
+    }
+    const implementation = MODULE_POLICY[moduleName]?.kind === 'widget'
+      ? require('./coreBrowserModule')
+      : generation
+      ? loadCoreModuleCode({ moduleName, moduleDir: generation.moduleDir, canonicalModuleDir: path.join(rootDir, modulePath) })
+      : require(path.join(rootDir, modulePath, 'index.js'));
+    return { implementation, generation };
+  }
+
   console.log('[SERVER INIT] Loading Auth module...');
-  require(path.join(rootDir, 'mother', 'modules', 'auth', 'index.js'))
-    .initialize({
-      motherEmitter,
+  const selectedAuth = await selectedModule('auth', 'mother/modules/auth');
+  await coreModuleLifecycle.start('auth', selectedAuth.implementation, {
       isCore: true,
       JWT_SECRET: jwtSecret,
+      authModuleSecret,
+      // Strategies are host-owned and must not capture a retired event facade.
+      strategyEmitter: motherEmitter,
+      moduleGeneration: { generationId: selectedAuth.generation?.generationId || null, releaseVersion: selectedAuth.generation?.manifest.version || hostVersion },
       userPasswordSalt,
       moduleDbSalt,
       tokenSalts,
@@ -76,11 +118,8 @@ async function bootstrapCoreModules({
   console.log('[SERVER INIT] Requesting DB-manager token...');
   const dbManagerToken = await getCoreModuleToken('databaseManager');
   const coreTokenCache = new Map([['databaseManager', dbManagerToken]]);
-
   async function getCachedCoreToken(moduleName) {
-    if (!coreTokenCache.has(moduleName)) {
-      coreTokenCache.set(moduleName, await getCoreModuleToken(moduleName));
-    }
+    if (!coreTokenCache.has(moduleName)) coreTokenCache.set(moduleName, await getCoreModuleToken(moduleName));
     return coreTokenCache.get(moduleName);
   }
   console.log('[SERVER INIT] dbManagerToken obtained.');
@@ -88,16 +127,29 @@ async function bootstrapCoreModules({
   for (const mod of coreModulesForApp({ app, authModuleSecret })) {
     console.log(`[SERVER INIT] Loading ${mod.name}...`);
     const moduleJwt = await getCachedCoreToken(mod.name);
-    await require(path.join(rootDir, mod.path, 'index.js'))
-      .initialize({
-        motherEmitter,
+    const { implementation, generation } = await selectedModule(mod.name, mod.path);
+    await coreModuleLifecycle.start(mod.name, implementation, {
         isCore: true,
         jwt: moduleJwt,
         jwtToken: moduleJwt,
         moduleDbSalt,
+        moduleGeneration: { generationId: generation?.generationId || null, releaseVersion: generation?.manifest.version || hostVersion },
+        browserDirectory: generation?.moduleDir,
+        ...(mod.name === 'updater' ? { coreModuleUpdates } : {}),
+        ...(mod.name === 'geoipManager' ? { serviceEmitter: motherEmitter } : {}),
+        ...(mod.name === 'fontsManager' ? { strategyEmitter: motherEmitter } : {}),
         ...mod.extra
       });
     console.log(`[SERVER INIT] ${mod.name} loaded.`);
+  }
+
+  for (const [moduleName, policy] of Object.entries(MODULE_POLICY)) {
+    if (policy.kind !== 'widget') continue;
+    const { implementation, generation } = await selectedModule(moduleName);
+    await coreModuleLifecycle.start(moduleName, implementation, {
+      moduleGeneration: { generationId: generation?.generationId || null, releaseVersion: generation?.manifest.version || hostVersion },
+      browserDirectory: generation?.moduleDir
+    });
   }
 
   try {
@@ -116,6 +168,7 @@ async function bootstrapCoreModules({
   await verifyProductionCredentials({ motherEmitter, authModuleSecret });
 
   return {
+    coreModuleLifecycle,
     getCachedCoreToken,
     getCoreModuleToken
   };

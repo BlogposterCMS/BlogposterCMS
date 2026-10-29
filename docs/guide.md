@@ -176,7 +176,7 @@ For a beginner-friendly, step-by-step walkthrough, see the
 4. Include a `moduleInfo.json` file describing your module. It must define `moduleName`, `version`, `developer` and `description`; other properties like permissions are optional.
 5. Restart the server. The Module Loader will automatically health-check the new module in a runner process, then start a fresh runtime process if it passes.
 
-Modules should only interact with the rest of the CMS through meltdown events and `moduleHost` capabilities. Host-facing calls cross process IPC, so await `moduleHost.registerStaticAssets()` when you need its mount result and keep database writes behind documented core contracts.
+Modules should only interact with the rest of the CMS through meltdown events and `moduleHost` capabilities. Host-facing calls cross sandbox IPC; keep database writes behind scoped storage or documented core contracts. Install UI separately as an isolated widget; static module frontends are denied.
 
 
 ## Page Hierarchy (No PostType)

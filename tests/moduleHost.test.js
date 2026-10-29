@@ -206,108 +206,12 @@ test('community event bus refuses arbitrary core query events', () => {
   }
 });
 
-test('community event bus allows explicitly granted core events only', () => {
-  const motherEmitter = new EventEmitter();
-  const calls = [];
-  motherEmitter.on('listContentEntries', (payload, cb) => {
-    calls.push(payload);
-    cb(null, []);
-  });
-
-  const moduleHost = createCommunityModuleHost({
-    app: express(),
-    motherEmitter,
-    moduleName: 'demoModule',
-    moduleDir: __dirname,
-    jwt: 'token',
-    nonce: 'nonce-1',
-    accessGrants: [{ event: 'listContentEntries' }]
-  });
-
-  moduleHost.eventBus.emit('listContentEntries', { limit: 5 }, () => {});
-  expect(calls[0]).toEqual({
-    limit: 5,
-    jwt: 'token',
-    moduleName: 'contentEngine',
-    moduleType: 'core',
-    requestedByModule: 'demoModule'
-  });
-
-  expect(() => {
-    createCommunityModuleHost({
-      app: express(),
-      motherEmitter: new EventEmitter(),
-      moduleName: 'demoModule',
-      moduleDir: __dirname,
-      jwt: 'token',
-      nonce: 'nonce-1',
-      accessGrants: [{ event: 'deleteUser' }]
-    }).eventBus.emit('deleteUser', { userId: 1 }, () => {});
-  }).toThrow(/protected resource "users"/);
-});
-
-test('community event bus can run a protected core event after one-time admin consent', async () => {
-  const motherEmitter = new EventEmitter();
-  const calls = [];
-  motherEmitter.on('deleteUser', (payload, cb) => {
-    calls.push(payload);
-    cb(null, { deleted: true });
-  });
-
-  const accessConsentManager = {
-    requestAccess(input) {
-      return {
-        request: {
-          id: 'request-1',
-          allowPermanent: false
-        },
-        promise: Promise.resolve({
-          approved: true,
-          mode: 'once',
-          jwt: 'admin-token',
-          decodedJWT: {
-            userId: 'admin-1',
-            permissions: {
-              modules: { manageAccess: true },
-              users: { delete: true }
-            }
-          }
-        })
-      };
-    }
-  };
-  const moduleHost = createCommunityModuleHost({
-    app: express(),
-    motherEmitter,
-    moduleName: 'demoModule',
-    moduleInfo: { moduleName: 'demoModule' },
-    moduleDir: __dirname,
-    jwt: 'module-token',
-    nonce: 'nonce-1',
-    accessConsentManager
-  });
-
-  let callbackResult = null;
-  const emitted = await moduleHost.eventBus.emit('deleteUser', { userId: 'user-1' }, (err, result) => {
-    callbackResult = { err, result };
-  });
-
-  expect(emitted).toBe(true);
-  expect(calls[0]).toEqual({
-    userId: 'user-1',
-    jwt: 'admin-token',
-    moduleName: 'userManagement',
-    moduleType: 'core',
-    requestedByModule: 'demoModule',
-    decodedJWT: {
-      userId: 'admin-1',
-      permissions: {
-        modules: { manageAccess: true },
-        users: { delete: true }
-      }
-    }
-  });
-  expect(callbackResult).toEqual({ err: null, result: { deleted: true } });
+test('old grants and one-time consent cannot bypass the mandatory manifest review', () => {
+  const consent = {requestAccess:jest.fn()};
+  const host = createCommunityModuleHost({app:express(),motherEmitter:new EventEmitter(),moduleName:'demoModule',moduleDir:__dirname,jwt:'token',accessGrants:[{event:'listContentEntries'}],accessConsentManager:consent});
+  expect(() => host.eventBus.emit('listContentEntries',{},()=>{})).toThrow();
+  expect(() => host.eventBus.emit('deleteUser',{},()=>{})).toThrow();
+  expect(consent.requestAccess).not.toHaveBeenCalled();
 });
 
 test('community event bus refuses raw SQL reads', () => {
@@ -548,30 +452,12 @@ test('community health check refuses system listeners', () => {
   }).toThrow(/cannot subscribe to system event/);
 });
 
-test('static assets are constrained to the module URL and folder', () => {
-  const app = express();
-  const moduleHost = createCommunityModuleHost({
-    app,
-    motherEmitter: new EventEmitter(),
-    moduleName: 'demoModule',
-    moduleDir: __dirname,
-    jwt: 'token',
-    nonce: 'nonce-1'
-  });
-
-  const mount = moduleHost.registerStaticAssets({
-    dir: 'moduleStaticAssets',
-    mountPath: 'assets'
-  });
-
-  expect(mount.mountPath).toBe('/modules/demoModule/assets');
-  expect(mount.dir).toBe(path.join(__dirname, 'moduleStaticAssets'));
-  expect(() => {
-    moduleHost.registerStaticAssets({ dir: '..', mountPath: 'bad' });
-  }).toThrow(/inside the module folder/);
-  expect(() => {
-    moduleHost.registerStaticAssets({ dir: 'missing-static', mountPath: 'missing' });
-  }).toThrow(/must exist/);
+test('backend modules cannot publish browser code', () => {
+  const app = { use: jest.fn() };
+  const host = createCommunityModuleHost({app,motherEmitter:new EventEmitter(),moduleName:'demoModule',moduleDir:__dirname,jwt:'token'});
+  expect(host.capabilities.staticAssets).toBe(false);
+  expect(() => host.registerStaticAssets({dir:'moduleStaticAssets'})).toThrow('E_MODULE_UI_DENIED');
+  expect(app.use).not.toHaveBeenCalled();
 });
 
 test('static assets block source, secret and package-manager files', () => {
@@ -692,54 +578,9 @@ test('module host capabilities expose read-only system boundaries', () => {
   expect(moduleHost.capabilities.moduleStorage).toBe(true);
 });
 
-test('static assets prefer a declared user overlay and fall back to managed module files', async () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-module-static-overlay-'));
-  const moduleDir = path.join(tempRoot, 'modules', 'demoModule');
-  const frontendDir = path.join(moduleDir, 'frontend');
-  const modificationRoot = path.join(tempRoot, 'data', 'module-overrides');
-  const overrideDir = path.join(modificationRoot, 'demoModule', 'frontend');
-  fs.mkdirSync(frontendDir, { recursive: true });
-  fs.mkdirSync(overrideDir, { recursive: true });
-  fs.writeFileSync(path.join(frontendDir, 'theme.css'), 'managed');
-  fs.writeFileSync(path.join(frontendDir, 'fallback.js'), 'fallback');
-  fs.writeFileSync(path.join(overrideDir, 'theme.css'), 'override');
-
-  const app = express();
-  const moduleHost = createCommunityModuleHost({
-    app,
-    motherEmitter: new EventEmitter(),
-    moduleName: 'demoModule',
-    moduleInfo: { staticFrontend: true },
-    moduleDir,
-    jwt: 'token',
-    nonce: 'nonce-1',
-    modificationRoot
-  });
-  const mount = moduleHost.registerStaticAssets({ dir: 'frontend' });
-  const server = await new Promise(resolve => {
-    const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
-  });
-
-  try {
-    const address = server.address();
-    const origin = `http://127.0.0.1:${address.port}`;
-    const overridden = await fetch(`${origin}/modules/demoModule/theme.css`);
-    const fallback = await fetch(`${origin}/modules/demoModule/fallback.js`);
-
-    expect(mount.overrideActive).toBe(true);
-    expect(await overridden.text()).toBe('override');
-    expect(await fallback.text()).toBe('fallback');
-    expect(resolveStaticAssetLayers({
-      moduleName: 'demoModule',
-      moduleInfo: { overridablePaths: [] },
-      moduleDir,
-      requestedDir: 'frontend',
-      modificationRoot
-    })).toEqual([fs.realpathSync(frontendDir)]);
-  } finally {
-    await new Promise(resolve => server.close(resolve));
-    fs.rmSync(tempRoot, { recursive: true, force: true });
-  }
+test('legacy static overlays cannot restore module frontend execution', () => {
+  const host = createCommunityModuleHost({app:{use:jest.fn()},motherEmitter:new EventEmitter(),moduleName:'demoModule',moduleInfo:{staticFrontend:true},moduleDir:__dirname,jwt:'token'});
+  expect(() => host.registerStaticAssets({dir:'frontend'})).toThrow('E_MODULE_UI_DENIED');
 });
 
 test('normalizes community static mount paths', () => {

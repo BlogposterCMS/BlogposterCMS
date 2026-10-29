@@ -100,6 +100,13 @@ const LOCAL_FILE_DELETE_PERMISSIONS = [
 let libraryRoot;
 
 module.exports = {
+  lifecycleVersion: 1,
+  httpLifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await mediaDbSelect(motherEmitter, jwt, 'LIST_MEDIA_ATTACHMENTS', { limit: 1, offset: 0 });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_MEDIA_NOT_READY');
+    await fs.promises.access(libraryRoot, fs.constants.R_OK);
+  },
   /**
    * initialize:
    *  1) Ensures we are a core module
@@ -107,7 +114,7 @@ module.exports = {
    *  3) Ensures the "library" folder is created
    *  4) Registers meltdown events
    */
-  async initialize({ motherEmitter, app, isCore, jwt }) {
+  async initialize({ motherEmitter, app, isCore, jwt, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[MEDIA MANAGER] Must be loaded as a core module.');
     }
@@ -126,12 +133,15 @@ module.exports = {
 
     // Decide on the library folder path
     libraryRoot = path.join(process.cwd(), 'library');
-    ensureLibraryFolder();
+    if (!isModuleUpdate) ensureLibraryFolder();
 
     try {
       // If you need DB-based metadata or schema creation:
-      await ensureMediaManagerDatabase(motherEmitter, jwt);
-      await ensureMediaTables(motherEmitter, jwt);
+      // Schema and storage stay in place while only the owned handlers change.
+      if (!isModuleUpdate) {
+        await ensureMediaManagerDatabase(motherEmitter, jwt);
+        await ensureMediaTables(motherEmitter, jwt);
+      }
 
       // Register meltdown events for local FS actions
       setupMediaManagerEvents(motherEmitter);
@@ -158,6 +168,7 @@ module.exports = {
       console.log('[MEDIA MANAGER] Ready!');
     } catch (err) {
       console.error('[MEDIA MANAGER] Error =>', err.message);
+      throw err;
     }
   },
   setupMediaMetadataEvents,

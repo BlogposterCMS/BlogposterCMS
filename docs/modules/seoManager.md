@@ -11,7 +11,30 @@ require `moduleName: "seoManager"`, `moduleType: "core"`, a valid JWT and
 Core SEO metadata, robots and sitemap domain. It is backend-only and does not
 add UI screens by itself.
 
-## Startup
+## Settings and image defaults
+
+- Settings > SEO reads and saves through the existing `seo.defaults` and
+  `seo.setDefaults` admin facade actions (`seo.manage`). Its old `SEO_*` settings
+  are displayed until the first explicit save, which adopts them into SEO Manager.
+  Legacy settings are then ignored; no dual writes occur. Save once to activate
+  values entered in the old form.
+- The title pattern lives in global `meta.titleTemplate`; `%title%` is replaced
+  with the page title. An explicit SEO title overrides the pattern.
+- Image precedence: explicit SEO override / page `seo_image`, page or entry
+  `meta.featuredImage` (post content may also provide `featuredImage`), global
+  `og_image`. Empty image fields inherit; they do not suppress a fallback.
+- Global `noindex` also applies to pages with their own metadata. Other global
+  SEO fields and metadata survive saving the Settings form.
+- Public Open Graph and Twitter image tags are emitted in the first HTML with
+  absolute URLs. Selected images must be publicly accessible. No image is inserted
+  into a page's visual layout by these metadata settings.
+- Image fields request `publicUrlOnly` from the existing media picker. This uses
+  the established public media URL resolver and rejects private selections without
+  creating share links or changing file access.
+  Use **Choose from file manager** above the URL field to select an existing image;
+  entering a public image URL remains an alternative.
+
+## Startup sequence
 - Core module loaded after `contentEngine`, `commentsManager` and
   `navigationManager`.
 - Ensures the SEO schema/table/collection exists.

@@ -244,6 +244,10 @@ function renderImage(item, defaults) {
     image.alt = item.alt;
     image.loading = 'lazy';
     image.decoding = 'async';
+    if (item.width && item.height) {
+        image.width = item.width;
+        image.height = item.height;
+    }
     image.style.objectFit = normalizeFit(item.objectFit || item.fit, defaults.fit);
     image.style.objectPosition = normalizeObjectPosition(item, defaults.focalX, defaults.focalY, defaults.objectPosition);
     frame.appendChild(image);
@@ -415,4 +419,15 @@ export function render(el, ctx = {}) {
         });
     }
     el.replaceChildren(sharedStyle(), galleryStyle(), root);
+    // Visible gallery images must not wait for the browser's lazy-load pass.
+    // Hidden carousel slides and below-fold images keep native lazy loading.
+    Array.from(root.querySelectorAll('img')).forEach((image, index) => {
+        if (mode === 'carousel' && index >= (animation === 'fade' ? 1 : slidesToShow))
+            return;
+        const bounds = image.getBoundingClientRect();
+        if (bounds.width > 0 && bounds.height > 0 && bounds.bottom > 0 && bounds.right > 0
+            && bounds.top < window.innerHeight && bounds.left < window.innerWidth) {
+            image.loading = 'eager';
+        }
+    });
 }

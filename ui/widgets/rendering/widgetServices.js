@@ -50,6 +50,7 @@ export function createWidgetServices(widgetId, policy, host = window, preview = 
     }
     return Object.freeze({
         preview,
+        refresh,
         async request(name, input = {}, signal) {
             if (disposed)
                 throw failure('WIDGET_SERVICE_DISPOSED');
@@ -158,7 +159,7 @@ export function createWidgetServices(widgetId, policy, host = window, preview = 
     });
 }
 /** Missing policy means no capabilities; a widget cannot grant itself services in its manifest. */
-export async function loadWidgetServices(widgetId, preview = false) {
+export async function loadWidgetServices(widgetId, preview = false, expectedCodeHash) {
     // Studio uses an opaque-origin frame. Its preview never reads host cookies
     // or calls product services; exercise live operations in the public preview.
     if (preview)
@@ -170,7 +171,10 @@ export async function loadWidgetServices(widgetId, preview = false) {
         const text = await response.text();
         if (text.length > 65536)
             throw failure('WIDGET_SERVICE_POLICY_INVALID');
-        return JSON.parse(text);
+        const policy = JSON.parse(text);
+        if (expectedCodeHash && (!policy.managed || policy.codeHash !== expectedCodeHash))
+            throw failure('WIDGET_SERVICE_PACKAGE_CHANGED');
+        return policy;
     }
     const policy = await readPolicy();
     return createWidgetServices(widgetId, policy, window, preview, policy.managed ? readPolicy : undefined);

@@ -35,7 +35,8 @@ export async function openMediaExplorer(opts = {}) {
             uploadFetch: window.fetchWithTimeout,
             csrfToken: window.CSRF_TOKEN,
             initialPath,
-            accept: 'image/*',
+            accept: opts.accept === 'video/*' ? 'video/*' : 'image/*',
+            publicUrlOnly: opts.publicUrlOnly,
             enableMutations: false,
             onSelectFile: (selection) => {
                 settle({

@@ -40,9 +40,7 @@ const SURFACE_WRITE_PERMISSIONS = Object.freeze(API_DEFINITION.permissions.surfa
 const CONTROL_PERMISSIONS = Object.freeze(API_DEFINITION.permissions.control);
 
 const COMMAND_FINAL_STATES = new Set(['acked', 'failed', 'cancelled']);
-const surfaceSnapshots = new Map();
-const surfaceCommands = new Map();
-const activityEvents = [];
+const { surfaceSnapshots, surfaceCommands, activityEvents } = require('./surfaceState');
 
 function once(originalCb) {
   let fired = false;
@@ -1532,6 +1530,13 @@ function setupAgentManagerEvents(motherEmitter) {
 }
 
 module.exports = {
+  lifecycleVersion: 1,
+  async healthCheck() {
+    const { isMap } = require('node:util').types;
+    if (!isMap(surfaceSnapshots) || !isMap(surfaceCommands) || !Array.isArray(activityEvents)) {
+      throw new Error('CORE_MODULE_AGENT_STATE_NOT_READY');
+    }
+  },
   async initialize({ motherEmitter, isCore, jwt }) {
     if (!isCore) throw new Error('[AGENT MANAGER] Must be loaded as a core module.');
     if (!jwt) throw new Error('[AGENT MANAGER] initialization requires a valid JWT token.');

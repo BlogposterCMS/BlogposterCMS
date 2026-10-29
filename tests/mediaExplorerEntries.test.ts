@@ -2,6 +2,10 @@ import { acceptsMedia, mediaEntries, mediaSize, publicMediaUrl, visibleMediaEntr
 import { toFolderListing } from '../ui/shared/media/mediaLibraryData';
 
 describe('Explorer file records', () => {
+  it('does not map a private remote object onto the local public folder', () => {
+    const listing = toFolderListing({ folders: [], files: ['private.png'], details: [{ name: 'private.png', url: '' }] });
+    expect(publicMediaUrl(mediaEntries(listing, 'public')[0]!)).toBe('');
+  });
   it('retains old name-only listings and safely reads optional file metadata', () => {
     const listing = toFolderListing({ folders: ['docs'], files: ['empty.txt', 'unknown.txt'], details: [
       { name: 'empty.txt', size: 0, modifiedAt: '2026-09-05T10:00:00Z' },

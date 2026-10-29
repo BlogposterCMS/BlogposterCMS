@@ -23,8 +23,10 @@ const { setupPermissionCrudEvents } = require('./permissionCrudEvents');
 
 const MODULE_NAME = 'userManagement';
 const MODULE_TYPE = 'core';
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
+const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog');
 
-async function initialize({ motherEmitter, app, dbConfig, isCore, jwt }) {
+async function initialize({ motherEmitter, app, dbConfig, isCore, jwt, isModuleUpdate = false }) {
   console.log('[USER MANAGEMENT] Initializing user management module...');
 
   if (!isCore) {
@@ -41,6 +43,8 @@ async function initialize({ motherEmitter, app, dbConfig, isCore, jwt }) {
   }
 
   try {
+    // Role/permission seeding belongs to host startup, never handler updates.
+    if (!isModuleUpdate) {
     // A) Ensure DB or schema
     await ensureUserManagementDatabase(motherEmitter, jwt);
     // B) Ensure user tables exist
@@ -52,6 +56,7 @@ async function initialize({ motherEmitter, app, dbConfig, isCore, jwt }) {
     await ensureUserColorField(motherEmitter, jwt);
 
     await ensureFirstUserIsAdmin(motherEmitter, jwt);
+    }
 
     // D) Now set up meltdown event listeners
     setupUserCrudEvents(motherEmitter);
@@ -62,7 +67,14 @@ async function initialize({ motherEmitter, app, dbConfig, isCore, jwt }) {
     console.log('[USER MANAGEMENT] Module initialized successfully. meltdown meltdown avoided!');
   } catch (err) {
     console.error('[USER MANAGEMENT] Error during initialization:', err.message);
+    throw err;
   }
 }
 
-module.exports = { initialize, MODULE_NAME, MODULE_TYPE };
+async function healthCheck({ motherEmitter, jwt }) {
+  await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE, table: 'roles'
+  });
+}
+
+module.exports = { lifecycleVersion: 1, initialize, healthCheck, MODULE_NAME, MODULE_TYPE };

@@ -27,6 +27,7 @@ function coreModulesForApp({ app, authModuleSecret }) {
     { name: 'pagesManager', path: 'mother/modules/pagesManager', extra: {} },
     { name: 'dependencyLoader', path: 'mother/modules/dependencyLoader', extra: {} },
     { name: 'requestManager', path: 'mother/modules/requestManager', extra: {} },
+    { name: 'geoipManager', path: 'mother/modules/geoipManager', extra: {} },
     { name: 'unifiedSettings', path: 'mother/modules/unifiedSettings', extra: { app } },
     { name: 'serverManager', path: 'mother/modules/serverManager', extra: { app } },
     { name: 'mediaManager', path: 'mother/modules/mediaManager', extra: { app } },

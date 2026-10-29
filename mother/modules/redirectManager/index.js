@@ -422,7 +422,13 @@ function setupRedirectEvents(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  // Keep schema/bootstrap work outside replacement of the owned event handlers.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await redirectDbSelect(motherEmitter, jwt, 'LIST_REDIRECT_RULES', { limit: 1, offset: 0 });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_REDIRECT_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[REDIRECT MANAGER] Must be loaded as a core module.');
     }
@@ -437,8 +443,10 @@ module.exports = {
     }
 
     console.log('[REDIRECT MANAGER] Initializing Redirect Manager...');
-    await ensureRedirectDatabase(motherEmitter, jwt, nonce);
-    await ensureRedirectSchema(motherEmitter, jwt);
+    if (!isModuleUpdate) {
+      await ensureRedirectDatabase(motherEmitter, jwt, nonce);
+      await ensureRedirectSchema(motherEmitter, jwt);
+    }
     setupRedirectEvents(motherEmitter);
     console.log('[REDIRECT MANAGER] Initialized successfully.');
   },

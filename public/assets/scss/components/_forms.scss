@@ -70,7 +70,8 @@
   outline: none;
   border-color: transparent;
   background: var(--studio-surface-solid);
-  box-shadow: var(--studio-focus-ring);
+  box-shadow: none;
+  border-color: var(--studio-border-strong);
 }
 
 .app-scope :where(input, textarea)::placeholder {
@@ -94,6 +95,9 @@
   gap: var(--studio-field-gap);
   min-width: 0;
 }
+
+// The storage form already has visible labels; do not render the global aria tooltip as content.
+.media-storage-panel[aria-label]::after { content: none; display: none; }
 
 .app-scope .form-field > label,
 .app-scope .form-field__label {

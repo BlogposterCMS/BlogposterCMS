@@ -1,5 +1,35 @@
 # Security Notes
 
+## Signed core module updates
+
+Authentication routes distinguish CORE_MODULE_UPDATING from invalid credentials.
+A paused dependency returns HTTP 503 with Retry-After and retains the existing
+session cookie; no request gains authorization while validation is unavailable.
+Batch responses preserve per-item outcomes so completed mutations are not retried
+as a whole. Invalid tokens still follow the existing rejection/clearing path.
+
+
+Media routes retain their existing authentication, permission and CSRF middleware
+inside a generation-owned router. A stable host mount selects the active router;
+the updater never removes or rewrites the host's Express stack. Matching new
+requests receive `CORE_MODULE_UPDATING` while existing responses and async handlers
+drain. Candidate readiness and method/path equality are required before activation.
+Designer preparation cannot mutate shared database placeholder registration.
+Per-module release notes are bounded text signed with the candidate manifest;
+they are not executable markup or a declaration of additional update permissions.
+
+Core listener scopes forward emission through the original authenticated
+MotherEmitter. They grant no additional permissions. The generation loader is
+for trusted core code only and is not a sandbox. The existing administrator-only
+Updater verifies official release-workflow attestations, exact package bytes and
+host compatibility before loading a generation. A fixed host policy controls
+which modules qualify; callers cannot provide URLs, paths or source code.
+The active code selection is atomic and reverified on startup. An ambiguous
+activation-worker failure requires recovery rather than an unsafe rollback.
+Shared runtime, dependencies and schema changes retain the signed host-release
+boundary. See [independent core module updates](core-module-updates.md) for scope,
+recovery and the distinction between local fixtures and production acceptance.
+
 ## UI-installed community packages
 
 ZIP inspection never executes package code. Package size, decompression size,
@@ -7,36 +37,43 @@ entry count, traversal, duplicate/case-colliding names, symlinks and mixed packa
 types are checked. Confirmation is bound to the ZIP SHA-256. SHA-256 binds bytes;
 it does not establish publisher identity or prove absence of malware.
 
-Reviewed modules store `accessPolicyVersion: 1` and grants in the module registry.
-The runtime rereads that registry for cross-module events, requires declaration
-and approval, and never uses runtime consent as a fallback for denied events.
-Health checks apply the same allowlist. Existing scoped storage, assets and own
-lifecycle/query contracts remain available. Legacy manually provisioned modules
-retain their old policy until an administrator reviews them; conversion stops
-the legacy runner. Updates preserve the strict policy and require a matching
-review hash; new access requires review and removed declarations lose grants.
+Community code now uses the mandatory isolation contract described in
+[Community isolation and migration](community-isolation.md). Modules run only in
+Linux namespaces with read-only package code, no host secrets/data/network and a
+seccomp process/socket policy. Widgets run in opaque-origin workers with a
+bounded UI tree and service bridge. Core/bundled product code remains trusted.
+There is no ordinary Node or same-document community execution fallback.
+The runner exposes no procfs and cannot create further namespaces, including
+through clone flags. Docker deployments use the narrowly extended Moby profiles
+documented in the isolation guide; the outer container retains no capabilities,
+no-new-privileges and its default masked/read-only paths. Never apply these
+profiles globally or use them without the mandatory inner runner filter.
 
-Widget package consent lives inside Settings Manager's `PUBLIC_WIDGET_SERVICES`,
-intersected with operator-configured services. The package cannot configure URLs,
-credentials or core events. Requests recheck policy before dispatch; streams and
-local helpers refresh within five seconds. Public endpoints remain responsible
-for their own authorization. These mechanisms are not a browser/OS sandbox.
-
-The supported UI installer writes local administrator approval receipts in
-`data/extension-integrity/{modules,widgets}/<id>.json`. Receipts contain file hashes,
-not permission grants. Boot integrity combines those exact extension files with
-the verified signed core baseline; receipts cannot override release-owned paths.
-Module process startup rechecks the tree. Protect the data volume and receipts as
-trusted operator state. An attacker who already controls the application OS user
-or data volume is outside this integrity guarantee. Strong isolation for arbitrary
-hostile code remains a separate deployment requirement.
+The module registry and Settings Manager remain the access authorities. Only
+installer/host code writes packages and approval receipts. Hashes bind reviewed
+bytes but do not establish publisher identity. Operator/host compromise and
+kernel/browser vulnerabilities remain outside the extension access guarantee.
+Browser resource exhaustion remains a limitation; do not claim absolute malware
+prevention. Existing packages and data are retained on incompatible upgrades.
 
 ## Public static compression and HTML handoff
+
+Trusted admin/public shell asset references carry content hashes. Static routes
+grant immutable caching only to verified file versions or content-hashed build
+chunks; dynamic HTML/tokens, APIs, unversioned assets and stale versions do not
+gain that policy. Development disables immutable caching. The bounded digest
+memo is refreshed when file metadata changes and does not resolve client paths.
+
+The browser's bounded 30-second presentation cache is credential/CSRF scoped and
+contains only widget registries and public settings, never page/user/permission
+records. Commands and batches invalidate it. The admin read allowlist affects
+queue scheduling only; all HTTP requests retain authentication, CSRF and facade
+permission checks. Unknown actions stay ordered and do not bypass write fences.
 
 Only successful public CSS, JavaScript and SVG responses are eligible for the
 standard compression middleware. Dynamic HTML with nonce/token data, JSON APIs,
 errors, binary downloads and Range requests are excluded. Existing media realpath
-and source-file guards remain authoritative; no new file route/cache is added.
+and source-file guards remain authoritative; no new file route is added.
 The middleware retains Accept-Encoding negotiation and no-transform handling.
 
 Bootstrap version 2 references only the sanitized initial HTML node for that
@@ -55,6 +92,26 @@ The shared DOM capture preserves the Designer's existing media/permission flow;
 it does not add a server-side URL fetch or a Chromium service.
 
 ## Analytics
+
+Website collection now defaults off. SettingsManager validates the atomic
+public-safe consent configuration, including fixed provider IDs and bounded
+lifetimes. No secret or executable URL is accepted there. Consent cookies are
+untrusted preferences; correlation UUIDs never grant authority. Account IDs are
+copied only from the existing validated user principal with explicit recognition
+consent. DNT/GPC and disabled consent/collection suppress optional recording.
+Consent withdrawal stops future collection and reloads the page; retained history
+expires under the existing 60-day policy. The banner cannot intercept arbitrary
+custom HTML scripts; their owners must integrate the consent lifecycle.
+
+GA4 is disabled and explicitly untested for live ingestion. Basic-mode loading
+requires explicit analytics consent; the nonce authorizes only the configured
+fixed Google script URL. Advertising signals remain denied. GeoIP belongs to
+`geoipManager`, with server-only credentials and an operator-provided database
+or a RequestManager allowlisted HTTPS service. No raw IP is retained by Analytics;
+external GeoIP lookup transmits the IP only after explicit analytics consent.
+The internal GeoIP event requires a verified registered core-module principal and
+rejects external/user/public calls. Existing outbound DNS/SSRF restrictions remain
+unchanged, including for self-hosted services.
 
 `analytics.summary` requires `analytics.read` at the existing admin facade and
 module boundary. There is no public analytics-read or arbitrary collection API.
@@ -177,7 +234,7 @@ BlogposterCMS was designed with multiple layers of security in mind. While no sy
 - **Rate limiting** – `config/security.js` sets limits for login attempts and meltdown API calls. Tune these using `LOGIN_LIMIT_MAX` and `API_RATE_LIMIT_MAX` if needed.
 - **Weak credentials** – Logins and first-install passwords under 12 characters are only accepted from local non-production requests while `DEV_AUTOLOGIN` is enabled or `ALLOW_WEAK_CREDS=I_KNOW_THIS_IS_LOCAL` is set. Production startup aborts if a user named `admin` or a short password is detected.
 - **CSRF protection** – Admin routes use CSRF tokens to prevent cross-site request forgery. Clients must include the token when authenticating or performing sensitive actions.
-- **Module process isolation** - Optional community modules run in external runner processes instead of the CMS host process. They receive no raw Express app, no host objects and only whitelisted service environment variables. Module-owned data access goes through `moduleHost.storage`, which normalizes physical tables and rejects raw SQL markers instead of exposing a host `dbClient`. Module manifests may declare only their own permission namespace and must request core event access separately; the admin UI stores approved event grants in the registry. Protected user, role, permission, module, settings, auth and app-management events cannot become permanent grants and require a one-time approval by an admin who has both `modules.manageAccess` and the target permission. This is not a full OS sandbox; use container, microVM, filesystem and network policy before treating Marketplace code as fully untrusted production input.
+- **Community isolation** - See [the enforced runtime contract and migration requirements](community-isolation.md). Ordinary child processes alone are not an untrusted-code sandbox.
 - **JWT event bus** – All internal actions pass through the meltdown event bus. Each event carries a signed token and is validated before execution to prevent unauthorized operations. HTTP-exposed direct events are additionally selected from executable backend contracts with payload/result schemas and bounded deadlines. Contract validation is defense in depth and never replaces JWT, permission, app-manifest or module-host checks.
 
 - **HTTP security headers** – Configure a Content-Security-Policy and other headers (using middleware such as `helmet`) to protect against common attacks like XSS and clickjacking.
@@ -323,6 +380,15 @@ made writable in production.
 
 ## Developing Secure Modules
 
+Individual CMS updates preserve host-owned engines, permission definitions,
+revocation state, installation authorities and shared service instances. The
+fixed package policy includes a projection of the canonical bundled-widget
+catalog; uploaded metadata cannot create a new backend package identity.
+Bundled-widget packages may contain only their declared browser entry/source,
+never Node entry points. Signed asset generations retain existing public CORS
+headers and sandbox permissions; shared ES imports use canonical URLs.
+See [module update boundaries](core-module-updates.md) for pinned host contracts.
+
 The Updater is a protected core module, not a community-installable package.
 Its periodic checks and UI actions use the same fixed Unix-socket executor.
 The combined installer stages release files in a private root-owned directory
@@ -364,3 +430,12 @@ the established server/client sanitizer and script-nonce boundaries. Widget
 imports use an absolute URL only after the existing same-origin/path allowlist.
 UI-kit JSON import calls the existing Site Presets domain, which rejects code
 and unknown component presets. Import does not activate site-wide styles.
+
+### Article editor input boundary
+
+The article dialog uses a restricted rich-text schema and removes active pasted
+HTML. Agent nodes are schema-checked, bounded, and reject executable media/link
+URLs. Videos are direct files rather than arbitrary iframe embeds. This is an
+editing boundary, not a replacement for the existing server/public sanitizer:
+Pages update permissions and public HTML sanitization remain authoritative.
+Stable HTML block IDs are content identifiers, never authorization credentials.

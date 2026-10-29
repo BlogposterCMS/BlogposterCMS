@@ -1,3 +1,6 @@
+import { createBrandingFields } from './brandingFields.js';
+import { createAnalyticsSettings } from './analyticsSettings.js';
+import { createImageField } from '../../../../shared/media/imageField.js';
 import {
   errorMessage,
   fetchDesignSettings,
@@ -29,6 +32,7 @@ import type {
 import { renderUiKitGallery } from './uiKitGallery.js';
 import { renderCoreUpdatePanel } from './coreUpdatePanel.js';
 import { mountWebsiteDesignSettings } from './websiteDesignSettings.js';
+import { createMediaStoragePanel } from '../../../../shared/media/mediaStoragePanel.js';
 import {
   createFormActions,
   createFormChoice as createChoice,
@@ -52,7 +56,7 @@ type SurfaceKey =
   | 'import-export';
 type EmbeddedPanelKey = 'modules' | 'providers' | 'users' | 'access' | 'user-edit' | 'provider-edit';
 type EmbeddedPanelModule = {
-  render?: (target: HTMLElement, options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; userId?: string }) => Promise<void> | void;
+  render?: (target: HTMLElement, options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; actionsHost?: HTMLElement; userId?: string }) => Promise<void> | void;
 };
 
 type RenderCtx = {
@@ -139,7 +143,7 @@ function createShell(title: string, subtitle: string) {
   // Each tab keeps its own saved baseline; saving branding must not clear a
   // pending typography edit. Lock the shared surface while a write is pending.
   function bindSave(button: HTMLButtonElement, fields: Control[], action: () => Promise<unknown>, message: string,
-    agent?: { id: string; fields: Record<string, Control> }) {
+    agent?: { id: string; fields: Record<string, Control> }, disablePristine = false) {
     fields.forEach(field => savedValues.set(field, valueOf(field)));
     const discard = document.createElement('button');
     discard.type = 'button';
@@ -151,6 +155,7 @@ function createShell(title: string, subtitle: string) {
     const refresh = () => {
       const dirty = fields.some(field => valueOf(field) !== savedValues.get(field));
       discard.hidden = !dirty;
+      if (disablePristine) button.disabled = saving || !dirty;
       state.textContent = dirty ? 'Unsaved changes' : 'Saved';
     };
     fields.forEach(field => {
@@ -335,8 +340,14 @@ async function reviewUpdateAccess(inspection: ModuleUpdateInspection): Promise<M
 }
 
 async function renderGeneral(ctx: RenderCtx) {
-  const shell = createShell('General Settings', 'Set the name and description used across your website.');
-  const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
+  const shell = createShell('General Settings', 'Manage your website identity and connected storage.');
+  let storage: HTMLElement | undefined;
+  const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline', onSelect: index => {
+    // Fetch connection settings only when their tab is opened.
+    if (index === 1 && storage && !storage.childElementCount) storage.append(createMediaStoragePanel({
+      mode: 'settings', request: window.fetch.bind(window), csrfToken: window.CSRF_TOKEN
+    }));
+  } });
   const identity = tabs.addTab('Site identity');
   identity.classList.add('settings-section--form');
 
@@ -362,6 +373,16 @@ async function renderGeneral(ctx: RenderCtx) {
     createFormField('Site Description', descInput, { hint: 'A short description of what visitors will find here.' }),
     createFormActions(save)
   );
+  // Storage is site configuration; keep it on the existing Settings route and tab contract.
+  storage = tabs.addTab('Storage');
+  storage.classList.add('settings-section--form');
+  const privacy = tabs.addTab('Privacy & analytics');
+  const privacyEditor = await createAnalyticsSettings(ctx.meltdownEmit, ctx.jwt);
+  const privacySave = document.createElement('button'); privacySave.type = 'button'; privacySave.className = 'button primary'; privacySave.textContent = 'Save privacy & analytics';
+  shell.bindSave(privacySave, Object.values(privacyEditor.fields), privacyEditor.save, 'Privacy & analytics saved.', { id: 'privacy', fields: privacyEditor.fields });
+  privacy.append(privacyEditor.root, createFormActions(privacySave));
+  if (new URLSearchParams(window.location.search).get('tab') === 'storage') tabs.select(1);
+  if (new URLSearchParams(window.location.search).get('tab') === 'privacy') tabs.select(2);
   shell.mount(ctx.el);
 }
 
@@ -377,63 +398,20 @@ async function renderDesign(ctx: RenderCtx) {
   const presets = tabs.addTab('UI kits');
 
   const designSettings = await fetchDesignSettings(ctx.meltdownEmit, ctx.jwt);
-  const logoInputs: Record<string, HTMLInputElement> = {};
-
-  // Both variants use the existing settings persistence and media picker.
-  for (const variant of [
-    { key: 'SITE_LOGO_URL', field: 'logoUrl', label: 'Logo (light / default)', value: designSettings.logoUrl, hint: 'Website logo for light mode. Also used in dark mode when no dark logo is set.' },
-    { key: 'SITE_LOGO_DARK_URL', field: 'logoDarkUrl', label: 'Logo (dark)', value: designSettings.logoDarkUrl, hint: 'Optional logo for dark mode. The Logo widget switches automatically with the color scheme.' }
-  ] as const) {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = variant.value;
-    logoInputs[variant.field] = input;
-    const pick = document.createElement('button');
-    pick.type = 'button';
-    pick.className = 'button ghost';
-    pick.textContent = 'Choose from media';
-    pick.addEventListener('click', async () => {
-      try {
-        const url = await pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt);
-        if (url) {
-          input.value = url;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      } catch (err) {
-        shell.status.textContent = `SETTINGS_LOGO_MEDIA_FAILED: ${errorMessage(err)}`;
-      }
-    });
-    const save = document.createElement('button');
-    save.type = 'button';
-    save.className = 'button primary';
-    save.textContent = `Save ${variant.label}`;
-    shell.bindSave(save, [input], () => saveSettingValue(ctx.meltdownEmit, ctx.jwt, variant.key, input.value.trim()), 'Logo updated.', { id: variant.field, fields: { [variant.field]: input } });
-    branding.append(createFormField(variant.label, input, { hint: variant.hint }), createFormActions(pick, save));
-  }
-
-  const favInput = document.createElement('input');
-  favInput.type = 'text';
-  favInput.value = designSettings.faviconUrl;
-  const pickBtn = document.createElement('button');
-  pickBtn.type = 'button';
-  pickBtn.className = 'button ghost';
-  pickBtn.textContent = 'Choose from media';
-  pickBtn.addEventListener('click', async () => {
-    try {
-      const pickedUrl = await pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt);
-      if (pickedUrl) {
-        favInput.value = pickedUrl;
-        favInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    } catch (err) {
-      shell.status.textContent = `Unable to open media explorer: ${errorMessage(err)}`;
-    }
-  });
-  const favSave = document.createElement('button');
-  favSave.type = 'button';
-  favSave.className = 'button primary';
-  favSave.textContent = 'Save favicon';
-  shell.bindSave(favSave, [favInput], () => saveFaviconUrl(ctx.meltdownEmit, ctx.jwt, favInput.value.trim()), 'Favicon updated.', { id: 'branding', fields: { faviconUrl: favInput } });
+  branding.classList.add('branding-settings');
+  const editor = createBrandingFields(designSettings,
+    () => pickMediaShareUrl(ctx.meltdownEmit, ctx.jwt), message => { shell.status.textContent = message; });
+  const logoInputs = editor.fields;
+  const saveBranding = document.createElement('button');
+  saveBranding.type = 'button'; saveBranding.className = 'button primary'; saveBranding.textContent = 'Save changes';
+  const footer = createFormActions(saveBranding); footer.classList.add('branding-save');
+  branding.append(editor.root, footer);
+  // Reuse the existing save/dirty/agent contract and settings persistence.
+  shell.bindSave(saveBranding, Object.values(editor.fields), async () => {
+    await saveSettingValue(ctx.meltdownEmit, ctx.jwt, 'SITE_LOGO_URL', editor.fields.logoUrl!.value.trim());
+    await saveSettingValue(ctx.meltdownEmit, ctx.jwt, 'SITE_LOGO_DARK_URL', editor.fields.logoDarkUrl!.value.trim());
+    await saveFaviconUrl(ctx.meltdownEmit, ctx.jwt, editor.fields.faviconUrl!.value.trim());
+  }, 'Branding saved.', { id: 'branding', fields: editor.fields }, true);
 
   const fontInput = document.createElement('input');
   fontInput.type = 'password';
@@ -445,10 +423,6 @@ async function renderDesign(ctx: RenderCtx) {
   fontSave.textContent = 'Save typography settings';
   shell.bindSave(fontSave, [fontInput], () => saveGoogleFontsApiKey(ctx.meltdownEmit, ctx.jwt, fontInput.value.trim()), 'Typography settings saved.');
 
-  branding.append(
-    createFormField('Favicon URL', favInput, { hint: 'The small icon shown in browser tabs. Choose an image from your media library or enter its URL.' }),
-    createFormActions(pickBtn, favSave)
-  );
   typography.append(
     createFormField('Google Fonts API Key', fontInput, { hint: 'Optional connection for the font library. Leave empty if you do not use it.' }),
     createFormActions(fontSave)
@@ -490,17 +464,27 @@ async function renderSeo(ctx: RenderCtx) {
   indexInput.type = 'checkbox';
   indexInput.checked = seoSettings.indexingEnabled;
 
+  const imageInput = document.createElement('input'); imageInput.type = 'text';
+  imageInput.value = seoSettings.defaultImage || '';
+  const imageField = createImageField('Default link preview image', imageInput, {
+    emit: ctx.meltdownEmit, jwt: ctx.jwt,
+    hint: 'Used when a page has neither a link preview image nor a featured image.',
+    reportError: message => { shell.status.textContent = message; shell.status.setAttribute('role', 'alert'); }
+  });
+
   const save = document.createElement('button');
   save.type = 'button';
   save.className = 'button primary';
   save.textContent = 'Save SEO settings';
-  shell.bindSave(save, [titleInput, descInput, indexInput], () => saveSeoSettings(ctx.meltdownEmit, ctx.jwt, {
-    titleTemplate: titleInput.value.trim(), metaDescription: descInput.value.trim(), indexingEnabled: indexInput.checked
-  }), 'SEO settings saved.', { id: 'seo', fields: { titleTemplate: titleInput, metaDescription: descInput, indexingEnabled: indexInput } });
+  shell.bindSave(save, [titleInput, descInput, indexInput, imageInput], () => saveSeoSettings(ctx.meltdownEmit, ctx.jwt, {
+    titleTemplate: titleInput.value.trim(), metaDescription: descInput.value.trim(), indexingEnabled: indexInput.checked,
+    defaultImage: imageInput.value.trim()
+  }), 'SEO settings saved.', { id: 'seo', fields: { titleTemplate: titleInput, metaDescription: descInput, indexingEnabled: indexInput, defaultImage: imageInput } });
 
   defaults.append(
-    createFormField('SEO Title Template', titleInput, { hint: 'The default title pattern used by your SEO integration.' }),
+    createFormField('SEO Title Template', titleInput, { hint: 'Use %title% for the page title, e.g. %title% | My website. A page SEO title overrides this pattern.' }),
     createFormField('Default Meta Description', descInput),
+    imageField.root,
     createChoice('Allow Search Engine Indexing', indexInput),
     createFormActions(save)
   );
@@ -556,7 +540,7 @@ async function loadEmbeddedWidgetPanel(key: EmbeddedPanelKey): Promise<EmbeddedP
 }
 
 async function renderEmbeddedWidgetPanel(target: HTMLElement, key: EmbeddedPanelKey,
-  options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; userId?: string }) {
+  options?: { tabs?: BpTabSystem; tabsHost?: HTMLElement; actionsHost?: HTMLElement; userId?: string }) {
   try {
     const mod = await loadEmbeddedWidgetPanel(key);
     if (typeof mod.render !== 'function') throw new Error('SETTINGS_PANEL_UNAVAILABLE');
@@ -594,23 +578,18 @@ async function renderUpdateRows(
   ctx: RenderCtx
 ): Promise<void> {
   mount.textContent = 'Checking module updates...';
-  const rows = await fetchUpdateCenterRows(ctx.meltdownEmit, ctx.jwt);
+  const checkedRows = await fetchUpdateCenterRows(ctx.meltdownEmit, ctx.jwt);
+  const rows = checkedRows.filter(row => row.available);
   mount.innerHTML = '';
 
-  if (!rows.length) {
-    const empty = document.createElement('p');
-    empty.className = 'settings-hint';
-    empty.textContent = 'No installed community modules found.';
-    mount.appendChild(empty);
-    return;
-  }
-
-  const availableCount = rows.filter(row => row.available).length;
-  const summary = document.createElement('p');
-  summary.className = 'settings-hint';
-  summary.textContent = availableCount
-    ? `${availableCount} module update${availableCount === 1 ? '' : 's'} available.`
-    : 'All configured module update sources are current.';
+  const heading = document.createElement('h4'); heading.textContent = 'Installed module updates';
+  const summary = document.createElement('p'); summary.className = 'settings-hint';
+  summary.textContent = rows.length ? `${rows.length} module updates available`
+    : !checkedRows.length ? 'No installed modules'
+    : checkedRows.every(row => row.status === 'current') ? 'Up to date' : 'Some modules could not be checked';
+  const checked = document.createElement('p'); checked.className = 'settings-hint';
+  checked.textContent = `Last checked: ${new Date().toLocaleString()}`;
+  mount.append(heading, summary, checked);
 
   const list = document.createElement('ul');
   list.className = 'modules-list page-list';
@@ -619,7 +598,7 @@ async function renderUpdateRows(
     list.appendChild(renderUpdateRow(row, status, mount, ctx));
   });
 
-  mount.append(summary, list);
+  mount.append(list);
 }
 
 function renderUpdateRow(
@@ -630,7 +609,7 @@ function renderUpdateRow(
 ): HTMLLIElement {
   const item = document.createElement('li');
 
-  const details = document.createElement('div');
+  const details = document.createElement('details');
   details.className = 'module-details';
 
   const nameRow = document.createElement('div');
@@ -689,7 +668,9 @@ function renderUpdateRow(
   });
 
   actions.appendChild(updateButton);
-  nameRow.append(name, badge, actions);
+  const versions = document.createElement('span'); versions.className = 'update-versions';
+  versions.textContent = `${row.currentVersion} → ${row.latestVersion}`;
+  nameRow.append(name, versions);
 
   const meta = document.createElement('div');
   meta.className = 'module-meta';
@@ -697,7 +678,11 @@ function renderUpdateRow(
     ? `${row.meta} -> v${row.latestVersion}`
     : row.meta;
 
-  details.append(nameRow, meta);
+  const heading = document.createElement('summary');
+  heading.append(nameRow);
+  const notes = document.createElement('p');
+  notes.textContent = 'No module-specific release notes were provided.';
+  details.append(heading, meta, notes, actions);
   item.appendChild(details);
   return item;
 }
@@ -705,14 +690,31 @@ function renderUpdateRow(
 async function renderUpdates(ctx: RenderCtx) {
   const shell = createShell('Update Center', 'Keep Blogposter and your installed modules up to date.');
   const tabs = createTabSystem(shell.content, shell.tabs, { variant: 'underline' });
-  const corePanel = tabs.addTab('Blogposter');
-  corePanel.classList.add('settings-section--form');
-  const updatesPanel = tabs.addTab('Module updates');
+  const corePanel = tabs.addTab('System');
+  const updatesPanel = tabs.addTab('Installed');
+  updatesPanel.classList.add('installed-update-panel');
+  const modulesPanel = document.createElement('section');
+  modulesPanel.setAttribute('aria-label', 'Modules');
+  const widgetsPanel = document.createElement('section');
+  widgetsPanel.setAttribute('aria-label', 'Widgets');
+  widgetsPanel.className = 'core-module-updates';
+  updatesPanel.append(modulesPanel, widgetsPanel);
+  // Official bundled widgets share signed release discovery. Community ZIP
+  // packages retain their existing reviewed installation and sandbox contracts.
+  const widgetStatus = document.createElement('p'); widgetStatus.className = 'settings-hint';
+  widgetStatus.textContent = 'Community widgets are updated by installing a reviewed ZIP package.';
+  widgetsPanel.append(widgetStatus);
 
   const refresh = document.createElement('button');
   refresh.type = 'button';
-  refresh.className = 'button ghost sm';
-  refresh.textContent = 'Check updates';
+  refresh.className = 'icon-button';
+  refresh.setAttribute('aria-label', 'Check all updates');
+  refresh.title = 'Check all updates';
+  refresh.innerHTML = '<img src="/assets/icons/refresh-cw.svg" width="18" height="18" alt="" />';
+  let checkCore: (() => Promise<void>) | undefined;
+  refresh.disabled = true;
+  const toolbar = document.createElement('div'); toolbar.className = 'settings-update-toolbar';
+  shell.tabs.before(toolbar); toolbar.append(shell.tabs, refresh);
 
   const rowsMount = document.createElement('div');
   rowsMount.className = 'modules-list-mount';
@@ -720,8 +722,8 @@ async function renderUpdates(ctx: RenderCtx) {
   refresh.addEventListener('click', async () => {
     refresh.disabled = true;
     try {
-      await renderUpdateRows(rowsMount, shell.status, ctx);
-      shell.status.textContent = 'Update check completed.';
+      await Promise.all([checkCore?.(), renderUpdateRows(rowsMount, shell.status, ctx)]);
+      shell.status.textContent = 'Update checks requested. See each source for its status.';
     } catch (err) {
       shell.status.textContent = `Update check failed: ${errorMessage(err)}`;
     } finally {
@@ -729,10 +731,11 @@ async function renderUpdates(ctx: RenderCtx) {
     }
   });
 
-  updatesPanel.append(refresh, rowsMount);
+  modulesPanel.append(rowsMount);
   shell.mount(ctx.el);
-  await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt);
+  checkCore = await renderCoreUpdatePanel(corePanel, ctx.meltdownEmit, ctx.jwt, true, widgetsPanel, toolbar);
   await renderUpdateRows(rowsMount, shell.status, ctx);
+  refresh.disabled = false;
 }
 
 async function renderUsersAccess(ctx: RenderCtx) {

@@ -602,6 +602,11 @@ function setupExportEvents(motherEmitter) {
 }
 
 module.exports = {
+  // Exports finish through the scoped async handler before its code is retired.
+  lifecycleVersion: 1,
+  async healthCheck() {
+    if (!listExporterMetadata().length) throw new Error('CORE_MODULE_EXPORTERS_NOT_READY');
+  },
   async initialize({ motherEmitter, isCore, jwt }) {
     if (!isCore) {
       throw new Error('[EXPORT MANAGER] Must be loaded as a core module.');

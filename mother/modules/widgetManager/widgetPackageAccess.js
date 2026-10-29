@@ -33,7 +33,7 @@ function approveWidgetAccess(requested, approved) {
 }
 
 function restrictWidgetPolicy(policy, packageAccess) {
-  if (!packageAccess) return policy; // Existing operator-managed integrations retain their policy.
+  if (!packageAccess) return { operations: {}, preferences: {}, draft: false, managed: true };
   if (packageAccess.policyVersion !== 1) throw packageError('WIDGET_ACCESS_POLICY_INVALID', 'Unsupported package access policy.');
   const requested = normalizeWidgetAccess({ requestedAccess: packageAccess.requestedAccess });
   const grants = new Set(approveWidgetAccess(requested, packageAccess.approvedAccess));

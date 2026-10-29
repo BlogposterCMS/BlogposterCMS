@@ -284,7 +284,13 @@ function setupSearchEvents(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  // Index data remains in the database while scoped handlers are replaced.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await searchDbSelect(motherEmitter, jwt, 'SEARCH_DOCUMENTS', { query: '', limit: 1, offset: 0 });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_SEARCH_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[SEARCH MANAGER] Must be loaded as a core module.');
     }
@@ -299,8 +305,10 @@ module.exports = {
     }
 
     console.log('[SEARCH MANAGER] Initializing Search Manager...');
-    await ensureSearchDatabase(motherEmitter, jwt, nonce);
-    await ensureSearchSchema(motherEmitter, jwt);
+    if (!isModuleUpdate) {
+      await ensureSearchDatabase(motherEmitter, jwt, nonce);
+      await ensureSearchSchema(motherEmitter, jwt);
+    }
     setupSearchEvents(motherEmitter);
     console.log('[SEARCH MANAGER] Initialized successfully.');
   },

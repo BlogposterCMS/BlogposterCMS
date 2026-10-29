@@ -20,7 +20,13 @@ function assertFontsPayload(payload, eventName) {
 }
 
 module.exports = {
-  initialize({ motherEmitter, isCore, jwt }) {
+  lifecycleVersion: 1,
+  async healthCheck() {
+    if (!Array.isArray(global.fontsList) || !global.fontProviders || typeof global.fontProviders !== 'object') {
+      throw new Error('CORE_MODULE_FONT_PROVIDERS_NOT_READY');
+    }
+  },
+  initialize({ motherEmitter, isCore, jwt, isModuleUpdate = false, strategyEmitter = motherEmitter }) {
     if (!isCore) {
       throw new Error('[FONTS MANAGER] Must be loaded as a core module.');
     }
@@ -72,10 +78,11 @@ module.exports = {
       }
       const provider = global.fontProviders[providerName];
       provider.isEnabled = !!enabled;
+      let pending = Promise.resolve();
       // If enabling and provider exposes an init function, run it to populate fonts.
       try {
         if (provider.isEnabled && typeof provider.initFunction === 'function') {
-          Promise.resolve(provider.initFunction()).catch(err => {
+          pending = Promise.resolve(provider.initFunction()).catch(err => {
             console.warn(`[FONTS MANAGER] Provider init failed => ${providerName}`, err?.message || err);
           });
         }
@@ -83,6 +90,9 @@ module.exports = {
         console.warn(`[FONTS MANAGER] Provider init threw => ${providerName}`, e?.message || e);
       }
       cb(null, { success: true });
+      // Preserve the immediate UI acknowledgement while the lifecycle still
+      // waits for the provider's in-flight catalogue request before cutover.
+      return pending;
     });
 
     motherEmitter.on(BACKEND_EVENTS.REGISTER_FONT_PROVIDER, (payload, cb) => {
@@ -143,11 +153,11 @@ module.exports = {
     });
 
     const strategiesPath = path.join(__dirname, 'strategies');
-    if (fs.existsSync(strategiesPath)) {
+    if (!isModuleUpdate && fs.existsSync(strategiesPath)) {
       fs.readdirSync(strategiesPath).filter(f => f.endsWith('.js')).forEach(file => {
-        const strategy = require(path.join(strategiesPath, file));
+        const strategy = require(`./strategies/${file}`);
         if (typeof strategy.initialize === 'function') {
-          strategy.initialize({ motherEmitter, fontsModuleSecret: process.env.FONTS_MODULE_INTERNAL_SECRET, jwt });
+          strategy.initialize({ motherEmitter: strategyEmitter, fontsModuleSecret: process.env.FONTS_MODULE_INTERNAL_SECRET, jwt });
           console.log(`[FONTS MANAGER] Loaded provider => ${file}`);
         }
       });

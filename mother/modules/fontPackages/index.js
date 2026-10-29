@@ -77,6 +77,12 @@ function setupFontPackageEvents(motherEmitter) {
 }
 
 module.exports = {
+  // Shared settings services retain their canonical queues and persistence.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const value = await readFontPackages(motherEmitter, jwt);
+    if (!Array.isArray(value?.packages)) throw new Error('CORE_MODULE_FONTPACKAGES_NOT_READY');
+  },
   async initialize({ motherEmitter, isCore, jwt }) {
     if (!isCore) {
       throw new Error('FONT_PACKAGES_CORE_REQUIRED: fontPackages must load as a core module.');

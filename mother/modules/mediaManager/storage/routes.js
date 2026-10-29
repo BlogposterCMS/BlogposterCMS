@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const path = require('node:path');
 const express = require('express');
 const { hasPermission } = require('../../userManagement/permissionUtils');
-const { createConfigStore, publicConfig } = require('./config');
+const { createConfigStore } = require('./config');
 const { createStorageAdapter, publicDeliveryUrl } = require('./index');
 const { receiveUpload } = require('./upload');
 
@@ -37,23 +37,44 @@ function setupStorageRoutes(app, options) {
   // Read credentials only after authorization, and never serialize the private config.
   app.get(base, auth, requireMedia, async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    try { res.json({ ...publicConfig(await store.read()), canConfigure: hasPermission(req.user, 'settings.unified.editSettings') }); }
+    try { res.json({ ...await store.snapshot(), canConfigure: hasPermission(req.user, 'settings.unified.editSettings') }); }
     catch (error) { safeError(res, error); }
   });
   app.put(base, auth, requireMedia, requireSettings, csrf, express.json({ limit: '16kb' }), async (req, res) => {
     try { res.json(await store.save(req.body)); }
     catch (error) { safeError(res, error); }
   });
-  app.post(`${base}/test`, auth, requireMedia, requireSettings, csrf, async (_req, res) => {
+  app.post(`${base}/test`, auth, requireMedia, requireSettings, csrf, async (req, res) => {
     try {
-      await adapterFor(await store.read()).test();
+      await adapterFor(await store.read(req.query.connectionId)).test();
       res.json({ ok: true });
+    } catch (error) { safeError(res, error); }
+  });
+  app.get(`${base}/files`, auth, requireMedia, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    try {
+      const config = await store.read(req.query.connectionId);
+      const currentPath = req.query.path || '';
+      const { objects, folders } = await adapterFor(config).list(currentPath);
+      const prefix = currentPath ? `${currentPath}/` : '';
+      // Ignore unexpected ancestors or nested entries returned by a remote server.
+      const childName = key => typeof key === 'string' && key.startsWith(prefix)
+        && key.slice(prefix.length) && !/[\/\\\u0000-\u001f]/.test(key.slice(prefix.length))
+        && !['.', '..'].includes(key.slice(prefix.length)) ? key.slice(prefix.length) : '';
+      const details = objects.filter(item => childName(item.key)).map(item => ({
+        name: childName(item.key), size: Number(item.size) || 0, modifiedAt: String(item.modifiedAt || ''),
+        url: publicDeliveryUrl(config, item.key)
+      }));
+      res.json({ currentPath, parentPath: currentPath.split('/').slice(0, -1).join('/'),
+        folders: folders.map(key => childName(key.replace(/\/$/, ''))).filter(Boolean),
+        files: details.map(item => item.name), details });
     } catch (error) { safeError(res, error); }
   });
   app.post(`${base}/upload`, auth, requireMedia, csrf, async (req, res) => {
     let upload;
     try {
-      const config = await store.read();
+      const config = await store.read(req.query.connectionId);
+      if (!publicDeliveryUrl(config, 'downloads/probe')) throw new Error('MEDIA_STORAGE_PUBLIC_URL_REQUIRED');
       const adapter = adapterFor(config);
       const limit = Number(process.env.MAX_UPLOAD_BYTES || 20000000);
       if (!Number.isSafeInteger(limit) || limit <= 0) throw new Error('MEDIA_STORAGE_UPLOAD_LIMIT_INVALID');
@@ -69,7 +90,7 @@ function setupStorageRoutes(app, options) {
           url, checksum: upload.checksum, sizeBytes: upload.sizeBytes,
           category: 'download', status: 'active', visibility: 'public',
           userId: req.user.user?.id || req.user.userId || req.user.id || req.user.sub,
-          meta: { storage: { provider: config.provider, bucket: config.bucket || '', objectKey: key, deliveryUrl: url },
+          meta: { storage: { connectionId: config.connectionId, provider: config.provider, bucket: config.bucket || '', objectKey: key, deliveryUrl: url },
             artifact: { version: upload.appVersion, kind: 'application-package', checksumAlgorithm: 'sha256' } }
         });
       } catch {

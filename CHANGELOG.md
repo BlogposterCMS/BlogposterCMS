@@ -2,6 +2,200 @@
 
 ## [Unreleased]
 
+- Combine selected-element actions and contextual text formatting in one Design Studio toolbar; keep Duplicate in the existing More menu on narrow screens.
+
+- Reduce dashboard startup waterfalls with bounded parallel reads, ordered write
+  barriers and a short-lived, credential-scoped presentation cache. Load Settings
+  and the media picker only when needed. Version shell assets and async chunks
+  for safe browser caching; prioritize visible gallery images and retain supplied
+  image dimensions without changing authored layouts.
+
+- Connect the Profile menu to `/admin/profile`, resolving the verified session user into the existing account editor.
+
+- Keep isolated community widget workers alive when their rendered host moves
+  between connected layout parents, while disposing all sandbox resources after
+  host removal or view replacement and avoiding false timeouts after tab suspension.
+
+- Select module and widget updates with default-selected checkboxes and a server-owned sequential queue that continues after leaving the update page.
+
+- Keep omitted optional source examples from blocking individual Importer updates;
+  preserve strict failures for broken installed importers.
+
+- Verify selected module packages in the existing worker during cold starts,
+  keeping database callbacks responsive while all module generations are restored.
+
+- Preserve admin sessions during individual module updates: temporarily paused
+  authentication dependencies return a retryable availability error instead of
+  clearing valid cookies. Invalid credentials remain rejected.
+
+- Add detailed, filterable website delivery history with page title/path, time,
+  referrer, verified account and consent-based browser/session links. Add
+  configurable opt-in/opt-out cookie preferences in General Settings and a
+  disabled-by-default GA4 connector explicitly marked UNTESTED for live delivery.
+- Prepare a separate reusable GeoIP core module with provider folders for local
+  MaxMind MMDB, paid MaxMind and self-hosted compatible services. It stays disabled
+  until configured; Analytics consumes only minimized approximate location.
+
+- Float dialog dropdown lists above scrollable dialog content using the existing
+  select overlay path. Escape closes the list first; opening another modal
+  dismisses older dropdowns.
+
+- Center the Add page label independently of its leading plus icon and render
+  the icon in the button text color for consistent contrast.
+
+- Let new pages continue directly into Design Studio or the article dialog.
+  Show a red content-slot warning where the selected composition has no content
+  destination. HTML parents can place attached content with the existing
+  `data-dynamic-host="true"` marker; standalone articles remain valid.
+
+- Enable individual, verified updates for all 36 CMS modules and the 31 bundled
+  widget entries in the existing Update Center. Preserve active sessions,
+  registries, queues and completed database work across generation changes.
+  Designer browser assets travel with its backend; widget assets activate for
+  new page loads. Shared host contracts and schema changes remain compatibility
+  checks, and each package carries its own signed changelog.
+
+- Add an article-only rich-text dialog from page actions, with headings, lists,
+  links, tables, images and videos through the shared media picker. Empty pages
+  offer Create design or Article only. Existing HTML/designs retain their editor.
+  Articles stay in Pages HTML with stable block IDs and guarded agent actions.
+
+- Place Add subpage immediately before the overflow menu in selected and hovered page rows.
+
+- Align content import and Design Studio actions at the right of page editor tabs,
+  using secondary and primary buttons respectively.
+
+- Move advanced user rights into the shared modal with searchable groups and
+  explicit draft apply/cancel. Account Save and Discard retain ownership.
+
+- Refine page layout and SEO tabs with on-demand HTML selection, consistently
+  enhanced selects, stacked SEO text fields and compact image previews.
+
+- Organize the page editor into Details, Layout & content and SEO & previews tabs
+  with one save footer, clean sections and collapsible HTML source.
+
+- Finalize the shared color picker with responsive swatches, accessible selection
+  states, English controls, validated color input and an in-flow custom editor.
+  Account accent selection uses the shared viewport-aware popover and hides an
+  unavailable color library, preventing overlap with account actions.
+
+- Use English loading, failure and retry text throughout the admin shell,
+  including its initial HTML and JavaScript-disabled message.
+
+- Make image selection easier to find in Page Settings and SEO Settings: show
+  “Choose from file manager” directly above the optional image URL.
+
+- Carry each module's own changelog and explicit breaking-change declaration in its
+  signed update package and the existing Update Center review.
+- Add independent Media and Designer backend generations. Media waits for active
+  HTTP work and keeps its host mount and route guards; Designer retains existing
+  schema and database registrations. Browser bundles and widgets are not yet
+  independently activated by this change.
+
+- Add SEO title, optional featured image and link-preview image with media selection
+  to Page Settings. Link previews fall back from their own image to the featured
+  image and then the global image. SEO Settings now saves to SEO Manager, including
+  a working `%title%` pattern and global indexing control.
+
+- Add light/dark logo and favicon previews, compact image actions and optional
+  URL entry with one shared branding save/discard footer.
+
+- Remove shadows from light ghost buttons, including hover and pressed states.
+
+- Match minimum section heights and top spacing across System and Installed updates.
+
+- Split Installed updates into stacked Modules and Widgets sections, explicitly marking
+  widget update checks unavailable until the package service supports them.
+
+- Restore System and Installed update tabs and give compact status sections
+  consistent minimum heights, retaining the shared refresh control.
+
+- Show successful no-update checks as Up to date in both update sections, with
+  the last-check time beneath each status.
+
+- Replace the verbose Update Center header with compact service and CMS module
+  status summaries; keep release details inside available update accordions.
+
+- Present actual update candidates as compact expandable rows with current and target versions; support an optional breaking-change warning from release metadata.
+
+- Hide unchanged and unchecked CMS modules from the update list; hide the entire
+  section when no module changes are available or in progress.
+
+- Keep page status beside the title with a shared status popover, limit inline
+  field hit areas to their content, and keep row actions at the right edge.
+- Show installed release notes even without an update host connection and use
+  one white Changelog surface.
+
+- Put one Check all updates icon beside the Update Center tabs to check the host
+  and module sources together.
+- Present update release notes in a separate document-style Changelog block.
+- Align hovered/selected page rows consistently and place list actions beside filters.
+  Use vertical overflow icons and center icon/text buttons through the shared button styles.
+- Compact Update Center status, version and controls; remove empty vertical gaps
+  and align module update rows using shared Settings spacing.
+- Toggle child pages with an animated row accordion, respecting reduced motion;
+  field and action clicks remain independent of expansion.
+- Keep every page's status beside its title, reveal actions on row hover, and
+  select rows without automatically focusing their editable title.
+- Use one subtle field focus border; keep inline page fields transparent. Move
+  deletion into the vertical page menu and keep settings/menu at the row's right edge.
+- Place page creation actions together in the shared dialog footer.
+- Move example import into the page-list overflow menu and center the Add page icon/label.
+- Place Copy link and Open page beside the inline page address.
+- Remove native underlines from styled buttons and use plain shared menu items
+  for page attachment actions.
+- Open page/subpage creation in the shared modal, retaining the existing form and validation.
+- Place page status beside the inline title and keep row-action icons plain until hover.
+- Replace the page detail card with inline title/address editing in the selected
+  row. Enter saves, Escape cancels, and page actions appear as icons on the right.
+  Changing the home page and deleting a page require the shared confirmation dialog.
+- Place an icon-only page-settings shortcut beside the design action and use an
+  icon-only Open page control with accessible labels.
+- Label the page design action “Design page” when no design is assigned and
+  “Edit design” when an existing design can be opened.
+- Replace the centered notification logo with a Lucide bell beside the account menu.
+- Align top-bar controls with the workspace navigation and use equal left/right insets.
+- Hide the breadcrumb row on admin Home without reserving an empty gap.
+- Omit repeated title/subtitle blocks in Media, Pages, Navigation, Settings,
+  Modules and Widgets while retaining tool actions and file-picker headings.
+- Keep the top-bar site link icon-only and prevent sidebar labels from being
+  clipped at the edge of fixed workspaces.
+- Remove the legacy layout-edit button from shared breadcrumb headers and the
+  square focus ring inside the top-bar search.
+- Keep inactive workspace navigation and its plus action plain; show a white surface
+  for the selected workspace and align breadcrumbs with the left navigation rail.
+- Align the workspace-create button vertically with the left sidebar controls.
+- Place the extension store at the right of the main workspace navigation on all
+  admin pages. Its ZIP dialog selects Module or Widget and delegates to the existing review.
+- Shorten the full-height Settings panel shadow so it stays close to the bottom edge.
+- Replace module/widget ZIP bars with a header store icon opening the shared
+  dropzone/file picker. Place breadcrumbs under navigation with transparent chrome.
+- Simplify Storage settings to a connection overview; add/edit opens the shared
+  modal with retained failed drafts and a save/discard close guard.
+- Add signed independent updates for translation, content, search, workflow and
+  export module handlers through the existing Update Center. Verify compatible
+  host/schema bytes, persist active generations, drain in-flight work and restore
+  old handlers after failed readiness without restarting the CMS. Shared runtime,
+  frontend and schema changes continue to require a coordinated host update.
+- Enforce backend-only community modules in Linux namespaces with read-only code,
+  secret-free environments, seccomp and bounded host messaging. Remove module
+  static UI and runtime-consent fallbacks; require current reviewed grants.
+  Add Docker seccomp/AppArmor profiles for rootless isolation, omit runner procfs
+  and deny further namespace creation. Verify the isolation on the target host
+  without granting container capabilities or exposing production volumes.
+- Isolate community widget code in opaque-origin workers with an inert UI bridge.
+  Require the v2 widget contract and block incompatible packages while preserving
+  their files, IDs, settings and saved content. Add read-only migration inventory
+  and a real Linux negative-test command; document deployment prerequisites.
+  Widget ZIP replacement keeps verified backups and binds live grants to the
+  loaded script hash so old instances cannot acquire new-version permissions.
+- Make RequestManager egress fail closed with an explicit HTTPS host allowlist,
+  pinned public IPv4 addresses, no redirects/proxies and bounded transfers.
+
+- Move storage configuration into Settings > General > Storage. Support multiple
+  named connections and show their folders/files in the existing Media Explorer.
+  Load provider descriptors from individual adapter files, with local, Alibaba
+  OSS, S3-compatible and HTTPS WebDAV adapters; publication selects a destination.
 - Move widget management from Content to Settings > Widgets, preserving existing
   page identity and saved state during the admin-page upgrade.
 
@@ -1165,3 +1359,4 @@ in the private `BlogposterDEV` archive and its 2026-06-26 archive tag.
 The active BlogposterCMS repository starts from the former BlogposterDEV
 application state. Earlier detailed changelog entries remain available in the
 preserved private BlogposterDEV history and its 2026-06-26 archive tag.
+

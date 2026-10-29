@@ -8,6 +8,7 @@ import {
   renderRuntimeDesignDocument
 } from './runtimeDesignDocument.js';
 import { renderAttachedRuntimeContent } from './runtimeAttachedContent.js';
+import { htmlContentSlot } from '../../shared/article/contentSlot.js';
 import { clearContentKeepHeader } from './runtimePageShell.js';
 import {
   appendRuntimeEmptyState,
@@ -143,8 +144,10 @@ export async function renderPublicRuntimePageContent({
 
   if (page.html) {
     clearContentKeepHeader(contentEl);
-    appendRuntimeHtmlContent(contentEl, page.html);
-    await renderAttachedRuntimeContent({ page, lane, allWidgets, container: contentEl, emit, widgetEmit });
+    const html = appendRuntimeHtmlContent(contentEl, page.html);
+    // HTML attachments can declare the same explicit content destination as a
+    // Designer container. Keep the legacy fallback for already published pages.
+    await renderAttachedRuntimeContent({ page, lane, allWidgets, container: htmlContentSlot(html) || contentEl, emit, widgetEmit });
     return;
   }
 

@@ -258,6 +258,9 @@ function resolveModuleFilePath(repoRoot, moduleName, filePath, eventName) {
 }
 
 module.exports = {
+  // Schema allowlists always resolve against the canonical host, including when
+  // the calling event bridge belongs to a persisted update generation.
+  repositoryRoot: path.resolve(__dirname, '../../../..'),
   assertDatabaseControlEventAllowed,
   assertHighLevelCrudIdentifiers,
   assertHighLevelCrudAllowed,

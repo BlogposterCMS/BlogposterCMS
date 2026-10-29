@@ -59,6 +59,8 @@
 }
 
 .bp-popover__item {
+  text-decoration: none;
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -77,7 +79,8 @@
 .bp-popover__item:hover,
 .bp-popover__item:focus-visible {
   background: var(--studio-surface-muted);
-  box-shadow: var(--studio-focus-ring);
+  box-shadow: none;
+  outline: none;
 }
 
 .bp-popover__item img {

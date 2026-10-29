@@ -4,6 +4,15 @@ const { projectWidgetPolicy } = require('../mother/modules/runtimeManager/public
 const response = () => ({ ok: true, headers: { get: () => 'application/json' }, body: { getReader: () => { let read = false; return { read: async () => read ? { done: true } : (read = true, { done: false, value: new Uint8Array([123,125]) }) }; } } });
 beforeEach(() => { window.sessionStorage.clear(); (window as any).fetch = jest.fn(async () => response()); });
 
+test('an old widget cannot acquire a replacement package permissions', async () => {
+  const previousTimeout = AbortSignal.timeout;
+  AbortSignal.timeout = () => new AbortController().signal;
+  const hash = 'a'.repeat(64);
+  (window as any).fetch = jest.fn(async () => ({ok:true,headers:{get:()=> 'application/json'},text:async()=>JSON.stringify({managed:true,codeHash:'b'.repeat(64),operations:{}})}));
+  try { await expect(loadWidgetServices('sample',false,hash)).rejects.toThrow('WIDGET_SERVICE_PACKAGE_CHANGED'); }
+  finally { if (previousTimeout) AbortSignal.timeout = previousTimeout; else delete (AbortSignal as any).timeout; }
+});
+
 test('managed services recheck revoked grants before dispatch and fail closed on refresh failure', async () => {
   const refresh = jest.fn(async () => ({ operations: {} }));
   const services = createWidgetServices('sample', { managed: true, operations: { search: { method: 'GET', path: '/api/public/search' } } }, window, false, refresh);
@@ -40,7 +49,7 @@ test('drafts are isolated by widget and bounded', () => {
 test('public projection excludes secrets and other widget policies', () => {
   const policy = projectWidgetPolicy({ version: 1, widgets: { example: { secret: 'private', operations: { search: { path: '/api/public/search', method: 'GET', token: 'private' } } }, other: { draft: true } } }, 'example');
   expect(JSON.stringify(policy)).not.toContain('private');
-  expect(policy.operations.search).toEqual({ path: '/api/public/search', method: 'GET', query: [], stream: false, credentials: false });
+  expect(policy.operations).toEqual({}); // Operator configuration alone is not package consent.
 });
 test.each(['https://example.test/api/x', '/api/../admin', '/api/meltdown', '/api/internal/x'])('operator configuration rejects unsafe path %s', path => {
   expect(() => projectWidgetPolicy({ version: 1, widgets: { example: { operations: { read: { path, method: 'GET' } } } } }, 'example')).toThrow('WIDGET_SERVICE_POLICY_INVALID');

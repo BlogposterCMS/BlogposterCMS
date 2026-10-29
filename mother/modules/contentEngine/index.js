@@ -685,7 +685,13 @@ function setupContentEngineEvents(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  // Schema and seed definitions remain part of the coordinated host release.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await contentDbSelect(motherEmitter, jwt, 'LIST_CONTENT_TYPES', {});
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_CONTENT_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[CONTENT ENGINE] Must be loaded as a core module.');
     }
@@ -700,10 +706,12 @@ module.exports = {
     }
 
     console.log('[CONTENT ENGINE] Initializing Content Engine...');
-    await ensureContentEngineDatabase(motherEmitter, jwt, nonce);
-    await ensureContentEngineSchema(motherEmitter, jwt);
+    if (!isModuleUpdate) {
+      await ensureContentEngineDatabase(motherEmitter, jwt, nonce);
+      await ensureContentEngineSchema(motherEmitter, jwt);
+    }
     setupContentEngineEvents(motherEmitter);
-    await seedDefaultContentTypes(motherEmitter, jwt);
+    if (!isModuleUpdate) await seedDefaultContentTypes(motherEmitter, jwt);
     console.log('[CONTENT ENGINE] Initialized successfully.');
   },
   setupContentEngineEvents,

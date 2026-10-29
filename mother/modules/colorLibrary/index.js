@@ -80,6 +80,12 @@ function setupColorLibraryEvents(motherEmitter) {
 }
 
 module.exports = {
+  // Shared settings services retain their canonical queues and persistence.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const value = await readColorLibrary(motherEmitter, jwt);
+    if (!Array.isArray(value?.schemes)) throw new Error('CORE_MODULE_COLORLIBRARY_NOT_READY');
+  },
   async initialize({ motherEmitter, isCore, jwt }) {
     if (!isCore) {
       throw new Error('COLOR_LIBRARY_CORE_REQUIRED: colorLibrary must load as a core module.');

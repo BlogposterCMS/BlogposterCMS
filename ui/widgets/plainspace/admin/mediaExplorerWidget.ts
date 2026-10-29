@@ -1,6 +1,7 @@
 import { createMediaExplorerSurface } from '../../../shared/media/mediaExplorerSurface.js';
 import { createMediaStoragePanel } from '../../../shared/media/mediaStoragePanel.js';
-import { listMediaDownloads } from '../../../shared/media/mediaLibraryData.js';
+import { listMediaStorageLocations } from '../../../shared/media/mediaStorageLocations.js';
+import { bpDialog } from '../../../shared/dialogs/bpDialog.js';
 
 export async function render(el: HTMLElement | null): Promise<void> {
   const jwt = window.ADMIN_TOKEN;
@@ -16,7 +17,14 @@ export async function render(el: HTMLElement | null): Promise<void> {
     jwt,
     emit: emitter,
     uploadFetch: window.fetchWithTimeout,
-    csrfToken: window.CSRF_TOKEN
+    csrfToken: window.CSRF_TOKEN,
+    loadStorageLocations: () => listMediaStorageLocations(window.fetch.bind(window), emitter, jwt),
+    onPublishDownload: async connectionId => {
+      await bpDialog.open({ title: 'Publish download', body: createMediaStoragePanel({
+        mode: 'publish', request: window.fetch.bind(window), csrfToken: window.CSRF_TOKEN, initialConnectionId: connectionId,
+        onPublished: () => { void surface.load(surface.getCurrentPath()); }
+      }), actions: [{ id: 'close', label: 'Close', variant: 'ghost' }] });
+    }
   });
 
   el.innerHTML = '';
@@ -27,10 +35,5 @@ export async function render(el: HTMLElement | null): Promise<void> {
   surface.element.style.flex = '1';
   surface.element.style.minHeight = '0';
   surface.element.style.height = 'auto';
-  el.appendChild(createMediaStoragePanel({
-    request: window.fetch.bind(window),
-    csrfToken: window.CSRF_TOKEN,
-    listDownloads: () => listMediaDownloads(emitter, jwt)
-  }));
   el.appendChild(surface.element);
 }

@@ -83,13 +83,13 @@ describe('runtimeWidgetModuleRenderer', () => {
       asyncRenderCompleted = true;
     });
     const context = { id: 'instance-1', jwt: 'admin-token' };
-    const def = { id: 'testWidget', metadata: { label: 'Test' }, codeUrl: '/widgets/community_test/widget.js' };
+    const def = { id: 'testWidget', metadata: { label: 'Test' }, codeUrl: '/ui/widgets/plainspace/public/test.js' };
     (loadWidgetModule as jest.Mock).mockResolvedValue({ render });
     (createRuntimeWidgetContext as jest.Mock).mockReturnValue(context);
 
     await renderRuntimeWidgetModule(wrapper, container, def, 'admin');
 
-    expect(loadWidgetModule).toHaveBeenCalledWith('/widgets/community_test/widget.js');
+    expect(loadWidgetModule).toHaveBeenCalledWith('/ui/widgets/plainspace/public/test.js');
     expect(createRuntimeWidgetContext).toHaveBeenCalledWith(wrapper, def, 'admin', {}, {
       emit: undefined
     });
@@ -106,13 +106,13 @@ describe('runtimeWidgetModuleRenderer', () => {
     await renderRuntimeWidgetModule(
       wrapper,
       container,
-      { id: 'missingRender', codeUrl: '/widgets/community_test/widget.js' },
+      { id: 'missingRender', codeUrl: '/ui/widgets/plainspace/public/test.js' },
       'public'
     );
 
     expect(consoleError).toHaveBeenCalledWith(
       '[Widget missingRender] WIDGET_RUNTIME_MISSING_RENDER render export missing:',
-      '/widgets/community_test/widget.js'
+      '/ui/widgets/plainspace/public/test.js'
     );
     expect(createRuntimeWidgetContext).not.toHaveBeenCalled();
     expectRuntimeError(container, 'WIDGET_RUNTIME_MISSING_RENDER');
@@ -127,7 +127,7 @@ describe('runtimeWidgetModuleRenderer', () => {
     await renderRuntimeWidgetModule(
       wrapper,
       container,
-      { id: 'brokenWidget', codeUrl: '/widgets/community_test/widget.js' },
+      { id: 'brokenWidget', codeUrl: '/ui/widgets/plainspace/public/test.js' },
       'public'
     );
 
@@ -146,7 +146,7 @@ describe('runtimeWidgetModuleRenderer', () => {
     });
     const context = { id: 'instance-1', jwt: 'admin-token' };
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    const def = { id: 'renderBroken', codeUrl: '/widgets/community_test/widget.js' };
+    const def = { id: 'renderBroken', codeUrl: '/ui/widgets/plainspace/public/test.js' };
     (loadWidgetModule as jest.Mock).mockResolvedValue({ render });
     (createRuntimeWidgetContext as jest.Mock).mockReturnValue(context);
 

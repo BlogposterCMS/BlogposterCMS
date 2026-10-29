@@ -1,5 +1,4 @@
 import { emitRuntimeAdmin } from '../../../shared/api-client/runtimeFacade.js';
-import { openExtensionUpload } from '../../../shared/module-access/extensionUpload.js';
 function call(action, params = {}) {
     if (!window.meltdownEmit)
         throw new Error('WIDGET_PACKAGE_EMITTER_UNAVAILABLE');
@@ -47,10 +46,21 @@ export async function reviewWidgetPackage(pkg, installing) {
         note.textContent = 'No widget services requested.';
         body.append(note);
     }
-    const result = await dialog.open({ title: installing ? 'Install widget' : 'Widget access',
+    const result = await dialog.open({ title: installing ? (pkg.replacing ? 'Replace widget package' : 'Install widget') : 'Widget access',
         message: 'Only selected, declared services are allowed. Direct core events are blocked. This review is not a malware scan; install code you trust.', body,
-        actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'confirm', label: installing ? 'Install and allow selected access' : 'Save access', variant: 'primary' }] });
+        actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'confirm', label: installing ? (pkg.replacing ? 'Back up and replace package' : 'Install and allow selected access') : 'Save access', variant: 'primary' }] });
     return result.action === 'confirm' ? checks.filter(check => check.checked && !check.disabled).map(check => check.value) : null;
+}
+/** The global store retains the widget owner's manifest review and permissions. */
+export async function installWidgetArchive(zipData, _name, progress) {
+    const pkg = await call('inspectZip', { zipData });
+    const approvedAccess = await reviewWidgetPackage(pkg, true);
+    if (approvedAccess === null)
+        return false;
+    progress.textContent = 'Installing widget…';
+    await call('installZip', { zipData, reviewedHash: pkg.reviewedHash, approvedAccess, replaceExisting: pkg.replacing === true });
+    window.location.reload();
+    return true;
 }
 export function addWidgetPackageControls(root, refresh) {
     const header = root.querySelector('header');
@@ -58,19 +68,6 @@ export function addWidgetPackageControls(root, refresh) {
         return;
     const status = document.createElement('p');
     status.setAttribute('role', 'status');
-    const install = document.createElement('button');
-    install.className = 'button secondary sm';
-    install.textContent = 'Install ZIP';
-    install.addEventListener('click', () => openExtensionUpload(async (zipData, _name, progress) => {
-        const pkg = await call('inspectZip', { zipData });
-        const approvedAccess = await reviewWidgetPackage(pkg, true);
-        if (approvedAccess === null)
-            return false;
-        progress.textContent = 'Installing widget…';
-        await call('installZip', { zipData, reviewedHash: pkg.reviewedHash, approvedAccess });
-        await refresh();
-        return true;
-    }));
     const manage = document.createElement('button');
     manage.className = 'button secondary sm';
     manage.textContent = 'Manage installed access';
@@ -112,6 +109,9 @@ export function addWidgetPackageControls(root, refresh) {
             manage.disabled = false;
         }
     });
-    header.append(install, manage);
+    const accessActions = document.createElement('div');
+    accessActions.className = 'form-actions';
+    accessActions.append(manage);
+    header.after(accessActions);
     root.append(status);
 }

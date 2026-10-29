@@ -956,6 +956,16 @@ function publishingFeedbackState() {
 }
 function designerFeedbackWarnings(visual, layoutNodes, widgets) {
     const warnings = [];
+    // Surface isolated-widget failures through the existing agent feedback contract.
+    for (const node of Array.from(document.querySelectorAll('#layoutRoot [data-error-code]'))) {
+        const code = node.dataset.errorCode || '';
+        if (code.startsWith('WIDGET_SANDBOX_') || code.startsWith('WIDGET_WORKER_'))
+            warnings.push({
+                code: 'DESIGNER_AGENT_FEEDBACK_WIDGET_SANDBOX_BLOCKED', severity: 'warning',
+                widgetId: node.closest('[data-widget-id]')?.dataset.widgetId || null,
+                runtimeCode: code, message: 'Community widget requires a compatible isolated UI package. Saved placement is preserved.'
+            });
+    }
     const contentHosts = layoutNodes.filter(node => node.isDynamicHost === true);
     if (contentHosts.length > 1)
         warnings.push({
@@ -1134,6 +1144,11 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
         status,
         reason: context.reason,
         generatedAt: new Date().toISOString(),
+        // Expose only the immutable asset generation, never app launch tokens.
+        browserGeneration: Array.from(document.scripts)
+            .map(script => script.getAttribute('src') || '')
+            .map(src => src.match(/^\/_module-assets\/designerManager\/([a-f0-9]{64})\//)?.[1])
+            .find(Boolean) || null,
         contracts: {
             transport: 'AgentManager/AppLoader agentSurface',
             structuredSnapshot: true,
@@ -1150,6 +1165,7 @@ function buildDesignerAgentFeedback(context, visual, activeSceneId, activeSceneT
             activeSectionBoundaries: true,
             activeSectionBoundaryTransition: true,
             sectionToolbarInsetPlacement: true,
+            unifiedSelectionTextToolbar: true,
             sectionResizeZoomInvariant: true,
             placementModeIndependentWidgetSelection: true,
             singleDocumentLayoutEditing: true,

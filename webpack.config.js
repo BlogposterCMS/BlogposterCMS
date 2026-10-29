@@ -19,6 +19,7 @@ function resolveSource(basePath, relativePath) {
 }
 
 const entry = {
+  articleEditor: { import: './ui/shared/article/articleEditor.ts', library: { name: 'BlogposterArticleEditor', type: 'window' } },
   adminSearch: resolveSource(__dirname, './ui/shell/entries/adminSearch'),
   agentConsole: resolveSource(__dirname, './ui/shared/entries/agentConsole'),
   appBridge: resolveSource(__dirname, './ui/shared/entries/appBridge'),
@@ -78,6 +79,10 @@ module.exports = {
   entry,
   output: {
     filename: '[name].js',
+    // Designer chunks already belong to signed generation URLs. Preserve the
+    // package ownership filenames; host-owned async chunks use content hashes.
+    chunkFilename: ({ chunk }) => String(chunk.name || '').startsWith('designer-app-')
+      ? '[name].js' : '[name].[contenthash:16].js',
     path: path.resolve(__dirname, 'public', 'build'),
     clean: true
   },

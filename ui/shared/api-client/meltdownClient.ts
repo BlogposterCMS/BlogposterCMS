@@ -1,3 +1,5 @@
+import { isConcurrentAdminRead, isReusableRuntimeRead } from './runtimeReadPolicy.js';
+
 export type MeltdownPayload = Record<string, unknown>;
 
 export interface MeltdownBatchEvent {
@@ -117,7 +119,11 @@ export function createMeltdownClient(options: MeltdownClientOptions = {}): Meltd
   const requestQueue: QueueItem[] = [];
   const publicQueue: QueueItem[] = [];
   let publicActive = 0;
-  let busy = false;
+  let commandActive = false;
+  let adminReadsActive = 0;
+  const readCache = new Map<string, { expires: number; value: Promise<unknown> }>();
+
+  function invalidateReads() { readCache.clear(); }
 
   // Only the read-only public facade bypasses ordered command delivery.
   // Bound concurrency so background fonts cannot serialize page discovery.
@@ -166,33 +172,43 @@ export function createMeltdownClient(options: MeltdownClientOptions = {}): Meltd
   }
 
   function processQueue() {
-    if (busy || requestQueue.length === 0) return;
-    busy = true;
-
-    const item = requestQueue.shift();
-    if (!item) {
-      busy = false;
-      return;
+    if (commandActive) return;
+    while (requestQueue.length && adminReadsActive < 4) {
+      const next = requestQueue[0]!;
+      const concurrent = throttleDelay <= 0 && isConcurrentAdminRead(next.eventName, next.payload);
+      // A command is a fence: finish earlier reads, then the command, before
+      // starting later reads. Reads never jump over a queued save/delete.
+      if (!concurrent && adminReadsActive > 0) return;
+      const item = requestQueue.shift()!;
+      if (concurrent) adminReadsActive += 1;
+      else commandActive = true;
+      send(item.eventName, item.payload, item.timeout)
+        .then(item.resolve, item.reject)
+        .finally(() => {
+          const continueQueue = () => {
+            if (concurrent) adminReadsActive -= 1;
+            else commandActive = false;
+            processQueue();
+          };
+          if (throttleDelay > 0) setTimeout(continueQueue, throttleDelay);
+          else continueQueue();
+        });
+      if (!concurrent) return;
     }
-
-    send(item.eventName, item.payload, item.timeout)
-      .then(item.resolve)
-      .catch(item.reject)
-      .finally(() => {
-        const continueQueue = () => {
-          busy = false;
-          processQueue();
-        };
-        // Preserve explicit pacing for callers that request it; normal startup
-        // proceeds immediately after success or failure, still one at a time.
-        if (throttleDelay > 0) setTimeout(continueQueue, throttleDelay);
-        else continueQueue();
-      });
   }
 
   return {
     emit<T = unknown>(eventName: string, payload: MeltdownPayload = {}, timeout = DEFAULT_TIMEOUT): Promise<T> {
-      return new Promise<unknown>((resolve, reject) => {
+      const reusable = isReusableRuntimeRead(eventName, payload);
+      const key = reusable ? JSON.stringify([
+        eventName, payload, tokenProvider.getPublicToken(), tokenProvider.getCsrfToken(), timeout
+      ]) : '';
+      const cached = readCache.get(key);
+      if (cached && cached.expires > Date.now()) {
+        return cached.value.then(value => structuredClone(value)) as Promise<T>;
+      }
+      if (eventName !== 'cmsPublicRuntimeRequest' && !isConcurrentAdminRead(eventName, payload)) invalidateReads();
+      const pending = new Promise<unknown>((resolve, reject) => {
         // Local dialogs can issue their own backend requests while awaiting a
         // selection. Holding the transport queue for the dialog would deadlock.
         try {
@@ -206,7 +222,14 @@ export function createMeltdownClient(options: MeltdownClientOptions = {}): Meltd
         }
         requestQueue.push({ eventName, payload, timeout, resolve, reject });
         processQueue();
-      }) as Promise<T>;
+      });
+      if (!reusable) return pending as Promise<T>;
+      if (readCache.size >= 64) readCache.delete(readCache.keys().next().value!);
+      const entry = { expires: Date.now() + 30_000, value: pending };
+      readCache.set(key, entry);
+      // Remove failures without deleting a newer request after invalidation.
+      void pending.catch(() => { if (readCache.get(key) === entry) readCache.delete(key); });
+      return pending.then(value => structuredClone(value)) as Promise<T>;
     },
 
     async emitBatch<T = unknown>(
@@ -215,6 +238,7 @@ export function createMeltdownClient(options: MeltdownClientOptions = {}): Meltd
       timeout = DEFAULT_TIMEOUT
     ): Promise<T[]> {
       if (!Array.isArray(events) || events.length === 0) return [];
+      invalidateReads();
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
@@ -239,7 +263,7 @@ export function createMeltdownClient(options: MeltdownClientOptions = {}): Meltd
         credentials: 'same-origin',
         headers,
         body: JSON.stringify({ events })
-      }, timeout);
+      }, timeout).finally(invalidateReads);
 
       const json = await parseJsonResponse(resp, '[MELTDOWN][IN][BATCH]', debug());
       return (Array.isArray(json.results) ? json.results : []) as T[];

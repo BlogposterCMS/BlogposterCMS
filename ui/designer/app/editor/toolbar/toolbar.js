@@ -103,6 +103,11 @@ function resetDirectTextStyles() {
 
 export function updateToolbarPosition() {
   if (!state.toolbar) return;
+  const selectionBar = state.toolbar.closest('.widget-action-bar');
+  if (selectionBar) {
+    selectionBar.dispatchEvent(new Event('text-toolbar-resize'));
+    return;
+  }
   const header = document.querySelector('.builder-header');
   if (!header) return;
   const rect = header.getBoundingClientRect();
@@ -1078,17 +1083,17 @@ export function initToolbar(stateObj, applyHandlerSetter, updateBtnStates) {
 
 export function showToolbar() {
   if (!state.toolbar) return;
-  const content = document.getElementById('content');
-  if (content && state.toolbar.parentElement !== content) {
-    content.prepend(state.toolbar);
+  const owner = document.querySelector('.widget-action-bar') || document.getElementById('content');
+  if (owner && state.toolbar.parentElement !== owner) {
+    owner.appendChild(state.toolbar);
   }
-  updateToolbarPosition();
   if (!toolbarPositionListenersAttached) {
     window.addEventListener('scroll', updateToolbarPosition);
     window.addEventListener('resize', updateToolbarPosition);
     toolbarPositionListenersAttached = true;
   }
   state.toolbar.style.display = 'flex';
+  updateToolbarPosition();
   updateButtonStates();
   syncTextStyleSourceStatus();
 }
@@ -1096,6 +1101,7 @@ export function showToolbar() {
 export function hideToolbar() {
   if (!state.toolbar) return;
   state.toolbar.style.display = 'none';
+  updateToolbarPosition();
   if (toolbarPositionListenersAttached) {
     window.removeEventListener('scroll', updateToolbarPosition);
     window.removeEventListener('resize', updateToolbarPosition);

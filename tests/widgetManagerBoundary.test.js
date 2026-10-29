@@ -13,7 +13,7 @@ function emitAsync(emitter, eventName, payload) {
 }
 
 test('widget manager accepts safe community widget metadata and scripts', () => {
-  const info = _internals.normalizeCommunityWidgetInfo({
+  const info = _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
     widgetId: 'heroBanner_1',
     widgetType: 'public',
     label: 'Hero Banner',
@@ -158,35 +158,35 @@ test('widget manager rejects community widget system access patterns', () => {
   }
 
   assert.throws(() => {
-    _internals.normalizeCommunityWidgetInfo({
+    _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
       widgetId: '../bad',
       widgetType: 'public'
     });
   }, /widgetId/);
 
   assert.throws(() => {
-    _internals.normalizeCommunityWidgetInfo({
+    _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
       widgetId: 'otherWidget',
       widgetType: 'public'
     }, 'folderWidget');
   }, /must match widget folder/);
 
   assert.throws(() => {
-    _internals.normalizeCommunityWidgetInfo({
+    _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
       widgetId: 'good',
       widgetType: 'system'
     });
   }, /widgetType/);
 
   assert.throws(() => {
-    _internals.normalizeCommunityWidgetInfo({
+    _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
       widgetId: 'adminShape',
       widgetType: 'admin'
     });
   }, /Community widgets/);
 
   assert.throws(() => {
-    _internals.normalizeCommunityWidgetInfo({
+    _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
       widgetId: 'coreClaimWidget',
       widgetType: 'public',
       moduleType: 'core'
@@ -194,7 +194,7 @@ test('widget manager rejects community widget system access patterns', () => {
   }, /cannot declare moduleType/);
 
   assert.throws(() => {
-    _internals.normalizeCommunityWidgetInfo({
+    _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
       widgetId: 'moduleClaimWidget',
       widgetType: 'public',
       moduleName: 'contentEngine'
@@ -202,7 +202,7 @@ test('widget manager rejects community widget system access patterns', () => {
   }, /cannot declare moduleName/);
 
   assert.throws(() => {
-    _internals.normalizeCommunityWidgetInfo({
+    _internals.normalizeCommunityWidgetInfo({ uiContractVersion: 2,
       widgetId: 'appClaimWidget',
       widgetType: 'public',
       appName: 'designer'
@@ -430,11 +430,8 @@ test('widget manager scans every community widget script file', () => {
   }
 });
 
-test('server widgets static route is guarded before serving files', () => {
+test('server community assets use the isolated data route', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'mother/server/http/staticAssets.js'), 'utf8');
-  assert.match(source, /guardWidgetStaticRoot/);
-  assert.match(
-    source,
-    /app\.use\(\s*['"]\/widgets['"]\s*,\s*setStaticCorsHeaders\s*,\s*guardWidgetStaticRoot\s*,\s*blockBrowserSourceFiles\s*,\s*express\.static\(widgetsPath\)/
-  );
+  assert.match(source, /widgetSandboxAssets/);
+  assert.ok(!source.includes('express.static(widgetsPath)'));
 });

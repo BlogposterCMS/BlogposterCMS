@@ -1,12 +1,11 @@
 'use strict';
 
 const path = require('path');
-const { fork } = require('child_process');
+const { startSandbox } = require('./moduleSandbox');
 const {
   createCommunityHealthCheckHost,
   createCommunityModuleHost
 } = require('./moduleHost');
-const { buildModuleRuntimeEnv } = require('./moduleRuntimeEnv');
 const { cloneRuntimeData } = require('./moduleRuntimeUtils');
 const { verifyRuntimeModuleIntegrityNow } = require('../../security/runtimeIntegrity');
 
@@ -63,7 +62,8 @@ function fromWireValue(value) {
     if (Array.isArray(value)) return value.map(fromWireValue);
     const obj = {};
     for (const [key, item] of Object.entries(value)) {
-      obj[key] = fromWireValue(item);
+      // Define own keys rather than invoking Object.prototype.__proto__ setters.
+      Object.defineProperty(obj, key, { value: fromWireValue(item), enumerable: true, writable: true, configurable: true });
     }
     return obj;
   }
@@ -100,6 +100,7 @@ class CommunityModuleProcess {
     this.nextCallbackId = 1;
     this.pendingResponses = new Map();
     this.pendingHostCallbacks = new Map();
+    this.inflightHostRequests = 0;
     this.remoteListeners = new Map();
     this.staticMounts = [];
     this.boundaryTouched = false;
@@ -113,7 +114,8 @@ class CommunityModuleProcess {
     return {
       events: true,
       moduleStorage: true,
-      staticAssets: true,
+      staticAssets: false,
+      osSandboxed: true,
       rawExpressApp: false,
       rawSql: false,
       systemWrites: false,
@@ -136,8 +138,8 @@ class CommunityModuleProcess {
     this.startChild();
     const response = await this.sendRunnerRequest('initialize', {
       apiVersion: 1,
-      indexJsPath: this.indexJsPath,
-      moduleDir: this.moduleDir,
+      indexJsPath: '/module/' + path.relative(this.moduleDir, this.indexJsPath).split(path.sep).join('/'),
+      moduleDir: '/module',
       moduleInfo: this.moduleInfo,
       moduleName: this.moduleName,
       phase: this.phase
@@ -156,20 +158,17 @@ class CommunityModuleProcess {
     // Re-hash the signed module tree immediately before every health/runtime
     // child process so a post-bootstrap file change cannot register handlers.
     verifyRuntimeModuleIntegrityNow(this.moduleName);
-    const env = buildModuleRuntimeEnv(this.moduleDir);
-    const child = fork(RUNNER_ENTRY, [], {
-      cwd: this.moduleDir,
-      env,
-      execArgv: [],
-      stdio: ['ignore', 'pipe', 'pipe', 'ipc']
-    });
+    const child = startSandbox(this.moduleDir, RUNNER_ENTRY);
 
     this.child = child;
     child.stdout?.on('data', chunk => {
       process.stdout.write(`[MODULE RUNNER:${this.moduleName}] ${chunk}`);
     });
+    let logBytes = 0;
     child.stderr?.on('data', chunk => {
-      process.stderr.write(`[MODULE RUNNER:${this.moduleName}:ERR] ${chunk}`);
+      // Bound untrusted output over the lifetime of this runner.
+      logBytes += chunk.length;
+      if (logBytes <= 1048576) process.stderr.write(`[MODULE RUNNER:${this.moduleName}:ERR] ${chunk}`);
     });
     this.exitPromise = new Promise(resolve => {
       child.once('exit', (code, signal) => resolve({ code, signal }));
@@ -277,9 +276,14 @@ class CommunityModuleProcess {
     }
 
     if (message.type === 'request') {
+      if (this.inflightHostRequests >= 32) {
+        void this.stop('[E_MODULE_RUNNER_REQUEST_LIMIT] Too many concurrent requests.');
+        return;
+      }
+      this.inflightHostRequests++;
       this.handleHostRequest(message).catch(err => {
         this.sendHostResponse(message.id, null, err);
-      });
+      }).finally(() => { this.inflightHostRequests--; });
       return;
     }
 
@@ -314,13 +318,10 @@ class CommunityModuleProcess {
     } else if (action === 'event.listenerCount') {
       result = this.getHost().eventBus.listenerCount(payload.eventName);
     } else if (action === 'host.registerStaticAssets') {
-      this.boundaryTouched = true;
-      const mount = await this.getHost().registerStaticAssets(payload.options || {});
-      if (this.phase === 'runtime') this.staticMounts.push(mount);
-      result = mount;
+      throw Object.assign(new Error('[E_MODULE_UI_DENIED] Modules are backend-only. Install UI as a widget.'), { code: 'E_MODULE_UI_DENIED' });
     } else if (action === 'host.getStaticMounts') {
       result = this.getHost().getStaticMounts();
-    } else if (action.startsWith('host.storage.')) {
+    } else if (typeof action === 'string' && action.startsWith('host.storage.')) {
       this.boundaryTouched = true;
       result = await this.handleStorageRequest(action, payload);
     } else if (action === 'listener.callback') {
@@ -388,6 +389,9 @@ class CommunityModuleProcess {
   handleListenerRegistration(action, payload = {}) {
     this.boundaryTouched = true;
     const { eventName, listenerId } = payload;
+    if (this.remoteListeners.size >= 100 || this.remoteListeners.has(listenerId)) {
+      throw new Error('[E_MODULE_RUNNER_LISTENER_LIMIT] Duplicate listener or listener limit exceeded.');
+    }
     if (!listenerId) {
       throw new Error('[E_MODULE_RUNNER_LISTENER_ID_MISSING] Runner listener registration requires listenerId.');
     }
@@ -395,6 +399,7 @@ class CommunityModuleProcess {
     const handler = (...args) => {
       const callbackArgs = args.map(arg => {
         if (typeof arg !== 'function') return toWireValue(arg);
+        if (this.pendingHostCallbacks.size >= 1000) throw new Error('[E_MODULE_RUNNER_CALLBACK_LIMIT] Too many pending callbacks.');
         const callbackId = `cb-${this.nextCallbackId++}`;
         this.pendingHostCallbacks.set(callbackId, arg);
         return { __bpFunctionRef: true, callbackId };
@@ -428,6 +433,7 @@ class CommunityModuleProcess {
   handleListenerCallback(payload = {}) {
     const callback = this.pendingHostCallbacks.get(payload.callbackId);
     if (!callback) return { called: false };
+    this.pendingHostCallbacks.delete(payload.callbackId);
     callback(...(payload.args || []).map(fromWireValue));
     return { called: true };
   }
@@ -501,6 +507,9 @@ async function startCommunityModuleProcess(options) {
   try {
     await controller.initialize();
     return controller;
+  } catch (err) {
+    await controller.stop();
+    throw err;
   } finally {
     removeReadyAcknowledger();
   }

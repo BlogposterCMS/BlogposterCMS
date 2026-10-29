@@ -54,25 +54,9 @@ function serviceNamesFromApiDefinition(apiDefinition = {}) {
   return names;
 }
 
-function buildModuleRuntimeEnv(moduleRoot) {
-  const apiDefinition = readModuleApiDefinition(moduleRoot);
-  const env = Object.create(null);
-
-  for (const key of HOST_PROCESS_ENV_KEYS) {
-    if (process.env[key] !== undefined) {
-      env[key] = process.env[key];
-    }
-  }
-
-  for (const serviceName of serviceNamesFromApiDefinition(apiDefinition)) {
-    const keys = SERVICE_ENV_KEYS[serviceName] || [];
-    for (const key of keys) {
-      if (process.env[key] !== undefined) {
-        env[key] = process.env[key];
-      }
-    }
-  }
-  return Object.freeze(env);
+function buildModuleRuntimeEnv() {
+  // Package declarations never authorize delivery of provider credentials.
+  return Object.freeze(Object.create(null));
 }
 
 module.exports = {

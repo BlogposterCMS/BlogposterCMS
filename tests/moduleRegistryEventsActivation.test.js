@@ -68,7 +68,7 @@ async function withTempModule(moduleName, source, fn) {
   }
 }
 
-test('activateModuleInRegistry immediate load uses scoped community event bus', async () => {
+(process.platform === 'linux' ? test : test.skip)('activateModuleInRegistry immediate load uses scoped community event bus', async () => {
   await withTempModule('safeActivation', `
     module.exports = {
       async initialize({ motherEmitter, app, moduleHost }) {
@@ -104,7 +104,7 @@ test('activateModuleInRegistry immediate load uses scoped community event bus', 
   });
 });
 
-test('activateModuleInRegistry immediate load scopes safe payloads and records loaded module', async () => {
+(process.platform === 'linux' ? test : test.skip)('activateModuleInRegistry immediate load scopes safe payloads and records loaded module', async () => {
   await withTempModule('safeActivation', `
     module.exports = {
       async initialize({ motherEmitter, moduleHost }) {
@@ -136,7 +136,7 @@ test('activateModuleInRegistry immediate load scopes safe payloads and records l
   });
 });
 
-test('activateModuleInRegistry does not expose loader tokens in module initialize context', async () => {
+(process.platform === 'linux' ? test : test.skip)('activateModuleInRegistry does not expose loader tokens in module initialize context', async () => {
   await withTempModule('tokenlessActivation', `
     module.exports = {
       async initialize(context) {
@@ -162,7 +162,7 @@ test('activateModuleInRegistry does not expose loader tokens in module initializ
   });
 });
 
-test('activateModuleInRegistry immediate load blocks system events', async () => {
+(process.platform === 'linux' ? test : test.skip)('activateModuleInRegistry immediate load blocks system events', async () => {
   await withTempModule('badActivation', `
     module.exports = {
       async initialize({ motherEmitter }) {
@@ -176,11 +176,11 @@ test('activateModuleInRegistry immediate load blocks system events', async () =>
     assert.strictEqual(result, false);
     assert.strictEqual(emitter.removals.length, 0);
     assert.strictEqual(global.loadedModules?.badActivation, undefined);
-    assert.match(emitter.updates[0].data.last_error, /system event/);
+    assert.match(emitter.updates[0].data.last_error, /E_MODULE_ACCESS_DENIED|system event/);
   });
 });
 
-test('activateModuleInRegistry immediate load runs community code outside the host process', async () => {
+(process.platform === 'linux' ? test : test.skip)('activateModuleInRegistry immediate load runs community code outside the host process', async () => {
   await withTempModule('processActivation', `
     module.exports = {
       async initialize({ motherEmitter }) {
@@ -307,4 +307,14 @@ test('registry admin events refuse core-owned module names', async () => {
   }
 
   assert.strictEqual(emitter.updates.length, 0);
+});
+
+(process.platform !== 'linux' ? test : test.skip)('unsupported host retains module files and records a sandbox activation error', async () => {
+  await withTempModule('unsupportedHost', 'module.exports = {initialize() {}}', async ({ modulesRoot }) => {
+    const emitter = new ActivationEmitter();
+    const result = await _internals.attemptSingleLoad('unsupportedHost', emitter, {}, 'module-token', { modulesRoot });
+    expect(result).toBe(false);
+    expect(emitter.updates[0].data.last_error).toContain('E_MODULE_SANDBOX_UNAVAILABLE');
+    expect(fs.existsSync(path.join(modulesRoot, 'unsupportedHost', 'index.js'))).toBe(true);
+  });
 });

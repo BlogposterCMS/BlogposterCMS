@@ -144,6 +144,13 @@ async function mirrorPageTrashToContentEngine(motherEmitter, action, pageData) {
 }
 
 module.exports = {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    await requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      jwt, moduleName: MODULE_NAME, moduleType: MODULE_TYPE,
+      table: '__rawSQL__', data: { rawSQL: 'GET_ALL_PAGES' }
+    });
+  },
   _internals: {
     setupPagesManagerEvents,
     designLayoutForPage,
@@ -151,7 +158,7 @@ module.exports = {
     normalizeLayoutRef,
     parsePageMeta
   },
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[PAGE MANAGER] Must be loaded as a core module.');
     }
@@ -166,6 +173,12 @@ module.exports = {
     }
 
     console.log('[PAGE MANAGER] Initializing Page Manager...');
+
+    // Existing pages, public tokens and schemas survive a handler replacement.
+    if (isModuleUpdate) {
+      setupPagesManagerEvents(motherEmitter);
+      return;
+    }
 
     try {
       // 1) Ensure DB/schema
@@ -250,6 +263,7 @@ module.exports = {
 
     } catch (err) {
       console.error('[PAGE MANAGER] Initialization error:', err.message);
+      throw err;
     }
   }
 };
@@ -345,14 +359,14 @@ function setupPagesManagerEvents(motherEmitter) {
           finalSlug = `${baseSlug}-${tries}`;
           return checkSlug();
         }
-        doInsert();
+        return doInsert();
       } catch (err) {
         callback(err);
       }
     };
   
     const doInsert = () => {
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -414,7 +428,7 @@ function setupPagesManagerEvents(motherEmitter) {
 });
     };
   
-    checkSlug();
+    return checkSlug();
   });
   
   
@@ -434,7 +448,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching all pages.'));
       }, TIMEOUT_DURATION);
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
@@ -465,7 +479,7 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('A valid "lane" argument ("public"|"admin") is required.'));
       }
       const lang = language && typeof language === 'string' ? language.toLowerCase() : undefined;
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -502,7 +516,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching page by ID.'));
       }, TIMEOUT_DURATION);
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
@@ -553,7 +567,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching page by slug.'));
       }, TIMEOUT_DURATION);
   
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
@@ -601,7 +615,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while fetching start page.'));
       }, TIMEOUT_DURATION);
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -636,7 +650,7 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('parentId is required.'));
       }
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -662,7 +676,7 @@ function setupPagesManagerEvents(motherEmitter) {
         return cb(new Error('[pagesManager] getEnvelope => invalid payload.'));
       }
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_SLUG, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -672,10 +686,12 @@ function setupPagesManagerEvents(motherEmitter) {
         }).then(async page => {
   if (!page) return cb(new Error('Page not found'));
   const pageSeo = {
-    title: page.seo_title || page.title || '',
+    title: page.title || '',
+    seoTitle: page.seo_title || '',
     description: page.meta_desc || '',
     keywords: page.seo_keywords || '',
-    ogImage: page.seo_image || ''
+    ogImage: page.seo_image || '',
+    featuredImage: typeof page.meta?.featuredImage === 'string' ? page.meta.featuredImage : ''
   };
   const resolvedSeo = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.RESOLVE_SEO_META, {
     jwt, moduleName: 'seoManager', moduleType: 'core',
@@ -685,7 +701,7 @@ function setupPagesManagerEvents(motherEmitter) {
     console.warn('PUBLIC_SEO_RESOLVE_FAILED: Using the published page metadata.', error.message);
     return null;
   });
-  const seo = resolvedSeo?.seo || pageSeo;
+  const seo = resolvedSeo?.seo || { ...pageSeo, title: pageSeo.seoTitle || pageSeo.title, ogImage: pageSeo.ogImage || pageSeo.featuredImage };
   const usesMain = ['main', 'composed', 'inherit'].includes(pageLayoutMode(page));
   const settings = usesMain ? await requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PUBLIC_SETTINGS, {
     jwt, moduleName: 'settingsManager', moduleType: 'core', keys: [SITE_MAIN_DESIGN_SETTING]
@@ -829,7 +845,7 @@ function setupPagesManagerEvents(motherEmitter) {
         callback(new Error('Timeout while updating page.'));
       }, TIMEOUT_DURATION);
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
           jwt,
           moduleName : 'pagesManager',
           moduleType : 'core',
@@ -959,7 +975,7 @@ function setupPagesManagerEvents(motherEmitter) {
       const laneVal = ['all', 'public', 'admin'].includes(lane) ? lane : 'all';
       const limVal = Math.min(parseInt(limit, 10) || 20, 50);
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',
@@ -993,13 +1009,13 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('Forbidden – missing permission: pages.delete'));
       }
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_ID, { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId }).then(page => {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_PAGE_BY_ID, { jwt, moduleName: 'pagesManager', moduleType: 'core', pageId }).then(page => {
   const slug = page?.slug || '';
   const rootSlug = String(slug).split('/')[0];
   if (['home', 'settings'].includes(rootSlug) && rootSlug === slug) {
     return callback(new Error('Cannot delete essential workspace pages.'));
   }
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_AS_DELETED, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.SET_AS_DELETED, {
     jwt,
     moduleName: 'pagesManager',
     moduleType: 'core',
@@ -1008,7 +1024,7 @@ function setupPagesManagerEvents(motherEmitter) {
     const to = setTimeout(() => {
       callback(new Error('Timeout while deleting a page.'));
     }, TIMEOUT_DURATION);
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       jwt,
       moduleName: 'pagesManager',
       moduleType: 'core',
@@ -1092,7 +1108,7 @@ function setupPagesManagerEvents(motherEmitter) {
         return callback(new Error('[pagesManager] generateXmlSitemap => invalid meltdown payload.'));
       }
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
           jwt,
           moduleName: 'pagesManager',
           moduleType: 'core',

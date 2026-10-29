@@ -10,6 +10,24 @@ function tick(): Promise<void> {
 }
 
 describe('mediaExplorerSurface', () => {
+  it('shows connected storage in the normal file view and isolates local mutations', async () => {
+    const emit = jest.fn(async () => ({ folders: [], files: ['local.png'], currentPath: '', parentPath: '' }));
+    const list = jest.fn(async (path: string) => ({ folders: [], files: ['remote.apk'], currentPath: path, parentPath: '',
+      details: [{ name: 'remote.apk', size: 10, modifiedAt: '', url: 'https://cdn.example.com/remote.apk' }] }));
+    const surface = createMediaExplorerSurface({ mode: 'manage', emit, loadStorageLocations: async () => [{ id: 'cloud', label: 'Release server', list }] });
+    document.body.append(surface.element);
+    await tick();
+    surface.element.querySelector<HTMLButtonElement>('[aria-label="Open storage Release server"]')!.click();
+    await tick();
+    expect(list).toHaveBeenCalledWith('');
+    expect(surface.element.querySelector('.media-item.file')?.textContent).toContain('remote.apk');
+    expect(surface.element.querySelector<HTMLButtonElement>('[aria-label="New folder"]')!.disabled).toBe(true);
+    expect(surface.element.textContent).not.toContain('local.png');
+    surface.element.querySelector<HTMLButtonElement>('[aria-label="Open storage Local server"]')!.click();
+    await tick();
+    expect(surface.element.textContent).toContain('local.png');
+    expect(surface.element.querySelector<HTMLButtonElement>('[aria-label="New folder"]')!.disabled).toBe(false);
+  });
   beforeEach(() => {
     document.body.innerHTML = '';
     window.ADMIN_TOKEN = 'admin-token';
@@ -101,6 +119,19 @@ describe('mediaExplorerSurface', () => {
       shortToken: 'abc',
       name: 'public/hero.png'
     });
+  });
+
+  it.each(['public', 'private'])('public URL image selection never creates shares (%s)', async initialPath => {
+    const onSelectFile = jest.fn();
+    const emit = jest.fn(async (_event, payload) => payload.action === 'listLocalFolder'
+      ? { folders: [], files: ['hero.png'], parentPath: '', currentPath: initialPath } : {});
+    const surface = createMediaExplorerSurface({ mode: 'picker', emit, initialPath, publicUrlOnly: true, onSelectFile });
+    document.body.append(surface.element); await tick();
+    surface.element.querySelector<HTMLButtonElement>('.media-item.file .media-item__main')!.click();
+    surface.element.querySelector<HTMLButtonElement>('[aria-label="Use selected file"]')!.click(); await tick();
+    expect(emit.mock.calls.some(([, payload]) => payload.resource === 'shares')).toBe(false);
+    if (initialPath === 'public') expect(onSelectFile).toHaveBeenCalledWith({ shareURL: '/media/hero.png', name: 'public/hero.png' });
+    else { expect(onSelectFile).not.toHaveBeenCalled(); expect(surface.element.textContent).toContain('MEDIA_PUBLIC_IMAGE_REQUIRED'); }
   });
 
   it('keeps the newest folder when earlier requests finish late', async () => {

@@ -433,7 +433,7 @@ function renderModuleDetail(moduleRecord: ModuleRecord | null, pendingAccess: Mo
   return panel;
 }
 
-export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLElement } = {}): Promise<void> {
+export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLElement; actionsHost?: HTMLElement } = {}): Promise<void> {
   const jwt = window.ADMIN_TOKEN;
   const meltdownEmit = window.meltdownEmit;
   if (!el) return;
@@ -457,10 +457,6 @@ export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLE
     title.textContent = 'Modules';
 
     titleBar.appendChild(title);
-    const installButton = document.createElement('button');
-    installButton.className = 'button secondary sm'; installButton.textContent = 'Install ZIP';
-    installButton.addEventListener('click', openUploadPopup);
-    card.appendChild(installButton);
 
     const tabs = options.tabsHost || document.createElement('div');
     tabs.classList.add('modules-tabs');
@@ -710,7 +706,11 @@ export async function render(el: HTMLElement | null, options: { tabsHost?: HTMLE
 }
 
 function openUploadPopup(): void {
-  openExtensionUpload(async (zipData, fileName, status) => {
+  openExtensionUpload(installModuleArchive);
+}
+
+/** The global store delegates to the existing inspection/access-review workflow. */
+export async function installModuleArchive(zipData: string, fileName: string, status: HTMLElement): Promise<boolean> {
     const emit = window.meltdownEmit;
     const inspection = await inspectModuleZip(emit, window.ADMIN_TOKEN, zipData);
     const name = inspection.moduleName || fileName;
@@ -720,7 +720,6 @@ function openUploadPopup(): void {
     await installModuleZip(emit, window.ADMIN_TOKEN, zipData, approved, inspection.reviewedHash);
     window.location.reload();
     return true;
-  });
 }
 
 (window as ModulesWindow).openUploadPopup = openUploadPopup;

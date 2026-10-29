@@ -28,7 +28,7 @@ function createFixture(slug, token = 'fixture-token') {
     params: { 0: slug }, cookies: token ? { admin_jwt: token } : {},
     originalUrl: `/admin/${slug}`, csrfToken: () => 'fixture-csrf'
   };
-  const res = { redirect: jest.fn(), clearCookie: jest.fn(), setHeader: jest.fn(), send: jest.fn() };
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn(), redirect: jest.fn(), clearCookie: jest.fn(), setHeader: jest.fn(), send: jest.fn() };
   const next = jest.fn();
   return { run: () => handler(req, res, next), res, next, validateAdminToken };
 }
@@ -87,4 +87,28 @@ test('other existing widget detail routes keep their numeric entity ID', async (
   await fixture.run();
   expect(requestBackendEvent).toHaveBeenCalledWith(expect.anything(), expect.any(String), expect.objectContaining({ slug: 'content/pages/edit' }));
   expect(fixture.res.send.mock.calls[0][0]).toContain('window.PAGE_ID     = 42');
+});
+
+
+test('Profile opens the existing editor for the verified session user', async () => {
+  const fixture = createFixture('profile');
+  fixture.validateAdminToken.mockResolvedValue({ isUser: true, userId: 12 });
+  await fixture.run();
+  expect(fixture.res.redirect).toHaveBeenCalledWith('/admin/settings/users/edit/12');
+  expect(requestBackendEvent).not.toHaveBeenCalled();
+});
+
+test.each([{}, { isUser: true, userId: '../12' }, { isUser: false, userId: 12 }, { isUser: true, isPublic: true, userId: 12 }])('Profile rejects an unavailable session identity: %j', async principal => {
+  const fixture = createFixture('profile');
+  fixture.validateAdminToken.mockResolvedValue(principal);
+  await fixture.run();
+  expect(fixture.res.status).toHaveBeenCalledWith(403);
+  expect(fixture.res.json).toHaveBeenCalledWith({ error: 'ADMIN_PROFILE_IDENTITY_UNAVAILABLE' });
+  expect(fixture.res.redirect).not.toHaveBeenCalled();
+});
+
+test('Profile requires a signed-in session', async () => {
+  const fixture = createFixture('profile', null);
+  await fixture.run();
+  expect(fixture.res.redirect).toHaveBeenCalledWith('/admin/login?redirectTo=%2Fadmin%2Fprofile');
 });

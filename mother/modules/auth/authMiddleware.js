@@ -1,3 +1,4 @@
+const { respondIfModuleUpdating } = require('../../utils/coreModuleAvailability');
 
 
 const { requestBackendEvent } = require('../../contracts/backendEventContracts');
@@ -128,7 +129,8 @@ function requireAuthCookie(req, res, next) {
     }
   }
 
-  function finalize() {
+  function finalize(error) {
+    if (respondIfModuleUpdating(res, error)) return;
     const jump = `/admin/login?redirectTo=${encodeURIComponent(req.originalUrl)}`;
     return res.redirect(jump);
   }
@@ -161,7 +163,10 @@ function requireAuthHeader(req, res, next) {
     attachWildcardIfAdmin(decoded);
     req.user = decoded;
     next();
-  }, () => res.status(401).json({ error: 'Unauthorized – invalid token' }));
+  }, error => {
+    if (respondIfModuleUpdating(res, error)) return;
+    res.status(401).json({ error: 'Unauthorized – invalid token' });
+  });
 }
 
 /* ──────────────────────────────────────────────────────────────── *

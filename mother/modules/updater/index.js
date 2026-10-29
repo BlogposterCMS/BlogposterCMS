@@ -4,7 +4,7 @@ const { initializeCoreUpdateEvents } = require('./coreUpdateEvents');
 const { startUpdateChecks } = require('./updateScheduler');
 const activeEmitters = new WeakSet();
 
-async function initialize({ motherEmitter, isCore, jwt }) {
+async function initialize({ motherEmitter, isCore, jwt, coreModuleUpdates, isModuleUpdate = false }) {
   if (!isCore || !jwt || !motherEmitter || typeof motherEmitter.on !== 'function') {
     throw new Error('CORE_UPDATE_INIT_INVALID: updater requires the authenticated core lifecycle');
   }
@@ -13,9 +13,15 @@ async function initialize({ motherEmitter, isCore, jwt }) {
   if (typeof motherEmitter.registerModuleType === 'function') {
     motherEmitter.registerModuleType('updater', 'core');
   }
-  initializeCoreUpdateEvents(motherEmitter);
-  startUpdateChecks();
+  initializeCoreUpdateEvents(motherEmitter, { coreModuleUpdates });
+  // The host-owned discovery scheduler survives replacing the review handlers.
+  if (!isModuleUpdate) startUpdateChecks();
   activeEmitters.add(motherEmitter);
 }
 
-module.exports = { initialize };
+async function healthCheck({ coreModuleUpdates }) {
+  if (typeof coreModuleUpdates?.snapshot !== 'function') throw new Error('CORE_MODULE_UPDATE_SERVICE_MISSING');
+  coreModuleUpdates.snapshot();
+}
+
+module.exports = { lifecycleVersion: 1, initialize, healthCheck };

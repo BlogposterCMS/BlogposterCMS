@@ -1,6 +1,8 @@
+import { editUserPermissions } from './userPermissionsDialog.js';
 import { createFormField, createFormActions } from '../../../shared/forms/formField.js';
 import { registerWorkspaceChanges } from '../../../shared/navigation/workspaceChanges.js';
 import { createColorPicker } from '/ui/shared/controls/colorPicker.js';
+import { openPopover, type BpPopoverHandle } from '/ui/shared/overlays/popover.js';
 import {
   deleteUserRecord,
   errorMessage,
@@ -10,7 +12,6 @@ import {
   fetchUserDetails,
   updateUserAccess,
   updateUserProfile,
-  type PermissionRecord,
   type RoleRecord,
   userEditTextFields as textFields,
   userValue,
@@ -19,8 +20,6 @@ import {
 } from './userEditData.js';
 import {
   permissionBlobFromKeys,
-  permissionGroupForKey,
-  permissionKey,
   permissionKeysFromBlob,
   visiblePermissionGroups
 } from './usersListData.js';
@@ -75,42 +74,6 @@ function buildRoleCheckboxes(container: HTMLElement, roles: RoleRecord[], select
     label.appendChild(input);
     label.appendChild(text);
     container.appendChild(label);
-  });
-}
-
-function buildPermissionCheckboxes(container: HTMLElement, permissions: PermissionRecord[], selectedKeys: Set<string>): void {
-  const groups = new Map<string, PermissionRecord[]>();
-  permissions.forEach(permission => {
-    const key = permissionKey(permission);
-    if (!key || key === '*' || key === 'canAccessEverything') return;
-    const group = permissionGroupForKey(key);
-    groups.set(group, [...(groups.get(group) || []), permission]);
-  });
-
-  Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b)).forEach(([group, records]) => {
-    const section = document.createElement('div');
-    section.className = 'permission-group-section';
-    const title = document.createElement('strong');
-    title.textContent = group;
-    section.appendChild(title);
-
-    records.sort((a, b) => permissionKey(a).localeCompare(permissionKey(b))).forEach(permission => {
-      const key = permissionKey(permission);
-      const label = document.createElement('label');
-      label.className = 'permission-checkbox';
-      label.title = permission.description || key;
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.value = key;
-      input.dataset.permissionKey = key;
-      input.checked = selectedKeys.has(key);
-      const text = document.createElement('span');
-      text.textContent = key;
-      label.appendChild(input);
-      label.appendChild(text);
-      section.appendChild(label);
-    });
-    container.appendChild(section);
   });
 }
 
@@ -179,11 +142,16 @@ export async function render(el: HTMLElement | null, options: { userId?: string 
     colorBtn.type = 'button';
     colorBtn.id = 'ue-ui_color';
     colorBtn.className = 'color-picker-toggle';
+    colorBtn.setAttribute('aria-label', 'Choose account accent');
+    colorBtn.setAttribute('aria-haspopup', 'dialog');
+    colorBtn.setAttribute('aria-expanded', 'false');
+    colorBtn.title = selectedColor;
     colorBtn.style.backgroundColor = selectedColor;
 
     const themeColor = getComputedStyle(document.documentElement)
       .getPropertyValue('--accent-color')
       .trim();
+    let colorPopover: BpPopoverHandle | null = null;
     const picker = createColorPicker({
       presetColors: colorChoices,
       userColors: userRecord.ui_color ? [userRecord.ui_color] : [],
@@ -192,18 +160,20 @@ export async function render(el: HTMLElement | null, options: { userId?: string 
       onSelect: color => {
         selectedColor = color;
         colorBtn.style.backgroundColor = color;
-        picker.el.classList.add('hidden');
+        colorBtn.title = color;
       }
     });
-    picker.el.classList.add('hidden');
     colorBtn.addEventListener('click', () => {
-      picker.el.classList.toggle('hidden');
+      if (colorPopover) { colorPopover.close(); return; }
+      picker.updateOptions({ initialColor: selectedColor });
+      // Use the shared viewport-aware overlay instead of a height-constrained
+      // absolutely positioned child of the account form.
+      colorPopover = openPopover(colorBtn, { content: picker.el, ariaLabel: 'Account accent', autoFocus: true,
+        onClose: () => { colorPopover = null; } });
     });
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
-    picker.el.classList.add('floating');
     wrapper.appendChild(colorBtn);
-    wrapper.appendChild(picker.el);
 
     const colorLabel = document.createElement('label');
     colorLabel.setAttribute('for', 'ue-ui_color');
@@ -220,7 +190,7 @@ export async function render(el: HTMLElement | null, options: { userId?: string 
     container.append(createFormField('New password', passInput, { hint: 'Leave empty to keep the current password.' }));
 
     const selectedRoleIds = new Set((access.roleIds || []).map(String));
-    const selectedPermissionKeys = new Set(permissionKeysFromBlob(access.directPermissions));
+    let selectedPermissionKeys = new Set(permissionKeysFromBlob(access.directPermissions));
 
     const roleSection = document.createElement('div');
     roleSection.className = 'permission-group-section';
@@ -230,13 +200,27 @@ export async function render(el: HTMLElement | null, options: { userId?: string 
     buildRoleCheckboxes(roleSection, roles, selectedRoleIds);
     container.appendChild(roleSection);
 
-    const advanced = document.createElement('details');
+    const advanced = document.createElement('div');
     advanced.className = 'permission-advanced-section';
-    const advancedSummary = document.createElement('summary');
-    advancedSummary.textContent = 'Advanced rights';
-    advanced.appendChild(advancedSummary);
-    buildPermissionCheckboxes(advanced, permissions, selectedPermissionKeys);
-    container.appendChild(advanced);
+    const advancedSummary = document.createElement('p'); advancedSummary.className = 'settings-hint';
+    const refreshPermissionSummary = () => {
+      advancedSummary.textContent = `${selectedPermissionKeys.size} direct rights selected. Permission group rights remain in effect.`;
+    };
+    const editRights = document.createElement('button'); editRights.type = 'button';
+    editRights.className = 'button ghost'; editRights.textContent = 'Edit advanced rights';
+    editRights.setAttribute('aria-haspopup', 'dialog');
+    let editingRights = false;
+    editRights.addEventListener('click', async () => {
+      if (editingRights || saving) return;
+      colorPopover?.close(); editingRights = true;
+      try {
+        const draft = await editUserPermissions(permissions, selectedPermissionKeys);
+        if (draft && container.isConnected) { selectedPermissionKeys = draft; refreshPermissionSummary(); }
+      } catch (err) {
+        status.setAttribute('role', 'alert'); status.textContent = `SETTINGS_USER_RIGHTS_DIALOG_FAILED: ${errorMessage(err)}`;
+      } finally { editingRights = false; }
+    });
+    refreshPermissionSummary(); advanced.append(editRights, advancedSummary); container.append(advanced);
 
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button'; saveBtn.className = 'button primary'; saveBtn.textContent = 'Save user';
@@ -248,22 +232,29 @@ export async function render(el: HTMLElement | null, options: { userId?: string 
     const controls = [...container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')];
     const valueOf = (input: HTMLInputElement | HTMLTextAreaElement) => input instanceof HTMLInputElement && input.type === 'checkbox' ? String(input.checked) : input.value;
     let baseline = controls.map(valueOf); let savedColor = selectedColor; let saving = false;
-    const dirty = () => savedColor !== selectedColor || controls.some((input, index) => valueOf(input) !== baseline[index]);
-    registerWorkspaceChanges(container, { isDirty: dirty, isBusy: () => saving });
+    const permissionSignature = () => JSON.stringify([...selectedPermissionKeys].sort());
+    let savedPermissions = new Set(selectedPermissionKeys);
+    let savedPermissionSignature = permissionSignature();
+    const dirty = () => savedPermissionSignature !== permissionSignature() || savedColor !== selectedColor || controls.some((input, index) => valueOf(input) !== baseline[index]);
+    registerWorkspaceChanges(container, { isDirty: dirty, isBusy: () => saving || editingRights });
     discard.addEventListener('click', () => {
-      if (saving) return;
+      if (saving || editingRights) return;
       controls.forEach((input, index) => {
         if (input instanceof HTMLInputElement && input.type === 'checkbox') input.checked = baseline[index] === 'true';
         else input.value = baseline[index] || '';
       });
-      selectedColor = savedColor; colorBtn.style.backgroundColor = savedColor; status.textContent = '';
+      selectedPermissionKeys = new Set(savedPermissions); refreshPermissionSummary();
+      colorPopover?.close();
+      selectedColor = savedColor; colorBtn.style.backgroundColor = savedColor; colorBtn.title = savedColor;
+      picker.updateOptions({ initialColor: savedColor }); status.textContent = '';
     });
 
     el.innerHTML = '';
     el.appendChild(container);
 
     async function saveUser(): Promise<void> {
-      if (saving) return;
+      if (saving || editingRights) return;
+      colorPopover?.close();
       saving = true; container.inert = true; saveBtn.disabled = true;
       status.setAttribute('role', 'status'); status.textContent = 'Saving…';
       const values = {} as UserEditFieldValues;
@@ -279,14 +270,12 @@ export async function render(el: HTMLElement | null, options: { userId?: string 
         const roleIds = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-role-id]'))
           .filter(input => input.checked)
           .map(input => input.value);
-        const permissionKeys = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-permission-key]'))
-          .filter(input => input.checked)
-          .map(input => input.value);
         await updateUserAccess(meltdownEmit, jwt, userRecord.id, {
           roleIds,
-          directPermissions: permissionBlobFromKeys(permissionKeys)
+          directPermissions: permissionBlobFromKeys([...selectedPermissionKeys])
         });
         passInput.value = ''; baseline = controls.map(valueOf); savedColor = selectedColor;
+        savedPermissions = new Set(selectedPermissionKeys); savedPermissionSignature = permissionSignature();
         status.textContent = 'User saved.';
       } catch (err) {
         status.setAttribute('role', 'alert'); status.textContent = `SETTINGS_USER_SAVE_FAILED: ${errorMessage(err)}`;

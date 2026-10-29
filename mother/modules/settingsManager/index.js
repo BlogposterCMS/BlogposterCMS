@@ -14,11 +14,13 @@ const { onceCallback } = require('../../emitters/motherEmitter');
 const { hasPermission } = require('../userManagement/permissionUtils');
 const { SITE_MAIN_DESIGN_SETTING, mainDesignId } = require('../../../ui/shared/layout/pagePresentation.js');
 const { pageContentHostIds } = require('../../../ui/shared/layout/layoutDocument.js');
+const { SETTING_KEY: ANALYTICS_CONFIG_KEY, normalizeConfig: normalizeAnalyticsConfig } = require('../analyticsManager/consent');
 
 const MODULE_NAME = 'settingsManager';
 const MODULE_TYPE = 'core';
 
 const PUBLIC_SETTING_KEYS = Object.freeze([
+  ANALYTICS_CONFIG_KEY,
   'FIRST_INSTALL_DONE',
   'ALLOW_REGISTRATION',
   'FAVICON_URL',
@@ -134,6 +136,7 @@ async function listStoredSettings(motherEmitter, jwt, options = {}) {
 }
 
 async function setStoredSetting(motherEmitter, jwt, key, value) {
+  if (key === ANALYTICS_CONFIG_KEY) value = JSON.stringify(normalizeAnalyticsConfig(value, true));
   if (key === SITE_MAIN_DESIGN_SETTING) {
     value = mainDesignId(value);
     if (value) {
@@ -311,7 +314,12 @@ function setupSettingsListeners(motherEmitter) {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, moduleDbSalt, jwt }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await selectRaw(motherEmitter, jwt, 'GET_SETTING', { key: 'FIRST_INSTALL_DONE' });
+    if (rows === undefined) throw new Error('CORE_MODULE_SETTINGS_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, moduleDbSalt, jwt, isModuleUpdate = false }) {
     if (!isCore) {
       throw new Error('[SETTINGS MANAGER] Must be loaded as a core module.');
     }
@@ -328,12 +336,16 @@ module.exports = {
     console.log('[SETTINGS MANAGER] Initializing SETTINGS MANAGER...');
 
     try {
-      await ensuresettingsManagerDatabase(motherEmitter, moduleDbSalt, jwt);
-      await ensureSettingsSchemaAndTables(motherEmitter, jwt);
+      // Preserve the existing settings store while preparing new listeners.
+      if (!isModuleUpdate) {
+        await ensuresettingsManagerDatabase(motherEmitter, moduleDbSalt, jwt);
+        await ensureSettingsSchemaAndTables(motherEmitter, jwt);
+      }
       setupSettingsListeners(motherEmitter);
       console.log('[SETTINGS MANAGER] SETTINGS MANAGER initialized successfully.');
     } catch (err) {
       console.error('[SETTINGS MANAGER] Error during initialization:', err.message);
+      throw err;
     }
   },
   setupSettingsListeners,

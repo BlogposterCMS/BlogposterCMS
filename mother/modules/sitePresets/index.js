@@ -61,6 +61,12 @@ function setupSitePresetEvents(motherEmitter) {
 }
 
 module.exports = {
+  // Shared settings services retain their canonical queues and persistence.
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const value = await listSitePresets(motherEmitter, jwt);
+    if (!Array.isArray(value?.presets)) throw new Error('CORE_MODULE_SITEPRESETS_NOT_READY');
+  },
   async initialize({ motherEmitter, isCore, jwt }) {
     if (!isCore) {
       throw new Error('SITE_PRESETS_CORE_REQUIRED: sitePresets must load as a core module.');

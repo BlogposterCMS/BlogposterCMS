@@ -63,7 +63,8 @@ describe('settingsPanelsData', () => {
     await expect(fetchSeoSettings(emit, 'admin-token')).resolves.toEqual({
       metaDescription: 'Meta',
       titleTemplate: '%title%',
-      indexingEnabled: true
+      indexingEnabled: true,
+      defaultImage: ''
     });
     expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({
       jwt: 'admin-token',
@@ -106,6 +107,15 @@ describe('settingsPanelsData', () => {
     });
   });
 
+  it('uses canonical SEO defaults after adoption and never reads stale legacy settings', async () => {
+    const emit = jest.fn().mockResolvedValue({ description: '', og_image: '/default.jpg', robots: 'noindex,follow',
+      meta: { settingsVersion: 1, titleTemplate: '%title% | Website' } });
+    await expect(fetchSeoSettings(emit, 't')).resolves.toEqual({ metaDescription: '', defaultImage: '/default.jpg',
+      indexingEnabled: false, titleTemplate: '%title% | Website' });
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', expect.objectContaining({ resource: 'seo', action: 'defaults' }));
+  });
+
   it('saves grouped settings through the runtime admin facade', async () => {
     const emit = jest.fn().mockResolvedValue(undefined);
 
@@ -136,12 +146,9 @@ describe('settingsPanelsData', () => {
       jwt: 'admin-token',
       moduleName: 'runtimeManager',
       moduleType: 'core',
-      resource: 'settings',
-      action: 'set',
-      params: {
-        key: 'SEO_INDEXING_ENABLED',
-        value: 'false'
-      }
+      resource: 'seo',
+      action: 'setDefaults',
+      params: { description: 'Meta', ogImage: '', robots: 'noindex,follow', meta: { titleTemplate: '%title%', settingsVersion: 1 } }
     });
     expect(emit).toHaveBeenCalledWith('cmsAdminApiRequest', {
       jwt: 'admin-token',

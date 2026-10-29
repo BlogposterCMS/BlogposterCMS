@@ -3,7 +3,7 @@ export interface FolderListing {
   files: string[];
   parentPath: string;
   currentPath: string;
-  details?: Array<{ name: string; size: number | null; modifiedAt: string }>;
+  details?: Array<{ name: string; size: number | null; modifiedAt: string; url?: string }>;
 }
 
 export interface ShareLinkResult {
@@ -103,7 +103,8 @@ export function toFolderListing(value: unknown): FolderListing {
     ).map(item => ({
       name: item.name,
       size: typeof item.size === 'number' && Number.isFinite(item.size) && item.size >= 0 ? item.size : null,
-      modifiedAt: typeof item.modifiedAt === 'string' ? item.modifiedAt : ''
+      modifiedAt: typeof item.modifiedAt === 'string' ? item.modifiedAt : '',
+      ...(typeof item.url === 'string' ? { url: item.url } : {})
     })) } : {})
   };
 }
@@ -169,6 +170,20 @@ export async function listMediaDownloads(
     category: 'download', status: 'active', visibility: 'public', limit: 50
   });
   return Array.isArray(result) ? result : [];
+}
+
+/** Page the existing media catalog; do not silently hide files after the first page. */
+export async function listMediaCatalog(emit: MediaEmitter, jwt?: string | null): Promise<Record<string, unknown>[]> {
+  const rows: Record<string, unknown>[] = [];
+  for (let offset = 0; offset < 10000; offset += 200) {
+    const page = await emitRuntimeAdmin<unknown>(requireEmitter(emit), jwt, 'media', 'list', {
+      status: 'active', visibility: 'public', limit: 200, offset
+    });
+    if (!Array.isArray(page)) throw new Error('MEDIA_EXPLORER_CATALOG_INVALID');
+    rows.push(...page);
+    if (page.length < 200) return rows;
+  }
+  throw new Error('MEDIA_EXPLORER_CATALOG_LIMIT: Narrow the media catalog before browsing storage.');
 }
 
 export async function renameMediaItem(

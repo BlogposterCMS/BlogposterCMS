@@ -1,8 +1,26 @@
 /** @jest-environment jsdom */
-import { openExtensionUpload } from '../ui/shared/module-access/extensionUpload';
+import { openExtensionUpload, createExtensionStoreButton } from '../ui/shared/module-access/extensionUpload';
 import { reviewWidgetPackage } from '../ui/widgets/plainspace/admin/widgetPackageControls';
 
 beforeEach(() => { document.body.innerHTML = ''; delete (window as any).bpDialog; });
+
+test('store icon opens a keyboard-accessible ZIP dropzone with a hidden native picker', () => {
+  const button = createExtensionStoreButton();
+  expect(button.querySelector('img')?.getAttribute('src')).toBe('/assets/icons/store.svg');
+  expect(button.getAttribute('aria-label')).toBe('Install extension ZIP');
+  openExtensionUpload(jest.fn());
+  const input = document.querySelector<HTMLInputElement>('input[type=file]')!;
+  expect(input.hidden).toBe(true);
+  const click = jest.spyOn(input, 'click').mockImplementation(() => {});
+  document.querySelector('.module-upload-dropzone')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  expect(click).toHaveBeenCalledTimes(1);
+});
+
+test('global store chooses the owning package type in the ZIP dialog', () => {
+  openExtensionUpload(jest.fn(), true);
+  const select = document.querySelector<HTMLSelectElement>('[aria-label="Package type"]')!;
+  expect([...select.options].map(option => option.value)).toEqual(['module', 'widget']);
+});
 
 test('file picker rejects multiple files before inspection', async () => {
   const install = jest.fn();
@@ -18,12 +36,14 @@ test('dropping a file uses the same inspection callback without installing on ca
   let inspected: (value: unknown) => void;
   const completed = new Promise(resolve => { inspected = resolve; });
   const install = jest.fn(async (data: string, name: string) => { inspected({ data, name }); return false; });
-  openExtensionUpload(install);
+  openExtensionUpload(install, true);
+  document.querySelector<HTMLSelectElement>('[aria-label="Package type"]')!.value = 'widget';
   const drop = new Event('drop', { bubbles: true, cancelable: true });
   Object.defineProperty(drop, 'dataTransfer', { value: { files: [new File(['zip bytes'], 'sample.zip')] } });
   document.querySelector('.module-upload-box')!.dispatchEvent(drop);
   await expect(completed).resolves.toEqual({ data: btoa('zip bytes'), name: 'sample.zip' });
   expect(install).toHaveBeenCalledTimes(1);
+  expect((install.mock.calls[0] as unknown[])[3]).toBe('widget');
 });
 
 test('review preselects configured services only and submits the user selection', async () => {

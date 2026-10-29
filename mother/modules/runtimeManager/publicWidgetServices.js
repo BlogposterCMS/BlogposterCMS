@@ -24,9 +24,11 @@ function projectWidgetPolicy(value, widgetId) {
       || !Array.isArray(spec.values) || spec.values.length > 20 || spec.values.some(value => typeof value !== 'string' || !/^[a-zA-Z-]{1,20}$/.test(value))) throw new Error('WIDGET_SERVICE_POLICY_INVALID');
     preferences[name] = { cookie: spec.cookie, values: spec.values };
   }
-  return require('../widgetManager/widgetPackageAccess').restrictWidgetPolicy(
+  const projected = require('../widgetManager/widgetPackageAccess').restrictWidgetPolicy(
     { operations, preferences, draft: policy.draft === true }, policy.packageAccess
   );
+  if (projected.managed && /^[a-f0-9]{64}$/.test(policy.packageAccess?.codeHash || '')) projected.codeHash = policy.packageAccess.codeHash;
+  return projected;
 }
 function registerPublicWidgetServices(app, motherEmitter, jwt) {
   app.get('/api/public/widget-services/:widgetId', async (req, res) => {

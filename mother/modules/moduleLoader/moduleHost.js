@@ -686,86 +686,24 @@ function createEmitterListener(moduleName, handler, once = false) {
   return listener;
 }
 
-function prepareCommunityEventEmission({
-  eventName,
-  scopedPayload,
-  moduleName,
-  moduleInfo,
-  jwt,
-  accessGrants = [],
-  accessConsentManager = null,
-  motherEmitter
-}) {
-  if (moduleInfo?.accessPolicyVersion === 1) {
-    // Local lifecycle/storage contracts remain scoped by the existing host.
-    // All cross-module events use current registry grants, never runner state.
-    if (isCommunityOwnedEvent(eventName, moduleName) || eventName === BACKEND_EVENTS.DB_SELECT || eventName === BACKEND_EVENTS.LOG) {
-      assertCommunityEventAllowed(eventName, scopedPayload, moduleName, []);
-      return { eventName, payload: scopedPayload };
-    }
-    const { getRegisteredModuleInfo } = require('./moduleRegistryService');
-    return getRegisteredModuleInfo(motherEmitter, jwt, moduleName).then(current => {
-      const declared = current.requestedAccess?.some(item => item.event === eventName);
-      const allowed = current.accessPolicyVersion === 1 && declared && isCommunityAccessGranted(eventName, require('./moduleAccessPolicy').getGrantedModuleEvents(current));
-      if (!allowed) throw createModuleHostError('E_MODULE_ACCESS_DENIED', `Module "${moduleName}" has no approved manifest access to "${eventName}".`);
-      return { eventName, payload: createCoreEventPayload({ eventName, scopedPayload, moduleName, jwt }) };
-    });
-  }
-  if (isCommunityAccessGranted(eventName, accessGrants)) {
-    return {
-      eventName,
-      payload: createCoreEventPayload({ eventName, scopedPayload, moduleName, jwt })
-    };
-  }
-
-  try {
+function prepareCommunityEventEmission({ eventName, scopedPayload, moduleName, moduleInfo, jwt, motherEmitter }) {
+  // Every community module uses one strict policy; old grants cannot bypass review.
+  if (isCommunityOwnedEvent(eventName, moduleName) || eventName === BACKEND_EVENTS.DB_SELECT || eventName === BACKEND_EVENTS.LOG) {
     assertCommunityEventAllowed(eventName, scopedPayload, moduleName, []);
     return { eventName, payload: scopedPayload };
-  } catch (originalError) {
-    if (!accessConsentManager || typeof accessConsentManager.requestAccess !== 'function') {
-      throw originalError;
-    }
-
-    let accessRequest;
-    try {
-      accessRequest = accessConsentManager.requestAccess({
-        moduleName,
-        moduleInfo,
-        eventName,
-        eventPayload: scopedPayload
-      });
-    } catch {
-      throw originalError;
-    }
-
-    return accessRequest.promise.then(decision => {
-      if (!decision?.approved) {
-        throw decision?.error || createModuleHostError(
-          'E_MODULE_ACCESS_CONSENT_DENIED',
-          `Module access request for "${eventName}" was denied.`
-        );
-      }
-
-      if (
-        decision.mode === 'always' &&
-        accessRequest.request.allowPermanent &&
-        !isCommunityAccessGranted(eventName, accessGrants)
-      ) {
-        accessGrants.push(eventName);
-      }
-
-      return {
-        eventName,
-        payload: createCoreEventPayload({
-          eventName,
-          scopedPayload,
-          moduleName,
-          jwt: decision.jwt || jwt,
-          decodedJWT: decision.decodedJWT || null
-        })
-      };
-    });
   }
+  if (moduleInfo?.accessPolicyVersion !== 1) {
+    // Old in-memory grants and one-time prompts are no longer execution authority.
+    assertCommunityEventAllowed(eventName, scopedPayload, moduleName, []);
+    throw createModuleHostError('E_MODULE_ACCESS_REVIEW_REQUIRED', 'Review this module in Modules before using cross-module actions.');
+  }
+  const { getRegisteredModuleInfo } = require('./moduleRegistryService');
+  return getRegisteredModuleInfo(motherEmitter, jwt, moduleName).then(current => {
+    const declared = current.requestedAccess?.some(item => item.event === eventName);
+    const allowed = current.accessPolicyVersion === 1 && declared && isCommunityAccessGranted(eventName, require('./moduleAccessPolicy').getGrantedModuleEvents(current));
+    if (!allowed) throw createModuleHostError('E_MODULE_ACCESS_DENIED', `Module "${moduleName}" has no approved manifest access to "${eventName}".`);
+    return { eventName, payload: createCoreEventPayload({ eventName, scopedPayload, moduleName, jwt }) };
+  });
 }
 
 function createScopedEventBus({ motherEmitter, moduleName, moduleInfo = {}, jwt, nonce, accessGrants = [], accessConsentManager = null }) {
@@ -864,7 +802,7 @@ function createHealthCheckEventBus({ moduleName, moduleInfo = {}, jwt, nonce, ma
         throw new Error('HealthCheck-Emitter: A callback is required in emitter events.');
       }
       const scopedPayload = normalizeCommunityPayload({ moduleName, jwt, nonce }, payload);
-      if (moduleInfo.accessPolicyVersion === 1 && !isCommunityOwnedEvent(eventName, moduleName)
+      if (!isCommunityOwnedEvent(eventName, moduleName)
         && eventName !== BACKEND_EVENTS.DB_SELECT && eventName !== BACKEND_EVENTS.LOG
         && !(moduleInfo.requestedAccess?.some(item => item.event === eventName) && isCommunityAccessGranted(eventName, accessGrants))) {
         throw createModuleHostError('E_MODULE_ACCESS_DENIED', `No approved manifest access to "${eventName}".`);
@@ -898,19 +836,18 @@ function createHealthCheckEventBus({ moduleName, moduleInfo = {}, jwt, nonce, ma
 }
 
 function createCommunityModuleHost({
-  app,
+  app: _app,
   motherEmitter,
   moduleName,
   moduleInfo = {},
-  moduleDir,
+  moduleDir: _moduleDir,
   jwt,
   nonce,
   accessGrants = [],
   accessConsentManager = null,
-  modificationRoot
+  modificationRoot: _modificationRoot
 }) {
   assertValidModuleName(moduleName);
-  const normalizedModuleDir = path.resolve(moduleDir);
   const events = createScopedEventBus({ motherEmitter, moduleName, moduleInfo, jwt, nonce, accessGrants, accessConsentManager });
   const storage = createCommunityStorageFacade({ motherEmitter, moduleName, jwt, nonce });
   const staticMounts = [];
@@ -923,7 +860,7 @@ function createCommunityModuleHost({
     capabilities: createBoundaryObject({
       events: true,
       moduleStorage: true,
-      staticAssets: true,
+      staticAssets: false,
       rawExpressApp: false,
       rawSql: false,
       systemWrites: false
@@ -932,25 +869,8 @@ function createCommunityModuleHost({
     eventBus: events,
     storage,
 
-    registerStaticAssets: createBoundaryFunction(function registerStaticAssets({ dir = 'frontend', mountPath = '/', options = {} } = {}) {
-      if (!app) {
-        throw new Error('[MODULE HOST] Static assets can only be registered during runtime initialization.');
-      }
-
-      const layers = resolveStaticAssetLayers({
-        moduleName,
-        moduleInfo,
-        moduleDir: normalizedModuleDir,
-        requestedDir: dir,
-        modificationRoot
-      });
-      const root = layers[layers.length - 1];
-      const normalizedMountPath = normalizeMountPath(moduleName, mountPath);
-      const staticOptions = createCommunityStaticAssetOptions(options);
-      mountStaticAssetLayers(app, normalizedMountPath, layers, staticOptions);
-      const overrideActive = layers.length > 1;
-      staticMounts.push({ mountPath: normalizedMountPath, dir: root, overrideActive });
-      return cloneRuntimeData({ mountPath: normalizedMountPath, dir: root, overrideActive });
+    registerStaticAssets: createBoundaryFunction(function registerStaticAssets() {
+      throw createModuleHostError('E_MODULE_UI_DENIED', 'Modules are backend-only. Install UI through Widget Manager.');
     }),
 
     getStaticMounts: createBoundaryFunction(function getStaticMounts() {
@@ -964,15 +884,14 @@ function createCommunityModuleHost({
 function createCommunityHealthCheckHost({
   moduleName,
   moduleInfo = {},
-  moduleDir,
+  moduleDir: _moduleDir,
   jwt,
   nonce,
   markEvent,
   accessGrants = [],
-  modificationRoot
+  modificationRoot: _modificationRoot
 }) {
   assertValidModuleName(moduleName);
-  const normalizedModuleDir = path.resolve(moduleDir);
   const events = createHealthCheckEventBus({ moduleName, moduleInfo, jwt, nonce, markEvent, accessGrants });
   const storage = createCommunityStorageFacade({
     motherEmitter: null,
@@ -991,7 +910,7 @@ function createCommunityHealthCheckHost({
     capabilities: createBoundaryObject({
       events: true,
       moduleStorage: true,
-      staticAssets: true,
+      staticAssets: false,
       rawExpressApp: false,
       rawSql: false,
       systemWrites: false
@@ -999,22 +918,10 @@ function createCommunityHealthCheckHost({
     events,
     eventBus: events,
     storage,
-    registerStaticAssets: createBoundaryFunction(function registerStaticAssets({ dir = 'frontend', mountPath = '/' } = {}) {
-      markEvent('registerStaticAssets');
-      const layers = resolveStaticAssetLayers({
-        moduleName,
-        moduleInfo,
-        moduleDir: normalizedModuleDir,
-        requestedDir: dir,
-        modificationRoot
-      });
-      const root = layers[layers.length - 1];
-      return cloneRuntimeData({
-        mountPath: normalizeMountPath(moduleName, mountPath),
-        dir: root,
-        overrideActive: layers.length > 1
-      });
+    registerStaticAssets: createBoundaryFunction(function registerStaticAssets() {
+      throw createModuleHostError('E_MODULE_UI_DENIED', 'Modules are backend-only. Install UI through Widget Manager.');
     }),
+
     getStaticMounts: createBoundaryFunction(function getStaticMounts() {
       return cloneRuntimeData([]);
     })

@@ -106,8 +106,8 @@ function apiAction(resource, action) {
 }
 
 // Both the canonical Pages workspace and stored Collections instances use it.
-const PAGE_MANAGER_ACTIONS = ['byLane', 'create', 'update', 'setStart', 'delete']
-  .map(action => apiAction('pages', action));
+const PAGE_MANAGER_ACTIONS = ['get', 'byLane', 'create', 'update', 'setStart', 'delete']
+  .map(action => apiAction('pages', action)).concat([apiAction('designer', 'save'), apiAction('designer', 'get')]);
 
 const PAGE_CONTENT_ACTIONS = [
   apiAction('apps', 'builderList'), apiAction('pages', 'update'), apiAction('designer', 'list'),

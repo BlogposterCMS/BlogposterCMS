@@ -12,6 +12,8 @@ const initCanvasGrid = jest.fn(() => ({
 const applyWidgetOptions = jest.fn();
 const executeJs = jest.fn();
 const mockRenderTextWidget = jest.fn();
+const mockMountSandboxWidget = jest.fn(async () => {});
+jest.mock('../ui/widgets/rendering/widgetSandbox', () => ({ mountSandboxWidget: mockMountSandboxWidget }));
 
 jest.mock('/ui/shared/grid/canvasGrid.js', () => ({
   init: initCanvasGrid,
@@ -286,15 +288,18 @@ describe('widgetManager public loader', () => {
 });
 
 
-test('ordinary community modules mount publicly with services and without CMS credentials', async () => {
+test('ordinary community modules mount through the trusted sandbox adapter without direct execution', async () => {
   document.body.innerHTML = '<div id="app"></div>';
   mockRenderTextWidget.mockClear();
+  mockMountSandboxWidget.mockClear();
   const activeLayout = { grid: { columns: 12, cellHeight: 10 }, items: [{ widgetId: 'example', instanceId: 'example-one', wPercent: 100, hPercent: 20 }] };
   const meltdownEmit = jest.fn().mockResolvedValue({ resource: 'widgets', action: 'list', data: [{ widgetId: 'example', content: '/widgets/example/widget.js' }] });
   await loadWidgets({}, { meltdownEmit, publicToken: 'must-not-leak', activeLayout });
-  const context = mockRenderTextWidget.mock.calls[0][1];
+  expect(mockRenderTextWidget).not.toHaveBeenCalled();
+  expect(mockMountSandboxWidget).toHaveBeenCalledWith(expect.any(HTMLElement), 'example', '/widgets/example/widget.js', expect.any(Object));
+  const context = (mockMountSandboxWidget as jest.Mock).mock.calls[0][3];
   expect(context.widgetId).toBe('example');
-  expect(typeof context.services.request).toBe('function');
+  // Service creation and credential stripping belong to the sandbox adapter.
   expect(context.jwt).toBeUndefined();
   expect(context.publicToken).toBeUndefined();
   expect(context.meltdownEmit).toBeUndefined();

@@ -202,3 +202,14 @@ Settings reuse the shared workspace navigation guard, with separate saved field
 baselines per tab. Failed loads offer Retry and failed saves retain inputs.
 The core Import / Export placeholder is retired; it never invoked the module
 import/export contracts. Installed module tools are unaffected.
+
+The existing content-header host now sits between the main navigation and the
+workspace. Breadcrumb links retain their canonical renderer and appear without
+background, border or shadow. Initializing the header again must not duplicate
+the host or reserve the former bottom-footer space.
+
+The extension store is a persistent action on the right of the main workspace
+navigation, including Content. The shared ZIP dialog selects Module or Widget;
+inspection, capability review and installation remain in the owning workflows.
+
+Branding settings use image previews for light/dark logos and favicon, the existing media picker, and optional URL inputs. A single save/discard group persists all three settings; dark preview falls back to the light logo. URL changes remain drafts until saved.

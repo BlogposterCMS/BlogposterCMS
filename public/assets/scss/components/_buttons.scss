@@ -15,7 +15,7 @@
   border:0;
   min-width:120px;
   background: var(--bg); color: var(--fg);
-  font-weight:600; line-height: var(--btn-h);
+  font-weight:600; line-height: 1;
   cursor:pointer; user-select:none;
   transition:
     filter var(--motion-duration-fast) var(--motion-ease-standard),
@@ -30,6 +30,10 @@
 }
 
 /* Focus */
+// Link-backed buttons use button chrome rather than native link underlines.
+.app-scope .button:not(.text),
+.app-scope .icon-button { text-decoration: none; }
+
 .app-scope .button:focus-visible{
   outline:2px solid color-mix(in srgb, var(--brand) 45%, transparent);
   outline-offset:2px;
@@ -53,7 +57,7 @@
 .app-scope .button.ghost{
   --bg: var(--studio-surface-solid);
   --fg: var(--studio-text);
-  box-shadow: var(--studio-shadow-soft);
+  box-shadow: none;
 }
 .app-scope .button.secondary{
   --bg: var(--studio-surface-muted);
@@ -84,6 +88,10 @@
 }
 .app-scope .button:not(:disabled):active{ filter: brightness(.97) saturate(1.01); }
 
+// Light actions remain flat in every pointer state; keyboard focus uses outline.
+.app-scope .button.ghost:not(:disabled):hover,
+.app-scope .button.ghost:not(:disabled):active { box-shadow: none; }
+
 /* Sizes */
 .app-scope .button.sm{ --btn-h: 34px; padding:0 12px; font-weight:600; }
 .app-scope .button.lg{ --btn-h: 48px; padding:0 20px; }
@@ -92,7 +100,7 @@
 /* Icon support */
 .app-scope .button .icon{ display:inline-flex; width:1.1em; height:1.1em; line-height:0; }
 .app-scope .button .icon+span,
-.app-scope .button span+.icon{ margin-left:6px; }
+.app-scope .button span+.icon{ margin-left:0; }
 
 /* Compact icon actions reuse the floating language of the dashboard chrome. */
 .app-scope :where(

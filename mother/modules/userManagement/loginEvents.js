@@ -46,7 +46,7 @@ function setupLoginEvents(motherEmitter) {
     }
 
     // meltdown => getUserDetailsByUsername
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_USERNAME, {
         jwt,
         moduleName: 'userManagement',
         moduleType: 'core',
@@ -93,7 +93,7 @@ function setupLoginEvents(motherEmitter) {
     }
 
     // meltdown => getUserDetailsById
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_ID, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_USER_DETAILS_BY_ID, {
         jwt,
         moduleName: 'userManagement',
         moduleType: 'core',
@@ -103,7 +103,7 @@ function setupLoginEvents(motherEmitter) {
     return callback(new Error(`No user found => id=${userId}`));
   }
   // meltdown => getRolesForUser => gather roles
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_ROLES_FOR_USER, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.GET_ROLES_FOR_USER, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -122,7 +122,7 @@ function setupLoginEvents(motherEmitter) {
       : mergedPermissions;
 
       // meltdown => issueUserToken => embed finalPermissions + roles
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_USER_TOKEN, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_USER_TOKEN, {
         skipJWT: true,
         authModuleSecret,
         moduleName: 'auth',

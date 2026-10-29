@@ -1,17 +1,49 @@
+/** One store entry point for module and widget installation. */
+export function createExtensionStoreButton() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'icon-btn extension-store-button';
+    button.setAttribute('aria-label', 'Install extension ZIP');
+    button.title = 'Install extension ZIP';
+    const icon = document.createElement('img');
+    icon.src = '/assets/icons/store.svg';
+    icon.alt = '';
+    icon.width = icon.height = 20;
+    button.append(icon);
+    return button;
+}
 /** Shared file picker; the owning module/widget client performs inspection and installation. */
-export function openExtensionUpload(install) {
+export function openExtensionUpload(install, chooseKind = false) {
     const overlay = document.createElement('div');
-    overlay.className = 'module-upload-overlay';
+    overlay.className = 'module-upload-overlay app-scope';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-label', 'Install extension');
     const box = document.createElement('div');
     box.className = 'module-upload-box';
+    const kind = document.createElement('select');
+    kind.setAttribute('aria-label', 'Package type');
+    for (const [value, text] of [['module', 'Module'], ['widget', 'Widget']]) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        kind.append(option);
+    }
+    if (chooseKind)
+        box.append(kind);
     const label = document.createElement('label');
+    label.className = 'module-upload-dropzone';
+    label.tabIndex = 0;
+    label.setAttribute('role', 'button');
     label.textContent = 'Drop one ZIP file here or choose a file (up to 10 MiB)';
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.zip,application/zip';
+    input.hidden = true;
+    label.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        input.click();
+    } });
     label.append(input);
     const status = document.createElement('p');
     status.setAttribute('role', 'status');
@@ -38,6 +70,7 @@ export function openExtensionUpload(install) {
         busy = true;
         input.disabled = true;
         cancel.disabled = true;
+        kind.disabled = true;
         status.textContent = 'Inspecting package…';
         try {
             const file = files[0];
@@ -48,7 +81,7 @@ export function openExtensionUpload(install) {
                 reader.onabort = () => reject(new Error('EXTENSION_FILE_READ_ABORTED'));
                 reader.readAsDataURL(file);
             });
-            if (await install(data, file.name, status)) {
+            if (await install(data, file.name, status, kind.value === 'widget' ? 'widget' : 'module')) {
                 overlay.remove();
                 previous?.focus();
             }
@@ -63,6 +96,7 @@ export function openExtensionUpload(install) {
             busy = false;
             input.disabled = false;
             cancel.disabled = false;
+            kind.disabled = false;
         }
     }
     input.addEventListener('change', () => void handle(input.files));
@@ -72,5 +106,5 @@ export function openExtensionUpload(install) {
     box.append(label, status, cancel);
     overlay.append(box);
     document.body.append(overlay);
-    input.focus();
+    label.focus();
 }

@@ -365,11 +365,6 @@ export async function render(el, options = {}) {
         title.className = 'modules-title page-title';
         title.textContent = 'Modules';
         titleBar.appendChild(title);
-        const installButton = document.createElement('button');
-        installButton.className = 'button secondary sm';
-        installButton.textContent = 'Install ZIP';
-        installButton.addEventListener('click', openUploadPopup);
-        card.appendChild(installButton);
         const tabs = options.tabsHost || document.createElement('div');
         tabs.classList.add('modules-tabs');
         tabs.setAttribute('aria-label', 'Module categories');
@@ -591,17 +586,19 @@ export async function render(el, options = {}) {
     }
 }
 function openUploadPopup() {
-    openExtensionUpload(async (zipData, fileName, status) => {
-        const emit = window.meltdownEmit;
-        const inspection = await inspectModuleZip(emit, window.ADMIN_TOKEN, zipData);
-        const name = inspection.moduleName || fileName;
-        const approved = await reviewModuleAccess(`Install ${name}`, 'Review the declared capabilities. Unselected and undeclared core events stay blocked. Module-owned storage, scoped assets and lifecycle events remain available.', inspection, 'Install and allow selected access');
-        if (approved === null)
-            return false;
-        status.textContent = 'Installing and activating module…';
-        await installModuleZip(emit, window.ADMIN_TOKEN, zipData, approved, inspection.reviewedHash);
-        window.location.reload();
-        return true;
-    });
+    openExtensionUpload(installModuleArchive);
+}
+/** The global store delegates to the existing inspection/access-review workflow. */
+export async function installModuleArchive(zipData, fileName, status) {
+    const emit = window.meltdownEmit;
+    const inspection = await inspectModuleZip(emit, window.ADMIN_TOKEN, zipData);
+    const name = inspection.moduleName || fileName;
+    const approved = await reviewModuleAccess(`Install ${name}`, 'Review the declared capabilities. Unselected and undeclared core events stay blocked. Module-owned storage, scoped assets and lifecycle events remain available.', inspection, 'Install and allow selected access');
+    if (approved === null)
+        return false;
+    status.textContent = 'Installing and activating module…';
+    await installModuleZip(emit, window.ADMIN_TOKEN, zipData, approved, inspection.reviewedHash);
+    window.location.reload();
+    return true;
 }
 window.openUploadPopup = openUploadPopup;

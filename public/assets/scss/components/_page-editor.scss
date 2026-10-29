@@ -106,3 +106,119 @@
     .page-editor-actions { width: 100%; }
   }
 }
+
+// Keep the editor in one reading order, with one existing form/save authority.
+.page-editor-workspace {
+  .page-editor-body { display: flex; flex-direction: column; gap: 28px; }
+  .page-editor-widget { display: contents; }
+  .page-editor-general, .page-editor-seo {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px;
+    padding: 0 0 24px; border-bottom: 1px solid var(--studio-border);
+    > h3 { grid-column: 1 / -1; margin: 0; }
+  }
+  .page-editor-general { order: 0; }
+  .page-editor-content { order: 1; }
+  .page-editor-seo { order: 2; }
+  input[type='datetime-local'] {
+    width: 100%; min-height: 40px; padding: 8px 12px; box-sizing: border-box;
+    border: 1px solid var(--studio-border); border-radius: var(--studio-field-radius);
+    background: var(--studio-surface-solid); color: var(--studio-text); font: inherit;
+  }
+  .page-editor-footer {
+    display: flex; align-items: center; justify-content: flex-end; gap: 16px;
+    padding: 16px 0; border-top: 1px solid var(--studio-border);
+    .page-editor-feedback { margin: 0 auto 0 0; }
+  }
+  .page-content-source { border-block: 1px solid var(--studio-border); padding: 12px 0; }
+  .page-content-source summary { cursor: pointer; font-size: 13px; }
+  .page-content-source[open] summary { margin-bottom: 12px; }
+  .page-content-source textarea { min-height: 240px; }
+  .page-editor-seo .form-actions { justify-content: flex-start; gap: 8px; border: 0; padding: 0; margin: 8px 0; }
+  @media (max-width: 650px) {
+    .page-editor-general, .page-editor-seo { grid-template-columns: 1fr; }
+    .page-editor-footer { flex-wrap: wrap; }
+  }
+}
+.page-editor-workspace .page-editor-body > .bp-tab-panel { min-height: 300px; }
+.page-editor-workspace .page-editor-general,
+.page-editor-workspace .page-editor-seo { border-bottom: 0; }
+.page-editor-workspace .page-editor-footer .page-editor-actions { width: auto; margin-left: auto; }
+
+.page-editor-workspace {
+  .page-editor-seo { display: flex; flex-direction: column; gap: 24px; }
+  .page-editor-seo-text { display: grid; gap: 18px; max-width: 720px; width: 100%; }
+  .page-editor-seo-images { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; border-top: 1px solid var(--studio-border); padding-top: 24px; }
+  .form-field { align-self: start; align-content: start; gap: 8px; }
+  .page-editor-image-preview {
+    min-height: 120px; padding: 12px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--studio-border); border-radius: var(--studio-field-radius);
+    img[hidden], p:empty { display: none; }
+  }
+  .page-editor-image .icon-button { background: transparent; box-shadow: none; }
+  .page-editor-image summary, .page-layout-help summary, .page-content-library summary { font-size: 13px; cursor: pointer; }
+  .page-content-library { border-top: 1px solid var(--studio-border); padding-top: 16px; }
+  .page-content-library[open] > summary { margin-bottom: 16px; }
+  .page-content-library .design-gallery { margin-top: 12px; }
+  .page-content-widget .selected-content { background: transparent; border-radius: 0; border-width: 0 0 1px; padding: 12px 0; }
+  .page-layout-help p { margin-top: 8px; }
+  .page-layout-fields select { min-height: 40px; border: 1px solid var(--studio-border); border-radius: var(--studio-field-radius); padding: 8px 12px; background: var(--studio-surface-solid); font: inherit; }
+  @media (max-width: 650px) { .page-editor-seo-images { grid-template-columns: 1fr; } }
+}
+.page-editor-tab-toolbar { display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--studio-border); }
+.page-editor-tab-toolbar .page-editor-tabs { flex: 1; min-width: 0; border-bottom: 0; }
+.page-editor-tab-actions { margin-left: auto; flex: 0 0 auto; }
+.page-editor-tab-actions[hidden] { display: none; }
+.page-editor-tab-actions .page-content-actions { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 700px) { .page-editor-tab-toolbar { flex-wrap: wrap; padding-bottom: 8px; gap: 8px; } }
+
+// Article writing uses the shared dialog shell with a document-sized body.
+.bp-dialog:has(.article-editor) { width: min(1100px, calc(100vw - 32px)); max-width: none; }
+.bp-dialog:has(.article-editor) .bp-dialog__body { overflow: auto; }
+.article-editor { display: flex; flex-direction: column; min-height: min(65vh, 650px); }
+.article-editor__toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 8px 0; position: sticky; top: 0; z-index: 1; background: var(--studio-surface-solid); border-bottom: 1px solid var(--studio-border); }
+.article-editor__toolbar .icon-button { background: transparent; box-shadow: none; }
+.article-editor__toolbar .icon-button[aria-pressed='true'] { background: var(--studio-surface-muted); }
+.article-editor__toolbar select { height: 34px; padding: 4px 8px; border: 1px solid var(--studio-border); border-radius: 8px; background: transparent; color: inherit; }
+.article-editor__document { padding: 28px clamp(12px, 4vw, 60px); flex: 1; }
+.article-editor__document .tiptap { outline: none; min-height: 360px; line-height: 1.7; overflow-wrap: anywhere; }
+.article-editor__document :is(p,h1,h2,h3,ul,ol,blockquote,pre,table) { margin: 0 0 16px; }
+.article-editor__document ul { list-style: disc; padding-left: 24px; }
+.article-editor__document ol { list-style: decimal; padding-left: 24px; }
+.article-editor__document blockquote { border-left: 3px solid var(--studio-border); padding-left: 18px; }
+.article-editor__document pre { background: var(--studio-surface-muted); padding: 16px; border-radius: 8px; white-space: pre-wrap; }
+.article-editor__document :is(img,video) { max-width: 100%; max-height: 450px; }
+.article-editor__document table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.article-editor__document :is(td,th) { border: 1px solid var(--studio-border); padding: 8px; min-width: 40px; }
+.article-editor__document .selectedCell { background: var(--studio-surface-muted); }
+.article-editor__footer { display: flex; align-items: center; gap: 8px; }
+.article-editor__footer [hidden] { display: none; }
+.page-manager__create-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+/* Reserve equal space on both sides so the label itself stays centered. The
+   existing plus asset is masked with currentColor, including custom themes. */
+.app-scope .page-manager .button[data-action='add'] {
+  position: relative;
+  padding-inline: 32px;
+  gap: 0;
+  justify-content: center;
+}
+.page-manager .button[data-action='add'] > .icon { display: none; }
+.page-manager .button[data-action='add']::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: url('/assets/icons/plus.svg') center / contain no-repeat;
+}
+.page-manager__slot-warning { display: inline-flex; align-items: center; color: #c52828; flex: 0 0 auto; margin-left: 6px; }
+.page-manager__slot-warning img { width: 16px; height: 16px; filter: invert(22%) sepia(92%) saturate(2400%) hue-rotate(345deg); }
+.page-manager__slot-warning::after { content: none; display: none; }
+/* The toolbar has native titles. Global floating labels on the textbox and
+   toolbar would create invisible horizontal overflow inside the dialog. */
+.article-editor [aria-label]::after, .article-editor [title]::after { content: none; display: none; }
+.article-editor__status { font-size: 13px; margin: 8px 0; }
+.article-editor__status[role='alert'] { color: var(--color-error); }
+.article-editor__link { display: grid; gap: 12px; min-width: 240px; }

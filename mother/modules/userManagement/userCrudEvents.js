@@ -136,7 +136,7 @@ function setupUserCrudEvents(motherEmitter) {
       };
 
       // 3) Insert user
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_INSERT, {
         jwt,
         moduleName: 'userManagement',
         table: 'users',
@@ -166,7 +166,7 @@ function setupUserCrudEvents(motherEmitter) {
   if (userLog && userLog.password) userLog.password = '***';
   traceRuntimeEvent('[USER MGMT] createUser => User inserted:', userLog);
   if (hasAccessSelection) {
-    setUserAccess(motherEmitter, jwt, newUser.id, requestedRoleIds, directPermissions).then(() => {
+    return setUserAccess(motherEmitter, jwt, newUser.id, requestedRoleIds, directPermissions).then(() => {
       clearTimeout(timeout);
       callback(null, newUser);
     }).catch(accessErr => {
@@ -180,7 +180,7 @@ function setupUserCrudEvents(motherEmitter) {
     return callback(null, newUser);
   }
   // Dann: DB-Select nach role_name
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
     jwt,
     moduleName: 'userManagement',
     table: 'roles',
@@ -194,7 +194,7 @@ function setupUserCrudEvents(motherEmitter) {
       return callback(null, newUser);
     }
     const foundRole = rolesArr[0];
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.ASSIGN_ROLE_TO_USER, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.ASSIGN_ROLE_TO_USER, {
       jwt,
       moduleName: 'userManagement',
       moduleType: 'core',
@@ -277,7 +277,7 @@ function setupUserCrudEvents(motherEmitter) {
         ? 'standard'
         : (role === 'admin' ? 'admin' : (role || 'admin'));
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.ISSUE_MODULE_TOKEN, {
           skipJWT: true,
           authModuleSecret,
           moduleName: 'auth',
@@ -285,7 +285,7 @@ function setupUserCrudEvents(motherEmitter) {
           trustLevel: 'high',
           signAsModule: 'userManagement'
         }).then(highTok => {
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_USER, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.CREATE_USER, {
     jwt: highTok,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -321,7 +321,7 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout while fetching users.'));
     }, TIMEOUT_DURATION);
 
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users'
@@ -357,7 +357,7 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout deleting user.'));
     }, TIMEOUT_DURATION);
 
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_DELETE, {
       jwt,
       moduleName: 'userManagement',
       table: 'users',
@@ -365,7 +365,7 @@ function setupUserCrudEvents(motherEmitter) {
     }).then(() => {
   clearTimeout(timeout);
   // Optional: Tokens löschen
-  requestBackendEvent(motherEmitter, BACKEND_EVENTS.REVOKE_ALL_TOKENS_FOR_USER, {
+  return requestBackendEvent(motherEmitter, BACKEND_EVENTS.REVOKE_ALL_TOKENS_FOR_USER, {
     jwt,
     moduleName: 'userManagement',
     moduleType: 'core',
@@ -406,7 +406,7 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout while fetching user details by username.'));
     }, TIMEOUT_DURATION);
 
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users',
@@ -496,7 +496,7 @@ function setupUserCrudEvents(motherEmitter) {
         dataToUpdate.password = hashed;
       }
 
-      requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
+      return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_UPDATE, {
         jwt,
         moduleName: 'userManagement',
         table: 'users',
@@ -553,7 +553,7 @@ function setupUserCrudEvents(motherEmitter) {
       const { ObjectId } = require('mongodb');
       queryId = new ObjectId(userId);
     }
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users',
@@ -594,7 +594,7 @@ function setupUserCrudEvents(motherEmitter) {
       callback(new Error('Timeout while counting users.'));
     }, TIMEOUT_DURATION);
 
-    requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
+    return requestBackendEvent(motherEmitter, BACKEND_EVENTS.DB_SELECT, {
       jwt,
       moduleName: 'userManagement',
       table: 'users'

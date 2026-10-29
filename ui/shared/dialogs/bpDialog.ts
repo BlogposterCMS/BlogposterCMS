@@ -22,8 +22,12 @@ export interface BpDialogOpenOptions {
   kind?: BpDialogKind;
   body?: string | Node | (() => Node);
   actions?: BpDialogAction[];
+  /** Domain-owned controls can share the standard footer without a second dialog. */
+  footerContent?: Node;
   prompt?: BpDialogPromptOptions;
   dismissable?: boolean;
+  /** Forms can keep the dialog open while saving or until an explicit discard. */
+  beforeClose?: () => boolean;
   confirmLabel?: string;
   cancelLabel?: string;
   submitLabel?: string;
@@ -236,6 +240,7 @@ function runDomDialog(options: BpDialogOpenOptions): Promise<BpDialogResult> {
 
     let settled = false;
     const closeWith = (result: BpDialogResult) => {
+      if (options.beforeClose && !options.beforeClose()) return;
       if (settled) return;
       settled = true;
       document.removeEventListener('keydown', onKeyDown);
@@ -280,6 +285,7 @@ function runDomDialog(options: BpDialogOpenOptions): Promise<BpDialogResult> {
       });
       footer.appendChild(button);
     });
+    if (options.footerContent) footer.appendChild(options.footerContent);
 
     function onRootClick(event: MouseEvent) {
       if (event.target === root && options.dismissable !== false) {

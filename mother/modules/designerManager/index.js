@@ -4,6 +4,7 @@ const { BACKEND_EVENTS } = require('../../contracts/generatedBackendEventCatalog
 
 const path = require("path");
 const designerService = require("./designerService");
+const { requestBackendEvent } = require('../../contracts/backendEventContracts');
 
 const MANAGER_NAME = "designerManager";
 const DESIGNER_RESOURCE_NAME = "designer";
@@ -41,7 +42,15 @@ function capabilities() {
 }
 
 module.exports = {
-  async initialize({ motherEmitter, isCore, jwt, nonce }) {
+  lifecycleVersion: 1,
+  async healthCheck({ motherEmitter, jwt }) {
+    const rows = await requestBackendEvent(motherEmitter, BACKEND_EVENTS.PERFORM_DB_OPERATION, {
+      jwt, moduleName: MANAGER_NAME, moduleType: MODULE_TYPE,
+      operation: 'DESIGNER_LIST_DESIGNS', params: [{ limit: 1 }]
+    });
+    if (!Array.isArray(rows)) throw new Error('CORE_MODULE_DESIGNER_NOT_READY');
+  },
+  async initialize({ motherEmitter, isCore, jwt, nonce, isModuleUpdate = false }) {
     assertCoreInitialize({ motherEmitter, isCore, jwt });
 
     if (typeof motherEmitter.registerModuleType === "function") {
@@ -52,11 +61,16 @@ module.exports = {
       motherEmitter,
       jwt,
       nonce,
-      moduleType: MODULE_TYPE
+      moduleType: MODULE_TYPE,
+      isModuleUpdate
     });
 
-    global.loadedModules = global.loadedModules || {};
-    global.loadedModules[MANAGER_NAME] = designerService;
+    // The database placeholder authority remains host-owned and fingerprinted.
+    // Preparing a candidate must not overwrite the active shared service.
+    if (!isModuleUpdate) {
+      global.loadedModules = global.loadedModules || {};
+      global.loadedModules[MANAGER_NAME] = designerService;
+    }
   },
 
   _internals: {

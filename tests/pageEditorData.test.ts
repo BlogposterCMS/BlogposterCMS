@@ -103,6 +103,7 @@ describe('pageEditorData', () => {
         }],
         meta: {
           keep: true,
+          featuredImage: '',
           publish_at: '2026-06-17T12:00',
           layoutTemplate: 'old-layout'
         }

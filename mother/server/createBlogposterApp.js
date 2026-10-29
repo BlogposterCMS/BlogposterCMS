@@ -67,7 +67,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
   });
   mountSecurityMiddleware(app, { isProduction });
 
-  const { getCachedCoreToken } = await bootstrapCoreModules({
+  const { getCachedCoreToken, coreModuleLifecycle } = await bootstrapCoreModules({
     app,
     rootDir,
     motherEmitter,
@@ -154,6 +154,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
     motherEmitter
   }));
   app.use(createPublicPageRoutes({
+    validateAdminToken: authContext.validateAdminToken,
     injectDevReload,
     motherEmitter,
     plainSpaceVersion,
@@ -170,6 +171,7 @@ async function createBlogposterApp({ rootDir, motherEmitter, devFileLogger }) {
 
   return {
     app,
+    coreModuleLifecycle,
     closeDevelopmentServices: devReload.close,
     port
   };
